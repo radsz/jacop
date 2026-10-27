@@ -100,12 +100,23 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
       return null;
     }
 
-    var.min();
+    return getChoiceConstraint(var);
+  }
+
+  /**
+   * Returns the choice that splits the domain of a given variable, for a selection that chooses the
+   * variable itself, such as {@link LastConflictSelect}.
+   *
+   * @param var the variable to split, not a singleton.
+   * @return the choice constraint for the left branch.
+   */
+  public PrimitiveConstraint getChoiceConstraint(T var) {
+
     int value;
     if (var.domain.getSize() == 2 && var.dom().domainId() == IntDomain.BOUND_DOMAIN_ID) {
       value = var.min();
     } else {
-      value = super.getChoiceValue();
+      value = valueOrdering.indomain(var);
     }
 
     if (leftFirst) {
@@ -121,11 +132,6 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
     }
   }
 
-  /**
-   * It returns the string representation of the choice point selector.
-   *
-   * @return string describing the variables, ordering, and value selection heuristic.
-   */
   @Override
   public String toString() {
     return Arrays.asList((Var[]) searchVariables)

@@ -279,6 +279,38 @@ public final class DisjunctiveCliques {
   }
 
   /**
+   * It returns the transition times between the tasks of a clique that its disjunctions imply. Two
+   * tasks of a clique never overlap, so when task a comes first every disjunction between their
+   * starts gives {@code s_b >= s_a + lag}, which is {@code s_a + d_a + (lag - d_a)}; the transition
+   * from a to b is the largest such lag minus the largest duration of a, or zero.
+   *
+   * @param clique the tasks.
+   * @return the transition from each task of the clique to each other, by their positions.
+   */
+  public int[][] transitions(int[] clique) {
+    int m = clique.length;
+    Map<IntVar, List<Integer>> position = new IdentityHashMap<>();
+    for (int k = 0; k < m; k++) {
+      position.computeIfAbsent(starts.get(clique[k]), v -> new ArrayList<>()).add(k);
+    }
+    int[][] tt = new int[m][m];
+    for (Disjunction d : disjunctions) {
+      List<Integer> pa = position.get(d.a);
+      List<Integer> pb = position.get(d.b);
+      if (pa == null || pb == null) {
+        continue;
+      }
+      for (int x : pa) {
+        for (int y : pb) {
+          tt[x][y] = Math.max(tt[x][y], d.lagAB - maxDuration(clique[x]));
+          tt[y][x] = Math.max(tt[y][x], d.lagBA - maxDuration(clique[y]));
+        }
+      }
+    }
+    return tt;
+  }
+
+  /**
    * It finds the cliques.
    *
    * @return the cliques, each of at least three tasks given by their indices in increasing order.

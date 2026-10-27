@@ -172,13 +172,74 @@ public final class FloatImposeGroundingHarness {
       Case c = generator.apply(random);
       checkCase(name + " trial " + trial, c, random, failures);
       checkSatisfied(name + " trial " + trial, c, random, failures);
-      if (isPrimitive(c)) {
-        for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
-          checkCase(name + " trial " + trial + " " + wrapper, wrap(c, wrapper), random, failures);
-        }
+      checkWrapped(name + " trial " + trial, c, random, failures);
+      Case aliased = alias(c, random);
+      if (aliased != null) {
+        String label = name + " trial " + trial + " aliased";
+        checkCase(label, aliased, random, failures);
+        checkSatisfied(label, aliased, random, failures);
+        checkWrapped(label, aliased, random, failures);
       }
     }
     return failures;
+  }
+
+  private static void checkWrapped(String label, Case c, Random random, List<String> failures) {
+    if (isPrimitive(c)) {
+      for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
+        checkCase(label + " " + wrapper, wrap(c, wrapper), random, failures);
+      }
+    }
+  }
+
+  /**
+   * The case with two variables of the same kind merged into one, or null when there are no two
+   * such variables or their grids share no point. The aliased case has one variable fewer: position
+   * {@code j} of the original reads the variable of position {@code i}, whose grid is the points
+   * both grids share (an interval only if both were intervals).
+   */
+  static Case alias(Case c, Random random) {
+    int n = c.vars().length;
+    if (n < 2) {
+      return null;
+    }
+    int i = random.nextInt(n);
+    int k = random.nextInt(n - 1);
+    int j = k >= i ? k + 1 : k;
+    Spec a = c.vars()[i];
+    Spec b = c.vars()[j];
+    double[] shared =
+        Arrays.stream(a.grid())
+            .filter(v -> Arrays.stream(b.grid()).anyMatch(w -> w == v))
+            .toArray();
+    if (a.isFloat() != b.isFloat() || shared.length == 0) {
+      return null;
+    }
+    int[] map = new int[n];
+    Spec[] vars = new Spec[n - 1];
+    for (int p = 0, q = 0; p < n; p++) {
+      if (p == j) {
+        continue;
+      }
+      map[p] = q;
+      vars[q++] =
+          p == i ? new Spec(shared, a.isFloat(), a.continuous() && b.continuous()) : c.vars()[p];
+    }
+    map[j] = map[i];
+    Case aliased =
+        new Case(
+            vars,
+            x -> c.build().apply(Arrays.stream(map).mapToObj(p -> x[p]).toArray(Var[]::new)),
+            t -> c.semantics().test(Arrays.stream(map).mapToDouble(p -> t[p]).toArray()),
+            c.description() + " (x" + j + " is x" + i + " of the original)");
+    try {
+      Store store = new Store();
+      aliased.build().apply(create(store, vars, new double[n - 1], When.BEFORE_IMPOSE));
+    } catch (IllegalArgumentException e) {
+      // the constraint rejects a variable in two roles
+      return null;
+    }
+    return aliased;
   }
 
   private static boolean isPrimitive(Case c) {

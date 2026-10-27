@@ -63,6 +63,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
@@ -1242,6 +1243,20 @@ class ConsistencyChecker {
                               .allMatch(i -> strict ? t[i - 1] < t[i] : t[i - 1] <= t[i])
                           && IntStream.range(0, n).map(i -> t[i]).sum() == t[n],
                   concat(x, new IntVar[] {sum}));
+            }),
+        new Case(
+            "IncreasingNValue",
+            Level.DOMAIN,
+            (s, r) -> {
+              int n = 2 + r.nextInt(4);
+              IntVar[] x = vars(s, "x", n, 0, 5, r);
+              IntVar count = var(s, "c", 0, n + 1, r);
+              return new Model(
+                  new IncreasingNValue(x, count),
+                  t ->
+                      IntStream.range(1, n).allMatch(i -> t[i - 1] <= t[i])
+                          && 1 + IntStream.range(1, n).filter(i -> t[i - 1] < t[i]).count() == t[n],
+                  concat(x, new IntVar[] {count}));
             }),
         new Case("Sort", Level.BOUNDS_Z, (s, r) -> sort(s, r, false)),
         new Case("InterDistance", Level.BOUNDS_Z, (s, r) -> interDistance(s, r, false)),

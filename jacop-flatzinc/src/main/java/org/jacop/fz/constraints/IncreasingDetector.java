@@ -1,5 +1,5 @@
 /*
- * IncreasingSumDetector.java
+ * IncreasingDetector.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -32,9 +32,12 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntDomain;
@@ -46,20 +49,24 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
- * It finds sums over variables that are ordered and posts {@link IncreasingSum} on them as a
- * redundant constraint. The order comes from increasing and decreasing constraints or from chains
- * of x[i] &le; x[i+1], as symmetry breaking writes them; the sum is an int_lin_eq or int_lin_le
- * with unit coefficients over exactly the ordered variables, optionally with one more variable of
- * the opposite sign as the sum. All constraints are still posted as usual, so the IncreasingSum
- * only adds pruning.
+ * It finds sums and value counts over variables that are ordered. The order comes from increasing
+ * and decreasing constraints or from chains of x[i] &le; x[i+1], as symmetry breaking writes them.
  *
- * <p>Setting the system property {@code org.jacop.fz.increasingSum} to false turns the detection
- * off.
+ * <p>A sum is an int_lin_eq or int_lin_le with unit coefficients over exactly the ordered
+ * variables, optionally with one more variable of the opposite sign as the sum. It gets an {@link
+ * IncreasingSum} as a redundant constraint, so all constraints are still posted as usual.
+ *
+ * <p>A value count is a jacop_nvalue over exactly the ordered variables. It is posted as an {@link
+ * IncreasingNValue} instead of Values: the order holds anyway, and IncreasingNValue is domain
+ * consistent on both together.
+ *
+ * <p>Setting the system property {@code org.jacop.fz.increasingSum} to false turns the detection of
+ * sums off, and {@code org.jacop.fz.increasingNValue} the detection of value counts.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class IncreasingSumDetector implements ParserTreeConstants {
+public class IncreasingDetector implements ParserTreeConstants {
 
   private final Support support;
 
@@ -68,31 +75,41 @@ public class IncreasingSumDetector implements ParserTreeConstants {
 
   private final List<ASTConstElem> linears = new ArrayList<>();
 
+  private final List<ASTConstElem> nvalues = new ArrayList<>();
+
   /**
    * It creates a detector reading variables through the given support.
    *
    * @param support the support of the FlatZinc front end.
    */
-  public IncreasingSumDetector(Support support) {
+  public IncreasingDetector(Support support) {
     this.support = support;
   }
 
   /**
-   * It tells if the detection is on.
+   * It tells if the detection of sums is on.
    *
    * @return false if the system property org.jacop.fz.increasingSum is false.
    */
-  public static boolean enabled() {
+  public static boolean sumEnabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.increasingSum"));
   }
 
   /**
-   * It scans the constraint items of the model and posts an IncreasingSum for each sum over ordered
-   * variables.
+   * It tells if the detection of value counts is on.
+   *
+   * @return false if the system property org.jacop.fz.increasingNValue is false.
+   */
+  public static boolean nvalueEnabled() {
+    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.increasingNValue"));
+  }
+
+  /**
+   * It scans the constraint items of the model for orders, sums and value counts.
    *
    * @param astTree the root of the parsed model.
    */
-  public void detect(SimpleNode astTree) {
+  public void scan(SimpleNode astTree) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
@@ -104,12 +121,51 @@ public class IncreasingSumDetector implements ParserTreeConstants {
         }
       }
     }
+  }
+
+  /**
+   * It posts an IncreasingNValue for each value count over ordered variables, and returns the
+   * jacop_nvalue constraints it replaces.
+   *
+   * @return the replaced constraints, which must not be posted.
+   */
+  public Set<SimpleNode> replaceNValues() {
+    Set<SimpleNode> replaced = new HashSet<>();
+    if (above.isEmpty()) {
+      return replaced;
+    }
+    for (ASTConstElem node : nvalues) {
+      IntVar count = var(node, 0);
+      IntVar[] x = ordered(List.of(support.getVarArray(child(node, 1))));
+      if (x == null || x.length == 0 || size(x) > IncreasingNValue.VALUE_LIMIT) {
+        continue;
+      }
+      IncreasingNValue c = new IncreasingNValue(x, count);
+      if (support.options.debug()) {
+        FzConsole.println("% nvalue on ordered variables " + c);
+      }
+      support.pose(c);
+      replaced.add(node);
+    }
+    return replaced;
+  }
+
+  /** It posts an IncreasingSum for each sum over ordered variables. */
+  public void postSums() {
     if (above.isEmpty()) {
       return;
     }
     for (ASTConstElem node : linears) {
       sum(node);
     }
+  }
+
+  private static long size(IntVar[] x) {
+    long total = 0;
+    for (IntVar v : x) {
+      total += v.getSize();
+    }
+    return total;
   }
 
   private void collect(ASTConstElem node) {
@@ -125,8 +181,9 @@ public class IncreasingSumDetector implements ParserTreeConstants {
         linears.add(node);
       }
       case "int_lin_eq" -> linears.add(node);
+      case "jacop_nvalue" -> nvalues.add(node);
       default -> {
-        // not part of an increasing sum
+        // not about ordered variables
       }
     }
   }

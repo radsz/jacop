@@ -316,13 +316,21 @@ public final class Derivation implements VarMap {
 
   /**
    * The constraints attached in the parent, walking the variables in store order and each
-   * variable's constraints in attachment order, so a derivation is deterministic.
+   * variable's constraints in attachment order, so a derivation is deterministic. Besides the
+   * constraints of a variable's domain, this takes the constraints that only watch the variable:
+   * for a value ({@link Store#watchValue}, for example a long 0-1 linear constraint) or as a
+   * watched literal ({@link Store#registerWatchedLiteralConstraint}).
    */
   private List<Constraint> collectConstraints() {
     Map<Constraint, Boolean> seen = new IdentityHashMap<>();
     List<Constraint> result = new ArrayList<>();
     for (Var v : variables) {
-      for (Constraint c : v.dom().constraints()) {
+      List<Constraint> attached = new ArrayList<>(v.dom().constraints());
+      attached.addAll(parent.valueWatchers(v));
+      if (parent.watchedConstraints != null) {
+        attached.addAll(parent.watchedConstraints.getOrDefault(v, Set.of()));
+      }
+      for (Constraint c : attached) {
         if (c != null && !c.isEntailed() && seen.put(c, Boolean.TRUE) == null) {
           result.add(c);
         }
@@ -383,6 +391,10 @@ public final class Derivation implements VarMap {
       d.searchConstraints = new ArrayList<>();
       d.searchConstraintsToEvaluate = 0;
       d.searchConstraintsCloned = false;
+      parent.clearValueWatches(v);
+    }
+    if (parent.watchedConstraints != null) {
+      parent.watchedConstraints.clear();
     }
   }
 

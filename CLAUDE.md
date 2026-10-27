@@ -88,6 +88,21 @@ generator returning a `Model` (the constraint, the relation as a `Predicate<int[
 assignments, and the variables in the relation's order). Keep the instances small, since every node
 enumerates the whole box (nodes above 200,000 tuples are skipped).
 
+## Checking globals against their decompositions
+
+`jacop-benchmarks/src/test/java/org/jacop/decomposition/DecompositionCheck.java` replaces each
+`jacop_*` global of the FlatZinc test problems with the MiniZinc standard library decomposition and
+checks that the solutions stay the same. Like the consistency checker it is run on demand:
+
+```
+mvn -Pmin -pl jacop-benchmarks test -Dtest=DecompositionCheck -Dsurefire.rerunFailingTestsCount=0 \
+    -Ddecomp.threads=3
+```
+
+Results go to `jacop-benchmarks/src/test/fz/decomposition/state-<category>.tsv` and a run resumes
+where the last one stopped; commit the state file with the work. Every `DIFF` or `ERROR` must be
+investigated, explained and fixed with a regression test. Details: `src/test/fz/decomposition/README.md`.
+
 ## Fuzzing the SAT core
 
 `jacop-sat/src/test/java/org/jacop/jasat/cdcl/CdclFuzzTest.java` fuzzes the CDCL core in process.

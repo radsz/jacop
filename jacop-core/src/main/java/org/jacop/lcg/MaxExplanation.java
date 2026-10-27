@@ -35,7 +35,13 @@ import org.jacop.core.IntVar;
 /**
  * Explanations of {@code m = max(list)}, and of {@code m = min(list)} through the mirrored values.
  * A bound of m comes from the bounds of the list; a variable of the list is bounded by m; with one
- * variable left that can reach m, that variable and m are equal.
+ * variable left that can reach m, that variable and m are equal. When m is itself in the list the
+ * constraint only says that m is at least every other variable, and is explained as such.
+ *
+ * <p>Each bound in a reason is given by the earliest atom on the trail that implies it, as CP-SAT
+ * does when it relaxes a reason to the lowest trail index, and where several variables can give the
+ * same bound, by the one whose atom is earliest. The learnt clause is then as general as the atoms
+ * on the trail allow, and depends on the lowest decision levels they offer.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -45,14 +51,27 @@ public final class MaxExplanation {
   // values walked for one reason before giving up on it
   private static final int MAX_VALUES = 4096;
 
+  // the earliest-atom value of a bound that does not hold
+  private static final int NONE = Integer.MAX_VALUE;
+
   private final AtomicTrail trail;
+  private final IntVar[] list;
+  private final IntVar m;
   private final boolean isMax;
+  private final boolean inList;
   private final EntryList out;
 
-  private MaxExplanation(AtomicTrail trail, boolean isMax, EntryList out) {
+  private MaxExplanation(AtomicTrail trail, IntVar[] list, IntVar m, boolean isMax, EntryList out) {
     this.trail = trail;
+    this.list = list;
+    this.m = m;
     this.isMax = isMax;
     this.out = out;
+    boolean found = false;
+    for (IntVar x : list) {
+      found |= x == m;
+    }
+    this.inList = found;
   }
 
   /**
@@ -64,11 +83,11 @@ public final class MaxExplanation {
    * @param m the maximum (or minimum)
    * @param isMax true for the maximum, false for the minimum
    * @param out where the reason entries are added
-   * @return false when there is no such reason, or m is in the list
+   * @return false when there is no such reason
    */
   public static boolean explain(
       AtomicTrail trail, int entry, IntVar[] list, IntVar m, boolean isMax, EntryList out) {
-    return !contains(list, m) && new MaxExplanation(trail, isMax, out).entry(entry, list, m);
+    return new MaxExplanation(trail, list, m, isMax, out).entry(entry);
   }
 
   /**
@@ -79,23 +98,14 @@ public final class MaxExplanation {
    * @param m the maximum (or minimum)
    * @param isMax true for the maximum, false for the minimum
    * @param out where the reason entries are added
-   * @return false when there is no such reason, or m is in the list
+   * @return false when there is no such reason
    */
   public static boolean explainFailure(
       AtomicTrail trail, IntVar[] list, IntVar m, boolean isMax, EntryList out) {
-    return !contains(list, m) && new MaxExplanation(trail, isMax, out).failure(list, m);
+    return new MaxExplanation(trail, list, m, isMax, out).failure();
   }
 
-  private static boolean contains(IntVar[] list, IntVar m) {
-    for (IntVar x : list) {
-      if (x == m) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private boolean entry(int entry, IntVar[] list, IntVar m) {
+  private boolean entry(int entry) {
     IntVar y = trail.variable(entry);
     int kind = trail.kind(entry);
     if (kind == AtomicTrail.NE && y == m) {
@@ -105,85 +115,142 @@ public final class MaxExplanation {
     boolean upper = (kind == AtomicTrail.LE) == isMax;
     long a = isMax ? trail.value(entry) : -(long) trail.value(entry);
     if (y == m) {
-      if (!upper) {
-        int j = largestLow(list, entry);
-        addLow(list[j], entry);
-        return excludedFrom(m, low(list[j], entry), a - 1, entry);
-      }
-      long top = Long.MIN_VALUE;
-      for (IntVar x : list) {
-        addHigh(x, entry);
-        top = Math.max(top, high(x, entry));
-      }
-      return excludedFrom(m, a + 1, top, entry);
+      return upper ? maxAtMost(a, entry) : maxAtLeast(a, entry);
     }
     int mark = out.size();
     if (kind != AtomicTrail.NE && upper) {
-      addHigh(m, entry);
-      if (excludedFrom(y, a + 1, high(m, entry), entry)) {
+      // y is at most m, and its values from a + 1 to m's high are out
+      long top = high(m, entry);
+      if (add(highAtMost(m, top, entry)) && excludedFrom(y, a + 1, top, entry)) {
         return true;
       }
       out.truncate(mark);
     }
     // y is the only variable that can reach m
-    if (!othersBelow(list, y, m, entry)) {
-      return false;
-    }
-    return ShiftExplanation.explain(trail, entry, y, m, 0, out);
+    return !inList && othersBelow(y, entry) && ShiftExplanation.explain(trail, entry, y, m, 0, out);
   }
 
-  private boolean failure(IntVar[] list, IntVar m) {
+  // m >= a: a variable of the list at least a, or the largest low and m's values out up to a
+  private boolean maxAtLeast(long a, int entry) {
+    long largest = Long.MIN_VALUE;
+    for (IntVar x : list) {
+      if (x != m) {
+        largest = Math.max(largest, low(x, entry));
+      }
+    }
+    if (largest == Long.MIN_VALUE) {
+      return false;
+    }
+    long b = Math.min(a, largest);
+    return add(earliestLowAtLeast(b, entry)) && excludedFrom(m, b, a - 1, entry);
+  }
+
+  // m <= a: every variable of the list at most top, and m's values from a + 1 to top out
+  private boolean maxAtMost(long a, int entry) {
+    if (inList) {
+      return false;
+    }
+    long top = Long.MIN_VALUE;
+    for (IntVar x : list) {
+      top = Math.max(top, high(x, entry));
+    }
+    return excludedFrom(m, a + 1, top, entry) && allAtMost(top, entry);
+  }
+
+  private boolean failure() {
     int now = trail.size();
     int mark = out.size();
     // nothing reaches m
-    if (othersBelow(list, null, m, now)) {
+    if (!inList && othersBelow(null, now)) {
       return true;
     }
     out.truncate(mark);
     // a variable above m
-    for (IntVar x : list) {
-      if (low(x, now) > high(m, now)) {
-        addLow(x, now);
-        addHigh(m, now);
-        return true;
-      }
+    if (variableAboveMax(now)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (inList) {
+      return false;
     }
     // no value of m between the largest low and the largest high of the list
-    int j = largestLow(list, now);
+    long largest = Long.MIN_VALUE;
     long top = Long.MIN_VALUE;
     for (IntVar x : list) {
-      addHigh(x, now);
+      largest = Math.max(largest, low(x, now));
       top = Math.max(top, high(x, now));
     }
-    addLow(list[j], now);
-    if (excludedFrom(m, low(list[j], now), top, now)) {
+    if (excludedFrom(m, largest, top, now)
+        && allAtMost(top, now)
+        && add(earliestLowAtLeast(largest, now))) {
       return true;
     }
     out.truncate(mark);
     // the only variable that can reach m has no value of m
     for (IntVar x : list) {
       if (high(x, now) >= low(m, now)) {
-        return othersBelow(list, x, m, now)
-            && ShiftExplanation.disjointBefore(trail, now, x, m, 0, out);
+        return othersBelow(x, now) && ShiftExplanation.disjointBefore(trail, now, x, m, 0, out);
       }
     }
     return false;
   }
 
-  // every variable of the list but y is below m's low, before the position
-  private boolean othersBelow(IntVar[] list, IntVar y, IntVar m, int position) {
-    long bottom = low(m, position);
+  // a variable of the list is above m's high: x >= t and m <= t - 1 for t between the two, taking
+  // the variable and t whose later atom is earliest
+  private boolean variableAboveMax(int position) {
+    long mHigh = high(m, position);
+    int best = NONE;
+    int bestX = NONE;
+    int bestM = NONE;
     for (IntVar x : list) {
-      if (x == y) {
+      long xLow = low(x, position);
+      if (x == m || xLow <= mHigh) {
         continue;
       }
-      if (high(x, position) >= bottom) {
+      for (long t : new long[] {xLow, mHigh + 1}) {
+        int ex = lowAtLeast(x, t, position);
+        int em = highAtMost(m, t - 1, position);
+        if (Math.max(ex, em) < best) {
+          best = Math.max(ex, em);
+          bestX = ex;
+          bestM = em;
+        }
+      }
+    }
+    return best != NONE && add(bestX) && add(bestM);
+  }
+
+  // every variable of the list but y is below m's low, before the position: the others at most
+  // m's low - 1, which lifts their atoms, and m at its low
+  private boolean othersBelow(IntVar y, int position) {
+    long bottom = low(m, position);
+    for (IntVar x : list) {
+      if (x != y && !add(highAtMost(x, bottom - 1, position))) {
         return false;
       }
-      addHigh(x, position);
     }
-    addLow(m, position);
+    return add(lowAtLeast(m, bottom, position));
+  }
+
+  // every variable of the list at most top
+  private boolean allAtMost(long top, int position) {
+    for (IntVar x : list) {
+      if (!add(highAtMost(x, top, position))) {
+        return false;
+      }
+    }
     return true;
+  }
+
+  // the earliest atom by which a variable of the list other than m is at least b
+  private int earliestLowAtLeast(long b, int position) {
+    int best = NONE;
+    for (IntVar x : list) {
+      if (x != m) {
+        best = Math.min(best, lowAtLeast(x, b, position));
+      }
+    }
+    return best;
   }
 
   // the mirrored values from..to are out of x's domain before the position
@@ -202,14 +269,15 @@ public final class MaxExplanation {
     return true;
   }
 
-  private int largestLow(IntVar[] list, int position) {
-    int j = 0;
-    for (int i = 1; i < list.length; i++) {
-      if (low(list[i], position) > low(list[j], position)) {
-        j = i;
-      }
+  // adds an earliest-atom entry; false when the bound does not hold
+  private boolean add(int e) {
+    if (e == NONE) {
+      return false;
     }
-    return j;
+    if (e >= 0) {
+      out.add(e);
+    }
+    return true;
   }
 
   private long low(IntVar x, int position) {
@@ -220,19 +288,17 @@ public final class MaxExplanation {
     return isMax ? trail.maxBefore(x, position) : -(long) trail.minBefore(x, position);
   }
 
-  private void addLow(IntVar x, int position) {
-    if (isMax) {
-      trail.addLowerBound(x, position, out);
-    } else {
-      trail.addUpperBound(x, position, out);
-    }
+  // the earliest atom giving the mirrored low of x at least v
+  private int lowAtLeast(IntVar x, long v, int position) {
+    return isMax
+        ? trail.earliestLowerBound(x, v, position)
+        : trail.earliestUpperBound(x, -v, position);
   }
 
-  private void addHigh(IntVar x, int position) {
-    if (isMax) {
-      trail.addUpperBound(x, position, out);
-    } else {
-      trail.addLowerBound(x, position, out);
-    }
+  // the earliest atom giving the mirrored high of x at most v
+  private int highAtMost(IntVar x, long v, int position) {
+    return isMax
+        ? trail.earliestUpperBound(x, v, position)
+        : trail.earliestLowerBound(x, -v, position);
   }
 }

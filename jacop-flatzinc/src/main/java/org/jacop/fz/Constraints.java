@@ -30,16 +30,19 @@
 
 package org.jacop.fz;
 
+import java.util.HashSet;
 import java.util.Set;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
-import org.jacop.fz.constraints.IncreasingSumDetector;
+import org.jacop.fz.constraints.IncreasingDetector;
+import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.satwrapper.SatTranslation;
 
@@ -124,6 +127,19 @@ public class Constraints implements ParserTreeConstants {
       replaced = alldifferent.replaced();
     }
 
+    IncreasingDetector increasing = null;
+    if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
+      increasing = new IncreasingDetector(support);
+      increasing.scan(astTree);
+      if (IncreasingDetector.nvalueEnabled()) {
+        Set<SimpleNode> nvalues = increasing.replaceNValues();
+        if (!nvalues.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(nvalues);
+        }
+      }
+    }
+
     int n = astTree.jjtGetNumChildren();
 
     for (int i = 0; i < n; i++) {
@@ -158,8 +174,16 @@ public class Constraints implements ParserTreeConstants {
       new CardinalityDetector(support).detect(astTree);
     }
 
-    if (IncreasingSumDetector.enabled()) {
-      new IncreasingSumDetector(support).detect(astTree);
+    if (increasing != null && IncreasingDetector.sumEnabled()) {
+      increasing.postSums();
+    }
+
+    if (BalanceDetector.enabled()) {
+      new BalanceDetector(support).detect(astTree);
+    }
+
+    if (StockingCostDetector.enabled()) {
+      new StockingCostDetector(support).detect(astTree);
     }
 
     support.poseDelayedConstraints();

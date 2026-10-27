@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.api.VarMap;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -84,6 +85,8 @@ public class Tables {
   int numberBoolVariables;
   int numberFloatVariables;
   int numberSetVariables;
+  // MiniZinc on_restart built-ins of the model, or null
+  OnRestart onRestart;
 
   /**
    * It constructs the storage object to store different objects, like int, array of ints, sets, ...
@@ -98,6 +101,18 @@ public class Tables {
    */
   public Tables(Store s) {
     this.store = s;
+  }
+
+  /**
+   * Returns the on_restart built-ins of the model, created at the first call.
+   *
+   * @return the on_restart built-ins.
+   */
+  public OnRestart onRestart() {
+    if (onRestart == null) {
+      onRestart = new OnRestart();
+    }
+    return onRestart;
   }
 
   /**
@@ -179,6 +194,58 @@ public class Tables {
     } else {
       return v;
     }
+  }
+
+  /**
+   * Returns a copy of these tables over other variables, for example over the variables of a store
+   * derived by presolve. Parameters are shared, every variable is mapped, and constants created
+   * later go into the map's target store.
+   *
+   * @param map the mapping of every variable of these tables.
+   * @return the mapped tables.
+   */
+  Tables mapTo(VarMap map) {
+    Tables t = new Tables(map.target());
+    mapValues(constantTable, t.constantTable, map);
+    mapValues(constantTableBoolean, t.constantTableBoolean, map);
+    mapValues(constantFloatTable, t.constantFloatTable, map);
+    aliasTable.forEach((k, v) -> t.aliasTable.put(map.get(k), map.get(v)));
+    t.intTable.putAll(intTable);
+    t.floatTable.putAll(floatTable);
+    t.intArrayTable.putAll(intArrayTable);
+    t.floatArrayTable.putAll(floatArrayTable);
+    t.setTable.putAll(setTable);
+    t.setArrayTable.putAll(setArrayTable);
+    mapValues(variableTable, t.variableTable, map);
+    mapArrays(variableArrayTable, t.variableArrayTable, map);
+    mapValues(variableFloatTable, t.variableFloatTable, map);
+    mapArrays(variableFloatArrayTable, t.variableFloatArrayTable, map);
+    mapValues(setVariableTable, t.setVariableTable, map);
+    mapArrays(setVariableArrayTable, t.setVariableArrayTable, map);
+    t.outputVariables.addAll(map.get(outputVariables));
+    for (OutputArrayAnnotation a : outputArray) {
+      OutputArrayAnnotation mapped = new OutputArrayAnnotation(a.id, a.indexes);
+      mapped.setArray(map.get(a.getArray()));
+      t.outputArray.add(mapped);
+    }
+    t.defaultSearchVariables.addAll(map.get(defaultSearchVariables));
+    t.defaultSearchFloatVariables.addAll(map.get(defaultSearchFloatVariables));
+    t.defaultSearchSetVariables.addAll(map.get(defaultSearchSetVariables));
+    defaultSearchArrays.forEach(a -> t.defaultSearchArrays.add(map.get(a)));
+    defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
+    defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
+    t.numberBoolVariables = numberBoolVariables;
+    t.numberFloatVariables = numberFloatVariables;
+    t.numberSetVariables = numberSetVariables;
+    return t;
+  }
+
+  private static <K, V extends Var> void mapValues(Map<K, V> from, Map<K, V> to, VarMap map) {
+    from.forEach((k, v) -> to.put(k, map.get(v)));
+  }
+
+  private static <K, V extends Var> void mapArrays(Map<K, V[]> from, Map<K, V[]> to, VarMap map) {
+    from.forEach((k, v) -> to.put(k, map.get(v)));
   }
 
   /** Removes aliased variables from the search variable collection. */

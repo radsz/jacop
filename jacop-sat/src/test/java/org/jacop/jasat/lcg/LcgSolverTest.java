@@ -35,11 +35,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
@@ -48,12 +51,16 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
@@ -64,7 +71,9 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
@@ -157,7 +166,7 @@ class LcgSolverTest {
                 resources,
                 new IntVar(store, limit, limit)),
             t -> {
-              for (int time = -2; time < 12; time++) {
+              for (int time = -8; time < 12; time++) {
                 int load = 0;
                 for (int k2 = 0; k2 < 3; k2++) {
                   if (t[at[k2]] <= time && time < t[at[k2]] + d[k2]) {
@@ -249,12 +258,39 @@ class LcgSolverTest {
    */
   @Test
   void hybridTablesAgreeWithBruteForce() {
-    Random rnd = new Random(17);
+    long[] counts = checkHybridTables(new Random(SEED + 17), TABLE_TRIALS, false);
+    assertThat(counts[0]).isGreaterThan(100);
+    assertThat(counts[1]).isGreaterThan(100);
+    assertThat(counts[2]).isGreaterThan(counts[3]);
+  }
+
+  /**
+   * Random hybrid tables with restrictions between columns, kept as they are, against brute force.
+   * A tuple whose restriction between columns is violated by the bounds is explained by them.
+   */
+  @Test
+  void hybridTablesBetweenColumnsAgreeWithBruteForce() {
+    long[] counts = checkHybridTables(new Random(SEED + 29), TABLE_TRIALS, true);
+    assertThat(counts[0]).isGreaterThan(100);
+    assertThat(counts[1]).isGreaterThan(100);
+    assertThat(counts[2]).isGreaterThan(4 * counts[3]);
+  }
+
+  /**
+   * Returns the satisfiable and unsatisfiable instances and the HybridTable explanations of its own
+   * and generic.
+   */
+  /** Instances of the hybrid table checks, and the seed added to their random seeds. */
+  private static final int TABLE_TRIALS = Integer.getInteger("lcg.table.trials", 1500);
+
+  private static final int SEED = Integer.getInteger("lcg.table.seed", 0);
+
+  private static long[] checkHybridTables(Random rnd, int instances, boolean betweenColumns) {
     int sat = 0;
     int unsat = 0;
     long own = 0;
     long generic = 0;
-    for (int instance = 0; instance < 1500; instance++) {
+    for (int instance = 0; instance < instances; instance++) {
       Store store = new Store();
       int n = 4 + rnd.nextInt(2);
       IntVar[] x = new IntVar[n];
@@ -263,30 +299,16 @@ class LcgSolverTest {
       }
       List<Relation> relations = new ArrayList<>();
       for (int c = 3 + rnd.nextInt(3); c > 0; c--) {
-        relations.add(c == 1 && rnd.nextBoolean() ? relation(x, rnd) : tableRelation(x, rnd));
+        relations.add(
+            c == 1 && rnd.nextBoolean() ? relation(x, rnd) : tableRelation(x, rnd, betweenColumns));
       }
-      boolean expected = bruteForce(x, relations, new int[n], 0);
-      for (Relation r : relations) {
-        store.impose(r.constraint);
-      }
-      LcgSolver solver = new LcgSolver(store);
-      solver.setChecking(true);
-      int status = solver.solve();
-      assertThat(status)
-          .as("instance %d", instance)
-          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      boolean expected = solveAndCheck(store, x, relations, "instance " + instance);
       if (expected) {
-        int[] t = new int[n];
-        for (int i = 0; i < n; i++) {
-          t[i] = solver.value(x[i]);
-        }
-        for (Relation r : relations) {
-          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
-        }
         sat++;
       } else {
         unsat++;
       }
+      LcgSolver solver = lastSolver;
       long[] counts = solver.explanationStatistics().get("HybridTable");
       if (counts != null) {
         own += counts[0] - counts[1] + counts[3] - counts[4];
@@ -294,11 +316,102 @@ class LcgSolverTest {
       }
     }
     System.out.printf(
-        "hybrid tables: %d sat, %d unsat, %d own and %d generic explanations%n",
-        sat, unsat, own, generic);
-    assertThat(sat).isGreaterThan(100);
-    assertThat(unsat).isGreaterThan(100);
-    assertThat(own).isGreaterThan(generic);
+        "hybrid tables%s: %d sat, %d unsat, %d own and %d generic explanations%n",
+        betweenColumns ? " between columns" : "", sat, unsat, own, generic);
+    return new long[] {sat, unsat, own, generic};
+  }
+
+  private static LcgSolver lastSolver;
+
+  /**
+   * Solves with lazy clause generation, explanations checked, and compares with brute force; a
+   * solution must satisfy every relation. Returns whether the model is satisfiable.
+   */
+  private static boolean solveAndCheck(
+      Store store, IntVar[] x, List<Relation> relations, String name) {
+    int n = x.length;
+    boolean expected = bruteForce(x, relations, new int[n], 0);
+    for (Relation r : relations) {
+      store.impose(r.constraint);
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    lastSolver = solver;
+    int status = solver.solve();
+    assertThat(status).as(name).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+    if (expected) {
+      int[] t = new int[n];
+      for (int i = 0; i < n; i++) {
+        t[i] = solver.value(x[i]);
+      }
+      for (Relation r : relations) {
+        assertThat(r.test.test(t)).as("%s: %s", name, r.constraint).isTrue();
+      }
+    }
+    return expected;
+  }
+
+  /**
+   * Large ground tables over a key variable with many values, a few tuples per value, so that the
+   * tables keep sparse supports and the explanations pick among many dead tuples. Each table
+   * explains everything itself.
+   */
+  @Test
+  void largeTablesAgreeWithBruteForce() {
+    Random rnd = new Random(SEED + 31);
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < TABLE_TRIALS / 10; instance++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      x[0] = new IntVar(store, "key", 0, 149);
+      for (int v = 0; v < 150; v++) {
+        if (rnd.nextInt(5) == 0) {
+          x[0].domain.subtractAdapt(v);
+        }
+      }
+      for (int i = 1; i < x.length; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(keyTableRelation(x, rnd));
+      }
+      relations.add(tableRelation(x, rnd, false));
+      if (solveAndCheck(store, x, relations, "instance " + instance)) {
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = lastSolver.explanationStatistics().get("HybridTable");
+      if (counts != null) {
+        assertThat(counts[1] + counts[4]).as("instance %d: generic", instance).isZero();
+      }
+    }
+    System.out.printf("large tables: %d sat, %d unsat%n", sat, unsat);
+    assertThat(sat).isGreaterThan(20);
+    assertThat(unsat).isGreaterThan(20);
+  }
+
+  /** A ground table over the key x[0] and two other variables, its tuples sorted by key. */
+  private static Relation keyTableRelation(IntVar[] x, Random rnd) {
+    int a = 1 + rnd.nextInt(x.length - 1);
+    int b = 1 + pick(rnd, x.length - 1, a - 1);
+    List<int[]> tuples = new ArrayList<>();
+    Set<Long> allowed = new HashSet<>();
+    for (int key = 0; key < 150; key++) {
+      for (int k = rnd.nextInt(5); k > 0; k--) {
+        int u = rnd.nextInt(7) - 1;
+        int w = rnd.nextInt(7) - 1;
+        if (allowed.add(((long) key * 64 + u + 1) * 64 + w + 1)) {
+          tuples.add(new int[] {key, u, w});
+        }
+      }
+    }
+    IntVar[] vars = {x[0], x[a], x[b]};
+    return new Relation(
+        new HybridTable(vars, tuples.toArray(new int[0][])),
+        t -> allowed.contains(((long) t[0] * 64 + t[a] + 1) * 64 + t[b] + 1));
   }
 
   @Test
@@ -390,6 +503,237 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(generic);
+  }
+
+  /**
+   * Bin packing with items sharing bin variables, items of weight zero, bin variables reaching
+   * outside the bins, loads with holes and an extra relation on the bins: the LCG answer agrees
+   * with enumerating the bins, every explanation is checked, and almost all are the constraint's
+   * own.
+   */
+  @Test
+  void binpackingAgreesWithBruteForce() {
+    Random rnd = new Random(31);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int bins = 2 + rnd.nextInt(2);
+      int minBin = rnd.nextInt(2);
+      int n = 6 + rnd.nextInt(3);
+      List<IntVar> distinct = new ArrayList<>();
+      int[] at = new int[n];
+      int[] w = new int[n];
+      for (int k = 0; k < n; k++) {
+        if (k > 0 && rnd.nextInt(5) == 0) {
+          at[k] = at[rnd.nextInt(k)];
+        } else {
+          IntVar b =
+              new IntVar(
+                  store, "b" + k, minBin - rnd.nextInt(2), minBin + bins - 1 + rnd.nextInt(2));
+          if (rnd.nextInt(3) == 0) {
+            b.domain.subtractAdapt(b.min() + rnd.nextInt(b.max() - b.min() + 1));
+          }
+          at[k] = distinct.size();
+          distinct.add(b);
+        }
+        w[k] = rnd.nextInt(6) == 0 ? 0 : 1 + rnd.nextInt(5);
+      }
+      IntVar[] x = distinct.toArray(new IntVar[0]);
+      IntVar[] item = new IntVar[n];
+      for (int k = 0; k < n; k++) {
+        item[k] = x[at[k]];
+      }
+      IntVar[] load = new IntVar[bins];
+      for (int i = 0; i < bins; i++) {
+        int lo = rnd.nextInt(6);
+        load[i] = new IntVar(store, "l" + i, lo, lo + 2 + rnd.nextInt(12));
+        for (int h = rnd.nextInt(3); h > 0 && load[i].getSize() > 2; h--) {
+          load[i].domain.subtractAdapt(load[i].min() + 1 + rnd.nextInt(load[i].getSize() - 2));
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Binpacking(item, load, w, minBin, rnd.nextInt(4) != 0),
+              t -> {
+                int[] sum = new int[bins];
+                for (int k = 0; k < n; k++) {
+                  int i = t[at[k]] - minBin;
+                  if (i < 0 || i >= bins) {
+                    return false;
+                  }
+                  sum[i] += w[k];
+                }
+                for (int i = 0; i < bins; i++) {
+                  if (!load[i].domain.contains(sum[i])) {
+                    return false;
+                  }
+                }
+                return true;
+              }));
+      if (x.length >= 3 && rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      // loads are read from their domains before search, so the test may refer to them
+      boolean expected = bruteForce(x, relations, new int[x.length], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        int[] sum = new int[bins];
+        for (int k = 0; k < n; k++) {
+          sum[t[at[k]] - minBin] += w[k];
+        }
+        for (int i = 0; i < bins; i++) {
+          assertThat(solver.value(load[i]))
+              .as("instance %d load %d", instance, i)
+              .isEqualTo(sum[i]);
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Binpacking");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "binpacking: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  @Test
+  void unaryTransitionAgreesWithBruteForce() {
+    Random rnd = new Random(31);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 800; instance++) {
+      Store store = new Store();
+      int n = 4;
+      boolean optional = rnd.nextInt(3) == 0;
+      boolean variable = !optional && rnd.nextBoolean();
+      List<IntVar> all = new ArrayList<>();
+      IntVar[] s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] o = optional ? new IntVar[n] : null;
+      int horizon = 5 + rnd.nextInt(4);
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, rnd.nextInt(2), horizon);
+        if (rnd.nextInt(4) == 0) {
+          s[i].domain.subtractAdapt(s[i].min() + 1 + rnd.nextInt(s[i].max() - s[i].min() - 1));
+        }
+        all.add(s[i]);
+      }
+      for (int i = 0; i < n; i++) {
+        int c = rnd.nextInt(4);
+        d[i] =
+            variable
+                ? new IntVar(store, "d" + i, Math.max(0, c - 1), c + 1)
+                : new IntVar(store, c, c);
+        if (variable) {
+          all.add(d[i]);
+        }
+      }
+      if (optional) {
+        for (int i = 0; i < n; i++) {
+          o[i] = new IntVar(store, "o" + i, 0, 1);
+          all.add(o[i]);
+        }
+      }
+      int f = 1 + rnd.nextInt(3);
+      int[] family = new int[n];
+      for (int i = 0; i < n; i++) {
+        family[i] = rnd.nextInt(f);
+      }
+      int[][] tt = new int[f][f];
+      for (int[] row : tt) {
+        for (int g = 0; g < f; g++) {
+          row[g] = rnd.nextInt(3);
+        }
+      }
+      IntVar[] x = all.toArray(IntVar[]::new);
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new UnaryTransition(s, d, family, tt, o),
+              t -> {
+                for (int i = 0; i < n; i++) {
+                  for (int j = i + 1; j < n; j++) {
+                    if (optional && (t[n + i] == 0 || t[n + j] == 0)) {
+                      continue;
+                    }
+                    int di = variable ? t[n + i] : d[i].value();
+                    int dj = variable ? t[n + j] : d[j].value();
+                    if (t[i] + di + tt[family[i]][family[j]] > t[j]
+                        && t[j] + dj + tt[family[j]][family[i]] > t[i]) {
+                      return false;
+                    }
+                  }
+                }
+                return true;
+              }));
+      if (rnd.nextBoolean()) {
+        relations.add(relation(s, rnd));
+      }
+      // t holds the starts, then the durations when variable or the presences when optional
+      int[] t = new int[x.length];
+      boolean expected = bruteForce(x, relations, t, 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] u = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          u[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(u)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("UnaryTransition");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "unary transition: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(20 * generic);
   }
 
   @Test
@@ -486,6 +830,157 @@ class LcgSolverTest {
   }
 
   @Test
+  void absoluteValueAgreesWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 2000; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        // signed values, with up to two holes
+        x[i] = new IntVar(store, "x" + i, -1 - rnd.nextInt(5), 1 + rnd.nextInt(5));
+        for (int h = rnd.nextInt(3); h > 0; h--) {
+          int v = x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1);
+          if (x[i].getSize() > 2) {
+            x[i].domain.subtractAdapt(v);
+          }
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        int i = pick(rnd, n);
+        int j = pick(rnd, n, i);
+        relations.add(
+            new Relation(new AbsXeqY(x[i], x[j], rnd.nextBoolean()), t -> Math.abs(t[i]) == t[j]));
+      }
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("AbsXeqY");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "absolute value: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(500);
+  }
+
+  @Test
+  void maxAndMinAgreeWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(3); c > 0; c--) {
+        boolean simple = rnd.nextInt(3) == 0;
+        IntVar[] q = new IntVar[simple ? 2 : 2 + rnd.nextInt(n - 2)];
+        int[] at = new int[q.length];
+        for (int k = 0; k < q.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+          q[k] = x[at[k]];
+        }
+        // the maximum is one of the list half of the time, as in y[k] = max(y)
+        int r = rnd.nextBoolean() ? at[rnd.nextInt(at.length)] : pick(rnd, n, at);
+        boolean isMax = rnd.nextBoolean();
+        Constraint constraint;
+        if (simple) {
+          constraint = isMax ? new MaxSimple(q[0], q[1], x[r]) : new MinSimple(q[0], q[1], x[r]);
+        } else {
+          constraint = isMax ? new Max(q, x[r]) : new Min(q, x[r]);
+        }
+        relations.add(
+            new Relation(
+                constraint,
+                t -> {
+                  int best = t[at[0]];
+                  for (int k : at) {
+                    best = isMax ? Math.max(best, t[k]) : Math.min(best, t[k]);
+                  }
+                  return t[r] == best;
+                }));
+      }
+      relations.add(relation(x, rnd));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"Max", "Min", "MaxSimple", "MinSimple"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "max and min: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(1000);
+  }
+
+  @Test
   void layeredGraphsAgreeWithBruteForce() {
     Random rnd = new Random(31);
     int sat = 0;
@@ -541,6 +1036,111 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
     assertThat(own).isGreaterThan(300);
+  }
+
+  /**
+   * CountValuesBounds over random lists, some with a variable twice, and random values and bounds,
+   * with every explanation checked; every reason and failure must be the constraint's own.
+   */
+  @Test
+  void countValuesBoundsAgreesWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(2); c > 0; c--) {
+        int[] at = new int[3 + rnd.nextInt(n - 2)];
+        for (int k = 0; k < at.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+        }
+        if (rnd.nextInt(4) == 0) {
+          at[at.length - 1] = at[0];
+        }
+        IntVar[] q = new IntVar[at.length];
+        for (int k = 0; k < at.length; k++) {
+          q[k] = x[at[k]];
+        }
+        int[] values = new int[1 + rnd.nextInt(3)];
+        for (int k = 0; k < values.length; k++) {
+          values[k] = rnd.nextInt(6) - 1;
+          for (int l = 0; l < k; l++) {
+            if (values[l] == values[k]) {
+              k--;
+              break;
+            }
+          }
+        }
+        int[] lb = new int[values.length];
+        int[] ub = new int[values.length];
+        for (int k = 0; k < values.length; k++) {
+          lb[k] = rnd.nextInt(3);
+          ub[k] = lb[k] + rnd.nextInt(2);
+        }
+        relations.add(
+            new Relation(
+                new CountValuesBounds(q, lb, ub, values),
+                t -> {
+                  for (int k = 0; k < values.length; k++) {
+                    int count = 0;
+                    for (int i : at) {
+                      if (t[i] == values[k]) {
+                        count++;
+                      }
+                    }
+                    if (count < lb[k] || count > ub[k]) {
+                      return false;
+                    }
+                  }
+                  return true;
+                }));
+      }
+      for (int c = rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("CountValuesBounds");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "count values bounds: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(1000);
   }
 
   /** An automaton of three states, its transitions on small ranges, over 3 or 4 variables. */
@@ -616,7 +1216,7 @@ class LcgSolverTest {
   }
 
   /** A hybrid table over 2 or 3 of the variables with random unary restrictions. */
-  private static Relation tableRelation(IntVar[] x, Random rnd) {
+  private static Relation tableRelation(IntVar[] x, Random rnd, boolean betweenColumns) {
     int arity = 2 + rnd.nextInt(2);
     int[] col = new int[arity];
     for (int k = 0; k < arity; k++) {
@@ -625,13 +1225,16 @@ class LcgSolverTest {
     int rows = 2 + rnd.nextInt(6);
     Restriction[][] tuples = new Restriction[rows][arity];
     List<List<IntPredicate>> accepts = new ArrayList<>();
+    List<int[]> columnRestrictions = new ArrayList<>();
     for (int r = 0; r < rows; r++) {
       List<IntPredicate> row = new ArrayList<>();
       for (int k = 0; k < arity; k++) {
         int v = rnd.nextInt(6) - 1;
         int w = rnd.nextInt(6) - 1;
+        int other = (k + 1 + rnd.nextInt(arity - 1)) % arity;
+        int offset = rnd.nextInt(3) - 1;
         // mostly constants, so that the tables prune
-        switch (rnd.nextInt(14)) {
+        switch (rnd.nextInt(betweenColumns ? 17 : 14)) {
           case 0 -> {
             tuples[r][k] = Restriction.any();
             row.add(u -> true);
@@ -656,6 +1259,12 @@ class LcgSolverTest {
             tuples[r][k] = Restriction.notIn(v, w);
             row.add(u -> u != v && u != w);
           }
+          case 14, 15, 16 -> {
+            Restriction.Relation rel = Restriction.Relation.values()[rnd.nextInt(6)];
+            tuples[r][k] = Restriction.column(rel, other, offset);
+            row.add(null); // checked on the whole tuple
+            columnRestrictions.add(new int[] {r, k, other, offset, rel.ordinal()});
+          }
           default -> {
             tuples[r][k] = Restriction.eq(v);
             row.add(u -> u == v);
@@ -669,12 +1278,28 @@ class LcgSolverTest {
       vars[k] = x[col[k]];
     }
     return new Relation(
-        new HybridTable(vars, tuples),
+        new HybridTable(vars, tuples, !betweenColumns),
         t -> {
-          for (List<IntPredicate> row : accepts) {
+          for (int r = 0; r < rows; r++) {
+            List<IntPredicate> row = accepts.get(r);
             boolean all = true;
             for (int k = 0; k < arity && all; k++) {
-              all = row.get(k).test(t[col[k]]);
+              all = row.get(k) == null || row.get(k).test(t[col[k]]);
+            }
+            for (int[] c : columnRestrictions) {
+              if (all && c[0] == r) {
+                long u = t[col[c[1]]];
+                long w = (long) t[col[c[2]]] + c[3];
+                all =
+                    switch (Restriction.Relation.values()[c[4]]) {
+                      case LT -> u < w;
+                      case LE -> u <= w;
+                      case EQ -> u == w;
+                      case NE -> u != w;
+                      case GE -> u >= w;
+                      case GT -> u > w;
+                    };
+              }
             }
             if (all) {
               return true;

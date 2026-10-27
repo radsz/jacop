@@ -439,6 +439,28 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return reason[entry];
   }
 
+  /**
+   * Returns a variable's last entry before a trail position. With {@link #previousEntry} it walks
+   * the variable's entries from the latest to the earliest.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the entry, or -1 when the variable has none before the position
+   */
+  public int lastEntry(IntVar x, int position) {
+    return lastBefore(x, position);
+  }
+
+  /**
+   * Returns the entry of the same variable recorded before an entry.
+   *
+   * @param entry the entry
+   * @return the variable's previous entry, or -1 when there is none
+   */
+  public int previousEntry(int entry) {
+    return previous[entry];
+  }
+
   private int lastBefore(IntVar x, int position) {
     int i = id(x);
     if (i >= last.length) {
@@ -522,6 +544,54 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   public int maxBefore(IntVar x, int position) {
     int e = latest(x, position, LE);
     return e >= 0 ? value[e] : root[slot(x)].max();
+  }
+
+  /**
+   * Returns the earliest entry whose atom gives {@code x >= v} just before a trail position: the
+   * weakest {@code >=} atom recorded for x that implies the bound, so a reason built on it is as
+   * general and as early as it can be with the atoms on the trail.
+   *
+   * @param x the variable
+   * @param v the bound
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the entry, -1 when the initial domain gives the bound, or {@link Integer#MAX_VALUE}
+   *     when x could be below v then
+   */
+  public int earliestLowerBound(IntVar x, long v, int position) {
+    return earliest(x, v, position, GE);
+  }
+
+  /**
+   * Returns the earliest entry whose atom gives {@code x <= v} just before a trail position: the
+   * weakest {@code <=} atom recorded for x that implies the bound.
+   *
+   * @param x the variable
+   * @param v the bound
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the entry, -1 when the initial domain gives the bound, or {@link Integer#MAX_VALUE}
+   *     when x could be above v then
+   */
+  public int earliestUpperBound(IntVar x, long v, int position) {
+    return earliest(x, v, position, LE);
+  }
+
+  // the bounds of one kind only tighten along a variable's chain
+  private int earliest(IntVar x, long v, int position, int k) {
+    IntDomain d = root[slot(x)];
+    if (k == GE ? d.min() >= v : d.max() <= v) {
+      return -1;
+    }
+    int found = Integer.MAX_VALUE;
+    for (int e = latest(x, position, k); e >= 0; e = previous[e]) {
+      if (kind[e] != k) {
+        continue;
+      }
+      if (k == GE ? value[e] < v : value[e] > v) {
+        break;
+      }
+      found = e;
+    }
+    return found;
   }
 
   /**

@@ -56,6 +56,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that items are packed into bins
@@ -71,7 +74,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class Binpacking extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Binpacking> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Binpacking>, Explainable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
   static long LBnumber;
@@ -102,13 +105,17 @@ public class Binpacking extends Constraint
 
   private int minBinNumber;
   private long sizeAllItems;
-  private long alphaP;
-  private long betaP;
+
+  /** The sums alpha' and beta' of the last NoSum. */
+  private final long[] noSumBounds = new long[2];
 
   /** Distinct sizes and their multiplicities of the items given to the bin-count bounds. */
   private final int[] sizes;
 
   private final int[] counts;
+
+  /** The explanations for lazy clause generation, created when first needed. */
+  private BinpackingExplanation explanation;
 
   /**
    * It constructs the binpacking constraint for the supplied variable.
@@ -368,11 +375,11 @@ public class Binpacking extends Constraint
     int len = candidateWeights.length;
     if (noSum(
         candidateWeights, len, sumCandidates, load[i].min() - required, load[i].min() - required)) {
-      load[i].domain.inMin(store.level, load[i], clamp(required + betaP));
+      load[i].domain.inMin(store.level, load[i], clamp(required + noSumBounds[1]));
     }
     if (noSum(
         candidateWeights, len, sumCandidates, load[i].max() - required, load[i].max() - required)) {
-      load[i].domain.inMax(store.level, load[i], clamp(required + alphaP));
+      load[i].domain.inMax(store.level, load[i], clamp(required + noSumBounds[0]));
     }
   }
 
@@ -490,43 +497,101 @@ public class Binpacking extends Constraint
     }
     int first = Math.max(0, firstBin - minBinNumber);
     int last = Math.min(load.length - 1, lastBin - minBinNumber);
-    int nb = last - first + 1;
+    int nb = Math.max(0, last - first + 1);
+    int[] packed = new int[nb];
+    int[] capacity = new int[nb];
+    for (int i = 0; i < nb; i++) {
+      packed[i] = a[first + i];
+      capacity[i] = load[first + i].max();
+    }
+    if (binCountFails(
+        unpacked, unpackedLength, packed, capacity, strongBinCountBound, sizes, counts)) {
+      throw Store.failException;
+    }
+  }
+
+  /**
+   * Tells whether the bin-count bounds show that the unpacked items (in descending order) do not
+   * fit into the bins whose largest loads are {@code capacity} and which already hold {@code
+   * packed}.
+   *
+   * @param unpacked the weights of the unpacked items, in descending order
+   * @param unpackedLength the number of unpacked items, at least 1
+   * @param packed the weight already packed in each bin the unpacked items can use
+   * @param capacity the largest load of each of those bins
+   * @param strong true to use also f_CCM1 and reduction RMax
+   * @param sizes scratch space of at least unpackedLength + capacity.length entries
+   * @param counts scratch space of at least unpackedLength + capacity.length entries
+   * @return true when the items need more bins than there are
+   */
+  static boolean binCountFails(
+      int[] unpacked,
+      int unpackedLength,
+      int[] packed,
+      int[] capacity,
+      boolean strong,
+      int[] sizes,
+      int[] counts) {
+    int nb = capacity.length;
 
     // Reduction R0 (Shaw 2004): the capacity is the largest bin capacity and every bin that items
     // can still use gets one virtual item made of the items already packed in it and the capacity
     // it lacks compared to the largest bin.
     int maxCapacity = 0;
-    for (int i = first; i <= last; i++) {
-      maxCapacity = Math.max(maxCapacity, load[i].max());
+    for (int c : capacity) {
+      maxCapacity = Math.max(maxCapacity, c);
     }
     if (maxCapacity <= 0) {
-      throw Store.failException; // unpacked items of positive weight and no capacity
+      return true; // unpacked items of positive weight and no capacity
     }
     int[] virtual = new int[nb];
-    for (int i = first; i <= last; i++) {
-      virtual[i - first] = maxCapacity - (load[i].max() - a[i]);
+    for (int i = 0; i < nb; i++) {
+      virtual[i] = maxCapacity - (capacity[i] - packed[i]);
     }
     Arrays.sort(virtual);
     int minVirtual = virtual[0];
 
     // A packing found by first fit decreasing shows that no bound can exceed nb.
     if (fitsFirstFitDecreasing(unpacked, unpackedLength, virtual, maxCapacity)) {
-      return;
+      return false;
     }
 
     // Any reduction R(delta) that adds delta to the capacity and to every virtual item keeps the
     // packings feasible (every bin holds exactly one virtual item), so each gives a valid bound
     // (Dupuis, Schaus and Deville 2010). Neither of R0, RMin and RMax dominates the others.
-    lbBins(unpacked, unpackedLength, virtual, 0, maxCapacity, nb);
+    if (lbBins(unpacked, unpackedLength, virtual, 0, maxCapacity, nb, strong, sizes, counts)) {
+      return true;
+    }
     // RMin: the smallest virtual item becomes empty, i.e. the capacity is the largest free space.
-    if (minVirtual > 0 && minVirtual < maxCapacity) {
-      lbBins(unpacked, unpackedLength, virtual, -minVirtual, maxCapacity - minVirtual, nb);
+    if (minVirtual > 0
+        && minVirtual < maxCapacity
+        && lbBins(
+            unpacked,
+            unpackedLength,
+            virtual,
+            -minVirtual,
+            maxCapacity - minVirtual,
+            nb,
+            strong,
+            sizes,
+            counts)) {
+      return true;
     }
     // RMax: every virtual item becomes larger than half the capacity.
     long deltaMax = (long) maxCapacity - 2L * minVirtual + 1;
-    if (strongBinCountBound && deltaMax != 0 && maxCapacity + deltaMax <= IntDomain.MAX_INT) {
-      lbBins(unpacked, unpackedLength, virtual, (int) deltaMax, (int) (maxCapacity + deltaMax), nb);
-    }
+    return strong
+        && deltaMax != 0
+        && maxCapacity + deltaMax <= IntDomain.MAX_INT
+        && lbBins(
+            unpacked,
+            unpackedLength,
+            virtual,
+            (int) deltaMax,
+            (int) (maxCapacity + deltaMax),
+            nb,
+            true,
+            sizes,
+            counts);
   }
 
   /**
@@ -554,36 +619,41 @@ public class Binpacking extends Constraint
   }
 
   /**
-   * Checks the bin-count bounds on the unpacked items plus the virtual items (ascending) shifted by
-   * delta, with the given capacity.
+   * Tells whether the bin-count bounds on the unpacked items plus the virtual items (ascending)
+   * shifted by delta, with the given capacity, exceed nb.
    */
-  private void lbBins(
-      int[] unpacked, int unpackedLength, int[] virtual, int delta, int capacity, int nb) {
+  private static boolean lbBins(
+      int[] unpacked,
+      int unpackedLength,
+      int[] virtual,
+      int delta,
+      int capacity,
+      int nb,
+      boolean strong,
+      int[] sizes,
+      int[] counts) {
     int[] v = new int[virtual.length];
     for (int i = 0; i < v.length; i++) {
       v[i] = virtual[i] + delta;
     }
     int[] x = merge(unpacked, unpackedLength, v);
     if (x[0] > capacity) {
-      throw Store.failException; // an item fits in no bin
+      return true; // an item fits in no bin
     }
-    lbBins(x, capacity, nb);
-    if (strongBinCountBound) {
-      ccm1Check(x, capacity, nb);
-    }
+    return lbBins(x, capacity, nb) || strong && ccm1Fails(x, capacity, nb, sizes, counts);
   }
 
   /**
-   * Fails when the dual feasible function f_CCM1 of Carlier, Clautiaux and Moukrim (2007) shows
+   * Tells whether the dual feasible function f_CCM1 of Carlier, Clautiaux and Moukrim (2007) shows
    * that the items x (in descending order) need more than nb bins of the given capacity. A dual
    * feasible function maps the sizes so that items fitting together in a bin still fit after the
    * mapping, so ceil(sum f(x) / f(capacity)) is a lower bound. Its parameter lambda (1 to capacity
    * / 2) is tried at the distinct item sizes, as for L2.
    */
-  private void ccm1Check(int[] x, int capacity, int nb) {
+  private static boolean ccm1Fails(int[] x, int capacity, int nb, int[] sizes, int[] counts) {
     int half = capacity / 2;
     if (half == 0) {
-      return;
+      return false;
     }
     // distinct sizes with their multiplicities
     int d = 0;
@@ -618,12 +688,13 @@ public class Binpacking extends Constraint
       }
       // ceil(sum / f(capacity)) > nb, with f(capacity) = 2 * capacityLambda
       if (sum > 2 * capacityLambda * nb) {
-        throw Store.failException;
+        return true;
       }
     }
+    return false;
   }
 
-  private int[] merge(int[] a, int arrLength, int[] b) {
+  private static int[] merge(int[] a, int arrLength, int[] b) {
     int[] c = new int[arrLength + b.length];
     int i = 0;
     int j = b.length - 1;
@@ -706,6 +777,15 @@ public class Binpacking extends Constraint
    * sumX.
    */
   private boolean noSum(int[] x, int len, long sumX, long alpha, long beta) {
+    return noSum(x, len, sumX, alpha, beta, noSumBounds);
+  }
+
+  /**
+   * NoSum of Shaw (2004): tells whether no subset of the first len weights of x, sorted in
+   * descending order and summing to sumX, sums to a value in [alpha, beta]. It stores in bounds the
+   * largest such sum below alpha and the smallest above beta that it found.
+   */
+  static boolean noSum(int[] x, int len, long sumX, long alpha, long beta, long[] bounds) {
 
     if (alpha <= 0 || beta >= sumX) {
       return false;
@@ -738,13 +818,13 @@ public class Binpacking extends Constraint
       }
     }
 
-    alphaP = sumA + sumC;
-    betaP = sumB;
+    bounds[0] = sumA + sumC;
+    bounds[1] = sumB;
 
     return sumA < alpha;
   }
 
-  private long sum(int[] x) {
+  private static long sum(int[] x) {
     long summa = 0;
     for (int v : x) {
       summa += v;
@@ -752,13 +832,14 @@ public class Binpacking extends Constraint
     return summa;
   }
 
-  private void lbBins(int[] x, int capacity, int nb) {
+  /** Tells whether the bounds L1 and L2 of Martello and Toth exceed nb. */
+  private static boolean lbBins(int[] x, int capacity, int nb) {
     int nn = x.length;
     long sum = sum(x);
     long lb = sum / capacity + (sum % capacity != 0 ? 1 : 0);
 
     if (nb < lb) {
-      throw Store.failException;
+      return true;
     }
 
     // Martello and Toth's L2 is the maximum of L(k) over 0 <= k <= capacity / 2, but L(k) only
@@ -779,12 +860,10 @@ public class Binpacking extends Constraint
         lb = currentLb;
       }
     }
-    if (nb < lb) {
-      throw Store.failException;
-    }
+    return nb < lb;
   }
 
-  private long computeLbForK(int[] x, int nn, int capacity, int k) {
+  private static long computeLbForK(int[] x, int nn, int capacity, int k) {
     int N1 = 0;
     int N2 = 0;
     int i = 0;
@@ -809,6 +888,44 @@ public class Binpacking extends Constraint
       noBinsN3 = toPack / capacity + (toPack % capacity > 0 ? 1 : 0);
     }
     return N1 + N2 + noBinsN3;
+  }
+
+  /**
+   * Explains a pruning by the packed, candidate and excluded items of the bins and the bounds of
+   * the loads; see {@link BinpackingExplanation}.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    BinpackingExplanation e = explanation();
+    return e != null && e.explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    BinpackingExplanation e = explanation();
+    return e != null && e.explainFailure(trail, out);
+  }
+
+  // null when a bin variable is also a load, which the explanations do not handle
+  private BinpackingExplanation explanation() {
+    if (explanation == null) {
+      IntVar[] bins = Arrays.stream(item).map(BinItem::bin).toArray(IntVar[]::new);
+      for (IntVar b : Stream.concat(Arrays.stream(bins), Arrays.stream(zeroWeightBins)).toList()) {
+        if (binMap.containsKey(b)) {
+          return null;
+        }
+      }
+      explanation =
+          new BinpackingExplanation(
+              bins,
+              Arrays.stream(item).mapToInt(BinItem::weight).toArray(),
+              load,
+              itemMap,
+              binMap,
+              zeroWeightBins,
+              minBinNumber);
+    }
+    return explanation;
   }
 
   @Override

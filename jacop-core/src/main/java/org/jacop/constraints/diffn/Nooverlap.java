@@ -25,15 +25,21 @@
 
 package org.jacop.constraints.diffn;
 
+import java.util.Arrays;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -46,7 +52,7 @@ import org.jacop.lcg.Explainable;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explainable {
+public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explainable, Stateful {
 
   static final boolean TRACE_ON = false;
   static final boolean TRACE_NARR_ON = false;
@@ -72,6 +78,34 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
   int stamp;
 
   boolean doAreaCheck = true;
+
+  /*
+   * What a pass of the pairwise pruning, the profile or the area check finds for a rectangle depends
+   * only on the bounds of the rectangle and of the rectangles that may overlap it. A pass examines
+   * a rectangle again only if one of them changed since the previous pass of the same kind began;
+   * otherwise the previous pass already found nothing for it. Each pass that runs to its end without
+   * a change leaves every rectangle examined, so the constraint is at its fixpoint at the end of
+   * each search node and nothing needs to be examined again after a backtrack.
+   */
+  static final int PRUNING_PASS = 0;
+  static final int PROFILE_PASS = 1;
+  static final int AREA_PASS = 2;
+
+  /*
+   * The profile of another rectangle uses a rectangle only while it has a compulsory part, and a
+   * rectangle that has none now had none since the previous pass, since compulsory parts only grow
+   * until a backtrack. So the profile pass tracks such rectangles apart from all changed ones.
+   */
+  static final int PROFILE_OF_OTHERS = 3;
+
+  /** For each kind of pass, the rectangles changed since the current pass of that kind began. */
+  private final BitSet[] changed = new BitSet[4];
+
+  /** For each kind of pass, the rectangles changed since the previous pass of that kind began. */
+  private final BitSet[] changedBefore = new BitSet[4];
+
+  /** The rectangles of each variable. */
+  private Map<Var, int[]> rectanglesOf;
 
   /**
    * It specifies a diff constraint.
@@ -275,20 +309,35 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
    */
   void pruning() {
 
+    startPass(PRUNING_PASS);
+    // the area check runs in Diffn if the last rectangle checked here asks for it
+    int last = -1;
+    boolean lastExamined = false;
     for (int j = 0; j < rectangle.length; j++) {
       Rectangle r = rectangle[j];
 
       BitSet os = overlapping[j].value();
-      BitSet o = (BitSet) os.clone();
       if (r.instantiatedBefore(store)) {
-        o.clear();
-        overlapping[j].update(o);
+        if (!os.isEmpty()) {
+          overlapping[j].update(new BitSet());
+        }
         continue;
       }
+      last = j;
+      lastExamined = mustExamine(PRUNING_PASS, j, os);
+      if (!lastExamined) {
+        continue;
+      }
+      BitSet o = (BitSet) os.clone();
       for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
         if (!r.possibleOverlap(rectangle[i])) {
           o.set(i, false);
         }
+      }
+      if (o.cardinality() != os.cardinality()) {
+        // the profile and the area check of r depend on the rectangles that may overlap it
+        changed[PROFILE_PASS].set(j);
+        changed[AREA_PASS].set(j);
       }
       overlapping[j].update(o);
 
@@ -296,6 +345,90 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
       prune(r, o);
     }
+    if (last >= 0 && !lastExamined) {
+      doAreaCheck = areaExceedsSpace(rectangle[last], overlapping[last].value());
+    }
+  }
+
+  /**
+   * Begins a pass of the given kind.
+   *
+   * @param pass the kind of pass.
+   */
+  void startPass(int pass) {
+    swap(pass);
+    if (pass == PROFILE_PASS) {
+      swap(PROFILE_OF_OTHERS);
+    }
+  }
+
+  private void swap(int set) {
+    BitSet b = changedBefore[set];
+    changedBefore[set] = changed[set];
+    b.clear();
+    changed[set] = b;
+  }
+
+  /**
+   * Tells whether a pass has to examine a rectangle, that is, whether the rectangle or one that may
+   * overlap it changed since the previous pass of the same kind began.
+   *
+   * @param pass the kind of pass.
+   * @param j the index of the rectangle.
+   * @param o the rectangles that may overlap it.
+   * @return true if the rectangle has to be examined.
+   */
+  boolean mustExamine(int pass, int j, BitSet o) {
+    int others = pass == PROFILE_PASS ? PROFILE_OF_OTHERS : pass;
+    return changedBefore[pass].get(j)
+        || changed[pass].get(j)
+        || o.intersects(changedBefore[others])
+        || o.intersects(changed[others]);
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    int[] rs = rectanglesOf.get(v);
+    if (rs == null) {
+      return;
+    }
+    for (int j : rs) {
+      changed[PRUNING_PASS].set(j);
+      changed[PROFILE_PASS].set(j);
+      changed[AREA_PASS].set(j);
+      if (hasCompulsoryPart(rectangle[j])) {
+        changed[PROFILE_OF_OTHERS].set(j);
+      }
+    }
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    // the store goes back to the end of a search node, where every pass found nothing; the area
+    // check does not run in every call, so it examines all rectangles again
+    changed[PRUNING_PASS].clear();
+    changedBefore[PRUNING_PASS].clear();
+    changed[PROFILE_PASS].clear();
+    changedBefore[PROFILE_PASS].clear();
+    changed[PROFILE_OF_OTHERS].clear();
+    changedBefore[PROFILE_OF_OTHERS].clear();
+    changed[AREA_PASS].set(0, rectangle.length);
+  }
+
+  // whether the profile of another rectangle in some dimension uses r
+  private static boolean hasCompulsoryPart(Rectangle r) {
+    return r.lst(X) < r.ect(X) && r.getLength(Y).min() > 0
+        || r.lst(Y) < r.ect(Y) && r.getLength(X).min() > 0;
+  }
+
+  /**
+   * The constraint reads only the bounds of its variables.
+   *
+   * @return the BOUND event.
+   */
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
   }
 
   /**
@@ -397,6 +530,16 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     doAreaCheck = rSpace < minArea;
   }
 
+  // the flag energyCheck(r, rects) sets, for a rectangle that it would not fail
+  private boolean areaExceedsSpace(Rectangle r, BitSet rects) {
+    long rSpace = (long) (r.lct(X) - r.est(X)) * (r.lct(Y) - r.est(Y));
+    long minArea = (long) r.getLength(X).min() * r.getLength(Y).min();
+    for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
+      minArea += (long) rectangle[j].getLength(X).min() * rectangle[j].getLength(Y).min();
+    }
+    return rSpace < minArea;
+  }
+
   // registers the constraint in the constraint store
   @Override
   @SuppressWarnings("unchecked")
@@ -405,11 +548,28 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     super.impose(store);
 
     overlapping = new TimeStamp[rectangle.length];
+    rectanglesOf = new HashMap<>();
+    for (int pass = 0; pass < changed.length; pass++) {
+      changed[pass] = new BitSet(rectangle.length);
+      changed[pass].set(0, rectangle.length);
+      changedBefore[pass] = new BitSet(rectangle.length);
+    }
     for (int i = 0; i < rectangle.length; i++) {
       BitSet bs = new BitSet(rectangle.length);
       bs.flip(0, rectangle.length); // set all bits to true == all rectangles overlap
       bs.set(i, false); // rectangle does not overlaps with itself
       overlapping[i] = new TimeStamp<>(store, bs);
+      for (IntVar v :
+          List.of(
+              rectangle[i].origin[0],
+              rectangle[i].origin[1],
+              rectangle[i].length[0],
+              rectangle[i].length[1])) {
+        int[] rs = rectanglesOf.get(v);
+        rs = rs == null ? new int[1] : Arrays.copyOf(rs, rs.length + 1);
+        rs[rs.length - 1] = i;
+        rectanglesOf.put(v, rs);
+      }
 
       // impose constraint on rectangle length >= 0
       rectangle[i].getLength(0).domain.inMin(store.level, rectangle[i].getLength(0), 0);

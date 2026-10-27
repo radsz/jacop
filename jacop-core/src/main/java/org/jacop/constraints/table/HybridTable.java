@@ -214,6 +214,9 @@ public class HybridTable extends Constraint
   private boolean pruning;
   private final InitOnce init = new InitOnce();
 
+  /** The explanations for lazy clause generation, made on first use. */
+  private TableExplanation explanation;
+
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
   private IntDomain[] binarySupport;
@@ -1893,11 +1896,52 @@ public class HybridTable extends Constraint
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return TableExplanation.explain(trail, entry, x, cells, tupleCount, out);
+    return explanation().explain(trail, entry, out);
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return TableExplanation.explainFailure(trail, x, cells, tupleCount, out);
+    return explanation().explainFailure(trail, out);
+  }
+
+  private TableExplanation explanation() {
+    if (explanation == null) {
+      explanation = new TableExplanation(this);
+    }
+    return explanation;
+  }
+
+  /**
+   * It adds to a set the tuples whose restriction on column i accepts a value class meeting [lo,
+   * hi]: every tuple that may allow a value of the range.
+   *
+   * @param i the column
+   * @param lo the smallest value of the range
+   * @param hi the largest value of the range
+   * @param set the set of tuples, as a bit-set of the tuple indexes
+   * @param classLimit the most classes united
+   * @return false when the range meets more classes than classLimit, and nothing was added
+   */
+  boolean addCandidates(int i, int lo, int hi, long[] set, int classLimit) {
+    int first = classOf(i, lo);
+    int last = classOf(i, hi);
+    if (last - first >= classLimit) {
+      return false;
+    }
+    for (int c = first; c <= last; c++) {
+      long[] s = supports[i][c];
+      if (s != null) {
+        for (int w = 0; w < words; w++) {
+          set[w] |= s[w];
+        }
+      } else if (sparseStart[i] != null) {
+        int[] ws = sparseWord[i];
+        long[] bs = sparseBits[i];
+        for (int k = sparseStart[i][c]; k < sparseStart[i][c + 1]; k++) {
+          set[ws[k]] |= bs[k];
+        }
+      }
+    }
+    return true;
   }
 }

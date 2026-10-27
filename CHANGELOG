@@ -89,7 +89,75 @@ Version 5.0 (unreleased)
     the variables taking no counted value add up to the list length, so
     search trees can be smaller.
 
-11. New constraints InterDistance(x, p), |x[i] - x[j]| >= p for all pairs,
+11. WeightedSpanningTree (MiniZinc weighted_spanning_tree, d_weighted_
+    spanning_tree, dwst) has a cost bound for directed graphs too: the new
+    ArborescenceBound computes Edmonds' minimum arborescence containing the
+    selected edges, with a virtual root for an unknown root, and removes
+    edges and root values whose reduced cost (Houndji, Schaus, Hounkonnou
+    and Wolsey, CPAIOR 2017) exceeds the cost's upper bound. On degree-
+    constrained minimum arborescences with 12 to 60 nodes (60 s) JaCoP
+    proved 2 of 16 optima before and proves all 16 now, each within 0.7 s
+    of search and 2,600 nodes; Gecode 6.4.0 proves 1 and OR-Tools CP-SAT
+    9.15 proves 9.
+
+12. New constraint IncreasingNValue(x, count): x is non-decreasing and
+    takes count distinct values, domain consistent in time linear in the
+    total size of the domains of x (Beldiceanu, Hermenier, Lorca and
+    Petit, CPAIOR 2010). The FlatZinc front end posts it instead of Values
+    for a jacop_nvalue (MiniZinc nvalue) whose variables are ordered, by
+    the same order detection as IncreasingSum (now in IncreasingDetector);
+    -Dorg.jacop.fz.increasingNValue=false turns this off. On generated
+    slot-assignment models (symmetric tasks, minimise the slots used),
+    four of fifteen instances that took 12 s, 40 s or more than 60 s are
+    solved in under a second.
+
+13. New balancing constraints Deviation(x, s, d) and Spread(x, s, d):
+    sum(x) = s and d = sum(i)(abs(n * x[i] - s)), or the sum of
+    (n * x[i] - s)^2, with general forms over abs(a * x[i] - b) and
+    (a * x[i] - b)^2. They are bounds consistent on x for d >= cost and
+    raise d.min to the least cost of an assignment with sum s (Schaus,
+    Deville, Dupont and Regin, CP 2007; Schaus and Regin, EJCO 2014).
+    The FlatZinc front end posts them as redundant constraints on a sum of
+    int_abs or squared terms over variables whose sum an int_lin_eq fixes,
+    as sum(p)(abs(n * load[p] - total)) with sum(load) = total compiles;
+    -Dorg.jacop.fz.balance=false turns this off. JaCoP's MiniZinc library
+    adds the predicates deviation and spread. On 28 balanced academic
+    curriculum instances with a deviation or spread objective JaCoP proves
+    52 of the 54 optima in under 3 s each; without the new constraints it
+    proves none in 20 s.
+
+14. New constraint StockingCost(x, d, h, H, c) for lot sizing (Houndji,
+    Schaus, Wolsey and Deville, CP 2014 and Constraints 2019): order i is
+    produced in period x[i] <= d[i], at most c orders per period, and
+    sum h[i] * (d[i] - x[i]) <= H. It bounds H by the greedy optimum of
+    the relaxation without the lower bounds of x and raises the minima of
+    x that the maximum of H allows (bounds consistent on the relaxation
+    for equal costs). MiniZinc predicate stocking_cost in the JaCoP
+    library; the FlatZinc front end also posts it as a redundant
+    constraint on an alldifferent (or gcc) with a cost sum over the same
+    variables; -Dorg.jacop.fz.stockingCost=false turns this off. On the
+    lot sizing part of the 46 CSPLib prob058 instances it proves 39 optima
+    in 60 s instead of 19.
+
+15. New constraint UnaryTransition(s, d, family, transitions[, optional]):
+    a unary resource with sequence-dependent transition (setup) times
+    between families of tasks, also with optional tasks (Dejemeppe, Van
+    Cauwelaert and Schaus, CP 2015; Van Cauwelaert, Dejemeppe and Schaus,
+    J. Scheduling 2020). Overload, detectable precedences, not-last and
+    edge finding run on Theta-Lambda trees whose completion times count a
+    lower bound of the transitions among the families of their tasks, plus
+    a pairwise rule. MiniZinc predicate disjunctive_setup in the JaCoP
+    library (also over var opt int starts); the FlatZinc front end posts it
+    instead of CumulativeUnary on a disjunctive clique whose disjunctions
+    carry transition times. It explains its own propagation for lazy
+    clause generation (--lcg): bounds, absent optional tasks and failures
+    by pairs, cuts of tasks that must precede, not-first/not-last and
+    edge-finding sets, found again from the bounds before the atom. On 38
+    job shops and single machines with setups (60 s, --lcg) they raise
+    the optima proved from 0-5 to 8-12, depending on the model and the
+    search; before, the generic reason explained 83 to 86 % of the reasons.
+
+16. New constraints InterDistance(x, p), |x[i] - x[j]| >= p for all pairs,
     bounds consistent in O(n^2) (Quimper, Lopez-Ortiz and Pesant, AAAI
     2006), and MultiInterDistance(x, m, p), at most m values in every
     window of p, bounds consistent (Ouellet and Quimper, IJCAI 2011). The

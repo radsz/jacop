@@ -37,6 +37,9 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * CountValuesBounds constraint implements the counting over numbers of occurrences of a given
@@ -46,7 +49,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountValuesBounds extends AbstractCountValues implements Copyable<CountValuesBounds> {
+public class CountValuesBounds extends AbstractCountValues
+    implements Copyable<CountValuesBounds>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -245,6 +249,22 @@ public class CountValuesBounds extends AbstractCountValues implements Copyable<C
 
       return min + "(" + lb + ").." + max + "(" + ub + ")";
     }
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == CountValuesBounds.class && explanation(trail, entry).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == CountValuesBounds.class
+        && explanation(trail, trail.size()).explainFailure(out);
+  }
+
+  private CountValuesExplanation explanation(AtomicTrail trail, int position) {
+    return new CountValuesExplanation(
+        trail, list, values, valuesDomain, sortedValues, indexOfSorted, lb, ub, position);
   }
 
   @Override

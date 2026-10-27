@@ -67,6 +67,7 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -81,6 +82,7 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
@@ -100,6 +102,8 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -248,6 +252,13 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "IncreasingSum",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
+        Arguments.of("Deviation", balance(false)),
+        Arguments.of("Spread", balance(true)),
+        Arguments.of("StockingCost", stockingCost(false)),
+        Arguments.of("StockingCostItemDependent", stockingCost(true)),
+        Arguments.of(
+            "IncreasingNValue",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
         Arguments.of(
             "ValuePrecede",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuePrecede),
@@ -328,6 +339,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DPath", graph("Path", true)),
         Arguments.of("WeightedSpanningTree", weightedGraph("WeightedSpanningTree", false)),
         Arguments.of("DWeightedSpanningTree", weightedGraph("WeightedSpanningTree", true)),
+        Arguments.of(
+            "DWeightedSpanningTreeDense",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::denseArborescence),
         Arguments.of("Steiner", weightedGraph("Steiner", false)),
         Arguments.of("DSteiner", weightedGraph("Steiner", true)),
         Arguments.of("BoundedPath", weightedGraph("BoundedPath", false)),
@@ -461,6 +475,194 @@ class GlobalConstraintBruteForceTest {
           consistent = false;
         }
       }
+    }
+  }
+
+  /**
+   * The same comparison with two positions of the instance given the same variable, whose domain is
+   * the intersection of theirs. The expected solutions are the brute-force solutions that agree on
+   * the two positions. Constraints must accept a variable that occurs more than once in their
+   * arguments, or reject it at impose time with an {@link IllegalArgumentException}.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceWithAliasedVariables(
+      String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 4);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      if (n < 2) {
+        continue;
+      }
+      int i = random.nextInt(n);
+      int k = random.nextInt(n - 1);
+      int j = k >= i ? k + 1 : k;
+      int[] shared =
+          IntStream.of(instance.domains()[i])
+              .filter(v -> IntStream.of(instance.domains()[j]).anyMatch(w -> w == v))
+              .toArray();
+      if (shared.length == 0) {
+        continue;
+      }
+      int[][] domains = instance.domains().clone();
+      domains[i] = shared;
+      domains[j] = shared;
+      int a = i;
+      int b = j;
+      Instance aliased =
+          new Instance(
+              domains,
+              (store, x) -> {
+                IntVar[] y = x.clone();
+                y[b] = y[a];
+                instance.impose().accept(store, y);
+              },
+              t -> t[a] == t[b] && instance.semantics().test(t),
+              instance.description() + " x" + b + " is x" + a);
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(aliased, new int[n], 0, expected);
+
+      Set<List<Integer>> found;
+      try {
+        found = solveAllAliased(aliased, trial % 3, random.nextInt(), a, b);
+      } catch (IllegalArgumentException e) {
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(
+            name
+                + " trial "
+                + trial
+                + " domains="
+                + Arrays.deepToString(domains)
+                + " "
+                + aliased.description(),
+            e);
+      }
+      assertThat(found)
+          .as(
+              "%s trial %d domains=%s %s",
+              name, trial, Arrays.deepToString(domains), aliased.description())
+          .isEqualTo(expected);
+    }
+  }
+
+  /** Like {@link #solveAll}, but variable {@code b} is the variable {@code a}. */
+  private static Set<List<Integer>> solveAllAliased(
+      Instance instance, int valueOrder, int seed, int a, int b) {
+    Store store = new Store();
+    IntVar[] x = variables(store, instance);
+    x[b] = x[a];
+    instance.impose().accept(store, x);
+    Set<List<Integer>> found = new HashSet<>();
+    if (!store.consistency()) {
+      return found;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            found.add(Arrays.stream(x).map(IntVar::value).toList());
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    Indomain<IntVar> indomain =
+        switch (valueOrder) {
+          case 0 -> new IndomainMin<>();
+          case 1 -> new IndomainMax<>();
+          default -> new IndomainRandom<>(seed);
+        };
+    search.labeling(store, new SimpleSelect<>(x, null, indomain));
+    return found;
+  }
+
+  /**
+   * A single primitive global under {@link Not} must have exactly the assignments that violate it,
+   * and under {@link Reified} with a free 0/1 variable exactly the assignments whose control value
+   * matches; this runs notConsistency, notSatisfied and the reified paths of every case that
+   * imposes one PrimitiveConstraint.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void negationAndReificationMatchBruteForce(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 5);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      if (Arrays.stream(instance.domains()).mapToDouble(d -> d.length).reduce(1, (p, q) -> p * q)
+          > 50_000) {
+        continue;
+      }
+      boolean reify = trial % 2 == 0;
+      int[][] domains = Arrays.copyOf(instance.domains(), reify ? n + 1 : n);
+      if (reify) {
+        domains[n] = new int[] {0, 1};
+      }
+      boolean[] primitive = {true};
+      Instance wrapped =
+          new Instance(
+              domains,
+              (store, x) -> {
+                List<Constraint> imposed = new ArrayList<>();
+                Store recorder =
+                    new Store() {
+                      @Override
+                      public void impose(Constraint c) {
+                        imposed.add(c);
+                      }
+
+                      @Override
+                      public void impose(Constraint c, int queueIndex) {
+                        imposed.add(c);
+                      }
+                    };
+                IntVar[] y = Arrays.copyOf(x, n);
+                // the variables were created in store; the recorder only collects the constraints
+                instance.impose().accept(recorder, y);
+                if (imposed.size() != 1
+                    || recorder.size() > 0
+                    || !(imposed.get(0) instanceof PrimitiveConstraint c)) {
+                  primitive[0] = false;
+                  return;
+                }
+                store.impose(reify ? new Reified(c, x[n]) : new Not(c));
+              },
+              t ->
+                  reify
+                      ? (t[n] == 1) == instance.semantics().test(Arrays.copyOf(t, n))
+                      : !instance.semantics().test(t),
+              instance.description() + (reify ? " reified" : " negated"));
+      Set<List<Integer>> found;
+      try {
+        found = solveAll(wrapped, trial % 3, random.nextInt());
+      } catch (IllegalArgumentException | UnsupportedOperationException e) {
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(
+            name
+                + " trial "
+                + trial
+                + " domains="
+                + Arrays.deepToString(domains)
+                + " "
+                + wrapped.description(),
+            e);
+      }
+      if (!primitive[0]) {
+        continue;
+      }
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(wrapped, new int[domains.length], 0, expected);
+      assertThat(found)
+          .as(
+              "%s trial %d domains=%s %s",
+              name, trial, Arrays.deepToString(domains), wrapped.description())
+          .isEqualTo(expected);
     }
   }
 
@@ -1303,6 +1505,66 @@ class GlobalConstraintBruteForceTest {
     };
   }
 
+  /**
+   * A directed weighted spanning tree on a denser multigraph than {@link #weightedGraph}: 2 to 5
+   * nodes, 3 to 8 edges, weights in -1..6 and a narrow cost window, so that the minimum
+   * arborescence bound and its reduced-cost filtering decide often. Variables: es, the root, then
+   * the cost.
+   */
+  private static Instance denseArborescence(Random random) {
+    int n = 2 + random.nextInt(4);
+    int m = 3 + random.nextInt(6);
+    int base = random.nextInt(2);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] w = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(n);
+      w[e] = random.nextInt(8) - 1;
+    }
+    int[][] domains = new int[m + 2][];
+    for (int e = 0; e < m; e++) {
+      int r = random.nextInt(8);
+      domains[e] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    domains[m] = domain(random, base, base + n - 1);
+    int lo = random.nextInt(4 * n) - 2;
+    domains[m + 1] = domain(random, lo, lo + 2 + random.nextInt(10));
+    int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+    int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.imposeDecomposition(
+                new WeightedSpanningTree(
+                    n,
+                    fromNumber,
+                    toNumber,
+                    w,
+                    x[m],
+                    Arrays.copyOfRange(x, 0, m),
+                    x[m + 1],
+                    base,
+                    true)),
+        x -> {
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += x[e] * w[e];
+          }
+          int[] ns = new int[n];
+          Arrays.fill(ns, 1);
+          return sum == x[m + 1]
+              && GraphSemantics.dtree(from, to, ns, Arrays.copyOfRange(x, 0, m), x[m] - base);
+        },
+        "from="
+            + Arrays.toString(fromNumber)
+            + " to="
+            + Arrays.toString(toNumber)
+            + " w="
+            + Arrays.toString(w));
+  }
+
   private static Instance stretch(Random random) {
     int n = 2 + random.nextInt(4);
     int[] values = {1, 2};
@@ -1468,6 +1730,134 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
+  // last
+  private static Function<Random, Instance> stockingCost(boolean itemDependent) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int capacity = 1 + random.nextInt(2);
+      int[] due = randomInts(random, n, 1, 6);
+      // the unit cost constructor is checked against costs of 1
+      int[] h = itemDependent ? randomInts(random, n, 0, 3) : randomInts(random, n, 1, 1);
+      int[][] domains =
+          append(domains(random, n, 0, 6), domain(random, 0, 3 * n * (itemDependent ? 3 : 1)));
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            store.impose(
+                itemDependent
+                    ? new StockingCost(x, due, h, v[n], capacity)
+                    : new StockingCost(x, due, v[n], capacity));
+          },
+          t -> {
+            int total = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[i] > due[i]) {
+                return false;
+              }
+              int same = 0;
+              for (int j = 0; j < n; j++) {
+                same += t[j] == t[i] ? 1 : 0;
+              }
+              if (same > capacity) {
+                return false;
+              }
+              total += h[i] * (due[i] - t[i]);
+            }
+            return total <= t[n];
+          },
+          "due=" + Arrays.toString(due) + " h=" + Arrays.toString(h) + " c=" + capacity);
+    };
+  }
+
+  /**
+   * Deviation (sum of |a * x[i] - b|) or Spread (sum of (a * x[i] - b)^2) with sum of x = s; half
+   * of the instances use a = n and b = s, the others random a and b.
+   */
+  private static Function<Random, Instance> balance(boolean squares) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      boolean repeated = n > 1 && random.nextInt(6) == 0;
+      int[][] domains = new int[n + 1][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = domain(random, -1, 4);
+      }
+      int s = -1 + random.nextInt(4 * n + 2);
+      boolean mean = random.nextBoolean();
+      int a = mean ? n : 1 + random.nextInt(3);
+      int b = mean ? s : -3 + random.nextInt(12);
+      int start = random.nextInt(squares ? 40 : 12);
+      domains[n] = domain(random, start, start + (squares ? 30 : 20));
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            if (squares) {
+              store.impose(mean ? new Spread(x, s, v[n]) : new Spread(x, a, b, s, v[n]));
+            } else {
+              store.impose(mean ? new Deviation(x, s, v[n]) : new Deviation(x, a, b, s, v[n]));
+            }
+          },
+          t -> {
+            int[] x = Arrays.copyOf(t, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            long total = 0;
+            long cost = 0;
+            for (int i = 0; i < n; i++) {
+              total += x[i];
+              long e = (long) a * x[i] - b;
+              cost += squares ? e * e : Math.abs(e);
+            }
+            return total == s && cost == t[n];
+          },
+          "s=" + s + " a=" + a + " b=" + b + " repeated=" + repeated);
+    };
+  }
+
+  // x[0..n-1] non-decreasing with as many distinct values as the last variable, which may also
+  // occur in x at position repeated
+  private static Instance increasingNValue(Random random) {
+    int n = 1 + random.nextInt(5);
+    int repeated = random.nextInt(5) == 0 ? random.nextInt(n) : -1;
+    int[][] domains = new int[n + 1][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = domain(random, -1, 4);
+    }
+    domains[n] = domain(random, -1, n + 1);
+    return new Instance(
+        domains,
+        (store, v) -> {
+          IntVar[] x = Arrays.copyOf(v, n);
+          if (repeated >= 0) {
+            x[repeated] = v[n];
+          }
+          store.impose(new IncreasingNValue(x, v[n]));
+        },
+        t -> {
+          int[] x = Arrays.copyOf(t, n);
+          if (repeated >= 0) {
+            x[repeated] = t[n];
+          }
+          int distinct = 1;
+          for (int i = 1; i < n; i++) {
+            if (x[i] < x[i - 1]) {
+              return false;
+            }
+            if (x[i] > x[i - 1]) {
+              distinct++;
+            }
+          }
+          return distinct == t[n];
+        },
+        "repeated=" + repeated);
   }
 
   private static Instance valuePrecede(Random random) {

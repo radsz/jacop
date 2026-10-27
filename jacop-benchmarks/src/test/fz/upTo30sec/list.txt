@@ -1,4 +1,5 @@
 1d_rubiks_cube2/1d_rubiks_cube2
+2DBinPacking/Class1_20_2
 2DBinPacking/Class1_20_5
 2DBinPacking/Class1_20_9
 QCP/qcp-15-120-2_ext

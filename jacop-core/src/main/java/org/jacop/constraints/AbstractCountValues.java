@@ -65,13 +65,13 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
   final int n;
 
   /** The counted values in increasing order. */
-  private final int[] sortedValues;
+  final int[] sortedValues;
 
   /** True when the counted values form one interval, so a value's sorted position is computed. */
   private final boolean contiguous;
 
   /** The position in values of each value of sortedValues. */
-  private final int[] indexOfSorted;
+  final int[] indexOfSorted;
 
   /** The number of variables equal to each value, reused by consistency. */
   private final int[] numberEq;

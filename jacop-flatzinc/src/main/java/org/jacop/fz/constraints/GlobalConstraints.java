@@ -43,6 +43,7 @@ import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
@@ -61,6 +62,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
@@ -71,6 +73,7 @@ import org.jacop.constraints.Increasing;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -83,11 +86,15 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.WeightedSubcircuits;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
@@ -101,6 +108,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.geost.Dbox;
@@ -534,6 +542,42 @@ class GlobalConstraints implements ParserTreeConstants {
     addImpliedAlldistinct(v);
   }
 
+  // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
+  // sum(i)(d[i, x[i]]), with d given row by row
+  void gen_jacop_subcircuit_cost(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(1)), v.length);
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    checkForDuplicateVariables(v);
+    support.pose(new Subcircuit(v));
+    addImpliedAlldistinct(v);
+    support.pose(new SubcircuitCost(v, costs, cost));
+  }
+
+  // jacop_weighted_subcircuits(next, tour, d, tourCost, cost, offset)
+  void gen_jacop_weighted_subcircuits(SimpleNode node) {
+    IntVar[] next = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] tour = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(2)), next.length);
+    IntVar[] tourCost = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
+    int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
+    checkForDuplicateVariables(next);
+    support.pose(new Alldistinct(next));
+    support.pose(new WeightedSubcircuits(next, tour, costs, tourCost, cost, offset));
+  }
+
+  private static int[][] matrix(int[] values, int n) {
+    if (values == null || values.length != n * n) {
+      throw new IllegalArgumentException("the cost matrix needs " + n + " x " + n + " values");
+    }
+    int[][] m = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      System.arraycopy(values, i * n, m[i], 0, n);
+    }
+    return m;
+  }
+
   /**
    * Adds the implied Alldistinct (GAC all-different) on the successors of a circuit or subcircuit
    * under ::domain, and by default when there are at least CIRCUIT_ALLDISTINCT_MIN_SIZE successors.
@@ -629,6 +673,18 @@ class GlobalConstraints implements ParserTreeConstants {
     checkForDuplicateVariables(v);
 
     support.parameterListForAlldistincts.add(v);
+  }
+
+  // the capacity and the cost sum are posted by the predicate; this only adds the cost reasoning
+  void gen_jacop_stocking_cost(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] due = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] h = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int capacity = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
+    if (x.length > 0) {
+      support.pose(new StockingCost(x, due, h, cost, capacity));
+    }
   }
 
   void gen_jacop_alldifferent_except_0(SimpleNode node) {
@@ -1822,6 +1878,13 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
+    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))) {
+      // Knapsack rejects a quantity that is also the capacity or the profit
+      support.pose(new LinearInt(x, weights, "==", W));
+      support.pose(new LinearInt(x, profits, "==", P));
+      return;
+    }
+
     support.pose(
         Knapsack.builder()
             .profits(profits)
@@ -1846,6 +1909,17 @@ class GlobalConstraints implements ParserTreeConstants {
     DecomposedConstraint<Constraint> c =
         Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
     support.poseDc(c);
+  }
+
+  void gen_jacop_balance(SimpleNode node, boolean squares) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int a = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int b = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int s = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    IntVar d = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
+
+    // repeated variables and constants are treated as independent, which stays correct
+    support.pose(squares ? new Spread(x, a, b, s, d) : new Deviation(x, a, b, s, d));
   }
 
   void gen_jacop_stretch(SimpleNode node) {
@@ -2432,6 +2506,26 @@ class GlobalConstraints implements ParserTreeConstants {
     c.doOptionalOverload(
         Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
+  }
+
+  void gen_jacop_disjunctive_setup(SimpleNode node) {
+    IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int[] family = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    int[] flat = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+
+    int f = (int) Math.round(Math.sqrt(flat.length));
+    if (f * f != flat.length) {
+      throw new IllegalArgumentException(
+          "jacop_disjunctive_setup: the transition matrix has " + flat.length + " entries");
+    }
+    int[][] transitions = new int[f][f];
+    for (int a = 0; a < f; a++) {
+      System.arraycopy(flat, a * f, transitions[a], 0, f);
+    }
+    IntVar[] opt =
+        node.jjtGetNumChildren() > 4 ? support.getVarArray((SimpleNode) node.jjtGetChild(4)) : null;
+    support.pose(new UnaryTransition(str, dur, family, transitions, opt));
   }
 
   void gen_jacop_disjunctive_strict_optional(SimpleNode node) {

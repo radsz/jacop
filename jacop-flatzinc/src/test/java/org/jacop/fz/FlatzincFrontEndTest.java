@@ -86,6 +86,46 @@ class FlatzincFrontEndTest {
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
   }
 
+  /**
+   * Four variables in 1..3 that must differ pairwise, after eight free variables, all left out of
+   * the search annotation. int_ne finds no conflict until three of them are fixed.
+   */
+  private static String pigeonsAfterFreeVariables(int lastMax) {
+    StringBuilder fzn = new StringBuilder("var 1..2: s:: output_var;\n");
+    for (int i = 1; i <= 8; i++) {
+      fzn.append("var 1..2: a").append(i).append(":: output_var;\n");
+    }
+    for (int i = 1; i <= 4; i++) {
+      fzn.append("var 1..").append(i == 4 ? lastMax : 3).append(": z").append(i);
+      fzn.append(":: output_var;\n");
+    }
+    for (int i = 1; i <= 4; i++) {
+      for (int j = i + 1; j <= 4; j++) {
+        fzn.append("constraint int_ne(z").append(i).append(",z").append(j).append(");\n");
+      }
+    }
+    return fzn.append("solve :: int_search([s],input_order,indomain_min,complete) satisfy;\n")
+        .toString();
+  }
+
+  @Test
+  void completionSearchBacktracksToTheLastConflict() throws IOException {
+    // The variables the annotation leaves out are labelled by a search JaCoP adds. Without last
+    // conflict it tried every assignment of a1..a8 before finding that z1..z4 never fit (3072
+    // failures); with it z is branched on first again after each failure (kidney-exchange,
+    // MiniZinc Challenge 2023: 4.7 million nodes against Choco's 22 thousand).
+    String out = run(pigeonsAfterFreeVariables(3), "-s")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    int failures = Integer.parseInt(out.replaceAll("(?s).*%%%mzn-stat: failures=(\\d+).*", "$1"));
+    assertTrue(failures < 200, out);
+  }
+
+  @Test
+  void completionSearchWithLastConflictFindsAllSolutions() throws IOException {
+    // z4 = 4 and z1..z3 a permutation of 1..3: 6 solutions for each of the 2^9 values of s and a.
+    assertEquals(512 * 6, solveAll(pigeonsAfterFreeVariables(4)).size());
+  }
+
   @Test
   void floatSettingsOfAnEarlierRunDoNotCarryOver() throws IOException {
     // FloatDomain keeps precision and print format in static fields. The FlatZinc tests run many
@@ -147,6 +187,23 @@ class FlatzincFrontEndTest {
     String out = run(fzn, "-s")[0];
     assertTrue(out.contains("b = false;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
+  void searchAnnotationsAcceptConstants() throws IOException {
+    // MiniZinc's -O3 and above fix variables before writing the FlatZinc, so a search annotation
+    // can list Boolean constants; they were rejected with "Wrong parameter"
+    String fzn =
+        """
+        var bool: b:: output_var;
+        var 0..1: x:: output_var;
+        constraint bool2int(b, x);
+        solve :: seq_search([bool_search([true, b, false], input_order, indomain_min, complete),\
+         int_search([3, x], input_order, indomain_min, complete)]) satisfy;
+        """;
+
+    String[] out = run(fzn);
+    assertTrue(out[0].contains("b = false;") && out[0].contains("x = 0;"), out[0] + out[1]);
   }
 
   @Test
@@ -1331,6 +1388,41 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("lcgExplanations"), out);
     String last = out.substring(out.lastIndexOf("x = "));
     assertTrue(last.startsWith("x = 5;") && last.contains("b = true;"), last);
+  }
+
+  @Test
+  void lcgStatisticsAfterTheShutdownHookStopsASearchBetweenRuns() throws Exception {
+    // MiniZinc stops a run at its time limit with SIGTERM, and the shutdown hook prints the
+    // statistics while LcgSolver may be between two runs of its search, holding no solution;
+    // LcgSolver.value then threw IllegalStateException: no solution. The clauses on p need more
+    // than 1024 decisions, so a run started past its deadline stops before it finds a solution.
+    StringBuilder model = new StringBuilder("array [1..4000] of var bool: p;\n");
+    model.append("var 0..1: i;\nvar 3..4: o :: output_var;\n");
+    for (int i = 1; i < 4000; i++) {
+      model.append("constraint bool_clause([p[%d], p[%d]], []);\n".formatted(i, i + 1));
+    }
+    model.append(
+        "constraint bool2int(p[1], i);\nconstraint int_plus(i, 3, o);\nsolve minimize o;\n");
+    Path fzn = tmp.resolve("hook.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(new Options(new String[] {"--lcg", "-s", fzn.toString()}));
+      parser.model();
+      // a new run drops the solution, as each run of the search does; past its deadline it stops
+      // at once without finding another
+      parser.solver.lcg.sat().setDeadline(System.nanoTime());
+      parser.solver.lcg.solve();
+      parser.solver.printStatisticsIterrupt();
+    } finally {
+      System.setOut(originalOut);
+    }
+    String text = out.toString(StandardCharsets.UTF_8);
+    assertTrue(text.contains("%%%mzn-stat: objective=3"), text);
   }
 
   @Test
