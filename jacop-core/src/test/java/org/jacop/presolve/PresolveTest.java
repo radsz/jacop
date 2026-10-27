@@ -66,6 +66,7 @@ import org.jacop.constraints.XltC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -206,7 +207,8 @@ class PresolveTest {
     Derivation derivation = Presolver.of(store).presolve();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
-    assertThat(derivation.statistics().orderLiterals()).isEqualTo(4);
+    // the four reifications of x are left out of the child, which gets one channel instead
+    assertThat(derivation.statistics().dropped()).isEqualTo(4);
     assertThat(derivation.statistics().childConstraints()).isEqualTo(2);
     Store child = derivation.child();
     IntVar cx = derivation.get(x);
@@ -220,8 +222,11 @@ class PresolveTest {
         .containsExactly(0, 1, 1, 0);
     assertThat(derivation.get(y).max()).isEqualTo(9);
 
-    Derivation off = Derivation.of(rebuilt(b.length)).orderLiterals(false).derive();
-    assertThat(off.statistics().orderLiterals()).isZero();
+    // a derivation without the standard rules keeps the reifications
+    assertThat(Derivation.of(rebuilt(b.length)).derive().statistics().childConstraints())
+        .isEqualTo(b.length);
+    assertThat(Presolver.of(rebuilt(b.length)).presolve().statistics().childConstraints())
+        .isEqualTo(1);
   }
 
   private static Store rebuilt(int booleans) {
@@ -236,7 +241,8 @@ class PresolveTest {
   @Test
   void randomOrderReificationsHaveTheSameSolutionsThroughPresolve() {
     Random random = new Random(20261027);
-    int merged = 0;
+    // reifications left out of the child, merged into a channel or entailed
+    int dropped = 0;
     for (int trial = 0; trial < TRIALS; trial++) {
       // the reifications are on the first one or two variables; random constraints need three
       int n = 1 + random.nextInt(2);
@@ -276,9 +282,9 @@ class PresolveTest {
       assertThat(result.solutions())
           .as("trial %d, checking %b", trial, checking)
           .isEqualTo(expected);
-      merged += result.orderLiterals();
+      dropped += result.dropped();
     }
-    assertThat(merged).isGreaterThan(TRIALS);
+    assertThat(dropped).isGreaterThan(TRIALS);
   }
 
   // a derived variable keeps the static degree of its parent, which degree-based selections read
@@ -337,6 +343,134 @@ class PresolveTest {
     assertThat(derivation.child()).isSameAs(store);
     assertThat(derivation.get(x)).isSameAs(x);
     assertThat(store.state()).isEqualTo(StoreState.ACTIVE);
+  }
+
+  /** A rule that, once x is fixed by an earlier round, imposes y = x. */
+  private static Rule equalOnceFixed(IntVar x, IntVar y) {
+    return context -> {
+      if (x.singleton() && !y.singleton()) {
+        context.impose(new XeqC(y, x.value()));
+      }
+    };
+  }
+
+  @Test
+  void rulesRunAgainOnDomainsNarrowedByTheRoundBefore() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar z = new IntVar(store, "z", 0, 9);
+    IntVar w = new IntVar(store, "w", 0, 9);
+    store.impose(new XplusCeqZ(y, 1, z));
+    store.impose(new XltY(x, w));
+    // the first rule only applies once the second has fixed x and propagation has run
+    Derivation derivation =
+        Presolver.of(store)
+            .rule(equalOnceFixed(x, y))
+            .rule(context -> x.domain.in(context.level(), x, 4, 4))
+            .presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    // round 1 fixes x, round 2 fixes y and so z, round 3 changes nothing
+    assertThat(derivation.rounds()).isEqualTo(3);
+    assertThat(derivation.entry(y)).isInstanceOf(Entry.Fixed.class);
+    assertThat(derivation.entry(z)).isInstanceOf(Entry.Fixed.class);
+    assertThat(z.value()).isEqualTo(5);
+    assertThat(derivation.get(w).min()).isEqualTo(5);
+  }
+
+  @Test
+  void oneRoundDoesNotSeeTheDomainsItNarrows() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    IntVar z = new IntVar(store, "z", 0, 9);
+    store.impose(new XplusCeqZ(y, 1, z));
+    Derivation derivation =
+        Presolver.of(store)
+            .rounds(1)
+            .rule(equalOnceFixed(x, y))
+            .rule(context -> x.domain.in(context.level(), x, 4, 4))
+            .presolve();
+
+    assertThat(derivation.rounds()).isEqualTo(1);
+    assertThat(derivation.entry(y)).isInstanceOf(Entry.Kept.class);
+    assertThat(derivation.get(y).getSize()).isEqualTo(9);
+  }
+
+  @Test
+  void aRemovedConstraintIsNotCopiedAndTheSolutionsStay() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 4), new IntVar(store, "x1", 0, 4), new IntVar(store, "x2", 0, 4)
+    };
+    store.impose(new XltY(x[0], x[1]));
+    store.impose(new XltY(x[1], x[2]));
+    Constraint implied = new XltY(x[0], x[2]);
+    store.impose(implied);
+    Derivation derivation =
+        Presolver.of(store)
+            .checking(true)
+            .rule(
+                context -> {
+                  if (context.constraints().contains(implied)) {
+                    context.remove(implied);
+                  }
+                })
+            .presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    // round 2 finds the constraint removed and changes nothing
+    assertThat(derivation.rounds()).isEqualTo(2);
+    assertThat(derivation.statistics().childConstraints()).isEqualTo(2);
+    int[] solutions = {0};
+    search(
+        derivation.child(),
+        derivation.counterparts(x),
+        0,
+        () -> {
+          if (derivation.returnSolution()) {
+            solutions[0]++;
+          }
+        });
+    // three increasing values out of five
+    assertThat(solutions[0]).isEqualTo(10);
+  }
+
+  @Test
+  void aRuleThatAlwaysChangesSomethingStopsAtTheBudget() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    store.impose(new XltY(x, y));
+    Derivation derivation =
+        Presolver.of(store).rounds(4).rule(context -> context.impose(new XltY(x, y))).presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    assertThat(derivation.rounds()).isEqualTo(4);
+    assertThat(derivation.statistics().childConstraints()).isEqualTo(5);
+  }
+
+  @Test
+  void aRuleThatEmptiesADomainMakesTheParentInfeasible() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    store.impose(new XltY(x, y));
+    Derivation derivation =
+        Presolver.of(store).rule(context -> x.domain.in(context.level(), x, 9, 9)).presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.INFEASIBLE);
+  }
+
+  @Test
+  void withoutRulesNoRoundRuns() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    store.impose(new XltY(x, y));
+
+    assertThat(Derivation.of(store).derive().rounds()).isZero();
   }
 
   @Test
@@ -599,8 +733,7 @@ class PresolveTest {
     assertThat(store.model()).isEmpty();
   }
 
-  private record Result(
-      Derivation.Outcome outcome, Set<List<Integer>> solutions, int orderLiterals) {
+  private record Result(Derivation.Outcome outcome, Set<List<Integer>> solutions, int dropped) {
 
     Result(Derivation.Outcome outcome, Set<List<Integer>> solutions) {
       this(outcome, solutions, 0);
@@ -737,7 +870,7 @@ class PresolveTest {
           }
         });
     derivation.discard();
-    return new Result(derivation.outcome(), found, derivation.statistics().orderLiterals());
+    return new Result(derivation.outcome(), found, derivation.statistics().dropped());
   }
 
   private static IntVar[] decisions(Model.Vars vars) {

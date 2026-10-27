@@ -96,6 +96,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] litVar = new int[16];
   private byte[] litKind = new byte[16];
   private int[] litValue = new int[16];
+  // semantic minimisation: learnt literals sorted by variable, and those removed
+  private long[] minimizeKeys = new long[16];
+  private boolean[] minimizeRemoved = new boolean[16];
 
   // clauses linking new literals, added through externalClause
   private final ArrayDeque<int[]> structural = new ArrayDeque<>();
@@ -153,6 +156,16 @@ public final class LcgSolver implements ExternalPropagator {
   private final boolean activityBranching =
       !"literals".equals(System.getProperty("jacop.lcg.branching", "activity"));
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
+  // last-conflict branching, on unless -Djacop.lcg.lastConflict=false
+  private final boolean lastConflict =
+      !"false".equals(System.getProperty("jacop.lcg.lastConflict"));
+  private int decisionVar = -1; // the variable of the last activity decision
+  private int conflictVar = -1; // the variable to branch on next, after a conflict
+  private long backtrackConflicts;
+  // semantic minimisation of learnt clauses, on unless -Djacop.lcg.semantic=false
+  private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
+  // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
+  private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
   private double[] activity;
   private final VarHeap heap = new VarHeap();
   private double activityInc = 1;
@@ -194,6 +207,9 @@ public final class LcgSolver implements ExternalPropagator {
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
     sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 2));
+    // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
+    // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
+    sat.setTierLimits(3, 8);
     if (Boolean.getBoolean("jacop.lcg.check")) {
       checker = new ExplanationChecker(trail);
     }
@@ -552,6 +568,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyBacktrack(int level) {
+    if (sat.conflicts != backtrackConflicts) {
+      // a conflict led here: its last decision was on decisionVar
+      backtrackConflicts = sat.conflicts;
+      conflictVar = decisionVar;
+    }
     while (store.level > baseLevel + level) {
       store.removeLevel(store.level);
       store.setLevel(store.level - 1);
@@ -570,6 +591,147 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
     }
+  }
+
+  /**
+   * Semantic minimisation (Feydy, Schutt and Stuckey 2013): a learnt literal whose set of values of
+   * its variable is inside the set of another learnt literal on the same variable implies that
+   * literal, so the clause holds without it; for example {@code [x <= 2]} next to {@code [x <= 4]},
+   * or {@code [x = 3]} next to {@code [x != 5]}.
+   */
+  @Override
+  public int minimizeLearnt(int[] clause, int size) {
+    if (!semantic) {
+      return size;
+    }
+    if (minimizeKeys.length < size) {
+      minimizeKeys = new long[2 * size];
+      minimizeRemoved = new boolean[2 * size];
+    }
+    for (int k = 0; k < size; k++) {
+      minimizeKeys[k] = (long) litVar[Math.abs(clause[k])] << 32 | k;
+      minimizeRemoved[k] = false;
+    }
+    Arrays.sort(minimizeKeys, 0, size);
+    int removed = 0;
+    for (int from = 0, to; from < size; from = to) {
+      long var = minimizeKeys[from] >>> 32;
+      to = from + 1;
+      while (to < size && minimizeKeys[to] >>> 32 == var) {
+        to++;
+      }
+      for (int a = from; a < to; a++) {
+        int i = (int) minimizeKeys[a];
+        if (i == 0) {
+          continue; // the asserting literal stays
+        }
+        for (int b = from; b < to; b++) {
+          int j = (int) minimizeKeys[b];
+          if (j != i && !minimizeRemoved[j] && implies(clause[i], clause[j])) {
+            minimizeRemoved[i] = true;
+            removed++;
+            break;
+          }
+        }
+      }
+    }
+    if (removed == 0) {
+      return size;
+    }
+    int kept = 0;
+    for (int k = 0; k < size; k++) {
+      if (!minimizeRemoved[k]) {
+        clause[kept++] = clause[k];
+      }
+    }
+    return kept;
+  }
+
+  // whether literal a implies literal b, both on the same variable, by their sets of values
+  private boolean implies(int a, int b) {
+    int va = Math.abs(a);
+    int vb = Math.abs(b);
+    boolean aEq = litKind[va] == EQ_KIND;
+    boolean bEq = litKind[vb] == EQ_KIND;
+    if (aEq && a < 0) {
+      return false; // x != v implies no other atom's literal on x
+    }
+    long aLo = a > 0 ? litValue[va] : Long.MIN_VALUE;
+    long aHi = aEq || a < 0 ? litValue[va] - (aEq ? 0L : 1L) : Long.MAX_VALUE;
+    if (bEq && b < 0) {
+      return litValue[vb] < aLo || litValue[vb] > aHi;
+    }
+    long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
+    long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
+    return bLo <= aLo && aHi <= bHi;
+  }
+
+  @Override
+  public int integerVariable(int var) {
+    return semanticUip && var < litVar.length ? litVar[var] : -1;
+  }
+
+  /**
+   * The atom equal to a conjunction of true atoms of one variable, when one exists: the values they
+   * leave form one interval, after the {@code x != v} atoms at its ends, that touches a root bound
+   * ({@code [x >= v]} or {@code [x <= v]}) or holds one value ({@code [x = v]}).
+   */
+  @Override
+  public int semanticUip(int[] lits, int size) {
+    int i = litVar[Math.abs(lits[0])];
+    long lo = Long.MIN_VALUE;
+    long hi = Long.MAX_VALUE;
+    for (int k = 0; k < size; k++) {
+      int d = Math.abs(lits[k]);
+      long v = litValue[d];
+      if (litKind[d] == GE_KIND) {
+        if (lits[k] > 0) {
+          lo = Math.max(lo, v);
+        } else {
+          hi = Math.min(hi, v - 1);
+        }
+      } else if (lits[k] > 0) {
+        lo = Math.max(lo, v);
+        hi = Math.min(hi, v);
+      }
+    }
+    for (boolean moved = true; moved; ) {
+      moved = false;
+      for (int k = 0; k < size; k++) {
+        int d = Math.abs(lits[k]);
+        if (litKind[d] == EQ_KIND && lits[k] < 0 && (litValue[d] == lo || litValue[d] == hi)) {
+          lo += litValue[d] == lo ? 1 : 0;
+          hi -= litValue[d] == hi ? 1 : 0;
+          moved = true;
+        }
+      }
+    }
+    for (int k = 0; k < size; k++) {
+      int d = Math.abs(lits[k]);
+      if (litKind[d] == EQ_KIND && lits[k] < 0 && lo < litValue[d] && litValue[d] < hi) {
+        return 0; // a hole inside the interval
+      }
+    }
+    int min = root[i].min();
+    int max = root[i].max();
+    if (lo > hi || lo <= min && hi >= max) {
+      return 0;
+    }
+    int d = LiteralMap.NONE;
+    if (lo == hi) {
+      d = eq[i].get((int) lo);
+    }
+    if (d == LiteralMap.NONE && hi >= max) {
+      return orZero(ge[i].get((int) lo), 1);
+    }
+    if (d == LiteralMap.NONE && lo <= min) {
+      return orZero(ge[i].get((int) hi + 1), -1);
+    }
+    return orZero(d, 1);
+  }
+
+  private static int orZero(int d, int sign) {
+    return d == LiteralMap.NONE ? 0 : sign * d;
   }
 
   @Override
@@ -856,6 +1018,11 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     int i = heap.max();
+    if (lastConflict && conflictVar >= 0 && !vars[conflictVar].singleton()) {
+      i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
+    }
+    conflictVar = -1;
+    decisionVar = i;
     IntVar x = vars[i];
     searchDecisions++;
     if (phase != null && x.domain.contains(phase[i])) {

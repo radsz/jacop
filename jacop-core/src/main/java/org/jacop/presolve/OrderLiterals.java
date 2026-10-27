@@ -31,7 +31,6 @@
 package org.jacop.presolve;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,18 +53,33 @@ import org.jacop.lcg.LinearForm;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-final class OrderLiterals {
+final class OrderLiterals implements Rule {
 
   // the smallest number of reifications of one variable that become a channel
   static final int MIN_GROUP = 2;
 
+  /**
+   * The rule, which {@link Presolver#STANDARD} applies unless jacop.presolve.orderLiterals is
+   * false.
+   */
+  static final OrderLiterals RULE = new OrderLiterals();
+
   private OrderLiterals() {}
+
+  @Override
+  public void apply(Rule.Context context) {
+    for (Group g : groups(context.constraints())) {
+      context.impose(g.channel());
+      g.reifications().forEach(context::remove);
+    }
+  }
 
   private record Item(Reified r, IntVar x, IntVar b, int t, boolean atMost) {}
 
   /**
    * A channel and the reifications it replaces; the channel is over the same variables and is not
-   * imposed.
+   * imposed. The rule imposes the channel in the parent and leaves the reifications out of the
+   * child, so it does not find the group again in the next round.
    *
    * @param channel the channel.
    * @param reifications the reifications, in the order of the constraints.
@@ -109,40 +123,6 @@ final class OrderLiterals {
       groups.add(new Group(new ChannelOrder(e.getKey(), bs, ts, atMost), reifications));
     }
     return groups;
-  }
-
-  /**
-   * Replaces each group of order reifications of one variable by its channel, at the position of
-   * the group's first reification.
-   *
-   * @param constraints the constraints to carry into the child, changed in place.
-   * @return the number of reifications replaced.
-   */
-  static int apply(List<Constraint> constraints) {
-    Map<Constraint, Constraint> replaced = new IdentityHashMap<>();
-    int count = 0;
-    for (Group g : groups(constraints)) {
-      List<Reified> rs = g.reifications();
-      replaced.put(rs.get(0), g.channel());
-      for (int i = 1; i < rs.size(); i++) {
-        replaced.put(rs.get(i), null);
-      }
-      count += rs.size();
-    }
-    if (count == 0) {
-      return 0;
-    }
-    List<Constraint> result = new ArrayList<>(constraints.size());
-    for (Constraint c : constraints) {
-      if (!replaced.containsKey(c)) {
-        result.add(c);
-      } else if (replaced.get(c) != null) {
-        result.add(replaced.get(c));
-      }
-    }
-    constraints.clear();
-    constraints.addAll(result);
-    return count;
   }
 
   /** The item of {@code b <=> x op c}, or null if the constraint is not such a reification. */
