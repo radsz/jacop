@@ -98,6 +98,17 @@ public final class Presolver {
   }
 
   /**
+   * Switches automatic tabulation on or off; see {@link Derivation.Builder#tabling(boolean)}.
+   *
+   * @param on true to tabulate.
+   * @return this presolver.
+   */
+  public Presolver tabling(boolean on) {
+    builder.tabling(on);
+    return this;
+  }
+
+  /**
    * Presolves.
    *
    * @return the derivation, whose child is the store to search.

@@ -41,8 +41,10 @@ import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.StoreState;
 import org.jacop.core.Var;
@@ -109,6 +111,7 @@ public final class Derivation implements VarMap {
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final Tabling.Limits tabling;
 
   private Outcome outcome;
   private int level;
@@ -118,6 +121,7 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
+  private TablingStatistics tablingStatistics = new TablingStatistics(0, 0, 0, 0);
   private boolean solutionWritten;
 
   private Derivation(Builder builder) {
@@ -125,6 +129,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.tabling = builder.tabling;
   }
 
   /**
@@ -144,6 +149,7 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    private Tabling.Limits tabling;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -184,6 +190,24 @@ public final class Derivation implements VarMap {
      */
     public Builder rules(boolean on) {
       this.rules = on;
+      return this;
+    }
+
+    /**
+     * Switches automatic tabulation on or off: small groups of constraints over at most ten unfixed
+     * variables are replaced by the tables of their solutions; see {@link Tabling}. Off by default;
+     * it applies only with the rules on.
+     *
+     * @param on true to tabulate.
+     * @return this builder.
+     */
+    public Builder tabling(boolean on) {
+      this.tabling = on ? Tabling.Limits.DEFAULT : null;
+      return this;
+    }
+
+    Builder tabling(Tabling.Limits limits) {
+      this.tabling = limits;
       return this;
     }
 
@@ -229,9 +253,34 @@ public final class Derivation implements VarMap {
       }
     }
 
+    List<Tabling.Group> tables = List.of();
+    if (rules && tabling != null) {
+      Tabling t = Tabling.of(carried, variables, tabling);
+      tables = t.groups();
+      if (t.infeasible()) {
+        outcome = Outcome.INFEASIBLE;
+        return;
+      }
+      Set<Constraint> replaced = Collections.newSetFromMap(new IdentityHashMap<>());
+      int tuples = 0;
+      for (Tabling.Group g : tables) {
+        replaced.addAll(g.constraints());
+        tuples += g.tuples() == null ? 0 : g.tuples().length;
+      }
+      carried.removeIf(replaced::contains);
+      for (Tabling.Group g : tables) {
+        dropped += g.tuples() == null ? g.constraints().size() : 0;
+      }
+      tables = tables.stream().filter(g -> g.tuples() != null).toList();
+      tablingStatistics = new TablingStatistics(tables.size(), replaced.size(), tuples, t.nodes());
+    }
+
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
       used.addAll(c.arguments());
+    }
+    for (Tabling.Group g : tables) {
+      used.addAll(List.of(g.scope()));
     }
 
     child = new Store();
@@ -263,6 +312,10 @@ public final class Derivation implements VarMap {
       }
       child.impose(copy);
     }
+    for (Tabling.Group g : tables) {
+      IntVar[] scope = get(g.scope());
+      child.impose(new HybridTable(scope, g.tuples()));
+    }
     // degree-based variable selections choose in the child as in the parent, whose static degrees
     // also count the constraints entailed or dropped since
     for (Map.Entry<Var, Var> e : copies.entrySet()) {
@@ -273,7 +326,12 @@ public final class Derivation implements VarMap {
 
     statistics =
         new Statistics(
-            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
+            variables.size(),
+            collected.size(),
+            copies.size(),
+            carried.size() + tables.size(),
+            fixed,
+            dropped);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -419,6 +477,26 @@ public final class Derivation implements VarMap {
       throw new IllegalStateException("The parent is infeasible; there is no child");
     }
     return child;
+  }
+
+  /**
+   * What automatic tabulation did.
+   *
+   * @param tables tables imposed in the child.
+   * @param replaced constraints of the parent replaced by the tables, or dropped because their
+   *     group was entailed.
+   * @param tuples tuples of the tables.
+   * @param nodes search nodes spent tabulating.
+   */
+  public record TablingStatistics(int tables, int replaced, int tuples, long nodes) {}
+
+  /**
+   * Returns what automatic tabulation did; all zero when it is off.
+   *
+   * @return the statistics.
+   */
+  public TablingStatistics tablingStatistics() {
+    return tablingStatistics;
   }
 
   /**

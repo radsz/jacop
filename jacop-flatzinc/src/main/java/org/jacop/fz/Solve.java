@@ -307,7 +307,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void presolve() {
     long start = timer.getCpuTime();
     Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+        Presolver.of(store)
+            .checking(options.presolve() == Options.Presolve.CHECK)
+            .tabling(options.presolveTabling())
+            .presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -368,6 +371,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    if (options.presolveTabling()) {
+      Derivation.TablingStatistics t = d.tablingStatistics();
+      s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
+      s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
+      s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());

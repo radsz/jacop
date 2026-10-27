@@ -77,6 +77,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -149,6 +150,8 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --presolve-tabling replace small groups of constraints by the tables of their
+                solutions when presolving (default false)
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -189,6 +192,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -286,6 +290,11 @@ public class Options {
     if (mode != null) {
       presolve = mode;
     }
+    return i + 1;
+  }
+
+  private int handlePresolveTabling(int i) {
+    presolveTabling = true;
     return i + 1;
   }
 
@@ -603,6 +612,16 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines whether presolve replaces small groups of constraints by tables
+   * (--presolve-tabling).
+   *
+   * @return true if presolve tabulates, false by default
+   */
+  public boolean presolveTabling() {
+    return presolveTabling;
   }
 
   /** Sat is used. */

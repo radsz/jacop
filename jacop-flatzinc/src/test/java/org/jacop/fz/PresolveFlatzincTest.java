@@ -143,24 +143,32 @@ class PresolveFlatzincTest {
     assertThat(solve(model, "check")).as(model).isEqualTo(solve(model, "off"));
   }
 
+  /**
+   * Automatic tabulation keeps the solutions and their order too: a table holds exactly the
+   * solutions of the constraints it replaces.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameWithTabling(String model) {
+    assertThat(solve(model, "check", "--presolve-tabling"))
+        .as(model)
+        .isEqualTo(solve(model, "off"));
+  }
+
   /** Solves a model with the front end, as from the command line, and returns what it prints. */
-  private static String solve(String model, String presolve) {
+  private static String solve(String model, String presolve, String... options) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream out = System.out;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop()
-          .callMain(
-              new String[] {
-                "-a",
-                "-n",
-                String.valueOf(LIMIT),
-                "--default-search",
-                "input",
-                "--presolve",
-                presolve,
-                DIR + model
-              });
+      List<String> args =
+          new ArrayList<>(
+              List.of(
+                  "-a", "-n", String.valueOf(LIMIT), "--default-search", "input", "--presolve"));
+      args.add(presolve);
+      args.addAll(Arrays.asList(options));
+      args.add(DIR + model);
+      new Fz2jacop().callMain(args.toArray(new String[0]));
     } finally {
       System.setOut(out);
     }
