@@ -78,7 +78,30 @@ public final class ObjectivePresolve {
   /** Largest domain of a variable whose value literals form an exactly-one set. */
   static final int MAX_ENCODED_DOMAIN = 100_000;
 
-  private record Equation(IntVar[] vars, int[] coefs, int rhs) {}
+  /** An equation {@code sum(coefs[i] * vars[i]) = rhs}; compared by identity. */
+  private static final class Equation {
+    private final IntVar[] vars;
+    private final int[] coefs;
+    private final int rhs;
+
+    Equation(IntVar[] vars, int[] coefs, int rhs) {
+      this.vars = vars;
+      this.coefs = coefs;
+      this.rhs = rhs;
+    }
+
+    IntVar[] vars() {
+      return vars;
+    }
+
+    int[] coefs() {
+      return coefs;
+    }
+
+    int rhs() {
+      return rhs;
+    }
+  }
 
   private final IntVar objective;
   private final boolean minimize;
