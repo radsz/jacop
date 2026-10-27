@@ -34,6 +34,7 @@ package org.jacop.floats.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Random;
+import org.jacop.core.IntDomain;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -59,6 +60,14 @@ class FloatDomainOperationsTest {
   }
 
   @Test
+  void intersectAdaptOfDisjointDomainsEmptiesTheDomain() {
+    FloatIntervalDomain a = new FloatIntervalDomain(-10.0, -6.0);
+    int event = a.intersectAdapt(new FloatIntervalDomain(-3.5, 9.0));
+    assertThat(a.isEmpty()).isTrue();
+    assertThat(event).isEqualTo(IntDomain.GROUND);
+  }
+
+  @Test
   void domainOperationsMatchValueMembership() {
     Random random = new Random(20261027);
     for (int trial = 0; trial < TRIALS; trial++) {
@@ -67,11 +76,16 @@ class FloatDomainOperationsTest {
       String context = "a=" + a + " b=" + b;
 
       FloatDomain difference = a.subtract(b);
+      FloatIntervalDomain intersection = (FloatIntervalDomain) a.cloneLight();
+      intersection.intersectAdapt(b);
       FloatDomain intersect = a.intersect(b);
       FloatDomain union = a.union(b);
 
       assertThat(((FloatIntervalDomain) difference).checkInvariants())
           .as("subtract invariants " + context)
+          .isNull();
+      assertThat(intersection.checkInvariants())
+          .as("intersectAdapt invariants " + context)
           .isNull();
 
       for (double value : probes()) {
@@ -81,6 +95,9 @@ class FloatDomainOperationsTest {
         assertThat(difference.contains(value))
             .as("subtract(dom) " + at + " result=" + difference)
             .isEqualTo(inA && !inB);
+        assertThat(intersection.contains(value))
+            .as("intersectAdapt(dom) " + at + " result=" + intersection)
+            .isEqualTo(inA && inB);
         assertThat(intersect.contains(value))
             .as("intersect(dom) " + at + " result=" + intersect)
             .isEqualTo(inA && inB);

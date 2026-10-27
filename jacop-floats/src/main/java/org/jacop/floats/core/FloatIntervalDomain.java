@@ -35,6 +35,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.util.ArrayList;
 import java.util.Iterator;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.ValueEnumeration;
@@ -3111,15 +3112,17 @@ public class FloatIntervalDomain extends FloatDomain {
       return IntDomain.GROUND;
     }
 
-    FloatIntervalDomain result = computeIntersection(input.intervals, input.size, 0.0);
+    FloatIntervalDomain result;
+    try {
+      result = computeIntersection(input.intervals, input.size, 0.0);
+    } catch (FailException _) {
+      // the intersection is empty; unlike in(), intersectAdapt() empties the domain
+      size = 0;
+      return IntDomain.GROUND;
+    }
 
     if (result == null) {
       return NONE;
-    }
-
-    if (result.isEmpty()) {
-      size = 0;
-      return IntDomain.GROUND;
     }
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
