@@ -103,7 +103,33 @@ final class Tabling {
    * @param scope the unfixed variables of the group, the columns of the table.
    * @param tuples the solutions of the group over the scope, or null if the group is entailed.
    */
-  record Group(List<Constraint> constraints, IntVar[] scope, int[][] tuples) {}
+  record Group(List<Constraint> constraints, IntVar[] scope, int[][] tuples) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Group g
+          && constraints.equals(g.constraints)
+          && Arrays.equals(scope, g.scope)
+          && Arrays.deepEquals(tuples, g.tuples);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * (31 * constraints.hashCode() + Arrays.hashCode(scope))
+          + Arrays.deepHashCode(tuples);
+    }
+
+    @Override
+    public String toString() {
+      return "Group[constraints="
+          + constraints
+          + ", scope="
+          + Arrays.toString(scope)
+          + ", tuples="
+          + (tuples == null ? "entailed" : tuples.length)
+          + "]";
+    }
+  }
 
   // most tuple cells read by the removal check of one group
   private static final long PROBE_WORK = 20_000_000;
