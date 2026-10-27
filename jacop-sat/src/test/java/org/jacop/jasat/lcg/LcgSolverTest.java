@@ -35,8 +35,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
@@ -249,12 +251,39 @@ class LcgSolverTest {
    */
   @Test
   void hybridTablesAgreeWithBruteForce() {
-    Random rnd = new Random(17);
+    long[] counts = checkHybridTables(new Random(SEED + 17), TABLE_TRIALS, false);
+    assertThat(counts[0]).isGreaterThan(100);
+    assertThat(counts[1]).isGreaterThan(100);
+    assertThat(counts[2]).isGreaterThan(counts[3]);
+  }
+
+  /**
+   * Random hybrid tables with restrictions between columns, kept as they are, against brute force.
+   * A tuple whose restriction between columns is violated by the bounds is explained by them.
+   */
+  @Test
+  void hybridTablesBetweenColumnsAgreeWithBruteForce() {
+    long[] counts = checkHybridTables(new Random(SEED + 29), TABLE_TRIALS, true);
+    assertThat(counts[0]).isGreaterThan(100);
+    assertThat(counts[1]).isGreaterThan(100);
+    assertThat(counts[2]).isGreaterThan(4 * counts[3]);
+  }
+
+  /**
+   * Returns the satisfiable and unsatisfiable instances and the HybridTable explanations of its own
+   * and generic.
+   */
+  /** Instances of the hybrid table checks, and the seed added to their random seeds. */
+  private static final int TABLE_TRIALS = Integer.getInteger("lcg.table.trials", 1500);
+
+  private static final int SEED = Integer.getInteger("lcg.table.seed", 0);
+
+  private static long[] checkHybridTables(Random rnd, int instances, boolean betweenColumns) {
     int sat = 0;
     int unsat = 0;
     long own = 0;
     long generic = 0;
-    for (int instance = 0; instance < 1500; instance++) {
+    for (int instance = 0; instance < instances; instance++) {
       Store store = new Store();
       int n = 4 + rnd.nextInt(2);
       IntVar[] x = new IntVar[n];
@@ -263,30 +292,16 @@ class LcgSolverTest {
       }
       List<Relation> relations = new ArrayList<>();
       for (int c = 3 + rnd.nextInt(3); c > 0; c--) {
-        relations.add(c == 1 && rnd.nextBoolean() ? relation(x, rnd) : tableRelation(x, rnd));
+        relations.add(
+            c == 1 && rnd.nextBoolean() ? relation(x, rnd) : tableRelation(x, rnd, betweenColumns));
       }
-      boolean expected = bruteForce(x, relations, new int[n], 0);
-      for (Relation r : relations) {
-        store.impose(r.constraint);
-      }
-      LcgSolver solver = new LcgSolver(store);
-      solver.setChecking(true);
-      int status = solver.solve();
-      assertThat(status)
-          .as("instance %d", instance)
-          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      boolean expected = solveAndCheck(store, x, relations, "instance " + instance);
       if (expected) {
-        int[] t = new int[n];
-        for (int i = 0; i < n; i++) {
-          t[i] = solver.value(x[i]);
-        }
-        for (Relation r : relations) {
-          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
-        }
         sat++;
       } else {
         unsat++;
       }
+      LcgSolver solver = lastSolver;
       long[] counts = solver.explanationStatistics().get("HybridTable");
       if (counts != null) {
         own += counts[0] - counts[1] + counts[3] - counts[4];
@@ -294,11 +309,102 @@ class LcgSolverTest {
       }
     }
     System.out.printf(
-        "hybrid tables: %d sat, %d unsat, %d own and %d generic explanations%n",
-        sat, unsat, own, generic);
-    assertThat(sat).isGreaterThan(100);
-    assertThat(unsat).isGreaterThan(100);
-    assertThat(own).isGreaterThan(generic);
+        "hybrid tables%s: %d sat, %d unsat, %d own and %d generic explanations%n",
+        betweenColumns ? " between columns" : "", sat, unsat, own, generic);
+    return new long[] {sat, unsat, own, generic};
+  }
+
+  private static LcgSolver lastSolver;
+
+  /**
+   * Solves with lazy clause generation, explanations checked, and compares with brute force; a
+   * solution must satisfy every relation. Returns whether the model is satisfiable.
+   */
+  private static boolean solveAndCheck(
+      Store store, IntVar[] x, List<Relation> relations, String name) {
+    int n = x.length;
+    boolean expected = bruteForce(x, relations, new int[n], 0);
+    for (Relation r : relations) {
+      store.impose(r.constraint);
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    lastSolver = solver;
+    int status = solver.solve();
+    assertThat(status).as(name).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+    if (expected) {
+      int[] t = new int[n];
+      for (int i = 0; i < n; i++) {
+        t[i] = solver.value(x[i]);
+      }
+      for (Relation r : relations) {
+        assertThat(r.test.test(t)).as("%s: %s", name, r.constraint).isTrue();
+      }
+    }
+    return expected;
+  }
+
+  /**
+   * Large ground tables over a key variable with many values, a few tuples per value, so that the
+   * tables keep sparse supports and the explanations pick among many dead tuples. Each table
+   * explains everything itself.
+   */
+  @Test
+  void largeTablesAgreeWithBruteForce() {
+    Random rnd = new Random(SEED + 31);
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < TABLE_TRIALS / 10; instance++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      x[0] = new IntVar(store, "key", 0, 149);
+      for (int v = 0; v < 150; v++) {
+        if (rnd.nextInt(5) == 0) {
+          x[0].domain.subtractAdapt(v);
+        }
+      }
+      for (int i = 1; i < x.length; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(keyTableRelation(x, rnd));
+      }
+      relations.add(tableRelation(x, rnd, false));
+      if (solveAndCheck(store, x, relations, "instance " + instance)) {
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = lastSolver.explanationStatistics().get("HybridTable");
+      if (counts != null) {
+        assertThat(counts[1] + counts[4]).as("instance %d: generic", instance).isZero();
+      }
+    }
+    System.out.printf("large tables: %d sat, %d unsat%n", sat, unsat);
+    assertThat(sat).isGreaterThan(20);
+    assertThat(unsat).isGreaterThan(20);
+  }
+
+  /** A ground table over the key x[0] and two other variables, its tuples sorted by key. */
+  private static Relation keyTableRelation(IntVar[] x, Random rnd) {
+    int a = 1 + rnd.nextInt(x.length - 1);
+    int b = 1 + pick(rnd, x.length - 1, a - 1);
+    List<int[]> tuples = new ArrayList<>();
+    Set<Long> allowed = new HashSet<>();
+    for (int key = 0; key < 150; key++) {
+      for (int k = rnd.nextInt(5); k > 0; k--) {
+        int u = rnd.nextInt(7) - 1;
+        int w = rnd.nextInt(7) - 1;
+        if (allowed.add(((long) key * 64 + u + 1) * 64 + w + 1)) {
+          tuples.add(new int[] {key, u, w});
+        }
+      }
+    }
+    IntVar[] vars = {x[0], x[a], x[b]};
+    return new Relation(
+        new HybridTable(vars, tuples.toArray(new int[0][])),
+        t -> allowed.contains(((long) t[0] * 64 + t[a] + 1) * 64 + t[b] + 1));
   }
 
   @Test
@@ -616,7 +722,7 @@ class LcgSolverTest {
   }
 
   /** A hybrid table over 2 or 3 of the variables with random unary restrictions. */
-  private static Relation tableRelation(IntVar[] x, Random rnd) {
+  private static Relation tableRelation(IntVar[] x, Random rnd, boolean betweenColumns) {
     int arity = 2 + rnd.nextInt(2);
     int[] col = new int[arity];
     for (int k = 0; k < arity; k++) {
@@ -625,13 +731,16 @@ class LcgSolverTest {
     int rows = 2 + rnd.nextInt(6);
     Restriction[][] tuples = new Restriction[rows][arity];
     List<List<IntPredicate>> accepts = new ArrayList<>();
+    List<int[]> columnRestrictions = new ArrayList<>();
     for (int r = 0; r < rows; r++) {
       List<IntPredicate> row = new ArrayList<>();
       for (int k = 0; k < arity; k++) {
         int v = rnd.nextInt(6) - 1;
         int w = rnd.nextInt(6) - 1;
+        int other = (k + 1 + rnd.nextInt(arity - 1)) % arity;
+        int offset = rnd.nextInt(3) - 1;
         // mostly constants, so that the tables prune
-        switch (rnd.nextInt(14)) {
+        switch (rnd.nextInt(betweenColumns ? 17 : 14)) {
           case 0 -> {
             tuples[r][k] = Restriction.any();
             row.add(u -> true);
@@ -656,6 +765,12 @@ class LcgSolverTest {
             tuples[r][k] = Restriction.notIn(v, w);
             row.add(u -> u != v && u != w);
           }
+          case 14, 15, 16 -> {
+            Restriction.Relation rel = Restriction.Relation.values()[rnd.nextInt(6)];
+            tuples[r][k] = Restriction.column(rel, other, offset);
+            row.add(null); // checked on the whole tuple
+            columnRestrictions.add(new int[] {r, k, other, offset, rel.ordinal()});
+          }
           default -> {
             tuples[r][k] = Restriction.eq(v);
             row.add(u -> u == v);
@@ -669,12 +784,28 @@ class LcgSolverTest {
       vars[k] = x[col[k]];
     }
     return new Relation(
-        new HybridTable(vars, tuples),
+        new HybridTable(vars, tuples, !betweenColumns),
         t -> {
-          for (List<IntPredicate> row : accepts) {
+          for (int r = 0; r < rows; r++) {
+            List<IntPredicate> row = accepts.get(r);
             boolean all = true;
             for (int k = 0; k < arity && all; k++) {
-              all = row.get(k).test(t[col[k]]);
+              all = row.get(k) == null || row.get(k).test(t[col[k]]);
+            }
+            for (int[] c : columnRestrictions) {
+              if (all && c[0] == r) {
+                long u = t[col[c[1]]];
+                long w = (long) t[col[c[2]]] + c[3];
+                all =
+                    switch (Restriction.Relation.values()[c[4]]) {
+                      case LT -> u < w;
+                      case LE -> u <= w;
+                      case EQ -> u == w;
+                      case NE -> u != w;
+                      case GE -> u >= w;
+                      case GT -> u > w;
+                    };
+              }
             }
             if (all) {
               return true;
