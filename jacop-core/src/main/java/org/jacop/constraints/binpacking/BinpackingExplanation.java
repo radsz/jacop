@@ -528,7 +528,8 @@ final class BinpackingExplanation {
     if (a <= b) {
       if (b - base <= SUBSET_SUM_LIMIT) {
         long[] sums = subsetSums(c, nc, (int) (b - base));
-        for (int s = nextSum(sums, (int) (a - base)); s >= 0 && s <= b - base; ) {
+        int s = nextSum(sums, (int) (a - base));
+        while (s >= 0 && s <= b - base) {
           long t = base + s;
           if (t < lmin) {
             needMin = true;
@@ -681,7 +682,7 @@ final class BinpackingExplanation {
       return false;
     }
     int f = (int) Math.max(0, first);
-    int nb = (int) Math.max(0, Math.min(load.length - 1, last) - f + 1);
+    int nb = (int) Math.max(0, Math.min(load.length - 1L, last) - f + 1);
     int[] p = new int[nb];
     int[] capacity = new int[nb];
     for (int i = 0; i < nb; i++) {
