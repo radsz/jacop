@@ -73,7 +73,11 @@ class RedundantConstraintsTest {
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
   /** A model: variables in a store and its constraints, built twice for the two runs. */
-  private record Model(Store store, IntVar[] x, List<Constraint> constraints) {}
+  private record Model(Store store, List<IntVar> vars, List<Constraint> constraints) {
+    IntVar[] x() {
+      return vars.toArray(new IntVar[0]);
+    }
+  }
 
   private static Model model(
       int[][] domains, int booleans, Function<IntVar[], List<Constraint>> f) {
@@ -89,7 +93,7 @@ class RedundantConstraintsTest {
     for (Constraint c : constraints) {
       store.impose(c);
     }
-    return new Model(store, x, constraints);
+    return new Model(store, List.of(x), constraints);
   }
 
   private static RedundantConstraints.Result find(Model m) {
@@ -294,11 +298,11 @@ class RedundantConstraintsTest {
       long[] weights = new long[terms];
       for (int i = 0; i < terms; i++) {
         vars[i] = x[random.nextInt(n)];
-        weights[i] = (random.nextInt(4) + 1) * (random.nextInt(3) - 1) * (1 + random.nextInt(2));
+        weights[i] = (random.nextInt(4) + 1L) * (random.nextInt(3) - 1) * (1 + random.nextInt(2));
       }
       LinearForm f =
           new LinearForm(
-              vars, weights, random.nextInt(13) - 6, relations[random.nextInt(relations.length)]);
+              vars, weights, random.nextInt(13) - 6L, relations[random.nextInt(relations.length)]);
       LinearForm canonical = RedundantConstraints.canonicalForm(f);
       int[] values = new int[n];
       int t = trial;

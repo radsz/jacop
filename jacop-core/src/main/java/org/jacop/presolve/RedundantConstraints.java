@@ -130,6 +130,11 @@ final class RedundantConstraints {
     public int hashCode() {
       return 31 * Arrays.hashCode(vars) + Arrays.hashCode(weights);
     }
+
+    @Override
+    public String toString() {
+      return "Lhs[vars=" + Arrays.toString(vars) + ", weights=" + Arrays.toString(weights) + "]";
+    }
   }
 
   private record Canonical(Lhs lhs, Kind kind, long c) {}
