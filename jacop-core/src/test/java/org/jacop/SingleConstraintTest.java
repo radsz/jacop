@@ -2576,6 +2576,17 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void channelReifWithXAlsoItsOwnBoolean() {
+    // x is the 0/1 variable of both values 1 and 3: setting it to 0 for value 3 fixed x to 0, a
+    // value without an item, and the lookup of its 0/1 variable threw NullPointerException
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new ChannelReif(x, new IntVar[] {x, x}, new int[] {1, 3}));
+    // x = 0: both items off and x is neither 1 nor 3; x = 1 would turn the item of 3 on
+    assertThat(countSolutions(store, new IntVar[] {x}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
   void spreadFailsWhenNoValueFitsTheCostBound() {
     // cost <= 3 allows |4 * v - 10| <= 1, which no integer v satisfies; narrow() used to call in()
     // with min 3 > max 2 and threw IllegalStateException instead of failing
