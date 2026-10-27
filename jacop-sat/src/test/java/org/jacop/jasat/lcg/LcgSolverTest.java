@@ -53,7 +53,10 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
@@ -478,6 +481,89 @@ class LcgSolverTest {
     }
     System.out.printf(
         "all different: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(1000);
+  }
+
+  @Test
+  void maxAndMinAgreeWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(3); c > 0; c--) {
+        boolean simple = rnd.nextInt(3) == 0;
+        IntVar[] q = new IntVar[simple ? 2 : 2 + rnd.nextInt(n - 2)];
+        int[] at = new int[q.length];
+        for (int k = 0; k < q.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+          q[k] = x[at[k]];
+        }
+        // the maximum is one of the list half of the time, as in y[k] = max(y)
+        int r = rnd.nextBoolean() ? at[rnd.nextInt(at.length)] : pick(rnd, n, at);
+        boolean isMax = rnd.nextBoolean();
+        Constraint constraint;
+        if (simple) {
+          constraint = isMax ? new MaxSimple(q[0], q[1], x[r]) : new MinSimple(q[0], q[1], x[r]);
+        } else {
+          constraint = isMax ? new Max(q, x[r]) : new Min(q, x[r]);
+        }
+        relations.add(
+            new Relation(
+                constraint,
+                t -> {
+                  int best = t[at[0]];
+                  for (int k : at) {
+                    best = isMax ? Math.max(best, t[k]) : Math.min(best, t[k]);
+                  }
+                  return t[r] == best;
+                }));
+      }
+      relations.add(relation(x, rnd));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"Max", "Min", "MaxSimple", "MinSimple"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "max and min: %d sat, %d unsat, %d own and %d generic explanations%n",
         sat, unsat, own, generic);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
