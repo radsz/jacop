@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -573,6 +574,35 @@ public class Store {
       v.valueWatches = new ValueWatches();
     }
     v.valueWatches.add(value, c, tag);
+  }
+
+  /**
+   * Returns the constraints that watch a value of a variable ({@link #watchValue}), in the order
+   * the watches were added, a constraint once even if it watches both values. They are not in the
+   * constraint lists of the variable's domain.
+   *
+   * @param v the variable.
+   * @return the watching constraints.
+   */
+  public List<Constraint> valueWatchers(Var v) {
+    ValueWatches watches = v.valueWatches;
+    if (watches == null) {
+      return List.of();
+    }
+    Set<Constraint> result = Collections.newSetFromMap(new LinkedHashMap<>());
+    for (int value = 0; value < 2; value++) {
+      result.addAll(Arrays.asList(watches.constraints[value]).subList(0, watches.size[value]));
+    }
+    return new ArrayList<>(result);
+  }
+
+  /**
+   * Removes every value watch of a variable, so the watching constraints are no longer woken by it.
+   *
+   * @param v the variable.
+   */
+  public void clearValueWatches(Var v) {
+    v.valueWatches = null;
   }
 
   private void queueValueWatches(Var v) {
