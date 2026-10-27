@@ -33,6 +33,7 @@ package org.jacop.search;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.lang.reflect.Array;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
 import lombok.Setter;
@@ -173,6 +174,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It represents the choice point selection heuristic. */
   SelectChoicePoint<T> heuristic;
+
+  // the variable of the left branch that the next call of label checks, for last-conflict reasoning
+  private Var leftDecision;
 
   /** It stores the maximum depth reached during search. */
   int maxDepth;
@@ -845,10 +849,14 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   /** This function is called recursively to assign variables one by one. */
   public boolean label(int firstVariable) {
 
+    Var decision = leftDecision;
+    leftDecision = null;
+
     if (childSearchTimedOut || !checkExitConditions()) {
       return false;
     }
     if (!applyOptimizationCostRestriction()) {
+      failedDecision(decision);
       return false;
     }
 
@@ -859,6 +867,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
     if (!consistent) {
       wrongDecisions++;
+      failedDecision(decision);
       return false;
     }
 
@@ -884,6 +893,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       applyChoiceConstraint(choice);
     }
 
+    if (heuristic instanceof LastConflictSelect) {
+      leftDecision = fdv != null ? fdv : singleVariable(choice);
+    }
     consistent = label(heuristic.getIndex());
 
     if (shouldExitAfterLeftChild(fdv, val, choice, consistent)) {
@@ -905,6 +917,18 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     store.setLevel(--depth);
     depthExcludePaths--;
     return consistent;
+  }
+
+  /** Tells a last-conflict selection that the left branch of a decision on var failed. */
+  private void failedDecision(Var var) {
+    if (var != null && heuristic instanceof LastConflictSelect<?> lc) {
+      lc.failedDecision(var);
+    }
+  }
+
+  private static Var singleVariable(PrimitiveConstraint choice) {
+    Set<Var> args = choice.arguments();
+    return args.size() == 1 ? args.iterator().next() : null;
   }
 
   private boolean doRightBranch(PrimitiveConstraint choice, T fdv, int val, int firstVariable) {

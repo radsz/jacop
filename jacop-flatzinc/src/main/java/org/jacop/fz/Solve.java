@@ -74,6 +74,7 @@ import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
+import org.jacop.search.LastConflictSelect;
 import org.jacop.search.Lds;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
@@ -1453,12 +1454,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (intSearchVariables.length != 0) {
       // add search containing int variables to be sure that they get a value
-      SelectChoicePoint<IntVar> intSelect =
-          options.freeSearch() || options.complementarySearch()
-              ? new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>())
-              // x <= middle keeps the order of the solutions of x = min, but needs only a
-              // logarithmic number of nested choices to reach a value of a large domain
-              : new SplitSelect<>(intSearchVariables, null, new IndomainMiddle<>());
+      SelectChoicePoint<IntVar> intSelect;
+      if (options.freeSearch() || options.complementarySearch()) {
+        intSelect =
+            new SimpleSelect<>(intSearchVariables, new AfcMaxDeg<>(store), new IndomainMin<>());
+      } else {
+        // x <= middle keeps the order of the solutions of x = min, but needs only a
+        // logarithmic number of nested choices to reach a value of a large domain
+        SplitSelect<IntVar> split =
+            new SplitSelect<>(intSearchVariables, null, new IndomainMiddle<>());
+        // After the search of the annotation, last conflict backtracks straight to the decision
+        // of the annotation that left no value for a variable, as Choco's complementary search
+        // does. A model without annotation keeps the plain split search.
+        intSelect = label != null ? new LastConflictSelect<>(split, new IndomainMiddle<>()) : split;
+      }
 
       if (variableSelection == null) {
         variableSelection = (SelectChoicePoint<T>) intSelect;
