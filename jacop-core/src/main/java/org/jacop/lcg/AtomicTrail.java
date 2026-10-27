@@ -439,6 +439,28 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return reason[entry];
   }
 
+  /**
+   * Returns a variable's last entry before a trail position. With {@link #previousEntry} it walks
+   * the variable's entries from the latest to the earliest.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the entry, or -1 when the variable has none before the position
+   */
+  public int lastEntry(IntVar x, int position) {
+    return lastBefore(x, position);
+  }
+
+  /**
+   * Returns the entry of the same variable recorded before an entry.
+   *
+   * @param entry the entry
+   * @return the variable's previous entry, or -1 when there is none
+   */
+  public int previousEntry(int entry) {
+    return previous[entry];
+  }
+
   private int lastBefore(IntVar x, int position) {
     int i = id(x);
     if (i >= last.length) {
