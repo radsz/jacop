@@ -80,6 +80,9 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
   /** The root node number, or null when any selected node may be the root. */
   final IntVar root;
 
+  // the root is also one of the node or edge variables
+  private final boolean rootAliased;
+
   /** The Boolean of each node; ns[i] is node base + i. */
   final IntVar[] ns;
 
@@ -225,6 +228,11 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
     valid = new int[n];
     dominated = new int[n + m];
     parent = new int[n];
+
+    rootAliased =
+        root != null
+            && (Arrays.stream(ns).anyMatch(v -> v == root)
+                || Arrays.stream(es).anyMatch(v -> v == root));
 
     if (root == null) {
       setScope(ns, es);
@@ -480,6 +488,11 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
         lastValid = c;
       } else if (root != null) {
         root.domain.inComplement(store.level, root, base + c);
+        if (rootAliased) {
+          // the root is also a node or edge variable, so the count of selected nodes may be stale;
+          // consistency() runs this again
+          return;
+        }
       }
     }
 
