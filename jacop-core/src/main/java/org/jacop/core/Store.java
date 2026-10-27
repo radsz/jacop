@@ -210,6 +210,12 @@ public class Store {
   /** It stores current queue, which is being evaluated. */
   public int currentQueue;
 
+  /** The number of domain changes reported so far, to tell whether a constraint pruned. */
+  private long domainChanges;
+
+  /** Whether consistency() returns after each constraint that changed a domain. */
+  private boolean returnAfterPruning;
+
   /** It specifies long description of the store. */
   public String description;
 
@@ -534,6 +540,7 @@ public class Store {
   public void addChanged(Var v, int pruningEvent, int info) {
 
     propagationHasOccurred = true;
+    domainChanges++;
 
     if (variableActivityManagement) {
       variablesPrunned.add(v);
@@ -752,8 +759,47 @@ public class Store {
   }
 
   /**
+   * Makes {@link #consistency()} return after each constraint whose call changed a domain, with the
+   * other queued constraints left for the next call, instead of running all of them to a fixpoint.
+   * Lazy clause generation uses it to propagate clauses before the next constraint, as clauses are
+   * the cheapest propagators it has.
+   *
+   * @param returnAfterPruning true to return after each pruning constraint, false for a fixpoint.
+   */
+  public void setReturnAfterPruning(boolean returnAfterPruning) {
+    this.returnAfterPruning = returnAfterPruning;
+  }
+
+  /**
+   * It specifies whether {@link #consistency()} returns after each constraint that changed a
+   * domain.
+   *
+   * @return true if consistency() returns after each pruning constraint.
+   */
+  public boolean isReturnAfterPruning() {
+    return returnAfterPruning;
+  }
+
+  /**
+   * Checks whether constraints wait in the propagation queues, as they do after {@link
+   * #consistency()} returned early (see {@link #setReturnAfterPruning(boolean)}).
+   *
+   * @return true if some constraint waits for its consistency function.
+   */
+  public boolean hasPendingConstraints() {
+    for (int i = currentQueue; i < queueNo; i++) {
+      if (!changed[i].isEmpty()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * This function computes the consistency function. It evaluates all constraints which are in the
-   * changed queue.
+   * changed queue. With {@link #setReturnAfterPruning(boolean)} it returns after the first
+   * constraint that changed a domain instead, and the constraints still queued wait for the next
+   * call ({@link #hasPendingConstraints()}).
    *
    * @return returns true if all constraints which were in changed queue are consistent, false
    *     otherwise.
@@ -791,10 +837,15 @@ public class Store {
             startFirstRun(currentConstraint);
           }
           numberConsistencyCalls++;
+          long changesBefore = domainChanges;
           currentConstraint.consistency(this);
           if (variableActivityManagement) {
             updateActivities(currentConstraint);
             variablesPrunned.clear();
+          }
+          if (returnAfterPruning && domainChanges != changesBefore) {
+            currentConstraint = null;
+            return true;
           }
         }
         currentQueue++;
