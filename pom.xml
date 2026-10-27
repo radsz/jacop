@@ -247,12 +247,14 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -345,12 +347,14 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -442,12 +446,14 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -538,12 +544,14 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

@@ -290,6 +290,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
                 + (setups ? " with transition times" : ""));
       }
       support.delayedConstraints.add(unary);
+      support.unaryResources.add(new IntVar[][] {s, d});
     }
   }
 }

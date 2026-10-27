@@ -104,6 +104,8 @@ public class Support implements ParserTreeConstants {
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
+  // unary resources found by the disjunctive clique detection: starts and durations
+  final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
