@@ -161,6 +161,7 @@ final class StdDecompositions {
     DECOMPOSERS.put("jacop_link_set_to_booleans", StdDecompositions::linkSetToBooleans);
     DECOMPOSERS.put("jacop_disjoint", (b, a) -> disjoint(b, a.get(0), a.get(1)));
     DECOMPOSERS.put("jacop_partition_set", StdDecompositions::partitionSet);
+    DECOMPOSERS.put("jacop_all_disjoint", StdDecompositions::allDisjoint);
     DECOMPOSERS.put("jacop_if_then_else_set", StdDecompositions::ifThenElseSet);
     DECOMPOSERS.put("jacop_int_set_channel", StdDecompositions::intSetChannel);
     DECOMPOSERS.put("jacop_gcc", StdDecompositions::gcc);
@@ -1205,6 +1206,16 @@ final class StdDecompositions {
     String r = b.newSet(universe);
     b.post("set_intersect", b.set(s), b.set(t), r);
     b.post("set_eq", r, "{}");
+  }
+
+  /** fzn_all_disjoint: pairwise fzn_disjoint. */
+  static void allDisjoint(FznBuilder b, List<Expr> a) {
+    List<Expr> xs = b.model.elements(a.get(0));
+    for (int i = 0; i < xs.size(); i++) {
+      for (int j = i + 1; j < xs.size(); j++) {
+        disjoint(b, xs.get(i), xs.get(j));
+      }
+    }
   }
 
   /** fzn_partition_set: all_disjoint(x) and universe = array_union(x). */

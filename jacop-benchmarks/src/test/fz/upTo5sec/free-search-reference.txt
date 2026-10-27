@@ -33,6 +33,7 @@ abpuzzle/abpuzzle SAT
 added_corner/added_corner SAT
 adjacency_matrix_from_degrees/adjacency_matrix_from_degrees SAT
 ages2/ages2 SAT
+all_disjoint_golfers/all_disjoint_golfers ALL 870
 all_interval/all_interval SAT
 all_interval1/all_interval1 SAT
 all_interval2/all_interval2 SAT

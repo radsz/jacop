@@ -1139,6 +1139,11 @@ public final class ConstraintFncs {
     sc.gen_link_set_to_booleans(n);
   }
 
+  /** Handles the jacop_all_disjoint FlatZinc constraint. */
+  public void jacop_all_disjoint(SimpleNode n) {
+    sc.gen_all_disjoint(n);
+  }
+
   /** Handles the jacop_partition_set FlatZinc constraint. */
   public void jacop_partition_set(SimpleNode n) {
     sc.gen_partition_set(n);
