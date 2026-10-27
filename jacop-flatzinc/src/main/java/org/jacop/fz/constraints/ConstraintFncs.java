@@ -813,6 +813,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_sequence(n);
   }
 
+  /** Handles the jacop_deviation FlatZinc constraint. */
+  public void jacop_deviation(SimpleNode n) {
+    gc.gen_jacop_balance(n, false);
+  }
+
+  /** Handles the jacop_spread FlatZinc constraint. */
+  public void jacop_spread(SimpleNode n) {
+    gc.gen_jacop_balance(n, true);
+  }
+
   /** Handles the jacop_stretch FlatZinc constraint. */
   public void jacop_stretch(SimpleNode n) {
     gc.gen_jacop_stretch(n);

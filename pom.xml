@@ -190,6 +190,7 @@ setup to run configuration. -->
                             <!-- fewer random instances than the commit profile; same checks -->
                             <systemPropertyVariables>
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
+                                <balance.trials>300</balance.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
                                 <grounding.trials>10</grounding.trials>
@@ -230,6 +231,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
@@ -239,11 +241,13 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
+                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
@@ -317,6 +321,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -327,11 +332,13 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
+                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -404,6 +411,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -414,11 +422,13 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
+                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -491,6 +501,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
@@ -500,8 +511,9 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

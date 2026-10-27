@@ -61,6 +61,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.IfThen;
@@ -81,6 +82,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Spread;
 import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
@@ -1803,6 +1805,17 @@ class GlobalConstraints implements ParserTreeConstants {
     DecomposedConstraint<Constraint> c =
         Sequence.builder().list(x).set(setImpl).q(q).min(min).max(max).build();
     support.poseDc(c);
+  }
+
+  void gen_jacop_balance(SimpleNode node, boolean squares) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int a = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int b = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int s = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    IntVar d = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
+
+    // repeated variables and constants are treated as independent, which stays correct
+    support.pose(squares ? new Spread(x, a, b, s, d) : new Deviation(x, a, b, s, d));
   }
 
   void gen_jacop_stretch(SimpleNode node) {
