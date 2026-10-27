@@ -93,9 +93,9 @@ final class BinpackingExplanation {
   // the domains just before the position being explained
   private AtomicTrail trail;
   private int position;
-  private int[] itemMin;
-  private int[] itemMax;
-  private byte[][] status; // per bin and item, computed when first asked; 0 when not yet
+  private final int[] itemMin;
+  private final int[] itemMax;
+  private final byte[][] status; // per bin and item, computed when first asked; 0 when not yet
   private final EntryList scratch = new EntryList();
   private final long[] bounds = new long[2];
 
@@ -119,17 +119,15 @@ final class BinpackingExplanation {
       s += w;
     }
     this.sizeAll = s;
+    this.itemMin = new int[bins.length];
+    this.itemMax = new int[bins.length];
+    this.status = new byte[load.length][];
   }
 
   private void snapshot(AtomicTrail trail, int position) {
     this.trail = trail;
     this.position = position;
     int n = bins.length;
-    if (itemMin == null) {
-      itemMin = new int[n];
-      itemMax = new int[n];
-      status = new byte[load.length][];
-    }
     for (int k = 0; k < n; k++) {
       itemMin[k] = trail.minBefore(bins[k], position);
       itemMax[k] = trail.maxBefore(bins[k], position);
@@ -201,11 +199,11 @@ final class BinpackingExplanation {
     switch (kind) {
       case AtomicTrail.GE -> {
         int m = trail.minBefore(x, entry);
-        for (long u = minBin; u < v && u <= lastBin; u++) {
-          if (u < m) {
-            trail.addLowerBound(x, entry, out);
-            u = m - 1L;
-          } else if (!notIn(k, x, (int) u, out)) {
+        if (m > minBin) {
+          trail.addLowerBound(x, entry, out); // the bins below m
+        }
+        for (long u = Math.max(minBin, m); u < v && u <= lastBin; u++) {
+          if (!notIn(k, x, (int) u, out)) {
             return false;
           }
         }
@@ -213,11 +211,11 @@ final class BinpackingExplanation {
       }
       case AtomicTrail.LE -> {
         int m = trail.maxBefore(x, entry);
-        for (long u = lastBin; u > v && u >= minBin; u--) {
-          if (u > m) {
-            trail.addUpperBound(x, entry, out);
-            u = m + 1L;
-          } else if (!notIn(k, x, (int) u, out)) {
+        if (m < lastBin) {
+          trail.addUpperBound(x, entry, out); // the bins above m
+        }
+        for (long u = Math.min(lastBin, m); u > v && u >= minBin; u--) {
+          if (!notIn(k, x, (int) u, out)) {
             return false;
           }
         }
