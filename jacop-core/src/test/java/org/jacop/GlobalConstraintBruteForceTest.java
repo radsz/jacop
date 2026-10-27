@@ -314,6 +314,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DPath", graph("Path", true)),
         Arguments.of("WeightedSpanningTree", weightedGraph("WeightedSpanningTree", false)),
         Arguments.of("DWeightedSpanningTree", weightedGraph("WeightedSpanningTree", true)),
+        Arguments.of(
+            "DWeightedSpanningTreeDense",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::denseArborescence),
         Arguments.of("Steiner", weightedGraph("Steiner", false)),
         Arguments.of("DSteiner", weightedGraph("Steiner", true)),
         Arguments.of("BoundedPath", weightedGraph("BoundedPath", false)),
@@ -1287,6 +1290,66 @@ class GlobalConstraintBruteForceTest {
               + " w="
               + Arrays.toString(w));
     };
+  }
+
+  /**
+   * A directed weighted spanning tree on a denser multigraph than {@link #weightedGraph}: 2 to 5
+   * nodes, 3 to 8 edges, weights in -1..6 and a narrow cost window, so that the minimum
+   * arborescence bound and its reduced-cost filtering decide often. Variables: es, the root, then
+   * the cost.
+   */
+  private static Instance denseArborescence(Random random) {
+    int n = 2 + random.nextInt(4);
+    int m = 3 + random.nextInt(6);
+    int base = random.nextInt(2);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] w = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(n);
+      w[e] = random.nextInt(8) - 1;
+    }
+    int[][] domains = new int[m + 2][];
+    for (int e = 0; e < m; e++) {
+      int r = random.nextInt(8);
+      domains[e] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    domains[m] = domain(random, base, base + n - 1);
+    int lo = random.nextInt(4 * n) - 2;
+    domains[m + 1] = domain(random, lo, lo + 2 + random.nextInt(10));
+    int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+    int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.imposeDecomposition(
+                new WeightedSpanningTree(
+                    n,
+                    fromNumber,
+                    toNumber,
+                    w,
+                    x[m],
+                    Arrays.copyOfRange(x, 0, m),
+                    x[m + 1],
+                    base,
+                    true)),
+        x -> {
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += x[e] * w[e];
+          }
+          int[] ns = new int[n];
+          Arrays.fill(ns, 1);
+          return sum == x[m + 1]
+              && GraphSemantics.dtree(from, to, ns, Arrays.copyOfRange(x, 0, m), x[m] - base);
+        },
+        "from="
+            + Arrays.toString(fromNumber)
+            + " to="
+            + Arrays.toString(toNumber)
+            + " w="
+            + Arrays.toString(w));
   }
 
   private static Instance stretch(Random random) {
