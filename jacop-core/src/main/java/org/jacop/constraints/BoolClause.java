@@ -35,11 +35,13 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
+import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * I defines a boolean clause for 0/1 variables x_i and y_i. The clause is fulfilled if at least one
@@ -50,7 +52,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClause> {
+public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClause>, Monotone {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -307,5 +309,15 @@ public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClau
   @Override
   public BoolClause copy(VarMap map) {
     return new BoolClause(map.get(x), map.get(y));
+  }
+
+  @Override
+  public int freeDirections(Var v) {
+    boolean positive = Arrays.asList(x).contains(v);
+    boolean negative = Arrays.asList(y).contains(v);
+    if (positive == negative) {
+      return 0;
+    }
+    return positive ? INCREASE : DECREASE;
   }
 }

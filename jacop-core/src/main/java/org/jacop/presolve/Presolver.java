@@ -30,6 +30,7 @@
 
 package org.jacop.presolve;
 
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -94,6 +95,31 @@ public final class Presolver {
    */
   public Presolver checking(boolean on) {
     this.checking = on;
+    return this;
+  }
+
+  /**
+   * Switches the dual reductions on; see {@link Derivation.Builder#dualReductions(boolean)}. They
+   * keep one solution and every optimum but not every solution, so they are only for a search that
+   * wants one solution or an optimum.
+   *
+   * @param objective the objective variable, or null for a satisfaction problem.
+   * @param minimize true if the objective is minimised.
+   * @return this presolver.
+   */
+  public Presolver dualReductions(IntVar objective, boolean minimize) {
+    builder.dualReductions(true).objective(objective, minimize);
+    return this;
+  }
+
+  /**
+   * Sets variables the dual reductions leave alone; see {@link Derivation.Builder#exempt(Var...)}.
+   *
+   * @param vars the variables.
+   * @return this presolver.
+   */
+  public Presolver exempt(Var... vars) {
+    builder.exempt(vars);
     return this;
   }
 

@@ -1027,6 +1027,16 @@ public class LinearInt extends PrimitiveConstraint
     };
   }
 
+  /**
+   * Returns the relation this constraint enforces, over its variables with repeated ones merged,
+   * for presolve; unlike the explanations it holds for subclasses as well.
+   *
+   * @return the linear form
+   */
+  public LinearForm linearRelation() {
+    return lcgForm();
+  }
+
   @Override
   public boolean checksReasons() {
     return true;

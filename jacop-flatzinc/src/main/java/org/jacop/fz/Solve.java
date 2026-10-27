@@ -265,7 +265,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolve();
+      presolve(node);
     }
 
     if (opt.debug()) {
@@ -304,10 +304,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
    */
-  private void presolve() {
+  private void presolve(ASTSolveItem node) {
     long start = timer.getCpuTime();
-    Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+    Presolver presolver =
+        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK);
+    dualReductions(presolver, node);
+    Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -327,6 +329,52 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         store = d.child();
         presolve = d;
       }
+    }
+  }
+
+  /**
+   * Switches presolve's dual reductions on when the search wants one solution or an optimum: they
+   * keep both but not every solution, so they stay off for all solutions of a satisfaction problem
+   * (-a, -n), and with a float or constant objective. With -a an optimisation prints improving
+   * solutions only, which they keep. They stay off with on_restart too, whose built-ins fix
+   * variables from outside the store, and leave alone the variables of the clauses kept for the SAT
+   * solver, which are posted after presolve.
+   */
+  private void dualReductions(Presolver presolver, ASTSolveItem node) {
+    if (!options.presolveDual() || dictionary.onRestart != null) {
+      return;
+    }
+    ASTSolveKind kind = null;
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (node.jjtGetChild(i) instanceof ASTSolveKind k) {
+        kind = k;
+      }
+    }
+    if (kind == null) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    IntVar objective = null;
+    if (k == 0) {
+      if (options.getAll()) {
+        return;
+      }
+    } else {
+      ASTSolveExpr expr = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (expr.getType() == 0) {
+        objective = dictionary.getVariable(expr.getIdent());
+      } else if (expr.getType() == 1) {
+        IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+        objective = a != null ? a[expr.getIndex()] : null;
+      }
+      if (objective == null) {
+        return;
+      }
+    }
+    presolver.dualReductions(objective, k != 2);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      presolver.exempt(clause[0]);
+      presolver.exempt(clause[1]);
     }
   }
 
@@ -368,6 +416,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    Derivation.DualStatistics dual = d.dualStatistics();
+    if (dual != null) {
+      s.append("%%%mzn-stat: presolveDualRounds=").append(dual.rounds()).append('\n');
+      s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
+      s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());
