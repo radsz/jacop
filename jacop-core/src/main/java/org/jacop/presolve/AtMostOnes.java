@@ -269,8 +269,9 @@ public final class AtMostOnes {
       return;
     }
     // merge repeated variables and fold fixed ones into the right-hand side
-    Map<IntVar, long[]> merged = new IdentityHashMap<>();
+    Map<IntVar, Integer> position = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
+    long[] weights = new long[f.vars().length];
     long rhs = f.c();
     try {
       for (int i = 0; i < f.vars().length; i++) {
@@ -279,25 +280,25 @@ public final class AtMostOnes {
         if (v.singleton()) {
           rhs = Math.subtractExact(rhs, Math.multiplyExact(w, (long) v.value()));
         } else {
-          long[] sum = merged.get(v);
-          if (sum == null) {
-            merged.put(v, new long[] {w});
+          Integer p = position.putIfAbsent(v, order.size());
+          if (p == null) {
+            weights[order.size()] = w;
             order.add(v);
           } else {
-            sum[0] = Math.addExact(sum[0], w);
+            weights[p] = Math.addExact(weights[p], w);
           }
         }
       }
       List<Form> forms = new ArrayList<>();
       if (f.relation() != LinearForm.GE) {
-        Form le = form(order, merged, 1, rhs);
+        Form le = form(order, weights, 1, rhs);
         if (le == null) {
           return;
         }
         forms.add(le);
       }
       if (f.relation() != LinearForm.LE) {
-        Form ge = form(order, merged, -1, Math.negateExact(rhs));
+        Form ge = form(order, weights, -1, Math.negateExact(rhs));
         if (ge == null) {
           return;
         }
@@ -326,14 +327,15 @@ public final class AtMostOnes {
    * Reads {@code sign * sum w_i x_i <= rhs}, or returns null if it has no literal or no at-most-one
    * or clause.
    */
-  private Form form(List<IntVar> order, Map<IntVar, long[]> merged, int sign, long rhs) {
+  private Form form(List<IntVar> order, long[] weights, int sign, long rhs) {
     int n = 0;
     long[] cost = new long[order.size()];
     int[] lit = new int[order.size()];
     long base = 0;
     boolean rest = false;
-    for (IntVar v : order) {
-      long w = Math.multiplyExact(sign, merged.get(v)[0]);
+    for (int i = 0; i < order.size(); i++) {
+      IntVar v = order.get(i);
+      long w = Math.multiplyExact(sign, weights[i]);
       if (w == 0) {
         continue;
       }
