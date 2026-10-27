@@ -107,6 +107,10 @@ public class WeightedCompletion extends Constraint
   // sort keys: minimum start and task
   private final long[] key;
 
+  // per task its position in jobs, and per job its weighted mean busy time without a fixed task
+  private final int[] position;
+  private final double[] busy;
+
   // the shift of the parameter up to which the comparisons of the current simulation hold
   private double limit;
 
@@ -164,6 +168,8 @@ public class WeightedCompletion extends Constraint
     this.square2 = new long[n];
     this.heap = new int[n];
     this.key = new long[n];
+    this.position = new int[n];
+    this.busy = new double[n];
 
     this.queueIndex = 3;
 
@@ -173,8 +179,10 @@ public class WeightedCompletion extends Constraint
   @Override
   public void consistency(Store store) {
 
+    boolean again;
     do {
-      store.propagationHasOccurred = false;
+      // the relaxation reads only the bounds of the starts, so it runs again only when they change
+      again = false;
 
       double constant = collect();
       // the bound with no task fixed at a parameter: tasks of the relaxation and the others
@@ -182,12 +190,21 @@ public class WeightedCompletion extends Constraint
       simulate(-1, 0);
       double bound = q0 + constant;
       double best = bound;
+      double totalWeight = 0;
+      for (int k = 0; k < jobCount; k++) {
+        int j = jobs[k];
+        position[j] = k;
+        busy[k] = weights[j] / (2.0 * durations[j]) * square0[k];
+        totalWeight += weights[j];
+      }
 
       for (int i = 0; i < n; i++) {
         IntVar s = starts[i];
         if (s.singleton()) {
           continue;
         }
+        int min = s.min();
+        int max = s.max();
         if (durations[i] == 0) {
           // the bound grows by weights[i] for each unit of start
           if (weights[i] > 0) {
@@ -197,12 +214,13 @@ public class WeightedCompletion extends Constraint
               s.domain.inMax(store.level, s, (int) Math.max(last, (long) IntDomain.MIN_INT));
             }
           }
-          continue;
+        } else if (fixedLimit(i, bound, totalWeight)) {
+          // no start of i can raise the bound above the maximum of the cost
+          removeOverlaps(store, i);
+        } else {
+          best = Math.max(best, sweep(store, i, constant));
         }
-        double least = sweep(store, i, constant);
-        if (least > best) {
-          best = least;
-        }
+        again |= s.min() != min || s.max() != max;
       }
 
       double lower = Math.ceil(best - slack(best));
@@ -213,7 +231,49 @@ public class WeightedCompletion extends Constraint
         cost.domain.inMin(store.level, cost, (int) lower);
       }
 
-    } while (store.propagationHasOccurred);
+    } while (again);
+  }
+
+  /**
+   * It tells if the bound with task i at its latest start stays within the maximum of the cost. The
+   * bound with i at t is at most the bound without i plus w * (t + d) of i, plus a delay of d and
+   * the fixed tasks after the earliest start of i for every other task: the schedule of the
+   * relaxation with the pieces of i removed and the others from t on moved right is a schedule of
+   * the relaxation with i at t.
+   */
+  private boolean fixedLimit(int i, double bound, double totalWeight) {
+    int k = position[i];
+    long est = starts[i].min();
+    long delay = durations[i];
+    for (int f = 0; f < fixedCount; f++) {
+      int task = fixedTask[f];
+      if ((long) starts[task].value() + durations[task] > est) {
+        delay += durations[task];
+      }
+    }
+    double highest =
+        bound
+            - busy[k]
+            - weights[i] * durations[i] / 2.0
+            + (double) weights[i] * ((long) starts[i].max() + durations[i])
+            + (totalWeight - weights[i]) * delay;
+    return highest + slack(highest) < cost.max();
+  }
+
+  // it removes the starts of i at which i overlaps a fixed task
+  private void removeOverlaps(Store store, int i) {
+    IntVar s = starts[i];
+    removed.clear();
+    for (int f = 0; f < fixedCount; f++) {
+      int task = fixedTask[f];
+      long fs = starts[task].value();
+      long from = Math.max(fs - durations[i] + 1, s.min());
+      long to = Math.min(fs + durations[task] - 1, s.max());
+      remove(from, to);
+    }
+    if (!removed.isEmpty()) {
+      s.domain.inComplement(store.level, s, removed);
+    }
   }
 
   // tolerance of the floating point bound, far below the unit of the cost
