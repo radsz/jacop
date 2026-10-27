@@ -249,6 +249,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -351,6 +352,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -452,6 +454,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -552,6 +555,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>

@@ -1,5 +1,5 @@
 /*
- * EnergyPrecedenceDetector.java
+ * PrecedenceDetector.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.List;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
+import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
@@ -41,23 +42,25 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
- * It posts {@link EnergyPrecedence} on each {@code jacop_cumulative} of a model whose tasks are
- * ordered by precedences, as in project scheduling models. The precedences are the difference
- * constraints {@code x + c <= y} of the model ({@code int_lin_le}, {@code int_lin_eq}, {@code
- * int_le}, {@code int_lt}) over any variables, so a chain through tasks of other resources and a
- * makespan that follows the last tasks count too.
+ * It collects the precedences of a model, the difference constraints {@code x + c <= y} ({@code
+ * int_lin_le}, {@code int_lin_eq}, {@code int_le}, {@code int_lt}) over any variables, and gives
+ * them to the constraints that reason on a precedence graph:
  *
- * <p>The cumulative and the precedences are still posted as usual, so the constraint only adds
- * pruning; it has degree weight 0, so it does not change the static degrees that variable
- * selections such as most_constrained read.
- *
- * <p>Setting the system property {@code org.jacop.fz.energyPrecedence} to false turns the detection
- * off.
+ * <ul>
+ *   <li>{@link EnergyPrecedence} on each {@code jacop_cumulative} whose tasks are ordered by
+ *       precedences, as in project scheduling models. A chain through tasks of other resources and
+ *       a makespan that follows the last tasks count too. The cumulative and the precedences are
+ *       still posted as usual, so the constraint only adds pruning; it has degree weight 0, so it
+ *       does not change the static degrees that variable selections such as most_constrained read.
+ *       Setting the system property {@code org.jacop.fz.energyPrecedence} to false turns this off.
+ *   <li>{@link Reservoir} for each {@code jacop_reservoir}, which is posted here rather than when
+ *       the constraint items are read, so that it knows the precedences between its events.
+ * </ul>
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class EnergyPrecedenceDetector implements ParserTreeConstants {
+public class PrecedenceDetector implements ParserTreeConstants {
 
   private final Support support;
 
@@ -67,12 +70,14 @@ public class EnergyPrecedenceDetector implements ParserTreeConstants {
 
   private final List<IntVar[][]> cumulatives = new ArrayList<>();
 
+  private final List<ASTConstElem> reservoirs = new ArrayList<>();
+
   /**
    * It creates a detector reading variables through the given support.
    *
    * @param support the support of the FlatZinc front end.
    */
-  public EnergyPrecedenceDetector(Support support) {
+  public PrecedenceDetector(Support support) {
     this.support = support;
   }
 
@@ -86,8 +91,8 @@ public class EnergyPrecedenceDetector implements ParserTreeConstants {
   }
 
   /**
-   * It scans the constraint items of the model and posts energy precedence reasoning on each
-   * cumulative resource whose tasks have precedences.
+   * It scans the constraint items of the model, posts the reservoirs and, when the detection is on,
+   * energy precedence reasoning on each cumulative resource whose tasks have precedences.
    *
    * @param astTree the root of the parsed model.
    */
@@ -104,12 +109,19 @@ public class EnergyPrecedenceDetector implements ParserTreeConstants {
         }
       }
     }
-    if (from.isEmpty() || cumulatives.isEmpty()) {
-      return;
-    }
     IntVar[] f = from.toArray(new IntVar[0]);
     IntVar[] t = to.toArray(new IntVar[0]);
     int[] l = lag.stream().mapToInt(Integer::intValue).toArray();
+    for (ASTConstElem node : reservoirs) {
+      IntVar[] times = support.getVarArray(child(node, 0));
+      int[] changes = support.getIntArray(child(node, 1));
+      int min = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+      int max = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+      support.delayedConstraints.add(new Reservoir(times, changes, 0, min, max, f, t, l));
+    }
+    if (!enabled() || f.length == 0 || cumulatives.isEmpty()) {
+      return;
+    }
     int posted = 0;
     for (IntVar[][] c : cumulatives) {
       EnergyPrecedence ep = new EnergyPrecedence(c[0], c[1], c[2], c[3][0], f, t, l);
@@ -137,6 +149,7 @@ public class EnergyPrecedenceDetector implements ParserTreeConstants {
   private void collect(ASTConstElem node) {
     switch (node.getName()) {
       case "jacop_cumulative" -> cumulative(node);
+      case "jacop_reservoir" -> reservoirs.add(node);
       case "int_lin_le" -> linear(node, false);
       case "int_lin_eq" -> linear(node, true);
       case "int_le" -> difference(var(node, 0), var(node, 1), 0);

@@ -119,6 +119,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
+import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnDecomposed;
 import org.jacop.constraints.diffn.DiffnK;
@@ -258,6 +259,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "EnergyPrecedence",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::energyPrecedence),
+        Arguments.of("Reservoir", reservoir(false)),
+        Arguments.of("ReservoirPrecedences", reservoir(true)),
         Arguments.of("StockingCost", stockingCost(false)),
         Arguments.of("StockingCostItemDependent", stockingCost(true)),
         Arguments.of(
@@ -1805,6 +1808,78 @@ class GlobalConstraintBruteForceTest {
             + Arrays.toString(to)
             + " lag="
             + Arrays.toString(lag));
+  }
+
+  // events at times t[0..n-1] change a level that starts at initial and stays within [min, max];
+  // with precedences t[to] >= t[from] + lag over the times and one extra variable
+  private static Function<Random, Instance> reservoir(boolean precedences) {
+    return random -> {
+      int n = 2 + random.nextInt(3);
+      int[] changes = randomInts(random, n, -3, 3);
+      int min = -random.nextInt(3);
+      int max = random.nextInt(4);
+      int initial = min + random.nextInt(max - min + 1);
+      int points = precedences ? n + 1 : n;
+      int arcs = precedences ? 1 + random.nextInt(3) : 0;
+      int[] from = new int[arcs];
+      int[] to = new int[arcs];
+      int[] lag = new int[arcs];
+      for (int k = 0; k < arcs; k++) {
+        from[k] = random.nextInt(points);
+        to[k] = (from[k] + 1 + random.nextInt(points - 1)) % points;
+        lag[k] = random.nextInt(4) - 1;
+      }
+      return new Instance(
+          domains(random, points, 0, 4),
+          (store, v) -> {
+            IntVar[] f = new IntVar[arcs];
+            IntVar[] t = new IntVar[arcs];
+            for (int k = 0; k < arcs; k++) {
+              f[k] = v[from[k]];
+              t[k] = v[to[k]];
+            }
+            IntVar[] times = Arrays.copyOf(v, n);
+            store.impose(
+                precedences
+                    ? new Reservoir(times, changes, initial, min, max, f, t, lag)
+                    : new Reservoir(times, changes, min - initial, max - initial));
+          },
+          v -> {
+            for (int k = 0; k < arcs; k++) {
+              if (v[to[k]] < v[from[k]] + lag[k]) {
+                return false;
+              }
+            }
+            for (int x = 0; x < n; x++) {
+              int level = precedences ? initial : 0;
+              for (int y = 0; y < n; y++) {
+                if (v[y] <= v[x]) {
+                  level += changes[y];
+                }
+              }
+              if (precedences
+                  ? level < min || level > max
+                  : level < min - initial || level > max - initial) {
+                return false;
+              }
+            }
+            return true;
+          },
+          "changes="
+              + Arrays.toString(changes)
+              + " initial="
+              + initial
+              + " ["
+              + min
+              + ", "
+              + max
+              + "] from="
+              + Arrays.toString(from)
+              + " to="
+              + Arrays.toString(to)
+              + " lag="
+              + Arrays.toString(lag));
+    };
   }
 
   // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
