@@ -228,6 +228,29 @@ class StdDecompositionsTest {
             "jacop_disjunctive_optional(" + s + ",[d1,d2,2,1]," + o + ")"));
 
     d = new StringBuilder();
+    String ss = vars(d, "s", 3, "0..4");
+    String sd = vars(d, "d", 2, "0..2");
+    String sp = vars(d, "p", 4, "bool");
+    vars(d, "m", 1, "0..5");
+    vars(d, "l", 1, "-1..6");
+    models.add(
+        model(
+            "alternative",
+            d.toString(),
+            "jacop_alternative(p4,m1,l1,[p1,p2,p3]," + ss + ",[d1,d2,2])"));
+    models.add(model("span", d.toString(), "jacop_span(p4,m1,l1,[p1,p2,p3]," + ss + ",[d1,d2,2])"));
+    models.add(
+        model(
+            "alternative_present",
+            d.toString(),
+            "jacop_alternative(true,m1,l1,[p1,p2,p3]," + ss + ",[d1,d2,2])"));
+    models.add(
+        model(
+            "span_present",
+            d.toString(),
+            "jacop_span(true,m1,l1,[p1,p2,p3]," + ss + ",[d1,d2,2])"));
+
+    d = new StringBuilder();
     String f = vars(d, "f", 4, "0..3");
     vars(d, "k", 1, "0..30");
     // arcs 1->2, 1->3, 2->3, 3->4 with supply 3 at node 1 and demand 3 at node 4
