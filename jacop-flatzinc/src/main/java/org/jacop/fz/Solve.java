@@ -50,6 +50,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -63,9 +64,12 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.fz.constraints.ObjectiveDetector;
+import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
@@ -268,6 +272,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
+      presolveObjective(node);
       presolve();
     }
 
@@ -303,6 +308,56 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Objective presolve: imposes the objective, expanded through its defining equations and shifted
+   * by the exactly-one sets of the model, as a redundant equation in the loaded store, so presolve
+   * copies it into the derived store. See {@link ObjectivePresolve}.
+   *
+   * @param node the solve item.
+   */
+  private void presolveObjective(ASTSolveItem node) {
+    if (!ObjectiveDetector.enabled()
+        || !(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null || objective.singleton() || !store.consistency()) {
+      return;
+    }
+    SimpleNode root = node;
+    while (root.jjtGetParent() != null) {
+      root = (SimpleNode) root.jjtGetParent();
+    }
+    long start = timer.getCpuTime();
+    ObjectivePresolve presolve =
+        new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
+    LinearInt equation = presolve.reformulate();
+    if (equation != null) {
+      store.impose(equation);
+    }
+    if (options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: presolveObjectiveTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: presolveObjectiveExpanded="
+              + (equation == null ? 0 : presolve.expanded())
+              + "\n%%%mzn-stat: presolveObjectiveShifted="
+              + (equation == null ? 0 : presolve.shifted()));
+    }
+  }
+
+  /**
    * Derives the store to search from the loaded store. Search, annotations and the objective use
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
@@ -310,7 +365,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void presolve() {
     long start = timer.getCpuTime();
     Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+        Presolver.of(store)
+            .checking(options.presolve() == Options.Presolve.CHECK)
+            .rounds(options.presolveRounds())
+            .presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -363,6 +421,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     s.append("%%%mzn-stat: presolveOutcome=")
         .append(d.outcome().name().toLowerCase(Locale.ROOT))
         .append('\n');
+    s.append("%%%mzn-stat: presolveRounds=").append(d.rounds()).append('\n');
     Derivation.Statistics st = d.statistics();
     if (st != null) {
       s.append("%%%mzn-stat: presolveVariablesBefore=").append(st.parentVariables()).append('\n');
@@ -999,6 +1058,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.searchDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
+            + "\n%%%mzn-stat: lcgSemanticallyRemoved="
+            + lcg.sat().semanticallyRemoved
+            + "\n%%%mzn-stat: lcgSemanticUips="
+            + lcg.sat().semanticUips
             + "\n%%%mzn-stat-end\n"
             + perClass);
   }
