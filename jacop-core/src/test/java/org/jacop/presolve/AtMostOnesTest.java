@@ -67,7 +67,29 @@ class AtMostOnesTest {
 
   private static final int TRIALS = Integer.getInteger("atmostones.trials", 600);
 
-  private record Model(Store store, IntVar[] x, IntVar[] b) {}
+  private static final class Model {
+    private final Store store;
+    private final IntVar[] x;
+    private final IntVar[] b;
+
+    Model(Store store, IntVar[] x, IntVar[] b) {
+      this.store = store;
+      this.x = x;
+      this.b = b;
+    }
+
+    Store store() {
+      return store;
+    }
+
+    IntVar[] x() {
+      return x;
+    }
+
+    IntVar[] b() {
+      return b;
+    }
+  }
 
   private static Model model(int booleans, Consumer<Model> impose) {
     Store store = new Store();

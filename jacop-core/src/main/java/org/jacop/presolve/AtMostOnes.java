@@ -130,7 +130,15 @@ public final class AtMostOnes {
   private final List<IntVar> vars = new ArrayList<>();
 
   /** A clique or a clause over literals, sorted; {@code equivalent} if it is the whole relation. */
-  private record Part(int[] lits, boolean equivalent) {}
+  private static final class Part {
+    final int[] lits;
+    final boolean equivalent;
+
+    Part(int[] lits, boolean equivalent) {
+      this.lits = lits;
+      this.equivalent = equivalent;
+    }
+  }
 
   /** One relation {@code <=} of a constraint: an equality gives two. */
   private record Form(Part atMostOne, Part clause) {}
@@ -153,7 +161,15 @@ public final class AtMostOnes {
   private int falseCount;
 
   /** A constraint to add over sorted literals: at most one of them, or exactly one. */
-  private record Addition(int[] lits, boolean exactlyOne) {}
+  private static final class Addition {
+    final int[] lits;
+    final boolean exactlyOne;
+
+    Addition(int[] lits, boolean exactlyOne) {
+      this.lits = lits;
+      this.exactlyOne = exactlyOne;
+    }
+  }
 
   private final List<Addition> added = new ArrayList<>();
   private int[][] addedOf;
@@ -192,8 +208,8 @@ public final class AtMostOnes {
     r.statistics =
         new Statistics(
             r.cliques.size(),
-            (int) r.added.stream().filter(a -> !a.exactlyOne()).count(),
-            (int) r.added.stream().filter(Addition::exactlyOne).count(),
+            (int) r.added.stream().filter(a -> !a.exactlyOne).count(),
+            (int) r.added.stream().filter(a -> a.exactlyOne).count(),
             r.dropped.size(),
             r.falseCount);
     return r;
@@ -239,7 +255,7 @@ public final class AtMostOnes {
       }
     } else {
       for (Addition a : r.added) {
-        impose.accept(r.constraint(a.lits(), a.exactlyOne()));
+        impose.accept(r.constraint(a.lits, a.exactlyOne));
       }
       for (Constraint c : r.dropped) {
         remove.accept(c);
@@ -577,7 +593,7 @@ public final class AtMostOnes {
 
   private void removeLastAdded() {
     int index = added.size() - 1;
-    for (int l : added.remove(index).lits()) {
+    for (int l : added.remove(index).lits) {
       addedOfSize[l]--;
     }
   }
@@ -586,7 +602,7 @@ public final class AtMostOnes {
   private boolean impliedAtMostOne(int[] lits) {
     int first = lits[0];
     for (int m = 0; m < addedOfSize[first]; m++) {
-      int[] a = added.get(addedOf[first][m]).lits();
+      int[] a = added.get(addedOf[first][m]).lits;
       boolean all = true;
       for (int l : lits) {
         if (Arrays.binarySearch(a, l) < 0) {
@@ -606,9 +622,9 @@ public final class AtMostOnes {
     for (int l : lits) {
       for (int m = 0; m < addedOfSize[l]; m++) {
         int index = addedOf[l][m];
-        if (added.get(index).exactlyOne()) {
+        if (added.get(index).exactlyOne) {
           boolean all = true;
-          for (int u : added.get(index).lits()) {
+          for (int u : added.get(index).lits) {
             if (Arrays.binarySearch(lits, u) < 0) {
               all = false;
               break;
