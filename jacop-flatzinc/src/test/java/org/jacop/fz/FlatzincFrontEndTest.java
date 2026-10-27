@@ -301,6 +301,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void twoImplicationsOfTheSameEqualityKeepTheirBooleansIndependent() throws IOException {
+    // int_eq_imp(x,0,a) and int_eq_imp(x,0,b) were collected as one channel and a = b was posted,
+    // as for reifications; with a false and the clause a \/ b the 2021 Challenge model
+    // flowshop-workers failed at the root on all its instances
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: x:: output_var;
+        constraint int_eq_imp(x,0,a);
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        List.of(
+            "a = false; b = false; x = 0;",
+            "a = false; b = false; x = 1;",
+            "a = false; b = false; x = 2;",
+            "a = false; b = true; x = 0;",
+            "a = true; b = false; x = 0;",
+            "a = true; b = true; x = 0;"),
+        solveAllInOrder(fzn).stream().sorted().toList());
+  }
+
+  @Test
   void seqSearchOfIgnoredAnnotationsFallsBackToDefaultSearch() throws IOException {
     // A seq_search whose annotations were all ignored had no search, which ended in a
     // NullPointerException, both nested (MiniZinc regression test_bug53) and at the top level.
