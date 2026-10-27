@@ -154,7 +154,7 @@ public class OverlappingAlldiff extends Constraint
     this.hi = new int[n];
     this.first = new int[] {0, group[W].length, group[W].length + group[X].length, n};
 
-    this.queueIndex = 2;
+    this.queueIndex = 4;
 
     setScope(Stream.concat(Arrays.stream(s), Arrays.stream(group[Y])));
   }
@@ -276,8 +276,9 @@ public class OverlappingAlldiff extends Constraint
     int[] dw = dist[W];
     int[] dx = dist[X];
     int[] dy = dist[Y];
-    for (int a = 0; a < m; a++) {
-      for (int c = a + 1; c < m; c++) {
+    // narrow intervals first: their tightenings often imply those of the wider ones
+    for (int span = 1; span < m; span++) {
+      for (int a = 0, c = span; c < m; a++, c++) {
         int width = point[c] - point[a];
         int ac = a * size + c;
         int ca = c * size + a;
@@ -305,10 +306,14 @@ public class OverlappingAlldiff extends Constraint
     if (v + d[c * size + a] < 0) {
       throw Store.failException;
     }
+    int rowc = c * size;
     for (int i = 0; i < m; i++) {
-      int ia = d[i * size + a] + v;
       int row = i * size;
-      int rowc = c * size;
+      int ia = d[row + a] + v;
+      // d(i, j) <= d(i, c) + d(c, j) already, so row i improves only if d(i, c) does
+      if (ia >= d[row + c]) {
+        continue;
+      }
       for (int j = 0; j < m; j++) {
         int w = ia + d[rowc + j];
         if (w < d[row + j]) {
