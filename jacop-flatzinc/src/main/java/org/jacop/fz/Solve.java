@@ -310,7 +310,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void presolve() {
     long start = timer.getCpuTime();
     Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+        Presolver.of(store)
+            .checking(options.presolve() == Options.Presolve.CHECK)
+            .rounds(options.presolveRounds())
+            .presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -363,6 +366,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     s.append("%%%mzn-stat: presolveOutcome=")
         .append(d.outcome().name().toLowerCase(Locale.ROOT))
         .append('\n');
+    s.append("%%%mzn-stat: presolveRounds=").append(d.rounds()).append('\n');
     Derivation.Statistics st = d.statistics();
     if (st != null) {
       s.append("%%%mzn-stat: presolveVariablesBefore=").append(st.parentVariables()).append('\n');
@@ -999,6 +1003,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.searchDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
+            + "\n%%%mzn-stat: lcgSemanticallyRemoved="
+            + lcg.sat().semanticallyRemoved
+            + "\n%%%mzn-stat: lcgSemanticUips="
+            + lcg.sat().semanticUips
             + "\n%%%mzn-stat-end\n"
             + perClass);
   }

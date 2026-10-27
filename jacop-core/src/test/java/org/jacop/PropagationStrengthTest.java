@@ -40,6 +40,8 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -51,6 +53,8 @@ import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntDomain;
@@ -501,5 +505,72 @@ class PropagationStrengthTest {
       v.domain.inComplement(store.level, v, value);
     }
     return store.consistency();
+  }
+
+  /** Tasks of length p on some machines, as the inter-distance global or as a cumulative. */
+  private static IntVar[] equalLengthTasks(
+      Store store, int[] lo, int[] hi, int p, int machines, boolean global) {
+    int n = lo.length;
+    IntVar[] x = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    IntVar[] r = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, lo[i], hi[i]);
+      d[i] = new IntVar(store, p, p);
+      r[i] = new IntVar(store, 1, 1);
+    }
+    IntVar limit = new IntVar(store, machines, machines);
+    if (machines == 1) {
+      store.impose(global ? new InterDistance(x, p) : new CumulativeUnary(x, d, r, limit, true));
+    } else {
+      store.impose(
+          global ? new MultiInterDistance(x, machines, p) : new Cumulative(x, d, r, limit));
+    }
+    return x;
+  }
+
+  @Test
+  void testInterDistanceIsBoundsConsistentWhereTheUnaryResourceIsNot() {
+
+    // x3 = 9 or 10 leaves x0 in 8..12 and x2 in 9..14 both at 12 or later, 3 apart: impossible
+    int[] lo = {6, 0, 9, 9, 5};
+    int[] hi = {12, 3, 14, 16, 6};
+    Store store = new Store();
+    IntVar[] x = equalLengthTasks(store, lo, hi, 3, 1, true);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[3].min()).isEqualTo(11);
+
+    Store unaryStore = new Store();
+    IntVar[] y = equalLengthTasks(unaryStore, lo, hi, 3, 1, false);
+    assertThat(unaryStore.consistency()).isTrue();
+    assertThat(y[3].min()).isEqualTo(9);
+  }
+
+  @Test
+  void testInterDistanceRemovesTheNeighbourhoodOfAFixedTask() {
+
+    Store store = new Store();
+    IntVar[] x = equalLengthTasks(store, new int[] {5, 0, 0}, new int[] {5, 20, 20}, 3, 1, true);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1].dom().toString()).isEqualTo("{0..2, 8..20}");
+    assertThat(x[2].dom().toString()).isEqualTo("{0..2, 8..20}");
+  }
+
+  @Test
+  void testMultiInterDistanceIsStrongerThanCumulative() {
+
+    // two machines, tasks of length 4
+    int[] lo = {8, 6, 9, 9, 8};
+    int[] hi = {12, 10, 10, 16, 13};
+    Store store = new Store();
+    IntVar[] x = equalLengthTasks(store, lo, hi, 4, 2, true);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[3].min()).isEqualTo(14);
+    assertThat(x[1].max()).isEqualTo(8);
+
+    Store cumulativeStore = new Store();
+    IntVar[] y = equalLengthTasks(cumulativeStore, lo, hi, 4, 2, false);
+    assertThat(cumulativeStore.consistency()).isTrue();
+    assertThat(y[3].min()).isEqualTo(12);
   }
 }

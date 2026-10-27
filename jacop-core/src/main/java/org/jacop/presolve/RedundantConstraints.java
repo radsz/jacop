@@ -144,6 +144,10 @@ final class RedundantConstraints {
   // key of a reified or implied linear constraint
   private record ReifiedKey(Class<?> outer, int control, Class<?> inner, Canonical relation) {}
 
+  /** The rule: leaves out of the child the constraints that the others imply. */
+  static final Rule RULE =
+      context -> find(context.constraints()).removed().forEach(context::remove);
+
   private final Map<Var, Integer> ordinals = new IdentityHashMap<>();
 
   private final List<Var> byOrdinal = new ArrayList<>();
