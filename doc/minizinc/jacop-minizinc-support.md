@@ -77,7 +77,7 @@ or copy those files into one directory and put that directory on `MZN_SOLVER_PAT
 
 ## Free search (`-f`)
 
-With `-f` (MiniZinc's "free search" flag) JaCoP ignores the search annotations as the only search and runs its free search engine, `org.jacop.search.free.FreeSearch`, which is also available to Java models through `FreeSearch.withDefaults(store, vars)`. By default it branches with dom/wdeg, last conflict (k = 1) and solution-based phase saving, restarts geometrically (100 failures, growing by 1.5), restarts after each solution, learns nogoods from restarts, and interleaves the model's annotation with free search, one restart each. For `-a` on a satisfaction model it runs one complete search without restarts and reports each assignment of the output variables once. `-n`, `-t`, `-s` and `-v` work as without `-f`; `-r` has no effect, since the engine makes no random choices.
+With `-f` (MiniZinc's "free search" flag) JaCoP ignores the search annotations as the only search and runs its free search engine, `org.jacop.search.free.FreeSearch`, which is also available to Java models through `FreeSearch.withDefaults(store, vars)`. By default it branches with dom/wdeg, last conflict (k = 1) and solution-based phase saving, restarts geometrically (for satisfaction from 100 failures, growing by 1.5; for optimisation, as Choco does, from 10 failures growing by 1.05, started again after each solution, with the dom/wdeg weights forgotten every 32 restarts), restarts after each solution, learns nogoods from restarts, and interleaves the model's annotation with free search, one restart each. For `-a` on a satisfaction model it runs one complete search without restarts and reports each assignment of the output variables once. `-n`, `-t`, `-s` and `-v` work as without `-f`; `-r` has no effect, since the engine makes no random choices.
 
 `--free-engine legacy` selects the previous implementation. `--free-config key=value,...` changes the settings of the new engine, mainly for experiments:
 
@@ -86,12 +86,15 @@ With `-f` (MiniZinc's "free search" flag) JaCoP ignores the search annotations a
 | `heuristic` | `domwdeg`, `cacd` (wdeg^ca.cd), `chs` (conflict history search), `afc` | `domwdeg` |
 | `lc` | last conflict size, 0 is off | 1 |
 | `phase` | solution-based phase saving, 0 or 1 | 1 |
-| `restarts`, `scale`, `base` | `geometric`, `luby` or `none`; failures of the first run; growth of geometric restarts | `geometric`, 100, 1.5 |
+| `restarts`, `scale`, `base` | `geometric`, `luby` or `none`; failures of the first run; growth of geometric restarts | `geometric`; 100, 1.5 for satisfaction; 10, 1.05 for optimisation |
 | `restart-on-solution` | 0 or 1 | 1 |
 | `objective-last` | branch on the objective after the other variables, 0 or 1 | 1 |
 | `interleave` | `restart`, `solution` (annotation until the first solution) or `none` | `restart` |
 | `nogoods` | nogoods from restarts, 0 or 1 | 1 |
 | `impact`, `impact-until` | bound-impact values for optimisation on domains up to n values (0 is off); `first` or `always` | 0, `first` |
+| `impact-every` | with `impact`, probe in the first run and then every k-th run only (0 is every run) | 0 |
+| `restart-reset` | start the restart limits again after each solution, 0 or 1 | 0 for satisfaction, 1 for optimisation |
+| `flush` | forget the dom/wdeg weights every k restarts (0 is never) | 0 for satisfaction, 32 for optimisation |
 
 `--restart` (with `--restart-scale` and `--restart-base`), when given, replaces the restart policy of the free search.
 

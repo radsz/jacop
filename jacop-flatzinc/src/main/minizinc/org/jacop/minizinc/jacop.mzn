@@ -56,6 +56,8 @@ include "disjunctive_setup.mzn";
 include "subcircuit_cost.mzn";
 include "weighted_subcircuits.mzn";
 include "deviation.mzn";
+include "inter_distance.mzn";
+include "multi_inter_distance.mzn";
 
 %% ===== JaCoP graph constraints =====
 opt bool: use_jacop_graph_constraints;

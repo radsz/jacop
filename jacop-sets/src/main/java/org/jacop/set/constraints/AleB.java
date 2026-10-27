@@ -78,6 +78,10 @@ public class AleB extends AbstractAleqB implements Copyable<AleB> {
 
   @Override
   public void consistency(Store store) {
+    // every set is at most itself; the propagation treats a and b as independent
+    if (a == b) {
+      return;
+    }
     propagateOrder(store, false);
   }
 
@@ -108,6 +112,11 @@ public class AleB extends AbstractAleqB implements Copyable<AleB> {
     }
 
     return le;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return a == b || super.satisfied();
   }
 
   @Override

@@ -79,6 +79,10 @@ public class AltB extends AbstractAleqB implements Copyable<AltB> {
 
   @Override
   public void consistency(Store store) {
+    // no set is smaller than itself; the propagation below treats a and b as independent
+    if (a == b) {
+      throw Store.failException;
+    }
     // b is larger than some set, so it is not empty
     b.domain.inCardinality(store.level, b, 1, IntDomain.MAX_INT);
     propagateOrder(store, true);
@@ -111,6 +115,11 @@ public class AltB extends AbstractAleqB implements Copyable<AltB> {
     }
 
     return lt;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return a != b && super.satisfied();
   }
 
   @Override

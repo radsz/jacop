@@ -198,6 +198,30 @@ class SetRelationsTest {
     assertThat(store3.consistency()).isTrue();
   }
 
+  @Test
+  void testLexOrderOfASetWithItself() {
+    // the propagation treated a and b as two sets, so a < a and not (a <= a) accepted a = {1, 2}
+    Store store = new Store();
+    SetVar a = groundSetVar(store, "a", 1, 2);
+    store.impose(new AltB(a, a));
+    assertThat(store.consistency()).isFalse();
+
+    Store store2 = new Store();
+    SetVar c = groundSetVar(store2, "c", 1, 2);
+    store2.impose(new Not(new AleB(c, c)));
+    assertThat(store2.consistency()).isFalse();
+
+    Store store3 = new Store();
+    SetVar e = new SetVar(store3, "e", new BoundSetDomain(dom(2), dom(1, 2)));
+    assertThat(new AleB(e, e).satisfied()).isTrue();
+    assertThat(new AleB(e, e).notSatisfied()).isFalse();
+    assertThat(new AltB(e, e).satisfied()).isFalse();
+    assertThat(new AltB(e, e).notSatisfied()).isTrue();
+    store3.impose(new AleB(e, e));
+    assertThat(store3.consistency()).isTrue();
+    assertThat(e.domain.lub().eq(dom(1, 2))).isTrue();
+  }
+
   private static IntDomain dom(int... values) {
     IntervalDomain d = new IntervalDomain();
     for (int v : values) {

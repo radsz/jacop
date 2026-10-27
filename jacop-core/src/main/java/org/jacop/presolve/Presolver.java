@@ -30,6 +30,7 @@
 
 package org.jacop.presolve;
 
+import java.util.List;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -52,16 +53,26 @@ import org.jacop.core.Var;
  * checking mode they are kept, and every returned solution is propagated in the original store,
  * which checks it against the whole model.
  *
+ * <p>The presolver applies the {@link #STANDARD standard rules} and any added with {@link
+ * #rule(Rule)}, in rounds alternated with propagation until a fixpoint; see {@link Rule}.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
 public final class Presolver {
+
+  /**
+   * The rules every presolve applies, in this order, before those added with {@link #rule(Rule)}. A
+   * new presolve rule is added here.
+   */
+  static final List<Rule> STANDARD = List.of();
 
   private final Derivation.Builder builder;
   private boolean checking;
 
   private Presolver(Store store) {
     this.builder = Derivation.of(store);
+    STANDARD.forEach(builder::rule);
   }
 
   /**
@@ -99,6 +110,17 @@ public final class Presolver {
   }
 
   /**
+   * Adds a rule after the standard ones.
+   *
+   * @param rule the rule.
+   * @return this presolver.
+   */
+  public Presolver rule(Rule rule) {
+    builder.rule(rule);
+    return this;
+  }
+
+  /**
    * Switches the dual reductions on; see {@link Derivation.Builder#dualReductions(boolean)}. They
    * keep one solution and every optimum but not every solution, so they are only for a search that
    * wants one solution or an optimum.
@@ -109,6 +131,17 @@ public final class Presolver {
    */
   public Presolver dualReductions(IntVar objective, boolean minimize) {
     builder.dualReductions(true).objective(objective, minimize);
+    return this;
+  }
+
+  /**
+   * Sets the most rounds of rules; see {@link Derivation.Builder#rounds(int)}.
+   *
+   * @param max the most rounds, at least 1.
+   * @return this presolver.
+   */
+  public Presolver rounds(int max) {
+    builder.rounds(max);
     return this;
   }
 

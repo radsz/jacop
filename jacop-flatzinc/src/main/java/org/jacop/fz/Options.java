@@ -37,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.presolve.Derivation;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -78,6 +79,7 @@ public class Options {
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean presolveDual = true;
+  int presolveRounds = Derivation.DEFAULT_ROUNDS;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -133,11 +135,13 @@ public class Options {
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
-                scale=<failures>, base=<growth of geometric restarts>,
+                scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),
                 impact=<n> (bound-impact values for optimisation, on domains up to n values; 0 = off),
-                impact-until=first|always,
+                impact-until=first|always, impact-every=<k> (probe in the first run and every k-th),
+                restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
+                flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
@@ -152,6 +156,8 @@ public class Options {
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
+            --presolve-rounds <value> the most rounds of presolve rules, each followed by
+                propagation, before presolve stops short of a fixpoint (default 10).
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -193,6 +199,7 @@ public class Options {
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
+      case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -298,6 +305,16 @@ public class Options {
       case "on" -> presolveDual = true;
       case "off" -> presolveDual = false;
       default -> System.err.println("%% Presolve dual mode " + args[i] + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveRounds(String[] args, int i) {
+    int rounds = Integer.parseInt(args[++i]);
+    if (rounds >= 1) {
+      presolveRounds = rounds;
+    } else {
+      System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
     return i + 1;
   }
@@ -626,6 +643,15 @@ public class Options {
    */
   public boolean presolveDual() {
     return presolveDual;
+  }
+
+  /**
+   * It defines the most rounds of presolve rules (--presolve-rounds).
+   *
+   * @return the most rounds, {@link Derivation#DEFAULT_ROUNDS} by default
+   */
+  public int presolveRounds() {
+    return presolveRounds;
   }
 
   /** Sat is used. */

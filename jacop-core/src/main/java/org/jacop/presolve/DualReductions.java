@@ -63,14 +63,15 @@ import org.jacop.lcg.LinearForm;
  *
  * <p>The reductions keep at least one solution and every optimum, but not every solution, so they
  * are only for searches that want one solution or an optimum. Each round reduces each variable at
- * most once, which keeps every reduction of a round valid with the others applied; the caller
- * propagates between rounds. Unlike the other rules, the reductions remove solutions, so they run
- * only when asked for.
+ * most once, which keeps every reduction of a round valid with the others applied; the derivation
+ * propagates between rounds. Unlike the other rules, the reductions remove solutions, so a
+ * derivation runs this rule, after the others, only when asked for (see {@link
+ * Derivation.Builder#dualReductions(boolean)}).
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-final class DualReductions {
+final class DualReductions implements Rule {
 
   /** The locks on one variable in a round. */
   private static final class Info {
@@ -128,6 +129,7 @@ final class DualReductions {
   private final boolean minimize;
   private final Set<Var> exempt;
 
+  private int rounds;
   private int fixed;
   private int tightened;
 
@@ -142,6 +144,15 @@ final class DualReductions {
     this.objective = objective;
     this.minimize = minimize;
     this.exempt = exempt;
+  }
+
+  /**
+   * Returns the number of rounds run.
+   *
+   * @return the number.
+   */
+  int rounds() {
+    return rounds;
   }
 
   /**
@@ -160,6 +171,12 @@ final class DualReductions {
    */
   int tightened() {
     return tightened;
+  }
+
+  @Override
+  public void apply(Context context) {
+    rounds++;
+    apply(context.store(), context.level(), context.constraints());
   }
 
   /**
