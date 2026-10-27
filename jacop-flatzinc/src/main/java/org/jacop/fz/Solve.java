@@ -47,6 +47,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
@@ -63,6 +64,8 @@ import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Presolver;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -112,13 +115,19 @@ import org.jacop.set.search.IndomainSetMin;
 public class Solve<T extends Var> implements ParserTreeConstants {
 
   static final String P = System.getProperty("fz_system_timer");
-  final Store store;
+  // the store searched: the loaded store, or the store derived from it by presolve
+  Store store;
   final boolean debug = false;
   final boolean printSearchInfo = false;
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
+  // the variables search uses, in the searched store
   Tables dictionary;
+  // the variables output prints, in the loaded store
+  Tables output;
+  // the derivation of the searched store, or null when the loaded store is searched
+  Derivation presolve;
   Options options;
   int initNumberConstraints;
   Timer timer;
@@ -250,6 +259,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
+    options = opt;
+    dictionary = table;
+    output = table;
+    if (opt.presolve() != Options.Presolve.OFF) {
+      presolve();
+    }
+
     if (opt.debug()) {
       failStatistics = new FailConstraintsStatistics(store);
     }
@@ -262,13 +278,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Runtime runtime = Runtime.getRuntime();
     long modelMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
 
-    dictionary = table;
-
     if (opt.debug()) {
-      printSearchModelDebugInfo(table, modelMem);
+      printSearchModelDebugInfo(dictionary, modelMem);
     }
 
-    options = opt;
     solveKind = -1;
 
     int count = node.jjtGetNumChildren();
@@ -282,6 +295,80 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "%% Error: Not recognized structure of solve statement; compilation aborted");
     }
+  }
+
+  /**
+   * Derives the store to search from the loaded store. Search, annotations and the objective use
+   * the derived store's variables through a mapped copy of the tables; each solution is written
+   * back into the loaded variables, which the output prints.
+   */
+  private void presolve() {
+    long start = timer.getCpuTime();
+    Derivation d =
+        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+    long time = timer.getCpuTime() - start;
+    if (options.getStatistics()) {
+      printPresolveStatistics(d, time);
+    }
+    switch (d.outcome()) {
+      case INFEASIBLE -> throw Store.failException;
+      case LIVE -> {
+        // a constraint that cannot be copied: the loaded store is searched
+      }
+      case DERIVED -> {
+        VarMap map = completeMap(d);
+        for (IntVar[][] clause : sat.collectedClauses()) {
+          clause[0] = map.get(clause[0]);
+          clause[1] = map.get(clause[1]);
+        }
+        dictionary = dictionary.mapTo(map);
+        store = d.child();
+        presolve = d;
+      }
+    }
+  }
+
+  /**
+   * The derivation's map, completed with a constant in the derived store for every variable fixed
+   * by presolve, so annotations and output arrays that name such a variable stay valid.
+   */
+  private static VarMap completeMap(Derivation d) {
+    Map<Var, Var> fixed = new IdentityHashMap<>();
+    return new VarMap() {
+      @Override
+      public Store target() {
+        return d.child();
+      }
+
+      @Override
+      @SuppressWarnings("unchecked")
+      public <V extends Var> V get(V v) {
+        if (v == null) {
+          return null;
+        }
+        V copy = d.get(v);
+        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> x.copyTo(d.child()));
+      }
+    };
+  }
+
+  private void printPresolveStatistics(Derivation d, long time) {
+    StringBuilder s = new StringBuilder();
+    s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
+    s.append("%%%mzn-stat: presolveOutcome=")
+        .append(d.outcome().name().toLowerCase(Locale.ROOT))
+        .append('\n');
+    Derivation.Statistics st = d.statistics();
+    if (st != null) {
+      s.append("%%%mzn-stat: presolveVariablesBefore=").append(st.parentVariables()).append('\n');
+      s.append("%%%mzn-stat: presolveVariablesAfter=").append(st.childVariables()).append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsBefore=")
+          .append(st.parentConstraints())
+          .append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    s.append("%%%mzn-stat-end");
+    IO.println(s.toString());
   }
 
   private void printSearchModelDebugInfo(Tables table, long modelMem) {
@@ -2238,12 +2325,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
 
-    if (!dictionary.outputVariables.isEmpty()) {
+    if (presolve != null) {
+      presolve.returnSolution();
+    }
+
+    if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);
     }
 
-    for (int i = 0; i < dictionary.outputArray.size(); i++) {
-      printBuffer.append(dictionary.outputArray.get(i)).append("\n");
+    for (int i = 0; i < output.outputArray.size(); i++) {
+      printBuffer.append(output.outputArray.get(i)).append("\n");
     }
 
     if (options.getVerbose()) {
@@ -2265,8 +2356,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void appendOutputVariablesToBuffer(StringBuffer printBuffer) {
-    for (int i = 0; i < dictionary.outputVariables.size(); i++) {
-      appendVariableOutput(printBuffer, dictionary.outputVariables.get(i));
+    for (int i = 0; i < output.outputVariables.size(); i++) {
+      appendVariableOutput(printBuffer, output.outputVariables.get(i));
     }
   }
 

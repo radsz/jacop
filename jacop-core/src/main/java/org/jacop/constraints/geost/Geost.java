@@ -35,8 +35,10 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,9 +46,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.InitOnce;
@@ -116,7 +120,8 @@ import org.jacop.core.Var;
  */
 @Slf4j
 @SuppressWarnings("PointlessBooleanExpression")
-public class Geost extends Constraint implements UsesQueueVariable, Stateful, RemoveLevelLate {
+public class Geost extends Constraint
+    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<Geost> {
 
   /**
    * It specifies different debugging switches to print out diverse information about execution of
@@ -1604,6 +1609,64 @@ public class Geost extends Constraint implements UsesQueueVariable, Stateful, Re
   @Override
   public int getDefaultConsistencyPruningEvent() {
     throw new IllegalStateException("Not implemented as more precise implementation exists.");
+  }
+
+  @Override
+  public Geost copy(VarMap map) {
+    Map<GeostObject, GeostObject> copies = new IdentityHashMap<>();
+    GeostObject[] objectCopies = new GeostObject[objects.length];
+    for (int i = 0; i < objects.length; i++) {
+      GeostObject o = objects[i];
+      objectCopies[i] =
+          new GeostObject(
+              o.no,
+              Arrays.stream(o.coords).map(v -> mapped(map, v)).toArray(IntVar[]::new),
+              mapped(map, o.shapeId),
+              mapped(map, o.start),
+              mapped(map, o.duration),
+              mapped(map, o.end));
+      copies.put(o, objectCopies[i]);
+    }
+    ExternalConstraint[] constraintCopies = new ExternalConstraint[externalConstraints.length];
+    for (int i = 0; i < externalConstraints.length; i++) {
+      if (externalConstraints[i] instanceof NonOverlapping no) {
+        GeostObject[] mapped = new GeostObject[no.objects.length];
+        for (int k = 0; k < mapped.length; k++) {
+          mapped[k] = copies.get(no.objects[k]);
+        }
+        constraintCopies[i] = new NonOverlapping(mapped, no.selectedDimensions.clone());
+      } else {
+        InArea in = (InArea) externalConstraints[i];
+        constraintCopies[i] = new InArea(in.allowedArea, new ArrayList<>(in.holes));
+      }
+    }
+    // shapes are not changed by the constraint, so the copy shares them
+    return new Geost(objectCopies, constraintCopies, shapeRegister.clone());
+  }
+
+  /**
+   * The variable standing for an object's variable in a copy. Fixed variables are not in the scope
+   * of the constraint, so a map may have no counterpart for them; the copy then gets a constant.
+   */
+  private static IntVar mapped(VarMap map, IntVar v) {
+    IntVar m = v.singleton() ? null : map.get(v);
+    return m != null ? m : new IntVar(map.target(), v.min(), v.max());
+  }
+
+  /** A copy rebuilds the two kinds of external constraints the library provides. */
+  @Override
+  public boolean canCopy() {
+    Set<GeostObject> own = Collections.newSetFromMap(new IdentityHashMap<>());
+    own.addAll(Arrays.asList(objects));
+    for (ExternalConstraint e : externalConstraints) {
+      if (e.getClass() != NonOverlapping.class && e.getClass() != InArea.class) {
+        return false;
+      }
+      if (e instanceof NonOverlapping no && !own.containsAll(Arrays.asList(no.objects))) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
