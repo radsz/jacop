@@ -95,7 +95,8 @@ public final class Derivation implements VarMap {
    * @param childVariables variables of the child store.
    * @param childConstraints constraints copied into the child.
    * @param fixed parent variables fixed at the level of the derivation and absent from the child.
-   * @param dropped constraints not copied because the presolve rules found them entailed.
+   * @param dropped constraints not copied because the presolve rules found them entailed, by the
+   *     domains or by the other constraints.
    */
   public record Statistics(
       int parentVariables,
@@ -226,6 +227,18 @@ public final class Derivation implements VarMap {
         dropped++;
       } else {
         carried.add(c);
+      }
+    }
+    if (rules) {
+      // rules 3 and 4: canonical linear relations, duplicate and dominated constraints
+      try {
+        Set<Constraint> redundant = Collections.newSetFromMap(new IdentityHashMap<>());
+        redundant.addAll(RedundantConstraints.find(carried).removed());
+        carried.removeIf(redundant::contains);
+        dropped += redundant.size();
+      } catch (FailException e) {
+        outcome = Outcome.INFEASIBLE;
+        return;
       }
     }
 

@@ -1004,6 +1004,15 @@ public class LinearInt extends PrimitiveConstraint
     return explained;
   }
 
+  /**
+   * Returns the linear relation this constraint states, for presolve.
+   *
+   * @return the linear form.
+   */
+  public LinearForm linearForm() {
+    return lcgForm();
+  }
+
   // the relation over the variables left after folding, for entailment and negation
   private LinearForm form() {
     return getClass() == LinearInt.class ? lcgForm() : null;
