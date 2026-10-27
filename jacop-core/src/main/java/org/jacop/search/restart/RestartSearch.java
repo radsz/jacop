@@ -34,6 +34,7 @@ import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltC;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -84,6 +85,12 @@ public class RestartSearch<T extends Var> {
   boolean restartsLimitReached;
   // whether the search stopped because there is nothing more to search
   boolean complete;
+  // code run at the root of every run (MiniZinc on_restart)
+  RestartHook hook;
+  // outcome of the last run, given to the hook
+  int status = RestartHook.START;
+  // solutions found in the current run
+  int solutionsInRun;
 
   /**
    * Constructs a restart search with the given parameters.
@@ -158,6 +165,11 @@ public class RestartSearch<T extends Var> {
     boolean restart = true;
     while (restart) {
 
+      if (hook != null && hook.completeMarked()) {
+        complete = true;
+        break;
+      }
+
       boolean result = runOneRestartIteration();
 
       cleanupAfterIterationIfRar();
@@ -191,7 +203,7 @@ public class RestartSearch<T extends Var> {
   }
 
   private void cleanupAfterIterationIfRar() {
-    if (rarVars != null) {
+    if (rarVars != null || hook != null) {
       store.removeLevel(store.level);
       store.setLevel(store.level - 1);
     }
@@ -199,17 +211,60 @@ public class RestartSearch<T extends Var> {
 
   private boolean runOneRestartIteration() {
     fixedInRun = 0;
-    if (rarVars != null) {
+    solutionsInRun = 0;
+    if (rarVars != null || hook != null) {
       store.setLevel(store.level + 1);
-      if (values != null) {
+      if (rarVars != null && values != null) {
         fixedInRun = assignRelaxedVariables();
+      }
+      if (hook != null && !runHook()) {
+        status = nextStatus(false);
+        return false;
       }
     }
 
+    boolean result;
     if (cost == null) {
-      return search.labeling(store, select);
+      result = search.labeling(store, select);
     } else {
-      return search.labeling(store, select, cost);
+      result = search.labeling(store, select, cost);
+    }
+    if (hook != null) {
+      status = nextStatus(solutionsInRun > 0 || cost == null && result);
+    }
+    return result;
+  }
+
+  /**
+   * The status of the run that just ended, as the hook sees it in the next run. Until the first
+   * solution it stays START, as in Chuffed, so the neighbourhoods of a model, which use the last
+   * solution, apply only once there is one.
+   *
+   * @param solutionFound whether the run found a solution.
+   * @return the status for the next run.
+   */
+  private int nextStatus(boolean solutionFound) {
+    if (solutionFound) {
+      return RestartHook.SAT;
+    }
+    if (!atLeastOneSolution) {
+      return RestartHook.START;
+    }
+    return calculator.pointsExhausted() ? RestartHook.UNKNOWN : RestartHook.UNSAT;
+  }
+
+  /**
+   * Runs the hook at the root of the run.
+   *
+   * @return false if the values of the hook fail.
+   */
+  private boolean runHook() {
+    try {
+      hook.restart(store, status);
+      return true;
+    } catch (FailException _) {
+      store.clearChanged();
+      return false;
     }
   }
 
@@ -230,7 +285,8 @@ public class RestartSearch<T extends Var> {
   private boolean computeNextResult(boolean result) {
     // the run explored the whole search space: it was not cut by its fail limit and relax and
     // reconstruct fixed no variable
-    boolean exhausted = !calculator.pointsExhausted() && fixedInRun == 0;
+    // the hook fixes variables in every run, so only the hook can end the search
+    boolean exhausted = !calculator.pointsExhausted() && fixedInRun == 0 && hook == null;
     if (result) {
       if (cost == null || exhausted) {
         return false;
@@ -396,6 +452,17 @@ public class RestartSearch<T extends Var> {
     return probability;
   }
 
+  /**
+   * Sets the code run at the root of every run, for MiniZinc's on_restart. With a hook the search
+   * does not end when a run explores its whole tree, since the hook may restrict every run; it ends
+   * when the hook marks it complete, when no better solution exists, or at a limit.
+   *
+   * @param hook the code to run at the root of every run.
+   */
+  public void setRestartHook(RestartHook hook) {
+    this.hook = hook;
+  }
+
   public void setRestartsLimit(int l) {
     restartsLimit = l;
   }
@@ -439,6 +506,11 @@ public class RestartSearch<T extends Var> {
     public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
 
       boolean returnCode = super.executeAfterSolution(search, select);
+
+      solutionsInRun++;
+      if (hook != null) {
+        hook.solution();
+      }
 
       if (reportSolution != null) {
         reportSolution.report();
