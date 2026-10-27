@@ -103,6 +103,7 @@ import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
@@ -4625,6 +4626,35 @@ class SingleConstraintTest extends TestHelper {
     assertThat(y[0].dom().toString()).isEqualTo("{0..1}");
     assertThat(y[1].dom().toString()).isEqualTo("{1..2}");
     assertThat(y[2].dom().toString()).isEqualTo("{3..5}");
+  }
+
+  @Test
+  void increasingNValueUsesOrderAndCountTogether() {
+    // Increasing and Values posted apart prune nothing here: two distinct values ending at 2
+    // need x0 = 1
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2), new IntVar(store, "x2", 2, 2)
+    };
+    IntVar count = new IntVar(store, "count", 2, 2);
+    store.impose(new IncreasingNValue(x, count));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("1");
+    assertThat(x[1].dom().toString()).isEqualTo("{1..2}");
+
+    // the counts reachable through the holes: [1], [3, 4], [2, 3, 4] give 2 or 3 values
+    Store store2 = new Store();
+    IntVar[] y = {
+      new IntVar(store2, "y0", 1, 1), new IntVar(store2, "y1", 3, 4), new IntVar(store2, "y2", 2, 4)
+    };
+    IntVar c = new IntVar(store2, "c", 0, 5);
+    store2.impose(new IncreasingNValue(y, c));
+    assertThat(store2.consistency()).isTrue();
+    assertThat(c.dom().toString()).isEqualTo("{2..3}");
+    c.domain.in(store2.level, c, 3, 3);
+    assertThat(store2.consistency()).isTrue();
+    assertThat(y[1].dom().toString()).isEqualTo("3");
+    assertThat(y[2].dom().toString()).isEqualTo("4");
   }
 
   @Test
