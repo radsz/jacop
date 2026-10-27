@@ -963,6 +963,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         FreeSearch.builder(store, free)
             .restarts(restarts)
             .restartOnSolution(restartOnSolution)
+            .resetRestartsOnSolution("1".equals(options.freeConfig("restart-reset", "0")))
             .nogoodsFromRestarts(nogoods)
             .allSolutions(options.getAll())
             .onSolution(s -> printSolution());
@@ -1036,6 +1037,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if ("first".equals(options.freeConfig("impact-until", "first"))) {
         boundImpact.untilFirstSolution();
       }
+      boundImpact.everyRestarts(Integer.parseInt(options.freeConfig("impact-every", "0")));
       monitors.add(boundImpact);
       values = boundImpact;
     }
@@ -1058,7 +1060,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             case "chs" -> DomWdeg.Weighting.CHS;
             default -> DomWdeg.Weighting.WDEG;
           };
-      DomWdeg domWdeg = new DomWdeg(vars, values, weighting);
+      DomWdeg domWdeg =
+          new DomWdeg(vars, values, weighting)
+              .flushEvery(Integer.parseInt(options.freeConfig("flush", "0")));
       monitors.add(domWdeg);
       SelectChoicePoint<IntVar> select = domWdeg;
       if (lastConflict > 0) {

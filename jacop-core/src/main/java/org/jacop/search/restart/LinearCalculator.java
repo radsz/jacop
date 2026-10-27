@@ -66,6 +66,12 @@ public class LinearCalculator extends Calculator {
    * @return a string describing the calculator and its increment.
    */
   @Override
+  public void reset() {
+    n = 1;
+    startRun(increment);
+  }
+
+  @Override
   public String toString() {
     return "linearCalculator(" + increment + ")";
   }

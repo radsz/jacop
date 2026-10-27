@@ -92,6 +92,9 @@ With `-f` (MiniZinc's "free search" flag) JaCoP ignores the search annotations a
 | `interleave` | `restart`, `solution` (annotation until the first solution) or `none` | `restart` |
 | `nogoods` | nogoods from restarts, 0 or 1 | 1 |
 | `impact`, `impact-until` | bound-impact values for optimisation on domains up to n values (0 is off); `first` or `always` | 0, `first` |
+| `impact-every` | with `impact`, probe in the first run and then every k-th run only (0 is every run) | 0 |
+| `restart-reset` | start the restart limits again after each solution, 0 or 1 | 0 |
+| `flush` | forget the dom/wdeg weights every k restarts (0 is never) | 0 |
 
 `--restart` (with `--restart-scale` and `--restart-base`), when given, replaces the restart policy of the free search.
 
