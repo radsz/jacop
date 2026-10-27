@@ -72,7 +72,7 @@ public class FloatCostVariableHandler implements CostVariableHandler {
   @Override
   public void updateCostDomain(Store store, Var v, double costValue) {
     if (v instanceof FloatVar floatVar) {
-      double previousCost = FloatDomain.previous(costValue);
+      double previousCost = FloatDomain.previousForMinimization(costValue);
       floatVar.domain.inMax(store.level, floatVar, previousCost);
       return;
     }
