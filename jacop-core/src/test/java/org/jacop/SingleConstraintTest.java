@@ -166,6 +166,7 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -2513,6 +2514,29 @@ class SingleConstraintTest extends TestHelper {
     store.impose(
         new Knapsack(new int[] {1, 2}, new int[] {1, 1}, new IntVar[] {two, other}, weight, two));
     assertThat(countSolutions(store, new IntVar[] {other, weight}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
+  void directedReachableWithTheRootAlsoANodeVariable() {
+    // ns[2] is also the root: removing root candidates fixed ns[2] while the count of selected
+    // nodes was already taken, and the stale count lost both solutions
+    Store store = new Store();
+    IntVar n0 = new IntVar(store, "n0", 0, 1);
+    IntVar n1 = new IntVar(store, "n1", 1, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    IntVar e0 = new IntVar(store, "e0", 0, 1);
+    IntVar e1 = new IntVar(store, "e1", 0, 1);
+    store.impose(
+        new Reachable(
+            new int[] {2, 1},
+            new int[] {0, 2},
+            r,
+            new IntVar[] {n0, n1, r},
+            new IntVar[] {e0, e1},
+            0,
+            true));
+    // root 1 = ns[2] selected, e1 = 1->2 selected; n0 and e0 = 2->0 both on or both off
+    assertThat(countSolutions(store, new IntVar[] {n0, n1, r, e0, e1}, new Random(1))).isEqualTo(2);
   }
 
   @Test
