@@ -242,6 +242,15 @@ public class Knapsack extends Constraint
       IntVar knapsackCapacity,
       IntVar knapsackProfit) {
 
+    for (IntVar q : quantity) {
+      if (!q.singleton() && (q == knapsackCapacity || q == knapsackProfit)) {
+        throw new IllegalArgumentException(
+            "Constraint Knapsack does not accept quantity variable "
+                + q.id()
+                + " as the capacity or the profit; post the linear sums instead");
+      }
+    }
+
     numberId = idNumber.incrementAndGet();
     queueIndex = 1;
 
