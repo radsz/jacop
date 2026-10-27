@@ -114,7 +114,22 @@ class TablingTest {
 
   @Test
   void aGroupThatPropagatesToItsSolutionsIsKept() {
-    // t = x - y, z = |t| with z = 2: every value left at each node has a solution
+    // x != y, y != z: a tree of arc-consistent constraints is domain consistent as a whole
+    Store s = new Store();
+    IntVar x = new IntVar(s, "x", 0, 2);
+    IntVar y = new IntVar(s, "y", 0, 2);
+    IntVar z = new IntVar(s, "z", 0, 2);
+    s.impose(new XneqY(x, y));
+    s.impose(new XneqY(y, z));
+    Derivation d = Derivation.of(s).tabling(true).derive();
+    assertThat(d.tablingStatistics().tables()).isZero();
+    assertThat(d.statistics().childConstraints()).isEqualTo(2);
+  }
+
+  @Test
+  void aGroupThatMissesHolesIsReplaced() {
+    // t = x - y, |t| = 2: the linear constraint reasons on bounds, so removing x = 3 leaves y = 1
+    // without a solution; assigning values alone never shows it
     Store s = new Store();
     IntVar x = new IntVar(s, "x", 0, 5);
     IntVar y = new IntVar(s, "y", 0, 5);
@@ -122,8 +137,7 @@ class TablingTest {
     s.impose(new XplusYeqZ(t, y, x));
     s.impose(new AbsXeqY(t, new IntVar(s, "z", 2, 2)));
     Derivation d = Derivation.of(s).tabling(true).derive();
-    assertThat(d.tablingStatistics().tables()).isZero();
-    assertThat(d.statistics().childConstraints()).isEqualTo(2);
+    assertThat(d.tablingStatistics().tables()).isEqualTo(1);
   }
 
   @Test

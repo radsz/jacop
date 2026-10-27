@@ -32,10 +32,12 @@ package org.jacop.presolve;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
@@ -102,6 +104,9 @@ final class Tabling {
    * @param tuples the solutions of the group over the scope, or null if the group is entailed.
    */
   record Group(List<Constraint> constraints, IntVar[] scope, int[][] tuples) {}
+
+  // most tuple cells read by the removal check of one group
+  private static final long PROBE_WORK = 20_000_000;
 
   private final Limits limits;
   private final Map<Var, Integer> position;
@@ -397,12 +402,82 @@ final class Tabling {
     if (all == e.solutions.size()) {
       return new Group(List.copyOf(group), scope, null);
     }
-    if (e.failures == 0 && limits.onlyStronger()) {
+    if (e.failures == 0
+        && limits.onlyStronger()
+        && !weakerAfterRemovals(scratch, copy, e.solutions)) {
       // the group's own propagation never left a value without a solution, so the table would
       // prune nothing more, only cost more
       return null;
     }
     return new Group(List.copyOf(group), scope, e.solutions.toArray(new int[0][]));
+  }
+
+  /**
+   * Checks whether the group's propagation leaves a value without a solution after one value of a
+   * variable is removed. Assigning values, as the search for the solutions does, leaves no holes in
+   * the domains, so a group of bounds-reasoning constraints can look as strong as its table there.
+   *
+   * @param store the scratch store of the group, at its root.
+   * @param vars the scope in the scratch store.
+   * @param tuples the solutions of the group over the scope.
+   * @return true if some removal leaves a value without a solution; false also if the check would
+   *     cost too much.
+   */
+  private boolean weakerAfterRemovals(Store store, IntVar[] vars, List<int[]> tuples) {
+    long probes = 0;
+    for (IntVar v : vars) {
+      probes += v.getSize();
+    }
+    if (probes * tuples.size() * vars.length > PROBE_WORK || nodes + probes > limits.budget()) {
+      return false;
+    }
+    nodes += probes;
+    for (IntVar x : vars) {
+      for (int value : x.dom().toIntArray()) {
+        int level = store.level;
+        store.setLevel(level + 1);
+        boolean weaker = false;
+        try {
+          x.domain.inComplement(store.level, x, value);
+          weaker = store.consistency() && unsupported(vars, tuples);
+        } catch (FailException f) {
+          // the table fails too
+        }
+        while (store.level > level) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        }
+        if (weaker) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Whether some value in the domains is in no tuple that the domains allow. */
+  private static boolean unsupported(IntVar[] vars, List<int[]> tuples) {
+    List<Set<Integer>> supported = new ArrayList<>(vars.length);
+    for (int i = 0; i < vars.length; i++) {
+      supported.add(new HashSet<>());
+    }
+    for (int[] t : tuples) {
+      boolean alive = true;
+      for (int i = 0; i < vars.length && alive; i++) {
+        alive = vars[i].dom().contains(t[i]);
+      }
+      if (alive) {
+        for (int i = 0; i < vars.length; i++) {
+          supported.get(i).add(t[i]);
+        }
+      }
+    }
+    for (int i = 0; i < vars.length; i++) {
+      if (supported.get(i).size() < vars[i].getSize()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** A depth-first search for all solutions of a scratch store, within the limits. */
