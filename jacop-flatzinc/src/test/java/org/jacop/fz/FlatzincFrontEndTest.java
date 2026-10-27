@@ -1340,11 +1340,12 @@ class FlatzincFrontEndTest {
     // LcgSolver.value then threw IllegalStateException: no solution. The clauses on p need more
     // than 1024 decisions, so a run started past its deadline stops before it finds a solution.
     StringBuilder model = new StringBuilder("array [1..4000] of var bool: p;\n");
-    model.append("var 0..1: o :: output_var;\n");
+    model.append("var 0..1: i;\nvar 3..4: o :: output_var;\n");
     for (int i = 1; i < 4000; i++) {
       model.append("constraint bool_clause([p[%d], p[%d]], []);\n".formatted(i, i + 1));
     }
-    model.append("constraint bool2int(p[1], o);\nsolve minimize o;\n");
+    model.append(
+        "constraint bool2int(p[1], i);\nconstraint int_plus(i, 3, o);\nsolve minimize o;\n");
     Path fzn = tmp.resolve("hook.fzn");
     Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -1364,7 +1365,7 @@ class FlatzincFrontEndTest {
       System.setOut(originalOut);
     }
     String text = out.toString(StandardCharsets.UTF_8);
-    assertTrue(text.contains("%%%mzn-stat: objective=0"), text);
+    assertTrue(text.contains("%%%mzn-stat: objective=3"), text);
   }
 
   @Test
