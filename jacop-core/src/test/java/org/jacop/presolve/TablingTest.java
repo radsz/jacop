@@ -121,8 +121,9 @@ class TablingTest {
     IntVar z = new IntVar(s, "z", 0, 2);
     s.impose(new XneqY(x, y));
     s.impose(new XneqY(y, z));
-    Derivation d = Derivation.of(s).tabling(true).derive();
-    assertThat(d.tablingStatistics().tables()).isZero();
+    Tabling rule = new Tabling();
+    Derivation d = Derivation.of(s).rule(rule).derive();
+    assertThat(rule.statistics().tables()).isZero();
     assertThat(d.statistics().childConstraints()).isEqualTo(2);
   }
 
@@ -136,8 +137,9 @@ class TablingTest {
     IntVar t = new IntVar(s, "t", -5, 5);
     s.impose(new XplusYeqZ(t, y, x));
     s.impose(new AbsXeqY(t, new IntVar(s, "z", 2, 2)));
-    Derivation d = Derivation.of(s).tabling(true).derive();
-    assertThat(d.tablingStatistics().tables()).isEqualTo(1);
+    Tabling rule = new Tabling();
+    Derivation d = Derivation.of(s).rule(rule).derive();
+    assertThat(rule.statistics().tables()).isEqualTo(1);
   }
 
   @Test
@@ -148,23 +150,24 @@ class TablingTest {
     IntVar z = new IntVar(s, "z", 0, 10);
     s.impose(new XplusYeqZ(x, y, z));
     s.impose(new LinearInt(new IntVar[] {x, y, z}, new int[] {2, 2, -2}, "==", 1));
-    Derivation d = Derivation.of(s).tabling(true).derive();
+    Tabling rule = new Tabling();
+    Derivation d = Derivation.of(s).rule(rule).derive();
     assertThat(d.outcome()).isEqualTo(Derivation.Outcome.INFEASIBLE);
   }
 
   @Test
   void aGroupOverTheLimitsIsKept() {
-    Derivation d = Derivation.of(sumOfDistinct()).tabling(ALWAYS).derive();
+    Tabling rule = new Tabling(ALWAYS);
+    Derivation d = Derivation.of(sumOfDistinct()).rule(rule).derive();
     assertThat(d.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
-    assertThat(d.tablingStatistics().tables()).isZero();
+    assertThat(rule.statistics().tables()).isZero();
     assertThat(d.statistics().childConstraints()).isEqualTo(2);
 
-    Derivation larger =
-        Derivation.of(sumOfDistinct())
-            .tabling(new Tabling.Limits(10, 3, 100_000, 1_000_000, 1_000_000, false))
-            .derive();
-    assertThat(larger.tablingStatistics().tables()).isEqualTo(1);
-    assertThat(larger.tablingStatistics().tuples()).isEqualTo(201 * 200);
+    Tabling largerRule =
+        new Tabling(new Tabling.Limits(10, 3, 100_000, 1_000_000, 1_000_000, false));
+    Derivation larger = Derivation.of(sumOfDistinct()).rule(largerRule).derive();
+    assertThat(largerRule.statistics().tables()).isEqualTo(1);
+    assertThat(largerRule.statistics().tuples()).isEqualTo(201 * 200);
     assertThat(larger.statistics().childConstraints()).isEqualTo(1);
   }
 
@@ -188,12 +191,12 @@ class TablingTest {
     }
     s.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, "==", 4));
     s.impose(new XneqY(x[0], x[1]));
-    Derivation d =
-        Derivation.of(s).tabling(new Tabling.Limits(3, 3, 100, 1000, 1000, false)).derive();
-    assertThat(d.tablingStatistics().tables()).isZero();
+    Tabling rule = new Tabling(new Tabling.Limits(3, 3, 100, 1000, 1000, false));
+    Derivation d = Derivation.of(s).rule(rule).derive();
+    assertThat(rule.statistics().tables()).isZero();
   }
 
-  private record Run(List<List<Integer>> solutions, Derivation.TablingStatistics statistics) {}
+  private record Run(List<List<Integer>> solutions, Tabling.Statistics statistics) {}
 
   private static IntVar[] randomModel(Store s, Random r) {
     int n = 3 + r.nextInt(4);
@@ -249,14 +252,15 @@ class TablingTest {
     Store s = new Store();
     IntVar[] vars = model.apply(s);
     List<List<Integer>> found = new ArrayList<>();
+    Tabling rule = new Tabling(limits);
     Derivation d =
         Derivation.of(s)
             .keep(vars)
-            .tabling(limits)
+            .rule(rule)
             .retention(checking ? Derivation.Retention.KEPT : Derivation.Retention.RELEASED)
             .derive();
     if (d.outcome() == Derivation.Outcome.INFEASIBLE) {
-      return new Run(found, d.tablingStatistics());
+      return new Run(found, rule.statistics());
     }
     search(
         d.child(),
@@ -267,7 +271,7 @@ class TablingTest {
           }
         });
     d.discard();
-    return new Run(found, d.tablingStatistics());
+    return new Run(found, rule.statistics());
   }
 
   private static List<Integer> values(IntVar[] vars) {

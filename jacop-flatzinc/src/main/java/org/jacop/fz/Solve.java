@@ -67,6 +67,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Presolver;
+import org.jacop.presolve.Tabling;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -309,14 +310,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void presolve() {
     long start = timer.getCpuTime();
-    Derivation d =
+    Presolver presolver =
         Presolver.of(store)
             .checking(options.presolve() == Options.Presolve.CHECK)
-            .tabling(options.presolveTabling())
-            .presolve();
+            .rounds(options.presolveRounds());
+    Tabling tabling = options.presolveTabling() ? new Tabling() : null;
+    if (tabling != null) {
+      presolver.rule(tabling);
+    }
+    Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, time);
+      printPresolveStatistics(d, tabling, time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -360,12 +365,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
-  private void printPresolveStatistics(Derivation d, long time) {
+  private void printPresolveStatistics(Derivation d, Tabling tabling, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
         .append(d.outcome().name().toLowerCase(Locale.ROOT))
         .append('\n');
+    s.append("%%%mzn-stat: presolveRounds=").append(d.rounds()).append('\n');
     Derivation.Statistics st = d.statistics();
     if (st != null) {
       s.append("%%%mzn-stat: presolveVariablesBefore=").append(st.parentVariables()).append('\n');
@@ -375,8 +381,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
     }
-    if (options.presolveTabling()) {
-      Derivation.TablingStatistics t = d.tablingStatistics();
+    if (tabling != null) {
+      Tabling.Statistics t = tabling.statistics();
       s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
       s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
       s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
@@ -1009,6 +1015,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.searchDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
+            + "\n%%%mzn-stat: lcgSemanticallyRemoved="
+            + lcg.sat().semanticallyRemoved
+            + "\n%%%mzn-stat: lcgSemanticUips="
+            + lcg.sat().semanticUips
             + "\n%%%mzn-stat-end\n"
             + perClass);
   }

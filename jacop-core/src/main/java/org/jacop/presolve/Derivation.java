@@ -31,6 +31,7 @@
 package org.jacop.presolve;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -41,10 +42,8 @@ import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
-import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.StoreState;
 import org.jacop.core.Var;
@@ -70,6 +69,9 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public final class Derivation implements VarMap {
+
+  /** The most rounds of presolve rules by default. */
+  public static final int DEFAULT_ROUNDS = 10;
 
   /** What happens to the parent's constraints. */
   public enum Retention {
@@ -97,7 +99,8 @@ public final class Derivation implements VarMap {
    * @param childVariables variables of the child store.
    * @param childConstraints constraints copied into the child.
    * @param fixed parent variables fixed at the level of the derivation and absent from the child.
-   * @param dropped constraints not copied because the presolve rules found them entailed.
+   * @param dropped constraints not copied because the presolve rules found them entailed or a rule
+   *     removed them.
    */
   public record Statistics(
       int parentVariables,
@@ -111,7 +114,8 @@ public final class Derivation implements VarMap {
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
-  private final Tabling.Limits tabling;
+  private final List<Rule> ruleList;
+  private final int maxRounds;
 
   private Outcome outcome;
   private int level;
@@ -121,15 +125,17 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
-  private TablingStatistics tablingStatistics = new TablingStatistics(0, 0, 0, 0);
   private boolean solutionWritten;
+  private int rounds;
+  private final Set<Constraint> removed = Collections.newSetFromMap(new IdentityHashMap<>());
 
   private Derivation(Builder builder) {
     this.parent = builder.parent;
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
-    this.tabling = builder.tabling;
+    this.ruleList = List.copyOf(builder.ruleList);
+    this.maxRounds = builder.maxRounds;
   }
 
   /**
@@ -149,7 +155,8 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
-    private Tabling.Limits tabling;
+    private final List<Rule> ruleList = new ArrayList<>();
+    private int maxRounds = DEFAULT_ROUNDS;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -194,20 +201,29 @@ public final class Derivation implements VarMap {
     }
 
     /**
-     * Switches automatic tabulation on or off: small groups of constraints over at most ten unfixed
-     * variables are replaced by the tables of their solutions; see {@link Tabling}. Off by default;
-     * it applies only with the rules on.
+     * Adds a presolve rule; the rules run in the order added, in rounds alternated with propagation
+     * of the parent until a fixpoint, see {@link Rule}.
      *
-     * @param on true to tabulate.
+     * @param rule the rule.
      * @return this builder.
      */
-    public Builder tabling(boolean on) {
-      this.tabling = on ? Tabling.Limits.DEFAULT : null;
+    public Builder rule(Rule rule) {
+      ruleList.add(rule);
       return this;
     }
 
-    Builder tabling(Tabling.Limits limits) {
-      this.tabling = limits;
+    /**
+     * Sets the most rounds of rules; the default is {@value Derivation#DEFAULT_ROUNDS}. The rounds
+     * stop earlier at a fixpoint, when a round of rules and propagation changes nothing.
+     *
+     * @param max the most rounds, at least 1.
+     * @return this builder.
+     */
+    public Builder rounds(int max) {
+      if (max < 1) {
+        throw new IllegalArgumentException("At least one round is needed; " + max + " given");
+      }
+      this.maxRounds = max;
       return this;
     }
 
@@ -235,6 +251,15 @@ public final class Derivation implements VarMap {
       return;
     }
     level = parent.level;
+    try {
+      if (rules && !ruleList.isEmpty() && !applyRules()) {
+        outcome = Outcome.INFEASIBLE;
+        return;
+      }
+    } catch (FailException e) {
+      outcome = Outcome.INFEASIBLE;
+      return;
+    }
     variables = allVariables();
     collected = collectConstraints();
 
@@ -246,41 +271,16 @@ public final class Derivation implements VarMap {
     List<Constraint> carried = new ArrayList<>();
     int dropped = 0;
     for (Constraint c : collected) {
-      if (rules && entailed(c)) {
+      if (rules && (removed.contains(c) || entailed(c))) {
         dropped++;
       } else {
         carried.add(c);
       }
     }
 
-    List<Tabling.Group> tables = List.of();
-    if (rules && tabling != null) {
-      Tabling t = Tabling.of(carried, variables, tabling);
-      tables = t.groups();
-      if (t.infeasible()) {
-        outcome = Outcome.INFEASIBLE;
-        return;
-      }
-      Set<Constraint> replaced = Collections.newSetFromMap(new IdentityHashMap<>());
-      int tuples = 0;
-      for (Tabling.Group g : tables) {
-        replaced.addAll(g.constraints());
-        tuples += g.tuples() == null ? 0 : g.tuples().length;
-      }
-      carried.removeIf(replaced::contains);
-      for (Tabling.Group g : tables) {
-        dropped += g.tuples() == null ? g.constraints().size() : 0;
-      }
-      tables = tables.stream().filter(g -> g.tuples() != null).toList();
-      tablingStatistics = new TablingStatistics(tables.size(), replaced.size(), tuples, t.nodes());
-    }
-
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
       used.addAll(c.arguments());
-    }
-    for (Tabling.Group g : tables) {
-      used.addAll(List.of(g.scope()));
     }
 
     child = new Store();
@@ -312,10 +312,6 @@ public final class Derivation implements VarMap {
       }
       child.impose(copy);
     }
-    for (Tabling.Group g : tables) {
-      IntVar[] scope = get(g.scope());
-      child.impose(new HybridTable(scope, g.tuples()));
-    }
     // degree-based variable selections choose in the child as in the parent, whose static degrees
     // also count the constraints entailed or dropped since
     for (Map.Entry<Var, Var> e : copies.entrySet()) {
@@ -326,12 +322,7 @@ public final class Derivation implements VarMap {
 
     statistics =
         new Statistics(
-            variables.size(),
-            collected.size(),
-            copies.size(),
-            carried.size() + tables.size(),
-            fixed,
-            dropped);
+            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -346,6 +337,103 @@ public final class Derivation implements VarMap {
       parent.setState(StoreState.SINK);
     } else {
       parent.setState(StoreState.SUSPENDED);
+    }
+  }
+
+  /**
+   * Runs the rules in rounds, each followed by propagation of the parent, until a round changes
+   * nothing or the budget of rounds is spent.
+   *
+   * @return false if the parent is inconsistent.
+   */
+  private boolean applyRules() {
+    Context context = new Context();
+    while (rounds < maxRounds) {
+      rounds++;
+      List<Var> before = allVariables();
+      double[] sizes = sizes(before);
+      int edits = context.edits;
+      for (Rule rule : ruleList) {
+        context.snapshot = null;
+        rule.apply(context);
+      }
+      if (!parent.consistency()) {
+        return false;
+      }
+      // propagating may raise the level, as before the rules
+      level = parent.level;
+      if (context.edits == edits
+          && allVariables().size() == before.size()
+          && Arrays.equals(sizes, sizes(before))) {
+        break;
+      }
+    }
+    return true;
+  }
+
+  /** The domain sizes of the variables, in order, to tell whether a round changed a domain. */
+  private static double[] sizes(List<Var> vars) {
+    double[] sizes = new double[vars.size()];
+    for (int i = 0; i < sizes.length; i++) {
+      sizes[i] = vars.get(i).getSizeFloat();
+    }
+    return sizes;
+  }
+
+  /** The view of the derivation that the rules get. */
+  private final class Context implements Rule.Context {
+
+    private int edits;
+    private List<Constraint> snapshot;
+
+    @Override
+    public Store store() {
+      return parent;
+    }
+
+    @Override
+    public int level() {
+      return level;
+    }
+
+    @Override
+    public int round() {
+      return rounds;
+    }
+
+    @Override
+    public List<Constraint> constraints() {
+      if (snapshot == null) {
+        variables = allVariables();
+        List<Constraint> live = new ArrayList<>();
+        for (Constraint c : collectConstraints()) {
+          if (!removed.contains(c)) {
+            live.add(c);
+          }
+        }
+        snapshot = Collections.unmodifiableList(live);
+      }
+      return snapshot;
+    }
+
+    @Override
+    public void impose(Constraint c) {
+      parent.impose(c);
+      snapshot = null;
+      edits++;
+    }
+
+    @Override
+    public void remove(Constraint c) {
+      if (removed.add(c)) {
+        snapshot = null;
+        edits++;
+      }
+    }
+
+    @Override
+    public boolean removed(Constraint c) {
+      return removed.contains(c);
     }
   }
 
@@ -480,26 +568,6 @@ public final class Derivation implements VarMap {
   }
 
   /**
-   * What automatic tabulation did.
-   *
-   * @param tables tables imposed in the child.
-   * @param replaced constraints of the parent replaced by the tables, or dropped because their
-   *     group was entailed.
-   * @param tuples tuples of the tables.
-   * @param nodes search nodes spent tabulating.
-   */
-  public record TablingStatistics(int tables, int replaced, int tuples, long nodes) {}
-
-  /**
-   * Returns what automatic tabulation did; all zero when it is off.
-   *
-   * @return the statistics.
-   */
-  public TablingStatistics tablingStatistics() {
-    return tablingStatistics;
-  }
-
-  /**
    * Returns the parent store.
    *
    * @return the parent.
@@ -515,6 +583,15 @@ public final class Derivation implements VarMap {
    */
   public int level() {
     return level;
+  }
+
+  /**
+   * Returns the rounds of presolve rules run, 0 when there are no rules.
+   *
+   * @return the rounds.
+   */
+  public int rounds() {
+    return rounds;
   }
 
   /**
@@ -659,6 +736,7 @@ public final class Derivation implements VarMap {
     shown.put("outcome", outcome);
     shown.put("level", level);
     shown.put("retention", retention);
+    shown.put("rounds", rounds);
     shown.put("statistics", statistics);
     return "Derivation" + shown;
   }
