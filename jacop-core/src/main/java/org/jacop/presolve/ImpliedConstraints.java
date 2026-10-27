@@ -60,15 +60,53 @@ import org.jacop.core.Var;
  * domains gets nothing. The posted constraints are implied by the model and keep every solution, so
  * the rule is sound for finding all solutions as well.
  *
+ * <p>It is not one of the {@link Presolver#STANDARD standard rules}: on the FlatZinc test models
+ * the sums pruned nothing the all-different propagators had not, and cost about 4% of the time. Add
+ * it with {@code Presolver.of(store).rule(new ImpliedConstraints())}.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public final class ImpliedConstraints {
+public final class ImpliedConstraints implements Rule {
 
   /** Fewest variables of an all-different that gets implied constraints. */
   static final int MIN_VARIABLES = 3;
 
-  private ImpliedConstraints() {}
+  // scopes of the all-different constraints already given their sums, so later rounds of the
+  // derivation do not post them again
+  private final Set<List<IntVar>> done = new HashSet<>();
+  private int imposed;
+
+  /** It creates the rule for one derivation; it remembers what it has imposed there. */
+  public ImpliedConstraints() {
+    // nothing to set up
+  }
+
+  /**
+   * Imposes the sums implied by the all-different constraints of the context, once per set of
+   * variables. They do not count in the static degrees of their variables, so degree-based search
+   * heuristics choose as without them.
+   *
+   * @param context the derivation in progress.
+   */
+  @Override
+  public void apply(Context context) {
+    List<Constraint> implied = new ArrayList<>();
+    collect(context.constraints(), done, implied);
+    for (Constraint c : implied) {
+      context.impose(c.setDegreeWeight(0));
+      imposed++;
+    }
+  }
+
+  /**
+   * Returns the number of constraints this rule has imposed.
+   *
+   * @return the number of implied constraints.
+   */
+  public int imposed() {
+    return imposed;
+  }
 
   /**
    * Returns the constraints implied by the all-different constraints among the given ones. They are
@@ -79,16 +117,20 @@ public final class ImpliedConstraints {
    */
   public static List<Constraint> of(List<? extends Constraint> constraints) {
     List<Constraint> implied = new ArrayList<>();
-    // an all-different posted twice, for example as Alldiff and as the Alldistinct implied by a
-    // circuit, implies the same sums once
-    Set<List<IntVar>> seen = new HashSet<>();
+    collect(constraints, new HashSet<>(), implied);
+    return implied;
+  }
+
+  // an all-different posted twice, for example as Alldiff and as the Alldistinct implied by a
+  // circuit, implies the same sums once
+  private static void collect(
+      List<? extends Constraint> constraints, Set<List<IntVar>> seen, List<Constraint> implied) {
     for (Constraint c : constraints) {
       IntVar[] vars = allDifferentVariables(c);
       if (vars != null && seen.add(List.of(vars))) {
         sumBounds(vars, implied);
       }
     }
-    return implied;
   }
 
   /**

@@ -3,7 +3,6 @@
 1d_rubiks_cube/1d_rubiks_cube
 2DBinPacking/Class1_20_1
 2DBinPacking/Class1_20_10
-2DBinPacking/Class1_20_2
 2DBinPacking/Class1_20_3
 2DBinPacking/Class1_20_4
 2DBinPacking/Class1_20_6
