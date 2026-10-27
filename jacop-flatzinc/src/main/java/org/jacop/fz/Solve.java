@@ -150,6 +150,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   FreeSearch.Status freeSearchStatus;
   LcgSolver lcg;
   int lcgStatus;
+  // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
+  // LcgSolver is between two runs and holds no solution
+  int lcgLastCost;
   // the search annotation of the model, interleaved with free search
   SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
@@ -934,9 +937,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getStatistics()) {
       printStatisticsOutput(
           (int) lcg.sat().decisions, (int) lcg.sat().conflicts, 0, numberSolutions);
-      if (numberSolutions > 0 && costVariable instanceof IntVar cost) {
+      if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
-        int value = lcg.value(cost);
+        int value = lcgLastCost;
         IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
       }
       printLcgExplanationStatistics();
@@ -2365,6 +2368,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
+    if (lcg != null && costVariable instanceof IntVar cost && cost.singleton()) {
+      lcgLastCost = cost.value();
+    }
 
     if (presolve != null) {
       presolve.returnSolution();

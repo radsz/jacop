@@ -66,6 +66,11 @@ public class PlteqQ extends AbstractPcompQ implements Copyable<PlteqQ> {
 
   @Override
   public void notConsistency(Store store) {
+    // a strict order of a variable with itself has no solution; one pass of the bounds below
+    // does not always see it, and the store does not run it again for its own changes
+    if (p == q) {
+      throw Store.failException;
+    }
     p.domain.inMin(store.level, p, FloatDomain.next(q.min()));
     q.domain.inMax(store.level, q, FloatDomain.previous(p.max()));
   }
