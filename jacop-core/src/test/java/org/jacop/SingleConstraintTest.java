@@ -2494,6 +2494,28 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void knapsackRejectsAQuantityThatIsTheProfitOrTheCapacity() {
+    // a free quantity that is also the profit or the capacity broke the tree invariants
+    // (IllegalStateException "Slice variable has not been adjusted"); fixed values still share
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q", 1, 2);
+    IntVar capacity = new IntVar(store, "capacity", 0, 10);
+    assertThatThrownBy(
+            () -> new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, capacity, q))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, q, capacity))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    IntVar two = new IntVar(store, "two", 2, 2);
+    IntVar other = new IntVar(store, "other", 0, 3);
+    IntVar weight = new IntVar(store, "weight", 0, 20);
+    store.impose(
+        new Knapsack(new int[] {1, 2}, new int[] {1, 1}, new IntVar[] {two, other}, weight, two));
+    assertThat(countSolutions(store, new IntVar[] {other, weight}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
   void sumBoolWithARepeatedVariableCountsMatchBruteForce() {
     // the sum also in the list, or a list variable repeated: x0 + x1 > x1 with x0 = 0 pruned x1 to
     // 0 through the sum and kept the stale bound of the list, so it accepted 0 + 0 > 0

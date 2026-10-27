@@ -72,6 +72,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -1819,6 +1820,13 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar W = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     IntVar P = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+
+    if (Arrays.stream(x).anyMatch(v -> !v.singleton() && (v == W || v == P))) {
+      // Knapsack rejects a quantity that is also the capacity or the profit
+      support.pose(new LinearInt(x, weights, "==", W));
+      support.pose(new LinearInt(x, profits, "==", P));
+      return;
+    }
 
     support.pose(
         Knapsack.builder()
