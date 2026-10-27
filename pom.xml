@@ -190,8 +190,12 @@ setup to run configuration. -->
                             <!-- fewer random instances than the commit profile; same checks -->
                             <systemPropertyVariables>
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
+                                <balance.trials>300</balance.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
+                                <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
+                                <subcircuitcost.instances>300</subcircuitcost.instances>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
+                                <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
@@ -229,16 +233,24 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SubcircuitCostTest.java</include>
+                                <include>**/WeightedSubcircuitsTest.java</include>
+                                <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -315,7 +327,9 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -323,9 +337,15 @@ setup to run configuration. -->
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SubcircuitCostTest.java</include>
+                                <include>**/WeightedSubcircuitsTest.java</include>
+                                <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -401,7 +421,9 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -409,9 +431,15 @@ setup to run configuration. -->
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SubcircuitCostTest.java</include>
+                                <include>**/WeightedSubcircuitsTest.java</include>
+                                <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -487,16 +515,24 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
+                                <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SubcircuitCostTest.java</include>
+                                <include>**/WeightedSubcircuitsTest.java</include>
+                                <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

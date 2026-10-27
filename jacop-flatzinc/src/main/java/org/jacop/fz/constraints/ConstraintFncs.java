@@ -508,6 +508,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_subcircuit(n);
   }
 
+  /** Handles the jacop_subcircuit_cost FlatZinc constraint. */
+  public void jacop_subcircuit_cost(SimpleNode n) {
+    gc.gen_jacop_subcircuit_cost(n);
+  }
+
+  /** Handles the jacop_weighted_subcircuits FlatZinc constraint. */
+  public void jacop_weighted_subcircuits(SimpleNode n) {
+    gc.gen_jacop_weighted_subcircuits(n);
+  }
+
   /** Handles the jacop_alldiff FlatZinc constraint. */
   public void jacop_alldiff(SimpleNode n) {
     gc.gen_jacop_alldiff(n);
@@ -526,6 +536,11 @@ public final class ConstraintFncs {
   /** Handles the jacop_softgcc_var FlatZinc constraint. */
   public void jacop_softgcc_var(SimpleNode n) {
     gc.gen_jacop_softgcc_var(n);
+  }
+
+  /** Handles the jacop_stocking_cost FlatZinc constraint. */
+  public void jacop_stocking_cost(SimpleNode n) {
+    gc.gen_jacop_stocking_cost(n);
   }
 
   /** Handles the jacop_alldistinct FlatZinc constraint. */
@@ -808,6 +823,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_sequence(n);
   }
 
+  /** Handles the jacop_deviation FlatZinc constraint. */
+  public void jacop_deviation(SimpleNode n) {
+    gc.gen_jacop_balance(n, false);
+  }
+
+  /** Handles the jacop_spread FlatZinc constraint. */
+  public void jacop_spread(SimpleNode n) {
+    gc.gen_jacop_balance(n, true);
+  }
+
   /** Handles the jacop_stretch FlatZinc constraint. */
   public void jacop_stretch(SimpleNode n) {
     gc.gen_jacop_stretch(n);
@@ -984,6 +1009,16 @@ public final class ConstraintFncs {
   /** Handles the jacop_disjunctive_optional FlatZinc constraint. */
   public void jacop_disjunctive_optional(SimpleNode n) {
     gc.gen_jacop_disjunctive_optional(n);
+  }
+
+  /** Handles the jacop_disjunctive_setup FlatZinc constraint. */
+  public void jacop_disjunctive_setup(SimpleNode n) {
+    gc.gen_jacop_disjunctive_setup(n);
+  }
+
+  /** Handles the jacop_disjunctive_setup_optional FlatZinc constraint. */
+  public void jacop_disjunctive_setup_optional(SimpleNode n) {
+    gc.gen_jacop_disjunctive_setup(n);
   }
 
   /** Handles the jacop_disjunctive_strict_optional FlatZinc constraint. */

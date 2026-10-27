@@ -144,16 +144,12 @@ public class MaxSimple extends Constraint
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     return getClass() == MaxSimple.class
-        && x1 != max
-        && x2 != max
         && MaxExplanation.explain(trail, entry, new IntVar[] {x1, x2}, max, true, out);
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == MaxSimple.class
-        && x1 != max
-        && x2 != max
         && MaxExplanation.explainFailure(trail, new IntVar[] {x1, x2}, max, true, out);
   }
 }
