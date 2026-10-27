@@ -81,6 +81,7 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
@@ -234,6 +235,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "IncreasingSum",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
+        Arguments.of(
+            "IncreasingNValue",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
         Arguments.of(
             "ValuePrecede",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuePrecede),
@@ -1513,6 +1517,44 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // x[0..n-1] non-decreasing with as many distinct values as the last variable, which may also
+  // occur in x at position repeated
+  private static Instance increasingNValue(Random random) {
+    int n = 1 + random.nextInt(5);
+    int repeated = random.nextInt(5) == 0 ? random.nextInt(n) : -1;
+    int[][] domains = new int[n + 1][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = domain(random, -1, 4);
+    }
+    domains[n] = domain(random, -1, n + 1);
+    return new Instance(
+        domains,
+        (store, v) -> {
+          IntVar[] x = Arrays.copyOf(v, n);
+          if (repeated >= 0) {
+            x[repeated] = v[n];
+          }
+          store.impose(new IncreasingNValue(x, v[n]));
+        },
+        t -> {
+          int[] x = Arrays.copyOf(t, n);
+          if (repeated >= 0) {
+            x[repeated] = t[n];
+          }
+          int distinct = 1;
+          for (int i = 1; i < n; i++) {
+            if (x[i] < x[i - 1]) {
+              return false;
+            }
+            if (x[i] > x[i - 1]) {
+              distinct++;
+            }
+          }
+          return distinct == t[n];
+        },
+        "repeated=" + repeated);
   }
 
   private static Instance valuePrecede(Random random) {
