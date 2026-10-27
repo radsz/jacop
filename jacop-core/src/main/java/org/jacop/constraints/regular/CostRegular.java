@@ -165,6 +165,13 @@ public class CostRegular extends Constraint
   private long lastMaxShortest;
   private long lastMinLongest;
 
+  /** The size of the domain of cost at the last pass; a new hole may remove edges. */
+  private int lastCostSize;
+
+  private static boolean isInterval(IntVar v) {
+    return v.max() - v.min() + 1 == v.getSize();
+  }
+
   // Trail of alive counts: pairs of level and previous count, with a mark per store level.
   private int[] savedEpoch;
   private int epoch;
@@ -591,7 +598,8 @@ public class CostRegular extends Constraint
     if (stable
         && levelQueueSize == 0
         && cost.max() >= lastMaxShortest
-        && cost.min() <= lastMinLongest) {
+        && cost.min() <= lastMinLongest
+        && (cost.getSize() == lastCostSize || isInterval(cost))) {
       return;
     }
 
@@ -708,6 +716,7 @@ public class CostRegular extends Constraint
     final int support = nextStamp();
     final long costMin = cost.min();
     final long costMax = cost.max();
+    final IntDomain holes = isInterval(cost) ? null : cost.dom();
     long maxShortest = Long.MIN_VALUE;
     long minLongest = Long.MAX_VALUE;
     int levels = list.length;
@@ -737,7 +746,11 @@ public class CostRegular extends Constraint
         int c = e[p + 3];
         long shortest = fMin[u] + c + toMin;
         long longest = fMax[u] + c + bMax[v];
-        if (shortest > costMax || longest < costMin) {
+        if (shortest > costMax
+            || longest < costMin
+            || (holes != null
+                && !holes.isIntersecting(
+                    (int) Math.max(shortest, costMin), (int) Math.min(longest, costMax)))) {
           if (fMin[u] + c == fMin[v] || fMax[u] + c == fMax[v]) {
             forwardFrom = level;
           }
@@ -792,6 +805,7 @@ public class CostRegular extends Constraint
     }
     lastMaxShortest = maxShortest;
     lastMinLongest = minLongest;
+    lastCostSize = cost.getSize();
     if (forwardFrom < levels) {
       return forwardFrom;
     }
@@ -807,7 +821,7 @@ public class CostRegular extends Constraint
   public int getConsistencyPruningEvent(Var v) {
     if (v == cost) {
       Integer event = getConsistencyPruningEventFromMap(v);
-      return event != null ? event : IntDomain.BOUND;
+      return event != null ? event : IntDomain.ANY;
     }
     return super.getConsistencyPruningEvent(v);
   }

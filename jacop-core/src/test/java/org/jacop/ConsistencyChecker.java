@@ -81,6 +81,7 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
@@ -92,6 +93,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.regular.CostRegular;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -716,6 +718,56 @@ class ConsistencyChecker {
         c, t -> t[0] >= 1 && t[0] <= n && t[1] == list[t[0] - 1], new IntVar[] {index, value});
   }
 
+  /**
+   * A counter automaton (Beldiceanu et al., AAAI 2014) as CostRegular with 0/1 transition costs:
+   * every state accepts and the count is the number of transitions with cost 1. In "exact" the
+   * count is the cost; in "atmost" and "atleast" the cost is a hidden variable bounded by it.
+   */
+  private static Model counter(Store store, Random random, String form) {
+    int states = 1 + random.nextInt(4);
+    int symbols = 2 + random.nextInt(2);
+    int n = 3 + random.nextInt(3);
+    int[][] delta = new int[states][symbols];
+    int[][] inc = new int[states][symbols];
+    for (int q = 0; q < states; q++) {
+      for (int j = 0; j < symbols; j++) {
+        delta[q][j] = random.nextInt(8) == 0 ? -1 : random.nextInt(states);
+        inc[q][j] = random.nextInt(4) == 0 ? 1 : 0;
+      }
+    }
+    int[] all = IntStream.range(0, states).toArray();
+    IntVar[] x = vars(store, "x", n, 0, symbols - 1, random);
+    IntVar count = var(store, "n", 0, n, random);
+    Predicate<int[]> relation =
+        t -> {
+          int q = 0;
+          int c = 0;
+          for (int i = 0; i < n; i++) {
+            if (delta[q][t[i]] < 0) {
+              return false;
+            }
+            c += inc[q][t[i]];
+            q = delta[q][t[i]];
+          }
+          return switch (form) {
+            case "atmost" -> c <= t[n];
+            case "atleast" -> c >= t[n];
+            default -> c == t[n];
+          };
+        };
+    Object constraint;
+    if (form.equals("exact")) {
+      constraint = new CostRegular(x, delta, 0, 0, all, inc, count);
+    } else {
+      IntVar c = new IntVar(store, "c", 0, n);
+      constraint =
+          List.of(
+              new CostRegular(x, delta, 0, 0, all, inc, c),
+              form.equals("atmost") ? new XlteqY(c, count) : new XlteqY(count, c));
+    }
+    return new Model(constraint, relation, concat(x, new IntVar[] {count}));
+  }
+
   /** GCC with counters for every value from the smallest to the largest value of x. */
   private static Model gcc(Store store, Random random) {
     int n = 3 + random.nextInt(2);
@@ -1053,6 +1105,9 @@ class ConsistencyChecker {
         new Case("AlldifferentExcept", Level.DOMAIN, (s, r) -> alldiffExcept(s, r, false)),
         new Case("AlldifferentExceptZero", Level.DOMAIN, (s, r) -> alldiffExcept(s, r, true)),
         new Case("GCC", Level.BOUNDS_Z, ConsistencyChecker::gcc),
+        new Case("CounterExact", Level.NONE, (s, r) -> counter(s, r, "exact")),
+        new Case("CounterAtMost", Level.NONE, (s, r) -> counter(s, r, "atmost")),
+        new Case("CounterAtLeast", Level.NONE, (s, r) -> counter(s, r, "atleast")),
         new Case("ElementInteger", Level.DOMAIN, (s, r) -> element(s, r, false, false)),
         new Case("ElementIntegerFast", Level.BOUNDS_D, (s, r) -> element(s, r, false, true)),
         // rarely: index values whose list variable cannot reach value stay until the constraint
