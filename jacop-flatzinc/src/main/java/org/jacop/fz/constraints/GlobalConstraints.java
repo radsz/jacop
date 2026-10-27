@@ -43,6 +43,7 @@ import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
@@ -86,9 +87,11 @@ import org.jacop.constraints.Spread;
 import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.WeightedSubcircuits;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
@@ -479,6 +482,42 @@ class GlobalConstraints implements ParserTreeConstants {
 
     // the successors of a subcircuit are all different too (x[i] = i is unique to i)
     addImpliedAlldistinct(v);
+  }
+
+  // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
+  // sum(i)(d[i, x[i]]), with d given row by row
+  void gen_jacop_subcircuit_cost(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(1)), v.length);
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    checkForDuplicateVariables(v);
+    support.pose(new Subcircuit(v));
+    addImpliedAlldistinct(v);
+    support.pose(new SubcircuitCost(v, costs, cost));
+  }
+
+  // jacop_weighted_subcircuits(next, tour, d, tourCost, cost, offset)
+  void gen_jacop_weighted_subcircuits(SimpleNode node) {
+    IntVar[] next = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] tour = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(2)), next.length);
+    IntVar[] tourCost = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(4));
+    int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
+    checkForDuplicateVariables(next);
+    support.pose(new Alldistinct(next));
+    support.pose(new WeightedSubcircuits(next, tour, costs, tourCost, cost, offset));
+  }
+
+  private static int[][] matrix(int[] values, int n) {
+    if (values == null || values.length != n * n) {
+      throw new IllegalArgumentException("the cost matrix needs " + n + " x " + n + " values");
+    }
+    int[][] m = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      System.arraycopy(values, i * n, m[i], 0, n);
+    }
+    return m;
   }
 
   /**

@@ -508,6 +508,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_subcircuit(n);
   }
 
+  /** Handles the jacop_subcircuit_cost FlatZinc constraint. */
+  public void jacop_subcircuit_cost(SimpleNode n) {
+    gc.gen_jacop_subcircuit_cost(n);
+  }
+
+  /** Handles the jacop_weighted_subcircuits FlatZinc constraint. */
+  public void jacop_weighted_subcircuits(SimpleNode n) {
+    gc.gen_jacop_weighted_subcircuits(n);
+  }
+
   /** Handles the jacop_alldiff FlatZinc constraint. */
   public void jacop_alldiff(SimpleNode n) {
     gc.gen_jacop_alldiff(n);
