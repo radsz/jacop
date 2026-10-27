@@ -70,6 +70,10 @@ class TablingTest {
 
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
+  /** The default limits, but every group within them is tabulated. */
+  private static final Tabling.Limits ALWAYS =
+      new Tabling.Limits(10, 3, 10_000, 100_000, 2_000_000, false);
+
   @Test
   void randomModelsHaveTheSameSolutionsThroughTabling() {
     Random random = new Random(20261027);
@@ -78,7 +82,8 @@ class TablingTest {
       long seed = random.nextLong();
       List<List<Integer>> expected = solveDirectly(s -> randomModel(s, new Random(seed)));
       boolean checking = trial % 2 == 0;
-      Run run = solveThroughTabling(s -> randomModel(s, new Random(seed)), checking);
+      Tabling.Limits limits = trial % 4 < 2 ? ALWAYS : Tabling.Limits.DEFAULT;
+      Run run = solveThroughTabling(s -> randomModel(s, new Random(seed)), checking, limits);
       assertThat(run.solutions())
           .as("trial %d, checking %b", trial, checking)
           .containsExactlyInAnyOrderElementsOf(expected);
@@ -86,27 +91,39 @@ class TablingTest {
         tabled++;
       }
     }
-    assertThat(tabled).isGreaterThan(TRIALS / 8);
+    assertThat(tabled).isGreaterThan(TRIALS / 10);
   }
 
   @Test
   void anIntermediateVariableJoinsItsDefinitionAndItsUse() {
-    // t = x - y, z = |t|: the bounds of t do not see the holes of z
+    // t = x * y, t + x = 8: bounds reasoning does not see that only (2, 3) and (4, 1) remain
     Function<Store, IntVar[]> model =
         s -> {
           IntVar x = new IntVar(s, "x", 0, 5);
           IntVar y = new IntVar(s, "y", 0, 5);
-          IntVar t = new IntVar(s, "t", -5, 5);
-          IntVar z = new IntVar(s, "z", 0, 5);
-          z.domain.in(0, z, 2, 2);
-          s.impose(new XplusYeqZ(t, y, x));
-          s.impose(new AbsXeqY(t, z));
-          return new IntVar[] {x, y, t, z};
+          IntVar t = new IntVar(s, "t", 0, 25);
+          s.impose(new XmulYeqZ(x, y, t));
+          s.impose(new XplusYeqZ(t, x, new IntVar(s, "z", 8, 8)));
+          return new IntVar[] {x, y, t};
         };
-    Run run = solveThroughTabling(model, true);
+    Run run = solveThroughTabling(model, true, Tabling.Limits.DEFAULT);
     assertThat(run.statistics().tables()).isEqualTo(1);
     assertThat(run.statistics().replaced()).isEqualTo(2);
     assertThat(run.solutions()).containsExactlyInAnyOrderElementsOf(solveDirectly(model));
+  }
+
+  @Test
+  void aGroupThatPropagatesToItsSolutionsIsKept() {
+    // t = x - y, z = |t| with z = 2: every value left at each node has a solution
+    Store s = new Store();
+    IntVar x = new IntVar(s, "x", 0, 5);
+    IntVar y = new IntVar(s, "y", 0, 5);
+    IntVar t = new IntVar(s, "t", -5, 5);
+    s.impose(new XplusYeqZ(t, y, x));
+    s.impose(new AbsXeqY(t, new IntVar(s, "z", 2, 2)));
+    Derivation d = Derivation.of(s).tabling(true).derive();
+    assertThat(d.tablingStatistics().tables()).isZero();
+    assertThat(d.statistics().childConstraints()).isEqualTo(2);
   }
 
   @Test
@@ -123,14 +140,14 @@ class TablingTest {
 
   @Test
   void aGroupOverTheLimitsIsKept() {
-    Derivation d = Derivation.of(sumOfDistinct()).tabling(true).derive();
+    Derivation d = Derivation.of(sumOfDistinct()).tabling(ALWAYS).derive();
     assertThat(d.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     assertThat(d.tablingStatistics().tables()).isZero();
     assertThat(d.statistics().childConstraints()).isEqualTo(2);
 
     Derivation larger =
         Derivation.of(sumOfDistinct())
-            .tabling(new Tabling.Limits(10, 3, 100_000, 1_000_000, 1_000_000))
+            .tabling(new Tabling.Limits(10, 3, 100_000, 1_000_000, 1_000_000, false))
             .derive();
     assertThat(larger.tablingStatistics().tables()).isEqualTo(1);
     assertThat(larger.tablingStatistics().tuples()).isEqualTo(201 * 200);
@@ -157,7 +174,8 @@ class TablingTest {
     }
     s.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, "==", 4));
     s.impose(new XneqY(x[0], x[1]));
-    Derivation d = Derivation.of(s).tabling(new Tabling.Limits(3, 3, 100, 1000, 1000)).derive();
+    Derivation d =
+        Derivation.of(s).tabling(new Tabling.Limits(3, 3, 100, 1000, 1000, false)).derive();
     assertThat(d.tablingStatistics().tables()).isZero();
   }
 
@@ -212,14 +230,15 @@ class TablingTest {
     return found;
   }
 
-  private static Run solveThroughTabling(Function<Store, IntVar[]> model, boolean checking) {
+  private static Run solveThroughTabling(
+      Function<Store, IntVar[]> model, boolean checking, Tabling.Limits limits) {
     Store s = new Store();
     IntVar[] vars = model.apply(s);
     List<List<Integer>> found = new ArrayList<>();
     Derivation d =
         Derivation.of(s)
             .keep(vars)
-            .tabling(true)
+            .tabling(limits)
             .retention(checking ? Derivation.Retention.KEPT : Derivation.Retention.RELEASED)
             .derive();
     if (d.outcome() == Derivation.Outcome.INFEASIBLE) {

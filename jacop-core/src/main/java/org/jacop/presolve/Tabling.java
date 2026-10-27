@@ -64,10 +64,12 @@ import org.jacop.core.Var;
  * A group grows only while it has at most {@link Limits#variables()} unfixed variables. Each group
  * of two or more constraints is solved on a scratch store, with a search over its unfixed variables
  * limited to {@link Limits#nodes()} nodes and {@link Limits#tuples()} solutions; a group within the
- * limits is replaced by the table of its solutions over all its unfixed variables. The table is
- * therefore equivalent to the group, so every solution, and the number of solutions, is kept. A
- * group whose table holds every tuple of its domains is entailed and is dropped without a table;
- * one without a solution makes the problem infeasible.
+ * limits is replaced by the table of its solutions over all its unfixed variables, unless that
+ * search never failed: then the group's own propagation already leaves only values with a solution
+ * along the search, and a table would cost more without pruning more. The table is therefore
+ * equivalent to the group, so every solution, and the number of solutions, is kept. A group whose
+ * table holds every tuple of its domains is entailed and is dropped without a table; one without a
+ * solution makes the problem infeasible.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
@@ -82,11 +84,14 @@ final class Tabling {
    * @param tuples most tuples of a table.
    * @param nodes most search nodes to tabulate one group.
    * @param budget most search nodes over all groups.
+   * @param onlyStronger whether a group is tabulated only if its own propagation failed in the
+   *     search for its solutions.
    */
-  record Limits(int variables, int degree, int tuples, long nodes, long budget) {
+  record Limits(
+      int variables, int degree, int tuples, long nodes, long budget, boolean onlyStronger) {
 
     /** The limits of Savile Row: 10 variables and 10,000 tuples. */
-    static final Limits DEFAULT = new Limits(10, 3, 10_000, 100_000, 2_000_000);
+    static final Limits DEFAULT = new Limits(10, 3, 10_000, 100_000, 2_000_000, true);
   }
 
   /**
@@ -389,10 +394,15 @@ final class Tabling {
       // only a count up to the number of solutions matters
       all = all > limits.tuples() ? all : all * v.getSize();
     }
-    return new Group(
-        List.copyOf(group),
-        scope,
-        all == e.solutions.size() ? null : e.solutions.toArray(new int[0][]));
+    if (all == e.solutions.size()) {
+      return new Group(List.copyOf(group), scope, null);
+    }
+    if (e.failures == 0 && limits.onlyStronger()) {
+      // the group's own propagation never left a value without a solution, so the table would
+      // prune nothing more, only cost more
+      return null;
+    }
+    return new Group(List.copyOf(group), scope, e.solutions.toArray(new int[0][]));
   }
 
   /** A depth-first search for all solutions of a scratch store, within the limits. */
@@ -402,6 +412,7 @@ final class Tabling {
     private final IntVar[] vars;
     private final List<int[]> solutions = new ArrayList<>();
     private final long start = nodes;
+    private long failures;
 
     Enumeration(Store store, IntVar[] vars) {
       this.store = store;
@@ -442,9 +453,11 @@ final class Tabling {
           next.domain.in(store.level, next, value, value);
           if (store.consistency()) {
             within = dive();
+          } else {
+            failures++;
           }
         } catch (FailException f) {
-          // no solution with this value
+          failures++;
         }
         // propagation may have raised the level further (raiseLevelBeforeConsistency)
         while (store.level > level) {
