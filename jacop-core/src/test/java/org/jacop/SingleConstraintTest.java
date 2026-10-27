@@ -123,6 +123,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Spread;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.Sum;
@@ -2479,6 +2480,17 @@ class SingleConstraintTest extends TestHelper {
           .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
           .isEqualTo(expected);
     }
+  }
+
+  @Test
+  void spreadFailsWhenNoValueFitsTheCostBound() {
+    // cost <= 3 allows |4 * v - 10| <= 1, which no integer v satisfies; narrow() used to call in()
+    // with min 3 > max 2 and threw IllegalStateException instead of failing
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", -1, 4), new IntVar(store, "x1", -1, 4)};
+    IntVar cost = new IntVar(store, "cost", 0, 3);
+    store.impose(new Spread(x, 4, 10, 5, cost));
+    assertThat(store.consistency()).isFalse();
   }
 
   @Test
