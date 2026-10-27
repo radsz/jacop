@@ -146,6 +146,8 @@ import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
+import org.jacop.core.AffineDomain;
+import org.jacop.core.AffineView;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -3384,6 +3386,98 @@ class GlobalConstraintBruteForceTest {
     search.getSolutionListener().recordSolutions(false);
     search.labeling(child, new SimpleSelect<>(decisions, null, new IndomainRandom<>(seed)));
     derivation.discard();
+    return found;
+  }
+
+  /**
+   * The constraint posted on affine views: every variable of the instance is a view a*u + b of its
+   * own base variable u, whose domain holds the values u for which a*u + b is in the instance's
+   * domain, so the expected solutions are the brute-force solutions whose values are all of that
+   * form. The search labels each base or its view.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceOnViews(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 4);
+    int[] factors = {1, 1, -1, 2, -2, 3};
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      int[] a = new int[n];
+      int[] b = new int[n];
+      for (int i = 0; i < n; i++) {
+        a[i] = factors[random.nextInt(factors.length)];
+        b[i] = random.nextInt(7) - 3;
+      }
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(instance, new int[n], 0, expected);
+      expected.removeIf(
+          solution ->
+              IntStream.range(0, n)
+                  .anyMatch(i -> Math.floorMod(solution.get(i) - b[i], a[i]) != 0));
+      String description =
+          String.format(
+              "%s trial %d domains=%s %s, x = a*u + b with a=%s b=%s",
+              name,
+              trial,
+              Arrays.deepToString(instance.domains()),
+              instance.description(),
+              Arrays.toString(a),
+              Arrays.toString(b));
+      Set<List<Integer>> found;
+      try {
+        found = solveOnViews(instance, a, b, random.nextLong());
+      } catch (IllegalArgumentException e) {
+        // a precondition of the instance on the domains, which a factor can thin out
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(description, e);
+      }
+      assertThat(found).as(description).isEqualTo(expected);
+    }
+  }
+
+  private static Set<List<Integer>> solveOnViews(Instance instance, int[] a, int[] b, long seed) {
+    Random random = new Random(seed);
+    int n = a.length;
+    Set<List<Integer>> found = new HashSet<>();
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    List<IntVar> decisions = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      IntervalDomain values = new IntervalDomain();
+      for (int v : instance.domains()[i]) {
+        values.unionAdapt(v, v);
+      }
+      IntDomain pre = AffineDomain.preimage(values, 0, a[i], b[i]);
+      if (pre.isEmpty()) {
+        return found;
+      }
+      IntVar u = new IntVar(store, "u" + i, pre);
+      x[i] = new AffineView(store, "x" + i, u, a[i], b[i]);
+      decisions.add(random.nextBoolean() ? u : x[i]);
+    }
+    instance.impose().accept(store, x);
+    if (!store.consistency()) {
+      return found;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            found.add(Arrays.stream(x).map(IntVar::value).toList());
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(
+        store,
+        new SimpleSelect<>(
+            decisions.toArray(new IntVar[0]), null, new IndomainRandom<>(random.nextInt())));
     return found;
   }
 }

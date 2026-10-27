@@ -588,6 +588,35 @@ public class Store {
     if (v.valueWatches != null && pruningEvent == IntDomain.GROUND) {
       queueValueWatches(v);
     }
+
+    if (v.views != null) {
+      queueViews(v, pruningEvent);
+    }
+  }
+
+  /**
+   * Wakes the constraints of the affine views of a changed variable, as if each view had changed
+   * itself; a decreasing view changes its maximum when its base changes its minimum. Like the
+   * constraints of the variable itself, the constraint whose pruning made the change is told about
+   * it but not queued again, so a propagator should not have two variables of one family (a base
+   * and its view, or two views of one base): its pruning of one would change the other.
+   */
+  private void queueViews(Var base, int pruningEvent) {
+    for (AffineView view : base.views) {
+      AffineDomain d = (AffineDomain) view.domain;
+      int event = d.swap(pruningEvent);
+      if (variableActivityManagement) {
+        variablesPrunned.add(view);
+      }
+      queueModelConstraintsForVariable(d, view, event);
+      queueSearchConstraintsForVariable(d, view);
+      if (view.watchedConstraints != null && event == IntDomain.GROUND) {
+        queueWatchedConstraintsForVariable(view);
+      }
+      if (view.valueWatches != null && event == IntDomain.GROUND) {
+        queueValueWatches(view);
+      }
+    }
   }
 
   /**
