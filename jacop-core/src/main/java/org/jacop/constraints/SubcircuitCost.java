@@ -100,7 +100,7 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
 
   private final CircuitCost.Assignment maxAssignment;
 
-  private Steiner steiner;
+  private SteinerCycleBound steiner;
 
   // the sums of the largest and of the smallest arc cost of each row, from the last call
   private long rowsUpperBound;
@@ -239,10 +239,10 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
       again = false;
       if (useSteiner && cost.max() < rowsUpperBound) {
         if (steiner == null) {
-          steiner = new Steiner();
+          steiner = new SteinerCycleBound(list, costs, offset);
         }
         store.propagationHasOccurred = false;
-        steiner.propagate(store);
+        steiner(store);
         again = store.propagationHasOccurred;
       }
     } while (again);
@@ -378,383 +378,71 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
     return result.toString();
   }
 
-  /**
-   * The Steiner cycle relaxation of Vismara and Briot on the required nodes R (x[i] != i). The
-   * optional nodes O may be on the circuit or not, and the nodes left out are fixed.
-   *
-   * <p>Each optional node o is charged m(o), the cheapest cost in its domain (its self-loop
-   * included), and an arc o to j then costs c(o, j) - m(o) &gt;= 0, so the cost of any subcircuit
-   * is at least the charges plus the costs of the paths that link each required node to the next
-   * one through optional nodes. The cheapest such path from i to j, d(i, j), is found by Dijkstra's
-   * algorithm, and the minimum assignment of R on d, without self-loops when |R| &gt;= 2 (all
-   * required nodes are on one cycle), bounds the cost. With |R| = 1, d(i, i) is the cheapest cycle
-   * through i.
-   *
-   * <p>An arc a to b forced into the circuit lies on the path from some required node i to some
-   * required node j, so the assignment costs at least its dual bound plus F(a) + c'(a, b) + G(b),
-   * where F(a) = min over i of (shortest path from i to a) - u(i) and G(b) = min over j of
-   * (shortest path from b to j) - v(j), with F = -u and G = -v on the required nodes themselves.
-   * Both are computed by one multi-source Dijkstra each. Leaving an optional node o out costs at
-   * least c(o, o) - m(o) more than the bound.
+  /*
+   * The Steiner cycle bound on the required nodes. An optional node is charged its cheapest cost,
+   * self-loop included, and a node left out its self-loop, so leaving an optional node o out
+   * costs c(o, o) - m(o) more than the bound.
    */
-  private final class Steiner {
-
-    private static final long INF = Long.MAX_VALUE / 8;
-
-    private static final byte OUT = 0;
-    private static final byte REQUIRED = 1;
-    private static final byte OPTIONAL = 2;
-
-    private final byte[] kind = new byte[n];
-    // the required nodes, and the position of each in that list
-    private final int[] required = new int[n];
-    private final int[] position = new int[n];
-    private final long[] charge = new long[n];
-    private final long[] dist = new long[n];
-    private final boolean[] done = new boolean[n];
-    private final long[] forward = new long[n];
-    private final long[] backward = new long[n];
-    private long[][] weight = new long[0][];
-
-    // the Hungarian method on the required nodes (1-based arrays)
-    private long[] u = new long[1];
-    private long[] v = new long[1];
-    private int[] mate = new int[1];
-    private int[] way = new int[1];
-    private long[] minv = new long[1];
-    private boolean[] used = new boolean[1];
-
-    void propagate(Store store) {
-
-      int r = 0;
-      int optional = 0;
-      long base = 0;
-      for (int i = 0; i < n; i++) {
-        IntVar x = list[i];
-        int self = offset + i;
-        if (!x.domain.contains(self)) {
-          kind[i] = REQUIRED;
-          position[i] = r;
-          required[r++] = i;
-        } else if (x.singleton()) {
-          kind[i] = OUT;
-          base += costs[i][i];
-        } else {
-          kind[i] = OPTIONAL;
-          optional++;
-          long m = Long.MAX_VALUE;
-          int last = x.max();
-          for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-            m = Math.min(m, costs[i][val - offset]);
-            if (val >= last) {
-              break;
-            }
-          }
-          charge[i] = m;
-          base += m;
-        }
-      }
-      if (r == 0 || optional == 0) {
-        // nothing is required, or the assignment bound already covers this case exactly
-        return;
-      }
-
-      if (weight.length < r) {
-        weight = new long[r][r];
-        u = new long[r + 1];
-        v = new long[r + 1];
-        mate = new int[r + 1];
-        way = new int[r + 1];
-        minv = new long[r + 1];
-        used = new boolean[r + 1];
-      }
-      for (int k = 0; k < r; k++) {
-        paths(required[k], weight[k], r);
-      }
-
-      long bound;
-      if (r == 1) {
-        bound = weight[0][0];
-        if (bound >= INF) {
-          throw Store.failException;
-        }
-        u[1] = bound;
-        v[1] = 0;
+  private void steiner(Store store) {
+    byte[] kind = steiner.kind;
+    long[] charge = steiner.charge;
+    int required = 0;
+    int optional = 0;
+    long base = 0;
+    for (int i = 0; i < n; i++) {
+      IntVar x = list[i];
+      if (!x.domain.contains(offset + i)) {
+        kind[i] = SteinerCycleBound.REQUIRED;
+        required++;
+      } else if (x.singleton()) {
+        kind[i] = SteinerCycleBound.OUT;
+        base += costs[i][i];
       } else {
-        for (int k = 0; k < r; k++) {
-          weight[k][k] = INF;
-        }
-        bound = hungarian(r);
-      }
-
-      long lowerBound = base + bound;
-      steinerBound = lowerBound;
-      setMin(store, lowerBound);
-      long slack = cost.max() - lowerBound;
-
-      forwardPaths(r);
-      backwardPaths(r);
-
-      for (int a = 0; a < n; a++) {
-        if (kind[a] == OUT) {
-          continue;
-        }
-        IntVar x = list[a];
-        long fa = kind[a] == REQUIRED ? -u[position[a] + 1] : forward[a];
-        long chargeA = kind[a] == REQUIRED ? 0 : charge[a];
-        int[] row = costs[a];
+        kind[i] = SteinerCycleBound.OPTIONAL;
+        optional++;
+        long m = Long.MAX_VALUE;
+        int last = x.max();
         for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-          int b = val - offset;
-          boolean remove;
-          if (b == a) {
-            // leaving the optional node a out
-            remove = row[a] - chargeA > slack;
-          } else if (kind[b] == OUT) {
-            remove = false;
-          } else {
-            long gb = kind[b] == REQUIRED ? -v[position[b] + 1] : backward[b];
-            remove = fa >= INF || gb >= INF || fa + row[b] - chargeA + gb > slack;
-          }
-          if (remove) {
-            x.domain.inComplement(store.level, x, val);
-          }
-          if (val >= x.max()) {
+          m = Math.min(m, costs[i][val - offset]);
+          if (val >= last) {
             break;
           }
         }
+        charge[i] = m;
+        base += m;
       }
     }
-
-    // the cheapest paths from the required node s through optional nodes to every required node
-    private void paths(int s, long[] out, int r) {
-      Arrays.fill(out, 0, r, INF);
-      Arrays.fill(dist, INF);
-      Arrays.fill(done, false);
-      relax(s, 0, 0, out);
-      while (true) {
-        int best = -1;
-        long bestDist = INF;
-        for (int o = 0; o < n; o++) {
-          if (kind[o] == OPTIONAL && !done[o] && dist[o] < bestDist) {
-            bestDist = dist[o];
-            best = o;
-          }
-        }
-        if (best < 0) {
-          return;
-        }
-        done[best] = true;
-        relax(best, bestDist, charge[best], out);
-      }
+    if (required == 0 || optional == 0) {
+      // nothing is required, or the assignment bound already covers this case exactly
+      return;
     }
 
-    // the arcs leaving node a, reached at distance d, with the charge of a taken off
-    private void relax(int a, long d, long chargeA, long[] out) {
+    long lowerBound = base + steiner.solve();
+    steinerBound = lowerBound;
+    setMin(store, lowerBound);
+    long slack = cost.max() - lowerBound;
+
+    for (int a = 0; a < n; a++) {
+      if (kind[a] == SteinerCycleBound.OUT) {
+        continue;
+      }
       IntVar x = list[a];
-      int[] row = costs[a];
-      int last = x.max();
       for (int val = x.min(); ; val = x.domain.nextValue(val)) {
         int b = val - offset;
-        if (b != a) {
-          long nd = d + row[b] - chargeA;
-          if (kind[b] == REQUIRED) {
-            int p = position[b];
-            if (nd < out[p]) {
-              out[p] = nd;
-            }
-          } else if (kind[b] == OPTIONAL && !done[b] && nd < dist[b]) {
-            dist[b] = nd;
-          }
+        boolean remove;
+        if (b == a) {
+          // leaving the optional node a out
+          remove = costs[a][a] - charge[a] > slack;
+        } else {
+          remove = kind[b] != SteinerCycleBound.OUT && steiner.arc(a, b) > slack;
         }
-        if (val >= last) {
+        if (remove) {
+          x.domain.inComplement(store.level, x, val);
+        }
+        if (val >= x.max()) {
           break;
         }
       }
-    }
-
-    // forward[o] = min over required i of (cheapest path from i to the optional node o) - u(i)
-    private void forwardPaths(int r) {
-      Arrays.fill(forward, INF);
-      Arrays.fill(done, false);
-      for (int k = 0; k < r; k++) {
-        int i = required[k];
-        long ui = u[k + 1];
-        IntVar x = list[i];
-        int[] row = costs[i];
-        int last = x.max();
-        for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-          int b = val - offset;
-          if (kind[b] == OPTIONAL) {
-            long d = row[b] - ui;
-            if (d < forward[b]) {
-              forward[b] = d;
-            }
-          }
-          if (val >= last) {
-            break;
-          }
-        }
-      }
-      while (true) {
-        int best = -1;
-        long bestDist = INF;
-        for (int o = 0; o < n; o++) {
-          if (kind[o] == OPTIONAL && !done[o] && forward[o] < bestDist) {
-            bestDist = forward[o];
-            best = o;
-          }
-        }
-        if (best < 0) {
-          return;
-        }
-        done[best] = true;
-        IntVar x = list[best];
-        int[] row = costs[best];
-        long c = charge[best];
-        int last = x.max();
-        for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-          int b = val - offset;
-          if (b != best && kind[b] == OPTIONAL && !done[b]) {
-            long d = bestDist + row[b] - c;
-            if (d < forward[b]) {
-              forward[b] = d;
-            }
-          }
-          if (val >= last) {
-            break;
-          }
-        }
-      }
-    }
-
-    // backward[o] = min over required j of (cheapest path from the optional node o to j) - v(j)
-    private void backwardPaths(int r) {
-      Arrays.fill(backward, INF);
-      Arrays.fill(done, false);
-      for (int o = 0; o < n; o++) {
-        if (kind[o] != OPTIONAL) {
-          continue;
-        }
-        IntVar x = list[o];
-        int[] row = costs[o];
-        long c = charge[o];
-        int last = x.max();
-        for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-          int b = val - offset;
-          if (kind[b] == REQUIRED) {
-            long d = row[b] - c - v[position[b] + 1];
-            if (d < backward[o]) {
-              backward[o] = d;
-            }
-          }
-          if (val >= last) {
-            break;
-          }
-        }
-      }
-      while (true) {
-        int best = -1;
-        long bestDist = INF;
-        for (int o = 0; o < n; o++) {
-          if (kind[o] == OPTIONAL && !done[o] && backward[o] < bestDist) {
-            bestDist = backward[o];
-            best = o;
-          }
-        }
-        if (best < 0) {
-          return;
-        }
-        done[best] = true;
-        int val = offset + best;
-        for (int a = 0; a < n; a++) {
-          if (a != best && kind[a] == OPTIONAL && !done[a] && list[a].domain.contains(val)) {
-            long d = bestDist + costs[a][best] - charge[a];
-            if (d < backward[a]) {
-              backward[a] = d;
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * The minimum assignment of the r required nodes on weight, by the Hungarian method with
-     * shortest augmenting paths; u and v get its duals. Infinite weights are replaced by a weight
-     * larger than any assignment of finite ones, so an assignment that needs one means that the
-     * required nodes cannot be linked into a cycle.
-     */
-    private long hungarian(int r) {
-      long big = 1;
-      for (int i = 0; i < r; i++) {
-        long rowMax = 0;
-        for (int j = 0; j < r; j++) {
-          if (weight[i][j] < INF) {
-            rowMax = Math.max(rowMax, Math.abs(weight[i][j]));
-          }
-        }
-        big += 2 * rowMax;
-      }
-      for (int i = 0; i < r; i++) {
-        for (int j = 0; j < r; j++) {
-          if (weight[i][j] >= INF) {
-            weight[i][j] = big;
-          }
-        }
-      }
-      Arrays.fill(u, 0, r + 1, 0);
-      Arrays.fill(v, 0, r + 1, 0);
-      Arrays.fill(mate, 0, r + 1, 0);
-      for (int i = 1; i <= r; i++) {
-        mate[0] = i;
-        int j0 = 0;
-        Arrays.fill(minv, 0, r + 1, Long.MAX_VALUE);
-        Arrays.fill(used, 0, r + 1, false);
-        do {
-          used[j0] = true;
-          int i0 = mate[j0];
-          long delta = Long.MAX_VALUE;
-          int j1 = 0;
-          long[] w = weight[i0 - 1];
-          for (int j = 1; j <= r; j++) {
-            if (!used[j]) {
-              long cur = w[j - 1] - u[i0] - v[j];
-              if (cur < minv[j]) {
-                minv[j] = cur;
-                way[j] = j0;
-              }
-              if (minv[j] < delta) {
-                delta = minv[j];
-                j1 = j;
-              }
-            }
-          }
-          for (int j = 0; j <= r; j++) {
-            if (used[j]) {
-              u[mate[j]] += delta;
-              v[j] -= delta;
-            } else {
-              minv[j] -= delta;
-            }
-          }
-          j0 = j1;
-        } while (mate[j0] != 0);
-        do {
-          int j1 = way[j0];
-          mate[j0] = mate[j1];
-          j0 = j1;
-        } while (j0 != 0);
-      }
-      long sum = 0;
-      for (int j = 1; j <= r; j++) {
-        long w = weight[mate[j] - 1][j - 1];
-        if (w == big) {
-          throw Store.failException;
-        }
-        sum += w;
-      }
-      // u[0] is not a dual of any row; the duals of the rows and columns sum to the assignment
-      u[0] = 0;
-      return sum;
     }
   }
 }

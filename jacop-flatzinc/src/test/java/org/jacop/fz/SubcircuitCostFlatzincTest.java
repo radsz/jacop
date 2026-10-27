@@ -313,6 +313,126 @@ class SubcircuitCostFlatzincTest {
         solutions(out));
   }
 
+  @Test
+  void subcircuitCostPredicateKeepsAllSolutions() throws IOException {
+    // jacop_subcircuit_cost from the mznlib predicate subcircuit_cost, d given row by row
+    int[][] d = {{4, 3, 9, 2}, {5, 0, 1, 7}, {2, 6, 3, 8}, {1, 4, 6, 5}};
+    String fzn =
+        """
+        var 1..4: x0;
+        var 1..4: x1;
+        var 1..4: x2;
+        var 1..4: x3;
+        var 0..13: cost:: output_var;
+        array [1..4] of var int: x:: output_array([1..4]) = [x0,x1,x2,x3];
+        constraint jacop_subcircuit_cost(x,[4,3,9,2,5,0,1,7,2,6,3,8,1,4,6,5],cost);
+        solve satisfy;
+        """;
+    int[][] domains = new int[4][];
+    Arrays.fill(domains, new int[] {1, 2, 3, 4});
+    List<int[]> all = new ArrayList<>();
+    enumerate(0, new int[4], new boolean[4], domains, all);
+    Set<String> expected = new TreeSet<>();
+    for (int[] s : all) {
+      int sum = 0;
+      int[] values = new int[4];
+      for (int i = 0; i < 4; i++) {
+        sum += d[i][s[i]];
+        values[i] = s[i] + 1;
+      }
+      if (sum <= 13) {
+        expected.add("cost = " + sum + "; x = array1d(1..4, " + Arrays.toString(values) + ");");
+      }
+    }
+    assertEquals(expected, solutions(run(fzn, "-a")));
+  }
+
+  @Test
+  void weightedSubcircuitsPredicateKeepsAllSolutions() throws IOException {
+    // two tours over four nodes, node 0 in tour 1; every arc costs 1 and leaving a node out 0
+    String fzn =
+        """
+        var 1..4: x0;
+        var 1..4: x1;
+        var 1..4: x2;
+        var 1..4: x3;
+        var 1..1: t0;
+        var 0..2: t1;
+        var 0..2: t2;
+        var 0..2: t3;
+        var 0..10: c1;
+        var 0..10: c2;
+        var 0..10: cost;
+        array [1..4] of var int: x:: output_array([1..4]) = [x0,x1,x2,x3];
+        array [1..4] of var int: t:: output_array([1..4]) = [t0,t1,t2,t3];
+        constraint jacop_weighted_subcircuits(x,t,[0,1,1,1,1,0,1,1,1,1,0,1,1,1,1,0],[c1,c2],cost,1);
+        solve satisfy;
+        """;
+    // brute force: permutations whose circuits get different tours, node 0 in tour 1
+    int[][] domains = new int[4][];
+    Arrays.fill(domains, new int[] {1, 2, 3, 4});
+    List<int[]> perms = new ArrayList<>();
+    enumerateAll(0, new int[4], new boolean[4], perms);
+    Set<String> expected = new TreeSet<>();
+    for (int[] p : perms) {
+      int[] cycle = new int[4];
+      Arrays.fill(cycle, -1);
+      int cycles = 0;
+      for (int s = 0; s < 4; s++) {
+        if (p[s] != s && cycle[s] < 0) {
+          int v = s;
+          do {
+            cycle[v] = cycles;
+            v = p[v];
+          } while (v != s);
+          cycles++;
+        }
+      }
+      for (int assign = 0; assign < 4; assign++) {
+        // cycle c gets tour 1 + ((assign >> c) & 1)
+        if (cycles > 2
+            || (cycles == 2 && (assign & 1) == ((assign >> 1) & 1))
+            || assign >= 1 << cycles) {
+          continue;
+        }
+        int[] t = new int[4];
+        for (int i = 0; i < 4; i++) {
+          t[i] = cycle[i] < 0 ? 0 : 1 + ((assign >> cycle[i]) & 1);
+        }
+        if (t[0] != 1) {
+          continue;
+        }
+        int[] values = new int[4];
+        for (int i = 0; i < 4; i++) {
+          values[i] = p[i] + 1;
+        }
+        expected.add(
+            "t = array1d(1..4, "
+                + Arrays.toString(t)
+                + "); x = array1d(1..4, "
+                + Arrays.toString(values)
+                + ");");
+      }
+    }
+    assertEquals(expected, solutions(run(fzn, "-a")));
+  }
+
+  // all permutations of 0..n-1
+  private static void enumerateAll(int i, int[] next, boolean[] used, List<int[]> out) {
+    if (i == next.length) {
+      out.add(next.clone());
+      return;
+    }
+    for (int j = 0; j < next.length; j++) {
+      if (!used[j]) {
+        used[j] = true;
+        next[i] = j;
+        enumerateAll(i + 1, next, used, out);
+        used[j] = false;
+      }
+    }
+  }
+
   private String run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
