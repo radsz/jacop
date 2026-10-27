@@ -101,6 +101,7 @@ import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -239,6 +240,8 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
         Arguments.of("Deviation", balance(false)),
         Arguments.of("Spread", balance(true)),
+        Arguments.of("StockingCost", stockingCost(false)),
+        Arguments.of("StockingCostItemDependent", stockingCost(true)),
         Arguments.of(
             "IncreasingNValue",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
@@ -1521,6 +1524,47 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
+  // last
+  private static Function<Random, Instance> stockingCost(boolean itemDependent) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int capacity = 1 + random.nextInt(2);
+      int[] due = randomInts(random, n, 1, 6);
+      // the unit cost constructor is checked against costs of 1
+      int[] h = itemDependent ? randomInts(random, n, 0, 3) : randomInts(random, n, 1, 1);
+      int[][] domains =
+          append(domains(random, n, 0, 6), domain(random, 0, 3 * n * (itemDependent ? 3 : 1)));
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            store.impose(
+                itemDependent
+                    ? new StockingCost(x, due, h, v[n], capacity)
+                    : new StockingCost(x, due, v[n], capacity));
+          },
+          t -> {
+            int total = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[i] > due[i]) {
+                return false;
+              }
+              int same = 0;
+              for (int j = 0; j < n; j++) {
+                same += t[j] == t[i] ? 1 : 0;
+              }
+              if (same > capacity) {
+                return false;
+              }
+              total += h[i] * (due[i] - t[i]);
+            }
+            return total <= t[n];
+          },
+          "due=" + Arrays.toString(due) + " h=" + Arrays.toString(h) + " c=" + capacity);
+    };
   }
 
   /**

@@ -53,6 +53,8 @@ include "soft_global_cardinality_int.mzn";
 include "GCC.mzn";
 include "channel.mzn";
 include "disjunctive_setup.mzn";
+include "subcircuit_cost.mzn";
+include "weighted_subcircuits.mzn";
 include "deviation.mzn";
 
 %% ===== JaCoP graph constraints =====
