@@ -952,6 +952,13 @@ public class Store {
           long before = domainChanges;
           currentConstraint.consistency(this);
           learnYield(currentConstraint, domainChanges != before);
+        } else if (yieldOnPrune) {
+          long before = domainChanges;
+          currentConstraint.consistency(this);
+          if (domainChanges != before) {
+            currentConstraint = null;
+            return true;
+          }
         } else {
           currentConstraint.consistency(this);
         }
@@ -973,6 +980,23 @@ public class Store {
 
     currentConstraint = null;
     return true;
+  }
+
+  /** Prototype: return from consistency() after each pruning call (LCG gives SAT a turn). */
+  public boolean yieldOnPrune;
+
+  /**
+   * Prototype: whether constraints wait in the queues (consistency() returned early).
+   *
+   * @return true if some queue is not empty.
+   */
+  public boolean hasPendingConstraints() {
+    for (int i = currentSlot; i < nSlots; i++) {
+      if (!changed[i].isEmpty()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Lean yield update: fixed point average with weight 1/16, sub-slot decided here. */
