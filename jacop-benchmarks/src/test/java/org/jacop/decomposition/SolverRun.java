@@ -139,8 +139,9 @@ final class SolverRun {
                         new BufferedReader(
                             new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
                       result.read(r);
-                    } catch (IOException e) {
-                      result.error = e.toString();
+                    } catch (IOException | RuntimeException | Error e) {
+                      result.status = Status.ERROR;
+                      result.error = "reading the output: " + e;
                     }
                   });
       if (!p.waitFor(timeoutMillis + 30_000L, TimeUnit.MILLISECONDS)) {
