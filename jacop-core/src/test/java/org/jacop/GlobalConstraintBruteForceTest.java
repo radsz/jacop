@@ -84,6 +84,7 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -94,6 +95,7 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -173,7 +175,19 @@ class GlobalConstraintBruteForceTest {
       Predicate<int[]> semantics,
       String description) {}
 
+  /** Comma-separated parts of case names to run, from -Dglobals.bruteforce.cases; all if unset. */
+  private static final String CASES = System.getProperty("globals.bruteforce.cases", "");
+
   static Stream<Arguments> cases() {
+    if (CASES.isBlank()) {
+      return allCases();
+    }
+    List<String> parts = Arrays.asList(CASES.split(","));
+    return allCases()
+        .filter(a -> parts.stream().anyMatch(part -> ((String) a.get()[0]).contains(part.strip())));
+  }
+
+  static Stream<Arguments> allCases() {
     return Stream.of(
         Arguments.of("Alldiff", alldiff("Alldiff")),
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
@@ -266,6 +280,10 @@ class GlobalConstraintBruteForceTest {
             "AmongVar", (Function<Random, Instance>) GlobalConstraintBruteForceTest::amongVar),
         Arguments.of(
             "Distance", (Function<Random, Instance>) GlobalConstraintBruteForceTest::distance),
+        Arguments.of("InterDistance", interDistance(false)),
+        Arguments.of("InterDistanceRepeated", interDistance(true)),
+        Arguments.of("MultiInterDistance", multiInterDistance(false)),
+        Arguments.of("MultiInterDistanceRepeated", multiInterDistance(true)),
         Arguments.of("XmulYeqZ", arithmetic("XmulYeqZ")),
         Arguments.of("XdivYeqZ", arithmetic("XdivYeqZ")),
         Arguments.of("XmodYeqZ", arithmetic("XmodYeqZ")),
@@ -457,6 +475,194 @@ class GlobalConstraintBruteForceTest {
           consistent = false;
         }
       }
+    }
+  }
+
+  /**
+   * The same comparison with two positions of the instance given the same variable, whose domain is
+   * the intersection of theirs. The expected solutions are the brute-force solutions that agree on
+   * the two positions. Constraints must accept a variable that occurs more than once in their
+   * arguments, or reject it at impose time with an {@link IllegalArgumentException}.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceWithAliasedVariables(
+      String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 4);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      if (n < 2) {
+        continue;
+      }
+      int i = random.nextInt(n);
+      int k = random.nextInt(n - 1);
+      int j = k >= i ? k + 1 : k;
+      int[] shared =
+          IntStream.of(instance.domains()[i])
+              .filter(v -> IntStream.of(instance.domains()[j]).anyMatch(w -> w == v))
+              .toArray();
+      if (shared.length == 0) {
+        continue;
+      }
+      int[][] domains = instance.domains().clone();
+      domains[i] = shared;
+      domains[j] = shared;
+      int a = i;
+      int b = j;
+      Instance aliased =
+          new Instance(
+              domains,
+              (store, x) -> {
+                IntVar[] y = x.clone();
+                y[b] = y[a];
+                instance.impose().accept(store, y);
+              },
+              t -> t[a] == t[b] && instance.semantics().test(t),
+              instance.description() + " x" + b + " is x" + a);
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(aliased, new int[n], 0, expected);
+
+      Set<List<Integer>> found;
+      try {
+        found = solveAllAliased(aliased, trial % 3, random.nextInt(), a, b);
+      } catch (IllegalArgumentException e) {
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(
+            name
+                + " trial "
+                + trial
+                + " domains="
+                + Arrays.deepToString(domains)
+                + " "
+                + aliased.description(),
+            e);
+      }
+      assertThat(found)
+          .as(
+              "%s trial %d domains=%s %s",
+              name, trial, Arrays.deepToString(domains), aliased.description())
+          .isEqualTo(expected);
+    }
+  }
+
+  /** Like {@link #solveAll}, but variable {@code b} is the variable {@code a}. */
+  private static Set<List<Integer>> solveAllAliased(
+      Instance instance, int valueOrder, int seed, int a, int b) {
+    Store store = new Store();
+    IntVar[] x = variables(store, instance);
+    x[b] = x[a];
+    instance.impose().accept(store, x);
+    Set<List<Integer>> found = new HashSet<>();
+    if (!store.consistency()) {
+      return found;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            found.add(Arrays.stream(x).map(IntVar::value).toList());
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    Indomain<IntVar> indomain =
+        switch (valueOrder) {
+          case 0 -> new IndomainMin<>();
+          case 1 -> new IndomainMax<>();
+          default -> new IndomainRandom<>(seed);
+        };
+    search.labeling(store, new SimpleSelect<>(x, null, indomain));
+    return found;
+  }
+
+  /**
+   * A single primitive global under {@link Not} must have exactly the assignments that violate it,
+   * and under {@link Reified} with a free 0/1 variable exactly the assignments whose control value
+   * matches; this runs notConsistency, notSatisfied and the reified paths of every case that
+   * imposes one PrimitiveConstraint.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void negationAndReificationMatchBruteForce(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 5);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      if (Arrays.stream(instance.domains()).mapToDouble(d -> d.length).reduce(1, (p, q) -> p * q)
+          > 50_000) {
+        continue;
+      }
+      boolean reify = trial % 2 == 0;
+      int[][] domains = Arrays.copyOf(instance.domains(), reify ? n + 1 : n);
+      if (reify) {
+        domains[n] = new int[] {0, 1};
+      }
+      boolean[] primitive = {true};
+      Instance wrapped =
+          new Instance(
+              domains,
+              (store, x) -> {
+                List<Constraint> imposed = new ArrayList<>();
+                Store recorder =
+                    new Store() {
+                      @Override
+                      public void impose(Constraint c) {
+                        imposed.add(c);
+                      }
+
+                      @Override
+                      public void impose(Constraint c, int queueIndex) {
+                        imposed.add(c);
+                      }
+                    };
+                IntVar[] y = Arrays.copyOf(x, n);
+                // the variables were created in store; the recorder only collects the constraints
+                instance.impose().accept(recorder, y);
+                if (imposed.size() != 1
+                    || recorder.size() > 0
+                    || !(imposed.get(0) instanceof PrimitiveConstraint c)) {
+                  primitive[0] = false;
+                  return;
+                }
+                store.impose(reify ? new Reified(c, x[n]) : new Not(c));
+              },
+              t ->
+                  reify
+                      ? (t[n] == 1) == instance.semantics().test(Arrays.copyOf(t, n))
+                      : !instance.semantics().test(t),
+              instance.description() + (reify ? " reified" : " negated"));
+      Set<List<Integer>> found;
+      try {
+        found = solveAll(wrapped, trial % 3, random.nextInt());
+      } catch (IllegalArgumentException | UnsupportedOperationException e) {
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(
+            name
+                + " trial "
+                + trial
+                + " domains="
+                + Arrays.deepToString(domains)
+                + " "
+                + wrapped.description(),
+            e);
+      }
+      if (!primitive[0]) {
+        continue;
+      }
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(wrapped, new int[domains.length], 0, expected);
+      assertThat(found)
+          .as(
+              "%s trial %d domains=%s %s",
+              name, trial, Arrays.deepToString(domains), wrapped.description())
+          .isEqualTo(expected);
     }
   }
 
@@ -1859,6 +2065,87 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> store.impose(new Distance(x[0], x[1], x[2])),
         x -> Math.abs(x[0] - x[1]) == x[2],
         "");
+  }
+
+  /** InterDistance(x, p): every variable on its own window of 0..11, so the tasks are tight. */
+  private static Function<Random, Instance> interDistance(boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int p = random.nextInt(5);
+      int pool = repeated ? 1 + random.nextInt(n) : n;
+      int[] pick = new int[n];
+      for (int k = 0; k < n; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        int lo = random.nextInt(10);
+        domains[v] = domain(random, lo, Math.min(11, lo + random.nextInt(8)));
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+            }
+            store.impose(new InterDistance(xs, p));
+          },
+          t -> {
+            for (int i = 0; i < n; i++) {
+              for (int j = i + 1; j < n; j++) {
+                if (Math.abs(t[pick[i]] - t[pick[j]]) < p) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          },
+          "n=" + n + " p=" + p + " pick=" + Arrays.toString(pick));
+    };
+  }
+
+  /** MultiInterDistance(x, m, p): every variable on its own window of 0..9. */
+  private static Function<Random, Instance> multiInterDistance(boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int m = 1 + random.nextInt(3);
+      int p = random.nextInt(5);
+      int pool = repeated ? 1 + random.nextInt(n) : n;
+      int[] pick = new int[n];
+      for (int k = 0; k < n; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        int lo = random.nextInt(8);
+        domains[v] = domain(random, lo, Math.min(9, lo + random.nextInt(7)));
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+            }
+            store.impose(new MultiInterDistance(xs, m, p));
+          },
+          t -> {
+            for (int i = 0; i < n; i++) {
+              int count = 0;
+              for (int j = 0; j < n; j++) {
+                if (t[pick[i]] <= t[pick[j]] && t[pick[j]] < t[pick[i]] + p) {
+                  count++;
+                }
+              }
+              if (count > m) {
+                return false;
+              }
+            }
+            return true;
+          },
+          "n=" + n + " m=" + m + " p=" + p + " pick=" + Arrays.toString(pick));
+    };
   }
 
   private static Function<Random, Instance> arithmetic(String kind) {

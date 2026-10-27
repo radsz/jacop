@@ -123,9 +123,11 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Spread;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -167,6 +169,7 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -2479,6 +2482,228 @@ class SingleConstraintTest extends TestHelper {
       store.impose(new SumInt(list, rel, v[sumIndex]));
       assertThat(countSolutions(store, v, random))
           .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void networkFlowWithAWeightThatIsAnotherArcsFlowCountsMatchBruteForce() {
+    // the weight of one arc is the flow of another: pruning the flow during the sensitivity
+    // analysis left the arc cost behind its weight (AssertionError in Pruning.analyzeArc); and a
+    // cost that is also an arc variable never told the network of its changes
+    Random random = new Random(59);
+    for (int trial = 0; trial < 1000; trial++) {
+      int[] supply = {random.nextInt(3), random.nextInt(3)};
+      int d0 = random.nextInt(supply[0] + supply[1] + 1);
+      int[] demand = {d0, supply[0] + supply[1] - d0};
+      int[] w = {random.nextInt(3), random.nextInt(3), random.nextInt(3), random.nextInt(3)};
+      int[] hi = {1 + random.nextInt(3), 1 + random.nextInt(3), 1 + random.nextInt(3), 3};
+      // arc wk has the flow of arc fk as its weight; with costIsFlow the cost is the flow of arc 3
+      int wk = random.nextInt(3);
+      int fk = (wk + 1 + random.nextInt(2)) % 3;
+      boolean costIsFlow = random.nextInt(3) == 0;
+      Store store = new Store();
+      IntVar[] f = new IntVar[4];
+      for (int k = 0; k < 4; k++) {
+        f[k] = new IntVar(store, "f" + k, 0, hi[k]);
+      }
+      IntVar cost = costIsFlow ? f[3] : new IntVar(store, "cost", 0, 40);
+      int expected = 0;
+      for (int[] t : tuples(hi)) {
+        if (t[0] + t[1] != supply[0]
+            || t[2] + t[3] != supply[1]
+            || t[0] + t[2] != demand[0]
+            || t[1] + t[3] != demand[1]) {
+          continue;
+        }
+        int total = 0;
+        for (int k = 0; k < 4; k++) {
+          total += (k == wk ? t[fk] : w[k]) * t[k];
+        }
+        if (costIsFlow ? total == t[3] : total <= 40) {
+          expected++;
+        }
+      }
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] sources = {net.addNode("s0", supply[0]), net.addNode("s1", supply[1])};
+      Node[] sinks = {net.addNode("t0", -demand[0]), net.addNode("t1", -demand[1])};
+      for (int k = 0; k < 4; k++) {
+        if (k == wk) {
+          net.addArc(sources[k / 2], sinks[k % 2], f[fk], f[k]);
+        } else {
+          net.addArc(sources[k / 2], sinks[k % 2], w[k], f[k]);
+        }
+      }
+      net.setCostVariable(cost);
+      store.impose(net.build());
+      IntVar[] all = costIsFlow ? f : new IntVar[] {f[0], f[1], f[2], f[3], cost};
+      assertThat(countSolutions(store, all, random))
+          .as(
+              "trial %d supply %s demand %s weights %s wk %d fk %d",
+              trial, Arrays.toString(supply), Arrays.toString(demand), Arrays.toString(w), wk, fk)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void softAlldifferentWithTheCostAlsoInTheList() {
+    // the cost c is also x1: the network's cost handler replaced the handler of x1, so changes of
+    // x1 never reached the value graph and both solutions were lost
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    x0.addDom(3, 3);
+    IntVar c = new IntVar(store, "c", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 1);
+    store.imposeDecomposition(
+        new SoftAlldifferent(new IntVar[] {x0, c, x2}, c, ViolationMeasure.VARIABLE_BASED));
+    // c = 1 = 3 - |distinct values|: [1, 1, 0] and [3, 1, 1]
+    assertThat(countSolutions(store, new IntVar[] {x0, c, x2}, new Random(1))).isEqualTo(2);
+  }
+
+  /** All tuples t with 0 <= t[i] <= hi[i]. */
+  private static List<int[]> tuples(int[] hi) {
+    List<int[]> all = new ArrayList<>();
+    all.add(new int[0]);
+    for (int h : hi) {
+      List<int[]> next = new ArrayList<>();
+      for (int[] t : all) {
+        for (int v = 0; v <= h; v++) {
+          int[] u = Arrays.copyOf(t, t.length + 1);
+          u[t.length] = v;
+          next.add(u);
+        }
+      }
+      all = next;
+    }
+    return all;
+  }
+
+  @Test
+  void channelReifWithXAlsoItsOwnBoolean() {
+    // x is the 0/1 variable of both values 1 and 3: setting it to 0 for value 3 fixed x to 0, a
+    // value without an item, and the lookup of its 0/1 variable threw NullPointerException
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new ChannelReif(x, new IntVar[] {x, x}, new int[] {1, 3}));
+    // x = 0: both items off and x is neither 1 nor 3; x = 1 would turn the item of 3 on
+    assertThat(countSolutions(store, new IntVar[] {x}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
+  void spreadFailsWhenNoValueFitsTheCostBound() {
+    // cost <= 3 allows |4 * v - 10| <= 1, which no integer v satisfies; narrow() used to call in()
+    // with min 3 > max 2 and threw IllegalStateException instead of failing
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", -1, 4), new IntVar(store, "x1", -1, 4)};
+    IntVar cost = new IntVar(store, "cost", 0, 3);
+    store.impose(new Spread(x, 4, 10, 5, cost));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void knapsackRejectsAQuantityThatIsTheProfitOrTheCapacity() {
+    // a free quantity that is also the profit or the capacity broke the tree invariants
+    // (IllegalStateException "Slice variable has not been adjusted"); fixed values still share
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q", 1, 2);
+    IntVar capacity = new IntVar(store, "capacity", 0, 10);
+    assertThatThrownBy(
+            () -> new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, capacity, q))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, q, capacity))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    IntVar two = new IntVar(store, "two", 2, 2);
+    IntVar other = new IntVar(store, "other", 0, 3);
+    IntVar weight = new IntVar(store, "weight", 0, 20);
+    store.impose(
+        new Knapsack(new int[] {1, 2}, new int[] {1, 1}, new IntVar[] {two, other}, weight, two));
+    assertThat(countSolutions(store, new IntVar[] {other, weight}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
+  void directedReachableWithTheRootAlsoANodeVariable() {
+    // ns[2] is also the root: removing root candidates fixed ns[2] while the count of selected
+    // nodes was already taken, and the stale count lost both solutions
+    Store store = new Store();
+    IntVar n0 = new IntVar(store, "n0", 0, 1);
+    IntVar n1 = new IntVar(store, "n1", 1, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    IntVar e0 = new IntVar(store, "e0", 0, 1);
+    IntVar e1 = new IntVar(store, "e1", 0, 1);
+    store.impose(
+        new Reachable(
+            new int[] {2, 1},
+            new int[] {0, 2},
+            r,
+            new IntVar[] {n0, n1, r},
+            new IntVar[] {e0, e1},
+            0,
+            true));
+    // root 1 = ns[2] selected, e1 = 1->2 selected; n0 and e0 = 2->0 both on or both off
+    assertThat(countSolutions(store, new IntVar[] {n0, n1, r, e0, e1}, new Random(1))).isEqualTo(2);
+  }
+
+  @Test
+  void sumBoolWithARepeatedVariableCountsMatchBruteForce() {
+    // the sum also in the list, or a list variable repeated: x0 + x1 > x1 with x0 = 0 pruned x1 to
+    // 0 through the sum and kept the stale bound of the list, so it accepted 0 + 0 > 0
+    String[] relations = {"==", "<=", "<", ">", ">=", "!="};
+    Random random = new Random(53);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int k = 2 + random.nextInt(2);
+      IntVar[] v = new IntVar[k + 1];
+      for (int i = 0; i < k; i++) {
+        v[i] = new IntVar(store, "v" + i, 0, 1);
+      }
+      v[k] = randomVar(store, "s", -1, 4, random);
+      int[] pick = new int[2 + random.nextInt(3)];
+      IntVar[] list = new IntVar[pick.length];
+      for (int i = 0; i < pick.length; i++) {
+        pick[i] = random.nextInt(k);
+        list[i] = v[pick[i]];
+      }
+      int sumIndex = random.nextInt(k + 1);
+      String rel = relations[random.nextInt(relations.length)];
+      boolean reified = random.nextBoolean();
+      IntVar b = new IntVar(store, "b", 0, 1);
+      IntVar[] all = Arrays.copyOf(v, k + 2);
+      all[k + 1] = b;
+      int expected =
+          bruteForce(
+                  all,
+                  a -> {
+                    int total = 0;
+                    for (int p : pick) {
+                      total += a[p];
+                    }
+                    int s = a[sumIndex];
+                    boolean holds =
+                        switch (rel) {
+                          case "==" -> total == s;
+                          case "<=" -> total <= s;
+                          case "<" -> total < s;
+                          case ">" -> total > s;
+                          case ">=" -> total >= s;
+                          default -> total != s;
+                        };
+                    return reified ? holds == (a[k + 1] == 1) : holds && a[k + 1] == 0;
+                  })
+              .size();
+
+      SumBool c = new SumBool(list, rel, v[sumIndex]);
+      if (reified) {
+        store.impose(new Reified(c, b));
+      } else {
+        store.impose(c);
+        store.impose(new XeqC(b, 0));
+      }
+      assertThat(countSolutions(store, all, random))
+          .as(
+              "trial %d: sum %s %s %s reified %b",
+              trial, Arrays.toString(list), rel, v[sumIndex], reified)
           .isEqualTo(expected);
     }
   }

@@ -64,9 +64,11 @@ import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.ExtensionalSupportVa;
 import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OrBoolSimple;
@@ -378,6 +380,25 @@ public class ConstraintArgumentValidationTest {
         BOOL,
         BOOL,
         BOOL);
+  }
+
+  @Test
+  public void interDistanceRejectsANegativeDistance() {
+    assertRejected((s, v) -> new InterDistance(new IntVar[] {v[0], v[1]}, -1), BOOL, BOOL);
+    assertRejected((s, v) -> new MultiInterDistance(new IntVar[] {v[0], v[1]}, 1, -1), BOOL, BOOL);
+    assertRejected((s, v) -> new MultiInterDistance(new IntVar[] {v[0], v[1]}, 0, 1), BOOL, BOOL);
+  }
+
+  @Test
+  public void interDistanceOfZeroDistanceOrFewVariables() {
+    int[] d = range(0, 2);
+    assertSolutions((s, v) -> new InterDistance(new IntVar[] {v[0], v[1]}, 0), a -> true, d, d);
+    assertSolutions((s, v) -> new InterDistance(new IntVar[] {v[0]}, 3), a -> true, d);
+    assertSolutions((s, v) -> new InterDistance(new IntVar[] {}, 3), a -> true, d);
+    assertSolutions(
+        (s, v) -> new MultiInterDistance(new IntVar[] {v[0], v[1]}, 2, 3), a -> true, d, d);
+    assertSolutions(
+        (s, v) -> new MultiInterDistance(new IntVar[] {v[0], v[1]}, 1, 0), a -> true, d, d);
   }
 
   @Test
