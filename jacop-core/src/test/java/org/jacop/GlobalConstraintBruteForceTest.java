@@ -67,6 +67,7 @@ import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -99,6 +100,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Spread;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -235,6 +237,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "IncreasingSum",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
+        Arguments.of("Deviation", balance(false)),
+        Arguments.of("Spread", balance(true)),
         Arguments.of(
             "IncreasingNValue",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
@@ -1517,6 +1521,55 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  /**
+   * Deviation (sum of |a * x[i] - b|) or Spread (sum of (a * x[i] - b)^2) with sum of x = s; half
+   * of the instances use a = n and b = s, the others random a and b.
+   */
+  private static Function<Random, Instance> balance(boolean squares) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      boolean repeated = n > 1 && random.nextInt(6) == 0;
+      int[][] domains = new int[n + 1][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = domain(random, -1, 4);
+      }
+      int s = -1 + random.nextInt(4 * n + 2);
+      boolean mean = random.nextBoolean();
+      int a = mean ? n : 1 + random.nextInt(3);
+      int b = mean ? s : -3 + random.nextInt(12);
+      int start = random.nextInt(squares ? 40 : 12);
+      domains[n] = domain(random, start, start + (squares ? 30 : 20));
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            if (squares) {
+              store.impose(mean ? new Spread(x, s, v[n]) : new Spread(x, a, b, s, v[n]));
+            } else {
+              store.impose(mean ? new Deviation(x, s, v[n]) : new Deviation(x, a, b, s, v[n]));
+            }
+          },
+          t -> {
+            int[] x = Arrays.copyOf(t, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            long total = 0;
+            long cost = 0;
+            for (int i = 0; i < n; i++) {
+              total += x[i];
+              long e = (long) a * x[i] - b;
+              cost += squares ? e * e : Math.abs(e);
+            }
+            return total == s && cost == t[n];
+          },
+          "s=" + s + " a=" + a + " b=" + b + " repeated=" + repeated);
+    };
   }
 
   // x[0..n-1] non-decreasing with as many distinct values as the last variable, which may also
