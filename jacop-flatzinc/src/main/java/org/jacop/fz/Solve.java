@@ -329,6 +329,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clause[1] = map.get(clause[1]);
         }
         dictionary = dictionary.mapTo(map);
+        if (!d.relaxed().isEmpty()) {
+          // half-reified Booleans: any value completes a solution, and postsolve sets them
+          Set<Var> relaxed = Collections.newSetFromMap(new IdentityHashMap<>());
+          d.relaxed().forEach(v -> relaxed.add(map.get(v)));
+          dictionary.removeFromDefaultSearch(relaxed);
+        }
         store = d.child();
         presolve = d;
       }
@@ -365,12 +371,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         frozen.add(fa != null ? fa[cost.getIndex()] : null);
       }
     }
+    addSearchVariables(node, frozen);
     for (IntVar[][] clause : sat.collectedClauses()) {
       frozen.addAll(Arrays.asList(clause[0]));
       frozen.addAll(Arrays.asList(clause[1]));
     }
     frozen.remove(null);
     return frozen.toArray(new Var[0]);
+  }
+
+  /**
+   * Adds the variables of the search annotations: a half-reified Boolean that the search sets to
+   * false no longer prunes with the negation of its constraint, so the search tree grows.
+   */
+  private void addSearchVariables(ASTSolveItem node, Set<Var> frozen) {
+    int count = node.jjtGetNumChildren();
+    if (count < 2) {
+      return;
+    }
+    SearchItem<T> si = new SearchItem<>(store, dictionary);
+    if (count == 2) {
+      si.searchParameters(node, 0);
+    } else {
+      si.searchParametersForSeveralAnnotations(node, 0);
+    }
+    addSearchVariables(si, frozen);
+  }
+
+  private static void addSearchVariables(SearchItem<?> si, Set<Var> frozen) {
+    if (si.vars() != null) {
+      frozen.addAll(Arrays.asList(si.vars()));
+    }
+    if (si.getSearchItems() != null) {
+      for (SearchItem<?> sub : si.getSearchItems()) {
+        addSearchVariables(sub, frozen);
+      }
+    }
   }
 
   /**

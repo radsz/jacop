@@ -494,6 +494,18 @@ public final class Derivation implements VarMap {
   }
 
   /**
+   * Returns the parent variables that the child half-reifies: Booleans that are not frozen. Once
+   * the other variables of the child are fixed, propagation leaves each of them either fixed or
+   * free to take the value that satisfies every constraint on it, so a search of the child can
+   * leave them out; postsolve gives them their value in the parent.
+   *
+   * @return the relaxed variables.
+   */
+  public Set<Var> relaxed() {
+    return Collections.unmodifiableSet(relaxed.keySet());
+  }
+
+  /**
    * Returns what the derivation did with a parent variable.
    *
    * @param v a variable of the parent.

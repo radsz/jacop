@@ -186,9 +186,14 @@ class ReificationCleanupTest {
       if (derivation.outcome() != Derivation.Outcome.INFEASIBLE) {
         relaxed += derivation.reductions().getOrDefault("halfReified", 0);
         relaxed += derivation.reductions().getOrDefault("reificationsDropped", 0);
+        // the relaxed Booleans are left out of the search, as the FlatZinc front end does
+        IntVar[] searched =
+            Arrays.stream(presolved.all())
+                .filter(v -> !derivation.relaxed().contains(v))
+                .toArray(IntVar[]::new);
         search(
             derivation.child(),
-            derivation.counterparts(presolved.all()),
+            derivation.counterparts(searched),
             () -> {
               assertThat(derivation.returnSolution()).isTrue();
               found.add(presolved.frozenValues());
