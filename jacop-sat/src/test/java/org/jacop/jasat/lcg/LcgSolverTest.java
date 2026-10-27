@@ -48,6 +48,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
@@ -541,6 +542,111 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
     assertThat(own).isGreaterThan(300);
+  }
+
+  /**
+   * CountValuesBounds over random lists, some with a variable twice, and random values and bounds,
+   * with every explanation checked; every reason and failure must be the constraint's own.
+   */
+  @Test
+  void countValuesBoundsAgreesWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(2); c > 0; c--) {
+        int[] at = new int[3 + rnd.nextInt(n - 2)];
+        for (int k = 0; k < at.length; k++) {
+          at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+        }
+        if (rnd.nextInt(4) == 0) {
+          at[at.length - 1] = at[0];
+        }
+        IntVar[] q = new IntVar[at.length];
+        for (int k = 0; k < at.length; k++) {
+          q[k] = x[at[k]];
+        }
+        int[] values = new int[1 + rnd.nextInt(3)];
+        for (int k = 0; k < values.length; k++) {
+          values[k] = rnd.nextInt(6) - 1;
+          for (int l = 0; l < k; l++) {
+            if (values[l] == values[k]) {
+              k--;
+              break;
+            }
+          }
+        }
+        int[] lb = new int[values.length];
+        int[] ub = new int[values.length];
+        for (int k = 0; k < values.length; k++) {
+          lb[k] = rnd.nextInt(3);
+          ub[k] = lb[k] + rnd.nextInt(2);
+        }
+        relations.add(
+            new Relation(
+                new CountValuesBounds(q, lb, ub, values),
+                t -> {
+                  for (int k = 0; k < values.length; k++) {
+                    int count = 0;
+                    for (int i : at) {
+                      if (t[i] == values[k]) {
+                        count++;
+                      }
+                    }
+                    if (count < lb[k] || count > ub[k]) {
+                      return false;
+                    }
+                  }
+                  return true;
+                }));
+      }
+      for (int c = rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("CountValuesBounds");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "count values bounds: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(1000);
   }
 
   /** An automaton of three states, its transitions on small ranges, over 3 or 4 variables. */
