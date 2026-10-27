@@ -107,9 +107,20 @@ public class UnaryTransition extends Constraint
   static final int EDGE_FIND = 8;
   int rules = OVERLOAD | DETECTABLE | NOT_LAST | EDGE_FIND;
 
+  // the presence of each task (0 or 1), or null when every task is present
+  final IntVar[] optional;
+
   private final int n;
+  // the family of each task among the families used, numbered from 0
+  private final int[] famOfTask;
+  // the rules on the present tasks; position k of a view holds task taskAt[k]
   private final TransitionReasoning normal;
   private final TransitionReasoning reversed;
+  private final int[] taskAt;
+  private int loaded;
+  // the rules on the present and the optional tasks, normal view only
+  private final TransitionReasoning withOptional;
+  private final int[] optionalTaskAt;
 
   /**
    * It creates a unary resource with transition times between families of tasks.
@@ -120,6 +131,21 @@ public class UnaryTransition extends Constraint
    * @param transitions the transition time from each family to each family, not negative.
    */
   public UnaryTransition(IntVar[] starts, IntVar[] durations, int[] family, int[][] transitions) {
+    this(starts, durations, family, transitions, null);
+  }
+
+  /**
+   * It creates a unary resource with transition times between families of optional tasks: the
+   * transitions hold between every two present tasks; an absent task does not use the resource.
+   *
+   * @param starts the starts of the tasks.
+   * @param durations the durations of the tasks, not negative.
+   * @param family the family of each task, from 0 to the number of families minus one.
+   * @param transitions the transition time from each family to each family, not negative.
+   * @param optional the presence of each task, 0 or 1; null when every task is present.
+   */
+  public UnaryTransition(
+      IntVar[] starts, IntVar[] durations, int[] family, int[][] transitions, IntVar[] optional) {
     checkInputForNullness(
         new String[] {"starts", "durations", "family", "transitions"},
         starts,
@@ -162,6 +188,11 @@ public class UnaryTransition extends Constraint
       this.transitions[g] = transitions[g].clone();
     }
     this.n = starts.length;
+    if (optional != null) {
+      this.optional = ProfileOptional.checkOptional(optional, n, "UnaryTransition");
+    } else {
+      this.optional = null;
+    }
 
     // the families used by the tasks, renumbered, so that the bounds count only those
     int[] used = new int[f];
@@ -185,10 +216,22 @@ public class UnaryTransition extends Constraint
       }
     }
     long[] ttk = familyBounds(tt);
-    normal = new TransitionReasoning(fam, tt, ttk);
-    reversed = new TransitionReasoning(fam, ttReversed, ttk);
-
-    setScope(Stream.concat(Arrays.stream(starts), Arrays.stream(durations)));
+    famOfTask = fam;
+    normal = new TransitionReasoning(n, tt, ttk);
+    reversed = new TransitionReasoning(n, ttReversed, ttk);
+    taskAt = new int[n];
+    if (this.optional != null) {
+      withOptional = new TransitionReasoning(n, tt, ttk);
+      optionalTaskAt = new int[n];
+      setScope(
+          Stream.concat(
+              Stream.concat(Arrays.stream(starts), Arrays.stream(durations)),
+              Arrays.stream(this.optional)));
+    } else {
+      withOptional = null;
+      optionalTaskAt = null;
+      setScope(Stream.concat(Arrays.stream(starts), Arrays.stream(durations)));
+    }
   }
 
   /**
@@ -476,21 +519,51 @@ public class UnaryTransition extends Constraint
    */
   void pairs(Store store) {
     for (int i = 0; i < n; i++) {
+      if (!possible(i)) {
+        continue;
+      }
       for (int j = i + 1; j < n; j++) {
+        if (!possible(j)) {
+          continue;
+        }
         IntVar si = starts[i];
         IntVar sj = starts[j];
         boolean iFirst = (long) si.min() + durations[i].min() + transition(i, j) <= sj.max();
         boolean jFirst = (long) sj.min() + durations[j].min() + transition(j, i) <= si.max();
+        if (iFirst && jFirst) {
+          continue;
+        }
+        boolean pi = present(i);
+        boolean pj = present(j);
+        if (!pi || !pj) {
+          // one of the two is optional: with no order left, it is absent if the other is present
+          if (!iFirst && !jFirst) {
+            if (pi) {
+              optional[j].domain.inMax(store.level, optional[j], 0);
+            } else if (pj) {
+              optional[i].domain.inMax(store.level, optional[i], 0);
+            }
+          }
+          continue;
+        }
         if (!iFirst && !jFirst) {
           throw Store.failException;
         }
         if (!iFirst) {
           precede(store, j, i);
-        } else if (!jFirst) {
+        } else {
           precede(store, i, j);
         }
       }
     }
+  }
+
+  private boolean present(int i) {
+    return optional == null || optional[i].min() == 1;
+  }
+
+  private boolean possible(int i) {
+    return optional == null || optional[i].max() == 1;
   }
 
   // task a precedes task b
@@ -508,7 +581,13 @@ public class UnaryTransition extends Constraint
     if (store.propagationHasOccurred || rules == 0) {
       return;
     }
+    if (optional != null && optionalRules(store)) {
+      return;
+    }
     load();
+    if (loaded == 0) {
+      return;
+    }
     if ((rules & OVERLOAD) != 0) {
       normal.overload();
     }
@@ -552,27 +631,100 @@ public class UnaryTransition extends Constraint
     return store.propagationHasOccurred;
   }
 
+  // loads the present tasks into both views
   private void load() {
     TransitionReasoning a = normal;
     TransitionReasoning b = reversed;
+    int k = 0;
     for (int i = 0; i < n; i++) {
+      if (!present(i)) {
+        continue;
+      }
+      taskAt[k] = i;
       int sMin = starts[i].min();
       int sMax = starts[i].max();
       int dMin = durations[i].min();
-      a.est[i] = sMin;
-      a.lst[i] = sMax;
-      a.lct[i] = sMax + durations[i].max();
-      a.ect[i] = sMin + dMin;
-      a.dur[i] = dMin;
+      a.fam[k] = famOfTask[i];
+      a.est[k] = sMin;
+      a.lst[k] = sMax;
+      a.lct[k] = sMax + durations[i].max();
+      a.ect[k] = sMin + dMin;
+      a.dur[k] = dMin;
       // the reversed task runs from -(sMax + dMax) to -sMin
-      b.est[i] = -a.lct[i];
-      b.lct[i] = -sMin;
-      b.dur[i] = dMin;
-      b.lst[i] = b.lct[i] - dMin;
-      b.ect[i] = b.est[i] + dMin;
+      b.fam[k] = famOfTask[i];
+      b.est[k] = -a.lct[k];
+      b.lct[k] = -sMin;
+      b.dur[k] = dMin;
+      b.lst[k] = b.lct[k] - dMin;
+      b.ect[k] = b.est[k] + dMin;
+      k++;
     }
-    a.sort();
-    b.sort();
+    loaded = k;
+    a.sort(k);
+    b.sort(k);
+  }
+
+  /**
+   * The overload check and edge finding with the optional tasks that may still be present: an
+   * optional task that would overload the present ones, or would have to start after its latest
+   * start, is absent.
+   *
+   * @param store the constraint store.
+   * @return true if some domain changed.
+   */
+  private boolean optionalRules(Store store) {
+    TransitionReasoning o = withOptional;
+    int k = 0;
+    boolean undecided = false;
+    for (int i = 0; i < n; i++) {
+      if (!possible(i)) {
+        continue;
+      }
+      optionalTaskAt[k] = i;
+      int sMin = starts[i].min();
+      int sMax = starts[i].max();
+      int dMin = durations[i].min();
+      o.gray[k] = !present(i);
+      undecided |= o.gray[k];
+      o.fam[k] = famOfTask[i];
+      o.est[k] = sMin;
+      o.lst[k] = sMax;
+      o.lct[k] = sMax + durations[i].max();
+      o.ect[k] = sMin + dMin;
+      o.dur[k] = dMin;
+      k++;
+    }
+    if (!undecided) {
+      return false;
+    }
+    o.sort(k);
+    if ((rules & OVERLOAD) != 0) {
+      o.optionalOverload();
+      markAbsent(store, o, k);
+      if (store.propagationHasOccurred) {
+        return true;
+      }
+    }
+    if ((rules & EDGE_FIND) != 0) {
+      o.edgeFind();
+      markAbsent(store, o, k);
+      for (int p = 0; p < k; p++) {
+        int i = optionalTaskAt[p];
+        if (!o.gray[p] && o.update[p] > starts[i].min()) {
+          starts[i].domain.inMin(store.level, starts[i], clamp(o.update[p]));
+        }
+      }
+    }
+    return store.propagationHasOccurred;
+  }
+
+  private void markAbsent(Store store, TransitionReasoning o, int k) {
+    for (int p = 0; p < k; p++) {
+      if (o.absent[p]) {
+        IntVar b = optional[optionalTaskAt[p]];
+        b.domain.inMax(store.level, b, 0);
+      }
+    }
   }
 
   private static int clamp(long v) {
@@ -580,16 +732,18 @@ public class UnaryTransition extends Constraint
   }
 
   private void applyEst(Store store, TransitionReasoning view) {
-    for (int i = 0; i < n; i++) {
-      if (view.update[i] > starts[i].min()) {
-        starts[i].domain.inMin(store.level, starts[i], clamp(view.update[i]));
+    for (int k = 0; k < loaded; k++) {
+      IntVar s = starts[taskAt[k]];
+      if (view.update[k] > s.min()) {
+        s.domain.inMin(store.level, s, clamp(view.update[k]));
       }
     }
   }
 
   private void applyLct(Store store, TransitionReasoning view) {
-    for (int i = 0; i < n; i++) {
-      long max = view.update[i] - durations[i].min();
+    for (int k = 0; k < loaded; k++) {
+      int i = taskAt[k];
+      long max = view.update[k] - durations[i].min();
       if (max < starts[i].max()) {
         starts[i].domain.inMax(store.level, starts[i], clamp(max));
       }
@@ -598,8 +752,9 @@ public class UnaryTransition extends Constraint
 
   // an est of the reversed view is a latest completion of the normal view
   private void applyReversedEst(Store store) {
-    for (int i = 0; i < n; i++) {
-      long max = -reversed.update[i] - durations[i].min();
+    for (int k = 0; k < loaded; k++) {
+      int i = taskAt[k];
+      long max = -reversed.update[k] - durations[i].min();
       if (max < starts[i].max()) {
         starts[i].domain.inMax(store.level, starts[i], clamp(max));
       }
@@ -608,8 +763,9 @@ public class UnaryTransition extends Constraint
 
   // an lct of the reversed view is an earliest start of the normal view
   private void applyReversedLct(Store store) {
-    for (int i = 0; i < n; i++) {
-      long min = -reversed.update[i];
+    for (int k = 0; k < loaded; k++) {
+      int i = taskAt[k];
+      long min = -reversed.update[k];
       if (min > starts[i].min()) {
         starts[i].domain.inMin(store.level, starts[i], clamp(min));
       }
@@ -619,12 +775,20 @@ public class UnaryTransition extends Constraint
   @Override
   public boolean satisfied() {
     for (int i = 0; i < n; i++) {
-      if (!starts[i].singleton() || !durations[i].singleton()) {
+      if (!starts[i].singleton()
+          || !durations[i].singleton()
+          || optional != null && !optional[i].singleton()) {
         return false;
       }
     }
     for (int i = 0; i < n; i++) {
+      if (!present(i)) {
+        continue;
+      }
       for (int j = i + 1; j < n; j++) {
+        if (!present(j)) {
+          continue;
+        }
         long si = starts[i].value();
         long sj = starts[j].value();
         if (si + durations[i].value() + transition(i, j) > sj
@@ -650,8 +814,11 @@ public class UnaryTransition extends Constraint
           .append(", ")
           .append(durations[i])
           .append(", ")
-          .append(family[i])
-          .append("]");
+          .append(family[i]);
+      if (optional != null) {
+        result.append(", ").append(optional[i]);
+      }
+      result.append("]");
     }
     result.append("], transitions = ").append(Arrays.deepToString(transitions)).append(")");
     return result.toString();
@@ -665,6 +832,13 @@ public class UnaryTransition extends Constraint
       s[i] = map.get(starts[i]);
       d[i] = map.get(durations[i]);
     }
-    return new UnaryTransition(s, d, family, transitions);
+    IntVar[] o = null;
+    if (optional != null) {
+      o = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        o[i] = map.get(optional[i]);
+      }
+    }
+    return new UnaryTransition(s, d, family, transitions, o);
   }
 }

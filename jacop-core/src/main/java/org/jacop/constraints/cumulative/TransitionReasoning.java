@@ -61,8 +61,7 @@ final class TransitionReasoning {
   // below any time without overflow
   static final long EMPTY = Long.MIN_VALUE / 4;
 
-  // the family of each task, the lower bounds tt(k) and the transitions of this view
-  private final int[] fam;
+  // the lower bounds tt(k) and the transitions of this view
   private final long[] ttk;
   // smallest transition into (out of) a family from (to) another family, and within a family
   private final long[] minIn;
@@ -70,7 +69,10 @@ final class TransitionReasoning {
   private final long[] within;
   private final int words;
 
-  // task data, indexed by the position of the task, loaded by the constraint
+  // task data, indexed by the position of the task, loaded by the constraint: the family, the
+  // bounds, and whether the task is optional (gray) for the rules on optional tasks
+  final int[] fam;
+  final boolean[] gray;
   final int[] est;
   final int[] lct;
   final int[] lst;
@@ -79,8 +81,11 @@ final class TransitionReasoning {
   // new bounds computed by a rule: est for detectable precedences and edge finding, lct for
   // not-last
   final long[] update;
+  // optional tasks found absent by the rules on optional tasks
+  final boolean[] absent;
 
-  private final int n;
+  // the number of loaded tasks
+  private int n;
   private final int[] estOrder;
   private final int[] lctOrder;
   private final int[] lstOrder;
@@ -104,14 +109,13 @@ final class TransitionReasoning {
   /**
    * It creates the rules of one view.
    *
-   * @param fam the family of each task.
+   * @param capacity the largest number of tasks.
    * @param transitions the transition times between families in this view.
    * @param ttk the lower bounds tt(k), for k from 0 to the number of families plus one.
    */
-  TransitionReasoning(int[] fam, int[][] transitions, long[] ttk) {
-    this.fam = fam;
+  TransitionReasoning(int capacity, int[][] transitions, long[] ttk) {
     this.ttk = ttk;
-    this.n = fam.length;
+    this.n = capacity;
     int families = transitions.length;
     this.words = Math.max(1, (families + 63) >>> 6);
     minIn = new long[families];
@@ -130,6 +134,9 @@ final class TransitionReasoning {
       minOut[f] = out;
       within[f] = transitions[f][f];
     }
+    fam = new int[n];
+    gray = new boolean[n];
+    absent = new boolean[n];
     est = new int[n];
     lct = new int[n];
     lst = new int[n];
@@ -158,8 +165,13 @@ final class TransitionReasoning {
     famCount = new int[families];
   }
 
-  /** Sorts the loaded tasks; called after the task data was loaded. */
-  void sort() {
+  /**
+   * Sorts the loaded tasks; called after the task data was loaded.
+   *
+   * @param count the number of loaded tasks, at positions 0 to count - 1.
+   */
+  void sort(int count) {
+    n = count;
     sortBy(est, estOrder);
     sortBy(lct, lctOrder);
     sortBy(lst, lstOrder);
@@ -405,37 +417,84 @@ final class TransitionReasoning {
   }
 
   /**
+   * The overload check with optional tasks (Vilím, Barták and Čepek, CP 2004, with transitions):
+   * the tasks enter by lct, mandatory ones in Theta and optional ones in Lambda; an optional task
+   * whose presence would overload the tasks up to the current lct is absent. The absent tasks are
+   * marked in absent.
+   */
+  void optionalOverload() {
+    clearTree();
+    Arrays.fill(absent, 0, n, false);
+    for (int p = 0; p < n; p++) {
+      int i = lctOrder[p];
+      if (gray[i]) {
+        setLambda(i);
+      } else {
+        setTheta(i);
+      }
+      updatePath(leafOf[i], true);
+      if (treeEct[1] > lct[i]) {
+        throw Store.failException;
+      }
+      while (treeEctLambda[1] > lct[i]) {
+        int r = responsibleEct[1];
+        if (r < 0) {
+          break;
+        }
+        absent[r] = true;
+        setEmpty(r);
+        updatePath(leafOf[r], true);
+      }
+    }
+  }
+
+  /**
    * Edge finding: a task that must end after a set of tasks starts after all of them, by a
    * transition from one of them. The new earliest starts are in update.
    */
   void edgeFind() {
     clearTree();
+    Arrays.fill(absent, 0, n, false);
     for (int i = 0; i < n; i++) {
       update[i] = est[i];
-      setTheta(i);
+      if (gray[i]) {
+        setLambda(i);
+      } else {
+        setTheta(i);
+      }
     }
     for (int v = size - 1; v >= 1; v--) {
       combine(v, true);
     }
     // tasks by decreasing lct, then decreasing est
     int[] order = lctOrder;
-    int t = order[n - 1];
-    for (int p = n - 1; p > 0; p--) {
+    // the mandatory tasks by decreasing lct leave Theta one by one; before each leaves, the tasks
+    // of Lambda that must follow Theta are found
+    for (int p = n - 1; p >= 0; p--) {
+      int t = order[p];
+      if (gray[t]) {
+        continue;
+      }
       if (treeEct[1] > lct[t]) {
         throw Store.failException;
       }
-      setLambda(t);
-      updatePath(leafOf[t], true);
-      t = order[p - 1];
       while (treeEctLambda[1] > lct[t]) {
         int r = responsibleEct[1];
         if (r < 0) {
           break;
         }
-        update[r] = Math.max(update[r], treeEct[1] + transitionIn(r));
+        long bound = treeEct[1] + transitionIn(r);
+        if (!gray[r]) {
+          update[r] = Math.max(update[r], bound);
+        } else if (bound > lst[r]) {
+          // if present, the optional task would start after its latest start
+          absent[r] = true;
+        }
         setEmpty(r);
         updatePath(leafOf[r], true);
       }
+      setLambda(t);
+      updatePath(leafOf[t], true);
     }
   }
 }

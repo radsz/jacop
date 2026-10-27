@@ -77,7 +77,8 @@ class UnaryTransitionTest {
   };
 
   /** One random instance: start domains, duration bounds, families and their transitions. */
-  private record Instance(int[][] starts, int[][] durations, int[] family, int[][] tt) {
+  private record Instance(
+      int[][] starts, int[][] durations, int[] family, int[][] tt, int[][] opt) {
 
     int n() {
       return starts.length;
@@ -94,19 +95,39 @@ class UnaryTransitionTest {
         }
         d[i] = new IntVar(store, "d" + i, durations[i][0], durations[i][1]);
       }
-      UnaryTransition c = new UnaryTransition(s, d, family, tt);
+      IntVar[] o = null;
+      if (opt != null) {
+        o = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          o[i] = new IntVar(store, "o" + i, opt[i][0], opt[i][1]);
+        }
+      }
+      UnaryTransition c = new UnaryTransition(s, d, family, tt, o);
       c.rules = rules;
       store.impose(c);
-      IntVar[] all = Arrays.copyOf(s, 2 * n);
+      IntVar[] all = Arrays.copyOf(s, width());
       System.arraycopy(d, 0, all, n, n);
+      if (o != null) {
+        System.arraycopy(o, 0, all, 2 * n, n);
+      }
       return all;
+    }
+
+    int width() {
+      return opt == null ? 2 * n() : 3 * n();
+    }
+
+    boolean present(int[] x, int i) {
+      return opt == null || x[2 * n() + i] == 1;
     }
 
     boolean satisfied(int[] x) {
       int n = n();
       for (int i = 0; i < n; i++) {
         for (int j = i + 1; j < n; j++) {
-          if (x[i] + x[n + i] + tt[family[i]][family[j]] > x[j]
+          if (present(x, i)
+              && present(x, j)
+              && x[i] + x[n + i] + tt[family[i]][family[j]] > x[j]
               && x[j] + x[n + j] + tt[family[j]][family[i]] > x[i]) {
             return false;
           }
@@ -119,6 +140,9 @@ class UnaryTransitionTest {
       long t = 1;
       for (int i = 0; i < n(); i++) {
         t *= starts[i].length * (long) (durations[i][1] - durations[i][0] + 1);
+        if (opt != null) {
+          t *= opt[i][1] - opt[i][0] + 1;
+        }
       }
       return t;
     }
@@ -132,11 +156,12 @@ class UnaryTransitionTest {
           + " family="
           + Arrays.toString(family)
           + " tt="
-          + Arrays.deepToString(tt);
+          + Arrays.deepToString(tt)
+          + (opt == null ? "" : " opt=" + Arrays.deepToString(opt));
     }
   }
 
-  private static Instance instance(Random random, int maxTasks, int horizon) {
+  private static Instance instance(Random random, int maxTasks, int horizon, boolean optional) {
     while (true) {
       int n = 2 + random.nextInt(maxTasks - 1);
       int families = 1 + random.nextInt(Math.min(n, 4));
@@ -165,7 +190,14 @@ class UnaryTransitionTest {
           tt[a][b] = a == b && random.nextInt(3) > 0 ? 0 : random.nextInt(maxT + 1);
         }
       }
-      Instance instance = new Instance(starts, durations, family, tt);
+      int[][] opt = null;
+      if (optional) {
+        opt = new int[n][];
+        for (int i = 0; i < n; i++) {
+          opt[i] = random.nextInt(3) == 0 ? new int[] {1, 1} : new int[] {0, 1};
+        }
+      }
+      Instance instance = new Instance(starts, durations, family, tt, opt);
       if (instance.tuples() <= MAX_TUPLES) {
         return instance;
       }
@@ -174,7 +206,7 @@ class UnaryTransitionTest {
 
   private static void bruteForce(Instance instance, int[] x, int k, Set<List<Integer>> solutions) {
     int n = instance.n();
-    if (k == 2 * n) {
+    if (k == instance.width()) {
       if (instance.satisfied(x)) {
         solutions.add(Arrays.stream(x).boxed().toList());
       }
@@ -185,8 +217,13 @@ class UnaryTransitionTest {
         x[k] = v;
         bruteForce(instance, x, k + 1, solutions);
       }
-    } else {
+    } else if (k < 2 * n) {
       for (int v = instance.durations[k - n][0]; v <= instance.durations[k - n][1]; v++) {
+        x[k] = v;
+        bruteForce(instance, x, k + 1, solutions);
+      }
+    } else {
+      for (int v = instance.opt[k - 2 * n][0]; v <= instance.opt[k - 2 * n][1]; v++) {
         x[k] = v;
         bruteForce(instance, x, k + 1, solutions);
       }
@@ -221,9 +258,9 @@ class UnaryTransitionTest {
   void solutionsMatchBruteForce() {
     Random random = new Random(20261026);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = instance(random, 5, 10);
+      Instance instance = instance(random, 5, 10, trial % 2 == 1);
       Set<List<Integer>> expected = new HashSet<>();
-      bruteForce(instance, new int[2 * instance.n()], 0, expected);
+      bruteForce(instance, new int[instance.width()], 0, expected);
       for (int rules : RULE_SETS) {
         Set<List<Integer>> found = solveAll(instance, rules, random.nextInt());
         assertThat(found).as("trial %d rules %d %s", trial, rules, instance).isEqualTo(expected);
@@ -237,7 +274,7 @@ class UnaryTransitionTest {
     Random random = new Random(7);
     int[] stronger = new int[RULE_SETS.length];
     for (int trial = 0; trial < 3000; trial++) {
-      Instance instance = instance(random, 8, 14);
+      Instance instance = instance(random, 8, 14, trial % 2 == 1);
       List<Set<Integer>> base = rootDomains(instance, 0);
       for (int k = 1; k < RULE_SETS.length; k++) {
         List<Set<Integer>> with = rootDomains(instance, RULE_SETS[k]);
@@ -298,6 +335,31 @@ class UnaryTransitionTest {
       c.rules = rules;
       store.impose(c);
       assertThat(store.consistency()).as("rules %d", rules).isEqualTo(rules == 0);
+    }
+  }
+
+  /**
+   * Two present tasks of length 2 with transitions 3 fill [0, 7) and must be in [0, 7); an optional
+   * third task in [0, 7) of another family cannot fit, so it is absent; with rules off the pairs
+   * alone keep it.
+   */
+  @Test
+  void optionalTaskThatOverloadsIsAbsent() {
+    for (int rules : new int[] {0, UnaryTransition.OVERLOAD, UnaryTransition.EDGE_FIND}) {
+      Store store = new Store();
+      IntVar[] s = new IntVar[3];
+      IntVar[] d = new IntVar[3];
+      for (int i = 0; i < 3; i++) {
+        s[i] = new IntVar(store, 0, 5);
+        d[i] = new IntVar(store, 2, 2);
+      }
+      IntVar[] o = {new IntVar(store, 1, 1), new IntVar(store, 1, 1), new IntVar(store, 0, 1)};
+      int[][] tt = {{0, 3, 1}, {3, 0, 1}, {1, 1, 0}};
+      UnaryTransition c = new UnaryTransition(s, d, new int[] {0, 1, 2}, tt, o);
+      c.rules = rules;
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      assertThat(o[2].max()).as("rules %d", rules).isEqualTo(rules == 0 ? 1 : 0);
     }
   }
 

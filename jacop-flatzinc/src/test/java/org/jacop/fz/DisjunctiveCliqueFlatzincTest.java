@@ -480,6 +480,122 @@ class DisjunctiveCliqueFlatzincTest {
     }
   }
 
+  /** One jacop_disjunctive_setup_optional with optional tasks, against enumeration. */
+  @Test
+  void optionalDisjunctiveSetupKeepsAllSolutions() throws IOException {
+    Random random = new Random(19);
+    int trials = Integer.getInteger("disjunctiveCliques.trials", 400) / 2;
+    for (int trial = 0; trial < trials; trial++) {
+      int n = 3 + random.nextInt(2);
+      int horizon = 3 + random.nextInt(4);
+      int families = 1 + random.nextInt(3);
+      int[] dur = new int[n];
+      int[] family = new int[n];
+      boolean[] mandatory = new boolean[n];
+      for (int i = 0; i < n; i++) {
+        dur[i] = 1 + random.nextInt(2);
+        family[i] = random.nextInt(families);
+        mandatory[i] = random.nextInt(3) == 0;
+      }
+      int[][] t = new int[families][families];
+      StringBuilder ts = new StringBuilder();
+      for (int a = 0; a < families; a++) {
+        for (int b = 0; b < families; b++) {
+          t[a][b] = a == b ? 0 : random.nextInt(4);
+          ts.append(a + b == 0 ? "" : ",").append(t[a][b]);
+        }
+      }
+      StringBuilder fzn = new StringBuilder();
+      StringBuilder ss = new StringBuilder();
+      StringBuilder os = new StringBuilder();
+      StringBuilder ds = new StringBuilder();
+      StringBuilder fs = new StringBuilder();
+      StringBuilder present = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        fzn.append("var 0..").append(horizon).append(": s").append(i).append(";\n");
+        fzn.append("var bool: o").append(i).append(";\n");
+        if (mandatory[i]) {
+          present.append("constraint bool_eq(o").append(i).append(",true);\n");
+        }
+        String sep = i == 0 ? "" : ",";
+        ss.append(sep).append('s').append(i);
+        os.append(sep).append('o').append(i);
+        ds.append(sep).append(dur[i]);
+        fs.append(sep).append(family[i]);
+      }
+      fzn.append("array [1..")
+          .append(n)
+          .append("] of var int: s:: output_array([1..")
+          .append(n)
+          .append("]) = [")
+          .append(ss)
+          .append("];\n");
+      fzn.append("array [1..")
+          .append(n)
+          .append("] of var bool: o:: output_array([1..")
+          .append(n)
+          .append("]) = [")
+          .append(os)
+          .append("];\n");
+      fzn.append(present);
+      fzn.append("constraint jacop_disjunctive_setup_optional([")
+          .append(ss)
+          .append("],[")
+          .append(ds)
+          .append("],[")
+          .append(fs)
+          .append("],[")
+          .append(ts)
+          .append("],[")
+          .append(os)
+          .append("]);\nsolve satisfy;\n");
+      Set<String> expected = new TreeSet<>();
+      int[] v = new int[2 * n];
+      enumerateOptional(0, v, horizon, dur, family, t, mandatory, expected);
+      String out = run(fzn.toString(), "-a");
+      assertEquals(expected, solutions(out), "trial " + trial + "\n" + fzn);
+    }
+  }
+
+  private static void enumerateOptional(
+      int pos,
+      int[] v,
+      int horizon,
+      int[] dur,
+      int[] family,
+      int[][] t,
+      boolean[] mandatory,
+      Set<String> out) {
+    int n = dur.length;
+    if (pos == 2 * n) {
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (v[n + i] == 1
+              && v[n + j] == 1
+              && v[j] < v[i] + dur[i] + t[family[i]][family[j]]
+              && v[i] < v[j] + dur[j] + t[family[j]][family[i]]) {
+            return;
+          }
+        }
+      }
+      StringBuilder o = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        o.append(i == 0 ? "" : ", ").append(v[n + i] == 1);
+      }
+      TreeSet<String> lines = new TreeSet<>();
+      lines.add("s = array1d(1.." + n + ", " + Arrays.toString(Arrays.copyOf(v, n)) + ");");
+      lines.add("o = array1d(1.." + n + ", [" + o + "]);");
+      out.add(String.join(" ", lines));
+      return;
+    }
+    int lo = pos < n || mandatory[pos - n] ? (pos < n ? 0 : 1) : 0;
+    int hi = pos < n ? horizon : 1;
+    for (int x = lo; x <= hi; x++) {
+      v[pos] = x;
+      enumerateOptional(pos + 1, v, horizon, dur, family, t, mandatory, out);
+    }
+  }
+
   // the 3n problem of Sidorov et al. (CP 2025): every pair of the 3n tasks conflicts on one of
   // three cumulatives, so the clique of all tasks fails at once although each cumulative alone
   // is satisfiable

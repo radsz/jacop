@@ -192,6 +192,7 @@ setup to run configuration. -->
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
+                                <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
@@ -229,6 +230,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
@@ -314,6 +316,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -399,6 +402,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -484,6 +488,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>

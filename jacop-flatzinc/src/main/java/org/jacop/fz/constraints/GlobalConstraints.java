@@ -2370,7 +2370,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (int a = 0; a < f; a++) {
       System.arraycopy(flat, a * f, transitions[a], 0, f);
     }
-    support.pose(new UnaryTransition(str, dur, family, transitions));
+    IntVar[] opt =
+        node.jjtGetNumChildren() > 4 ? support.getVarArray((SimpleNode) node.jjtGetChild(4)) : null;
+    support.pose(new UnaryTransition(str, dur, family, transitions, opt));
   }
 
   void gen_jacop_disjunctive_strict_optional(SimpleNode node) {
