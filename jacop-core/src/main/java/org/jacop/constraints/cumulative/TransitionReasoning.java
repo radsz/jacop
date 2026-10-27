@@ -91,6 +91,11 @@ final class TransitionReasoning {
   private final int[] lstOrder;
   private final int[] ectOrder;
   private final long[] sortKeys;
+  // the number of tasks of the orders kept from the previous call
+  private int ordered = -1;
+  // families of a subtree, for ectWithout
+  private final long[] scratchFam;
+  private final long[] scratchSibling;
 
   // the tree, root at 1, leaves at size + position in est order
   private final int size;
@@ -148,6 +153,8 @@ final class TransitionReasoning {
     lstOrder = new int[n];
     ectOrder = new int[n];
     sortKeys = new long[n];
+    scratchFam = new long[words];
+    scratchSibling = new long[words];
     int s = 1;
     while (s < n) {
       s <<= 1;
@@ -171,6 +178,15 @@ final class TransitionReasoning {
    * @param count the number of loaded tasks, at positions 0 to count - 1.
    */
   void sort(int count) {
+    if (count != ordered) {
+      for (int i = 0; i < count; i++) {
+        estOrder[i] = i;
+        lctOrder[i] = i;
+        lstOrder[i] = i;
+        ectOrder[i] = i;
+      }
+      ordered = count;
+    }
     n = count;
     sortBy(est, estOrder);
     sortBy(lct, lctOrder);
@@ -181,13 +197,25 @@ final class TransitionReasoning {
     }
   }
 
+  // insertion sort of order by (key, position), starting from the order of the previous call,
+  // since bounds change little between calls
   private void sortBy(int[] key, int[] order) {
-    for (int i = 0; i < n; i++) {
-      sortKeys[i] = ((long) key[i] << 32) | i;
-    }
-    Arrays.sort(sortKeys, 0, n);
+    long[] k = sortKeys;
     for (int m = 0; m < n; m++) {
-      order[m] = (int) sortKeys[m];
+      int i = order[m];
+      k[m] = ((long) key[i] << 32) | i;
+    }
+    for (int a = 1; a < n; a++) {
+      long x = k[a];
+      int b = a - 1;
+      while (b >= 0 && k[b] > x) {
+        k[b + 1] = k[b];
+        b--;
+      }
+      k[b + 1] = x;
+    }
+    for (int m = 0; m < n; m++) {
+      order[m] = (int) k[m];
     }
   }
 
@@ -250,11 +278,6 @@ final class TransitionReasoning {
 
   private void insertTheta(int i) {
     setTheta(i);
-    updatePath(leafOf[i], false);
-  }
-
-  private void removeTheta(int i) {
-    setEmpty(i);
     updatePath(leafOf[i], false);
   }
 
@@ -329,6 +352,44 @@ final class TransitionReasoning {
     return (treeFam[base + (f >>> 6)] & (1L << (f & 63))) != 0;
   }
 
+  /**
+   * The earliest completion time of Theta without task i, read from the path of i without changing
+   * the tree: the values of each node on the path are combined again with task i left out.
+   */
+  private long ectWithout(int i) {
+    int node = leafOf[i];
+    long p = 0;
+    long e = EMPTY;
+    long[] f = scratchFam;
+    Arrays.fill(f, 0);
+    for (; node > 1; node >>= 1) {
+      int sibling = node ^ 1;
+      int bs = sibling * words;
+      long sp = treeP[sibling];
+      long se = treeEct[sibling];
+      int added = 0;
+      if ((node & 1) == 0) {
+        // the path is the left child: the families of the sibling new to the path
+        for (int w = 0; w < words; w++) {
+          long sf = treeFam[bs + w];
+          added += Long.bitCount(sf & ~f[w]);
+          f[w] |= sf;
+        }
+        e = Math.max(se, e + sp + tt(added + 1));
+      } else {
+        // the path is the right child: its families new to the sibling
+        for (int w = 0; w < words; w++) {
+          long sf = treeFam[bs + w];
+          added += Long.bitCount(f[w] & ~sf);
+          f[w] |= sf;
+        }
+        e = Math.max(e, se + p + tt(added + 1));
+      }
+      p += sp;
+    }
+    return e;
+  }
+
   // the smallest transition into task i from a task of Theta, which does not contain i
   private long transitionIn(int i) {
     int f = fam[i];
@@ -372,14 +433,16 @@ final class TransitionReasoning {
         q++;
       }
       boolean own = inTheta[i];
+      long e = treeEct[1];
       if (own) {
-        removeTheta(i);
+        e = ectWithout(i);
+        famCount[fam[i]]--;
       }
-      if (treeEct[1] > EMPTY / 2) {
-        update[i] = Math.max(update[i], treeEct[1] + transitionIn(i));
+      if (e > EMPTY / 2) {
+        update[i] = Math.max(update[i], e + transitionIn(i));
       }
       if (own) {
-        insertTheta(i);
+        famCount[fam[i]]++;
       }
     }
   }
@@ -404,14 +467,16 @@ final class TransitionReasoning {
         continue;
       }
       boolean own = inTheta[i];
+      long e = treeEct[1];
       if (own) {
-        removeTheta(i);
+        e = ectWithout(i);
+        famCount[fam[i]]--;
       }
-      if (treeEct[1] > lst[i]) {
+      if (e > lst[i]) {
         update[i] = Math.min(update[i], lst[lstOrder[q - 1]] - transitionOut(i));
       }
       if (own) {
-        insertTheta(i);
+        famCount[fam[i]]++;
       }
     }
   }

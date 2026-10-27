@@ -118,6 +118,7 @@ public class UnaryTransition extends Constraint
   private final TransitionReasoning reversed;
   private final int[] taskAt;
   private int loaded;
+  private boolean changedByRules;
   // the rules on the present and the optional tasks, normal view only
   private final TransitionReasoning withOptional;
   private final int[] optionalTaskAt;
@@ -588,47 +589,44 @@ public class UnaryTransition extends Constraint
     if (loaded == 0) {
       return;
     }
+    changedByRules = false;
     if ((rules & OVERLOAD) != 0) {
       normal.overload();
     }
     if ((rules & DETECTABLE) != 0) {
       normal.detectable();
       applyEst(store, normal);
-      if (reload(store)) {
-        return;
-      }
+      reloadIfChanged(store);
       reversed.detectable();
       applyReversedEst(store);
-      if (reload(store)) {
-        return;
-      }
+      reloadIfChanged(store);
     }
     if ((rules & NOT_LAST) != 0) {
       normal.notLast();
       applyLct(store, normal);
-      if (reload(store)) {
-        return;
-      }
+      reloadIfChanged(store);
       reversed.notLast();
       applyReversedLct(store);
-      if (reload(store)) {
-        return;
-      }
+      reloadIfChanged(store);
     }
     if ((rules & EDGE_FIND) != 0) {
       normal.edgeFind();
       applyEst(store, normal);
-      if (reload(store)) {
-        return;
-      }
+      reloadIfChanged(store);
       reversed.edgeFind();
       applyReversedEst(store);
     }
+    // the pairs and the rules run again after any change
+    store.propagationHasOccurred |= changedByRules;
   }
 
-  // after a rule that changed bounds the pairs run first again
-  private static boolean reload(Store store) {
-    return store.propagationHasOccurred;
+  // each rule sees the bounds of the rules before it
+  private void reloadIfChanged(Store store) {
+    if (store.propagationHasOccurred) {
+      store.propagationHasOccurred = false;
+      changedByRules = true;
+      load();
+    }
   }
 
   // loads the present tasks into both views
