@@ -137,6 +137,7 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
@@ -7412,6 +7413,26 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new XeqC(y, 3));
     assertThat(store.consistency()).isTrue();
     assertThat(b.max()).isZero();
+  }
+
+  // Implies(b, x >= 17) woke only when x was fixed, since XgteqC propagates once when imposed and
+  // has no consistency event, so x <= 16 did not set b = 0 (zephyrus, fixed search).
+  @Test
+  void impliesOfConstraintOnOneVariableSetsTheVariableToZero() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 24);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 24);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Implies(b, new XgteqC(x, 17)));
+    store.impose(new Implies(d, new XeqC(y, 3)));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 0, 16);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+    assertThat(d.max()).isZero();
   }
 
   @Test

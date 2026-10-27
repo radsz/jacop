@@ -95,7 +95,10 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
       // consistency() needs c.notSatisfied() before b is fixed and c.consistency() after, and c's
       // own consistency event covers both. c.satisfied() only removes the constraint early, so it
       // does not need c's events for satisfaction, which can be ANY where c's are GROUND (XneqY).
-      return Math.max(IntDomain.GROUND, c.getConsistencyPruningEvent(v));
+      // A constraint on one variable (XgteqC, XeqC) propagates once when imposed and has no
+      // consistency event, so its nested event decides when c.notSatisfied() can change.
+      int event = c.getConsistencyPruningEvent(v);
+      return event < IntDomain.GROUND ? c.getNestedPruningEvent(v, true) : event;
     }
     return super.getConsistencyPruningEvent(v);
   }
