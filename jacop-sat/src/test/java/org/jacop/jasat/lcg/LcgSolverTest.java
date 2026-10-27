@@ -40,6 +40,7 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
@@ -157,7 +158,7 @@ class LcgSolverTest {
                 resources,
                 new IntVar(store, limit, limit)),
             t -> {
-              for (int time = -2; time < 12; time++) {
+              for (int time = -8; time < 12; time++) {
                 int load = 0;
                 for (int k2 = 0; k2 < 3; k2++) {
                   if (t[at[k2]] <= time && time < t[at[k2]] + d[k2]) {
@@ -483,6 +484,74 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
     assertThat(own).isGreaterThan(1000);
+  }
+
+  @Test
+  void absoluteValueAgreesWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 2000; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        // signed values, with up to two holes
+        x[i] = new IntVar(store, "x" + i, -1 - rnd.nextInt(5), 1 + rnd.nextInt(5));
+        for (int h = rnd.nextInt(3); h > 0; h--) {
+          int v = x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1);
+          if (x[i].getSize() > 2) {
+            x[i].domain.subtractAdapt(v);
+          }
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        int i = pick(rnd, n);
+        int j = pick(rnd, n, i);
+        relations.add(
+            new Relation(new AbsXeqY(x[i], x[j], rnd.nextBoolean()), t -> Math.abs(t[i]) == t[j]));
+      }
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("AbsXeqY");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "absolute value: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(generic).isZero();
+    assertThat(own).isGreaterThan(500);
   }
 
   @Test
