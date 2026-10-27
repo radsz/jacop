@@ -33,9 +33,11 @@ package org.jacop.constraints;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * If all x's are equal 1 then result variable is equal 1 too. Otherwise, result variable is equal
@@ -44,7 +46,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AndBoolVector extends AbstractBoolVector implements Copyable<AndBoolVector> {
+public class AndBoolVector extends AbstractBoolVector implements Copyable<AndBoolVector>, Monotone {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -217,6 +219,15 @@ public class AndBoolVector extends AbstractBoolVector implements Copyable<AndBoo
     resultString.append(result);
     resultString.append(")");
     return resultString.toString();
+  }
+
+  @Override
+  public Direction monotonicity(Var v) {
+    // result <-> and(list); with the result fixed, all ones or a clause on the negations
+    if (v == result || !result.singleton()) {
+      return Direction.NONE;
+    }
+    return result.value() == 1 ? Direction.UP : Direction.DOWN;
   }
 
   @Override

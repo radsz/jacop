@@ -32,9 +32,11 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * If at least one variable is equal 1 then result variable is equal 1 too. Otherwise, result
@@ -44,7 +46,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class OrBoolSimple extends AbstractBoolSimple implements Copyable<OrBoolSimple> {
+public class OrBoolSimple extends AbstractBoolSimple implements Copyable<OrBoolSimple>, Monotone {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -119,6 +121,15 @@ public class OrBoolSimple extends AbstractBoolSimple implements Copyable<OrBoolS
   public String toString() {
 
     return id() + " : orBoolSimple([ " + a + ", " + b + "], " + result + ")";
+  }
+
+  @Override
+  public Direction monotonicity(Var v) {
+    // result <-> a \/ b; with the result fixed, a clause or both zero
+    if (v == result || !result.singleton()) {
+      return Direction.NONE;
+    }
+    return result.value() == 1 ? Direction.UP : Direction.DOWN;
   }
 
   @Override

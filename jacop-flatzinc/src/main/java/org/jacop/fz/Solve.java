@@ -265,7 +265,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolve();
+      presolve(node);
     }
 
     if (opt.debug()) {
@@ -304,10 +304,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
    */
-  private void presolve() {
+  private void presolve(ASTSolveItem node) {
     long start = timer.getCpuTime();
-    Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+    Presolver presolver =
+        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK);
+    Var[] frozen = frozenVariables(node);
+    if (frozen != null) {
+      presolver.keep(frozen).solutionPreserving(false);
+    }
+    Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -328,6 +333,44 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         presolve = d;
       }
     }
+  }
+
+  /**
+   * The variables whose values must be those of a solution of the loaded model: the output
+   * variables, the objective and the variables of clauses posted after presolve. Returns null when
+   * presolve has to keep every solution, under all-solution or several-solution satisfaction
+   * search, or when an on_restart model reads variables between runs.
+   */
+  private Var[] frozenVariables(ASTSolveItem node) {
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(node.jjtGetNumChildren() - 1);
+    int solve = getKind(kind.getKind());
+    boolean severalSolutions = options.getAll() || options.getNumberSolutions() > 1;
+    if (solve == 0 && severalSolutions || dictionary.onRestart != null) {
+      return null;
+    }
+    Set<Var> frozen = Collections.newSetFromMap(new IdentityHashMap<>());
+    frozen.addAll(dictionary.outputVariables);
+    for (OutputArrayAnnotation a : dictionary.outputArray) {
+      frozen.addAll(Arrays.asList(a.getArray()));
+    }
+    if (solve != 0) {
+      ASTSolveExpr cost = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (cost.getType() == 0) {
+        Var v = dictionary.getVariable(cost.getIdent());
+        frozen.add(v != null ? v : dictionary.getFloatVariable(cost.getIdent()));
+      } else {
+        Var[] a = dictionary.getVariableArray(cost.getIdent());
+        frozen.add(a != null ? a[cost.getIndex()] : null);
+        Var[] fa = dictionary.getVariableFloatArray(cost.getIdent());
+        frozen.add(fa != null ? fa[cost.getIndex()] : null);
+      }
+    }
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      frozen.addAll(Arrays.asList(clause[0]));
+      frozen.addAll(Arrays.asList(clause[1]));
+    }
+    frozen.remove(null);
+    return frozen.toArray(new Var[0]);
   }
 
   /**
@@ -369,6 +412,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
     }
+    d.reductions()
+        .forEach(
+            (rule, n) ->
+                s.append("%%%mzn-stat: presolve")
+                    .append(Character.toUpperCase(rule.charAt(0)))
+                    .append(rule, 1, rule.length())
+                    .append('=')
+                    .append(n)
+                    .append('\n'));
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());
   }

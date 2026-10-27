@@ -40,6 +40,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
+import org.jacop.api.Monotone;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
@@ -67,7 +68,7 @@ import org.jacop.lcg.LinearForm;
  */
 @Slf4j
 public class LinearInt extends PrimitiveConstraint
-    implements Stateful, Copyable<LinearInt>, Explainable {
+    implements Stateful, Copyable<LinearInt>, Monotone, Explainable {
 
   /*
    * Defines relations
@@ -964,6 +965,22 @@ public class LinearInt extends PrimitiveConstraint
     result.append("], ").append(rel2String()).append(", ").append(b).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public Direction monotonicity(Var v) {
+    Direction positive =
+        switch (relationType) {
+          case GE, GT -> Direction.UP;
+          case LE, LT -> Direction.DOWN;
+          default -> Direction.NONE;
+        };
+    for (int i = 0; i < x.length; i++) {
+      if (x[i] == v) {
+        return a[i] > 0 ? positive : positive.negate();
+      }
+    }
+    return Direction.NONE;
   }
 
   @Override
