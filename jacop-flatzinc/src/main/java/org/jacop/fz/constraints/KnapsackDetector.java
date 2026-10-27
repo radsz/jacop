@@ -31,7 +31,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.LinearInt;
@@ -86,12 +86,40 @@ public class KnapsackDetector implements ParserTreeConstants {
 
   private final Support support;
 
-  /** A row sum(k) a[k] * x[k] over 0/1 variables, with all a[k] &gt; 0. */
-  private record Row(IntVar[] x, int[] a, long bound) {}
+  /** A row sum(k) a[k] * x[k] &lt;= bound over 0/1 variables, with all a[k] &gt; 0. */
+  private static final class Row {
+    final IntVar[] x;
+    final int[] a;
+    final long bound;
 
-  /** A profit row, sum(k) a[k] * x[k] = profit, with profit at least min. */
-  private record Profit(
-      IntVar[] x, int[] a, IntVar variable, long min, long max, ASTConstElem node) {}
+    Row(IntVar[] x, int[] a, long bound) {
+      this.x = x;
+      this.a = a;
+      this.bound = bound;
+    }
+  }
+
+  /**
+   * A profit row, sum(k) a[k] * x[k] = profit, with profit in min..max; the profit is the variable,
+   * or a constant when it is null.
+   */
+  private static final class Profit {
+    final IntVar[] x;
+    final int[] a;
+    final IntVar variable;
+    final long min;
+    final long max;
+    final ASTConstElem node;
+
+    Profit(IntVar[] x, int[] a, IntVar variable, long min, long max, ASTConstElem node) {
+      this.x = x;
+      this.a = a;
+      this.variable = variable;
+      this.min = min;
+      this.max = max;
+      this.node = node;
+    }
+  }
 
   private final List<Row> capacities = new ArrayList<>();
   private final List<ASTConstElem> capacityNodes = new ArrayList<>();
@@ -245,17 +273,18 @@ public class KnapsackDetector implements ParserTreeConstants {
 
   private boolean surrogate(Profit profit) {
     // the 0/1 variables of the profit, with duplicates merged
-    Map<IntVar, Integer> index = new IdentityHashMap<>();
+    // positions by the store index of the variable
+    Map<Integer, Integer> index = new HashMap<>();
     List<IntVar> xs = new ArrayList<>();
     List<Long> ps = new ArrayList<>();
-    for (int k = 0; k < profit.x().length; k++) {
-      Integer i = index.get(profit.x()[k]);
+    for (int k = 0; k < profit.x.length; k++) {
+      Integer i = index.get(profit.x[k].index());
       if (i == null) {
-        index.put(profit.x()[k], xs.size());
-        xs.add(profit.x()[k]);
-        ps.add((long) profit.a()[k]);
+        index.put(profit.x[k].index(), xs.size());
+        xs.add(profit.x[k]);
+        ps.add((long) profit.a[k]);
       } else {
-        ps.set(i, ps.get(i) + profit.a()[k]);
+        ps.set(i, ps.get(i) + profit.a[k]);
       }
     }
     int n = xs.size();
@@ -274,32 +303,32 @@ public class KnapsackDetector implements ParserTreeConstants {
     List<long[]> weights = new ArrayList<>();
     List<Long> bounds = new ArrayList<>();
     for (int r = 0; r < capacities.size(); r++) {
-      if (capacityNodes.get(r) == profit.node()) {
+      if (capacityNodes.get(r) == profit.node) {
         continue;
       }
       Row row = capacities.get(r);
-      if (row.bound() < 0) {
+      if (row.bound < 0) {
         return false;
       }
       long[] w = new long[n];
       long sum = 0;
       int shared = 0;
-      for (int k = 0; k < row.x().length; k++) {
-        Integer j = index.get(row.x()[k]);
+      for (int k = 0; k < row.x.length; k++) {
+        Integer j = index.get(row.x[k].index());
         if (j != null) {
           shared += w[j] == 0 ? 1 : 0;
-          w[j] += row.a()[k];
-          sum += row.a()[k];
+          w[j] += row.a[k];
+          sum += row.a[k];
         }
       }
-      if (shared >= 2 && sum > row.bound()) {
+      if (shared >= 2 && sum > row.bound) {
         double[] d = new double[n];
         for (int j = 0; j < n; j++) {
-          d[j] = w[j];
+          d[j] = (double) w[j];
         }
         rows.add(d);
         weights.add(w);
-        bounds.add(row.bound());
+        bounds.add(row.bound);
       }
     }
     int m = rows.size();
@@ -312,7 +341,7 @@ public class KnapsackDetector implements ParserTreeConstants {
       b[i] = bounds.get(i);
     }
     double[] y = duals(rows.toArray(new double[0][]), b, p);
-    if (y == null || !prunes(rows, b, p, y, profit.min())) {
+    if (y == null || !prunes(rows, b, p, y, profit.min)) {
       return false;
     }
 
@@ -388,18 +417,18 @@ public class KnapsackDetector implements ParserTreeConstants {
     if (items.size() < 2 || pSum > IntDomain.MAX_INT) {
       return false;
     }
-    long low = Math.max(0, profit.min() - freeSum);
-    long high = Math.min(itemSum, profit.max());
+    long low = Math.max(0, profit.min - freeSum);
+    long high = Math.min(itemSum, profit.max);
     if (low > high) {
       // the model has no solution, which the constraints posted as usual find
       return false;
     }
 
-    IntVar total = profit.variable();
+    IntVar total = profit.variable;
     if (total == null) {
       total =
           new IntVar(
-              support.store, (int) Math.max(profit.min(), 0), (int) Math.min(profit.max(), pSum));
+              support.store, (int) Math.max(profit.min, 0), (int) Math.min(profit.max, pSum));
     }
     IntVar knapsackProfit = total;
     if (!free.isEmpty()) {
@@ -562,7 +591,7 @@ public class KnapsackDetector implements ParserTreeConstants {
       }
       for (int i = 0; i < m; i++) {
         double f = t[i][q];
-        if (i != r && f != 0) {
+        if (i != r) {
           double[] ti = t[i];
           for (int j = 0; j < cols; j++) {
             ti[j] -= f * row[j];

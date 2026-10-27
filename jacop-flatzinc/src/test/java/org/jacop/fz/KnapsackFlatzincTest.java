@@ -177,8 +177,8 @@ class KnapsackFlatzincTest {
       double[] w = new double[n];
       double[] p = new double[n];
       for (int j = 0; j < n; j++) {
-        w[j] = 1 + random.nextInt(30);
-        p[j] = 1 + random.nextInt(30);
+        w[j] = 1.0 + random.nextInt(30);
+        p[j] = 1.0 + random.nextInt(30);
       }
       double c = random.nextInt((int) Arrays.stream(w).sum() + 1);
       double[] y = KnapsackDetector.duals(new double[][] {w}, new double[] {c}, p);
@@ -216,7 +216,7 @@ class KnapsackFlatzincTest {
         b[i] = random.nextInt((int) Arrays.stream(a[i]).sum() + 1);
       }
       for (int j = 0; j < n; j++) {
-        p[j] = 1 + random.nextInt(30);
+        p[j] = 1.0 + random.nextInt(30);
       }
       double[] y = KnapsackDetector.duals(a, b, p);
       double bound = 0;
