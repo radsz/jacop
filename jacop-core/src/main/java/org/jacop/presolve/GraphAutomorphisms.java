@@ -75,13 +75,40 @@ public final class GraphAutomorphisms {
    */
   public record Result(List<Permutation> generators, boolean complete) {}
 
-  /**
-   * A permutation of the vertices, given by the vertices it moves.
-   *
-   * @param points the vertices moved, in increasing order.
-   * @param images the image of each of them.
-   */
-  public record Permutation(int[] points, int[] images) {
+  /** A permutation of the vertices, given by the vertices it moves. */
+  public static final class Permutation {
+
+    private final int[] points;
+    private final int[] images;
+
+    /**
+     * Creates a permutation.
+     *
+     * @param points the vertices moved, in increasing order.
+     * @param images the image of each of them.
+     */
+    public Permutation(int[] points, int[] images) {
+      this.points = points;
+      this.images = images;
+    }
+
+    /**
+     * Returns the vertices moved.
+     *
+     * @return the vertices moved, in increasing order.
+     */
+    public int[] points() {
+      return points;
+    }
+
+    /**
+     * Returns the images of the vertices moved.
+     *
+     * @return the image of each vertex of {@link #points()}.
+     */
+    public int[] images() {
+      return images;
+    }
 
     /**
      * Returns the image of a vertex.

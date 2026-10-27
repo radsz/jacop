@@ -112,7 +112,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
   }
 
   /** How the arguments of a constraint are grouped; arguments in no group keep their position. */
-  private record Spec(int[] symmetric, int[][] bags) {
+  private static final class Spec {
+    final int[] symmetric;
+    final int[][] bags;
+
+    Spec(int[] symmetric, int[][] bags) {
+      this.symmetric = symmetric;
+      this.bags = bags;
+    }
+
     static Spec sym(int... args) {
       return new Spec(args, new int[0][]);
     }
@@ -384,15 +392,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
     boolean[] grouped = new boolean[arity];
     if (spec != null) {
-      for (int a : spec.symmetric()) {
+      for (int a : spec.symmetric) {
         if (a >= arity || array[a]) {
           throw new Unsupported("unexpected arguments of " + name);
         }
         grouped[a] = true;
         position(constraint, "y|" + prefix, args[a][0], constants);
       }
-      for (int b = 0; b < spec.bags().length; b++) {
-        int[] bag = spec.bags()[b];
+      for (int b = 0; b < spec.bags.length; b++) {
+        int[] bag = spec.bags[b];
         for (int a : bag) {
           if (a >= arity || !array[a] || args[a].length != args[bag[0]].length) {
             throw new Unsupported("unexpected arguments of " + name);
@@ -429,7 +437,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     StringBuilder key = new StringBuilder();
     if (spec != null) {
       List<String> sym = new ArrayList<>();
-      for (int a : spec.symmetric()) {
+      for (int a : spec.symmetric) {
         if (a < arity) {
           grouped[a] = true;
           sym.add(id(args[a][0]));
@@ -437,7 +445,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       sym.sort(null);
       key.append(sym);
-      for (int[] bag : spec.bags()) {
+      for (int[] bag : spec.bags) {
         List<String> items = new ArrayList<>();
         for (int a : bag) {
           if (a >= arity || args[a].length != args[bag[0]].length) {

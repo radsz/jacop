@@ -184,8 +184,8 @@ class SymmetryBreakingFlatzincTest {
     for (int k = 0; k < base; k++) {
       Template t = template(random, ints, bools, max);
       // the constraint and its images under the permutations until they repeat
-      int[] x = t.x();
-      int[] b = t.b();
+      int[] x = t.x;
+      int[] b = t.b;
       for (int step = 0; step < 60; step++) {
         constraints.add(t.text(x, b));
         x = Arrays.stream(x).map(v -> pi[v]).toArray();
@@ -249,7 +249,17 @@ class SymmetryBreakingFlatzincTest {
   }
 
   /** A constraint over integer variables x and Boolean variables b, written by text. */
-  private record Template(int[] x, int[] b, Text text) {
+  private static final class Template {
+    final int[] x;
+    final int[] b;
+    final Text text;
+
+    Template(int[] x, int[] b, Text text) {
+      this.x = x;
+      this.b = b;
+      this.text = text;
+    }
+
     String text(int[] xs, int[] bs) {
       return text.of(i -> xs[i], i -> bs[i]);
     }
