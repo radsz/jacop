@@ -263,7 +263,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     int[] colors = new int[n];
     int[][] adj = new int[n][];
     for (int v = 0; v < n; v++) {
-      colors[v] = sorted.get(colorKeys.get(v));
+      colors[v] = sorted.getOrDefault(colorKeys.get(v), 0);
       adj[v] = Arrays.copyOf(adjacency[v], degree[v]);
     }
     adjacency = null;
@@ -280,7 +280,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     // the variables are the base of the search, in the lex-leader order
     int[] base = new int[rank.size()];
-    rank.forEach((x, r) -> base[r] = varVertex.get(x));
+    rank.forEach((x, r) -> base[r] = varVertex.getOrDefault(x, 0));
     GraphAutomorphisms.Result result =
         new GraphAutomorphisms(colors, adj, base).generators(MAX_WORK, maxNanos);
 
@@ -289,7 +289,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     varVertex.forEach(
         (x, v) -> {
           varAt[v] = x;
-          rankAt[v] = rank.get(x);
+          rankAt[v] = rank.getOrDefault(x, 0);
         });
     int moving = 0;
     int posted = 0;

@@ -274,7 +274,7 @@ public final class GraphAutomorphisms {
     int relevant = interesting == null ? -1 : -2;
     while (cells < n) {
       int chosen;
-      if (relevant == -2) {
+      if (relevant == -2 && interesting != null) {
         while (nextInteresting < interesting.length
             && cellEnd[cellOf[interesting[nextInteresting]]] - cellOf[interesting[nextInteresting]]
                 == 1) {
