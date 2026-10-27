@@ -65,6 +65,7 @@ import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Presolver;
 import org.jacop.satwrapper.SatTranslation;
@@ -368,6 +369,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    AtMostOnes.Statistics amo = d.atMostOnes();
+    if (amo != null) {
+      s.append("%%%mzn-stat: presolveAtMostOnes=").append(amo.atMostOnes()).append('\n');
+      s.append("%%%mzn-stat: presolveCliques=").append(amo.cliques()).append('\n');
+      s.append("%%%mzn-stat: presolveExactlyOnes=").append(amo.exactlyOnes()).append('\n');
+      s.append("%%%mzn-stat: presolveCliqueReplaced=").append(amo.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveCliqueFixed=").append(amo.fixed()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());

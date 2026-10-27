@@ -105,10 +105,14 @@ public final class Derivation implements VarMap {
       int fixed,
       int dropped) {}
 
+  // rounds of the at-most-one rule
+  private static final int AT_MOST_ONE_ROUNDS = 10;
+
   private final Store parent;
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final boolean atMostOnes;
 
   private Outcome outcome;
   private int level;
@@ -118,6 +122,7 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
+  private AtMostOnes.Statistics atMostOnesStatistics;
   private boolean solutionWritten;
 
   private Derivation(Builder builder) {
@@ -125,6 +130,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.atMostOnes = builder.atMostOnes;
   }
 
   /**
@@ -144,6 +150,8 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    private boolean atMostOnes =
+        Boolean.parseBoolean(System.getProperty("jacop.presolve.atMostOnes", "true"));
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -188,6 +196,18 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Switches the at-most-one rule ({@link AtMostOnes}) on or off; it runs only with the rules on.
+     * On by default, unless the system property {@code jacop.presolve.atMostOnes} is false.
+     *
+     * @param on true to apply the rule.
+     * @return this builder.
+     */
+    public Builder atMostOnes(boolean on) {
+      this.atMostOnes = on;
+      return this;
+    }
+
+    /**
      * Derives the child.
      *
      * @return the derivation; see {@link Derivation#outcome()}.
@@ -213,10 +233,24 @@ public final class Derivation implements VarMap {
     level = parent.level;
     variables = allVariables();
     collected = collectConstraints();
+    int parentConstraints = collected.size();
 
     if (!copyable()) {
       live();
       return;
+    }
+
+    Set<Constraint> removed = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (rules && atMostOnes) {
+      if (!runAtMostOnes(removed)) {
+        outcome = Outcome.INFEASIBLE;
+        return;
+      }
+      // propagation may have imposed new constraints
+      if (!copyable()) {
+        live();
+        return;
+      }
     }
 
     List<Constraint> carried = new ArrayList<>();
@@ -224,7 +258,7 @@ public final class Derivation implements VarMap {
     for (Constraint c : collected) {
       if (rules && entailed(c)) {
         dropped++;
-      } else {
+      } else if (!removed.contains(c)) {
         carried.add(c);
       }
     }
@@ -273,7 +307,7 @@ public final class Derivation implements VarMap {
 
     statistics =
         new Statistics(
-            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
+            variables.size(), parentConstraints, copies.size(), carried.size(), fixed, dropped);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -289,6 +323,45 @@ public final class Derivation implements VarMap {
     } else {
       parent.setState(StoreState.SUSPENDED);
     }
+  }
+
+  /**
+   * Runs the at-most-one rule in rounds, each followed by propagation in the parent, until a round
+   * changes nothing. The rule narrows domains and imposes its constraints in the parent at its
+   * level, so they are collected and copied like the others; the constraints it replaces are left
+   * out of the child.
+   *
+   * @param removed receives the constraints to leave out of the child.
+   * @return false if the parent is infeasible.
+   */
+  private boolean runAtMostOnes(Set<Constraint> removed) {
+    AtMostOnes.Statistics total = new AtMostOnes.Statistics(0, 0, 0, 0, 0);
+    try {
+      for (int round = 0; round < AT_MOST_ONE_ROUNDS; round++) {
+        List<Constraint> live = new ArrayList<>();
+        for (Constraint c : collected) {
+          if (!entailed(c) && !removed.contains(c)) {
+            live.add(c);
+          }
+        }
+        AtMostOnes.Statistics s =
+            AtMostOnes.apply(parent, parent.level, live, parent::impose, removed::add);
+        total = total.plus(s);
+        if (!parent.consistency()) {
+          return false;
+        }
+        collected = collectConstraints();
+        if (!s.changed()) {
+          break;
+        }
+      }
+    } catch (FailException e) {
+      return false;
+    } finally {
+      atMostOnesStatistics = total;
+      level = parent.level;
+    }
+    return true;
   }
 
   private void keep(Var v) {
@@ -428,6 +501,15 @@ public final class Derivation implements VarMap {
    */
   public Store parent() {
     return parent;
+  }
+
+  /**
+   * Returns what the at-most-one rule did.
+   *
+   * @return the statistics, or null if the rule did not run.
+   */
+  public AtMostOnes.Statistics atMostOnes() {
+    return atMostOnesStatistics;
   }
 
   /**
