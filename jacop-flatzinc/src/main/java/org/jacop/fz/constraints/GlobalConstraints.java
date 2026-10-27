@@ -83,6 +83,7 @@ import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
@@ -575,6 +576,18 @@ class GlobalConstraints implements ParserTreeConstants {
     checkForDuplicateVariables(v);
 
     support.parameterListForAlldistincts.add(v);
+  }
+
+  // the capacity and the cost sum are posted by the predicate; this only adds the cost reasoning
+  void gen_jacop_stocking_cost(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] due = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] h = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int capacity = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
+    if (x.length > 0) {
+      support.pose(new StockingCost(x, due, h, cost, capacity));
+    }
   }
 
   void gen_jacop_alldifferent_except_0(SimpleNode node) {
