@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
@@ -65,7 +66,11 @@ import org.jacop.util.BipartiteGraphMatching;
  */
 @Slf4j
 public class Alldifferent extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, Copyable<Alldifferent>, Explainable {
+    implements Simplifiable,
+        UsesQueueVariable,
+        SatisfiedPresent,
+        Copyable<Alldifferent>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -517,6 +522,14 @@ public class Alldifferent extends Constraint
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     IntDomain except = explainedExceptions();
     return except != null && AlldiffExplanation.explainFailure(trail, list, except, out);
+  }
+
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != Alldifferent.class) {
+      return null;
+    }
+    return GlobalSimplification.allDifferent(list, Alldifferent::new);
   }
 
   @Override

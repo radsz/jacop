@@ -480,6 +480,14 @@ public class Alldiff extends Alldifferent {
   }
 
   @Override
+  public List<Constraint> simplify() {
+    if (getClass() != Alldiff.class) {
+      return null;
+    }
+    return GlobalSimplification.allDifferent(list, Alldiff::new);
+  }
+
+  @Override
   public Alldiff copy(VarMap map) {
     return new Alldiff(map.get(list));
   }

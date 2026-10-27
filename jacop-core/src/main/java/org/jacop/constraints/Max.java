@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -51,7 +52,7 @@ import org.jacop.lcg.MaxExplanation;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Max extends AbstractMinMax implements Copyable<Max>, Explainable {
+public class Max extends AbstractMinMax implements Simplifiable, Copyable<Max>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -167,6 +168,14 @@ public class Max extends AbstractMinMax implements Copyable<Max>, Explainable {
     result.append(")");
 
     return result.toString();
+  }
+
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != Max.class) {
+      return null;
+    }
+    return GlobalSimplification.extremum(list, max, true, l -> new Max(l, max));
   }
 
   @Override

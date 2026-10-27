@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -61,7 +62,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementIntegerFast extends AbstractElement
-    implements SatisfiedPresent, Copyable<ElementIntegerFast>, Explainable {
+    implements Simplifiable, SatisfiedPresent, Copyable<ElementIntegerFast>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -281,6 +282,19 @@ public class ElementIntegerFast extends AbstractElement
   @Override
   public String toString() {
     return buildToString("elementIntegerFast", list, value, false);
+  }
+
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != ElementIntegerFast.class) {
+      return null;
+    }
+    return ElementSimplification.integers(
+        index,
+        list,
+        value,
+        indexOffset,
+        (i, l, offset) -> new ElementIntegerFast(i, l, value, offset));
   }
 
   @Override

@@ -35,6 +35,7 @@ import java.util.Comparator;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -810,6 +811,14 @@ public class Cumulative extends CumulativeBasic {
         .append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != Cumulative.class) {
+      return null;
+    }
+    return simplifyTasks(t -> withOptionsOf(new Cumulative(t[0], t[1], t[2], limit)));
   }
 
   @Override

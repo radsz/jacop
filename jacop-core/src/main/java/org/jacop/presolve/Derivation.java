@@ -96,6 +96,8 @@ public final class Derivation implements VarMap {
    * @param childConstraints constraints copied into the child.
    * @param fixed parent variables fixed at the level of the derivation and absent from the child.
    * @param dropped constraints not copied because the presolve rules found them entailed.
+   * @param simplified constraints rewritten by {@link GlobalPresolve} for the domains at the level
+   *     of the derivation; those rewritten to nothing are counted here too.
    */
   public record Statistics(
       int parentVariables,
@@ -103,7 +105,8 @@ public final class Derivation implements VarMap {
       int childVariables,
       int childConstraints,
       int fixed,
-      int dropped) {}
+      int dropped,
+      int simplified) {}
 
   private final Store parent;
   private final Retention retention;
@@ -228,6 +231,20 @@ public final class Derivation implements VarMap {
         carried.add(c);
       }
     }
+    int simplified = 0;
+    if (rules) {
+      List<Constraint> rewritten = new ArrayList<>(carried.size());
+      for (Constraint c : carried) {
+        List<Constraint> r = GlobalPresolve.rewrite(c);
+        if (r == null) {
+          rewritten.add(c);
+        } else {
+          rewritten.addAll(r);
+          simplified++;
+        }
+      }
+      carried = rewritten;
+    }
 
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
@@ -273,7 +290,13 @@ public final class Derivation implements VarMap {
 
     statistics =
         new Statistics(
-            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
+            variables.size(),
+            collected.size(),
+            copies.size(),
+            carried.size(),
+            fixed,
+            dropped,
+            simplified);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -355,7 +378,7 @@ public final class Derivation implements VarMap {
     copies.clear();
     statistics =
         new Statistics(
-            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0);
+            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0);
   }
 
   /**

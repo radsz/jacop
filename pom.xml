@@ -340,6 +340,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -437,6 +438,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -533,6 +535,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>

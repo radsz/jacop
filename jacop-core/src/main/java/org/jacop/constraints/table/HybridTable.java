@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
@@ -89,7 +90,12 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class HybridTable extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<HybridTable>, Explainable {
+    implements UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Simplifiable,
+        Copyable<HybridTable>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1887,6 +1893,87 @@ public class HybridTable extends Constraint
     }
     s.append("])");
     return s.toString();
+  }
+
+  /**
+   * Removes the tuples that a unary restriction rules out for the current domains, and the columns
+   * of fixed variables that no restriction between columns refers to, keeping the tuples that
+   * accept the fixed value. A table without columns left holds.
+   */
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != HybridTable.class) {
+      return null;
+    }
+    boolean[] removed = new boolean[arity];
+    for (int i = 0; i < arity; i++) {
+      removed[i] = x[i].singleton();
+    }
+    for (Restriction r : cells) {
+      if (r.isBinary()) {
+        removed[r.column] = false;
+      }
+    }
+    for (int t = 0; t < tupleCount; t++) {
+      for (int i = 0; i < arity; i++) {
+        if (cells[t * arity + i].isBinary()) {
+          removed[i] = false;
+        }
+      }
+    }
+    int[] position = new int[arity];
+    int columns = 0;
+    for (int i = 0; i < arity; i++) {
+      position[i] = removed[i] ? -1 : columns++;
+    }
+    List<Restriction[]> kept = new ArrayList<>(tupleCount);
+    for (int t = 0; t < tupleCount; t++) {
+      Restriction[] row = new Restriction[columns];
+      boolean possible = true;
+      for (int i = 0; i < arity && possible; i++) {
+        Restriction r = cells[t * arity + i];
+        possible = r.isBinary() || acceptsSome(r, x[i]);
+        if (position[i] >= 0) {
+          row[position[i]] =
+              r.isBinary() ? Restriction.column(r.relation, position[r.column], r.offset) : r;
+        }
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty() || (kept.size() == tupleCount && columns == arity)) {
+      // an empty table cannot be at a fixpoint; leave it to propagation
+      return null;
+    }
+    if (columns == 0) {
+      return List.of();
+    }
+    IntVar[] list = new IntVar[columns];
+    for (int i = 0; i < arity; i++) {
+      if (position[i] >= 0) {
+        list[position[i]] = x[i];
+      }
+    }
+    return List.of(new HybridTable(list, kept.toArray(new Restriction[0][]), expandBetweenColumns));
+  }
+
+  /** Domains up to this size are enumerated to check a restriction; larger ones are kept. */
+  private static final int SIMPLIFY_ENUMERATION_LIMIT = 1024;
+
+  /**
+   * Whether a unary restriction accepts a value of a domain, or the domain is too large to tell.
+   */
+  private static boolean acceptsSome(Restriction r, IntVar v) {
+    if (v.getSize() > SIMPLIFY_ENUMERATION_LIMIT) {
+      return true;
+    }
+    for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      if (r.accepts(e.nextElement())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
@@ -81,7 +82,12 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class Alldistinct extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Alldistinct>, Explainable {
+    implements Simplifiable,
+        UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Copyable<Alldistinct>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1466,6 +1472,14 @@ public class Alldistinct extends Constraint
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == Alldistinct.class
         && AlldiffExplanation.explainFailure(trail, list, new IntervalDomain(), out);
+  }
+
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != Alldistinct.class) {
+      return null;
+    }
+    return GlobalSimplification.allDifferent(list, Alldistinct::new);
   }
 
   @Override

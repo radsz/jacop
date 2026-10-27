@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
@@ -57,7 +58,8 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class ElementBool extends Constraint implements UsesQueueVariable, Copyable<ElementBool> {
+public class ElementBool extends Constraint
+    implements Simplifiable, UsesQueueVariable, Copyable<ElementBool> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -267,6 +269,15 @@ public class ElementBool extends Constraint implements UsesQueueVariable, Copyab
     result.append("], ").append(value).append(", ").append(indexOffset).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public List<Constraint> simplify() {
+    if (getClass() != ElementBool.class) {
+      return null;
+    }
+    return ElementSimplification.integers(
+        index, list, value, indexOffset, (i, l, offset) -> new ElementBool(i, l, value, offset));
   }
 
   @Override
