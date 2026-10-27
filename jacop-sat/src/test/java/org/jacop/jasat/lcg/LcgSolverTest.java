@@ -64,6 +64,7 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
@@ -391,6 +392,124 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(generic);
+  }
+
+  /**
+   * Bin packing with items sharing bin variables, items of weight zero, bin variables reaching
+   * outside the bins, loads with holes and an extra relation on the bins: the LCG answer agrees
+   * with enumerating the bins, every explanation is checked, and almost all are the constraint's
+   * own.
+   */
+  @Test
+  void binpackingAgreesWithBruteForce() {
+    Random rnd = new Random(31);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int bins = 2 + rnd.nextInt(2);
+      int minBin = rnd.nextInt(2);
+      int n = 6 + rnd.nextInt(3);
+      List<IntVar> distinct = new ArrayList<>();
+      int[] at = new int[n];
+      int[] w = new int[n];
+      for (int k = 0; k < n; k++) {
+        if (k > 0 && rnd.nextInt(5) == 0) {
+          at[k] = at[rnd.nextInt(k)];
+        } else {
+          IntVar b =
+              new IntVar(
+                  store, "b" + k, minBin - rnd.nextInt(2), minBin + bins - 1 + rnd.nextInt(2));
+          if (rnd.nextInt(3) == 0) {
+            b.domain.subtractAdapt(b.min() + rnd.nextInt(b.max() - b.min() + 1));
+          }
+          at[k] = distinct.size();
+          distinct.add(b);
+        }
+        w[k] = rnd.nextInt(6) == 0 ? 0 : 1 + rnd.nextInt(5);
+      }
+      IntVar[] x = distinct.toArray(new IntVar[0]);
+      IntVar[] item = new IntVar[n];
+      for (int k = 0; k < n; k++) {
+        item[k] = x[at[k]];
+      }
+      IntVar[] load = new IntVar[bins];
+      for (int i = 0; i < bins; i++) {
+        int lo = rnd.nextInt(6);
+        load[i] = new IntVar(store, "l" + i, lo, lo + 2 + rnd.nextInt(12));
+        for (int h = rnd.nextInt(3); h > 0 && load[i].getSize() > 2; h--) {
+          load[i].domain.subtractAdapt(load[i].min() + 1 + rnd.nextInt(load[i].getSize() - 2));
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Binpacking(item, load, w, minBin, rnd.nextInt(4) != 0),
+              t -> {
+                int[] sum = new int[bins];
+                for (int k = 0; k < n; k++) {
+                  int i = t[at[k]] - minBin;
+                  if (i < 0 || i >= bins) {
+                    return false;
+                  }
+                  sum[i] += w[k];
+                }
+                for (int i = 0; i < bins; i++) {
+                  if (!load[i].domain.contains(sum[i])) {
+                    return false;
+                  }
+                }
+                return true;
+              }));
+      if (x.length >= 3 && rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      // loads are read from their domains before search, so the test may refer to them
+      boolean expected = bruteForce(x, relations, new int[x.length], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        int[] sum = new int[bins];
+        for (int k = 0; k < n; k++) {
+          sum[t[at[k]] - minBin] += w[k];
+        }
+        for (int i = 0; i < bins; i++) {
+          assertThat(solver.value(load[i]))
+              .as("instance %d load %d", instance, i)
+              .isEqualTo(sum[i]);
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Binpacking");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "binpacking: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(20 * generic);
   }
 
   @Test
