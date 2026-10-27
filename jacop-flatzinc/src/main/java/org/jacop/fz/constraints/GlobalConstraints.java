@@ -105,6 +105,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.geost.Dbox;
@@ -2417,6 +2418,26 @@ class GlobalConstraints implements ParserTreeConstants {
     c.doOptionalOverload(
         Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
+  }
+
+  void gen_jacop_disjunctive_setup(SimpleNode node) {
+    IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int[] family = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    int[] flat = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+
+    int f = (int) Math.round(Math.sqrt(flat.length));
+    if (f * f != flat.length) {
+      throw new IllegalArgumentException(
+          "jacop_disjunctive_setup: the transition matrix has " + flat.length + " entries");
+    }
+    int[][] transitions = new int[f][f];
+    for (int a = 0; a < f; a++) {
+      System.arraycopy(flat, a * f, transitions[a], 0, f);
+    }
+    IntVar[] opt =
+        node.jjtGetNumChildren() > 4 ? support.getVarArray((SimpleNode) node.jjtGetChild(4)) : null;
+    support.pose(new UnaryTransition(str, dur, family, transitions, opt));
   }
 
   void gen_jacop_disjunctive_strict_optional(SimpleNode node) {

@@ -65,6 +65,7 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
@@ -390,6 +391,119 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(generic);
+  }
+
+  @Test
+  void unaryTransitionAgreesWithBruteForce() {
+    Random rnd = new Random(31);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 800; instance++) {
+      Store store = new Store();
+      int n = 4;
+      boolean optional = rnd.nextInt(3) == 0;
+      boolean variable = !optional && rnd.nextBoolean();
+      List<IntVar> all = new ArrayList<>();
+      IntVar[] s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] o = optional ? new IntVar[n] : null;
+      int horizon = 5 + rnd.nextInt(4);
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, rnd.nextInt(2), horizon);
+        if (rnd.nextInt(4) == 0) {
+          s[i].domain.subtractAdapt(s[i].min() + 1 + rnd.nextInt(s[i].max() - s[i].min() - 1));
+        }
+        all.add(s[i]);
+      }
+      for (int i = 0; i < n; i++) {
+        int c = rnd.nextInt(4);
+        d[i] =
+            variable
+                ? new IntVar(store, "d" + i, Math.max(0, c - 1), c + 1)
+                : new IntVar(store, c, c);
+        if (variable) {
+          all.add(d[i]);
+        }
+      }
+      if (optional) {
+        for (int i = 0; i < n; i++) {
+          o[i] = new IntVar(store, "o" + i, 0, 1);
+          all.add(o[i]);
+        }
+      }
+      int f = 1 + rnd.nextInt(3);
+      int[] family = new int[n];
+      for (int i = 0; i < n; i++) {
+        family[i] = rnd.nextInt(f);
+      }
+      int[][] tt = new int[f][f];
+      for (int[] row : tt) {
+        for (int g = 0; g < f; g++) {
+          row[g] = rnd.nextInt(3);
+        }
+      }
+      IntVar[] x = all.toArray(IntVar[]::new);
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new UnaryTransition(s, d, family, tt, o),
+              t -> {
+                for (int i = 0; i < n; i++) {
+                  for (int j = i + 1; j < n; j++) {
+                    if (optional && (t[n + i] == 0 || t[n + j] == 0)) {
+                      continue;
+                    }
+                    int di = variable ? t[n + i] : d[i].value();
+                    int dj = variable ? t[n + j] : d[j].value();
+                    if (t[i] + di + tt[family[i]][family[j]] > t[j]
+                        && t[j] + dj + tt[family[j]][family[i]] > t[i]) {
+                      return false;
+                    }
+                  }
+                }
+                return true;
+              }));
+      if (rnd.nextBoolean()) {
+        relations.add(relation(s, rnd));
+      }
+      // t holds the starts, then the durations when variable or the presences when optional
+      int[] t = new int[x.length];
+      boolean expected = bruteForce(x, relations, t, 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] u = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          u[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(u)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("UnaryTransition");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "unary transition: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(20 * generic);
   }
 
   @Test

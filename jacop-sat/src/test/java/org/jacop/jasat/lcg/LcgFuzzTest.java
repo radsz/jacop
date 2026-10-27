@@ -122,6 +122,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
@@ -285,6 +286,31 @@ class LcgFuzzTest {
       return new Regular(fsm, pick(x, 3 + rnd.nextInt(2)));
     }
 
+    /** A unary resource with transition times between 1 to 3 families on 3 to 5 tasks. */
+    private UnaryTransition unaryTransition() {
+      int k = 3 + rnd.nextInt(3);
+      IntVar[] own = pick(x, 3);
+      IntVar[] s = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        s[i] = i < own.length ? own[i] : intVar("u" + i, -1, 6);
+      }
+      // durations as constants or variables, possibly zero
+      IntVar[] d = rnd.nextBoolean() ? constants(k, 0, 2) : chain("d", k, 0, 2);
+      int f = 1 + rnd.nextInt(3);
+      int[] family = new int[k];
+      for (int i = 0; i < k; i++) {
+        family[i] = rnd.nextInt(f);
+      }
+      int[][] t = new int[f][f];
+      for (int[] row : t) {
+        for (int g = 0; g < f; g++) {
+          row[g] = rnd.nextInt(3);
+        }
+      }
+      IntVar[] o = rnd.nextInt(3) == 0 ? chain("o", k, 0, 1) : null;
+      return new UnaryTransition(s, d, family, t, o);
+    }
+
     /** A table of 3 to 6 random tuples on 3 of the variables, as a decision diagram. */
     private ExtensionalSupportMdd mdd() {
       int[][] tuples = new int[3 + rnd.nextInt(4)][3];
@@ -358,7 +384,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(68)) {
+      return switch (rnd.nextInt(69)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -482,6 +508,7 @@ class LcgFuzzTest {
         case 64 -> hybridTable();
         case 65 -> regular();
         case 66 -> mdd();
+        case 67 -> unaryTransition();
         case 63 ->
             new LinearIntDom(
                 p,

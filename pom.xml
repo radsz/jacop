@@ -195,6 +195,7 @@ setup to run configuration. -->
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
+                                <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
@@ -232,6 +233,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -325,6 +327,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -418,6 +421,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -511,6 +515,7 @@ setup to run configuration. -->
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
+                                <include>**/UnaryTransitionTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
