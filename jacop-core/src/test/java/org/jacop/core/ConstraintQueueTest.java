@@ -37,6 +37,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.junit.jupiter.api.Test;
 
@@ -135,5 +136,42 @@ class ConstraintQueueTest {
     assertThat(store.changed[xy.getQueueIndex()].contains(xy)).isTrue();
     assertThat(store.consistency()).isTrue();
     assertThat(y.dom().contains(1)).isFalse();
+  }
+
+  /**
+   * With returnAfterPruning, consistency() stops after each pruning constraint with the rest still
+   * queued, and repeated calls reach the same fixpoint as one full call.
+   */
+  @Test
+  void returnAfterPruningReachesTheSameFixpointInSteps() {
+    int[][] full = chainDomains(false);
+    int[][] stepped = chainDomains(true);
+    assertThat(stepped).isDeepEqualTo(full);
+  }
+
+  private static int[][] chainDomains(boolean returnAfterPruning) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    for (int i = 0; i + 1 < x.length; i++) {
+      store.impose(new XltY(x[i], x[i + 1]));
+    }
+    assertThat(store.consistency()).isTrue();
+    store.setReturnAfterPruning(returnAfterPruning);
+    store.setLevel(1);
+    x[0].domain.in(store.level, x[0], 3, 10);
+    int calls = 0;
+    do {
+      assertThat(store.consistency()).isTrue();
+      calls++;
+    } while (store.hasPendingConstraints());
+    assertThat(calls > 1).isEqualTo(returnAfterPruning);
+    int[][] domains = new int[x.length][];
+    for (int i = 0; i < x.length; i++) {
+      domains[i] = new int[] {x[i].min(), x[i].max()};
+    }
+    return domains;
   }
 }

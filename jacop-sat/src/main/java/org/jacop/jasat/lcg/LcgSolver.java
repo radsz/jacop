@@ -83,6 +83,9 @@ public final class LcgSolver implements ExternalPropagator {
   private final int baseLevel;
   private boolean rootFailed;
 
+  /** Runs the store to its fixpoint before clauses propagate again (the earlier behaviour). */
+  private static final boolean FULL_FIXPOINT = Boolean.getBoolean("jacop.lcg.fullFixpoint");
+
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
   private IntDomain[] root = new IntDomain[0];
@@ -336,7 +339,14 @@ public final class LcgSolver implements ExternalPropagator {
       return CdclSolver.UNSAT;
     }
     solution = null;
-    int result = sat.solve(assumed);
+    // clauses propagate between constraints: each consistency() returns after a pruning constraint
+    store.setReturnAfterPruning(!FULL_FIXPOINT);
+    int result;
+    try {
+      result = sat.solve(assumed);
+    } finally {
+      store.setReturnAfterPruning(false);
+    }
     // the solver leaves its last assignment without notifying; the store goes back to the root
     notifyBacktrack(0);
     return result;
@@ -600,7 +610,7 @@ public final class LcgSolver implements ExternalPropagator {
         atomsPropagated++;
         return lit;
       }
-      if (numPending == 0) {
+      if (numPending == 0 && !store.hasPendingConstraints()) {
         return 0;
       }
       int from = trail.size();
