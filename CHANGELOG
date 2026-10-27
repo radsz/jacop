@@ -89,6 +89,21 @@ Version 5.0 (unreleased)
     the variables taking no counted value add up to the list length, so
     search trees can be smaller.
 
+11. New balancing constraints Deviation(x, s, d) and Spread(x, s, d):
+    sum(x) = s and d = sum(i)(abs(n * x[i] - s)), or the sum of
+    (n * x[i] - s)^2, with general forms over abs(a * x[i] - b) and
+    (a * x[i] - b)^2. They are bounds consistent on x for d >= cost and
+    raise d.min to the least cost of an assignment with sum s (Schaus,
+    Deville, Dupont and Regin, CP 2007; Schaus and Regin, EJCO 2014).
+    The FlatZinc front end posts them as redundant constraints on a sum of
+    int_abs or squared terms over variables whose sum an int_lin_eq fixes,
+    as sum(p)(abs(n * load[p] - total)) with sum(load) = total compiles;
+    -Dorg.jacop.fz.balance=false turns this off. JaCoP's MiniZinc library
+    adds the predicates deviation and spread. On the balanced academic
+    curriculum problem with a deviation objective the CSPLib instances are
+    proved optimal in under a second, where the decomposition does not
+    reach the optimum in 60 s.
+
 Version 4.11
 =============
 
