@@ -253,6 +253,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -351,6 +352,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -448,6 +450,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -544,6 +547,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

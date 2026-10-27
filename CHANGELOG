@@ -157,6 +157,21 @@ Version 5.0 (unreleased)
     the optima proved from 0-5 to 8-12, depending on the model and the
     search; before, the generic reason explained 83 to 86 % of the reasons.
 
+16. The FlatZinc front end posts a redundant Knapsack on multi-dimensional
+    knapsacks: a profit (a sum of 0/1 variables with positive, not all
+    equal coefficients that is bounded from below, or that defines a
+    variable) and capacity rows over the same variables (sums with
+    positive coefficients bounded from above). The Knapsack is posted on
+    one surrogate row, the capacity rows weighted by the dual values of
+    their linear relaxation (a small bounded simplex), so it prunes with
+    the bound of the relaxation of all rows together; each linear
+    constraint alone sees only its own row. It is posted only when that
+    bound fixes a variable at the root by its reduced cost.
+    -Dorg.jacop.fz.knapsack=false turns this off. On the 7 multi-knapsack
+    instances of the MiniZinc benchmarks JaCoP now finds the solution in
+    under 0.3 s in every mode (default, -f, --lcg); before, it found none
+    in 30 s on 5 of them.
+
 Version 4.11
 =============
 
