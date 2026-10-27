@@ -397,7 +397,11 @@ class LcgFuzzTest {
                 // a square, or the product equal to a factor
                 : new XmulYeqZ(p[0], rnd.nextBoolean() ? p[0] : p[1], p[rnd.nextInt(2) * 2]);
         case 5 -> new XmulCeqZ(p[0], 2 - rnd.nextInt(4), p[1]);
-        case 6 -> new AbsXeqY(p[0], p[1]);
+        case 6 -> {
+          // bounds or domain consistency, sometimes reified, rarely over one variable
+          AbsXeqY abs = new AbsXeqY(p[0], rnd.nextInt(8) == 0 ? p[0] : p[1], rnd.nextBoolean());
+          yield rnd.nextInt(3) == 0 ? new Reified(abs, bool()) : abs;
+        }
         case 7 -> new Distance(p[0], p[1], p[2]);
         case 8 -> new XexpYeqZ(p[0], intVar("e", 0, 2), p[1]);
         case 9 -> new Alldistinct(q);
