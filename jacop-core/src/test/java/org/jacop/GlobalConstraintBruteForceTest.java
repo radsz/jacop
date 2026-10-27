@@ -464,6 +464,194 @@ class GlobalConstraintBruteForceTest {
     }
   }
 
+  /**
+   * The same comparison with two positions of the instance given the same variable, whose domain is
+   * the intersection of theirs. The expected solutions are the brute-force solutions that agree on
+   * the two positions. Constraints must accept a variable that occurs more than once in their
+   * arguments, or reject it at impose time with an {@link IllegalArgumentException}.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void solutionsMatchBruteForceWithAliasedVariables(
+      String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 4);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      if (n < 2) {
+        continue;
+      }
+      int i = random.nextInt(n);
+      int k = random.nextInt(n - 1);
+      int j = k >= i ? k + 1 : k;
+      int[] shared =
+          IntStream.of(instance.domains()[i])
+              .filter(v -> IntStream.of(instance.domains()[j]).anyMatch(w -> w == v))
+              .toArray();
+      if (shared.length == 0) {
+        continue;
+      }
+      int[][] domains = instance.domains().clone();
+      domains[i] = shared;
+      domains[j] = shared;
+      int a = i;
+      int b = j;
+      Instance aliased =
+          new Instance(
+              domains,
+              (store, x) -> {
+                IntVar[] y = x.clone();
+                y[b] = y[a];
+                instance.impose().accept(store, y);
+              },
+              t -> t[a] == t[b] && instance.semantics().test(t),
+              instance.description() + " x" + b + " is x" + a);
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(aliased, new int[n], 0, expected);
+
+      Set<List<Integer>> found;
+      try {
+        found = solveAllAliased(aliased, trial % 3, random.nextInt(), a, b);
+      } catch (IllegalArgumentException e) {
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(
+            name
+                + " trial "
+                + trial
+                + " domains="
+                + Arrays.deepToString(domains)
+                + " "
+                + aliased.description(),
+            e);
+      }
+      assertThat(found)
+          .as(
+              "%s trial %d domains=%s %s",
+              name, trial, Arrays.deepToString(domains), aliased.description())
+          .isEqualTo(expected);
+    }
+  }
+
+  /** Like {@link #solveAll}, but variable {@code b} is the variable {@code a}. */
+  private static Set<List<Integer>> solveAllAliased(
+      Instance instance, int valueOrder, int seed, int a, int b) {
+    Store store = new Store();
+    IntVar[] x = variables(store, instance);
+    x[b] = x[a];
+    instance.impose().accept(store, x);
+    Set<List<Integer>> found = new HashSet<>();
+    if (!store.consistency()) {
+      return found;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            found.add(Arrays.stream(x).map(IntVar::value).toList());
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    Indomain<IntVar> indomain =
+        switch (valueOrder) {
+          case 0 -> new IndomainMin<>();
+          case 1 -> new IndomainMax<>();
+          default -> new IndomainRandom<>(seed);
+        };
+    search.labeling(store, new SimpleSelect<>(x, null, indomain));
+    return found;
+  }
+
+  /**
+   * A single primitive global under {@link Not} must have exactly the assignments that violate it,
+   * and under {@link Reified} with a free 0/1 variable exactly the assignments whose control value
+   * matches; this runs notConsistency, notSatisfied and the reified paths of every case that
+   * imposes one PrimitiveConstraint.
+   */
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("cases")
+  void negationAndReificationMatchBruteForce(String name, Function<Random, Instance> generator) {
+    Random random = new Random(name.hashCode() + 5);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance instance = generator.apply(random);
+      int n = instance.domains().length;
+      if (Arrays.stream(instance.domains()).mapToDouble(d -> d.length).reduce(1, (p, q) -> p * q)
+          > 50_000) {
+        continue;
+      }
+      boolean reify = trial % 2 == 0;
+      int[][] domains = Arrays.copyOf(instance.domains(), reify ? n + 1 : n);
+      if (reify) {
+        domains[n] = new int[] {0, 1};
+      }
+      boolean[] primitive = {true};
+      Instance wrapped =
+          new Instance(
+              domains,
+              (store, x) -> {
+                List<Constraint> imposed = new ArrayList<>();
+                Store recorder =
+                    new Store() {
+                      @Override
+                      public void impose(Constraint c) {
+                        imposed.add(c);
+                      }
+
+                      @Override
+                      public void impose(Constraint c, int queueIndex) {
+                        imposed.add(c);
+                      }
+                    };
+                IntVar[] y = Arrays.copyOf(x, n);
+                // the variables were created in store; the recorder only collects the constraints
+                instance.impose().accept(recorder, y);
+                if (imposed.size() != 1
+                    || recorder.size() > 0
+                    || !(imposed.get(0) instanceof PrimitiveConstraint c)) {
+                  primitive[0] = false;
+                  return;
+                }
+                store.impose(reify ? new Reified(c, x[n]) : new Not(c));
+              },
+              t ->
+                  reify
+                      ? (t[n] == 1) == instance.semantics().test(Arrays.copyOf(t, n))
+                      : !instance.semantics().test(t),
+              instance.description() + (reify ? " reified" : " negated"));
+      Set<List<Integer>> found;
+      try {
+        found = solveAll(wrapped, trial % 3, random.nextInt());
+      } catch (IllegalArgumentException | UnsupportedOperationException e) {
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(
+            name
+                + " trial "
+                + trial
+                + " domains="
+                + Arrays.deepToString(domains)
+                + " "
+                + wrapped.description(),
+            e);
+      }
+      if (!primitive[0]) {
+        continue;
+      }
+      Set<List<Integer>> expected = new HashSet<>();
+      bruteForce(wrapped, new int[domains.length], 0, expected);
+      assertThat(found)
+          .as(
+              "%s trial %d domains=%s %s",
+              name, trial, Arrays.deepToString(domains), wrapped.description())
+          .isEqualTo(expected);
+    }
+  }
+
   private static IntVar[] variables(Store store, Instance instance) {
     IntVar[] x = new IntVar[instance.domains().length];
     for (int i = 0; i < x.length; i++) {
