@@ -238,7 +238,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -324,7 +324,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -409,7 +409,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -493,7 +493,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
-                                <include>**/IncreasingSumFlatzincTest.java</include>
+                                <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

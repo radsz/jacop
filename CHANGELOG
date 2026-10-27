@@ -89,6 +89,17 @@ Version 5.0 (unreleased)
     the variables taking no counted value add up to the list length, so
     search trees can be smaller.
 
+11. New constraint IncreasingNValue(x, count): x is non-decreasing and
+    takes count distinct values, domain consistent in time linear in the
+    total size of the domains of x (Beldiceanu, Hermenier, Lorca and
+    Petit, CPAIOR 2010). The FlatZinc front end posts it instead of Values
+    for a jacop_nvalue (MiniZinc nvalue) whose variables are ordered, by
+    the same order detection as IncreasingSum (now in IncreasingDetector);
+    -Dorg.jacop.fz.increasingNValue=false turns this off. On generated
+    slot-assignment models (symmetric tasks, minimise the slots used),
+    four of fifteen instances that took 12 s, 40 s or more than 60 s are
+    solved in under a second.
+
 Version 4.11
 =============
 
