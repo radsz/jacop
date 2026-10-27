@@ -41,6 +41,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * UnaryTransition is a unary resource (disjunctive constraint) with sequence-dependent transition
@@ -82,7 +85,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class UnaryTransition extends Constraint
-    implements Copyable<UnaryTransition>, SatisfiedPresent {
+    implements Copyable<UnaryTransition>, SatisfiedPresent, Explainable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -122,6 +125,9 @@ public class UnaryTransition extends Constraint
   // the rules on the present and the optional tasks, normal view only
   private final TransitionReasoning withOptional;
   private final int[] optionalTaskAt;
+  // the bounds tt(k), and the explanations for lazy clause generation, made when first asked
+  private final long[] ttk;
+  private UnaryTransitionExplanation explanation;
 
   /**
    * It creates a unary resource with transition times between families of tasks.
@@ -218,6 +224,7 @@ public class UnaryTransition extends Constraint
     }
     long[] ttk = familyBounds(tt);
     famOfTask = fam;
+    this.ttk = ttk;
     normal = new TransitionReasoning(n, tt, ttk);
     reversed = new TransitionReasoning(n, ttReversed, ttk);
     taskAt = new int[n];
@@ -509,7 +516,7 @@ public class UnaryTransition extends Constraint
     store.propagationHasOccurred = changed;
   }
 
-  private int transition(int i, int j) {
+  int transition(int i, int j) {
     return transitions[family[i]][family[j]];
   }
 
@@ -768,6 +775,33 @@ public class UnaryTransition extends Constraint
         starts[i].domain.inMin(store.level, starts[i], clamp(min));
       }
     }
+  }
+
+  /**
+   * Explains a bound of a start or of a duration, or the absence of an optional task, by the pairs,
+   * detectable precedences, not-first and not-last, and edge finding with transition times (see
+   * {@link UnaryTransitionExplanation}).
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explainer() != null && explanation.explain(trail, entry, out);
+  }
+
+  /** Explains a failure by an overload or by a task whose start has no value left. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explainer() != null && explanation.explainFailure(trail, out);
+  }
+
+  // the explanations, for this class only: a subclass may have another relation
+  private UnaryTransitionExplanation explainer() {
+    if (getClass() != UnaryTransition.class) {
+      return null;
+    }
+    if (explanation == null) {
+      explanation = new UnaryTransitionExplanation(this, famOfTask, ttk);
+    }
+    return explanation;
   }
 
   @Override
