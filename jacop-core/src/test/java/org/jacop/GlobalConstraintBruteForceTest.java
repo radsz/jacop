@@ -95,6 +95,7 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -178,6 +179,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Alldiff", alldiff("Alldiff")),
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
         Arguments.of("Alldistinct", alldiff("Alldistinct")),
+        Arguments.of(
+            "OverlappingAlldiff",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::overlappingAlldiff),
         Arguments.of(
             "AlldifferentExceptZero",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::alldifferentExceptZero),
@@ -1040,6 +1044,29 @@ class GlobalConstraintBruteForceTest {
                     }),
             GlobalConstraintBruteForceTest::distinct,
             "");
+  }
+
+  /** alldifferent on s and on t; the variables of both are shared, each variable in s or t. */
+  private static Instance overlappingAlldiff(Random random) {
+    int n = 2 + random.nextInt(6);
+    // 0: only s, 1: only t, 2: both
+    int[] side = new int[n];
+    for (int i = 0; i < n; i++) {
+      side[i] = random.nextInt(3);
+    }
+    int[] s = IntStream.range(0, n).filter(i -> side[i] != 1).toArray();
+    int[] t = IntStream.range(0, n).filter(i -> side[i] != 0).toArray();
+    return new Instance(
+        domains(random, n, 0, 2 + random.nextInt(3)),
+        (store, x) ->
+            store.impose(
+                new OverlappingAlldiff(
+                    Arrays.stream(s).mapToObj(i -> x[i]).toArray(IntVar[]::new),
+                    Arrays.stream(t).mapToObj(i -> x[i]).toArray(IntVar[]::new))),
+        x ->
+            distinct(Arrays.stream(s).map(i -> x[i]).toArray())
+                && distinct(Arrays.stream(t).map(i -> x[i]).toArray()),
+        "s=" + Arrays.toString(s) + " t=" + Arrays.toString(t));
   }
 
   private static Instance alldifferentExceptZero(Random random) {
