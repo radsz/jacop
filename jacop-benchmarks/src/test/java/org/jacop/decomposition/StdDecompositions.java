@@ -150,6 +150,21 @@ final class StdDecompositions {
         "jacop_array_var_bool_element_nonshifted", StdDecompositions::elementNonshifted);
   }
 
+  static {
+    DECOMPOSERS.put("jacop_member_int", StdDecompositions::member);
+    DECOMPOSERS.put("jacop_all_equal_int_reif", StdDecompositions::allEqualReif);
+    DECOMPOSERS.put("jacop_minimum_arg_bool", (b, a) -> argMinMax(b, a, true));
+    DECOMPOSERS.put("jacop_maximum_arg_bool", (b, a) -> argMinMax(b, a, false));
+    DECOMPOSERS.put("jacop_seq_precede_chain_int", (b, a) -> seqPrecedeChain(b, b.array(a.get(0))));
+    DECOMPOSERS.put("jacop_value_precede_chain_int", StdDecompositions::valuePrecedeChain);
+    DECOMPOSERS.put("jacop_disjunctive_strict_optional", StdDecompositions::disjunctiveStrict);
+    DECOMPOSERS.put("jacop_link_set_to_booleans", StdDecompositions::linkSetToBooleans);
+    DECOMPOSERS.put("jacop_disjoint", (b, a) -> disjoint(b, a.get(0), a.get(1)));
+    DECOMPOSERS.put("jacop_partition_set", StdDecompositions::partitionSet);
+    DECOMPOSERS.put("jacop_if_then_else_set", StdDecompositions::ifThenElseSet);
+    DECOMPOSERS.put("jacop_int_set_channel", StdDecompositions::intSetChannel);
+  }
+
   private StdDecompositions() {}
 
   static boolean supports(String constraint) {
@@ -344,7 +359,10 @@ final class StdDecompositions {
    * (max(w)) and (idx != j) = (Mx < w[j]) (Mx > w[j]).
    */
   static void argMinMax(FznBuilder b, List<Expr> a, boolean min) {
-    List<Term> x = b.array(a.get(0));
+    List<Term> x = new ArrayList<>();
+    for (Term t : b.array(a.get(0))) {
+      x.add(t.bool() ? b.bool2int(t) : t);
+    }
     Term idx = b.term(a.get(1));
     long l = b.intArg(a.get(2));
     long n = x.size();
@@ -958,5 +976,204 @@ final class StdDecompositions {
     long minIndex = b.intArg(a.get(3));
     Term shifted = b.sum(new long[] {1}, List.of(idx), 1 - minIndex);
     b.post(y.bool() ? "array_var_bool_element" : "array_var_int_element", shifted, xs, y);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Further integer globals.
+
+  /** fzn_member_int: exists (i) (x[i] = y). */
+  static void member(FznBuilder b, List<Expr> a) {
+    Term y = b.term(a.get(1));
+    List<Term> eqs = new ArrayList<>();
+    for (Term xi : b.array(a.get(0))) {
+      eqs.add(b.eqReif(xi, y));
+    }
+    b.require(b.or(eqs));
+  }
+
+  /** fzn_all_equal_int_reif: b <-> forall (i < j) (x[i] = x[j]). */
+  static void allEqualReif(FznBuilder b, List<Expr> a) {
+    List<Term> x = b.array(a.get(0));
+    List<Term> eqs = new ArrayList<>();
+    for (int i = 0; i < x.size(); i++) {
+      for (int j = i + 1; j < x.size(); j++) {
+        eqs.add(b.eqReif(x.get(i), x.get(j)));
+      }
+    }
+    b.boolEq(b.and(eqs), b.term(a.get(1)));
+  }
+
+  /**
+   * fzn_seq_precede_chain_int: H[f] <= 1, H[f] = max(x[f], 0), H[i] <= H[i - 1] + 1 and H[i] =
+   * max(x[i], H[i - 1]).
+   */
+  static void seqPrecedeChain(FznBuilder b, List<Term> x) {
+    if (x.isEmpty()) {
+      return;
+    }
+    long lo = x.stream().mapToLong(b::lb).min().getAsLong();
+    long hi = x.stream().mapToLong(b::ub).max().getAsLong();
+    Term previous = null;
+    for (Term xi : x) {
+      Term h = b.newInt(lo, hi);
+      if (previous == null) {
+        b.linear(new long[] {1}, List.of(h), "le", 1);
+        b.post("int_max", xi, FznBuilder.constant(0), h);
+      } else {
+        b.linear(new long[] {1, -1}, List.of(h, previous), "le", 1);
+        b.post("int_max", xi, previous, h);
+      }
+      previous = h;
+    }
+  }
+
+  /**
+   * fzn_value_precede_chain_int: Y[i] = p[x[i] - l + 1], where p maps a value to its position in
+   * the chain (0 for values not in it), and seq_precede_chain(Y).
+   */
+  static void valuePrecedeChain(FznBuilder b, List<Expr> a) {
+    long[] order = b.intArray(a.get(0));
+    List<Term> x = b.array(a.get(1));
+    if (order.length == 0 || x.isEmpty()) {
+      return;
+    }
+    long l = x.stream().mapToLong(b::lb).min().getAsLong();
+    long u = x.stream().mapToLong(b::ub).max().getAsLong();
+    long[] p = new long[(int) (u - l + 1)];
+    for (int i = 0; i < order.length; i++) {
+      if (order[i] >= l && order[i] <= u) {
+        p[(int) (order[i] - l)] += i + 1;
+      }
+    }
+    List<Term> y = new ArrayList<>();
+    for (Term xi : x) {
+      if (xi.isConst()) {
+        y.add(FznBuilder.constant(p[(int) (xi.value() - l)]));
+      } else {
+        Term yi = b.newInt(0, order.length);
+        b.post("array_int_element", b.sum(new long[] {1}, List.of(xi), 1 - l), p, yi);
+        y.add(yi);
+      }
+    }
+    seqPrecedeChain(b, y);
+  }
+
+  /**
+   * fzn_disjunctive_strict_opt_decomp: d[i] >= 0 and forall (i < j) (absent(s[i]) \/ absent(s[j])
+   * \/ s[i] + d[i] <= s[j] \/ s[j] + d[j] <= s[i]).
+   */
+  static void disjunctiveStrict(FznBuilder b, List<Expr> a) {
+    List<Term> s = b.array(a.get(0));
+    List<Term> d = b.array(a.get(1));
+    List<Term> occurs = b.array(a.get(2));
+    for (Term di : d) {
+      b.le(FznBuilder.constant(0), di);
+    }
+    for (int i = 0; i < s.size(); i++) {
+      for (int j = i + 1; j < s.size(); j++) {
+        List<Term> or = new ArrayList<>();
+        or.add(before(b, s.get(i), d.get(i), s.get(j)));
+        or.add(before(b, s.get(j), d.get(j), s.get(i)));
+        b.clause(or, List.of(occurs.get(i), occurs.get(j)));
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Set globals.
+
+  /** fzn_link_set_to_booleans: b[i] <-> i in s, with b indexed from offset. */
+  static void linkSetToBooleans(FznBuilder b, List<Expr> a) {
+    String s = b.set(a.get(0));
+    List<Term> bs = b.array(a.get(1));
+    long offset = b.intArg(a.get(2));
+    for (int i = 0; i < bs.size(); i++) {
+      b.post("set_in_reif", offset + i, s, bs.get(i));
+    }
+  }
+
+  /** fzn_disjoint: s intersect t = {}. */
+  static void disjoint(FznBuilder b, Expr s, Expr t) {
+    SetLit universe = b.universe(s);
+    if (universe == null) {
+      throw new UnsupportedOperationException("set without a universe");
+    }
+    String r = b.newSet(universe);
+    b.post("set_intersect", b.set(s), b.set(t), r);
+    b.post("set_eq", r, "{}");
+  }
+
+  /** fzn_partition_set: all_disjoint(x) and universe = array_union(x). */
+  static void partitionSet(FznBuilder b, List<Expr> a) {
+    List<Expr> xs = b.model.elements(a.get(0));
+    String universe = b.set(a.get(1));
+    for (int i = 0; i < xs.size(); i++) {
+      for (int j = i + 1; j < xs.size(); j++) {
+        disjoint(b, xs.get(i), xs.get(j));
+      }
+    }
+    SetLit all = unionOf(b, xs);
+    String union = b.set(xs.get(0));
+    for (int i = 1; i < xs.size(); i++) {
+      String r = b.newSet(all);
+      b.post("set_union", union, b.set(xs.get(i)), r);
+      union = r;
+    }
+    b.post("set_eq", union, universe);
+  }
+
+  private static SetLit unionOf(FznBuilder b, List<Expr> xs) {
+    TreeSet<Long> values = new TreeSet<>();
+    for (Expr x : xs) {
+      SetLit u = b.universe(x);
+      if (u == null) {
+        throw new UnsupportedOperationException("set without a universe");
+      }
+      for (long v : u.values()) {
+        values.add(v);
+      }
+    }
+    return SetLit.of(values.stream().mapToLong(Long::longValue).toArray());
+  }
+
+  /** fzn_if_then_else_set / fzn_if_then_else_var_set. */
+  static void ifThenElseSet(FznBuilder b, List<Expr> a) {
+    List<Term> c = b.array(a.get(0));
+    List<Expr> x = b.model.elements(a.get(1));
+    String y = b.set(a.get(2));
+    Term d = FznBuilder.TRUE;
+    for (int i = 0; i < c.size(); i++) {
+      if (i > 0) {
+        d = b.and(List.of(b.not(c.get(i - 1)), d));
+      }
+      Term eq = b.newBool();
+      b.post("set_eq_reif", y, b.set(x.get(i)), eq);
+      b.clause(List.of(eq), List.of(c.get(i), d));
+    }
+  }
+
+  /**
+   * fzn_int_set_channel: x[i] in index_set(y), y[j] subset index_set(x) and x[i] = j <-> i in y[j],
+   * with the index sets starting at xoff and yoff.
+   */
+  static void intSetChannel(FznBuilder b, List<Expr> a) {
+    List<Term> x = b.array(a.get(0));
+    List<Expr> y = b.model.elements(a.get(1));
+    long xoff = b.intArg(a.get(2));
+    long yoff = b.intArg(a.get(3));
+    for (Term xi : x) {
+      b.in(xi, SetLit.range(yoff, yoff + y.size() - 1));
+    }
+    for (Expr yj : y) {
+      b.post("set_subset", b.set(yj), SetLit.range(xoff, xoff + x.size() - 1));
+    }
+    for (int i = 0; i < x.size(); i++) {
+      for (int j = 0; j < y.size(); j++) {
+        Term eq = b.eqReif(x.get(i), FznBuilder.constant(yoff + j));
+        Term in = b.newBool();
+        b.post("set_in_reif", xoff + i, b.set(y.get(j)), in);
+        b.boolEq(eq, in);
+      }
+    }
   }
 }

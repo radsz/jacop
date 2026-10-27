@@ -197,6 +197,35 @@ final class FznBuilder {
     return new Term(name, 0, false);
   }
 
+  /** Declares a set variable over the given universe and returns its name. */
+  String newSet(SetLit universe) {
+    String name = fresh();
+    declarations.add(
+        "var set of " + FznModel.renderSet(universe) + ": " + name + " :: var_is_introduced");
+    return name;
+  }
+
+  /** A set argument as FlatZinc text: a variable name or a set literal. */
+  String set(Expr e) {
+    Expr r = model.resolveParam(e);
+    if (r instanceof SetLit s) {
+      return FznModel.renderSet(s);
+    }
+    return FznModel.render(r);
+  }
+
+  /** The declared universe of a set argument, or null when it has none. */
+  SetLit universe(Expr e) {
+    Expr r = model.resolveParam(e);
+    if (r instanceof SetLit s) {
+      return s;
+    }
+    if (r instanceof Ident(String name) && model.decls.get(name) != null) {
+      return model.decls.get(name).domain;
+    }
+    return null;
+  }
+
   Term newBool() {
     String name = fresh();
     declarations.add("var bool: " + name + " :: var_is_introduced");

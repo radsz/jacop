@@ -577,8 +577,8 @@ final class FznModel {
           decl.type = BaseType.SET;
           if ("int".equals(peek())) {
             next();
-          } else {
-            expr();
+          } else if (expr() instanceof SetLit universe) {
+            decl.domain = universe;
           }
         }
         default -> {

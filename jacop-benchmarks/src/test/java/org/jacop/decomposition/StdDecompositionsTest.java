@@ -259,6 +259,54 @@ class StdDecompositionsTest {
     vars(d, "v", 1, "0..5");
     models.add(
         model("if_then_else_int", d.toString(), "jacop_if_then_else_int([b1,b2,true],[1,3,5],v1)"));
+
+    d = new StringBuilder();
+    x = vars(d, "x", 3, "0..2");
+    vars(d, "y", 1, "0..3");
+    vars(d, "b", 1, "bool");
+    models.add(model("member_int", d.toString(), "jacop_member_int(" + x + ",y1)"));
+    models.add(model("all_equal_int_reif", d.toString(), "jacop_all_equal_int_reif(" + x + ",b1)"));
+
+    d = new StringBuilder();
+    x = vars(d, "x", 3, "bool");
+    vars(d, "m", 1, "0..4");
+    models.add(model("minimum_arg_bool", d.toString(), "jacop_minimum_arg_bool(" + x + ",m1,1)"));
+    models.add(model("maximum_arg_bool", d.toString(), "jacop_maximum_arg_bool(" + x + ",m1,1)"));
+
+    d = new StringBuilder();
+    x = vars(d, "x", 4, "0..3");
+    models.add(
+        model("seq_precede_chain_int", d.toString(), "jacop_seq_precede_chain_int(" + x + ")"));
+    models.add(
+        model(
+            "value_precede_chain_int",
+            d.toString(),
+            "jacop_value_precede_chain_int([2,0,3]," + x + ")"));
+
+    d = new StringBuilder();
+    s = vars(d, "s", 3, "0..3");
+    o = vars(d, "o", 3, "bool");
+    models.add(
+        model(
+            "disjunctive_strict_optional",
+            d.toString(),
+            "jacop_disjunctive_strict_optional(" + s + ",[1,0,2]," + o + ")"));
+
+    d = new StringBuilder();
+    String sets = vars(d, "t", 3, "set of 1..3");
+    b = vars(d, "b", 3, "bool");
+    models.add(
+        model("link_set_to_booleans", d.toString(), "jacop_link_set_to_booleans(t1," + b + ",1)"));
+    models.add(model("disjoint", d.toString(), "jacop_disjoint(t1,t2)"));
+    models.add(model("partition_set", d.toString(), "jacop_partition_set(" + sets + ",1..3)"));
+    models.add(
+        model(
+            "if_then_else_set",
+            d.toString(),
+            "jacop_if_then_else_set([b1,b2,true],[{1},{2,3},{}],t1)"));
+    vars(d, "x", 3, "1..2");
+    models.add(
+        model("int_set_channel", d.toString(), "jacop_int_set_channel([x1,x2,x3],[t1,t2],1,1)"));
     return models.stream();
   }
 

@@ -94,7 +94,8 @@ import org.junit.jupiter.api.Test;
  *   <li>{@code decomp.constraints}: comma-separated constraint names to check (all supported).
  *   <li>{@code decomp.problems}: regular expression on problem names (all).
  *   <li>{@code decomp.maxProblems}: stop after this many problems were worked on (no limit).
- *   <li>{@code decomp.retry}: comma-separated verdicts to check again, such as DIFF,ERROR.
+ *   <li>{@code decomp.retry}: comma-separated verdicts to check again, such as DIFF,ERROR; EMPTY
+ *       selects the PARTIAL checks that compared no solution.
  *   <li>{@code decomp.threads}: problems checked in parallel (1).
  *   <li>{@code decomp.out}: directory for decomposed models of differences
  *       (target/decomposition-check).
@@ -196,6 +197,14 @@ class DecompositionCheck {
     }
   }
 
+  /** Whether a recorded check is to be run again ({@code decomp.retry}). */
+  private boolean retry(String[] check) {
+    boolean compared =
+        check.length < 14 || !check[13].startsWith("first 0 ") || check[13].contains("accepts");
+    return retry.contains(check[5])
+        || retry.contains("EMPTY") && "PARTIAL".equals(check[5]) && !compared;
+  }
+
   private void checkProblem(String problem) throws IOException {
     Path fzn = Path.of(FZ + category + "/" + problem + ".fzn");
     String text = Files.readString(fzn, StandardCharsets.UTF_8);
@@ -221,7 +230,7 @@ class DecompositionCheck {
         continue;
       }
       String[] done = state.check(problem, hash, name);
-      if (done != null && !retry.contains(done[5])) {
+      if (done != null && !retry(done)) {
         continue;
       }
       if (!StdDecompositions.supports(name)) {
