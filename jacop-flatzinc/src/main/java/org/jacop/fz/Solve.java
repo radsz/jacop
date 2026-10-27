@@ -36,6 +36,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,6 +67,7 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Entry;
 import org.jacop.presolve.Presolver;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
@@ -265,7 +267,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolve();
+      presolve(node);
+      if (opt.useSat() && !opt.lcg()) {
+        postClausesToSat();
+      }
     }
 
     if (opt.debug()) {
@@ -304,10 +309,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
    */
-  private void presolve() {
+  private void presolve(ASTSolveItem node) {
     long start = timer.getCpuTime();
-    Derivation d =
-        Presolver.of(store).checking(options.presolve() == Options.Presolve.CHECK).presolve();
+    Presolver presolver =
+        Presolver.of(store)
+            .checking(options.presolve() == Options.Presolve.CHECK)
+            .eliminate(searchedVariables(node))
+            .keepAllSolutions(
+                satisfy(node) && (options.getAll() || options.getNumberSolutions() > 1));
+    if (options.useSat()) {
+      // the clauses for the SAT solver of -sat or --lcg, kept outside the store
+      presolver.clauses(sat.collectedClauses());
+    }
+    Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
       printPresolveStatistics(d, time);
@@ -319,10 +333,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       case DERIVED -> {
         VarMap map = completeMap(d);
-        for (IntVar[][] clause : sat.collectedClauses()) {
-          clause[0] = map.get(clause[0]);
-          clause[1] = map.get(clause[1]);
-        }
         dictionary = dictionary.mapTo(map);
         store = d.child();
         presolve = d;
@@ -349,9 +359,92 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           return null;
         }
         V copy = d.get(v);
-        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> x.copyTo(d.child()));
+        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> absent(d, x));
       }
     };
+  }
+
+  /**
+   * The counterpart of a variable the child has none of: a copy of a fixed variable, and a constant
+   * for a variable presolve removed, whose value postsolve gives, so search does not branch on it.
+   */
+  private static Var absent(Derivation d, Var x) {
+    if (d.entry(x) instanceof Entry.Eliminated && x instanceof IntVar v) {
+      return new IntVar(d.child(), v.min(), v.min());
+    }
+    return x.copyTo(d.child());
+  }
+
+  /**
+   * The variables search may read: the output variables, which default search labels, and those the
+   * solve item names, the objective and the variables of the search annotations.
+   */
+  private Var[] searchedVariables(ASTSolveItem node) {
+    Set<Var> result = Collections.newSetFromMap(new IdentityHashMap<>());
+    result.addAll(dictionary.outputVariables);
+    for (OutputArrayAnnotation a : dictionary.outputArray) {
+      Collections.addAll(result, a.getArray());
+    }
+    result.addAll(dictionary.defaultSearchVariables);
+    for (Var[] a : dictionary.defaultSearchArrays) {
+      Collections.addAll(result, a);
+    }
+    ArrayDeque<SimpleNode> todo = new ArrayDeque<>();
+    todo.add(node);
+    while (!todo.isEmpty()) {
+      SimpleNode n = todo.poll();
+      for (int i = 0; i < n.jjtGetNumChildren(); i++) {
+        todo.add((SimpleNode) n.jjtGetChild(i));
+      }
+      String ident = null;
+      int index = -1;
+      if (n instanceof ASTScalarFlatExpr e && (e.getType() == 2 || e.getType() == 3)) {
+        ident = e.getIdent();
+        index = e.getType() == 3 ? e.getInt() : -1;
+      } else if (n instanceof ASTSolveExpr e && (e.getType() == 0 || e.getType() == 1)) {
+        ident = e.getIdent();
+        index = e.getType() == 1 ? e.getIndex() : -1;
+      }
+      if (ident != null) {
+        addNamed(result, ident, index);
+      }
+    }
+    return result.toArray(new Var[0]);
+  }
+
+  private void addNamed(Set<Var> result, String ident, int index) {
+    IntVar v = dictionary.variableTable.get(ident);
+    if (v != null) {
+      result.add(dictionary.getVariable(ident));
+    }
+    IntVar[] a = dictionary.variableArrayTable.get(ident);
+    if (a != null) {
+      a = dictionary.getVariableArray(ident);
+      if (index < 0) {
+        Collections.addAll(result, a);
+      } else if (index < a.length) {
+        result.add(a[index]);
+      }
+    }
+  }
+
+  private static boolean satisfy(ASTSolveItem node) {
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (node.jjtGetChild(i) instanceof ASTSolveKind k) {
+        return SATISFY.equals(k.getKind());
+      }
+    }
+    return true;
+  }
+
+  /** Gives the clauses kept for the SAT solver of -sat to a SAT solver in the searched store. */
+  private void postClausesToSat() {
+    SatTranslation translation = new SatTranslation(store);
+    translation.impose();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      translation.generateClause(clause[0], clause[1]);
+    }
+    sat.collectedClauses().clear();
   }
 
   private void printPresolveStatistics(Derivation d, long time) {
@@ -368,6 +461,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+    }
+    Derivation.ClauseStatistics cs = d.clauseStatistics();
+    if (cs != null && cs.clauses() > 0) {
+      s.append("%%%mzn-stat: presolveClausesBefore=").append(cs.clauses()).append('\n');
+      s.append("%%%mzn-stat: presolveClausesAfter=").append(cs.clausesAfter()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseFixed=").append(cs.fixed()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseEquivalent=").append(cs.equivalent()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseEliminated=").append(cs.eliminated()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseSubsumed=").append(cs.subsumed()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseStrengthened=").append(cs.strengthened()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseBlocked=").append(cs.blocked()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());

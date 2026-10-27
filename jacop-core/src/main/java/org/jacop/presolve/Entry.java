@@ -60,4 +60,10 @@ public sealed interface Entry {
    * child has no counterpart; postsolve leaves its domain as it is, so it can take any value.
    */
   record Free() implements Entry {}
+
+  /**
+   * The variable occurred only in clauses that presolve removed: it is neither fixed nor in the
+   * child, and postsolve gives it a value that satisfies the removed clauses.
+   */
+  record Eliminated() implements Entry {}
 }

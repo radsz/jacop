@@ -143,24 +143,36 @@ class PresolveFlatzincTest {
     assertThat(solve(model, "check")).as(model).isEqualTo(solve(model, "off"));
   }
 
+  /**
+   * With -sat the clauses go to the SAT solver after presolve has preprocessed them; the front end
+   * prints the same solutions in the same order.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameWithPresolveAndSat(String model) {
+    assertThat(solve(model, "check", "-sat")).as(model).isEqualTo(solve(model, "off", "-sat"));
+  }
+
   /** Solves a model with the front end, as from the command line, and returns what it prints. */
-  private static String solve(String model, String presolve) {
+  private static String solve(String model, String presolve, String... options) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream out = System.out;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop()
           .callMain(
-              new String[] {
-                "-a",
-                "-n",
-                String.valueOf(LIMIT),
-                "--default-search",
-                "input",
-                "--presolve",
-                presolve,
-                DIR + model
-              });
+              Stream.concat(
+                      Stream.of(options),
+                      Stream.of(
+                          "-a",
+                          "-n",
+                          String.valueOf(LIMIT),
+                          "--default-search",
+                          "input",
+                          "--presolve",
+                          presolve,
+                          DIR + model))
+                  .toArray(String[]::new));
     } finally {
       System.setOut(out);
     }

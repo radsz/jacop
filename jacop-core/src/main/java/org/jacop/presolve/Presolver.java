@@ -86,6 +86,42 @@ public final class Presolver {
   }
 
   /**
+   * Gives clauses kept outside the store to preprocess with the store's clauses; see {@link
+   * Derivation.Builder#clauses(java.util.List)}.
+   *
+   * @param clauses the clauses, a list changed in place to the child's clauses.
+   * @return this presolver.
+   */
+  public Presolver clauses(java.util.List<org.jacop.core.IntVar[][]> clauses) {
+    builder.clauses(clauses);
+    return this;
+  }
+
+  /**
+   * Lets presolve remove variables that occur only in clauses; see {@link
+   * Derivation.Builder#eliminate(Var...)}.
+   *
+   * @param protect the variables that must not be removed.
+   * @return this presolver.
+   */
+  public Presolver eliminate(Var... protect) {
+    builder.eliminate(protect);
+    return this;
+  }
+
+  /**
+   * Keeps one solution of the child for every solution of the parent; see {@link
+   * Derivation.Builder#keepAllSolutions(boolean)}.
+   *
+   * @param on true to keep all solutions.
+   * @return this presolver.
+   */
+  public Presolver keepAllSolutions(boolean on) {
+    builder.keepAllSolutions(on);
+    return this;
+  }
+
+  /**
    * Switches checking mode on: the original constraints are kept and every returned solution is
    * checked against them.
    *
