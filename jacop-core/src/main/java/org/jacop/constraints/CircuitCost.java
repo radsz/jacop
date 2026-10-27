@@ -98,9 +98,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
   private long oneTreeBound = Long.MIN_VALUE;
 
   // the sums of the largest and of the smallest arc cost of each row, from the last call
-  private long rowsUpperBound;
-
-  private long rowsLowerBound;
+  private final long[] rows = new long[2];
 
   // the last minimum assignment
   private long assignmentBound = Long.MIN_VALUE;
@@ -246,24 +244,25 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
         // can only prune when the cost has a smaller upper bound, and the same for the maximum
         // assignment, which in addition only runs when the lower bound of the cost is not the
         // one this constraint set.
-        if (useAssignment && cost.max() < rowsUpperBound) {
-          assignmentBound = minAssignment.solve(list, offset);
-          setMin(store, assignmentBound);
-          minAssignment.prune(store, list, offset, cost.max());
-        }
-        if (useAssignment
-            && cost.min() > rowsLowerBound
-            && cost.min() > Math.max(assignmentBound, oneTreeBound)) {
-          long negatedBound = maxAssignment.solve(list, offset);
-          setMax(store, -negatedBound);
-          maxAssignment.prune(store, list, offset, -(long) cost.min());
+        if (useAssignment) {
+          assignmentBound =
+              CostBounds.assignments(
+                  store,
+                  list,
+                  offset,
+                  cost,
+                  minAssignment,
+                  maxAssignment,
+                  rows,
+                  assignmentBound,
+                  oneTreeBound);
         }
       } while (store.propagationHasOccurred);
 
       // the 1-tree runs once per call and only prunes against an upper bound of the cost tighter
       // than the arc costs give, such as the bound of branch and bound after a first solution
       again = false;
-      if (oneTreePending && cost.max() < rowsUpperBound) {
+      if (oneTreePending && cost.max() < rows[1]) {
         oneTreePending = false;
         if (oneTree == null) {
           oneTree = new OneTree(n, costs);
@@ -303,51 +302,17 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
 
   // cost <= sum of the largest arc cost of each row; exact when all variables are ground
   private void upperBoundFromRows(Store store) {
-    long sumMax = 0;
-    long sumMin = 0;
-    for (int i = 0; i < n; i++) {
-      IntVar x = list[i];
-      int[] row = costs[i];
-      int max = Integer.MIN_VALUE;
-      int min = Integer.MAX_VALUE;
-      int last = x.max();
-      for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-        int c = row[val - offset];
-        if (c > max) {
-          max = c;
-        }
-        if (c < min) {
-          min = c;
-        }
-        if (val >= last) {
-          break;
-        }
-      }
-      sumMax += max;
-      sumMin += min;
-    }
-    rowsUpperBound = sumMax;
-    rowsLowerBound = sumMin;
-    setMax(store, sumMax);
-    setMin(store, sumMin);
+    CostBounds.rowSums(list, costs, offset, rows);
+    setMax(store, rows[1]);
+    setMin(store, rows[0]);
   }
 
   void setMin(Store store, long min) {
-    if (min > cost.max()) {
-      throw Store.failException;
-    }
-    if (min > cost.min()) {
-      cost.domain.inMin(store.level, cost, (int) min);
-    }
+    CostBounds.setMin(store, cost, min);
   }
 
   void setMax(Store store, long max) {
-    if (max < cost.min()) {
-      throw Store.failException;
-    }
-    if (max < cost.max()) {
-      cost.domain.inMax(store.level, cost, (int) max);
-    }
+    CostBounds.setMax(store, cost, max);
   }
 
   void removeArc(Store store, int from, int to) {
@@ -391,14 +356,9 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
     StringBuilder result = new StringBuilder(id());
     result.append(" : CircuitCost([");
     appendArrayToString(result, list);
-    result.append("], [");
-    for (int i = 0; i < n; i++) {
-      result.append(Arrays.toString(costs[i]));
-      if (i < n - 1) {
-        result.append(", ");
-      }
-    }
-    result.append("], ").append(cost);
+    result.append("], ");
+    CostBounds.appendCosts(result, costs);
+    result.append(", ").append(cost);
     if (offset != 1) {
       result.append(", ").append(offset);
     }

@@ -79,13 +79,34 @@ public class CircuitCostDetector implements ParserTreeConstants {
   private final List<SimpleNode> linears = new ArrayList<>();
 
   // an element constraint value = array[index - firstIndex] with a constant array
-  private record Element(IntVar value, int[] array, int firstIndex) {}
+  // (classes rather than records with array components, which would compare the arrays by identity)
+  private static final class Element {
+    final IntVar value;
+    final int[] array;
+    final int firstIndex;
+
+    Element(IntVar value, int[] array, int firstIndex) {
+      this.value = value;
+      this.array = array;
+      this.firstIndex = firstIndex;
+    }
+  }
 
   // b = (x = value), or b = (x != value) when equal is false
   private record Test(IntVar x, int value, boolean equal) {}
 
   // a circuit, or a subcircuit, on x whose values are numbered from offset
-  private record Circuit(IntVar[] x, int offset, boolean sub) {}
+  private static final class Circuit {
+    final IntVar[] x;
+    final int offset;
+    final boolean sub;
+
+    Circuit(IntVar[] x, int offset, boolean sub) {
+      this.x = x;
+      this.offset = offset;
+      this.sub = sub;
+    }
+  }
 
   /**
    * It creates a detector reading variables through the given support.
@@ -112,17 +133,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
-            collect((ASTConstElem) item);
-          }
-        }
-      }
-    }
+    Support.forEachConstraint(astTree, this::collect);
     if (circuits.isEmpty() || elements.isEmpty() || linears.isEmpty()) {
       return;
     }
@@ -241,7 +252,15 @@ public class CircuitCostDetector implements ParserTreeConstants {
   }
 
   // the arc costs of a linear constraint and the variable equal to their sum
-  private record Sum(int[][] costs, IntVar cost) {}
+  private static final class Sum {
+    final int[][] costs;
+    final IntVar cost;
+
+    Sum(int[][] costs, IntVar cost) {
+      this.costs = costs;
+      this.cost = cost;
+    }
+  }
 
   /*
    * The linear constraint sum(a[k] * vars[k]) = rhs or <= rhs as costs[i][x[i]] summed over i: one

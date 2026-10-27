@@ -103,9 +103,7 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
   private SteinerCycleBound steiner;
 
   // the sums of the largest and of the smallest arc cost of each row, from the last call
-  private long rowsUpperBound;
-
-  private long rowsLowerBound;
+  private final long[] rows = new long[2];
 
   // the last lower bounds from the two relaxations
   private long assignmentBound = Long.MIN_VALUE;
@@ -220,24 +218,25 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
         // only prune when the cost has a smaller upper bound, and the same for the maximum
         // assignment, which in addition only runs when the lower bound of the cost is not one
         // this constraint set.
-        if (useAssignment && cost.max() < rowsUpperBound) {
-          assignmentBound = minAssignment.solve(list, offset);
-          setMin(store, assignmentBound);
-          minAssignment.prune(store, list, offset, cost.max());
-        }
-        if (useAssignment
-            && cost.min() > rowsLowerBound
-            && cost.min() > Math.max(assignmentBound, steinerBound)) {
-          long negatedBound = maxAssignment.solve(list, offset);
-          setMax(store, -negatedBound);
-          maxAssignment.prune(store, list, offset, -(long) cost.min());
+        if (useAssignment) {
+          assignmentBound =
+              CostBounds.assignments(
+                  store,
+                  list,
+                  offset,
+                  cost,
+                  minAssignment,
+                  maxAssignment,
+                  rows,
+                  assignmentBound,
+                  steinerBound);
         }
       } while (store.propagationHasOccurred);
 
       // the Steiner bound costs a shortest path search from every required node, so it runs once
       // the assignment has reached its fixpoint, and again only when it pruned
       again = false;
-      if (useSteiner && cost.max() < rowsUpperBound) {
+      if (useSteiner && cost.max() < rows[1]) {
         if (steiner == null) {
           steiner = new SteinerCycleBound(list, costs, offset);
         }
@@ -292,51 +291,17 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
   // the cost is between the sums of the smallest and of the largest arc cost of each row; exact
   // when all variables are ground
   private void boundsFromRows(Store store) {
-    long sumMax = 0;
-    long sumMin = 0;
-    for (int i = 0; i < n; i++) {
-      IntVar x = list[i];
-      int[] row = costs[i];
-      int max = Integer.MIN_VALUE;
-      int min = Integer.MAX_VALUE;
-      int last = x.max();
-      for (int val = x.min(); ; val = x.domain.nextValue(val)) {
-        int c = row[val - offset];
-        if (c > max) {
-          max = c;
-        }
-        if (c < min) {
-          min = c;
-        }
-        if (val >= last) {
-          break;
-        }
-      }
-      sumMax += max;
-      sumMin += min;
-    }
-    rowsUpperBound = sumMax;
-    rowsLowerBound = sumMin;
-    setMax(store, sumMax);
-    setMin(store, sumMin);
+    CostBounds.rowSums(list, costs, offset, rows);
+    setMax(store, rows[1]);
+    setMin(store, rows[0]);
   }
 
   void setMin(Store store, long min) {
-    if (min > cost.max()) {
-      throw Store.failException;
-    }
-    if (min > cost.min()) {
-      cost.domain.inMin(store.level, cost, (int) min);
-    }
+    CostBounds.setMin(store, cost, min);
   }
 
   void setMax(Store store, long max) {
-    if (max < cost.min()) {
-      throw Store.failException;
-    }
-    if (max < cost.max()) {
-      cost.domain.inMax(store.level, cost, (int) max);
-    }
+    CostBounds.setMax(store, cost, max);
   }
 
   @Override
@@ -363,14 +328,9 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
     StringBuilder result = new StringBuilder(id());
     result.append(" : SubcircuitCost([");
     appendArrayToString(result, list);
-    result.append("], [");
-    for (int i = 0; i < n; i++) {
-      result.append(Arrays.toString(costs[i]));
-      if (i < n - 1) {
-        result.append(", ");
-      }
-    }
-    result.append("], ").append(cost);
+    result.append("], ");
+    CostBounds.appendCosts(result, costs);
+    result.append(", ").append(cost);
     if (offset != 1) {
       result.append(", ").append(offset);
     }

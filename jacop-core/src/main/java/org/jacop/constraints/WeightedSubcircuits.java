@@ -111,9 +111,7 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
   private SteinerCycleBound steiner;
 
   // the sums of the largest and of the smallest arc cost of each row, from the last call
-  private long rowsUpperBound;
-
-  private long rowsLowerBound;
+  private final long[] rows = new long[2];
 
   private long assignmentBound = Long.MIN_VALUE;
 
@@ -268,16 +266,17 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
       if (useAssignment) {
         do {
           store.propagationHasOccurred = false;
-          if (cost.max() < rowsUpperBound) {
-            assignmentBound = minAssignment.solve(list, offset);
-            setMin(store, cost, assignmentBound);
-            minAssignment.prune(store, list, offset, cost.max());
-          }
-          if (cost.min() > rowsLowerBound && cost.min() > assignmentBound) {
-            long negatedBound = maxAssignment.solve(list, offset);
-            setMax(store, cost, -negatedBound);
-            maxAssignment.prune(store, list, offset, -(long) cost.min());
-          }
+          assignmentBound =
+              CostBounds.assignments(
+                  store,
+                  list,
+                  offset,
+                  cost,
+                  minAssignment,
+                  maxAssignment,
+                  rows,
+                  assignmentBound,
+                  Long.MIN_VALUE);
         } while (store.propagationHasOccurred);
       }
 
@@ -567,26 +566,26 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
         }
       }
     }
-    rowsUpperBound = sumMax;
-    rowsLowerBound = sumMin;
-    setMax(store, cost, sumMax);
-    setMin(store, cost, sumMin);
+    rows[0] = sumMin;
+    rows[1] = sumMax;
+    CostBounds.setMax(store, cost, sumMax);
+    CostBounds.setMin(store, cost, sumMin);
     long costsMin = 0;
     long costsMax = 0;
     for (int tv = 1; tv <= k; tv++) {
       IntVar tc = tourCost[tv - 1];
       tourUpperBound[tv] = tourMax[tv];
-      setMin(store, tc, tourMin[tv]);
-      setMax(store, tc, tourMax[tv]);
+      CostBounds.setMin(store, tc, tourMin[tv]);
+      CostBounds.setMax(store, tc, tourMax[tv]);
       costsMin += tc.min();
       costsMax += tc.max();
     }
-    setMin(store, cost, costsMin + outMin);
-    setMax(store, cost, costsMax + outMax);
+    CostBounds.setMin(store, cost, costsMin + outMin);
+    CostBounds.setMax(store, cost, costsMax + outMax);
     for (int tv = 1; tv <= k; tv++) {
       IntVar tc = tourCost[tv - 1];
-      setMin(store, tc, cost.min() - (costsMax - tc.max()) - outMax);
-      setMax(store, tc, cost.max() - (costsMin - tc.min()) - outMin);
+      CostBounds.setMin(store, tc, cost.min() - (costsMax - tc.max()) - outMax);
+      CostBounds.setMax(store, tc, cost.max() - (costsMin - tc.min()) - outMin);
     }
   }
 
@@ -635,7 +634,7 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
 
     IntVar tc = tourCost[t - 1];
     long lowerBound = base + steiner.solve();
-    setMin(store, tc, lowerBound);
+    CostBounds.setMin(store, tc, lowerBound);
     long slack = tc.max() - lowerBound;
 
     int level = store.level;
@@ -661,24 +660,6 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
           break;
         }
       }
-    }
-  }
-
-  private static void setMin(Store store, IntVar v, long min) {
-    if (min > v.max()) {
-      throw Store.failException;
-    }
-    if (min > v.min()) {
-      v.domain.inMin(store.level, v, (int) min);
-    }
-  }
-
-  private static void setMax(Store store, IntVar v, long max) {
-    if (max < v.min()) {
-      throw Store.failException;
-    }
-    if (max < v.max()) {
-      v.domain.inMax(store.level, v, (int) max);
     }
   }
 
@@ -754,14 +735,9 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
     appendArrayToString(result, list);
     result.append("], [");
     appendArrayToString(result, tour);
-    result.append("], [");
-    for (int i = 0; i < n; i++) {
-      result.append(Arrays.toString(costs[i]));
-      if (i < n - 1) {
-        result.append(", ");
-      }
-    }
-    result.append("], [");
+    result.append("], ");
+    CostBounds.appendCosts(result, costs);
+    result.append(", [");
     appendArrayToString(result, tourCost);
     result.append("], ").append(cost);
     if (offset != 1) {
