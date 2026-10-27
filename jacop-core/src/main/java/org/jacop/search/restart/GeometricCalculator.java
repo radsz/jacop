@@ -64,6 +64,12 @@ public class GeometricCalculator extends Calculator {
     startRun((long) (scale * Math.pow(base, ++n)));
   }
 
+  @Override
+  public void reset() {
+    n = 0;
+    startRun(scale);
+  }
+
   /**
    * Returns a string representation of this geometric calculator.
    *

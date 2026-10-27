@@ -64,6 +64,8 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
   private long probes;
   private boolean untilFirstSolution;
   private boolean solved;
+  private int every;
+  private long runs;
 
   /**
    * Creates the heuristic.
@@ -86,6 +88,7 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
   @Override
   public int indomain(IntVar v) {
     if ((untilFirstSolution && solved)
+        || (every > 0 && runs % every != 0)
         || v == objective
         || v.getSize() > maxDomain
         || v.singleton()) {
@@ -131,9 +134,26 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
     return this;
   }
 
+  /**
+   * Probes only in the first run and then every given number of runs, as Choco's bound-impact value
+   * selection does (every 16 restarts there); the other runs use the wrapped heuristic.
+   *
+   * @param restarts the number of runs between two runs that probe.
+   * @return this heuristic.
+   */
+  public IndomainBoundImpact everyRestarts(int restarts) {
+    this.every = restarts;
+    return this;
+  }
+
   @Override
   public void onSolution(FreeSearch search) {
     solved = true;
+  }
+
+  @Override
+  public void onRestart(FreeSearch search) {
+    runs++;
   }
 
   /**
