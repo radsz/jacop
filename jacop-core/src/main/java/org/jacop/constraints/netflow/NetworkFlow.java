@@ -34,6 +34,7 @@ import static org.jacop.constraints.netflow.Assert.checkFlow;
 import static org.jacop.constraints.netflow.Assert.checkStructure;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -49,6 +50,7 @@ import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.IntDomain;
@@ -92,6 +94,9 @@ public class NetworkFlow extends Constraint
   private boolean disableQueueVariable;
 
   private int previousLevel = -1;
+
+  /** Pairs of a variable of the caller and the copy the network uses for one of its roles. */
+  private final List<IntVar[]> copies = new ArrayList<>();
 
   /** The network as given to the constructor, or null if it has handlers a copy cannot rebuild. */
   private final Definition definition;
@@ -213,13 +218,17 @@ public class NetworkFlow extends Constraint
 
   // It can handle duplicates of variables thanks to using MultiVarHandler that takes care of this.
   private NetworkFlow(
-      List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar costVariable) {
+      List<Node> nodes, List<Arc> arcs, List<VarHandler> flowVariables, IntVar cost) {
 
-    this.definition = Definition.of(nodes, arcs, flowVariables, costVariable);
+    // the network of the caller, before separateRoles gives variables in two roles a copy
+    this.definition = Definition.of(nodes, arcs, flowVariables, cost);
     this.network = new Pruning(nodes, arcs, statistics);
     this.map = Var.createEmptyPositioning();
     this.queue = new HashSet<>();
-    this.costVariable = costVariable;
+    this.costVariable = cost;
+    // may replace costVariable by a copy
+    separateRoles(flowVariables);
+    IntVar costVariable = this.costVariable;
 
     for (VarHandler ds : flowVariables) {
       for (IntVar v : ds.listVariables()) {
@@ -256,6 +265,46 @@ public class NetworkFlow extends Constraint
     this.numberId = idNumber.incrementAndGet();
 
     setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
+  }
+
+  /**
+   * A variable that is the weight of an arc and also the flow or structure variable of another arc,
+   * or the cost and also an arc variable, is pruned in one role during the sensitivity analysis
+   * while the network still holds its old bounds in the other role (an arc cost no longer equal to
+   * its weight's minimum, or a cost bound computed from stale flows). Such a weight and such a cost
+   * get a copy of their own, kept equal to the original by an XeqY imposed with the network.
+   */
+  private void separateRoles(List<VarHandler> handlers) {
+    Set<IntVar> arcVariables = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (VarHandler handler : handlers) {
+      if (handler instanceof ArcCompanion companion) {
+        if (companion.xVar != null) {
+          arcVariables.add(companion.xVar);
+        }
+      } else {
+        arcVariables.addAll(handler.listVariables());
+      }
+    }
+    for (VarHandler handler : handlers) {
+      if (handler instanceof ArcCompanion companion
+          && companion.wVar != null
+          && !companion.wVar.singleton()
+          && (arcVariables.contains(companion.wVar) || companion.wVar == costVariable)) {
+        companion.wVar = copyOf(companion.wVar);
+      }
+    }
+    for (VarHandler handler : handlers) {
+      arcVariables.addAll(handler.listVariables());
+    }
+    if (costVariable != null && arcVariables.contains(costVariable)) {
+      costVariable = copyOf(costVariable);
+    }
+  }
+
+  private IntVar copyOf(IntVar variable) {
+    IntVar copy = new IntVar(variable.getStore(), variable.dom().cloneLight());
+    copies.add(new IntVar[] {variable, copy});
+    return copy;
   }
 
   /**
@@ -305,6 +354,10 @@ public class NetworkFlow extends Constraint
     queueIndex = QUEUE_INDEX;
     store.registerRemoveLevelLateListener(this);
     super.impose(store);
+
+    for (IntVar[] pair : copies) {
+      store.impose(new XeqY(pair[0], pair[1]));
+    }
   }
 
   /* Search {@literal &} Backtracking */
