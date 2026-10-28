@@ -1464,6 +1464,65 @@ class LcgSolverTest {
   }
 
   /**
+   * Long tasks, as in the largescheduling benchmark: the time table made holes of thousands of
+   * start values in one go, each an atom with a literal of its own, and the solver ran out of
+   * memory before a first solution; a start with no value left was explained by every atom of the
+   * constraint. Under LCG the time table now keeps to the bounds of the starts, and such a failure
+   * has an explanation of its own.
+   */
+  @Test
+  void longTasksKeepTheTimeTableToTheBounds() {
+    Random rnd = new Random(11);
+    int n = 30;
+    Store store = new Store();
+    IntVar[] s = new IntVar[n];
+    IntVar[] durations = new IntVar[n];
+    IntVar[] resources = new IntVar[n];
+    int[] d = new int[n];
+    int[] r = new int[n];
+    int horizon = 0;
+    for (int i = 0; i < n; i++) {
+      d[i] = 5000 + rnd.nextInt(15000);
+      r[i] = 1 + rnd.nextInt(40);
+      horizon += d[i];
+    }
+    IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, horizon);
+      durations[i] = new IntVar(store, d[i], d[i]);
+      resources[i] = new IntVar(store, r[i], r[i]);
+      store.impose(new XplusClteqZ(s[i], d[i], makespan));
+    }
+    int limit = 50;
+    store.impose(new Cumulative(s, durations, resources, new IntVar(store, limit, limit)));
+    LcgSolver solver = new LcgSolver(store);
+    solver.sat().setConflictLimit(2000);
+    solver.minimize(makespan);
+
+    int end = solver.value(makespan);
+    for (int i = 0; i < n; i++) {
+      assertThat(solver.value(s[i]) + d[i]).isLessThanOrEqualTo(end);
+    }
+    for (int i = 0; i < n; i++) {
+      // the load where a task starts is the highest it reaches while that task runs
+      int time = solver.value(s[i]);
+      int load = 0;
+      for (int k = 0; k < n; k++) {
+        if (solver.value(s[k]) <= time && time < solver.value(s[k]) + d[k]) {
+          load += r[k];
+        }
+      }
+      assertThat(load).isLessThanOrEqualTo(limit);
+    }
+    assertThat(solver.sat().conflicts).isPositive();
+    // one hole of a long task alone was thousands of literals
+    assertThat(solver.sat().numVars()).isLessThan(100_000);
+    long[] counts = solver.explanationStatistics().get("Cumulative");
+    assertThat(counts[3]).as("failures of the cumulative").isPositive();
+    assertThat(counts[4]).as("failures explained generically").isZero();
+  }
+
+  /**
    * CountValues prunes with an internal variable for the number of variables equal to no counted
    * value. The variable was not among the constraint's arguments, so the generic reason left out
    * its atoms, among them the solver's own decisions on it, and the learnt clauses cut off the
