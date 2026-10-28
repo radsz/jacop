@@ -254,6 +254,9 @@ public class Store {
    */
   private Stateful[] timeStampTrail = new Stateful[64];
 
+  /** The trail of the domains changed in place, see {@link DomainTrail}. */
+  final DomainTrail domainTrail = new DomainTrail();
+
   /** The level of the corresponding entry of timeStampTrail. */
   private int[] timeStampTrailLevel = new int[64];
 
@@ -547,9 +550,12 @@ public class Store {
       variablesPrunned.add(v);
     }
 
-    recordChange(v);
-
     Domain vdomain = v.dom();
+
+    // a domain on the domain trail is restored without visiting its variable
+    if (!vdomain.onDomainTrail) {
+      recordChange(v);
+    }
 
     queueModelConstraintsForVariable(vdomain, v, pruningEvent);
     queueSearchConstraintsForVariable(vdomain, v);
@@ -1493,6 +1499,8 @@ public class Store {
         }
       }
     }
+
+    domainTrail.removeLevel(level);
 
     trailManager.removeLevel(level);
 
