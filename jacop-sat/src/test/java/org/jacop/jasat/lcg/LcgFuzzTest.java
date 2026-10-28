@@ -582,8 +582,16 @@ class LcgFuzzTest {
                         s, chain("d", 3, 0, 3), chain("r", 3, 1, 2), chain("c", 1, 1, 4)[0]);
               }
               case 1 ->
-                  new Binpacking(
-                      pick(x, 3), chain("l", 3, 0, 4), new int[] {1 + rnd.nextInt(3), 2, 1}, -1);
+                  rnd.nextBoolean()
+                      ? new Binpacking(
+                          pick(x, 3), chain("l", 3, 0, 4), new int[] {1 + rnd.nextInt(3), 2, 1}, -1)
+                      // the number of items of each bin as variables
+                      : new Binpacking(
+                          pick(x, 3),
+                          chain("l", 3, 0, 4),
+                          new int[] {rnd.nextInt(3), 2, 1},
+                          -1,
+                          chain("k", 3, 0, 2));
               default -> {
                 IntVar[] o = pick(x, 3);
                 IntVar[] o2 = pick(x, 3);

@@ -337,6 +337,9 @@ class GlobalConstraintBruteForceTest {
             "BinpackingTight",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
         Arguments.of(
+            "BinpackingCardinality",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingCardinality),
+        Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
         Arguments.of("Alternative", optionalIntervals(false)),
         Arguments.of("Span", optionalIntervals(true)),
@@ -2650,20 +2653,25 @@ class GlobalConstraintBruteForceTest {
         "weights=" + Arrays.toString(weights));
   }
 
-  /** Larger items and tight loads, so that the bin-count bounds prune during the search. */
+  /**
+   * Larger items and tight loads, so that the bin-count bounds prune during the search; half of the
+   * instances also use the cardinality rules.
+   */
   private static Instance binpackingTight(Random random) {
     int items = 3 + random.nextInt(4);
     int bins = 2 + random.nextInt(2);
     int[] weights = randomInts(random, items, 1, 6);
+    boolean cardinality = random.nextBoolean();
     return new Instance(
         append(domains(random, items, 0, bins - 1), domains(random, bins, 0, 7)),
         (store, x) ->
             store.impose(
                 new Binpacking(
-                    Arrays.copyOfRange(x, 0, items),
-                    Arrays.copyOfRange(x, items, items + bins),
-                    weights.clone(),
-                    0)),
+                        Arrays.copyOfRange(x, 0, items),
+                        Arrays.copyOfRange(x, items, items + bins),
+                        weights.clone(),
+                        0)
+                    .cardinalityReasoning(cardinality)),
         x -> {
           int[] load = new int[bins];
           for (int i = 0; i < items; i++) {
@@ -2676,7 +2684,54 @@ class GlobalConstraintBruteForceTest {
           }
           return true;
         },
-        "weights=" + Arrays.toString(weights));
+        "weights=" + Arrays.toString(weights) + " cardinality=" + cardinality);
+  }
+
+  /**
+   * Bin packing with the number of items of each bin as variables; items of weight 0 and items
+   * sharing a bin variable are counted once per occurrence.
+   */
+  private static Instance binpackingCardinality(Random random) {
+    int vars = 2 + random.nextInt(4);
+    int items = vars + random.nextInt(2);
+    int bins = 2 + random.nextInt(2);
+    int[] var = new int[items];
+    for (int i = 0; i < items; i++) {
+      var[i] = i < vars ? i : random.nextInt(vars);
+    }
+    int[] weights = randomInts(random, items, 0, 4);
+    return new Instance(
+        append(
+            append(domains(random, vars, 0, bins - 1), domains(random, bins, 0, 7)),
+            domains(random, bins, 0, 3)),
+        (store, x) -> {
+          IntVar[] item = new IntVar[items];
+          for (int i = 0; i < items; i++) {
+            item[i] = x[var[i]];
+          }
+          store.impose(
+              new Binpacking(
+                  item,
+                  Arrays.copyOfRange(x, vars, vars + bins),
+                  weights.clone(),
+                  0,
+                  Arrays.copyOfRange(x, vars + bins, vars + 2 * bins)));
+        },
+        x -> {
+          int[] load = new int[bins];
+          int[] count = new int[bins];
+          for (int i = 0; i < items; i++) {
+            load[x[var[i]]] += weights[i];
+            count[x[var[i]]]++;
+          }
+          for (int b = 0; b < bins; b++) {
+            if (load[b] != x[vars + b] || count[b] != x[vars + bins + b]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "items=" + Arrays.toString(var) + " weights=" + Arrays.toString(weights));
   }
 
   private static Instance knapsack(Random random) {
