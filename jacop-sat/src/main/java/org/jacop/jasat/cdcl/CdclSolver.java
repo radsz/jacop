@@ -259,6 +259,8 @@ public final class CdclSolver {
 
   // --- limits, proof, statistics
   private volatile boolean interrupted;
+  // set by cancel(): every later solve() stops at once as well
+  private volatile boolean cancelled;
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
   private DratWriter proof;
@@ -471,7 +473,7 @@ public final class CdclSolver {
         restoreEliminated();
       }
     }
-    interrupted = false;
+    interrupted = cancelled;
     backtrack(0);
     if (elimination && !eliminationTried && conflicts == 0 && !externalUsed && numUnits == 0) {
       eliminationTried = true;
@@ -525,6 +527,15 @@ public final class CdclSolver {
    * Asks a running {@link #solve} to stop and return {@link #UNKNOWN}; safe from another thread.
    */
   public void interrupt() {
+    interrupted = true;
+  }
+
+  /**
+   * Stops a running {@link #solve}, as {@link #interrupt()}, and every later call of it, which
+   * returns {@link #UNKNOWN}; safe from another thread.
+   */
+  public void cancel() {
+    cancelled = true;
     interrupted = true;
   }
 
