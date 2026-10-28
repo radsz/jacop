@@ -353,7 +353,19 @@ Version 5.0 (unreleased)
     (--lcg -f, 60 s) the solved ones take 2 % less time (geometric mean)
     and gbac reaches a better objective on 5 of 6.
 
-27. FlatZinc objective presolve (the objective equation shifted by the
+27. New constraint GlobalCardinality(x, values, counters) and
+    GlobalCardinality(x, values, low, up): domain consistent global
+    cardinality (Regin, AAAI 1996) on x, with the counters as intervals;
+    values outside values are not restricted. The FlatZinc front end posts
+    it for global_cardinality (jacop_count_values, _bounds and the closed
+    forms) annotated :: domain, which used to be ignored. It explores the
+    search tree of Gecode's domain consistent gcc. On rows and columns
+    with cardinality bounds and forbidden values it solves 8 of 12 random
+    instances in 60 s where counting solves 6, with 3x to 900x fewer
+    nodes; on Challenge models that do not ask for :: domain counting is
+    as good and cheaper, so it stays the default.
+
+28. FlatZinc objective presolve (the objective equation shifted by the
     exactly-one sets of the model) runs without --presolve too, with
     degree weight 0. It reads n = count(x, v) (jacop_count) as
     n = sum(x[i] = v) when every x[i] has a literal for v, and the shifted
