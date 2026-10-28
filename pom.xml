@@ -243,6 +243,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -362,6 +363,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -485,6 +487,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -608,6 +611,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
