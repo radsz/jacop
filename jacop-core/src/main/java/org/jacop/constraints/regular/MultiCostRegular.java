@@ -862,7 +862,7 @@ public class MultiCostRegular extends Constraint
           continue;
         }
         if (upperActive[r]) {
-          double g = pathCost[r] - cost[r].max();
+          double g = (double) pathCost[r] - cost[r].max();
           if (g > 0) {
             feasible = false;
           }
@@ -871,7 +871,7 @@ public class MultiCostRegular extends Constraint
           }
         }
         if (lowerActive[r]) {
-          double g = cost[r].min() - pathCost[r];
+          double g = cost[r].min() - (double) pathCost[r];
           if (g > 0) {
             feasible = false;
           }
