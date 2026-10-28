@@ -77,7 +77,13 @@ public abstract class AbstractOptionalIntervals extends Constraint implements Sa
   AbstractOptionalIntervals(
       IntVar p0, IntVar s0, IntVar d0, IntVar[] p, IntVar[] s, IntVar[] d, String name) {
     checkInputForNullness(
-        new String[] {"p0", "s0", "d0", "p", "s", "d"}, new Object[][] {{p0}, {s0}, {d0}, p, s, d});
+        new String[] {"p0", "s0", "d0", "p", "s", "d"},
+        new Object[] {p0},
+        new Object[] {s0},
+        new Object[] {d0},
+        p,
+        s,
+        d);
     if (p.length != s.length || s.length != d.length) {
       throw new IllegalArgumentException(
           name + ": presences, starts and durations must have the same length.");
