@@ -238,6 +238,21 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. New option --lp adds the linear relaxation of the model's linear
+    constraints (org.jacop.constraints.lp.LinearRelaxation) as a
+    propagator. A bounded dual simplex, warm-started from the previous
+    node, solves it at the nodes of the search (backing off while it
+    deduces nothing). A Farkas certificate of an infeasible relaxation, or
+    the duals of the objective, are rounded to integer multipliers and the
+    combination of the rows is computed exactly, so each deduction is a
+    valid linear inequality, explained by LinearForm under --lcg. Models
+    whose tableau would exceed 4M entries are left out
+    (-Dorg.jacop.lp.maxTableau). On the 414 vs-ortools instances (20 s)
+    --lp proves 114 instead of 106 (with --lcg 152 instead of 147),
+    including wwtpp-real UNSAT instances in about a second and rel2onto
+    optima. LinearExplanation now merges a variable that occurs with
+    weights of both signs and refuses reasons whose sums overflow a long.
+
 Version 4.11
 =============
 
