@@ -184,6 +184,23 @@ Version 5.0 (unreleased)
     the cumulative too and =false turns this off. On 90 runway instances
     with time windows (one to three runways, 30 to 90 aircraft, 60 s) it
     answers 79 instead of 63; Gecode answers 59 and Chuffed 60.
+18. New constraint Reservoir(times, changes, min, max) and a MiniZinc
+    predicate reservoir in the JaCoP library: the level, the sum of the
+    changes of the events at or before each time, stays within min..max.
+    It propagates with the balance constraint of Laborie (AIJ 2003) over
+    the precedences x + c <= y of the model, which the FlatZinc front end
+    gives it. On 30 project scheduling instances with storages (60 s) it
+    finds solutions on 29 instead of 25 and proves the optima both prove
+    1.8 times faster than the decomposition.
+
+19. New constraint EnergyPrecedence (Laborie, AIJ 2003): the tasks that
+    must end before a time point (such as a makespan) need their energy
+    between their earliest start and that point, and symmetrically for
+    the tasks that must start after it. The FlatZinc front end posts it on
+    every cumulative whose tasks are ordered by the precedences of the
+    model; -Dorg.jacop.fz.energyPrecedence=false turns this off. On the
+    560 cumulative benchmark instances (30 s) it proves 215 optima instead
+    of 211 and loses none.
 
 Version 4.11
 =============
