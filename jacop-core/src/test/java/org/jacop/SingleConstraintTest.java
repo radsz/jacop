@@ -6312,6 +6312,23 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testCumulativeResourceOfTaskOutsideProfile() {
+
+    // The third task must run at time 25, where the first two use the whole capacity, so it
+    // cannot use the resource. With a resource use of 0 or 6 it is not in the profile, and the
+    // sweep only checked its resource use at the dates where the profile changes (24 and 26).
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 24, 24), new IntVar(store, 20, 20), new IntVar(store, 22, 25)};
+    IntVar[] d = {new IntVar(store, 2, 2), new IntVar(store, 6, 6), new IntVar(store, 4, 4)};
+    IntVar r3 = new IntVar(store, 0, 0);
+    r3.addDom(6, 6);
+    IntVar[] r = {new IntVar(store, 6, 6), new IntVar(store, 9, 9), r3};
+    store.impose(new Cumulative(s, d, r, new IntVar(store, 15, 15)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(r3.singleton(0)).isTrue();
+  }
+
+  @Test
   void testCumulativeOptional() {
 
     // An optional task that fits right after the profile of the present tasks was made absent.
