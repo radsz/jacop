@@ -37,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.core.IntVar;
@@ -277,14 +278,24 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       }
       int[][] tt = cliques.transitions(clique);
       boolean setups = Arrays.stream(tt).flatMapToInt(Arrays::stream).anyMatch(t -> t > 0);
-      // with setup times in the disjunctions the unary resource counts them
-      Constraint unary =
-          setups ? new UnaryTransition(s, d, tt) : new CumulativeUnary(s, d, r, one, true);
+      // with setup times in the disjunctions the unary resource counts them; tasks of one fixed
+      // length without setups are an inter-distance, whose propagator is bounds consistent
+      int length = equalLength(d);
+      Constraint unary;
+      if (setups) {
+        unary = new UnaryTransition(s, d, tt);
+      } else if (length > 1 && !"false".equals(GlobalConstraints.interDistanceMode())) {
+        unary = new InterDistance(s, length);
+      } else {
+        unary = new CumulativeUnary(s, d, r, one, true);
+      }
       // redundant, so degree-based variable selections see the degrees of the model
       unary.setDegreeWeight(0);
       if (support.options.debug()) {
         FzConsole.println(
-            "% redundant unary resource on "
+            "% redundant "
+                + (unary instanceof InterDistance ? "inter-distance" : "unary resource")
+                + " on "
                 + clique.length
                 + " tasks"
                 + (setups ? " with transition times" : ""));
@@ -292,5 +303,15 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       support.delayedConstraints.add(unary);
       support.unaryResources.add(new IntVar[][] {s, d});
     }
+  }
+
+  /** The common fixed length of the tasks, or 0 if they differ or one is not fixed. */
+  private static int equalLength(IntVar[] d) {
+    for (IntVar v : d) {
+      if (!v.singleton() || v.value() != d[0].value()) {
+        return 0;
+      }
+    }
+    return d[0].value();
   }
 }
