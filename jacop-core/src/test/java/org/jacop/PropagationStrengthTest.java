@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiFunction;
+import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
@@ -58,6 +59,7 @@ import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -171,6 +173,30 @@ class PropagationStrengthTest {
     y.domain.in(store.level, y, 1, 2);
     assertThat(store.consistency()).isTrue();
     assertThat(x.dom().toString()).isEqualTo("{2..3}");
+  }
+
+  // notSatisfied() of 2 * x = z and of y = |x| looks at the holes of a domain, but a reification
+  // was woken on bounds only, so b = 0 waited until the variables were fixed
+  @Test
+  void testReificationNoticesFailureMadeByRemovedValues() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar z = new IntVar(store, "z", 0, 6);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(x, 2, z), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(removeValues(store, z, 2, 3, 4)).isTrue();
+    assertThat(b.dom().toString()).isEqualTo("0");
+
+    store = new Store();
+    x = new IntVar(store, "x", -3, 3);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new AbsXeqY(x, y), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(removeValues(store, x, -2, -1, 0, 1, 2)).isTrue();
+    assertThat(b.dom().toString()).isEqualTo("0");
   }
 
   /**
