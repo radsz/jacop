@@ -594,6 +594,15 @@ public class AmongVar extends Constraint
 
   @Override
   public void consistency(Store store) {
+    // a pass prunes n after it has looked at X and Y, and the constraint is not woken again by its
+    // own pruning, so a pass that pruned anything is repeated until nothing changes
+    do {
+      store.propagationHasOccurred = false;
+      consistencyPass(store);
+    } while (store.propagationHasOccurred);
+  }
+
+  private void consistencyPass(Store store) {
 
     // pureUbs ubs usually equals to ubs \ lbs and is used upon calculating
     // the lbV and ubV hashtables

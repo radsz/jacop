@@ -202,6 +202,7 @@ setup to run configuration. -->
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
+                                <wakeup.trials>1000</wakeup.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -230,6 +231,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -337,6 +339,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -445,6 +448,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -553,6 +557,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>

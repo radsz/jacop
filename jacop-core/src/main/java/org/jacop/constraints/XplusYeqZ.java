@@ -123,7 +123,8 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // notSatisfied() also notices the removal of the one value two fixed variables need
+    return IntDomain.ANY;
   }
 
   @Override
@@ -174,6 +175,14 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
     IntDomain xDom = x.dom();
     IntDomain yDom = y.dom();
     IntDomain zDom = z.dom();
+    if (xDom.singleton() && yDom.singleton()) {
+      return !zDom.contains(xDom.value() + yDom.value());
+    }
+    if (zDom.singleton() && (xDom.singleton() || yDom.singleton())) {
+      return xDom.singleton()
+          ? !yDom.contains(zDom.value() - xDom.value())
+          : !xDom.contains(zDom.value() - yDom.value());
+    }
     return xDom.max() + yDom.max() < zDom.min() || xDom.min() + yDom.min() > zDom.max();
   }
 
