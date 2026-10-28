@@ -445,7 +445,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ObjectivePresolve presolve =
         new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
     List<Constraint> reformulation = presolve.reformulate(store);
-    Constraint replaced = reformulation.isEmpty() ? null : objectiveDefinition(objective, presolve);
+    Constraint replaced =
+        reformulation.isEmpty()
+            ? null
+            : objectiveDefinition(objective, presolve, reformulation.getLast());
     if (replaced != null) {
       replaced.removeConstraint();
     }
@@ -467,13 +470,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * The constraint of the objective whose variables are those of the objective's defining equation,
-   * if exactly one constraint has them. The reformulated equation implies it, so it is replaced
-   * instead of kept next to the reformulated equation: on vrp under lazy clause generation the two
-   * equations of 1,800 terms halve the node rate.
+   * if exactly one constraint has them and the reformulated equation has no more variables. The
+   * reformulated equation implies it, so it is replaced instead of kept next to the reformulated
+   * equation: on vrp under lazy clause generation the two equations of 1,800 terms halve the node
+   * rate. A longer reformulated equation, expanded through intermediate variables, is only added:
+   * on routing-flexible it propagates less than the chain of definitions it expands, and replacing
+   * the definition lost a proof.
    */
-  private static Constraint objectiveDefinition(IntVar objective, ObjectivePresolve presolve) {
+  private static Constraint objectiveDefinition(
+      IntVar objective, ObjectivePresolve presolve, Constraint equation) {
     IntVar[] vars = presolve.definitionVariables();
-    if (vars == null) {
+    if (vars == null || equation.arguments().size() > vars.length) {
       return null;
     }
     Set<Var> definition = Collections.newSetFromMap(new IdentityHashMap<>());
