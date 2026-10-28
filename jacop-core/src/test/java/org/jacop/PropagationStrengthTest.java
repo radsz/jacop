@@ -39,9 +39,15 @@ import java.util.function.BiFunction;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.And;
+import org.jacop.constraints.Eq;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.MultiInterDistance;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -50,8 +56,13 @@ import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.Xor;
 import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -111,6 +122,55 @@ class PropagationStrengthTest {
   void testImpliesWakesOnRemovedValue() {
 
     assertThat(nestedXplusCeqZPrunes((c, b) -> new Implies(b, c))).isEqualTo("{1, 4}");
+  }
+
+  // the constraints composed of others woke only on the events that decide whether their parts are
+  // satisfied, GROUND and BOUND for XplusCeqZ, not on the ANY event its consistency() prunes on
+  @Test
+  void testComposedConstraintsWakeOnRemovedValue() {
+
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new And(c, new XeqC(b, 1)))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Or(c, new XeqC(b, 0)))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Not(new Not(c)))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Xor(new Not(c), b))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Eq(new XeqC(b, 1), c))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new IfThen(new XeqC(b, 1), c))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new IfThenElse(new XeqC(b, 1), c, new XeqC(b, 1))))
+        .isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Reified(new And(c, new XeqC(b, 1)), b)))
+        .isEqualTo("{1, 4}");
+  }
+
+  // Not(x != y) woke on the event deciding that x != y fails, GROUND, while it makes x and y equal
+  @Test
+  void testNegatedDisequalityWakesOnRemovedValue() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    store.impose(new Not(new XneqY(x, y)));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, y, 1)).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{0, 2..3}");
+  }
+
+  // Or(x + y = 4, w <= -2) woke on the event that decides x + y = 4 is satisfied, GROUND, so the
+  // bounds of y did not reach x once w <= -2 had failed
+  @Test
+  void testDisjunctionWakesOnBoundsOfItsLastConstraint() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = new IntVar(store, "y", 0, 4);
+    IntVar w = new IntVar(store, "w", 0, 2);
+    store.impose(new Or(new XplusYeqC(x, y, 4), new XlteqC(w, -2)));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 1, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{2..3}");
   }
 
   /**
