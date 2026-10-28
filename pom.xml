@@ -249,6 +249,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -350,6 +351,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -450,6 +452,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -549,6 +552,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
