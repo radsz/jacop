@@ -1025,9 +1025,9 @@ class GlobalConstraints implements ParserTreeConstants {
    * Poses, for each two-dimensional diffn, a cumulative per axis: the rectangles crossing a line
    * across one axis are disjoint along the other, so their lengths along it fit in the span of all
    * rectangles along it. A projection is skipped when the model already has a cumulative over the
-   * same tasks and heights, as rectangle packing models often do, or when the origins along the
-   * other axis are all fixed. Called after the whole model is read, before the delayed constraints
-   * are imposed.
+   * same tasks and heights, as rectangle packing models often do, or when the rectangles are fixed
+   * along the other axis and do not all cross one line along it. Called after the whole model is
+   * read, before the delayed constraints are imposed.
    */
   void poseDiffnProjections() {
     if (!diffnCumulativeEnabled()) {
@@ -1041,16 +1041,30 @@ class GlobalConstraints implements ParserTreeConstants {
       if (x.length < 2 || negativeMin(lx) || negativeMin(ly)) {
         continue;
       }
-      // with the other axis fixed, the rectangles are placed along it already and diffn reasons
-      // with those places; a capacity from their span only adds cost (accap)
-      if (!allVarGround(y) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
+      // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
+      // projection then only adds cost (accap), unless all of them cross one line (filters)
+      if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
         poseCumulative(x, lx, ly, span(y, ly));
       }
-      if (!allVarGround(x) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
+      if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
         poseCumulative(y, ly, lx, span(x, lx));
       }
     }
     diffnProjections.clear();
+  }
+
+  // whether all intervals [o, o + l) are fixed and not all of them share a point
+  private boolean fixedApart(IntVar[] o, IntVar[] l) {
+    if (!allVarGround(o) || !allVarGround(l)) {
+      return false;
+    }
+    long lastStart = Long.MIN_VALUE;
+    long firstEnd = Long.MAX_VALUE;
+    for (int i = 0; i < o.length; i++) {
+      lastStart = Math.max(lastStart, o[i].value());
+      firstEnd = Math.min(firstEnd, (long) o[i].value() + l[i].value());
+    }
+    return lastStart >= firstEnd;
   }
 
   private static boolean negativeMin(IntVar[] v) {
