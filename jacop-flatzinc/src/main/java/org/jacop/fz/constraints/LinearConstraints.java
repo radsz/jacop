@@ -471,6 +471,10 @@ class LinearConstraints implements ParserTreeConstants {
     Integer s = evaluateConstantLinearTerm(p1, p2);
     boolean p2Fixed = s != null;
 
+    if (!p2Fixed && (operation == Support.EQ || operation == Support.LE)) {
+      recordUnitSum(p1, p2, p3, operation == Support.EQ);
+    }
+
     switch (operation) {
       case Support.EQ:
         int_lin_relationEq(p1, p2, p3, s, p2Fixed);
@@ -487,6 +491,43 @@ class LinearConstraints implements ParserTreeConstants {
       default:
         throw new IllegalArgumentException(
             "%% ERROR: Relation in linear constraint not supported.");
+    }
+  }
+
+  /**
+   * Records sum(x) == c, sum(x) &lt;= c or sum(x) == y for an AlldiffSum: the coefficients are all
+   * 1 or all -1, or, for an equality with c = 0, all but one of the same sign.
+   */
+  private void recordUnitSum(int[] p1, IntVar[] p2, int p3, boolean eq) {
+    int plus = 0;
+    int minus = 0;
+    for (int w : p1) {
+      if (w == 1) {
+        plus++;
+      } else if (w == -1) {
+        minus++;
+      } else {
+        return;
+      }
+    }
+    int n = p1.length;
+    if (plus == n || minus == n) {
+      int c = plus == n ? p3 : -p3;
+      String rel = eq ? "==" : plus == n ? "<=" : ">=";
+      support.recordUnitSum(p2, rel, support.dictionary.getConstant(c));
+    } else if (eq && p3 == 0 && (plus == 1 || minus == 1)) {
+      int single = plus == 1 ? 1 : -1;
+      IntVar sum = null;
+      IntVar[] x = new IntVar[n - 1];
+      int k = 0;
+      for (int i = 0; i < n; i++) {
+        if (p1[i] == single) {
+          sum = p2[i];
+        } else {
+          x[k++] = p2[i];
+        }
+      }
+      support.recordUnitSum(x, "==", sum);
     }
   }
 
