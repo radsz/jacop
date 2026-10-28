@@ -79,6 +79,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean presolveImplied;
   boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
@@ -149,7 +150,11 @@ public class Options {
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
-                conflict of branch and bound, default 0.5; 0 = off)
+                conflict of branch and bound, default 0.5; 0 = off),
+                lcg-core=<share> (with --lcg and a linear objective: share of the time for
+                core-guided search before branch and bound, default 0.5; 0 = off),
+                lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
+                more, default 5000)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
@@ -160,6 +165,8 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --presolve-implied <value> with presolve, post the constraints implied by
+                all-different constraints (sum bounds); "off" (default) or "on"
             --symmetry <value> with presolve, break the variable symmetries of the model with
                 lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
                 problem asks for more than one solution (-a, -n).
@@ -211,6 +218,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
@@ -312,6 +320,15 @@ public class Options {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
       presolve = mode;
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveImplied(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> presolveImplied = true;
+      case "off" -> presolveImplied = false;
+      default -> System.err.println("%% Presolve-implied mode " + args[i] + " not known; ignored");
     }
     return i + 1;
   }
@@ -684,6 +701,15 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines whether presolve posts implied constraints (--presolve-implied).
+   *
+   * @return false by default
+   */
+  public boolean presolveImplied() {
+    return presolveImplied;
   }
 
   /**

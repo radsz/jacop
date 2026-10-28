@@ -67,11 +67,13 @@ import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Entry;
+import org.jacop.presolve.ImpliedConstraints;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
@@ -475,10 +477,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
     dualReductions(presolver, node);
+    ImpliedConstraints implied = new ImpliedConstraints();
+    if (options.presolveImplied()) {
+      presolver.rule(implied);
+    }
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, time);
+      printPresolveStatistics(d, implied.imposed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -652,7 +658,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return copy;
   }
 
-  private void printPresolveStatistics(Derivation d, long time) {
+  private void printPresolveStatistics(Derivation d, int implied, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -669,6 +675,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
       s.append("%%%mzn-stat: presolveEliminated=").append(d.eliminated()).append('\n');
       s.append("%%%mzn-stat: presolveSubstituted=").append(d.substitutions()).append('\n');
+      s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
@@ -1245,6 +1252,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (free) {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
+      // core-guided search for a sum objective before branch and bound: its share of the time,
+      // and the conflicts one call of the solver may take before it stops
+      lcg.setCoreSearch(
+          Double.parseDouble(options.freeConfig("lcg-core", "0.5")),
+          100_000,
+          Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
     }
     if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
       // the annotation is followed down each branch, as without learning
@@ -1329,8 +1342,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().semanticallyRemoved
             + "\n%%%mzn-stat: lcgSemanticUips="
             + lcg.sat().semanticUips
+            + coreStatistics()
             + "\n%%%mzn-stat-end\n"
             + perClass);
+  }
+
+  private String coreStatistics() {
+    CoreSearch core = lcg.coreSearch();
+    if (core == null) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lcgCores="
+        + core.cores
+        + "\n%%%mzn-stat: lcgCoreLiterals="
+        + core.coreLiterals
+        + "\n%%%mzn-stat: lcgCoreBound="
+        + (minimize ? core.lowerBound : -core.lowerBound);
   }
 
   private boolean useFreeSearchEngine(Var costVar) {
