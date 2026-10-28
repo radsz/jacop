@@ -255,7 +255,19 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
-21. --lcg -f finds solutions on cutstock and largescheduling, where it
+21. Subcircuit and Circuit explain their own propagation for lazy clause
+    generation (--lcg), by cuts of the successor graph (Francis and
+    Stuckey, Constraints 2014): an arc on no cycle, a node that cannot
+    join the required ones, a node every path between two required nodes
+    passes through (the dominator pruning), the fixed arcs of a chain for
+    the arc that would close it early (Circuit), and Hall sets for the
+    rest. Before, both used the generic reason: on mario (--lcg -f) every
+    Subcircuit reason, 266 atoms on average; now none, with 9 atoms on
+    average. On cvrp P-n16-k8 the Circuit reasons fall from 122 atoms
+    (all generic) to 19. tpp is proved about 1.7x faster; mario, cvrp,
+    is, p1f and stochastic-vrp end as before within 60 s.
+
+22. --lcg -f finds solutions on cutstock and largescheduling, where it
     found none in 60 s. Under lazy clause generation the time table of
     Cumulative keeps to the bounds of the starts: a hole of thousands of
     start values was thousands of atoms, each with its own literals. Its
@@ -268,7 +280,7 @@ Version 5.0 (unreleased)
     annotation (60 s), 3 go from no solution to a solution, 3 more are
     proved optimal, and none lose a solution or a proof.
 
-22. --lcg works on models with set variables; before, it printed "--lcg
+23. --lcg works on models with set variables; before, it printed "--lcg
     ignored: the model has float or set variables" and searched without
     learning. Each set variable is mirrored by a 0/1 variable for the
     membership of each element of its least upper bound that is not in its
@@ -291,7 +303,7 @@ Version 5.0 (unreleased)
     (steiner-triples 09: 1.1 s instead of 10.9 s). Float variables still
     turn --lcg off.
 
-23. Lazy clause generation explains XmulYeqZ removals by bounds first: the
+24. Lazy clause generation explains XmulYeqZ removals by bounds first: the
     product range of x and y (squares when x = y), the quotient range of a
     factor, and the square roots of z for x * x = z, citing only the
     bounds that matter. Before, a removal of more than 64 values, or with a
