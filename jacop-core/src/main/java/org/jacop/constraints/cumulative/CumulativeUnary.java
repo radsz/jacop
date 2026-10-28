@@ -505,6 +505,13 @@ public class CumulativeUnary extends Cumulative {
   }
 
   @Override
+  CumulativeBasic withTasks(IntVar[] s, IntVar[] d, IntVar[] r) {
+    return getClass() == CumulativeUnary.class
+        ? withOptionsOf(new CumulativeUnary(s, d, r, limit, doProfile, doUnaryEdgeFind))
+        : null;
+  }
+
+  @Override
   public Optional<List<Constraint>> simplify() {
     if (getClass() != CumulativeUnary.class) {
       return Optional.empty();

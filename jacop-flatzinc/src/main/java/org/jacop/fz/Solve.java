@@ -73,6 +73,7 @@ import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
+import org.jacop.presolve.CumulativeReductions;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Entry;
 import org.jacop.presolve.ImpliedConstraints;
@@ -677,6 +678,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       presolver.rule(tabling);
     }
     dualReductions(presolver, node);
+    CumulativeReductions cumulative = cumulativeReductions(node);
+    if (cumulative != null) {
+      presolver.rule(cumulative);
+    }
     ImpliedConstraints implied = new ImpliedConstraints();
     if (options.presolveImplied()) {
       presolver.rule(implied);
@@ -684,7 +689,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, tabling, implied.imposed(), time);
+      printPresolveStatistics(d, tabling, implied.imposed(), time, cumulative);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -708,6 +713,52 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         presolve = d;
       }
     }
+  }
+
+  /**
+   * The presolve rule for cumulative resources, or null when the system property
+   * org.jacop.fz.presolveCumulative is false. Its dual fixing keeps one optimal solution but not
+   * all, so it is off when several solutions are wanted (-a, -n) and when the objective is not a
+   * variable it can identify.
+   */
+  private CumulativeReductions cumulativeReductions(ASTSolveItem node) {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.presolveCumulative"))) {
+      return null;
+    }
+    // dual fixing follows --presolve-dual and stays off with on_restart, as the dual reductions do
+    boolean dual = !options.getAll() && options.presolveDual() && dictionary.onRestart == null;
+    IntVar cost = null;
+    boolean minimize = true;
+    ASTSolveKind kind = null;
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (node.jjtGetChild(i) instanceof ASTSolveKind k) {
+        kind = k;
+      }
+    }
+    int k = kind == null ? -1 : getKind(kind.getKind());
+    if (k != 0) {
+      cost = k > 0 ? objectiveVariable((ASTSolveExpr) kind.jjtGetChild(0)) : null;
+      minimize = k == 1;
+      dual &= cost != null;
+    }
+    CumulativeReductions rule = new CumulativeReductions(dual).objective(cost, minimize);
+    // clauses kept for the LCG solver are not in the store
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      rule.lock(clause[0]).lock(clause[1]);
+    }
+    return rule;
+  }
+
+  /** The integer variable of the objective, without creating one for a constant. */
+  private IntVar objectiveVariable(ASTSolveExpr node) {
+    if (node.getType() == 0) {
+      return dictionary.getVariable(node.getIdent());
+    }
+    if (node.getType() == 1) {
+      IntVar[] a = dictionary.getVariableArray(node.getIdent());
+      return a != null ? a[node.getIndex()] : null;
+    }
+    return null;
   }
 
   /**
@@ -865,7 +916,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     sat.collectedClauses().clear();
   }
 
-  private void printPresolveStatistics(Derivation d, Tabling tabling, int implied, long time) {
+  private void printPresolveStatistics(
+      Derivation d, Tabling tabling, int implied, long time, CumulativeReductions cumulative) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -883,6 +935,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
       s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
+    }
+    if (cumulative != null) {
+      s.append("%%%mzn-stat: presolveCumulativeFixedStarts=")
+          .append(cumulative.fixedStarts())
+          .append('\n');
+      s.append("%%%mzn-stat: presolveCumulativeRemovedTasks=")
+          .append(cumulative.removedTasks())
+          .append('\n');
+      s.append("%%%mzn-stat: presolveCumulativeRemovedResources=")
+          .append(cumulative.removedResources())
+          .append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {
