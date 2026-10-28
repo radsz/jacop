@@ -265,8 +265,7 @@ public class CumulativeUnary extends Cumulative {
     boundsChanged();
     // the rules run only after a time-table call that pruned nothing, so the compulsory parts do
     // not overlap when the rules first load the tasks; a rule that fixes overlapping tasks makes
-    // the
-    // time-table fail in the next pass
+    // the time-table fail in the next pass
     leaveOutFixedPrefix = doProfile;
     trailLeftOut = doProfile && !possibleZeroTasks;
     if (leftOut == null) {

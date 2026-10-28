@@ -238,6 +238,19 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. CumulativeUnary (MiniZinc disjunctive) is faster again, with the same
+    search trees: 4.6x on job shops (geometric mean over 23 instances from
+    6x6 to 200x20; 1.2x to 40x, more tasks per machine gain more) and 2.2x
+    on open shops. A fixed task that ends before every other task can
+    start is left out of the unary rules and the time-table for the rest
+    of the subtree; in a search that schedules from left to right these
+    are most tasks. A rule that pruned nothing is not run again until a
+    bound changes. With constant durations and resource uses a unary
+    time-table replaces the sweep of the cumulative profile and removes
+    the same values, holes included. Edge finding updates only the Lambda
+    values on the path of a removed task and stops where they no longer
+    change.
+
 Version 4.11
 =============
 
