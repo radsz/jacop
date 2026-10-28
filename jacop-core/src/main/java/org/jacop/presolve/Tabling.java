@@ -37,8 +37,11 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
+import java.util.Random;
 import java.util.Set;
 import org.jacop.api.Copyable;
+import org.jacop.api.SolutionCounting;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
@@ -134,6 +137,20 @@ final class Tabling {
   // most tuple cells read by the removal check of one group
   private static final long PROBE_WORK = 20_000_000;
 
+  // experimental selection of the groups: heur (the two heuristics), tight (merges by tightness
+  // only), both (heuristics, then merges by tightness), single (heuristics, and lone constraints)
+  static final String SELECT = System.getProperty("jacop.presolve.tabling.select", "heur");
+  // probe (Knuth's estimator over the group's propagation) or reported (a constraint's own count)
+  static final String ESTIMATE = System.getProperty("jacop.presolve.tabling.estimate", "probe");
+  static final double MIN_GAIN =
+      Double.parseDouble(System.getProperty("jacop.presolve.tabling.gain", "0.69"));
+  static final int DEGREE_CAP = Integer.getInteger("jacop.presolve.tabling.degreecap", 8);
+  static final boolean DEBUG = Boolean.getBoolean("jacop.presolve.tabling.debug");
+  private static final int PROBES = 32;
+  private static final long EXACT_NODES = 2_000;
+  private static final int LARGE_DOMAIN = 1 << 16;
+  private static final long COUNT_WORK = 200_000;
+
   private final Limits limits;
   private final Map<Var, Integer> position;
   private final List<Constraint> constraints;
@@ -187,8 +204,19 @@ final class Tabling {
    */
   List<Group> groups() {
     List<List<Integer>> occurrences = occurrences();
-    joinSubsets(occurrences);
-    joinThroughVariables(occurrences);
+    if (!SELECT.equals("tight")) {
+      joinSubsets(occurrences);
+      joinThroughVariables(occurrences);
+    }
+    if (SELECT.equals("tight") || SELECT.startsWith("both")) {
+      long before = nodes;
+      joinByTightness(occurrences);
+      if (SELECT.equals("bothsep")) {
+        // the estimates have their own budget and leave the tabulation's untouched
+        nodes = before;
+      }
+    }
+    int smallest = SELECT.equals("single") ? 1 : 2;
 
     Map<Integer, List<Integer>> members = new LinkedHashMap<>();
     for (int i = 0; i < constraints.size(); i++) {
@@ -198,7 +226,7 @@ final class Tabling {
     }
     List<Group> result = new ArrayList<>();
     for (Map.Entry<Integer, List<Integer>> e : members.entrySet()) {
-      if (e.getValue().size() < 2 || nodes >= limits.budget()) {
+      if (e.getValue().size() < smallest || nodes >= limits.budget()) {
         continue;
       }
       Group g = tabulate(e.getValue(), groupScope[e.getKey()]);
@@ -314,6 +342,263 @@ final class Tabling {
     }
   }
 
+  /**
+   * Merges groups by tightness: two groups that share a variable are merged when their conjunction
+   * has fewer solutions than their counts predict if they were independent, by a factor of at least
+   * e^{@link #MIN_GAIN}, and the merged table stays within the limits. The pair with the largest
+   * gain merges first; the merged group is then compared with its neighbours again.
+   */
+  private void joinByTightness(List<List<Integer>> occ) {
+    int n = constraints.size();
+    List<List<Integer>> members = new ArrayList<>(n);
+    double[] logCount = new double[n];
+    int[] version = new int[n];
+    for (int i = 0; i < n; i++) {
+      members.add(null);
+      logCount[i] = Double.NaN;
+    }
+    for (int i = 0; i < n; i++) {
+      if (scope[i] != null) {
+        int r = find(i);
+        if (members.get(r) == null) {
+          members.set(r, new ArrayList<>());
+        }
+        members.get(r).add(i);
+      }
+    }
+    // entries: gain, root a, version of a, root b, version of b, log count of the merge
+    PriorityQueue<double[]> queue = new PriorityQueue<>((x, y) -> Double.compare(y[0], x[0]));
+    Set<List<Integer>> tried = new HashSet<>();
+    long estimation = limits.budget() / 2;
+    for (int r = 0; r < n && nodes < estimation; r++) {
+      if (members.get(r) != null && find(r) == r) {
+        neighbours(r, occ, members, logCount, version, queue, tried, estimation);
+      }
+    }
+    while (!queue.isEmpty()) {
+      double[] e = queue.poll();
+      int a = (int) e[1];
+      int b = (int) e[3];
+      if (e[0] < MIN_GAIN) {
+        break;
+      }
+      if (find(a) != a || find(b) != b || version[a] != (int) e[2] || version[b] != (int) e[4]) {
+        continue;
+      }
+      union(a, b);
+      int root = find(a);
+      if (root == find(b) && groupScope[root].length <= limits.variables()) {
+        int other = root == a ? b : a;
+        members.get(root).addAll(members.get(other));
+        members.set(other, null);
+        logCount[root] = e[5];
+        version[root]++;
+        version[other]++;
+        if (nodes < estimation) {
+          neighbours(root, occ, members, logCount, version, queue, tried, estimation);
+        }
+      }
+    }
+  }
+
+  private void neighbours(
+      int r,
+      List<List<Integer>> occ,
+      List<List<Integer>> members,
+      double[] logCount,
+      int[] version,
+      PriorityQueue<double[]> queue,
+      Set<List<Integer>> tried,
+      long estimation) {
+    for (int p : groupScope[r]) {
+      List<Integer> cs = occ.get(p);
+      if (cs.size() > DEGREE_CAP) {
+        continue;
+      }
+      for (int c : cs) {
+        if (nodes >= estimation) {
+          return;
+        }
+        if (scope[c] == null) {
+          continue;
+        }
+        int q = find(c);
+        if (q == r) {
+          continue;
+        }
+        int[] joined = merge(groupScope[r], groupScope[q]);
+        if (joined.length > limits.variables()) {
+          continue;
+        }
+        int lo = Math.min(r, q);
+        int hi = Math.max(r, q);
+        if (!tried.add(List.of(lo, version[lo], hi, version[hi]))) {
+          continue;
+        }
+        if (Double.isNaN(logCount[r])) {
+          logCount[r] = estimate(members.get(r), groupScope[r]);
+        }
+        if (Double.isNaN(logCount[q])) {
+          logCount[q] = estimate(members.get(q), groupScope[q]);
+        }
+        List<Integer> both = new ArrayList<>(members.get(r));
+        both.addAll(members.get(q));
+        double together = estimate(both, joined);
+        if (together > Math.log(limits.tuples())) {
+          continue;
+        }
+        double shared = 0;
+        for (int x : groupScope[r]) {
+          if (Arrays.binarySearch(groupScope[q], x) >= 0) {
+            shared += Math.log(((IntVar) variables.get(x)).getSize());
+          }
+        }
+        double gain = logCount[r] + logCount[q] - shared - together;
+        if (DEBUG) {
+          System.err.printf(
+              "%%merge a=%.3f b=%.3f shared=%.3f ab=%.3f gain=%.3f arity=%d%n",
+              logCount[r], logCount[q], shared, together, gain, joined.length);
+        }
+        if (Double.isNaN(gain)) {
+          continue;
+        }
+        queue.add(new double[] {gain, lo, version[lo], hi, version[hi], together});
+      }
+    }
+  }
+
+  /**
+   * Estimates the number of solutions of a group: a lone constraint that counts its own solutions
+   * reports it (with the reported estimate), a small group is counted exactly, a larger one by
+   * Knuth's estimator over random dives of its propagation.
+   *
+   * @return the natural logarithm of the estimate; negative infinity if the group has no solution.
+   */
+  private double estimate(List<Integer> members, int[] positions) {
+    if (members.size() == 1
+        && ESTIMATE.equals("reported")
+        && constraints.get(members.get(0)) instanceof SolutionCounting counting) {
+      IntVar[] vars = new IntVar[positions.length];
+      for (int i = 0; i < positions.length; i++) {
+        vars[i] = (IntVar) variables.get(positions[i]);
+      }
+      double reported = counting.logSolutions(vars, COUNT_WORK);
+      if (!Double.isNaN(reported)) {
+        nodes += 1;
+        return reported;
+      }
+    }
+    return probe(members, positions);
+  }
+
+  private double probe(List<Integer> members, int[] positions) {
+    Scratch s = scratch(members, positions);
+    if (s == null) {
+      return Double.NEGATIVE_INFINITY;
+    }
+    Store store = s.store();
+    try {
+      if (!store.consistency()) {
+        return Double.NEGATIVE_INFINITY;
+      }
+    } catch (FailException f) {
+      return Double.NEGATIVE_INFINITY;
+    }
+    double logDomain = 0;
+    int largest = 0;
+    for (IntVar v : s.vars()) {
+      logDomain += Math.log(v.getSize());
+      largest = Math.max(largest, v.getSize());
+    }
+    if (largest > LARGE_DOMAIN) {
+      // too large to sample value by value; no tighter than its domains, as far as we know
+      return logDomain;
+    }
+    long exact = count(store, s.vars(), new long[] {EXACT_NODES});
+    if (exact >= 0) {
+      return Math.log(exact);
+    }
+    // Knuth (1975): the product of the branching factors along a random dive estimates the leaves
+    Random random = new Random(positions.length * 31L + members.get(0));
+    double sum = 0;
+    for (int k = 0; k < PROBES; k++) {
+      sum += dive(store, s.vars(), random);
+    }
+    return Math.log(Math.max(sum / PROBES, 0.5));
+  }
+
+  /** Counts the solutions, or -1 when the budget of nodes runs out. */
+  private long count(Store store, IntVar[] vars, long[] budget) {
+    IntVar next = smallest(vars);
+    if (next == null) {
+      return 1;
+    }
+    long total = 0;
+    for (int value : next.dom().toIntArray()) {
+      if (--budget[0] < 0) {
+        return -1;
+      }
+      nodes++;
+      int level = store.level;
+      store.setLevel(level + 1);
+      long sub = 0;
+      try {
+        next.domain.in(store.level, next, value, value);
+        if (store.consistency()) {
+          sub = count(store, vars, budget);
+        }
+      } catch (FailException f) {
+        // no solution here
+      }
+      restore(store, level);
+      if (sub < 0) {
+        return -1;
+      }
+      total += sub;
+    }
+    return total;
+  }
+
+  private double dive(Store store, IntVar[] vars, Random random) {
+    int level = store.level;
+    double product = 1;
+    try {
+      for (IntVar next = smallest(vars); next != null; next = smallest(vars)) {
+        int[] values = next.dom().toIntArray();
+        product *= values.length;
+        nodes++;
+        store.setLevel(store.level + 1);
+        int value = values[random.nextInt(values.length)];
+        next.domain.in(store.level, next, value, value);
+        if (!store.consistency()) {
+          product = 0;
+          break;
+        }
+      }
+    } catch (FailException f) {
+      product = 0;
+    }
+    restore(store, level);
+    return product;
+  }
+
+  private static IntVar smallest(IntVar[] vars) {
+    IntVar next = null;
+    for (IntVar v : vars) {
+      if (!v.singleton() && (next == null || v.getSize() < next.getSize())) {
+        next = v;
+      }
+    }
+    return next;
+  }
+
+  private static void restore(Store store, int level) {
+    while (store.level > level) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+  }
+
   private int find(int i) {
     while (parent[i] != i) {
       parent[i] = parent[parent[i]];
@@ -379,6 +664,94 @@ final class Tabling {
    *     exceeds the limits.
    */
   private Group tabulate(List<Integer> members, int[] positions) {
+    Scratch s = scratch(members, positions);
+    if (s == null) {
+      infeasible = true;
+      return null;
+    }
+    List<Constraint> group = s.group();
+    IntVar[] scope = s.scope();
+    IntVar[] copy = s.vars();
+    Store scratch = s.store();
+    Enumeration e = new Enumeration(scratch, copy);
+    if (!e.run()) {
+      debug(members, scope, -1, e.failures, "limit");
+      return null;
+    }
+    if (e.solutions.isEmpty()) {
+      infeasible = true;
+      return null;
+    }
+    long all = 1;
+    for (IntVar v : scope) {
+      // only a count up to the number of solutions matters
+      all = all > limits.tuples() ? all : all * v.getSize();
+    }
+    if (all == e.solutions.size()) {
+      debug(members, scope, e.solutions.size(), e.failures, "entailed");
+      return new Group(List.copyOf(group), scope, null);
+    }
+    if (e.failures == 0
+        && limits.onlyStronger()
+        && !weakerAfterRemovals(scratch, copy, e.solutions)) {
+      // the group's own propagation never left a value without a solution, so the table would
+      // prune nothing more, only cost more
+      debug(members, scope, e.solutions.size(), e.failures, "strong");
+      return null;
+    }
+    debug(members, scope, e.solutions.size(), e.failures, "table");
+    return new Group(List.copyOf(group), scope, e.solutions.toArray(new int[0][]));
+  }
+
+  private void debug(
+      List<Integer> members, IntVar[] scope, long count, long failures, String what) {
+    if (!DEBUG) {
+      return;
+    }
+    double logDomain = 0;
+    StringBuilder kinds = new StringBuilder();
+    for (IntVar v : scope) {
+      logDomain += Math.log(v.getSize());
+    }
+    for (int c : members) {
+      kinds.append(constraints.get(c).getClass().getSimpleName()).append(' ');
+    }
+    long before = nodes;
+    double probed = count >= 0 ? probe(members, groupPositions(scope)) : Double.NaN;
+    nodes = before;
+    System.err.printf(
+        "%%tabling members=%d arity=%d logDomain=%.3f logCount=%.3f logProbe=%.3f failures=%d"
+            + " outcome=%s kinds=%s%n",
+        members.size(),
+        scope.length,
+        logDomain,
+        count > 0 ? Math.log(count) : Double.NaN,
+        probed,
+        failures,
+        what,
+        kinds.toString().trim());
+  }
+
+  private int[] groupPositions(IntVar[] scope) {
+    int[] p = new int[scope.length];
+    for (int i = 0; i < scope.length; i++) {
+      p[i] = position.get(scope[i]);
+    }
+    return p;
+  }
+
+  /**
+   * A group copied onto a scratch store.
+   *
+   * @param store the scratch store.
+   * @param group the constraints of the group.
+   * @param scope the unfixed variables of the group.
+   * @param vars the copies of the scope in the scratch store.
+   */
+  private record Scratch(Store store, List<Constraint> group, IntVar[] scope, IntVar[] vars) {}
+
+  /** Copies a group onto a scratch store; null if imposing it fails. */
+  private Scratch scratch(List<Integer> members, int[] positions) {
     Store scratch = new Store();
     Map<Var, Var> copies = new IdentityHashMap<>();
     VarMap map =
@@ -409,33 +782,9 @@ final class Tabling {
         scratch.impose(((Copyable<?>) c).copy(map));
       }
     } catch (FailException e) {
-      infeasible = true;
       return null;
     }
-    Enumeration e = new Enumeration(scratch, copy);
-    if (!e.run()) {
-      return null;
-    }
-    if (e.solutions.isEmpty()) {
-      infeasible = true;
-      return null;
-    }
-    long all = 1;
-    for (IntVar v : scope) {
-      // only a count up to the number of solutions matters
-      all = all > limits.tuples() ? all : all * v.getSize();
-    }
-    if (all == e.solutions.size()) {
-      return new Group(List.copyOf(group), scope, null);
-    }
-    if (e.failures == 0
-        && limits.onlyStronger()
-        && !weakerAfterRemovals(scratch, copy, e.solutions)) {
-      // the group's own propagation never left a value without a solution, so the table would
-      // prune nothing more, only cost more
-      return null;
-    }
-    return new Group(List.copyOf(group), scope, e.solutions.toArray(new int[0][]));
+    return new Scratch(scratch, group, scope, copy);
   }
 
   /**

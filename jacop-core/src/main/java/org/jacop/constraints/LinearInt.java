@@ -31,6 +31,10 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +44,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
+import org.jacop.api.SolutionCounting;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
@@ -67,7 +72,7 @@ import org.jacop.lcg.LinearForm;
  */
 @Slf4j
 public class LinearInt extends PrimitiveConstraint
-    implements Stateful, Copyable<LinearInt>, Explainable {
+    implements Stateful, Copyable<LinearInt>, Explainable, SolutionCounting {
 
   /*
    * Defines relations
@@ -843,6 +848,78 @@ public class LinearInt extends PrimitiveConstraint
    */
   public boolean satisfiedGtEq(long b) {
     return computeSumMin() >= b;
+  }
+
+  /**
+   * Counts by dynamic programming over the partial sums: the weighted sums of the subset, each with
+   * the number of its tuples, against the sums the other variables reach.
+   */
+  @Override
+  public double logSolutions(IntVar[] subset, long work) {
+    Set<IntVar> in = Collections.newSetFromMap(new IdentityHashMap<>());
+    in.addAll(Arrays.asList(subset));
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    boolean exactOthers = relationType == EQ || relationType == NE;
+    Map<Long, Double> counted = new HashMap<>();
+    counted.put(0L, 1.0);
+    Set<Long> others = new HashSet<>();
+    others.add(0L);
+    long othersMin = 0;
+    long othersMax = 0;
+    long steps = 0;
+    for (int i = 0; i < l; i++) {
+      if (!seen.add(x[i])) {
+        return Double.NaN;
+      }
+      if (in.contains(x[i])) {
+        steps += (long) counted.size() * x[i].getSize();
+        if (steps > work) {
+          return Double.NaN;
+        }
+        Map<Long, Double> next = new HashMap<>();
+        for (int v : x[i].dom().toIntArray()) {
+          for (Map.Entry<Long, Double> e : counted.entrySet()) {
+            next.merge(e.getKey() + a[i] * v, e.getValue(), Double::sum);
+          }
+        }
+        counted = next;
+      } else if (exactOthers) {
+        steps += (long) others.size() * x[i].getSize();
+        if (steps > work) {
+          return Double.NaN;
+        }
+        Set<Long> next = new HashSet<>();
+        for (int v : x[i].dom().toIntArray()) {
+          for (long t : others) {
+            next.add(t + a[i] * v);
+          }
+        }
+        others = next;
+      } else {
+        othersMin += Math.min(a[i] * x[i].min(), a[i] * x[i].max());
+        othersMax += Math.max(a[i] * x[i].min(), a[i] * x[i].max());
+      }
+    }
+    if (seen.size() < in.size() || !seen.containsAll(in)) {
+      return Double.NaN;
+    }
+    double count = 0;
+    for (Map.Entry<Long, Double> e : counted.entrySet()) {
+      long s = e.getKey();
+      boolean extendable =
+          switch (relationType) {
+            case EQ -> others.contains(b - s);
+            case NE -> others.size() > 1 || !others.contains(b - s);
+            case LE -> s + othersMin <= b;
+            case LT -> s + othersMin < b;
+            case GE -> s + othersMax >= b;
+            default -> s + othersMax > b;
+          };
+      if (extendable) {
+        count += e.getValue();
+      }
+    }
+    return Math.log(count);
   }
 
   @Override
