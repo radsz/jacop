@@ -45,6 +45,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Energy precedence reasoning on a cumulative resource whose tasks are ordered by precedences,
@@ -80,7 +83,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class EnergyPrecedence extends Constraint
-    implements SatisfiedPresent, Copyable<EnergyPrecedence> {
+    implements SatisfiedPresent, Copyable<EnergyPrecedence>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -473,6 +476,213 @@ public class EnergyPrecedence extends Constraint
       }
       x.domain.inMax(store.level, x, (int) bound);
     }
+  }
+
+  /**
+   * Explains a bound of a time point by a set of tasks that precede it (or follow it): their
+   * earliest starts (latest ends), the smallest durations and heights that make their energy, the
+   * largest durations that keep them before the point, and the largest limit. The set is the best
+   * one with the bounds just before the entry, among those of the tasks starting at or after some
+   * time, the sets the rule tries.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != EnergyPrecedence.class || !feasible || trail.kind(entry) == AtomicTrail.NE) {
+      return false;
+    }
+    IntVar x = trail.variable(entry);
+    boolean lower = trail.kind(entry) == AtomicTrail.GE;
+    long a = trail.value(entry);
+    int mark = out.size();
+    for (int v : lower ? forwardTargets : backwardTargets) {
+      if (points[v] == x) {
+        long reached = rule(trail, entry, v, lower, a, out);
+        if (reached != Long.MIN_VALUE) {
+          out.sortUnique(mark);
+          return true;
+        }
+        out.truncate(mark);
+      }
+    }
+    return false;
+  }
+
+  /** Explains a failure: a time point whose rule bound passes its other bound. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != EnergyPrecedence.class || !feasible) {
+      return false;
+    }
+    int now = trail.size();
+    int mark = out.size();
+    for (boolean lower : new boolean[] {true, false}) {
+      for (int v : lower ? forwardTargets : backwardTargets) {
+        IntVar x = points[v];
+        long other = lower ? trail.maxBefore(x, now) + 1L : trail.minBefore(x, now) - 1L;
+        long reached = rule(trail, now, v, lower, other, out);
+        if (reached != Long.MIN_VALUE
+            && addBound(trail, x, !lower, lower ? reached - 1 : reached + 1, now, out)) {
+          out.sortUnique(mark);
+          return true;
+        }
+        out.truncate(mark);
+      }
+    }
+    return explainPrecedence(trail, now, out) || explainOverload(trail, now, out);
+  }
+
+  // a precedence the bounds violate: to <= max to < min from + lag
+  private boolean explainPrecedence(AtomicTrail trail, int now, EntryList out) {
+    for (int[] p : pairs) {
+      IntVar from = points[p[0]];
+      IntVar to = points[p[1]];
+      long fromMin = trail.minBefore(from, now);
+      long toMax = trail.maxBefore(to, now);
+      if (toMax < fromMin + p[2]) {
+        int mark = out.size();
+        if (addBound(trail, from, true, fromMin, now, out)
+            && addBound(trail, to, false, toMax, now, out)) {
+          out.sortUnique(mark);
+          return true;
+        }
+        out.truncate(mark);
+      }
+    }
+    return false;
+  }
+
+  // the compulsory parts [latest start, earliest end) of the tasks overload the limit at a time
+  private boolean explainOverload(AtomicTrail trail, int now, EntryList out) {
+    long capacity = trail.maxBefore(limit, now);
+    for (int k = 0; k < n; k++) {
+      long time = trail.maxBefore(starts[k], now);
+      long load = 0;
+      for (int i = 0; i < n; i++) {
+        if (covers(trail, i, time, now)) {
+          load += trail.minBefore(heights[i], now);
+        }
+      }
+      if (load <= capacity) {
+        continue;
+      }
+      int mark = out.size();
+      boolean ok = addBound(trail, limit, false, capacity, now, out);
+      for (int i = 0; ok && i < n; i++) {
+        if (covers(trail, i, time, now)) {
+          long dMin = trail.minBefore(durations[i], now);
+          ok =
+              addBound(trail, starts[i], false, time, now, out)
+                  && addBound(trail, starts[i], true, time - dMin + 1, now, out)
+                  && addBound(trail, durations[i], true, dMin, now, out)
+                  && addBound(trail, heights[i], true, trail.minBefore(heights[i], now), now, out);
+        }
+      }
+      if (ok) {
+        out.sortUnique(mark);
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  // whether the compulsory part of task i, with a positive height, covers the time
+  private boolean covers(AtomicTrail trail, int i, long time, int now) {
+    return trail.minBefore(heights[i], now) > 0
+        && trail.maxBefore(starts[i], now) <= time
+        && (long) trail.minBefore(starts[i], now) + trail.minBefore(durations[i], now) > time;
+  }
+
+  /**
+   * Adds the reason of the rule bounding point v to at least a (lower) or at most a, with the
+   * bounds just before the position; returns the bound the set reaches, or Long.MIN_VALUE when no
+   * set reaches a.
+   */
+  private long rule(AtomicTrail trail, int position, int v, boolean lower, long a, EntryList out) {
+    long capacity = trail.maxBefore(limit, position);
+    if (capacity <= 0) {
+      return Long.MIN_VALUE;
+    }
+    int[] tasks = new int[n];
+    long[] time = new long[n];
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+      if (pointOfTask[i] == v
+          || trail.minBefore(durations[i], position) <= 0
+          || trail.minBefore(heights[i], position) <= 0) {
+        continue;
+      }
+      long dMax = trail.maxBefore(durations[i], position);
+      int d = lower ? after[i][v] : before[v][i];
+      if (d == NONE || (lower ? d < dMax : d < 0)) {
+        continue;
+      }
+      tasks[count] = i;
+      // the earliest start, or the latest end negated, so both sides take the largest first
+      time[count++] =
+          lower
+              ? trail.minBefore(starts[i], position)
+              : -((long) trail.maxBefore(starts[i], position) + dMax);
+    }
+    Integer[] order = new Integer[count];
+    for (int k = 0; k < count; k++) {
+      order[k] = k;
+    }
+    Arrays.sort(order, (p, q) -> Long.compare(time[q], time[p]));
+    long sum = 0;
+    long gap = Long.MAX_VALUE;
+    for (int k = 0; k < count; k++) {
+      int i = tasks[order[k]];
+      long dMax = trail.maxBefore(durations[i], position);
+      sum += (long) trail.minBefore(durations[i], position) * trail.minBefore(heights[i], position);
+      gap = Math.min(gap, lower ? after[i][v] - dMax : before[v][i]);
+      long t = lower ? time[order[k]] : -time[order[k]];
+      long b =
+          lower
+              ? t + (sum + capacity - 1) / capacity + gap
+              : t - (sum + capacity - 1) / capacity - gap;
+      if (lower ? b >= a : b <= a) {
+        for (int j = 0; j <= k; j++) {
+          if (!addTask(trail, tasks[order[j]], lower, t, position, out)) {
+            return Long.MIN_VALUE;
+          }
+        }
+        if (!addBound(trail, limit, false, capacity, position, out)) {
+          return Long.MIN_VALUE;
+        }
+        return b;
+      }
+    }
+    return Long.MIN_VALUE;
+  }
+
+  // the atoms of task i in a set of the rule from time t: its start (or end) within t, its energy
+  // and its largest duration
+  private boolean addTask(
+      AtomicTrail trail, int i, boolean lower, long t, int position, EntryList out) {
+    long dMin = trail.minBefore(durations[i], position);
+    long dMax = trail.maxBefore(durations[i], position);
+    long hMin = trail.minBefore(heights[i], position);
+    return addBound(trail, starts[i], lower, lower ? t : t - dMax, position, out)
+        && addBound(trail, durations[i], true, dMin, position, out)
+        && addBound(trail, durations[i], false, dMax, position, out)
+        && addBound(trail, heights[i], true, hMin, position, out);
+  }
+
+  // the weakest atom giving x >= value (lower) or x <= value before the position
+  private static boolean addBound(
+      AtomicTrail trail, IntVar x, boolean lower, long value, int position, EntryList out) {
+    int e =
+        lower
+            ? trail.earliestLowerBound(x, value, position)
+            : trail.earliestUpperBound(x, value, position);
+    if (e == Integer.MAX_VALUE) {
+      return false;
+    }
+    if (e >= 0) {
+      out.add(e);
+    }
+    return true;
   }
 
   private void check() {

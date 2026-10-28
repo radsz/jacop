@@ -128,6 +128,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -446,7 +447,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(78)) {
+      return switch (rnd.nextInt(79)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -634,6 +635,21 @@ class LcgFuzzTest {
                 rnd.nextBoolean());
         case 75 -> costRegular(1);
         case 76 -> costRegular(2);
+        case 77 -> {
+          // three tasks before a point, which may be a variable of the model
+          IntVar[] s = pick(x, 3);
+          IntVar end = rnd.nextBoolean() ? one() : intVar("mk", 0, 6);
+          // durations or heights vary, not both: the reference search enumerates them
+          boolean variableDurations = rnd.nextBoolean();
+          yield new EnergyPrecedence(
+              s,
+              variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2),
+              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2),
+              constant(1 + rnd.nextInt(2)),
+              s,
+              new IntVar[] {end, end, end},
+              new int[] {2, 2, 2});
+        }
         case 63 ->
             new LinearIntDom(
                 p,
