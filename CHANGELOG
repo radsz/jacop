@@ -353,6 +353,21 @@ Version 5.0 (unreleased)
     (--lcg -f, 60 s) the solved ones take 2 % less time (geometric mean)
     and gbac reaches a better objective on 5 of 6.
 
+27. FlatZinc objective presolve (the objective equation shifted by the
+    exactly-one sets of the model) runs without --presolve too, with
+    degree weight 0. It reads n = count(x, v) (jacop_count) as
+    n = sum(x[i] = v) when every x[i] has a literal for v, and the shifted
+    cost terms of each variable encoded by value literals become one cost
+    variable y = c[x] (ElementInteger). The reformulated equation replaces
+    the constraint defining the objective when it has no more variables,
+    and is used only when it gives cost variables or has at most half the
+    variables of the definition; a stronger root bound alone did not pay
+    on vrp under --lcg. On jp-encoding (60 s) JaCoP proves data300 in
+    4.4 s instead of no proof and data200 in 17 s with --lcg -f, and
+    data1400 under --lcg -f ends at 62,978 instead of 68,422;
+    bus_scheduling r1a is proved in 3.1 s instead of not proved.
+    -Dorg.jacop.fz.objectivePresolve=false turns it off.
+
 Version 4.11
 =============
 
