@@ -37,7 +37,6 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
@@ -56,9 +55,10 @@ import org.jacop.core.Store;
  * constraints in AI planning and scheduling: existing approaches and new results", Artificial
  * Intelligence 143 (2003). For each event x the other events are before x for sure, after x for
  * sure or unranked, using the bounds of the times and the precedences given to the constraint
- * ({@code to[k] >= from[k] + lag[k]}, over the times and any other variables, which the constraint
- * also enforces). The level just after x is at most the level of the events surely before it plus
- * the unranked productions, and at least that level plus the unranked consumptions. From these
+ * ({@code to[k] >= from[k] + lag[k]}, over the times and any other variables). The constraint also
+ * enforces the precedences between its events that these imply, and only those: the other variables
+ * are not in its scope. The level just after x is at most the level of the events surely before it
+ * plus the unranked productions, and at least that level plus the unranked consumptions. From these
  * bounds:
  *
  * <ul>
@@ -104,6 +104,13 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
 
   // false when the precedences are contradictory (a cycle of positive length)
   private final boolean feasible;
+
+  // implied precedences between events: times[p[1]] >= times[p[0]] + p[2]
+  private final int[][] pairs;
+
+  // bounds of the times at the start of a pass
+  private final int[] tmin;
+  private final int[] tmax;
 
   // unranked productions and consumptions of the current event, and sort keys
   private final int[] unranked;
@@ -208,13 +215,27 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
     }
     this.dist = ok ? d : null;
     this.feasible = ok;
+    // the precedences between events that the given ones imply, kept as pairs y, x, distance
+    List<int[]> implied = new ArrayList<>();
+    if (dist != null) {
+      for (int y = 0; y < n; y++) {
+        for (int x = 0; x < n; x++) {
+          if (x != y && dist[y][x] != NONE && times[x] != times[y]) {
+            implied.add(new int[] {y, x, dist[y][x]});
+          }
+        }
+      }
+    }
+    this.pairs = implied.toArray(new int[0][]);
 
     this.unranked = new int[n];
+    this.tmin = new int[n];
+    this.tmax = new int[n];
     this.keys = new long[n];
 
     this.queueIndex = 2;
 
-    setScope(Stream.of(times, from, to).flatMap(Arrays::stream));
+    setScope(times);
   }
 
   // longest paths from the source by the queue-based Bellman-Ford; false on a cycle of positive
@@ -252,14 +273,12 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
 
   // the time of y is at or before the time of x in every solution
   private boolean before(int y, int x) {
-    return times[y].max() <= times[x].min()
-        || (dist != null && dist[y][x] != NONE && dist[y][x] >= 0);
+    return tmax[y] <= tmin[x] || (dist != null && dist[y][x] != NONE && dist[y][x] >= 0);
   }
 
   // the time of y is after the time of x in every solution
   private boolean after(int y, int x) {
-    return times[y].min() > times[x].max()
-        || (dist != null && dist[x][y] != NONE && dist[x][y] >= 1);
+    return tmin[y] > tmax[x] || (dist != null && dist[x][y] != NONE && dist[x][y] >= 1);
   }
 
   @Override
@@ -271,14 +290,13 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
 
     do {
       store.propagationHasOccurred = false;
-      // the precedences are part of the constraint, so they hold in its solutions
-      for (int k = 0; k < from.length; k++) {
-        if ((long) from[k].max() + lag[k] > to[k].max()) {
-          from[k].domain.inMax(store.level, from[k], to[k].max() - lag[k]);
-        }
-        if ((long) to[k].min() < (long) from[k].min() + lag[k]) {
-          to[k].domain.inMin(store.level, to[k], from[k].min() + lag[k]);
-        }
+      // the precedences between events are part of the constraint, so they hold in its solutions
+      for (int[] p : pairs) {
+        precede(store, p[0], p[1], p[2]);
+      }
+      for (int x = 0; x < n; x++) {
+        tmin[x] = times[x].min();
+        tmax[x] = times[x].max();
       }
       for (int x = 0; x < n; x++) {
         if (changes[x] != 0) {
@@ -383,11 +401,13 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
 
   // time of a + gap <= time of b
   private void precede(Store store, int a, int b, int gap) {
-    if (times[a].max() > times[b].max() - gap) {
-      times[a].domain.inMax(store.level, times[a], times[b].max() - gap);
+    if ((long) times[a].max() + gap > times[b].max()) {
+      times[a].domain.inMax(
+          store.level, times[a], (int) Math.max(IntDomain.MIN_INT, (long) times[b].max() - gap));
     }
-    if (times[b].min() < times[a].min() + gap) {
-      times[b].domain.inMin(store.level, times[b], times[a].min() + gap);
+    if ((long) times[b].min() < (long) times[a].min() + gap) {
+      times[b].domain.inMin(
+          store.level, times[b], (int) Math.min(IntDomain.MAX_INT, (long) times[a].min() + gap));
     }
   }
 
@@ -401,8 +421,8 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
     if (!grounded()) {
       return false;
     }
-    for (int k = 0; k < from.length; k++) {
-      if ((long) to[k].value() < (long) from[k].value() + lag[k]) {
+    for (int[] p : pairs) {
+      if ((long) times[p[1]].value() < (long) times[p[0]].value() + p[2]) {
         return false;
       }
     }
@@ -430,16 +450,25 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
     result.append(", ").append(Arrays.toString(changes));
     result.append(", ").append(initial).append(", ").append(min).append(", ").append(max);
     result.append(", [");
-    for (int k = 0; k < from.length; k++) {
-      result.append(k > 0 ? ", " : "").append(from[k].id()).append(" + ").append(lag[k]);
-      result.append(" <= ").append(to[k].id());
+    for (int k = 0; k < pairs.length; k++) {
+      result.append(k > 0 ? ", " : "").append(times[pairs[k][0]].id()).append(" + ");
+      result.append(pairs[k][2]).append(" <= ").append(times[pairs[k][1]].id());
     }
     return result.append("])").toString();
   }
 
   @Override
   public Reservoir copy(VarMap map) {
-    return new Reservoir(
-        map.get(times), changes, initial, min, max, map.get(from), map.get(to), lag);
+    // only the times are in the scope, so the copy keeps the precedences between events
+    IntVar[] t = map.get(times);
+    IntVar[] f = new IntVar[pairs.length];
+    IntVar[] g = new IntVar[pairs.length];
+    int[] l = new int[pairs.length];
+    for (int k = 0; k < pairs.length; k++) {
+      f[k] = t[pairs[k][0]];
+      g[k] = t[pairs[k][1]];
+      l[k] = pairs[k][2];
+    }
+    return new Reservoir(t, changes, initial, min, max, f, g, l);
   }
 }

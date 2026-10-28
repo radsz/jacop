@@ -115,6 +115,7 @@ import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -1843,6 +1844,10 @@ class GlobalConstraintBruteForceTest {
                 precedences
                     ? new Reservoir(times, changes, initial, min, max, f, t, lag)
                     : new Reservoir(times, changes, min - initial, max - initial));
+            // the reservoir enforces only the precedences between its events
+            for (int k = 0; k < arcs; k++) {
+              store.impose(new XplusClteqZ(f[k], lag[k], t[k]));
+            }
           },
           v -> {
             for (int k = 0; k < arcs; k++) {
