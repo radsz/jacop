@@ -69,7 +69,10 @@ import org.jacop.core.Store;
  * tasks are wide, since they do not know the precedences.
  *
  * <p>The constraint only adds pruning to a model with the cumulative and the precedences. It checks
- * both once the tasks are fixed, so it is a correct constraint on its own.
+ * both once the tasks are fixed, so it is a correct constraint on its own. To keep its cost low it
+ * runs at the lowest priority, makes one pass per call rather than a fixpoint, and after 64 calls
+ * in a row without pruning skips the following calls, 1, 2, 4, ... up to 64 of them, until it
+ * prunes again.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -83,6 +86,15 @@ public class EnergyPrecedence extends Constraint
   public static final long MAX_CLOSURE = 4_000_000L;
 
   private static final int NONE = Integer.MIN_VALUE;
+
+  // a pass that prunes nothing IDLE_LIMIT times in a row is skipped for 1, 2, 4, ... up to MAX_SKIP
+  // calls after each further pass without pruning
+  private static final int IDLE_LIMIT = 64;
+  private static final int MAX_SKIP = 64;
+
+  private int skipCalls;
+  private int idleCalls;
+  private int skipPeriod;
 
   final IntVar[] starts;
   final IntVar[] durations;
@@ -250,7 +262,8 @@ public class EnergyPrecedence extends Constraint
     this.est = new long[n];
     this.lct = new long[n];
 
-    this.queueIndex = 2;
+    // the cheaper propagators of the model run first
+    this.queueIndex = 4;
 
     setScope(
         Stream.of(starts, durations, heights, new IntVar[] {limit}, from, to)
@@ -331,7 +344,11 @@ public class EnergyPrecedence extends Constraint
       return;
     }
 
-    do {
+    // one pass, not to a fixpoint: the rule is redundant, and most of its pruning comes in the
+    // first pass
+    if (skipCalls > 0) {
+      skipCalls--;
+    } else {
       store.propagationHasOccurred = false;
       sortTasks();
       for (int v : forwardTargets) {
@@ -340,7 +357,14 @@ public class EnergyPrecedence extends Constraint
       for (int u : backwardTargets) {
         backward(store, u, capacity);
       }
-    } while (store.propagationHasOccurred);
+      if (store.propagationHasOccurred) {
+        idleCalls = 0;
+        skipPeriod = 0;
+      } else if (++idleCalls >= IDLE_LIMIT) {
+        skipPeriod = Math.min(Math.max(1, 2 * skipPeriod), MAX_SKIP);
+        skipCalls = skipPeriod;
+      }
+    }
 
     if (grounded()) {
       check();
