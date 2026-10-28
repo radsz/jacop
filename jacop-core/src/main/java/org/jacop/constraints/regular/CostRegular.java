@@ -33,7 +33,6 @@ package org.jacop.constraints.regular;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -114,17 +113,11 @@ public class CostRegular extends Constraint
 
   private List<Constraint> constraints;
 
-  private Map<IntVar, Integer> mapping;
-
   /** One-time work of the first consistency call. */
   private final InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
-
-  private int[] levelQueue;
-  private int levelQueueSize;
-  private boolean[] levelQueued;
 
   // Nodes of level l are levelNodeStart[l]..levelNodeStart[l+1]-1; node 0 is the source.
   private int[] levelNodeStart;
@@ -135,10 +128,8 @@ public class CostRegular extends Constraint
   private int[] edge;
   private int[] alive;
 
-  // Slots: the values labelling edges of level l are
-  // slotValue[levelSlotStart[l]..levelSlotStart[l+1]-1].
-  private int[] levelSlotStart;
-  private int[] slotValue;
+  /** The values labelling the edges of every level. */
+  private LevelSlots slots;
 
   private long[] forwardMin;
   private long[] forwardMax;
@@ -153,8 +144,6 @@ public class CostRegular extends Constraint
 
   private int[] levelSupported;
 
-  private int stamp;
-
   /**
    * True while the graph has not changed since the last pass, which then left every alive edge with
    * a shortest path through it of at most lastMaxShortest and a longest path through it of at least
@@ -165,16 +154,8 @@ public class CostRegular extends Constraint
   private long lastMaxShortest;
   private long lastMinLongest;
 
-  // Trail of alive counts: pairs of level and previous count, with a mark per store level.
-  private int[] savedEpoch;
-  private int epoch;
-  private int epochLevel = -1;
-  private int currentLevel;
-  private int[] trail = new int[64];
-  private int trailTop;
-  private int[] markLevel = new int[16];
-  private int[] markPosition = new int[16];
-  private int markTop;
+  /** The numbers of alive edges per level, trailed. */
+  private AliveCounts counts;
 
   /**
    * It constructs a cost regular constraint whose transition costs do not depend on the position.
@@ -232,46 +213,8 @@ public class CostRegular extends Constraint
       }
     }
 
-    int states = transition.length;
-    int symbols = states == 0 ? 0 : transition[0].length;
-    if (states == 0) {
-      throw new IllegalArgumentException("CostRegular: the automaton has no states");
-    }
-    if (initialState < 0 || initialState >= states) {
-      throw new IllegalArgumentException(
-          "CostRegular: initial state " + initialState + " is not a state");
-    }
-    for (int q : finalStates) {
-      if (q < 0 || q >= states) {
-        throw new IllegalArgumentException("CostRegular: final state " + q + " is not a state");
-      }
-    }
-    for (int[] row : transition) {
-      if (row == null || row.length != symbols) {
-        throw new IllegalArgumentException("CostRegular: transition rows must have equal lengths");
-      }
-      for (int t : row) {
-        if (t < -1 || t >= states) {
-          throw new IllegalArgumentException("CostRegular: transition to " + t + " is not a state");
-        }
-      }
-    }
-    if (costs.length != list.length) {
-      throw new IllegalArgumentException("CostRegular: costs must have one matrix per variable");
-    }
-    for (int[][] matrix : costs) {
-      if (matrix == null || matrix.length != states) {
-        throw new IllegalArgumentException("CostRegular: costs must have a row per state");
-      }
-      for (int[] row : matrix) {
-        if (row == null || row.length != symbols) {
-          throw new IllegalArgumentException("CostRegular: costs must have a column per value");
-        }
-      }
-    }
-    if ((long) firstValue + symbols - 1 > IntDomain.MAX_INT) {
-      throw new IllegalArgumentException("CostRegular: values out of range");
-    }
+    CostAutomatonGraph.check(
+        "CostRegular", list.length, transition, firstValue, initialState, finalStates, costs);
 
     this.queueIndex = 1;
     this.numberId = idNumber.incrementAndGet();
@@ -326,156 +269,28 @@ public class CostRegular extends Constraint
   }
 
   /**
-   * It unfolds the automaton into the layered graph. A forward pass collects the states reachable
-   * at each level, a backward pass keeps the states from which a final state can be reached, and
-   * the edges between kept states are created level by level. A subclass that describes its graph
-   * in another way overrides it and calls {@link #installGraph(int[], int[], int[])}.
+   * It unfolds the automaton into the layered graph and stores each edge with its source, target,
+   * slot and cost next to each other. A subclass that describes its graph in another way overrides
+   * it and calls {@link #installGraph(int[], int[], int[])}.
    */
   protected void buildGraph() {
+    CostAutomatonGraph graph =
+        new CostAutomatonGraph(list, transition, firstValue, initialState, finalStates);
     int levels = list.length;
-    int states = transition.length;
-    int symbols = transition[0].length;
-
-    boolean[] accepting = new boolean[states];
-    for (int q : finalStates) {
-      accepting[q] = true;
-    }
-
-    // Values of each level that are in the domain and in the alphabet.
-    int[][] values = new int[levels][];
+    levelNodeStart = graph.levelNodeStart;
+    edgeStart = graph.edgeStart;
+    slots = new LevelSlots(list, graph.levelSlotStart, graph.slotValue, getClass());
+    edge = new int[4 * graph.edges()];
     for (int level = 0; level < levels; level++) {
-      IntDomain dom = list[level].dom();
-      int[] buffer = new int[Math.max(0, Math.min(dom.getSize(), symbols))];
-      int count = 0;
-      for (var e = dom.valueEnumeration(); e.hasMoreElements(); ) {
-        int v = e.nextElement();
-        if (v >= firstValue && (long) v - firstValue < symbols) {
-          buffer[count++] = v - firstValue;
-        }
-      }
-      values[level] = Arrays.copyOf(buffer, count);
-    }
-
-    // Forward pass: states reachable at each level.
-    int[][] reachable = new int[levels + 1][];
-    boolean[] marked = new boolean[states];
-    int[] buffer = new int[states];
-    reachable[0] = new int[] {initialState};
-    for (int level = 0; level < levels; level++) {
-      int count = 0;
-      for (int q : reachable[level]) {
-        for (int j : values[level]) {
-          int t = transition[q][j];
-          if (t >= 0 && !marked[t] && (level < levels - 1 || accepting[t])) {
-            marked[t] = true;
-            buffer[count++] = t;
-          }
-        }
-      }
-      reachable[level + 1] = Arrays.copyOf(buffer, count);
-      for (int i = 0; i < count; i++) {
-        marked[buffer[i]] = false;
-      }
-    }
-    if (levels == 0 && !accepting[initialState]) {
-      reachable[0] = new int[0];
-    }
-
-    // Backward pass: keep the states with a transition to a kept state of the next level.
-    int[][] kept = new int[levels + 1][];
-    kept[levels] = reachable[levels];
-    int[] position = new int[states];
-    Arrays.fill(position, -1);
-    for (int level = levels - 1; level >= 0; level--) {
-      for (int i = 0; i < kept[level + 1].length; i++) {
-        position[kept[level + 1][i]] = i;
-      }
-      int count = 0;
-      for (int q : reachable[level]) {
-        for (int j : values[level]) {
-          int t = transition[q][j];
-          if (t >= 0 && position[t] >= 0) {
-            buffer[count++] = q;
-            break;
-          }
-        }
-      }
-      kept[level] = Arrays.copyOf(buffer, count);
-      for (int t : kept[level + 1]) {
-        position[t] = -1;
-      }
-    }
-
-    levelNodeStart = new int[levels + 2];
-    for (int level = 0; level <= levels; level++) {
-      levelNodeStart[level + 1] = levelNodeStart[level] + kept[level].length;
-    }
-    int nodes = levelNodeStart[levels + 1];
-
-    // Edges and slots, level by level.
-    edgeStart = new int[levels + 1];
-    levelSlotStart = new int[levels + 1];
-    int[] edges = new int[64];
-    int edgeCount = 0;
-    int[] slots = new int[16];
-    int slotCount = 0;
-    int[] slotOf = new int[symbols];
-    int[] sourcePosition = new int[states];
-    Arrays.fill(sourcePosition, -1);
-    for (int level = 0; level < levels; level++) {
-      edgeStart[level] = edgeCount;
-      levelSlotStart[level] = slotCount;
-      for (int i = 0; i < kept[level + 1].length; i++) {
-        position[kept[level + 1][i]] = i;
-      }
-      Arrays.fill(slotOf, -1);
-      // Slots in increasing order of values.
-      for (int j : values[level]) {
-        boolean used = false;
-        for (int q : kept[level]) {
-          int t = transition[q][j];
-          if (t >= 0 && position[t] >= 0) {
-            used = true;
-            break;
-          }
-        }
-        if (used) {
-          if (slotCount == slots.length) {
-            slots = Arrays.copyOf(slots, 2 * slotCount);
-          }
-          slotOf[j] = slotCount;
-          slots[slotCount++] = firstValue + j;
-        }
-      }
       int[][] costMatrix = costs[level];
-      for (int i = 0; i < kept[level].length; i++) {
-        int q = kept[level][i];
-        int source = levelNodeStart[level] + i;
-        for (int j : values[level]) {
-          int t = transition[q][j];
-          if (t < 0 || position[t] < 0) {
-            continue;
-          }
-          if (4 * edgeCount + 4 > edges.length) {
-            edges = Arrays.copyOf(edges, 2 * edges.length);
-          }
-          edges[4 * edgeCount] = source;
-          edges[4 * edgeCount + 1] = levelNodeStart[level + 1] + position[t];
-          edges[4 * edgeCount + 2] = slotOf[j];
-          edges[4 * edgeCount + 3] = costMatrix[q][j];
-          edgeCount++;
-        }
-      }
-      for (int t : kept[level + 1]) {
-        position[t] = -1;
+      for (int e = edgeStart[level]; e < edgeStart[level + 1]; e++) {
+        edge[4 * e] = graph.edgeSource[e];
+        edge[4 * e + 1] = graph.edgeTarget[e];
+        edge[4 * e + 2] = graph.edgeSlot[e];
+        edge[4 * e + 3] = costMatrix[graph.edgeState[e]][graph.edgeSymbol[e]];
       }
     }
-    edgeStart[levels] = edgeCount;
-    levelSlotStart[levels] = slotCount;
-
-    edge = Arrays.copyOf(edges, 4 * edgeCount);
-    slotValue = Arrays.copyOf(slots, slotCount);
-    allocate(nodes, slotCount);
+    allocate(graph.nodes());
   }
 
   /**
@@ -500,9 +315,9 @@ public class CostRegular extends Constraint
     this.levelNodeStart = Arrays.copyOf(nodeStart, nodeStart.length);
     this.edgeStart = Arrays.copyOf(edgeStart, edgeStart.length);
     this.edge = Arrays.copyOf(edges, 4 * edgeStart[levels]);
-    this.levelSlotStart = new int[levels + 1];
+    int[] levelSlotStart = new int[levels + 1];
     // Slots of a level: its distinct values in increasing order.
-    int[] slots = new int[16];
+    int[] slotValue = new int[16];
     int slotCount = 0;
     for (int level = 0; level < levels; level++) {
       levelSlotStart[level] = slotCount;
@@ -519,10 +334,10 @@ public class CostRegular extends Constraint
           values[distinct++] = values[i];
         }
       }
-      if (slotCount + distinct > slots.length) {
-        slots = Arrays.copyOf(slots, Math.max(2 * slots.length, slotCount + distinct));
+      if (slotCount + distinct > slotValue.length) {
+        slotValue = Arrays.copyOf(slotValue, Math.max(2 * slotValue.length, slotCount + distinct));
       }
-      System.arraycopy(values, 0, slots, slotCount, distinct);
+      System.arraycopy(values, 0, slotValue, slotCount, distinct);
       for (int i = 0; i < count; i++) {
         int p = 4 * (first + i) + 2;
         edge[p] = slotCount + Arrays.binarySearch(values, 0, distinct, edge[p]);
@@ -530,24 +345,25 @@ public class CostRegular extends Constraint
       slotCount += distinct;
     }
     levelSlotStart[levels] = slotCount;
-    this.slotValue = Arrays.copyOf(slots, slotCount);
-    allocate(nodeStart[levels + 1], slotCount);
+    slots = new LevelSlots(list, levelSlotStart, Arrays.copyOf(slotValue, slotCount), getClass());
+    allocate(nodeStart[levels + 1]);
   }
 
-  private void allocate(int nodes, int slotCount) {
+  private void allocate(int nodes) {
     int levels = list.length;
-    alive = new int[levels];
+    int[] edgesPerLevel = new int[levels];
     for (int level = 0; level < levels; level++) {
-      alive[level] = edgeStart[level + 1] - edgeStart[level];
+      edgesPerLevel[level] = edgeStart[level + 1] - edgeStart[level];
     }
-    savedEpoch = new int[levels];
+    counts = new AliveCounts(edgesPerLevel);
+    alive = counts.alive;
     forwardMin = new long[nodes];
     forwardMax = new long[nodes];
     backwardMin = new long[nodes];
     backwardMax = new long[nodes];
-    slotRemoved = new int[slotCount];
-    slotSupported = new int[slotCount];
-    levelSupported = new int[levels];
+    slotRemoved = slots.removed;
+    slotSupported = slots.supported;
+    levelSupported = slots.levelSupported;
   }
 
   @Override
@@ -555,64 +371,23 @@ public class CostRegular extends Constraint
 
     buildGraph();
 
-    mapping = Var.positionMapping(list, true, this.getClass());
-    levelQueue = new int[list.length];
-    levelQueued = new boolean[list.length];
-
     super.impose(store);
   }
 
   @Override
   public void queueVariable(int level, Var v) {
 
-    if (pruning) {
-      return;
-    }
-    Integer p = mapping.get(v);
-    if (p != null && !levelQueued[p]) {
-      levelQueued[p] = true;
-      levelQueue[levelQueueSize++] = p;
+    if (!pruning) {
+      slots.queue(v);
     }
   }
 
   @Override
   public void removeLevel(int level) {
 
-    while (markTop > 0 && markLevel[markTop - 1] >= level) {
-      int start = markPosition[--markTop];
-      while (trailTop > start) {
-        trailTop -= 2;
-        alive[trail[trailTop]] = trail[trailTop + 1];
-      }
-    }
-    epochLevel = -1;
+    counts.removeLevel(level);
     stable = false;
-    for (int i = 0; i < levelQueueSize; i++) {
-      levelQueued[levelQueue[i]] = false;
-    }
-    levelQueueSize = 0;
-  }
-
-  /** It sets the number of alive edges of a level, trailing the previous number. */
-  private void setAlive(int level, int count) {
-    if (savedEpoch[level] != epoch) {
-      savedEpoch[level] = epoch;
-      if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
-        if (markTop == markLevel.length) {
-          markLevel = Arrays.copyOf(markLevel, 2 * markTop);
-          markPosition = Arrays.copyOf(markPosition, 2 * markTop);
-        }
-        markLevel[markTop] = currentLevel;
-        markPosition[markTop++] = trailTop;
-      }
-      if (trailTop + 2 > trail.length) {
-        trail = Arrays.copyOf(trail, 2 * trail.length);
-      }
-      trail[trailTop] = level;
-      trail[trailTop + 1] = alive[level];
-      trailTop += 2;
-    }
-    alive[level] = count;
+    slots.clearQueue();
   }
 
   /** It moves the edge at position i to position j and the edge at position j to position i. */
@@ -627,48 +402,18 @@ public class CostRegular extends Constraint
     }
   }
 
-  private int nextStamp() {
-    if (++stamp == Integer.MAX_VALUE) {
-      Arrays.fill(slotRemoved, 0);
-      Arrays.fill(slotSupported, 0);
-      stamp = 1;
-    }
-    return stamp;
-  }
-
   @Override
   public void consistency(Store store) {
 
-    currentLevel = store.level;
-    if (epochLevel != currentLevel) {
-      if (++epoch == Integer.MAX_VALUE) {
-        Arrays.fill(savedEpoch, 0);
-        epoch = 1;
-      }
-      epochLevel = currentLevel;
-    }
+    counts.begin(store.level);
 
     int levels = list.length;
     if (init.begin(store)) {
       pruning = true;
       try {
-        for (int level = 0; level < levels; level++) {
-          IntervalDomain labels = new IntervalDomain();
-          for (int s = levelSlotStart[level]; s < levelSlotStart[level + 1]; s++) {
-            labels.unionAdapt(slotValue[s], slotValue[s]);
-          }
-          list[level].domain.in(store.level, list[level], labels);
-        }
+        slots.restrictToSlots(store);
       } finally {
         pruning = false;
-      }
-      // the graph was built at impose; values removed since then (also before this call, while
-      // the queue was not yet read) must be checked on every level
-      for (int level = 0; level < levels; level++) {
-        if (!levelQueued[level]) {
-          levelQueued[level] = true;
-          levelQueue[levelQueueSize++] = level;
-        }
       }
     }
 
@@ -681,7 +426,7 @@ public class CostRegular extends Constraint
     }
 
     if (stable
-        && levelQueueSize == 0
+        && slots.queueEmpty()
         && cost.max() >= lastMaxShortest
         && cost.min() <= lastMinLongest) {
       return;
@@ -690,20 +435,8 @@ public class CostRegular extends Constraint
     // Slots of the changed levels whose values were removed.
     // The paths from the source stay valid below the first level that lost an edge, unless the
     // search backtracked since they were computed.
-    int removedStamp = nextStamp();
-    int from = levels;
-    for (int i = 0; i < levelQueueSize; i++) {
-      int level = levelQueue[i];
-      levelQueued[level] = false;
-      IntDomain dom = list[level].domain;
-      for (int s = levelSlotStart[level]; s < levelSlotStart[level + 1]; s++) {
-        if (!dom.contains(slotValue[s])) {
-          slotRemoved[s] = removedStamp;
-          from = Math.min(from, level);
-        }
-      }
-    }
-    levelQueueSize = 0;
+    int removedStamp = slots.nextStamp();
+    int from = slots.markRemoved(removedStamp);
     if (!stable) {
       from = 0;
     }
@@ -717,18 +450,7 @@ public class CostRegular extends Constraint
 
     pruning = true;
     try {
-      int supported = stamp;
-      for (int level = 0; level < levels; level++) {
-        IntVar x = list[level];
-        if (levelSupported[level] == x.getSize()) {
-          continue;
-        }
-        for (int s = levelSlotStart[level]; s < levelSlotStart[level + 1]; s++) {
-          if (slotSupported[s] != supported && x.domain.contains(slotValue[s])) {
-            x.domain.inComplement(store.level, x, slotValue[s]);
-          }
-        }
-      }
+      slots.pruneUnsupported(store);
     } finally {
       pruning = false;
     }
@@ -777,7 +499,7 @@ public class CostRegular extends Constraint
         throw Store.failException;
       }
       if (end - start != alive[level]) {
-        setAlive(level, end - start);
+        counts.set(level, end - start);
       }
     }
   }
@@ -797,7 +519,7 @@ public class CostRegular extends Constraint
     final long[] bMin = backwardMin;
     final long[] bMax = backwardMax;
     final int[] supported = slotSupported;
-    final int support = nextStamp();
+    final int support = slots.nextStamp();
     final long costMin = cost.min();
     final long costMax = cost.max();
     long maxShortest = Long.MIN_VALUE;
@@ -860,7 +582,7 @@ public class CostRegular extends Constraint
         throw Store.failException;
       }
       if (end - start != alive[level]) {
-        setAlive(level, end - start);
+        counts.set(level, end - start);
       }
       levelSupported[level] = count;
     }
@@ -997,15 +719,9 @@ public class CostRegular extends Constraint
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-    result.append("([");
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i].id()).append(i + 1 < list.length ? ", " : "");
-    }
-    result.append("], transition=").append(Arrays.deepToString(transition));
-    result.append(", firstValue=").append(firstValue);
-    result.append(", initialState=").append(initialState);
-    result.append(", finalStates=").append(Arrays.toString(finalStates));
+    StringBuilder result =
+        CostAutomatonGraph.describe(
+            new StringBuilder(id()), list, transition, firstValue, initialState, finalStates);
     result.append(", cost=").append(cost.id()).append(")");
     return result.toString();
   }

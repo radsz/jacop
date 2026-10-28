@@ -74,6 +74,8 @@ import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Entry;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
+import org.jacop.presolve.Probing;
+import org.jacop.presolve.ProbingRule;
 import org.jacop.presolve.Rule;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
@@ -470,7 +472,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         Presolver.of(store)
             .keep(keptVariables(node))
             .checking(options.presolve() == Options.Presolve.CHECK)
-            .rounds(options.presolveRounds());
+            .rounds(options.presolveRounds())
+            .probing(options.probe(), options.probeBudget());
     dualReductions(presolver, node);
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
@@ -675,6 +678,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
     for (Rule rule : d.rules()) {
+      if (rule instanceof ProbingRule p) {
+        Probing.Result probed = p.result();
+        s.append("%%%mzn-stat: probeTime=").append(probed.timeNanos() / 1e9).append('\n');
+        s.append("%%%mzn-stat: probeProbes=").append(probed.probes()).append('\n');
+        s.append("%%%mzn-stat: probeFailed=").append(probed.failed()).append('\n');
+        s.append("%%%mzn-stat: probeNarrowed=").append(probed.narrowed()).append('\n');
+        s.append("%%%mzn-stat: probeValuesRemoved=").append(probed.removed()).append('\n');
+        s.append("%%%mzn-stat: probePasses=").append(probed.passes()).append('\n');
+        s.append("%%%mzn-stat: probeExhausted=").append(probed.exhausted()).append('\n');
+      }
       if (!(rule instanceof AtMostOneRule r)) {
         continue;
       }

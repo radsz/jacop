@@ -203,6 +203,7 @@ setup to run configuration. -->
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
                                 <presolve.elimination.trials>300</presolve.elimination.trials>
+                                <wakeup.trials>1000</wakeup.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -231,6 +232,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -243,6 +245,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -250,6 +253,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
@@ -337,6 +341,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -353,8 +358,10 @@ setup to run configuration. -->
                                 <include>**/VariableEliminationTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
@@ -445,6 +452,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -461,8 +469,10 @@ setup to run configuration. -->
                                 <include>**/VariableEliminationTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
@@ -553,6 +563,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -568,8 +579,10 @@ setup to run configuration. -->
                                 <include>**/VariableEliminationTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
