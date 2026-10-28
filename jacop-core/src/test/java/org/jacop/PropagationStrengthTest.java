@@ -286,6 +286,23 @@ class PropagationStrengthTest {
     return value.dom().toString();
   }
 
+  // the bounds of x * y = z fixed x to 1 after the check for a factor 1, and the constraint is not
+  // woken by its own pruning, so y and z were not made equal
+  @Test
+  void testXmulYeqZMakesFactorsEqualWhenItsBoundsFixTheOtherToOne() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -2, 1);
+    IntVar y = new IntVar(store, "y", 0, 4);
+    IntVar z = variable(store, "z", 0, 1, 3, 4);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, z, 0)).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("1");
+    assertThat(y.dom().toString()).isEqualTo("{1, 3..4}");
+  }
+
   /**
    * Imposes b -> x + 1 = z with b = 1, removes 3 and 4 from inside z and returns the domain of x.
    * XplusCeqZ only needs a ground variable to become satisfied, but once b is 1 its consistency()

@@ -121,14 +121,7 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Exp
   }
 
   private void propagateMulBounds(Store store) {
-    if (x.singleton(1)) {
-      this.queueIndex = 0;
-      yEqz.consistency(store);
-      return;
-    }
-    if (y.singleton(1)) {
-      this.queueIndex = 0;
-      xEqz.consistency(store);
+    if (propagateUnitFactor(store)) {
       return;
     }
 
@@ -150,6 +143,24 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Exp
       y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
     } while (store.propagationHasOccurred);
+
+    // the bounds can fix x or y to 1, and the constraint is not woken again by its own pruning
+    propagateUnitFactor(store);
+  }
+
+  /** Makes z equal to the other factor once x or y is 1, and tells whether one of them is. */
+  private boolean propagateUnitFactor(Store store) {
+    if (x.singleton(1)) {
+      this.queueIndex = 0;
+      yEqz.consistency(store);
+      return true;
+    }
+    if (y.singleton(1)) {
+      this.queueIndex = 0;
+      xEqz.consistency(store);
+      return true;
+    }
+    return false;
   }
 
   /**
