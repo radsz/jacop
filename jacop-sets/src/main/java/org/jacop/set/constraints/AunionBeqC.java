@@ -136,6 +136,11 @@ public class AunionBeqC extends AbstractSetOpBeqC implements Copyable<AunionBeqC
   }
 
   @Override
+  SetExplanation.Relation relation() {
+    return getClass() == AunionBeqC.class ? (e, in) -> in[2] == (in[0] || in[1]) : null;
+  }
+
+  @Override
   public boolean satisfied() {
     // SetDomain.union is the hull of two domains (intersection of the glbs), not the set union
     return grounded() && a.domain.glb().union(b.domain.glb()).eq(c.domain.glb());

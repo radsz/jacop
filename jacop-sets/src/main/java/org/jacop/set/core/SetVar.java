@@ -328,6 +328,15 @@ public class SetVar extends Var implements Mirrored {
     lcgMirror = mirror;
   }
 
+  /**
+   * Returns the constraint whose integer variables mirror this variable for lazy clause generation.
+   *
+   * @return the mirror, or null
+   */
+  public SetMirror lcgMirror() {
+    return lcgMirror;
+  }
+
   @Override
   public IntVar[] mirror() {
     return lcgMirror == null ? null : lcgMirror.mirrorVariables();

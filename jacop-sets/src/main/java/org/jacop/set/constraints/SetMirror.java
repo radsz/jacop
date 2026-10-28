@@ -38,6 +38,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
@@ -54,7 +57,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class SetMirror extends Constraint implements SatisfiedPresent {
+public class SetMirror extends Constraint implements SatisfiedPresent, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -157,6 +160,35 @@ public class SetMirror extends Constraint implements SatisfiedPresent {
     return i >= 0 ? members[i] : null;
   }
 
+  /**
+   * Returns the elements that have a membership variable, in increasing order.
+   *
+   * @return the elements, which must not be changed
+   */
+  public int[] elements() {
+    return elements;
+  }
+
+  /**
+   * Tells whether an element was in the set's greatest lower bound when the mirror was made.
+   *
+   * @param element the element
+   * @return true when it was
+   */
+  public boolean inRootGlb(int element) {
+    return glb.contains(element);
+  }
+
+  /**
+   * Tells whether an element was in the set's least upper bound when the mirror was made.
+   *
+   * @param element the element
+   * @return true when it was
+   */
+  public boolean inRootLub(int element) {
+    return lub.contains(element);
+  }
+
   /** Passes the set's current domain to the mirror. */
   public void follow() {
     int level = store.level;
@@ -220,6 +252,87 @@ public class SetMirror extends Constraint implements SatisfiedPresent {
       return SetDomain.ANY;
     }
     return v == cardinality ? IntDomain.BOUND : IntDomain.GROUND;
+  }
+
+  /**
+   * Explains the atoms the cardinality gives: a membership forced by the cardinality and the
+   * memberships known (the elements in, when the cardinality cannot be larger, or the elements out,
+   * when it cannot be smaller), and the cardinality's bounds given by the memberships.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar x = trail.variable(entry);
+    int kind = trail.kind(entry);
+    if (x == cardinality) {
+      if (kind == AtomicTrail.GE) {
+        return countBefore(trail, entry, true, null) >= trail.value(entry)
+            && addMembers(trail, entry, true, null, out);
+      }
+      return kind == AtomicTrail.LE
+          && elements.length + glb.getSize() - countBefore(trail, entry, false, null)
+              <= trail.value(entry)
+          && addMembers(trail, entry, false, null, out);
+    }
+    boolean in = kind == AtomicTrail.GE || kind == AtomicTrail.NE && trail.value(entry) == 0;
+    if (in) {
+      // every element not out is in: the elements out leave exactly the minimum cardinality
+      int possible = elements.length + glb.getSize() - countBefore(trail, entry, false, x);
+      if (possible > trail.minBefore(cardinality, entry)) {
+        return false;
+      }
+      trail.addLowerBound(cardinality, entry, out);
+      return addMembers(trail, entry, false, x, out);
+    }
+    // the elements in already reach the maximum cardinality
+    if (countBefore(trail, entry, true, x) < trail.maxBefore(cardinality, entry)) {
+      return false;
+    }
+    trail.addUpperBound(cardinality, entry, out);
+    return addMembers(trail, entry, true, x, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    int now = trail.size();
+    if (countBefore(trail, now, true, null) > trail.maxBefore(cardinality, now)) {
+      trail.addUpperBound(cardinality, now, out);
+      return addMembers(trail, now, true, null, out);
+    }
+    if (elements.length + glb.getSize() - countBefore(trail, now, false, null)
+        < trail.minBefore(cardinality, now)) {
+      trail.addLowerBound(cardinality, now, out);
+      return addMembers(trail, now, false, null, out);
+    }
+    return false;
+  }
+
+  // the elements in (or out) just before a trail position, with those fixed when the mirror was
+  // made, leaving out the membership variable skip
+  private int countBefore(AtomicTrail trail, int position, boolean in, IntVar skip) {
+    int count = in ? glb.getSize() : 0;
+    for (IntVar b : members) {
+      if (b != skip
+          && (in ? trail.minBefore(b, position) >= 1 : trail.maxBefore(b, position) <= 0)) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  // adds the atoms of the elements in (or out) just before a trail position
+  private boolean addMembers(
+      AtomicTrail trail, int position, boolean in, IntVar skip, EntryList out) {
+    for (IntVar b : members) {
+      if (b == skip) {
+        continue;
+      }
+      if (in && trail.minBefore(b, position) >= 1) {
+        trail.addLowerBound(b, position, out);
+      } else if (!in && trail.maxBefore(b, position) <= 0) {
+        trail.addUpperBound(b, position, out);
+      }
+    }
+    return true;
   }
 
   @Override

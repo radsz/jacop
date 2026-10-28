@@ -137,6 +137,11 @@ public class AintersectBeqC extends AbstractSetOpBeqC implements Copyable<Ainter
   }
 
   @Override
+  SetExplanation.Relation relation() {
+    return getClass() == AintersectBeqC.class ? (e, in) -> in[2] == (in[0] && in[1]) : null;
+  }
+
+  @Override
   public boolean satisfied() {
     return grounded() && a.domain.intersect(b.domain).eq(c.domain);
   }

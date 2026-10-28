@@ -35,6 +35,9 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -45,7 +48,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AinB extends PrimitiveConstraint implements Copyable<AinB> {
+public class AinB extends PrimitiveConstraint implements Copyable<AinB>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -133,6 +136,24 @@ public class AinB extends PrimitiveConstraint implements Copyable<AinB> {
     return a.singleton()
         && b.singleton()
         && (!a.domain.subtract(b.domain).isEmpty() || strict && a.domain.eq(b.domain));
+  }
+
+  // the relation on the memberships of each element in a and b, or null when the explanations are
+  // generic
+  private SetExplanation.Relation relation() {
+    return getClass() == AinB.class && !strict ? (e, in) -> !in[0] || in[1] : null;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    SetExplanation.Relation r = relation();
+    return r != null && SetExplanation.explain(trail, entry, new SetVar[] {a, b}, r, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    SetExplanation.Relation r = relation();
+    return r != null && SetExplanation.explainFailure(trail, new SetVar[] {a, b}, r, out);
   }
 
   @Override

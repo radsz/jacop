@@ -250,7 +250,12 @@ Version 5.0 (unreleased)
     interface org.jacop.lcg.Mirrored). The explanation checker
     (-Djacop.lcg.check=true) checks the set constraints too. Under --lcg
     the decisions of a set_search annotation on an element are taken as
-    the literal that the element is in the set. Float variables still
+    the literal that the element is in the set. Set constraints that hold
+    element by element (AintersectBeqC, AunionBeqC, AdiffBeqC, AinB, AeqB,
+    AdisjointB, EinA) explain a membership by the memberships of the same
+    element in their other sets, and SetMirror explains what the
+    cardinality gives, instead of the generic reason over every element
+    (steiner-triples 09: 2.6 s instead of 10.9 s). Float variables still
     turn --lcg off.
 
 Version 4.11

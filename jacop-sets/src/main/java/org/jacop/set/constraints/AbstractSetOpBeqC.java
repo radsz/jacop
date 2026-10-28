@@ -36,6 +36,9 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -48,7 +51,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public abstract class AbstractSetOpBeqC extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent {
+    implements UsesQueueVariable, SatisfiedPresent, Explainable {
 
   /** It specifies set variable a. */
   protected final SetVar a;
@@ -132,5 +135,27 @@ public abstract class AbstractSetOpBeqC extends Constraint
     } else if (variable == c) {
       cHasChanged = true;
     }
+  }
+
+  /**
+   * Returns the relation of the operation on the memberships of an element in a, b and c, for the
+   * explanations of lazy clause generation.
+   *
+   * @return the relation, or null when the explanations are generic
+   */
+  SetExplanation.Relation relation() {
+    return null;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    SetExplanation.Relation r = relation();
+    return r != null && SetExplanation.explain(trail, entry, new SetVar[] {a, b, c}, r, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    SetExplanation.Relation r = relation();
+    return r != null && SetExplanation.explainFailure(trail, new SetVar[] {a, b, c}, r, out);
   }
 }
