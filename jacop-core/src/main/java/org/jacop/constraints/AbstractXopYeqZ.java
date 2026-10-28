@@ -73,6 +73,33 @@ public abstract class AbstractXopYeqZ extends Constraint implements SatisfiedPre
     setScope(x, y, z);
   }
 
+  /**
+   * Returns variable x of x op y = z.
+   *
+   * @return variable x.
+   */
+  public IntVar x() {
+    return x;
+  }
+
+  /**
+   * Returns variable y of x op y = z.
+   *
+   * @return variable y.
+   */
+  public IntVar y() {
+    return y;
+  }
+
+  /**
+   * Returns variable z of x op y = z.
+   *
+   * @return variable z.
+   */
+  public IntVar z() {
+    return z;
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;

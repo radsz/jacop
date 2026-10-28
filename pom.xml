@@ -256,6 +256,7 @@ setup to run configuration. -->
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
@@ -263,6 +264,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -364,6 +366,7 @@ setup to run configuration. -->
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
@@ -380,6 +383,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -480,6 +484,7 @@ setup to run configuration. -->
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
@@ -496,6 +501,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -595,6 +601,7 @@ setup to run configuration. -->
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
@@ -611,6 +618,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>

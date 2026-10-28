@@ -1502,6 +1502,28 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgImpliedEqualityKeepsTheBoundsOfALargeDomain() throws IOException {
+    // liner-sf-repositioning fm3_5: int_eq_imp between a variable of a million values and one of
+    // four copied the holes of the small domain into the large one once b held, a != atom with its
+    // own literals for each of a million values, until the heap ran out
+    String model =
+        """
+        var 1..1000000: x :: output_var;
+        var {250000, 500000, 750000, 1000000}: y;
+        var bool: b;
+        var 0..3000000: cost :: output_var;
+        constraint int_eq_imp(x, y, b);
+        constraint int_lin_eq([1, -1000000, -1], [x, b, cost], -1000000);
+        solve minimize cost;
+        """;
+    String out = run(model, "--lcg", "-s")[0];
+    String last = out.substring(out.lastIndexOf("x = "));
+    assertTrue(last.startsWith("x = 250000;"), out);
+    String literals = out.substring(out.indexOf("lcgAtomLiterals=") + 16);
+    assertTrue(Long.parseLong(literals.substring(0, literals.indexOf('\n')).strip()) < 1000, out);
+  }
+
+  @Test
   void lcgFreeSearchWithoutAnnotationAlternatesWithDomWdeg() throws IOException {
     // cutstock without a search annotation: --lcg -f branched on activity alone and found no
     // solution in 60 s on type04_TEST9, where dom/wdeg finds one; its runs now alternate with

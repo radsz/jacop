@@ -122,6 +122,32 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     store.registerRemoveLevelLateListener(this);
   }
 
+  /**
+   * Domains with more values than this keep only the bounds of a domain {@link #in} copies into
+   * them while the changes are recorded; {@code -Djacop.lcg.holeLimit} changes it.
+   */
+  public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 10_000);
+
+  /**
+   * Intersects the domain of x with d, as {@code x.domain.in} does, but while a trail records the
+   * changes and x has more than {@link #HOLE_LIMIT} values only with d's bounds. Every value
+   * removed between the bounds is a {@code !=} atom with its own literals, so copying a sparse
+   * domain into a large one (an equality between a variable of millions of values and one of a few)
+   * would make millions of them. The weaker pruning is sound; the holes come once x is small
+   * enough.
+   *
+   * @param store the store
+   * @param x the variable
+   * @param d the domain x is restricted to
+   */
+  public static void in(Store store, IntVar x, IntDomain d) {
+    if (store.domainChangeRecorder != null && x.getSize() > HOLE_LIMIT) {
+      x.domain.in(store.level, x, d.min(), d.max());
+    } else {
+      x.domain.in(store.level, x, d);
+    }
+  }
+
   /** Stops recording. */
   public void detach() {
     store.domainChangeRecorder = null;

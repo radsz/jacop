@@ -45,6 +45,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.StoreState;
@@ -131,6 +132,7 @@ public final class Derivation implements VarMap {
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final boolean solutionPreserving;
   private final List<Rule> ruleList;
   private final int maxRounds;
   private final DualReductions dual;
@@ -143,6 +145,8 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
+  private final Map<String, Integer> reductions = new LinkedHashMap<>();
+  private Map<Var, Integer> relaxed = Map.of();
   private DualStatistics dualStatistics;
   private boolean solutionWritten;
   private int rounds;
@@ -153,6 +157,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.solutionPreserving = builder.solutionPreserving;
     this.dual =
         builder.dual
             ? new DualReductions(
@@ -186,6 +191,7 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    private boolean solutionPreserving = true;
     private boolean dual;
     private IntVar objective;
     private boolean minimize;
@@ -232,6 +238,22 @@ public final class Derivation implements VarMap {
      */
     public Builder rules(boolean on) {
       this.rules = on;
+      return this;
+    }
+
+    /**
+     * Sets whether the child must have every solution of the parent, projected on the frozen
+     * variables ({@link #keep(Var...)}), once each. With false, rules may also apply that keep only
+     * satisfiability and optima, for example half-reification, so the child can have several
+     * solutions for one solution of the parent, or a solution whose non-frozen variables postsolve
+     * leaves open; use true for all-solution search and counting. These rules also need the frozen
+     * variables to be given. True by default.
+     *
+     * @param on true to keep every solution.
+     * @return this builder.
+     */
+    public Builder solutionPreserving(boolean on) {
+      this.solutionPreserving = on;
       return this;
     }
 
@@ -383,9 +405,18 @@ public final class Derivation implements VarMap {
     Map<Var, Var> aliases = rules && Aliases.ENABLED ? Aliases.merge(carried) : Map.of();
     dropped += equations - carried.size();
 
+    ReificationCleanup reifications = new ReificationCleanup(carried, frozen, !solutionPreserving);
+    if (rules) {
+      reifications.run();
+      carried.removeIf(reifications::dropped);
+      reductions.put("reificationsSimplified", reifications.simplified());
+      reductions.put("halfReified", reifications.halfReified());
+      reductions.put("reificationsDropped", reifications.dropped());
+    }
+
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
-      used.addAll(c.arguments());
+      used.addAll(reifications.arguments(c));
     }
     // the variable that stays for a class is kept, so every merged variable has a copy
     used.addAll(aliases.values());
@@ -421,6 +452,10 @@ public final class Derivation implements VarMap {
     }
 
     for (Constraint c : carried) {
+      if (reifications.rewritten(c)) {
+        child.impose(reifications.rewrite(c, this));
+        continue;
+      }
       Constraint copy = ((Copyable<?>) c).copy(this);
       if (copy.getClass() != c.getClass()) {
         throw new IllegalStateException(
@@ -437,6 +472,7 @@ public final class Derivation implements VarMap {
     }
     degrees.forEach((copy, degree) -> copy.adjustDegree(degree - copy.sizeConstraintsOriginal()));
 
+    relaxed = reifications.relaxed();
     statistics =
         new Statistics(
             variables.size(),
@@ -737,6 +773,27 @@ public final class Derivation implements VarMap {
   }
 
   /**
+   * Returns how much each presolve rule reduced, by name, in the order the rules ran.
+   *
+   * @return the reductions; empty if no child was derived.
+   */
+  public Map<String, Integer> reductions() {
+    return Collections.unmodifiableMap(reductions);
+  }
+
+  /**
+   * Returns the parent variables that the child half-reifies: Booleans that are not frozen. Once
+   * the other variables of the child are fixed, propagation leaves each of them either fixed or
+   * free to take the value that satisfies every constraint on it, so a search of the child can
+   * leave them out; postsolve gives them their value in the parent.
+   *
+   * @return the relaxed variables.
+   */
+  public Set<Var> relaxed() {
+    return Collections.unmodifiableSet(relaxed.keySet());
+  }
+
+  /**
    * Returns what the dual reductions did.
    *
    * @return the statistics, or null if they were not run.
@@ -828,6 +885,11 @@ public final class Derivation implements VarMap {
           try {
             for (Map.Entry<Var, Var> e : copies.entrySet()) {
               Var v = e.getKey();
+              Integer enforcing = relaxed.get(v);
+              if (enforcing != null && !((IntDomain) e.getValue().dom()).singleton(enforcing)) {
+                // a half-reified Boolean: the parent's reification gives it its value
+                continue;
+              }
               v.dom().in(parent.level, v, e.getValue().dom());
             }
             accepted[0] = parent.consistency();
