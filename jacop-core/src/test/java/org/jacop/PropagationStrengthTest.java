@@ -43,6 +43,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.Eq;
@@ -249,6 +250,20 @@ class PropagationStrengthTest {
     assertThat(store.consistency()).isTrue();
     assertThat(b.dom()).hasToString("0");
     assertThat(d.dom()).hasToString("0");
+  }
+
+  // count(x, y == 2) = c with c in {3..6}: two variables give at most 2 occurrences
+  @Test
+  void testReifiedCountNoticesTooFewPossibleOccurrences() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 0, 2, 3);
+    IntVar y = variable(store, "y", 1);
+    IntVar c = new IntVar(store, "c", 3, 6);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Count(new IntVar[] {x, y}, c, 2), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
   }
 
   /**
