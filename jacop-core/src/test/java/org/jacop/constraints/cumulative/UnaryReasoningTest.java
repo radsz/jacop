@@ -348,6 +348,25 @@ class UnaryReasoningTest {
     }
   }
 
+  @Test
+  void rulesRunAgainAfterTheTimeTableChangesBounds() {
+    // found by random testing: a rule that pruned nothing in one pass prunes after the time-table
+    // changed bounds in a later pass, so the time-table must reset the skipped rules
+    Instance inst =
+        new Instance(
+            new int[][] {
+              {24, 25},
+              {6, 7, 8, 9, 10, 11, 13, 15, 17, 18, 19, 21, 22, 23},
+              {3, 4, 5, 7},
+              {22},
+              {15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31},
+              {2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 20},
+              {22, 23, 24, 25, 26, 29}
+            },
+            new int[][] {{1, 1}, {1, 4}, {7, 9}, {1, 1}, {6, 8}, {2, 5}, {7, 7}});
+    assertThat(rootFixpoint(inst, true, false)).isDeepEqualTo(rootFixpoint(inst, true, true));
+  }
+
   /** Solutions and nodes of a random-order search over all solutions, or the first if many. */
   private static long[] search(Instance inst, boolean profile, boolean reference, long seed) {
     return search(inst, profile, reference, seed, false);
