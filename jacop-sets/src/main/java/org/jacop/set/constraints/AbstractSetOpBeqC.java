@@ -48,7 +48,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public abstract class AbstractSetOpBeqC extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent {
+    implements UsesQueueVariable, SatisfiedPresent, ElementwiseExplainable {
 
   /** It specifies set variable a. */
   protected final SetVar a;
@@ -132,5 +132,15 @@ public abstract class AbstractSetOpBeqC extends Constraint
     } else if (variable == c) {
       cHasChanged = true;
     }
+  }
+
+  @Override
+  public SetExplanation.Relation relation() {
+    return null;
+  }
+
+  @Override
+  public SetVar[] explainedSets() {
+    return new SetVar[] {a, b, c};
   }
 }

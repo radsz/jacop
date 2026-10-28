@@ -40,6 +40,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -118,6 +119,17 @@ public class MaxSimple extends Constraint
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    // once one of x1 and x2 is below max, the other takes the domain of max, so a value
+    // removed inside the domain of max must wake the constraint as well
+    if (v == max
+        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))) {
+      return IntDomain.ANY;
+    }
+    return super.getConsistencyPruningEvent(v);
   }
 
   @Override
