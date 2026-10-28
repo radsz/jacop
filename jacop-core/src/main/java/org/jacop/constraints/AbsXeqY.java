@@ -278,7 +278,8 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
+    // notSatisfied() intersects y with the image of each interval of x, so a hole can decide it
+    return IntDomain.ANY;
   }
 
   @Override

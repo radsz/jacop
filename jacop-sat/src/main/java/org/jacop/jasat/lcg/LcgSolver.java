@@ -53,6 +53,7 @@ import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.Mirrored;
 import org.jacop.search.SelectChoicePoint;
 
 /**
@@ -194,6 +195,11 @@ public final class LcgSolver implements ExternalPropagator {
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
+  private double coreShare;
+  private long coreBudget;
+  private long coreCallLimit;
+  private boolean coreMode; // solutions under assumptions end the search instead of bounding it
+  private CoreSearch coreSearch;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -261,6 +267,19 @@ public final class LcgSolver implements ExternalPropagator {
     litVar[d] = i;
     litKind[d] = (byte) kind;
     litValue[d] = value;
+    return d;
+  }
+
+  /** A new solver variable that is not an atom, such as an output of a cardinality encoding. */
+  int newAuxiliary() {
+    int d = sat.newVariables(1);
+    if (d >= litVar.length) {
+      int n = 2 * d;
+      litVar = Arrays.copyOf(litVar, n);
+      litKind = Arrays.copyOf(litKind, n);
+      litValue = Arrays.copyOf(litValue, n);
+    }
+    litVar[d] = -1;
     return d;
   }
 
@@ -380,9 +399,14 @@ public final class LcgSolver implements ExternalPropagator {
   public int minimize(IntVar objective) {
     this.objective = trail.id(objective);
     best = null;
+    coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
     int result;
     try {
-      result = lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+      if (coreSearch != null) {
+        result = minimizeWithCores();
+      } else {
+        result = lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+      }
     } finally {
       this.objective = -1;
       sat.setConflictLimit(Long.MAX_VALUE);
@@ -393,6 +417,112 @@ public final class LcgSolver implements ExternalPropagator {
     }
     // SAT when the solution has the smallest value of the objective, UNSAT when none is better
     return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+  }
+
+  /**
+   * Runs core-guided search, then branch and bound from its best solution and lower bound. The
+   * core-guided search takes at most its share of the time left (its budget of conflicts when there
+   * is no deadline), and stops early when one call of the solver needs more than its limit of
+   * conflicts: a sign that it no longer finds cores or solutions quickly. Under a solution bound,
+   * every solution the core-guided search finds would have to improve, which makes its strata hard,
+   * so the bound comes only after it.
+   */
+  private int minimizeWithCores() {
+    long deadline = sat.deadline();
+    long now = System.nanoTime();
+    long phaseLimit = Long.MAX_VALUE;
+    if (deadline != Long.MAX_VALUE) {
+      sat.setDeadline(now + (long) (coreShare * Math.max(0, deadline - now)));
+    } else {
+      phaseLimit = sat.conflicts + coreBudget;
+    }
+    coreMode = true;
+    int result;
+    try {
+      result = coreSearch.run(phaseLimit, coreCallLimit);
+    } finally {
+      coreMode = false;
+      sat.setDeadline(deadline);
+      sat.setConflictLimit(Long.MAX_VALUE);
+    }
+    if (result != CdclSolver.UNKNOWN) {
+      return result;
+    }
+    if (!requireBetter()) {
+      return CdclSolver.SAT;
+    }
+    return lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+  }
+
+  /**
+   * Adds the clause that the objective is below its value in the best solution, if there is one.
+   * Returns false when that value is the objective's smallest, so the best solution is optimal.
+   */
+  boolean requireBetter() {
+    if (best == null) {
+      return true;
+    }
+    int v = best[objective];
+    if (v <= vars[objective].min()) {
+      return false;
+    }
+    sat.addClause(-geLit(objective, v)); // objective <= v - 1
+    return true;
+  }
+
+  /**
+   * Turns on core-guided search in {@link #minimize} when the objective is a linear sum: before
+   * branch and bound, it finds unsatisfiable cores of the assumptions that each term of the sum
+   * stays at its lower bound and relaxes them (OLL), raising the objective's lower bound, until it
+   * proves a solution optimal, its time is up, or one call of the solver needs too many conflicts.
+   *
+   * @param share the share of the time left that it may take; 0 turns it off
+   * @param conflicts the conflicts it may take when there is no deadline
+   * @param callLimit the conflicts one call of the solver may take before it stops
+   */
+  public void setCoreSearch(double share, long conflicts, long callLimit) {
+    coreShare = share;
+    coreBudget = Math.max(1, conflicts);
+    coreCallLimit = Math.max(1, callLimit);
+  }
+
+  /**
+   * Returns the core-guided phase of the last {@link #minimize}, for its statistics.
+   *
+   * @return the phase, or null when it did not run
+   */
+  public CoreSearch coreSearch() {
+    return coreSearch;
+  }
+
+  // ------------------------------------------------- access for the core-guided phase
+
+  CdclSolver solver() {
+    return sat;
+  }
+
+  /** The index of a variable of the store, or -1 when it is not one of the solver's variables. */
+  int index(IntVar x) {
+    int i = trail.id(x);
+    return i >= 0 && i < vars.length && vars[i] == x ? i : -1;
+  }
+
+  IntVar variable(int i) {
+    return vars[i];
+  }
+
+  /** The literal {@code [x >= v]} of variable i, for v in (root min, root max]. */
+  int geLiteral(int i, int v) {
+    return geLit(i, v);
+  }
+
+  int solveUnder(int... assumed) {
+    return solve(assumed);
+  }
+
+  /** The objective's value in the best solution so far, or {@link Long#MAX_VALUE}. */
+  long bestObjective() {
+    return best == null ? Long.MAX_VALUE : best[objective];
   }
 
   /**
@@ -544,6 +674,9 @@ public final class LcgSolver implements ExternalPropagator {
   @Override
   public void notifyLearntLiteral(int lit) {
     int dimacsVar = Math.abs(lit);
+    if (litVar[dimacsVar] < 0) {
+      return; // not an atom
+    }
     if (activityBranching) {
       bump(litVar[dimacsVar]);
     }
@@ -622,8 +755,8 @@ public final class LcgSolver implements ExternalPropagator {
       }
       for (int a = from; a < to; a++) {
         int i = (int) minimizeKeys[a];
-        if (i == 0) {
-          continue; // the asserting literal stays
+        if (i == 0 || litVar[Math.abs(clause[i])] < 0) {
+          continue; // the asserting literal stays, and so do literals that are not atoms
         }
         for (int b = from; b < to; b++) {
           int j = (int) minimizeKeys[b];
@@ -1055,6 +1188,11 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int annotationDecision() {
     Var v = annotation.getChoiceVariable(0);
+    if (v instanceof Mirrored m) {
+      // the left branch on a set variable's element is that the element is in the set
+      int i = idOf(m.decisionVariable(annotation.getChoiceValue()));
+      return i < 0 ? 0 : eqVar(i, 1);
+    }
     if (v != null) {
       int i = idOf(v);
       if (i < 0) {
@@ -1119,15 +1257,22 @@ public final class LcgSolver implements ExternalPropagator {
         solution[i] = vars[i].value();
       }
     }
-    if (onSolution != null) {
+    // under core-guided search a solution need not improve on the best one
+    boolean improving = objective < 0 || best == null || solution[objective] < best[objective];
+    if (onSolution != null && improving) {
       onSolution.run();
     }
     if (objective < 0) {
       return true;
     }
-    best = solution;
-    phase = solution;
-    solutions++;
+    if (improving) {
+      best = solution;
+      phase = solution;
+      solutions++;
+    }
+    if (coreMode) {
+      return true;
+    }
     int v = solution[objective];
     if (v <= root[objective].min()) {
       return true;

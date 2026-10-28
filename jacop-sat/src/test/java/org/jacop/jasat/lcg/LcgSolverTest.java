@@ -49,6 +49,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
@@ -62,15 +63,18 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -558,7 +562,8 @@ class LcgSolverTest {
       List<Relation> relations = new ArrayList<>();
       relations.add(
           new Relation(
-              new Binpacking(item, load, w, minBin, rnd.nextInt(4) != 0),
+              new Binpacking(item, load, w, minBin, rnd.nextInt(4) != 0)
+                  .cardinalityReasoning(rnd.nextInt(3) == 0),
               t -> {
                 int[] sum = new int[bins];
                 for (int k = 0; k < n; k++) {
@@ -828,6 +833,231 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
     assertThat(own).isGreaterThan(1000);
+  }
+
+  /**
+   * Random subcircuits with a least number of nodes and a cost bound, against brute force.
+   * Subcircuit explains its prunings by cuts of its successor graph, with the dominator pruning run
+   * at every call, so its reasons are checked on every kind of pruning.
+   */
+  @Test
+  void subcircuitAgreesWithBruteForce() {
+    String skip = System.getProperty("sub_circuit_dominance_skip");
+    System.setProperty("sub_circuit_dominance_skip", "0");
+    try {
+      Random rnd = new Random(41);
+      int sat = 0;
+      int unsat = 0;
+      long own = 0;
+      long generic = 0;
+      for (int instance = 0; instance < 1500; instance++) {
+        Store store = new Store();
+        int n = 6 + rnd.nextInt(3);
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 1, n);
+          for (int w = 1; w <= n; w++) {
+            if (w != i + 1 && rnd.nextInt(3) == 0) {
+              x[i].domain.subtractAdapt(w);
+            }
+          }
+        }
+        List<Relation> relations = new ArrayList<>();
+        relations.add(new Relation(new Subcircuit(x), t -> isSubcircuit(t)));
+        int[] cost = new int[n];
+        for (int i = 0; i < n; i++) {
+          cost[i] = rnd.nextInt(4);
+        }
+        IntVar[] in = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          in[i] = new IntVar(store, "in" + i, 0, 1);
+          relations.add(new Relation(new Reified(new XneqC(x[i], i + 1), in[i]), t -> true));
+        }
+        int limit = n / 2 + rnd.nextInt(n);
+        relations.add(
+            new Relation(
+                new LinearInt(in, cost, "<=", limit),
+                t -> {
+                  int sum = 0;
+                  for (int i = 0; i < n; i++) {
+                    sum += t[i] != i + 1 ? cost[i] : 0;
+                  }
+                  return sum <= limit;
+                }));
+        int least = 2 + rnd.nextInt(n - 2);
+        int[] ones = new int[n];
+        Arrays.fill(ones, 1);
+        relations.add(
+            new Relation(
+                new LinearInt(in, ones, ">=", least),
+                t -> {
+                  int count = 0;
+                  for (int i = 0; i < n; i++) {
+                    count += t[i] != i + 1 ? 1 : 0;
+                  }
+                  return count >= least;
+                }));
+        boolean expected = bruteForce(x, relations, new int[n], 0);
+        for (Relation r : relations) {
+          store.impose(r.constraint);
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        int status = solver.solve();
+        assertThat(status)
+            .as("instance %d", instance)
+            .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+        if (expected) {
+          int[] t = new int[n];
+          for (int i = 0; i < n; i++) {
+            t[i] = solver.value(x[i]);
+          }
+          for (Relation r : relations) {
+            assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+          }
+          sat++;
+        } else {
+          unsat++;
+        }
+        long[] counts = solver.explanationStatistics().get("Subcircuit");
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+      System.out.printf(
+          "subcircuit: %d sat, %d unsat, %d own and %d generic explanations%n",
+          sat, unsat, own, generic);
+      assertThat(sat).isGreaterThan(100);
+      assertThat(unsat).isGreaterThan(100);
+      assertThat(own).isGreaterThan(1000);
+      assertThat(generic).isLessThan(own / 50);
+    } finally {
+      if (skip == null) {
+        System.clearProperty("sub_circuit_dominance_skip");
+      } else {
+        System.setProperty("sub_circuit_dominance_skip", skip);
+      }
+    }
+  }
+
+  /**
+   * Random circuits, numbered from 0 or 1, with a bound on a weighted sum of the successors,
+   * against brute force. Circuit explains its prunings itself: cuts of its successor graph, and the
+   * fixed arcs of a chain for the arc that would close it early.
+   */
+  @Test
+  void circuitAgreesWithBruteForce() {
+    Random rnd = new Random(43);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(3);
+      int offset = rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, offset, offset + n - 1);
+        for (int w = 0; w < n; w++) {
+          if (w != i && rnd.nextInt(4) == 0) {
+            x[i].domain.subtractAdapt(offset + w);
+          }
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Circuit(x, offset),
+              t -> {
+                int v = 0;
+                for (int k = 1; k < n; k++) {
+                  v = t[v] - offset;
+                  if (v < 0 || v >= n || v == 0) {
+                    return false;
+                  }
+                }
+                return t[v] - offset == 0;
+              }));
+      int[] weight = new int[n];
+      for (int i = 0; i < n; i++) {
+        weight[i] = rnd.nextInt(3) - 1;
+      }
+      int limit = rnd.nextInt(n) - n / 2;
+      relations.add(
+          new Relation(
+              new LinearInt(x, weight, "<=", limit + offset * Arrays.stream(weight).sum()),
+              t -> {
+                int sum = 0;
+                for (int i = 0; i < n; i++) {
+                  sum += weight[i] * (t[i] - offset);
+                }
+                return sum <= limit;
+              }));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Circuit");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "circuit: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(1000);
+    assertThat(generic).isLessThan(own / 50);
+  }
+
+  // the nodes not pointing to themselves form one cycle
+  private static boolean isSubcircuit(int[] t) {
+    int n = t.length;
+    int start = -1;
+    int inCircuit = 0;
+    boolean[] seen = new boolean[n + 1];
+    for (int v = 0; v < n; v++) {
+      if (seen[t[v]]) {
+        return false;
+      }
+      seen[t[v]] = true;
+      if (t[v] != v + 1) {
+        start = v;
+        inCircuit++;
+      }
+    }
+    if (inCircuit == 0) {
+      return true;
+    }
+    int length = 0;
+    int v = start;
+    do {
+      v = t[v] - 1;
+      length++;
+    } while (v != start && length <= inCircuit);
+    return v == start && length == inCircuit;
   }
 
   @Test
@@ -1465,6 +1695,65 @@ class LcgSolverTest {
   }
 
   /**
+   * Long tasks, as in the largescheduling benchmark: the time table made holes of thousands of
+   * start values in one go, each an atom with a literal of its own, and the solver ran out of
+   * memory before a first solution; a start with no value left was explained by every atom of the
+   * constraint. Under LCG the time table now keeps to the bounds of the starts, and such a failure
+   * has an explanation of its own.
+   */
+  @Test
+  void longTasksKeepTheTimeTableToTheBounds() {
+    Random rnd = new Random(11);
+    int n = 30;
+    Store store = new Store();
+    IntVar[] s = new IntVar[n];
+    IntVar[] durations = new IntVar[n];
+    IntVar[] resources = new IntVar[n];
+    int[] d = new int[n];
+    int[] r = new int[n];
+    int horizon = 0;
+    for (int i = 0; i < n; i++) {
+      d[i] = 5000 + rnd.nextInt(15000);
+      r[i] = 1 + rnd.nextInt(40);
+      horizon += d[i];
+    }
+    IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, horizon);
+      durations[i] = new IntVar(store, d[i], d[i]);
+      resources[i] = new IntVar(store, r[i], r[i]);
+      store.impose(new XplusClteqZ(s[i], d[i], makespan));
+    }
+    int limit = 50;
+    store.impose(new Cumulative(s, durations, resources, new IntVar(store, limit, limit)));
+    LcgSolver solver = new LcgSolver(store);
+    solver.sat().setConflictLimit(2000);
+    solver.minimize(makespan);
+
+    int end = solver.value(makespan);
+    for (int i = 0; i < n; i++) {
+      assertThat(solver.value(s[i]) + d[i]).isLessThanOrEqualTo(end);
+    }
+    for (int i = 0; i < n; i++) {
+      // the load where a task starts is the highest it reaches while that task runs
+      int time = solver.value(s[i]);
+      int load = 0;
+      for (int k = 0; k < n; k++) {
+        if (solver.value(s[k]) <= time && time < solver.value(s[k]) + d[k]) {
+          load += r[k];
+        }
+      }
+      assertThat(load).isLessThanOrEqualTo(limit);
+    }
+    assertThat(solver.sat().conflicts).isPositive();
+    // one hole of a long task alone was thousands of literals
+    assertThat(solver.sat().numVars()).isLessThan(100_000);
+    long[] counts = solver.explanationStatistics().get("Cumulative");
+    assertThat(counts[3]).as("failures of the cumulative").isPositive();
+    assertThat(counts[4]).as("failures explained generically").isZero();
+  }
+
+  /**
    * CountValues prunes with an internal variable for the number of variables equal to no counted
    * value. The variable was not among the constraint's arguments, so the generic reason left out
    * its atoms, among them the solver's own decisions on it, and the learnt clauses cut off the
@@ -1690,5 +1979,118 @@ class LcgSolverTest {
     assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
     assertThat(solver.value(cost)).isEqualTo(250_000);
     assertThat(solver.atomLiterals).isLessThan(1_000);
+  }
+
+  @Test
+  void coreGuidedSearchAgreesWithSearch() {
+    Random rnd = new Random(17);
+    long cores = 0;
+    long proved = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = coreModelOptimum(seed, -1, new long[2]);
+      for (int mode = 0; mode < 3; mode++) {
+        // mode 0: core-guided search alone; 1: a few conflicts, then branch and bound; 2: the
+        // objective maximised through its negation
+        long[] stats = new long[2];
+        Integer found = coreModelOptimum(seed, mode, stats);
+        assertThat(found)
+            .as("instance %d (seed %d), mode %d", instance, seed, mode)
+            .isEqualTo(expected);
+        cores += stats[0];
+        proved += stats[1];
+      }
+      if (expected == null) {
+        unsat++;
+      }
+    }
+    assertThat(cores).isPositive();
+    // core-guided search alone proves some optima
+    assertThat(proved).isPositive();
+    assertThat(unsat).isPositive();
+  }
+
+  /**
+   * Builds a random model with a weighted sum objective and minimises it: by depth-first search
+   * (mode -1) or by LCG with core-guided search (modes 0 to 2). Returns the optimum, or null when
+   * there is no solution; stats gets the cores and whether core-guided search proved the optimum.
+   */
+  private static Integer coreModelOptimum(long seed, int mode, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 4 + rnd.nextInt(5);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      int lo = rnd.nextInt(3) - 1;
+      // a few wider domains, for terms that must move far above their bounds
+      x[i] = new IntVar(store, "x" + i, lo, lo + 1 + rnd.nextInt(i < 2 ? 10 : 4));
+    }
+    int m = 2 + rnd.nextInt(2 * n);
+    for (int k = 0; k < m; k++) {
+      int a = rnd.nextInt(n);
+      int b = (a + 1 + rnd.nextInt(n - 1)) % n;
+      switch (rnd.nextInt(5)) {
+        case 0 -> store.impose(new XneqY(x[a], x[b]));
+        case 3 -> {
+          // x[a] >= high or x[a] >= low by a 0/1 choice: x[a] >= low holds in every solution but
+          // not at the root, so core-guided search proves it by probing
+          int low = 2 + rnd.nextInt(3);
+          int high = low + 1 + rnd.nextInt(3);
+          IntVar choice = new IntVar(store, "c" + k, 0, 1);
+          store.impose(new LinearInt(new IntVar[] {x[a], choice}, new int[] {1, -high}, ">=", 0));
+          store.impose(new LinearInt(new IntVar[] {x[a], choice}, new int[] {1, low}, ">=", low));
+        }
+        case 1 -> store.impose(new XlteqY(x[a], x[b]));
+        case 2 -> store.impose(new XplusClteqZ(x[a], rnd.nextInt(3) - 1, x[b]));
+        default -> {
+          // x[a] + x[b] + x[c] >= c: pushes costs up
+          int c = rnd.nextInt(n);
+          store.impose(
+              new LinearInt(
+                  new IntVar[] {x[a], x[b], x[c]}, new int[] {1, 1, 1}, ">=", rnd.nextInt(6)));
+        }
+      }
+    }
+    int[] w = new int[n + 1];
+    IntVar[] terms = Arrays.copyOf(x, n + 1);
+    int lo = 0;
+    int hi = 0;
+    for (int i = 0; i < n; i++) {
+      w[i] = rnd.nextInt(4) == 0 ? -1 - rnd.nextInt(2) : 1 + rnd.nextInt(5);
+      lo += Math.min(w[i] * x[i].min(), w[i] * x[i].max());
+      hi += Math.max(w[i] * x[i].min(), w[i] * x[i].max());
+    }
+    IntVar objective = new IntVar(store, "obj", lo, hi);
+    terms[n] = objective;
+    w[n] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    IntVar cost = objective;
+    if (mode == 2) {
+      // as fz2jacop maximises: the negation of a variable that is minus the sum
+      IntVar negated = new IntVar(store, "neg", -hi, -lo);
+      store.impose(new XplusYeqZ(objective, negated, new IntVar(store, 0, 0)));
+      IntVar max = new IntVar(store, "max", lo, hi);
+      store.impose(new XplusYeqC(max, negated, 0));
+      cost = max;
+    }
+    if (mode < 0) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(
+        1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    if (solver.coreSearch() != null) {
+      stats[0] += solver.coreSearch().cores;
+      stats[1] += solver.coreSearch().proved ? 1 : 0;
+    }
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 }
