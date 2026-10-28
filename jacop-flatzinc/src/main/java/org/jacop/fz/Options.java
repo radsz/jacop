@@ -73,6 +73,7 @@ public class Options {
   boolean runSearch = true;
   boolean useSat;
   boolean lcg;
+  boolean lp;
   // the default can be changed by the system property jacop.presolve, for example to run the
   // FlatZinc test suites with presolve
   Presolve presolve =
@@ -153,6 +154,9 @@ public class Options {
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
                 the SAT core); the search annotation is followed without restarts, or with -f
                 alternated per restart with branching on the most active variables.
+            --lp add the linear relaxation of the linear constraints as a propagator, solved by a
+                dual simplex at every node; its deductions are integer combinations of the rows,
+                explained under --lcg.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
             --symmetry <value> with presolve, break the variable symmetries of the model with
@@ -201,6 +205,7 @@ public class Options {
       case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
+      case "--lp" -> i = handleLp(i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
@@ -294,6 +299,11 @@ public class Options {
 
   private int handleLcg(int i) {
     lcg = true;
+    return i + 1;
+  }
+
+  private int handleLp(int i) {
+    lp = true;
     return i + 1;
   }
 
@@ -629,6 +639,15 @@ public class Options {
    */
   public boolean lcg() {
     return lcg;
+  }
+
+  /**
+   * It defines whether the linear relaxation is added as a propagator (--lp).
+   *
+   * @return true when --lp was given
+   */
+  public boolean lp() {
+    return lp;
   }
 
   /** Whether the model is presolved before search, and how. */

@@ -52,6 +52,7 @@ import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -157,6 +158,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   FreeSearch.Status freeSearchStatus;
   LcgSolver lcg;
   int lcgStatus;
+
+  // the linear relaxation (--lp), or null
+  private LinearRelaxation linearRelaxation;
   // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
   // LcgSolver is between two runs and holds no solution
   int lcgLastCost;
@@ -377,6 +381,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       presolve(node);
     }
 
+    if (opt.lp()) {
+      imposeLinearRelaxation(node);
+    }
+
     if (opt.debug()) {
       failStatistics = new FailConstraintsStatistics(store);
     }
@@ -406,6 +414,67 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       throw new IllegalArgumentException(
           "%% Error: Not recognized structure of solve statement; compilation aborted");
     }
+  }
+
+  /**
+   * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
+   * with the objective of the solve item.
+   *
+   * @param node the solve item.
+   */
+  private void imposeLinearRelaxation(ASTSolveItem node) {
+    IntVar objective = null;
+    boolean maximize = false;
+    if (node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind) {
+      int k = getKind(kind.getKind());
+      if (k != 0 && kind.jjtGetChild(0) instanceof ASTSolveExpr expr) {
+        objective =
+            switch (expr.getType()) {
+              case 0 -> dictionary.getVariable(expr.getIdent());
+              case 1 -> {
+                IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+                yield a == null ? null : a[expr.getIndex()];
+              }
+              default -> null;
+            };
+        maximize = k == 2;
+      }
+    }
+    long start = timer.getCpuTime();
+    linearRelaxation = LinearRelaxation.of(store, objective, maximize);
+    if (linearRelaxation != null) {
+      store.impose(linearRelaxation);
+    }
+    if (options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: lpTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: lpRows="
+              + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat-end");
+    }
+  }
+
+  /** Prints the counts of the linear relaxation (--lp). */
+  private void printLinearRelaxationStatistics() {
+    LinearRelaxation r = linearRelaxation;
+    if (r == null || !options.getStatistics()) {
+      return;
+    }
+    IO.println(
+        "%%%mzn-stat: lpCalls="
+            + r.calls
+            + "\n%%%mzn-stat: lpPivots="
+            + r.pivots()
+            + "\n%%%mzn-stat: lpLimits="
+            + r.limits
+            + "\n%%%mzn-stat: lpInfeasible="
+            + r.infeasible
+            + "\n%%%mzn-stat: lpFailures="
+            + r.failures
+            + "\n%%%mzn-stat: lpPrunings="
+            + r.prunings
+            + "\n%%%mzn-stat-end");
   }
 
   /**
@@ -1681,6 +1750,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
 
+    printLinearRelaxationStatistics();
+
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
       return;
@@ -2211,6 +2282,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
+
+    printLinearRelaxationStatistics();
 
     if (lcg != null) {
       printLcgStatistics(interrupted);
