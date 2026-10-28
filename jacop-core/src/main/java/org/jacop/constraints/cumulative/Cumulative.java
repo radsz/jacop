@@ -81,6 +81,8 @@ public class Cumulative extends CumulativeBasic {
   boolean doTimeTableDisjunctive = true;
   boolean doHorizontallyElasticEdgeFind;
   private HorizontallyElasticEdgeFinder horizontallyElastic;
+  boolean doEnergeticReasoning;
+  private EnergeticReasoning energetic;
   boolean adaptiveEnergy;
   // calls in a row without pruning after which an adaptive rule starts to be skipped
   private static final int IDLE_LIMIT = 64;
@@ -88,10 +90,11 @@ public class Cumulative extends CumulativeBasic {
   private static final int MAX_SKIP = 64;
   private static final int TTDR = 0;
   private static final int TTEF = 1;
+  private static final int ER = 2;
   // per rule: calls in a row that pruned nothing, calls left to skip and the current skip period
-  private final int[] idleCalls = new int[2];
-  private final int[] skipCalls = new int[2];
-  private final int[] skipPeriod = new int[2];
+  private final int[] idleCalls = new int[3];
+  private final int[] skipCalls = new int[3];
+  private final int[] skipPeriod = new int[3];
   // one per view, so that each keeps its task orders between calls
   final EnergyReasoning energy = new EnergyReasoning();
   final EnergyReasoning energyReversed = new EnergyReasoning();
@@ -175,6 +178,7 @@ public class Cumulative extends CumulativeBasic {
     copy.doTimeTableDisjunctive(doTimeTableDisjunctive);
     copy.doHorizontallyElasticEdgeFind(doHorizontallyElasticEdgeFind);
     copy.doAdaptiveEnergyReasoning(adaptiveEnergy);
+    copy.doEnergeticReasoning(doEnergeticReasoning);
     return copy;
   }
 
@@ -240,6 +244,20 @@ public class Cumulative extends CumulativeBasic {
     }
   }
 
+  /**
+   * Sets whether to use energetic reasoning (Baptiste, Le Pape and Nuijten, 1999), which checks the
+   * minimal energy of the tasks in every relevant time window and adjusts the bounds of the tasks
+   * against it. It costs O(n^2 log n) per call and more for the adjustments. It is off by default.
+   *
+   * @param doEr true to enable energetic reasoning, false otherwise.
+   */
+  public void doEnergeticReasoning(boolean doEr) {
+    doEnergeticReasoning = doEr;
+    if (doEr && energetic == null) {
+      energetic = new EnergeticReasoning();
+    }
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -265,12 +283,12 @@ public class Cumulative extends CumulativeBasic {
   }
 
   /**
-   * Sets whether time-table edge finding and time-table disjunctive reasoning adapt to how often
-   * they prune. A rule that prunes nothing (and finds no failure) in 64 calls in a row is then
-   * skipped for 1, 2, 4, ... up to 64 calls after each further call without pruning, and runs at
-   * every call again as soon as it prunes. The constraint stays correct, since time-table
-   * propagation still checks every complete assignment, but it may prune less. It is off by
-   * default.
+   * Sets whether time-table edge finding, time-table disjunctive reasoning and energetic reasoning
+   * adapt to how often they prune. A rule that prunes nothing (and finds no failure) in 64 calls in
+   * a row is then skipped for 1, 2, 4, ... up to 64 calls after each further call without pruning,
+   * and runs at every call again as soon as it prunes. The constraint stays correct, since
+   * time-table propagation still checks every complete assignment, but it may prune less. It is off
+   * by default.
    *
    * @param adaptive true to let the rules adapt, false to run them at every call.
    */
@@ -298,6 +316,22 @@ public class Cumulative extends CumulativeBasic {
       ruleRan(rule, pruned);
     }
     return pruned;
+  }
+
+  // energetic reasoning in both directions unless it is being skipped
+  private void energeticRule(TaskView[] tn, TaskView[] tr, int n, long capacity, Store store) {
+    if (skipCalls[ER] > 0) {
+      skipCalls[ER]--;
+      return;
+    }
+    boolean pruned = true;
+    try {
+      energetic.filter(tn, n, capacity, store);
+      energetic.filter(tr, n, capacity, store);
+      pruned = store.propagationHasOccurred;
+    } finally {
+      ruleRan(ER, pruned);
+    }
   }
 
   private static void runEnergyRule(
@@ -335,7 +369,8 @@ public class Cumulative extends CumulativeBasic {
     if (!overload
         && !doTimeTableDisjunctive
         && !doTimeTableEdgeFind
-        && !doHorizontallyElasticEdgeFind) {
+        && !doHorizontallyElasticEdgeFind
+        && !doEnergeticReasoning) {
       return;
     }
     TaskView[] tn = filterZeroTasks(taskNormal);
@@ -360,6 +395,12 @@ public class Cumulative extends CumulativeBasic {
     if (doHorizontallyElasticEdgeFind) {
       horizontallyElastic.filter(tn, n, capacity, store);
       horizontallyElastic.filter(tr, n, capacity, store);
+      if (store.propagationHasOccurred) {
+        return;
+      }
+    }
+    if (doEnergeticReasoning) {
+      energeticRule(tn, tr, n, capacity, store);
     }
   }
 
@@ -809,6 +850,8 @@ public class Cumulative extends CumulativeBasic {
         .append(doTimeTableDisjunctive)
         .append(", heef=")
         .append(doHorizontallyElasticEdgeFind)
+        .append(", er=")
+        .append(doEnergeticReasoning)
         .append(" )");
 
     return result.toString();
