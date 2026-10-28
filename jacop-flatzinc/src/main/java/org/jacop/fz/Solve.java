@@ -1851,8 +1851,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
    * solution-based phase saving, and nogoods learned at each restart. Satisfaction restarts
    * geometrically from 100 failures, growing by 1.5; optimisation from 10 failures, growing by
-   * 1.05, starts that sequence again after each solution and forgets the dom/wdeg weights every 32
-   * restarts.
+   * 1.05, starts that sequence again after each solution, forgets the dom/wdeg weights every 32
+   * restarts and spends one failure in twenty on probes of the objective near its lower bound.
    */
   private boolean executeFreeSearch(Var costVar) {
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
@@ -1962,6 +1962,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
+      // one failure in twenty goes to runs with the objective at or near its lower bound
+      builder.probeObjective(
+          Double.parseDouble(options.freeConfig("probe", "0.05")),
+          Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
     freeSearch = builder.build();
     if (options.debug()) {
@@ -2898,6 +2902,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(solutions)
             + (freeSearch != null && freeSearch.getNogoods() > 0
                 ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
+                : "")
+            + (freeSearch != null && freeSearch.getProbes() > 0
+                ? "\n%%%mzn-stat: objectiveProbes="
+                    + nf.format(freeSearch.getProbes())
+                    + "\n%%%mzn-stat: objectiveProbesRefuted="
+                    + nf.format(freeSearch.getProbesRefuted())
+                    + "\n%%%mzn-stat: objectiveProbeFailures="
+                    + nf.format(freeSearch.getProbeFailures())
                 : "")
             + "\n%%%mzn-stat-end");
 
