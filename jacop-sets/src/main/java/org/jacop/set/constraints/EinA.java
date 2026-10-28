@@ -36,6 +36,9 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -46,7 +49,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class EinA extends PrimitiveConstraint implements Copyable<EinA> {
+public class EinA extends PrimitiveConstraint implements Copyable<EinA>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -117,6 +120,43 @@ public class EinA extends PrimitiveConstraint implements Copyable<EinA> {
   public boolean notSatisfied() {
     return !a.domain.lub().contains(element)
         || strict && (a.domain.card().max() <= 1 || a.domain.lub().getSize() <= 1);
+  }
+
+  // e in a, on the membership of each element, or null when the explanations are generic
+  private SetExplanation.Relation relation(boolean in) {
+    return getClass() == EinA.class && !strict ? (e, m) -> e != element || m[0] == in : null;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    SetExplanation.Relation r = relation(true);
+    return r != null && SetExplanation.explain(trail, entry, new SetVar[] {a}, r, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    SetExplanation.Relation r = relation(false);
+    return r != null && SetExplanation.explain(trail, entry, new SetVar[] {a}, r, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    SetExplanation.Relation r = relation(true);
+    return r != null && SetExplanation.explainFailure(trail, new SetVar[] {a}, r, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    SetExplanation.Relation r = relation(false);
+    return r != null && SetExplanation.explainFailure(trail, new SetVar[] {a}, r, out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    return getClass() == EinA.class
+        && !strict
+        && SetExplanation.membership(trail, a, element, position, entailed, out);
   }
 
   @Override

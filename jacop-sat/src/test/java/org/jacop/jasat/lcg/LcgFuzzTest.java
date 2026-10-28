@@ -582,8 +582,16 @@ class LcgFuzzTest {
                         s, chain("d", 3, 0, 3), chain("r", 3, 1, 2), chain("c", 1, 1, 4)[0]);
               }
               case 1 ->
-                  new Binpacking(
-                      pick(x, 3), chain("l", 3, 0, 4), new int[] {1 + rnd.nextInt(3), 2, 1}, -1);
+                  rnd.nextBoolean()
+                      ? new Binpacking(
+                          pick(x, 3), chain("l", 3, 0, 4), new int[] {1 + rnd.nextInt(3), 2, 1}, -1)
+                      // the number of items of each bin as variables
+                      : new Binpacking(
+                          pick(x, 3),
+                          chain("l", 3, 0, 4),
+                          new int[] {rnd.nextInt(3), 2, 1},
+                          -1,
+                          chain("k", 3, 0, 2));
               default -> {
                 IntVar[] o = pick(x, 3);
                 IntVar[] o2 = pick(x, 3);
@@ -735,15 +743,20 @@ class LcgFuzzTest {
   }
 
   /**
-   * Gives one run in three objective lower-bound search, and three runs in four a search annotation
-   * on the decision variables, as fixed search (with or without restarts) or free search, branching
-   * on values or splitting domains.
+   * Gives one run in three objective lower-bound search, one in three core-guided search first, and
+   * three runs in four a search annotation on the decision variables, as fixed search (with or
+   * without restarts) or free search, branching on values or splitting domains.
    */
   private static void annotate(LcgSolver solver, Model model, long seed) {
     Random random = new Random(seed * 31 + 7);
     if (random.nextInt(3) == 0) {
       // short runs, so that the tiny models reach the lower-bound runs
       solver.setLowerBoundSearch(0.25 + random.nextDouble(), 1 + random.nextInt(3));
+    }
+    // one run in three starts with core-guided search, for a few conflicts
+    Random core = new Random(seed * 17 + 3);
+    if (core.nextInt(3) == 0) {
+      solver.setCoreSearch(1, 1 + core.nextInt(50), 1 + core.nextInt(20));
     }
     int kind = (int) (seed / 3 % 4);
     if (kind == 0) {

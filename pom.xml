@@ -203,6 +203,7 @@ setup to run configuration. -->
                                 <lp.test.runs>300</lp.test.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
+                                <wakeup.trials>1000</wakeup.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -233,6 +234,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -245,6 +247,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -252,6 +255,9 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
@@ -261,9 +267,11 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -341,6 +349,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -356,12 +365,16 @@ setup to run configuration. -->
                                 <include>**/PresolveTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
@@ -371,9 +384,11 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -450,6 +465,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -465,12 +481,16 @@ setup to run configuration. -->
                                 <include>**/PresolveTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
@@ -480,9 +500,11 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -559,6 +581,7 @@ setup to run configuration. -->
                                 <include>**/TrailedTupleSetTest.java</include>
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
+                                <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -573,12 +596,16 @@ setup to run configuration. -->
                                 <include>**/PresolveTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
+                                <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/EnergyPrecedenceTest.java</include>
+                                <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
@@ -588,9 +615,11 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>

@@ -93,6 +93,16 @@ class AtomicTrailTest {
         });
     m.add(
         s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "z", rnd)};
+          return new Model(new XmulYeqZ(v[0], v[0], v[1]), t -> t[0] * t[0] == t[1], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), new IntVar(s, "b", 0, 1), newVar(s, "z", rnd)};
+          return new Model(new XmulYeqZ(v[0], v[1], v[2]), t -> t[0] * t[1] == t[2], v);
+        });
+    m.add(
+        s -> {
           IntVar[] v = {
             newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
           };
@@ -303,6 +313,104 @@ class AtomicTrailTest {
       }
     }
     assertThat(checked).isGreaterThan(1000);
+  }
+
+  /**
+   * Products over domains too wide to enumerate supports: their reasons come from the bounds and
+   * must still imply the propagated atoms.
+   */
+  @Test
+  void wideProductReasonsAreSound() {
+    Random rnd = new Random(13);
+    int checked = 0;
+    for (int instance = 0; instance < 40; instance++) {
+      int lo = -rnd.nextInt(2) * 150;
+      checked +=
+          dive(
+              s -> {
+                IntVar[] v = {
+                  new IntVar(s, "x", lo, lo + 150),
+                  new IntVar(s, "b", 0, 1),
+                  new IntVar(s, "z", -160, 160)
+                };
+                return new Model(new XmulYeqZ(v[0], v[1], v[2]), t -> t[0] * t[1] == t[2], v);
+              },
+              rnd);
+      checked +=
+          dive(
+              s -> {
+                IntVar[] v = {new IntVar(s, "x", -150, 150), new IntVar(s, "z", 0, 400)};
+                return new Model(new XmulYeqZ(v[0], v[0], v[1]), t -> t[0] * t[0] == t[1], v);
+              },
+              rnd);
+    }
+    assertThat(checked).isGreaterThan(100);
+  }
+
+  /**
+   * x * b = z with x in 1..1000 and b in 0..1: z >= 500 propagates x >= 500, which removes more
+   * values than supports are enumerated for. Its reason is z >= 500, not the generic one.
+   */
+  @Test
+  void wideProductBoundHasItsOwnReason() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1000);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XmulYeqZ(x, b, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    z.domain.inMin(store.level, z, 500);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(500);
+    int xBound = -1;
+    int zBound = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.GE) {
+        xBound = e;
+      }
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 500) {
+        zBound = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(xBound, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(zBound);
+    trail.detach();
+  }
+
+  /**
+   * x * x = z with x in 0..1566 (gbac): z <= 10000 propagates x <= 100, explained by z <= 10000.
+   */
+  @Test
+  void wideSquareBoundHasItsOwnReason() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1566);
+    IntVar z = new IntVar(store, "z", 0, 1566 * 1566);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XmulYeqZ(x, x, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    z.domain.inMax(store.level, z, 10000);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.max()).isEqualTo(100);
+    int xBound = -1;
+    int zBound = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.LE) {
+        xBound = e;
+      }
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.LE && trail.value(e) == 10000) {
+        zBound = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(xBound, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(zBound);
+    trail.detach();
   }
 
   /**
