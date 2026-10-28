@@ -72,9 +72,14 @@ public final class Presolver {
           ? List.of(
               GlobalPresolveRule::new,
               AtMostOneRule::new,
+              BooleanProducts::new,
               () -> RedundantConstraints.RULE,
               () -> OrderLiterals.RULE)
-          : List.of(GlobalPresolveRule::new, AtMostOneRule::new, () -> RedundantConstraints.RULE);
+          : List.of(
+              GlobalPresolveRule::new,
+              AtMostOneRule::new,
+              BooleanProducts::new,
+              () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;

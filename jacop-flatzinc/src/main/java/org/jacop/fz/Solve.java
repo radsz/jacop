@@ -70,6 +70,7 @@ import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
+import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.ImpliedConstraints;
 import org.jacop.presolve.ObjectivePresolve;
@@ -682,6 +683,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
     }
     for (Rule rule : d.rules()) {
+      if (rule instanceof BooleanProducts p) {
+        s.append("%%%mzn-stat: presolveBooleanProducts=").append(p.replaced()).append('\n');
+      }
       if (rule instanceof ProbingRule p) {
         Probing.Result probed = p.result();
         s.append("%%%mzn-stat: probeTime=").append(probed.timeNanos() / 1e9).append('\n');
