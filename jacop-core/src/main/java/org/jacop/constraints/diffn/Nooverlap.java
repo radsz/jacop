@@ -85,6 +85,8 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
   int[][] lMin;
   int[][] lMax;
   private long boundsStamp = -1;
+  private int[] readAt;
+  private int epoch;
 
   /*
    * What a pass of the pairwise pruning, the profile or the area check finds for a rectangle depends
@@ -337,8 +339,10 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
         continue;
       }
       syncBounds();
+      bounds(j);
       BitSet o = os;
       for (int i = os.nextSetBit(0); i >= 0; i = os.nextSetBit(i + 1)) {
+        bounds(i);
         if (!possibleOverlap(j, i)) {
           if (o == os) {
             o = (BitSet) os.clone();
@@ -368,32 +372,44 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
   }
 
   /**
-   * Reads the bounds of all rectangles into est, lst, lMin and lMax unless no domain changed since
-   * they were last read in this consistency call. All of them are read again, because a variable
-   * can belong to several rectangles.
+   * Starts a new reading of the bounds into est, lst, lMin and lMax if a domain changed since the
+   * last one in this consistency call. A rectangle's bounds are then read on first use, see bounds.
    */
   void syncBounds() {
     long stamp = store.domainChanges();
     if (stamp == boundsStamp) {
       return;
     }
-    int n = rectangle.length;
     if (est == null) {
+      int n = rectangle.length;
       est = new int[2][n];
       lst = new int[2][n];
       lMin = new int[2][n];
       lMax = new int[2][n];
+      readAt = new int[n];
     }
-    for (int i = 0; i < n; i++) {
-      Rectangle r = rectangle[i];
-      for (int d = 0; d < 2; d++) {
-        est[d][i] = r.origin[d].min();
-        lst[d][i] = r.origin[d].max();
-        lMin[d][i] = r.length[d].min();
-        lMax[d][i] = r.length[d].max();
-      }
-    }
+    epoch++;
     boundsStamp = stamp;
+  }
+
+  /**
+   * Makes est, lst, lMin and lMax of rectangle i current. A changed variable can belong to several
+   * rectangles, so any domain change makes syncBounds start a new reading of all of them.
+   *
+   * @param i the rectangle.
+   */
+  void bounds(int i) {
+    if (readAt[i] == epoch) {
+      return;
+    }
+    Rectangle r = rectangle[i];
+    for (int d = 0; d < 2; d++) {
+      est[d][i] = r.origin[d].min();
+      lst[d][i] = r.origin[d].max();
+      lMin[d][i] = r.length[d].min();
+      lMax[d][i] = r.length[d].max();
+    }
+    readAt[i] = epoch;
   }
 
   // Rectangle.possibleOverlap on the bounds read by syncBounds
@@ -509,6 +525,8 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
       for (int dim = 0; dim < 2; dim++) {
         int oDim = dim == 0 ? 1 : 0;
         syncBounds();
+        bounds(r.index);
+        bounds(i);
         if (overlap(r.index, i, dim)) {
           prune(r, rectangle[i], oDim);
         }

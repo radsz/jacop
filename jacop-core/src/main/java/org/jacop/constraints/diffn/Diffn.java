@@ -35,6 +35,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Comparator;
 import java.util.List;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -86,6 +87,8 @@ public class Diffn extends Nooverlap {
   private final int[][] partEst = new int[2][];
   private final int[][] partLct = new int[2][];
   private Event[] sweepEvents;
+  private static final Comparator<Event> EVENT_ORDER =
+      (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
   private boolean[] inProfile;
   private final List<Interval> sweepLine = new ArrayList<>();
 
@@ -221,13 +224,15 @@ public class Diffn extends Nooverlap {
         continue;
       }
       if (!read) {
-        // the area check prunes nothing, so the bounds are read once
+        // the area check prunes nothing, so each rectangle's bounds are read once
         invalidateBounds();
         syncBounds();
         read = true;
       }
+      bounds(k);
       int commonArea = 0;
       for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
+        bounds(j);
         int partialCommonArea = partialCommonArea(k, j, 0) * partialCommonArea(k, j, 1);
         commonArea += partialCommonArea;
       }
@@ -369,8 +374,6 @@ public class Diffn extends Nooverlap {
       subtractOutside[dim] = new Event[n];
       partEst[dim] = new int[n];
       partLct[dim] = new int[n];
-      sweepEvents = new Event[2 * n + 2];
-      inProfile = new boolean[n];
     }
     long[] keys = parts[dim];
     int m = 0;
@@ -402,6 +405,50 @@ public class Diffn extends Nooverlap {
     partsStamp[dim] = store.domainChanges();
   }
 
+  /** buildSweepEvents from the rectangles that r may overlap only. */
+  private int buildSweepEventsOf(Rectangle r, BitSet o, int dim, int otherDim, int[] limitOut) {
+    Event[] es = sweepEvents;
+    boolean mandatoryExists = false;
+    int j = 0;
+    int minLimit = r.est(otherDim);
+    int maxLimit = r.lct(otherDim);
+    for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
+      Rectangle rr = rectangle[i];
+      int min = rr.lst(dim);
+      int max = rr.ect(dim);
+      int lMin = rr.getLength(otherDim).min();
+      if (min >= max || lMin <= 0) {
+        continue;
+      }
+      int oMin = rr.lst(otherDim);
+      int oMax = rr.ect(otherDim);
+      boolean withinR = rr.est(otherDim) >= r.est(otherDim) && rr.lct(otherDim) <= r.lct(otherDim);
+      if (withinR) {
+        Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
+        es[j++] = new Event(PROFILE_ADD, rr, min, lMin, block);
+        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
+        // only rectangles within r in the other dimension widen the limit of the profile
+        minLimit = Math.min(rr.est(otherDim), minLimit);
+        maxLimit = Math.max(rr.lct(otherDim), maxLimit);
+        mandatoryExists = true;
+      } else if (oMin < oMax) {
+        // a rectangle reaching outside r adds no height, only its compulsory part as a block
+        Interval block = new Interval(oMin, oMax);
+        es[j++] = new Event(PROFILE_ADD, rr, min, 0, block);
+        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, 0, block);
+        mandatoryExists = true;
+      }
+    }
+    if (!mandatoryExists) {
+      return 0;
+    }
+    limitOut[0] = maxLimit - minLimit;
+    es[j++] = new Event(PRUNE_START, r, r.est(dim), 0, null);
+    es[j++] = new Event(PRUNE_END, r, r.lct(dim), 0, null);
+    Arrays.sort(es, 0, j, EVENT_ORDER);
+    return j;
+  }
+
   // orders by date, then type, then rectangle index, as the stable sort of the events did
   private static long partKey(int date, int type, int index) {
     return ((long) date << 32) | ((long) type << 31) | index;
@@ -413,6 +460,14 @@ public class Diffn extends Nooverlap {
    * limit.
    */
   private int buildSweepEvents(Rectangle r, BitSet o, int dim, int otherDim, int[] limitOut) {
+    if (sweepEvents == null) {
+      sweepEvents = new Event[2 * rectangle.length + 2];
+      inProfile = new boolean[rectangle.length];
+    }
+    if (8 * o.cardinality() < rectangle.length) {
+      // few rectangles may overlap r: sorting their events is cheaper than filtering all
+      return buildSweepEventsOf(r, o, dim, otherDim, limitOut);
+    }
     if (partsStamp[dim] != store.domainChanges()) {
       buildParts(dim, otherDim);
     }

@@ -364,6 +364,13 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("DiffnK4NonStrict", boxes(4, false, false)),
         Arguments.of("DiffnK3Shared", boxes(3, true, true)),
         Arguments.of("DiffnK3NonStrictShared", boxes(3, false, true)),
+        Arguments.of("DiffnK1Layers", boxes(1, true, false, true)),
+        Arguments.of("DiffnK2Layers", boxes(2, true, false, true)),
+        Arguments.of("DiffnK2NonStrictLayers", boxes(2, false, false, true)),
+        Arguments.of("DiffnK3Layers", boxes(3, true, false, true)),
+        Arguments.of("DiffnK3NonStrictLayers", boxes(3, false, false, true)),
+        Arguments.of("DiffnK3SharedLayers", boxes(3, true, true, true)),
+        Arguments.of("DiffnK3NonStrictSharedLayers", boxes(3, false, true, true)),
         Arguments.of("Diff2", rectangles("Diff2")),
         Arguments.of("Diff2Exclusive", rectangles("Diff2Exclusive")),
         Arguments.of("Disjoint", rectangles("Disjoint")),
@@ -3021,8 +3028,17 @@ class GlobalConstraintBruteForceTest {
    * its presence handle.
    */
   private static Function<Random, Instance> boxes(int k, boolean strict, boolean shared) {
+    return boxes(k, strict, shared, false);
+  }
+
+  /**
+   * The same, with the cumulative projection and the slice check switched on when layers is true,
+   * and then up to 4 boxes.
+   */
+  private static Function<Random, Instance> boxes(
+      int k, boolean strict, boolean shared, boolean layers) {
     return random -> {
-      int n = 1 + random.nextInt(3);
+      int n = 1 + random.nextInt(layers ? 4 : 3);
       int[][] domains = new int[2 * n * k][];
       // variable of origin (i, d) is 2k i + d, of length (i, d) is 2k i + k + d
       int[] originOf = new int[n * k];
@@ -3074,7 +3090,10 @@ class GlobalConstraintBruteForceTest {
                 handle[i] = length[i][0];
               }
             }
-            store.impose(new DiffnK(origin, length, strict, handle));
+            DiffnK c = new DiffnK(origin, length, strict, handle);
+            c.doProjection(layers);
+            c.doSlices(layers);
+            store.impose(c);
           },
           x -> {
             for (int i = 0; i < n; i++) {
