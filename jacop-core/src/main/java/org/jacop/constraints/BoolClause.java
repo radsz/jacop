@@ -40,6 +40,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.lcg.LinearForm;
 
 /**
  * I defines a boolean clause for 0/1 variables x_i and y_i. The clause is fulfilled if at least one
@@ -320,6 +321,25 @@ public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClau
     }
     resultString.append("])");
     return resultString.toString();
+  }
+
+  /**
+   * Returns the clause as the linear relation {@code sum x - sum y >= 1 - |y|}.
+   *
+   * @return the linear form.
+   */
+  LinearForm clauseForm() {
+    IntVar[] vars = new IntVar[lx + ly];
+    long[] weights = new long[lx + ly];
+    for (int i = 0; i < lx; i++) {
+      vars[i] = x[i];
+      weights[i] = 1;
+    }
+    for (int i = 0; i < ly; i++) {
+      vars[lx + i] = y[i];
+      weights[lx + i] = -1;
+    }
+    return new LinearForm(vars, weights, 1L - ly, LinearForm.GE);
   }
 
   @Override

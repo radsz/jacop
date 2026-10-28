@@ -134,6 +134,8 @@ public final class FreeSearch {
   private final boolean maximize;
   private final Calculator restarts;
   private final boolean restartOnSolution;
+  private final boolean resetRestartsOnSolution;
+  private boolean runEndedBySolution;
   private final boolean allSolutions;
   private final long solutionLimit;
   private final long failLimit;
@@ -182,6 +184,7 @@ public final class FreeSearch {
     // restarts would find the same solutions again
     restarts = allSolutions ? null : builder.restarts;
     restartOnSolution = builder.restartOnSolution && restarts != null;
+    resetRestartsOnSolution = builder.resetRestartsOnSolution;
     solutionLimit = builder.solutionLimit;
     failLimit = builder.failLimit;
     timeLimitMillis = builder.timeLimitMillis;
@@ -295,7 +298,11 @@ public final class FreeSearch {
         m.onRestart(this);
       }
       if (restarts != null) {
-        restarts.newLimit();
+        if (runEndedBySolution && resetRestartsOnSolution) {
+          restarts.reset();
+        } else {
+          restarts.newLimit();
+        }
       }
     }
   }
@@ -349,6 +356,7 @@ public final class FreeSearch {
 
   private RunEnd run() {
     runEndedByFailure = false;
+    runEndedBySolution = false;
     int nextIndex = 0;
     boolean consistent = propagate();
     Frame failedFrame = null;
@@ -590,6 +598,7 @@ public final class FreeSearch {
       return RunEnd.STOP;
     }
     if (cost != null && restartOnSolution) {
+      runEndedBySolution = true;
       return RunEnd.RESTART;
     }
     return null;
@@ -755,6 +764,7 @@ public final class FreeSearch {
     private boolean maximize;
     private Calculator restarts;
     private boolean restartOnSolution;
+    private boolean resetRestartsOnSolution;
     private boolean allSolutions;
     private long solutionLimit;
     private long failLimit;
@@ -858,6 +868,18 @@ public final class FreeSearch {
      */
     public Builder restartOnSolution(boolean restart) {
       this.restartOnSolution = restart;
+      return this;
+    }
+
+    /**
+     * With {@link #restartOnSolution(boolean)}, starts the sequence of fail limits again after each
+     * solution, so the runs after an improvement are short again (as in Choco).
+     *
+     * @param reset true to reset the restart limits after each solution.
+     * @return this builder.
+     */
+    public Builder resetRestartsOnSolution(boolean reset) {
+      this.resetRestartsOnSolution = reset;
       return this;
     }
 
