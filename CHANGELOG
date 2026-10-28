@@ -255,6 +255,17 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. Lazy clause generation explains XmulYeqZ removals by bounds first: the
+    product range of x and y (squares when x = y), the quotient range of a
+    factor, and the square roots of z for x * x = z, citing only the
+    bounds that matter. Before, a removal of more than 64 values, or with a
+    factor ranging over 1024 values or more, got the generic reason. On gbac
+    (squares over 0..1566) generic reasons drop from about half of the
+    XmulYeqZ reasons to almost none and the reasons from 17 to 2 atoms;
+    over the 46 MiniZinc benchmark instances with a variable product
+    (--lcg -f, 60 s) the solved ones take 2 % less time (geometric mean)
+    and gbac reaches a better objective on 5 of 6.
+
 Version 4.11
 =============
 
