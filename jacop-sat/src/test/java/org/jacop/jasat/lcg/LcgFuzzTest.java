@@ -132,6 +132,8 @@ import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.CostMdd;
+import org.jacop.constraints.regular.CostRegular;
+import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
@@ -356,6 +358,32 @@ class LcgFuzzTest {
       return new CostMdd(Arrays.copyOf(v, 3), level, from, label, cost, to, v[3]);
     }
 
+    /**
+     * A cost regular constraint (one resource) or a multi-cost regular one (two) over 3 variables:
+     * an automaton of three states over values -1 to 3, with random costs from -1 to 2.
+     */
+    private Constraint costRegular(int resources) {
+      IntVar[] v = pick(x, 3);
+      int[][] transition = new int[3][5];
+      int[][][] costs = new int[resources][3][5];
+      for (int q = 0; q < 3; q++) {
+        for (int j = 0; j < 5; j++) {
+          transition[q][j] = rnd.nextInt(4) - 1;
+          for (int r = 0; r < resources; r++) {
+            costs[r][q][j] = rnd.nextInt(4) - 1;
+          }
+        }
+      }
+      int[] finals = rnd.nextBoolean() ? new int[] {0, 1, 2} : new int[] {rnd.nextInt(3)};
+      IntVar[] cost = new IntVar[resources];
+      for (int r = 0; r < resources; r++) {
+        cost[r] = rnd.nextBoolean() ? one() : intVar("rc", rnd.nextInt(3) - 2, 2 + rnd.nextInt(3));
+      }
+      return resources == 1
+          ? new CostRegular(v, transition, -1, 0, finals, costs[0], cost[0])
+          : new MultiCostRegular(v, transition, -1, 0, finals, costs, cost);
+    }
+
     /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
     private HybridTable hybridTable() {
       IntVar[] v = pick(x, 2 + rnd.nextInt(2));
@@ -418,7 +446,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(76)) {
+      return switch (rnd.nextInt(78)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -604,6 +632,8 @@ class LcgFuzzTest {
                 new String[] {"==", "<=", ">="}[rnd.nextInt(3)],
                 rnd.nextBoolean() ? one() : intVar("as", value() + 2, 9),
                 rnd.nextBoolean());
+        case 75 -> costRegular(1);
+        case 76 -> costRegular(2);
         case 63 ->
             new LinearIntDom(
                 p,
