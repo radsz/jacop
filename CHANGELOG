@@ -404,7 +404,14 @@ Version 5.0 (unreleased)
     instead of 115 s with one left unsolved. gardner_sum_square finds
     another optimal solution.
 
-30. Free search (-f, with and without --lcg) tries the cost variables of
+30. The FlatZinc front end also posts the redundant SubcircuitCost when a
+    successor is fixed and written as a constant, as MiniZinc writes
+    succ[LuigiHouse] = MarioHouse in mario; before, the detection gave up on
+    such a subcircuit. All 6 mario instances of the OR-Tools comparison
+    are now proved in 60 s: in 0.6 to 13 s under --lcg -f (2 before) and
+    0.6 to 38 s by default (2 before).
+
+31. Free search (-f, with and without --lcg) tries the cost variables of
     FlatZinc objective presolve first, cheapest value first (largest when
     maximising), before the annotation it alternates with, and with
     --lcg gives core-guided search 0.1 of the time instead of 0.5 when
@@ -414,7 +421,7 @@ Version 5.0 (unreleased)
     and data300 are proved in about 7 s. Models without cost variables
     search as before.
 
-31. The FlatZinc front end adds the linear relaxation of the model's linear
+32. The FlatZinc front end adds the linear relaxation of the model's linear
     constraints (org.jacop.constraints.lp.LinearRelaxation) as a
     propagator; --lp off turns it off. A bounded dual simplex, warm-started
     from the previous node, solves it during search. A Farkas certificate
@@ -432,7 +439,7 @@ Version 5.0 (unreleased)
     variable that occurs with weights of both signs and refuses reasons
     whose sums overflow a long.
 
-31. --lcg -f branches on defined variables last. Activity branching picked
+33. --lcg -f branches on defined variables last. Activity branching picked
     the variables of defines_var annotations (sums, shortest-path values,
     the objective) as often as the model's decision variables, though they
     follow from those; it now branches on them only once every other
@@ -443,7 +450,7 @@ Version 5.0 (unreleased)
     in 0.02 s, where it found none in 10 s. -Djacop.lcg.late=none turns it
     off.
 
-32. Shorter linear explanations for lazy clause generation (--lcg). A
+34. Shorter linear explanations for lazy clause generation (--lcg). A
     lifted linear reason spends its slack on the terms that cost least
     first, so it leaves out as many terms as the slack allows, and the
     entailment reasons of reified linear constraints are lifted too. The

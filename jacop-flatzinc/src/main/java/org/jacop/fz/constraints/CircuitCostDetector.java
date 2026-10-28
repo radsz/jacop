@@ -218,8 +218,15 @@ public class CircuitCostDetector implements ParserTreeConstants {
     Map<IntVar, Integer> rowOfValue = new IdentityHashMap<>();
     Map<IntVar, Integer> rowOfSuccessor = new IdentityHashMap<>();
     int[][] arcCosts = new int[n][n];
+    int fixed = 0;
     for (int i = 0; i < n; i++) {
       Element e = elements.get(c.x[i]);
+      if (e == null && c.x[i].singleton()) {
+        // a fixed successor has a constant arc cost, which the linear constraint has as a constant,
+        // so its row stays zero
+        fixed++;
+        continue;
+      }
       if (e == null
           || rowOfValue.put(e.value, i) != null
           || rowOfSuccessor.put(c.x[i], i) != null) {
@@ -232,7 +239,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
       }
     }
     for (SimpleNode node : linears) {
-      Sum sum = sumOf(node, c, arcCosts, rowOfValue, rowOfSuccessor);
+      Sum sum = sumOf(node, c, arcCosts, fixed, rowOfValue, rowOfSuccessor);
       if (sum == null) {
         continue;
       }
@@ -271,6 +278,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
       SimpleNode node,
       Circuit c,
       int[][] arcCosts,
+      int fixed,
       Map<IntVar, Integer> rowOfValue,
       Map<IntVar, Integer> rowOfSuccessor) {
     boolean equation = "int_lin_eq".equals(((ASTConstElem) node).getName());
@@ -312,7 +320,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
         return null;
       }
     }
-    if (found != n) {
+    if (found + fixed != n) {
       return null;
     }
 
