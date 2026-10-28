@@ -632,6 +632,39 @@ class SingleConstraintTest extends TestHelper {
     assertThat(items[0].singleton(1)).isTrue();
   }
 
+  // Bins 0 and 1 hold at least 2 + 1 of the six items, so bins 2 and 3 together hold at most 3,
+  // and items 2, 3 and 5 can only go there. Item 4 is out of bin 2 although each bin alone could
+  // still take it: bin 2 has room for one more item and bin 3 is not full either.
+  @Test
+  void testBinpackingGroupOfBinsIsFull() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "x0", 0, 1),
+      new IntVar(store, "x1", 0, 0),
+      new IntVar(store, "x2", 2, 3),
+      new IntVar(store, "x3", 2, 3),
+      new IntVar(store, "x4", 0, 2),
+      new IntVar(store, "x5", 2, 3)
+    };
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 5, 7),
+      new IntVar(store, "l1", 2, 5),
+      new IntVar(store, "l2", 1, 4),
+      new IntVar(store, "l3", 2, 5)
+    };
+    IntVar[] card = {
+      new IntVar(store, "c0", 2, 3),
+      new IntVar(store, "c1", 1, 2),
+      new IntVar(store, "c2", 1, 2),
+      new IntVar(store, "c3", 2, 2)
+    };
+    store.impose(new Binpacking(items, binLoad, new int[] {2, 3, 1, 4, 3, 2}, 0, card));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[4].max()).isEqualTo(1);
+  }
+
   // The items of weight 0 are counted too: three items and two bins of at most one item each.
   @Test
   void testBinpackingCardinalityCountsZeroWeights() {
