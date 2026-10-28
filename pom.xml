@@ -244,6 +244,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -358,6 +359,7 @@ setup to run configuration. -->
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
@@ -467,6 +469,7 @@ setup to run configuration. -->
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
@@ -575,6 +578,7 @@ setup to run configuration. -->
                                 <include>**/ProbingTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
+                                <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
