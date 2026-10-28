@@ -470,6 +470,7 @@ class PresolveTest {
     IntVar y = new IntVar(store, "y", 0, 9);
     store.impose(new XltY(x, y));
 
+    // a derivation without rules; the presolver adds the standard ones
     assertThat(Derivation.of(store).derive().rounds()).isZero();
   }
 

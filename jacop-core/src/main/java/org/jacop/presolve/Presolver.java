@@ -31,6 +31,7 @@
 package org.jacop.presolve;
 
 import java.util.List;
+import java.util.function.Supplier;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -65,17 +66,17 @@ public final class Presolver {
    * new presolve rule is added here. The system property jacop.presolve.orderLiterals=false leaves
    * out {@link OrderLiterals}, for example to measure it.
    */
-  static final List<Rule> STANDARD =
+  static final List<Supplier<Rule>> STANDARD =
       Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"))
-          ? List.of(OrderLiterals.RULE)
-          : List.of();
+          ? List.of(AtMostOneRule::new, () -> OrderLiterals.RULE)
+          : List.of(AtMostOneRule::new);
 
   private final Derivation.Builder builder;
   private boolean checking;
 
   private Presolver(Store store) {
     this.builder = Derivation.of(store);
-    STANDARD.forEach(builder::rule);
+    STANDARD.forEach(rule -> builder.rule(rule.get()));
   }
 
   /**
