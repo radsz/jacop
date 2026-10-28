@@ -251,6 +251,17 @@ public class Tables {
     from.forEach((k, v) -> to.put(k, map.get(v)));
   }
 
+  /**
+   * Removes variables from the default search, which labels every variable without an annotation.
+   *
+   * @param vars the variables, which no constraint needs fixed.
+   */
+  void removeFromDefaultSearch(Set<Var> vars) {
+    defaultSearchVariables.removeIf(vars::contains);
+    defaultSearchArrays.replaceAll(
+        a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
+  }
+
   /** Removes aliased variables from the search variable collection. */
   void removeAliasFromSearch() {
 

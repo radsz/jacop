@@ -1068,9 +1068,9 @@ public class Support implements ParserTreeConstants {
 
   private void propagateFzXeqYwhenBone(Store store, IntVar x, IntVar y) {
     do {
-      x.domain.in(store.level, x, y.domain);
+      AtomicTrail.in(store, x, y.domain);
       store.propagationHasOccurred = false;
-      y.domain.in(store.level, y, x.domain);
+      AtomicTrail.in(store, y, x.domain);
     } while (store.propagationHasOccurred);
   }
 

@@ -50,7 +50,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -71,6 +70,7 @@ import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
+import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.ImpliedConstraints;
 import org.jacop.presolve.ObjectivePresolve;
@@ -78,6 +78,7 @@ import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
 import org.jacop.presolve.ProbingRule;
 import org.jacop.presolve.Rule;
+import org.jacop.presolve.Tabling;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -378,8 +379,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     options = opt;
     dictionary = table;
     output = table;
+    presolveObjective(node);
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolveObjective(node);
       presolve(node);
     }
 
@@ -417,7 +418,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Objective presolve: imposes the objective, expanded through its defining equations and shifted
    * by the exactly-one sets of the model, as a redundant equation in the loaded store, so presolve
-   * copies it into the derived store. See {@link ObjectivePresolve}.
+   * copies it into the derived store. It runs with and without --presolve, since it only adds
+   * redundant constraints; their degree weight is 0, so static variable orders do not change. See
+   * {@link ObjectivePresolve}.
    *
    * @param node the solve item.
    */
@@ -449,19 +452,88 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     ObjectivePresolve presolve =
         new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
-    LinearInt equation = presolve.reformulate();
-    if (equation != null) {
-      store.impose(equation);
+    List<Constraint> reformulation = presolve.reformulate(store);
+    if (reformulation.size() == 1 && !halves(presolve, reformulation.getFirst())) {
+      // no cost variables and an equation as long as the objective's definition: the stronger root
+      // bound alone did not pay on vrp under lazy clause generation (four of six instances worse)
+      reformulation = List.of();
+    }
+    Constraint replaced =
+        reformulation.isEmpty()
+            ? null
+            : objectiveDefinition(objective, presolve, reformulation.getLast());
+    if (replaced != null) {
+      replaced.removeConstraint();
+    }
+    for (Constraint c : reformulation) {
+      store.impose(c.setDegreeWeight(0));
     }
     if (options.getStatistics()) {
       IO.println(
           "%%%mzn-stat: presolveObjectiveTime="
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: presolveObjectiveExpanded="
-              + (equation == null ? 0 : presolve.expanded())
+              + (reformulation.isEmpty() ? 0 : presolve.expanded())
               + "\n%%%mzn-stat: presolveObjectiveShifted="
-              + (equation == null ? 0 : presolve.shifted()));
+              + (reformulation.isEmpty() ? 0 : presolve.shifted())
+              + "\n%%%mzn-stat: presolveObjectiveReplaced="
+              + (replaced == null ? 0 : 1));
     }
+  }
+
+  /** True if the equation has at most half as many variables as the objective's definition. */
+  private static boolean halves(ObjectivePresolve presolve, Constraint equation) {
+    IntVar[] vars = presolve.definitionVariables();
+    return vars != null && 2L * equation.arguments().size() <= vars.length;
+  }
+
+  /**
+   * The constraint of the objective whose variables are those of the objective's defining equation,
+   * if exactly one constraint has them and the reformulated equation has no more variables. The
+   * reformulated equation implies it, so it is replaced instead of kept next to the reformulated
+   * equation: on vrp under lazy clause generation the two equations of 1,800 terms halve the node
+   * rate. A longer reformulated equation, expanded through intermediate variables, is only added:
+   * on routing-flexible it propagates less than the chain of definitions it expands, and replacing
+   * the definition lost a proof.
+   */
+  private static Constraint objectiveDefinition(
+      IntVar objective, ObjectivePresolve presolve, Constraint equation) {
+    IntVar[] vars = presolve.definitionVariables();
+    if (vars == null || equation.arguments().size() > vars.length) {
+      return null;
+    }
+    Set<Var> definition = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : vars) {
+      if (!v.singleton()) {
+        definition.add(v);
+      }
+    }
+    Set<Constraint> candidates = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint[] cs : objective.dom().modelConstraints) {
+      if (cs != null) {
+        for (Constraint c : cs) {
+          if (c != null) {
+            candidates.add(c);
+          }
+        }
+      }
+    }
+    Constraint found = null;
+    for (Constraint c : candidates) {
+      Set<Var> scope = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Var v : c.arguments()) {
+        if (!v.singleton()) {
+          scope.add(v);
+        }
+      }
+      if (scope.equals(definition)) {
+        if (found != null) {
+          return null;
+        }
+        found = c;
+      }
+    }
+    return found;
   }
 
   /**
@@ -476,6 +548,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
+    Var[] frozen = frozenVariables(node);
+    if (frozen != null) {
+      presolver.keep(frozen).solutionPreserving(false);
+    }
+    Tabling tabling = options.presolveTabling() ? new Tabling() : null;
+    if (tabling != null) {
+      presolver.rule(tabling);
+    }
     dualReductions(presolver, node);
     ImpliedConstraints implied = new ImpliedConstraints();
     if (options.presolveImplied()) {
@@ -484,7 +564,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, implied.imposed(), time);
+      printPresolveStatistics(d, tabling, implied.imposed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -498,8 +578,82 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clause[1] = map.get(clause[1]);
         }
         dictionary = dictionary.mapTo(map);
+        if (!d.relaxed().isEmpty()) {
+          // half-reified Booleans: any value completes a solution, and postsolve sets them
+          Set<Var> relaxed = Collections.newSetFromMap(new IdentityHashMap<>());
+          d.relaxed().forEach(v -> relaxed.add(map.get(v)));
+          dictionary.removeFromDefaultSearch(relaxed);
+        }
         store = d.child();
         presolve = d;
+      }
+    }
+  }
+
+  /**
+   * The variables whose values must be those of a solution of the loaded model: the output
+   * variables, the objective and the variables of clauses posted after presolve. Returns null when
+   * presolve has to keep every solution, under all-solution or several-solution satisfaction
+   * search, or when an on_restart model reads variables between runs.
+   */
+  private Var[] frozenVariables(ASTSolveItem node) {
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(node.jjtGetNumChildren() - 1);
+    int solve = getKind(kind.getKind());
+    boolean severalSolutions = options.getAll() || options.getNumberSolutions() > 1;
+    if (solve == 0 && severalSolutions || dictionary.onRestart != null) {
+      return null;
+    }
+    Set<Var> frozen = Collections.newSetFromMap(new IdentityHashMap<>());
+    frozen.addAll(dictionary.outputVariables);
+    for (OutputArrayAnnotation a : dictionary.outputArray) {
+      frozen.addAll(Arrays.asList(a.getArray()));
+    }
+    if (solve != 0) {
+      ASTSolveExpr cost = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (cost.getType() == 0) {
+        Var v = dictionary.getVariable(cost.getIdent());
+        frozen.add(v != null ? v : dictionary.getFloatVariable(cost.getIdent()));
+      } else {
+        Var[] a = dictionary.getVariableArray(cost.getIdent());
+        frozen.add(a != null ? a[cost.getIndex()] : null);
+        Var[] fa = dictionary.getVariableFloatArray(cost.getIdent());
+        frozen.add(fa != null ? fa[cost.getIndex()] : null);
+      }
+    }
+    addSearchVariables(node, frozen);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      frozen.addAll(Arrays.asList(clause[0]));
+      frozen.addAll(Arrays.asList(clause[1]));
+    }
+    frozen.remove(null);
+    return frozen.toArray(new Var[0]);
+  }
+
+  /**
+   * Adds the variables of the search annotations: a half-reified Boolean that the search sets to
+   * false no longer prunes with the negation of its constraint, so the search tree grows.
+   */
+  private void addSearchVariables(ASTSolveItem node, Set<Var> frozen) {
+    int count = node.jjtGetNumChildren();
+    if (count < 2) {
+      return;
+    }
+    SearchItem<T> si = new SearchItem<>(store, dictionary);
+    if (count == 2) {
+      si.searchParameters(node, 0);
+    } else {
+      si.searchParametersForSeveralAnnotations(node, 0);
+    }
+    addSearchVariables(si, frozen);
+  }
+
+  private static void addSearchVariables(SearchItem<?> si, Set<Var> frozen) {
+    if (si.vars() != null) {
+      frozen.addAll(Arrays.asList(si.vars()));
+    }
+    if (si.getSearchItems() != null) {
+      for (SearchItem<?> sub : si.getSearchItems()) {
+        addSearchVariables(sub, frozen);
       }
     }
   }
@@ -574,7 +728,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
-  private void printPresolveStatistics(Derivation d, int implied, long time) {
+  private void printPresolveStatistics(Derivation d, Tabling tabling, int implied, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -591,6 +745,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
+      s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {
@@ -598,7 +753,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
+    d.reductions()
+        .forEach(
+            (rule, n) ->
+                s.append("%%%mzn-stat: presolve")
+                    .append(Character.toUpperCase(rule.charAt(0)))
+                    .append(rule, 1, rule.length())
+                    .append('=')
+                    .append(n)
+                    .append('\n'));
+    if (tabling != null) {
+      Tabling.Statistics t = tabling.statistics();
+      s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
+      s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
+      s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
+    }
     for (Rule rule : d.rules()) {
+      if (rule instanceof BooleanProducts p) {
+        s.append("%%%mzn-stat: presolveBooleanProducts=").append(p.replaced()).append('\n');
+      }
       if (rule instanceof ProbingRule p) {
         Probing.Result probed = p.result();
         s.append("%%%mzn-stat: probeTime=").append(probed.timeNanos() / 1e9).append('\n');
