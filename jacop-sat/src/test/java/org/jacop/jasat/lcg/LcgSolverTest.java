@@ -49,6 +49,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
@@ -62,9 +63,11 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
@@ -827,6 +830,231 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
     assertThat(own).isGreaterThan(1000);
+  }
+
+  /**
+   * Random subcircuits with a least number of nodes and a cost bound, against brute force.
+   * Subcircuit explains its prunings by cuts of its successor graph, with the dominator pruning run
+   * at every call, so its reasons are checked on every kind of pruning.
+   */
+  @Test
+  void subcircuitAgreesWithBruteForce() {
+    String skip = System.getProperty("sub_circuit_dominance_skip");
+    System.setProperty("sub_circuit_dominance_skip", "0");
+    try {
+      Random rnd = new Random(41);
+      int sat = 0;
+      int unsat = 0;
+      long own = 0;
+      long generic = 0;
+      for (int instance = 0; instance < 1500; instance++) {
+        Store store = new Store();
+        int n = 6 + rnd.nextInt(3);
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 1, n);
+          for (int w = 1; w <= n; w++) {
+            if (w != i + 1 && rnd.nextInt(3) == 0) {
+              x[i].domain.subtractAdapt(w);
+            }
+          }
+        }
+        List<Relation> relations = new ArrayList<>();
+        relations.add(new Relation(new Subcircuit(x), t -> isSubcircuit(t)));
+        int[] cost = new int[n];
+        for (int i = 0; i < n; i++) {
+          cost[i] = rnd.nextInt(4);
+        }
+        IntVar[] in = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          in[i] = new IntVar(store, "in" + i, 0, 1);
+          relations.add(new Relation(new Reified(new XneqC(x[i], i + 1), in[i]), t -> true));
+        }
+        int limit = n / 2 + rnd.nextInt(n);
+        relations.add(
+            new Relation(
+                new LinearInt(in, cost, "<=", limit),
+                t -> {
+                  int sum = 0;
+                  for (int i = 0; i < n; i++) {
+                    sum += t[i] != i + 1 ? cost[i] : 0;
+                  }
+                  return sum <= limit;
+                }));
+        int least = 2 + rnd.nextInt(n - 2);
+        int[] ones = new int[n];
+        Arrays.fill(ones, 1);
+        relations.add(
+            new Relation(
+                new LinearInt(in, ones, ">=", least),
+                t -> {
+                  int count = 0;
+                  for (int i = 0; i < n; i++) {
+                    count += t[i] != i + 1 ? 1 : 0;
+                  }
+                  return count >= least;
+                }));
+        boolean expected = bruteForce(x, relations, new int[n], 0);
+        for (Relation r : relations) {
+          store.impose(r.constraint);
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        int status = solver.solve();
+        assertThat(status)
+            .as("instance %d", instance)
+            .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+        if (expected) {
+          int[] t = new int[n];
+          for (int i = 0; i < n; i++) {
+            t[i] = solver.value(x[i]);
+          }
+          for (Relation r : relations) {
+            assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+          }
+          sat++;
+        } else {
+          unsat++;
+        }
+        long[] counts = solver.explanationStatistics().get("Subcircuit");
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+      System.out.printf(
+          "subcircuit: %d sat, %d unsat, %d own and %d generic explanations%n",
+          sat, unsat, own, generic);
+      assertThat(sat).isGreaterThan(100);
+      assertThat(unsat).isGreaterThan(100);
+      assertThat(own).isGreaterThan(1000);
+      assertThat(generic).isLessThan(own / 50);
+    } finally {
+      if (skip == null) {
+        System.clearProperty("sub_circuit_dominance_skip");
+      } else {
+        System.setProperty("sub_circuit_dominance_skip", skip);
+      }
+    }
+  }
+
+  /**
+   * Random circuits, numbered from 0 or 1, with a bound on a weighted sum of the successors,
+   * against brute force. Circuit explains its prunings itself: cuts of its successor graph, and the
+   * fixed arcs of a chain for the arc that would close it early.
+   */
+  @Test
+  void circuitAgreesWithBruteForce() {
+    Random rnd = new Random(43);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(3);
+      int offset = rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, offset, offset + n - 1);
+        for (int w = 0; w < n; w++) {
+          if (w != i && rnd.nextInt(4) == 0) {
+            x[i].domain.subtractAdapt(offset + w);
+          }
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Circuit(x, offset),
+              t -> {
+                int v = 0;
+                for (int k = 1; k < n; k++) {
+                  v = t[v] - offset;
+                  if (v < 0 || v >= n || v == 0) {
+                    return false;
+                  }
+                }
+                return t[v] - offset == 0;
+              }));
+      int[] weight = new int[n];
+      for (int i = 0; i < n; i++) {
+        weight[i] = rnd.nextInt(3) - 1;
+      }
+      int limit = rnd.nextInt(n) - n / 2;
+      relations.add(
+          new Relation(
+              new LinearInt(x, weight, "<=", limit + offset * Arrays.stream(weight).sum()),
+              t -> {
+                int sum = 0;
+                for (int i = 0; i < n; i++) {
+                  sum += weight[i] * (t[i] - offset);
+                }
+                return sum <= limit;
+              }));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Circuit");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "circuit: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(1000);
+    assertThat(generic).isLessThan(own / 50);
+  }
+
+  // the nodes not pointing to themselves form one cycle
+  private static boolean isSubcircuit(int[] t) {
+    int n = t.length;
+    int start = -1;
+    int inCircuit = 0;
+    boolean[] seen = new boolean[n + 1];
+    for (int v = 0; v < n; v++) {
+      if (seen[t[v]]) {
+        return false;
+      }
+      seen[t[v]] = true;
+      if (t[v] != v + 1) {
+        start = v;
+        inCircuit++;
+      }
+    }
+    if (inCircuit == 0) {
+      return true;
+    }
+    int length = 0;
+    int v = start;
+    do {
+      v = t[v] - 1;
+      length++;
+    } while (v != start && length <= inCircuit);
+    return v == start && length == inCircuit;
   }
 
   @Test

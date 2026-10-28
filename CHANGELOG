@@ -238,6 +238,18 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. Subcircuit and Circuit explain their own propagation for lazy clause
+    generation (--lcg), by cuts of the successor graph (Francis and
+    Stuckey, Constraints 2014): an arc on no cycle, a node that cannot
+    join the required ones, a node every path between two required nodes
+    passes through (the dominator pruning), the fixed arcs of a chain for
+    the arc that would close it early (Circuit), and Hall sets for the
+    rest. Before, both used the generic reason: on mario (--lcg -f) every
+    Subcircuit reason, 266 atoms on average; now none, with 9 atoms on
+    average. On cvrp P-n16-k8 the Circuit reasons fall from 122 atoms
+    (all generic) to 19. tpp is proved about 1.7x faster; mario, cvrp,
+    is, p1f and stochastic-vrp end as before within 60 s.
+
 Version 4.11
 =============
 
