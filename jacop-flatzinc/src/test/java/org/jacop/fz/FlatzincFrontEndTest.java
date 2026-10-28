@@ -170,6 +170,28 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void productOfZeroOneVariableAndConstantHasOnlyTwoValues() throws IOException {
+    // y2 = 7 * b2 cannot be 5, so only y1 = 5 * b1 can give the 5 the count needs and b1 = 1.
+    // XmulCeqZ is bounds consistent and left y2 in 0..7, which needed a failed decision b1 = 0
+    // (vaccine, fixed search).
+    String fzn =
+        """
+        var 0..1: b1:: output_var;
+        var 0..1: b2:: output_var;
+        var 0..5: y1;
+        var 0..7: y2;
+        constraint int_lin_eq([5,-1],[b1,y1],0);
+        constraint int_lin_eq([7,-1],[b2,y2],0);
+        constraint jacop_count_values_bounds([y1,y2],[5],[1],[2]);
+        solve :: int_search([b1,b2],input_order,indomain_min,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("b1 = 1;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
     // x1 and x3 have no common value, so b must be false before any search. Three variables
     // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and

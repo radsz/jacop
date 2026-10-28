@@ -197,7 +197,8 @@
     "set_union",
     "jacop_int_set_channel",
     "jacop_link_set_to_booleans",
-    "jacop_partition_set"
+    "jacop_partition_set",
+    "jacop_all_disjoint"
   ],
   "float": [
     "float_eq",

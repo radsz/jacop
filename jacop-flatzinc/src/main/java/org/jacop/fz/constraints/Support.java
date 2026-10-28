@@ -46,6 +46,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.core.FailException;
@@ -54,6 +55,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTAnnExpr;
@@ -104,6 +106,8 @@ public class Support implements ParserTreeConstants {
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
+  // unary resources found by the disjunctive clique detection: starts and durations
+  final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
@@ -808,6 +812,38 @@ public class Support implements ParserTreeConstants {
       String s = "% " + c;
       FzConsole.println(s.replace("\n", "\n% "));
     }
+  }
+
+  /** Largest domain of x for which z of x * c = z gets the holes of c * dom(x) at the root. */
+  static final int MUL_C_HOLES_MAX_SIZE = 64;
+
+  /**
+   * Poses x * c = z. XmulCeqZ is bounds consistent, so when x has few values z is first restricted
+   * to c * dom(x): for a 0/1 variable x, z gets {0, c}, and bounds on z then decide x both ways.
+   *
+   * @param x the variable multiplied by c
+   * @param c the constant
+   * @param z the result
+   */
+  void poseXmulCeqZ(IntVar x, int c, IntVar z) throws FailException {
+    if (c != 0 && !z.singleton() && x.getSize() <= MUL_C_HOLES_MAX_SIZE) {
+      IntDomain values = new IntervalDomain();
+      ValueEnumeration e = x.dom().valueEnumeration();
+      int[] products = new int[x.getSize()];
+      int n = 0;
+      while (e.hasMoreElements()) {
+        long product = (long) e.nextElement() * c;
+        if (product >= IntDomain.MIN_INT && product <= IntDomain.MAX_INT) {
+          products[n++] = (int) product;
+        }
+      }
+      Arrays.sort(products, 0, n);
+      for (int i = 0; i < n; i++) {
+        values.unionAdapt(products[i], products[i]);
+      }
+      z.domain.in(store.level, z, values);
+    }
+    pose(new XmulCeqZ(x, c, z));
   }
 
   /**
