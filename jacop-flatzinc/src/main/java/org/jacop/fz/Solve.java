@@ -77,6 +77,7 @@ import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
 import org.jacop.presolve.ProbingRule;
 import org.jacop.presolve.Rule;
+import org.jacop.presolve.Tabling;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -467,6 +468,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objective != null) {
       presolver.rule(objective);
     }
+    Tabling tabling = options.presolveTabling() ? new Tabling() : null;
+    if (tabling != null) {
+      presolver.rule(tabling);
+    }
     dualReductions(presolver, node);
     ImpliedConstraints implied = new ImpliedConstraints();
     if (options.presolveImplied()) {
@@ -483,7 +488,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 + "\n%%%mzn-stat: presolveObjectiveShifted="
                 + (imposed ? objective.shifted() : 0));
       }
-      printPresolveStatistics(d, implied.imposed(), time);
+      printPresolveStatistics(d, tabling, implied.imposed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -573,7 +578,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
-  private void printPresolveStatistics(Derivation d, int implied, long time) {
+  private void printPresolveStatistics(Derivation d, Tabling tabling, int implied, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -590,12 +595,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
+      s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {
       s.append("%%%mzn-stat: presolveDualRounds=").append(dual.rounds()).append('\n');
       s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
+    }
+    if (tabling != null) {
+      Tabling.Statistics t = tabling.statistics();
+      s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
+      s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
+      s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
     }
     for (Rule rule : d.rules()) {
       if (rule instanceof ProbingRule p) {
