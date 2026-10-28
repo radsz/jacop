@@ -71,6 +71,7 @@ import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.ImpliedConstraints;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
@@ -473,10 +474,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
     dualReductions(presolver, node);
+    ImpliedConstraints implied = new ImpliedConstraints();
+    if (options.presolveImplied()) {
+      presolver.rule(implied);
+    }
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, time);
+      printPresolveStatistics(d, implied.imposed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -566,7 +571,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
-  private void printPresolveStatistics(Derivation d, long time) {
+  private void printPresolveStatistics(Derivation d, int implied, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -581,6 +586,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
