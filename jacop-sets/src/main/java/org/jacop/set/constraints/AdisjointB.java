@@ -50,7 +50,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public class AdisjointB extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, Copyable<AdisjointB> {
+    implements UsesQueueVariable, SatisfiedPresent, Copyable<AdisjointB>, ElementwiseExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -163,6 +163,16 @@ public class AdisjointB extends Constraint
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return SetDomain.ANY;
+  }
+
+  @Override
+  public SetExplanation.Relation relation() {
+    return getClass() == AdisjointB.class ? (e, in) -> !(in[0] && in[1]) : null;
+  }
+
+  @Override
+  public SetVar[] explainedSets() {
+    return new SetVar[] {a, b};
   }
 
   @Override

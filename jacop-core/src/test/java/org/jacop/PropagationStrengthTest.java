@@ -36,12 +36,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.function.BiFunction;
+import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.AmongVar;
+import org.jacop.constraints.And;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.Eq;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -49,9 +64,16 @@ import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
+import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.Xor;
 import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -111,6 +133,255 @@ class PropagationStrengthTest {
   void testImpliesWakesOnRemovedValue() {
 
     assertThat(nestedXplusCeqZPrunes((c, b) -> new Implies(b, c))).isEqualTo("{1, 4}");
+  }
+
+  // the constraints composed of others woke only on the events that decide whether their parts are
+  // satisfied, GROUND and BOUND for XplusCeqZ, not on the ANY event its consistency() prunes on
+  @Test
+  void testComposedConstraintsWakeOnRemovedValue() {
+
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new And(c, new XeqC(b, 1)))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Or(c, new XeqC(b, 0)))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Not(new Not(c)))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Xor(new Not(c), b))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Eq(new XeqC(b, 1), c))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new IfThen(new XeqC(b, 1), c))).isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new IfThenElse(new XeqC(b, 1), c, new XeqC(b, 1))))
+        .isEqualTo("{1, 4}");
+    assertThat(nestedXplusCeqZPrunes((c, b) -> new Reified(new And(c, new XeqC(b, 1)), b)))
+        .isEqualTo("{1, 4}");
+  }
+
+  // Not(x != y) woke on the event deciding that x != y fails, GROUND, while it makes x and y equal
+  @Test
+  void testNegatedDisequalityWakesOnRemovedValue() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    store.impose(new Not(new XneqY(x, y)));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, y, 1)).isTrue();
+    assertThat(x.dom()).hasToString("{0, 2..3}");
+  }
+
+  // Or(x + y = 4, w <= -2) woke on the event that decides x + y = 4 is satisfied, GROUND, so the
+  // bounds of y did not reach x once w <= -2 had failed
+  @Test
+  void testDisjunctionWakesOnBoundsOfItsLastConstraint() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = new IntVar(store, "y", 0, 4);
+    IntVar w = new IntVar(store, "w", 0, 2);
+    store.impose(new Or(new XplusYeqC(x, y, 4), new XlteqC(w, -2)));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 1, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom()).hasToString("{2..3}");
+  }
+
+  // notSatisfied() of 2 * x = z and of y = |x| looks at the holes of a domain, but a reification
+  // was woken on bounds only, so b = 0 waited until the variables were fixed
+  @Test
+  void testReificationNoticesFailureMadeByRemovedValues() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar z = new IntVar(store, "z", 0, 6);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(x, 2, z), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(removeValues(store, z, 2, 3, 4)).isTrue();
+    assertThat(b.dom()).hasToString("0");
+
+    store = new Store();
+    x = new IntVar(store, "x", -3, 3);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new AbsXeqY(x, y), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(removeValues(store, x, -2, -1, 0, 1, 2)).isTrue();
+    assertThat(b.dom()).hasToString("0");
+  }
+
+  // reified x + c = z and x + y = c decided disentailment from the bounds only, so with x fixed and
+  // the value z needs a hole in z the Boolean stayed open (photo: x + 1 = z for neighbours)
+  @Test
+  void testReifiedSumNoticesMissingValueOfFixedVariable() {
+
+    assertThat(reifiedSumIsFalse((x, y, z) -> new XplusCeqZ(x, 1, z))).isTrue();
+    assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqC(x, z, 11))).isTrue();
+    assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqZ(x, y, z))).isTrue();
+  }
+
+  /**
+   * x = 5, y = 1, z in {2..3, 8..10}, then 6 also leaves z: the reified sum must be false at once.
+   */
+  private static boolean reifiedSumIsFalse(
+      TriFunction<IntVar, IntVar, IntVar, PrimitiveConstraint> sum) {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = variable(store, "y", 1);
+    IntVar z = variable(store, "z", 2, 3, 6, 8, 9, 10);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(sum.apply(x, y, z), b));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 5, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("{0..1}");
+    assertThat(removeValues(store, z, 6)).isTrue();
+    return b.singleton(0);
+  }
+
+  @FunctionalInterface
+  private interface TriFunction<A, B, C, R> {
+    R apply(A a, B b, C c);
+  }
+
+  // once only one variable can reach the maximum (minimum) it takes the target's domain, but the
+  // constraints woke on bounds only, so a value removed inside the target's domain stayed
+  @Test
+  void testMaxAndMinWakeOnValueRemovedFromTarget() {
+
+    assertThat(extremumPrunes((x, t) -> new MaxSimple(x[0], x[1], t), -1)).isEqualTo("{0, 2}");
+    assertThat(extremumPrunes((x, t) -> new MinSimple(x[0], x[1], t), 3)).isEqualTo("{0, 2}");
+    assertThat(extremumPrunes((x, t) -> new Max(x, t), -1)).isEqualTo("{0, 2}");
+    assertThat(extremumPrunes((x, t) -> new Min(x, t), 3)).isEqualTo("{0, 2}");
+  }
+
+  /**
+   * Imposes the extremum t of x0 in 0..2 and x1 = other with t in 0..2, removes 1 from inside t and
+   * returns the domain of x0.
+   */
+  private static String extremumPrunes(
+      BiFunction<IntVar[], IntVar, Constraint> extremum, int other) {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), variable(store, "x1", other)};
+    IntVar t = new IntVar(store, "t", 0, 2);
+    store.impose(extremum.apply(x, t));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, t, 1)).isTrue();
+    return x[0].dom().toString();
+  }
+
+  // the number of different values reads the domains, but Values woke on bounds only
+  @Test
+  void testValuesWakesOnRemovedValue() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", -2, 1), variable(store, "x1", 0), new IntVar(store, "x2", 0, 4)
+    };
+    IntVar count = new IntVar(store, "count", 1, 3);
+    store.impose(new Values(x, count));
+    assertThat(store.consistency()).isTrue();
+    assertThat(count.min()).isOne();
+
+    assertThat(removeValues(store, x[0], 0)).isTrue();
+    assertThat(count.dom()).hasToString("{2..3}");
+  }
+
+  // ElementVariable kept the supports of values at positions the index could not select, so a
+  // value lost by the selectable positions stayed in the value's domain
+  @Test
+  void testElementVariableDropsValuesSupportedOnlyByUnselectablePositions() {
+
+    // the index cannot select b from the start
+    assertThat(elementVariablePrunes(false)).isEqualTo("{0, 3..5}");
+    // the index stops selecting b during search
+    assertThat(elementVariablePrunes(true)).isEqualTo("{0, 3..5}");
+  }
+
+  /**
+   * Imposes value = [a, b, c][index] with a in 0..2, b in 0..5 and c in 3..5, where the index stops
+   * selecting b at the start or after propagation, removes 1 and 2 from a and returns the domain of
+   * value.
+   */
+  private static String elementVariablePrunes(boolean deselectBDuringSearch) {
+
+    Store store = new Store();
+    IntVar index =
+        deselectBDuringSearch ? new IntVar(store, "i", 1, 3) : variable(store, "i", 1, 3);
+    IntVar[] list = {
+      new IntVar(store, "a", 0, 2), new IntVar(store, "b", 0, 5), new IntVar(store, "c", 3, 5)
+    };
+    IntVar value = new IntVar(store, "value", 0, 5);
+    store.impose(new ElementVariable(index, list, value, 0));
+    assertThat(store.consistency()).isTrue();
+    if (deselectBDuringSearch) {
+      assertThat(removeValues(store, index, 2)).isTrue();
+    }
+
+    assertThat(removeValues(store, list[0], 1, 2)).isTrue();
+    return value.dom().toString();
+  }
+
+  // the bounds of x * y = z fixed x to 1 after the check for a factor 1, and the constraint is not
+  // woken by its own pruning, so y and z were not made equal
+  @Test
+  void testXmulYeqZMakesFactorsEqualWhenItsBoundsFixTheOtherToOne() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -2, 1);
+    IntVar y = new IntVar(store, "y", 0, 4);
+    IntVar z = variable(store, "z", 0, 1, 3, 4);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, z, 0)).isTrue();
+    assertThat(x.dom()).hasToString("1");
+    assertThat(y.dom()).hasToString("{1, 3..4}");
+  }
+
+  // a pass of AmongVar pruned n to 0 after it had looked at Y, and it is not woken by its own
+  // pruning, so y kept the values of the fixed x
+  @Test
+  void testAmongVarPropagatesItsOwnPruningOfTheCount() {
+
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", -1, 4);
+    IntVar x3 = new IntVar(store, "x3", 0, 3);
+    IntVar y = variable(store, "y", -2, 0, 1, 2, 3, 4);
+    IntVar n = variable(store, "n", -1, 0, 2, 3, 4, 5);
+    store.impose(new AmongVar(new IntVar[] {x1, x3}, new IntVar[] {y}, n));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x3.domain.in(store.level, x3, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x1.domain.in(store.level, x1, 4, 4);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(n.dom()).hasToString("0");
+    assertThat(y.dom()).hasToString("{-2, 1..3}");
+  }
+
+  // Distance cleared the propagation flag after pruning x, so a pass that fixed x was not followed
+  // by the one that propagates a fixed x
+  @Test
+  void testDistancePropagatesAVariableItFixes() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 0, 3);
+    IntVar y = variable(store, "y", -1, 0, 2, 4, 5);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    store.impose(new Distance(x, y, z));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 2);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x.dom()).hasToString("3");
+    assertThat(z.dom()).hasToString("1");
   }
 
   /**

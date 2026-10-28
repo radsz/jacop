@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.util.Arrays;
 import java.util.BitSet;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -64,6 +65,9 @@ class TimetableSweep {
   interface ProfileListener {
     void onProfileEvent(int date, int value);
   }
+
+  /** The task whose start lost all its values when the last sweep failed, or null. */
+  IntVar noStartLeft;
 
   private long[] eventKeys = new long[0];
   private TaskView[] eventTask = new TaskView[0];
@@ -134,6 +138,7 @@ class TimetableSweep {
       ProfileListener listener,
       Runnable postProcess) {
 
+    noStartLeft = null;
     final int n = tasks.length;
     ensureCapacity(n);
     final int limitMax = limitVar.max();
@@ -297,7 +302,12 @@ class TimetableSweep {
             ">>> CumulativeBasic Profile 2. Narrowed {} inMax {}", t.start, startExcluded[ti] - 1);
       }
 
-      t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
+      try {
+        t.start.domain.inMax(store.level, t.start, startExcluded[ti] - 1);
+      } catch (FailException e) {
+        noStartLeft = t.start;
+        throw e;
+      }
 
       if (debugNarr) {
         log.debug(" => {}", t.start);
@@ -354,7 +364,12 @@ class TimetableSweep {
                 new IntervalDomain(startExcluded[ti], date - 1),
                 t.start);
           }
-          t.start.domain.inComplement(store.level, t.start, startExcluded[ti], date - 1);
+          try {
+            removeStarts(store, t.start, startExcluded[ti], date - 1);
+          } catch (FailException e) {
+            noStartLeft = t.start;
+            throw e;
+          }
           startConsidered[ti] = false;
         }
       }
@@ -374,5 +389,18 @@ class TimetableSweep {
         t.res.domain.inMax(store.level, t.res, limitMax - profileValue);
       }
     }
+  }
+
+  /**
+   * Removes the starts {@code [from, to]} of a task. Under lazy clause generation a hole strictly
+   * inside the domain is not made: the solver takes each removed value as an atom of its own, so on
+   * long tasks one hole adds thousands of literals and clauses, and the search drowns in them. The
+   * pruning then keeps to the bounds, as the time tables of other LCG solvers do.
+   */
+  static void removeStarts(Store store, IntVar start, int from, int to) {
+    if (store.domainChangeRecorder != null && from > start.min() && to < start.max()) {
+      return;
+    }
+    start.domain.inComplement(store.level, start, from, to);
   }
 }

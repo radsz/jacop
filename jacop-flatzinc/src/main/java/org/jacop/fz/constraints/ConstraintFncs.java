@@ -835,6 +835,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_balance(n, false);
   }
 
+  /**
+   * Handles the jacop_reservoir FlatZinc constraint: nothing to do here, since {@link
+   * PrecedenceDetector} posts it once the precedences of the model are known.
+   *
+   * @param n the constraint node.
+   */
+  public void jacop_reservoir(SimpleNode n) {
+    // posted by PrecedenceDetector
+  }
+
   /** Handles the jacop_spread FlatZinc constraint. */
   public void jacop_spread(SimpleNode n) {
     gc.gen_jacop_balance(n, true);
