@@ -34,6 +34,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
@@ -477,6 +478,14 @@ public class Alldiff extends Alldifferent {
     // bounds of v cached for sorting
     private int min;
     private int max;
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != Alldiff.class) {
+      return Optional.empty();
+    }
+    return GlobalSimplification.allDifferent(list, Alldiff::new);
   }
 
   @Override

@@ -73,6 +73,8 @@ import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
+import org.jacop.presolve.Probing;
+import org.jacop.presolve.ProbingRule;
 import org.jacop.presolve.Rule;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
@@ -257,8 +259,106 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
 
       if (node.getId() == JJTMODELEND) {
-        search((ASTSolveItem) node.jjtGetChild(0), table, opt);
+        ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
+        if (opt.presolve() != Options.Presolve.OFF && opt.symmetry()) {
+          breakSymmetries(astTree, solveItem, opt);
+        }
+        search(solveItem, table, opt);
       }
+    }
+  }
+
+  /**
+   * Breaks the variable symmetries of the model with lex-leader constraints in the loaded store,
+   * before presolve derives the store to search. Symmetry breaking loses solutions, so it is not
+   * done when a satisfaction problem asks for more than one solution; it keeps the optimum, since
+   * the objective variable is kept by every symmetry.
+   */
+  private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
+    ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
+    boolean satisfy = getKind(kind.getKind()) == 0;
+    if (satisfy && (opt.getAll() || opt.getNumberSolutions() > 1)) {
+      return;
+    }
+    if (dictionary.onRestart != null) {
+      // the restart constraints refer to earlier solutions
+      return;
+    }
+    IntVar objective = null;
+    if (!satisfy) {
+      ASTSolveExpr e = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (e.getType() == 0) {
+        if (dictionary.getFloatVariable(e.getIdent()) != null) {
+          return;
+        }
+        objective = dictionary.getVariable(e.getIdent());
+      } else if (e.getType() == 1) {
+        IntVar[] a = dictionary.getVariableArray(e.getIdent());
+        if (a == null) {
+          if (dictionary.variableFloatArrayTable.containsKey(e.getIdent())) {
+            return;
+          }
+        } else {
+          objective = a[e.getIndex()];
+        }
+      } else {
+        return;
+      }
+    }
+    List<Var> order = new ArrayList<>();
+    for (int i = 0; i < item.jjtGetNumChildren() - 1; i++) {
+      annotationVariables((SimpleNode) item.jjtGetChild(i), order);
+    }
+
+    // the automorphism search takes at most a second (org.jacop.fz.symmetryTime, in milliseconds),
+    // and at most a twentieth of the time left
+    long budget = Long.getLong("org.jacop.fz.symmetryTime", 1000);
+    if (opt.getRemainingTimeOut() > 0) {
+      budget = Math.min(budget, opt.getRemainingTimeOut() / 20);
+    }
+    long start = timer.getCpuTime();
+    SymmetryBreaking.Outcome o =
+        new SymmetryBreaking(store, dictionary).run(astTree, objective, order, budget * 1_000_000L);
+    long time = timer.getCpuTime() - start;
+    if (!store.consistency()) {
+      throw Store.failException;
+    }
+    if (opt.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: symmetryTime="
+              + time / 1_000_000_000.0
+              + "\n%%%mzn-stat: symmetryGraphVertices="
+              + o.vertices()
+              + "\n%%%mzn-stat: symmetryGenerators="
+              + o.generators()
+              + "\n%%%mzn-stat: symmetryConstraints="
+              + o.constraints()
+              + "\n%%%mzn-stat: symmetrySearchComplete="
+              + o.complete()
+              + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
+              + "\n%%%mzn-stat-end");
+    }
+  }
+
+  /** The variables named in an annotation, in order. */
+  private void annotationVariables(SimpleNode node, List<Var> order) {
+    if (node instanceof ASTScalarFlatExpr e) {
+      if (e.getType() == 2) {
+        IntVar[] a = dictionary.getVariableArray(e.getIdent());
+        if (a != null) {
+          order.addAll(Arrays.asList(a));
+        } else if (dictionary.getVariable(e.getIdent()) != null) {
+          order.add(dictionary.getVariable(e.getIdent()));
+        }
+      } else if (e.getType() == 3) {
+        IntVar[] a = dictionary.getVariableArray(e.getIdent());
+        if (a != null && e.getInt() >= 0 && e.getInt() < a.length) {
+          order.add(a[e.getInt()]);
+        }
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      annotationVariables((SimpleNode) node.jjtGetChild(i), order);
     }
   }
 
@@ -370,7 +470,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Presolver presolver =
         Presolver.of(store)
             .checking(options.presolve() == Options.Presolve.CHECK)
-            .rounds(options.presolveRounds());
+            .rounds(options.presolveRounds())
+            .probing(options.probe(), options.probeBudget());
     dualReductions(presolver, node);
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
@@ -480,6 +581,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {
@@ -488,6 +590,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
     for (Rule rule : d.rules()) {
+      if (rule instanceof ProbingRule p) {
+        Probing.Result probed = p.result();
+        s.append("%%%mzn-stat: probeTime=").append(probed.timeNanos() / 1e9).append('\n');
+        s.append("%%%mzn-stat: probeProbes=").append(probed.probes()).append('\n');
+        s.append("%%%mzn-stat: probeFailed=").append(probed.failed()).append('\n');
+        s.append("%%%mzn-stat: probeNarrowed=").append(probed.narrowed()).append('\n');
+        s.append("%%%mzn-stat: probeValuesRemoved=").append(probed.removed()).append('\n');
+        s.append("%%%mzn-stat: probePasses=").append(probed.passes()).append('\n');
+        s.append("%%%mzn-stat: probeExhausted=").append(probed.exhausted()).append('\n');
+      }
       if (!(rule instanceof AtMostOneRule r)) {
         continue;
       }

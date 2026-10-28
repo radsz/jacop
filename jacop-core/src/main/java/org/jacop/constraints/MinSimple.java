@@ -30,13 +30,17 @@
 
 package org.jacop.constraints;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -52,7 +56,7 @@ import org.jacop.lcg.MaxExplanation;
  * @version 5.0
  */
 public class MinSimple extends Constraint
-    implements SatisfiedPresent, Copyable<MinSimple>, Explainable {
+    implements Simplifiable, SatisfiedPresent, Copyable<MinSimple>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -117,6 +121,17 @@ public class MinSimple extends Constraint
     return IntDomain.BOUND;
   }
 
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    // once one of x1 and x2 is above min, the other takes the domain of min, so a value
+    // removed inside the domain of min must wake the constraint as well
+    if (v == min
+        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))) {
+      return IntDomain.ANY;
+    }
+    return super.getConsistencyPruningEvent(v);
+  }
+
   /**
    * Checks if the constraint is satisfied.
    *
@@ -137,6 +152,14 @@ public class MinSimple extends Constraint
   public String toString() {
 
     return id() + " : minSimple(" + x1 + ", " + x2 + ", " + min + ")";
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != MinSimple.class) {
+      return Optional.empty();
+    }
+    return GlobalSimplification.extremum(new IntVar[] {x1, x2}, min, false, null);
   }
 
   @Override

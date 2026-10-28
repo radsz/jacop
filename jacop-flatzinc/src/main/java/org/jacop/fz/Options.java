@@ -38,6 +38,7 @@ import java.util.Objects;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.Probing;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -78,8 +79,13 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
+  Probing.Mode probe =
+      Objects.requireNonNullElse(
+          probeMode(System.getProperty("jacop.presolve.probe", "off")), Probing.Mode.OFF);
+  long probeBudget = 1000;
   boolean complementarySearch;
   float decay = 0.99f;
   double step = 0.0d;
@@ -154,10 +160,17 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --symmetry <value> with presolve, break the variable symmetries of the model with
+                lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
+                problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
+            --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
+                of "off" (default), "shave" (bound shaving and failed-literal probing of 0-1
+                variables), "sac" (as "shave", and every value of small domains)
+            --presolve-probe-budget <ms> time probing may take (default 1000)
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
             -i, --interval print intervals instead of values for floating variables
@@ -198,8 +211,11 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
+      case "--presolve-probe" -> i = handleProbe(args, i);
+      case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
@@ -300,6 +316,16 @@ public class Options {
     return i + 1;
   }
 
+  private int handleSymmetry(String[] args, int i) {
+    String mode = args[++i];
+    switch (mode) {
+      case "on" -> symmetry = true;
+      case "off" -> symmetry = false;
+      default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
+    }
+    return i + 1;
+  }
+
   private int handlePresolveDual(String[] args, int i) {
     switch (args[++i]) {
       case "on" -> presolveDual = true;
@@ -316,6 +342,31 @@ public class Options {
     } else {
       System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
+    return i + 1;
+  }
+
+  private int handleProbe(String[] args, int i) {
+    Probing.Mode mode = probeMode(args[++i]);
+    if (mode != null) {
+      probe = mode;
+    }
+    return i + 1;
+  }
+
+  private static Probing.Mode probeMode(String mode) {
+    return switch (mode) {
+      case "off" -> Probing.Mode.OFF;
+      case "shave" -> Probing.Mode.SHAVE;
+      case "sac" -> Probing.Mode.SAC;
+      default -> {
+        System.err.println("%% Probing mode " + mode + " not known; ignored");
+        yield null;
+      }
+    };
+  }
+
+  private int handleProbeBudget(String[] args, int i) {
+    probeBudget = Long.parseLong(args[++i]);
     return i + 1;
   }
 
@@ -636,6 +687,15 @@ public class Options {
   }
 
   /**
+   * It defines whether presolve breaks the symmetries of the model (--symmetry).
+   *
+   * @return true by default
+   */
+  public boolean symmetry() {
+    return symmetry;
+  }
+
+  /**
    * It defines whether presolve may use dual reductions (--presolve-dual); they run only when the
    * search wants one solution or an optimum.
    *
@@ -652,6 +712,24 @@ public class Options {
    */
   public int presolveRounds() {
     return presolveRounds;
+  }
+
+  /**
+   * It defines what presolve probes at the root (--presolve-probe).
+   *
+   * @return the probing mode, OFF by default
+   */
+  public Probing.Mode probe() {
+    return probe;
+  }
+
+  /**
+   * It defines the time root probing may take (--presolve-probe-budget).
+   *
+   * @return the budget in milliseconds, 1000 by default
+   */
+  public long probeBudget() {
+    return probeBudget;
   }
 
   /** Sat is used. */

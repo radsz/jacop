@@ -30,8 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -51,7 +54,8 @@ import org.jacop.lcg.Explainable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Explainable {
+public class XmulYeqZ extends AbstractXopYeqZ
+    implements Simplifiable, Copyable<XmulYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -121,14 +125,7 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Exp
   }
 
   private void propagateMulBounds(Store store) {
-    if (x.singleton(1)) {
-      this.queueIndex = 0;
-      yEqz.consistency(store);
-      return;
-    }
-    if (y.singleton(1)) {
-      this.queueIndex = 0;
-      xEqz.consistency(store);
+    if (propagateUnitFactor(store)) {
       return;
     }
 
@@ -150,6 +147,24 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Exp
       y.domain.in(store.level, y, yBounds.min(), yBounds.max());
 
     } while (store.propagationHasOccurred);
+
+    // the bounds can fix x or y to 1, and the constraint is not woken again by its own pruning
+    propagateUnitFactor(store);
+  }
+
+  /** Makes z equal to the other factor once x or y is 1, and tells whether one of them is. */
+  private boolean propagateUnitFactor(Store store) {
+    if (x.singleton(1)) {
+      this.queueIndex = 0;
+      yEqz.consistency(store);
+      return true;
+    }
+    if (y.singleton(1)) {
+      this.queueIndex = 0;
+      xEqz.consistency(store);
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -215,6 +230,23 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Exp
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == XmulYeqZ.class
         && new MulExplanation(trail, x, y, z, trail.size()).explainFailure(out);
+  }
+
+  /** With a fixed factor the product becomes {@code XmulCeqZ}, or holds when it is zero. */
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != XmulYeqZ.class || x == y || !(x.singleton() || y.singleton())) {
+      return Optional.empty();
+    }
+    IntVar other = x.singleton() ? y : x;
+    if (other == z) {
+      return Optional.empty();
+    }
+    int c = x.singleton() ? x.value() : y.value();
+    if (c == 0) {
+      return z.singleton(0) ? Optional.of(List.of()) : Optional.empty();
+    }
+    return Optional.of(List.of(c == 1 ? new XeqY(other, z) : new XmulCeqZ(other, c, z)));
   }
 
   @Override

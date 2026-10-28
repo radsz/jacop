@@ -35,11 +35,13 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
@@ -67,7 +69,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementVariable extends AbstractElement
-    implements UsesQueueVariable,
+    implements Simplifiable,
+        UsesQueueVariable,
         SatisfiedPresent,
         Stateful,
         Copyable<ElementVariable>,
@@ -184,6 +187,7 @@ public class ElementVariable extends AbstractElement
       }
       if (indexHasChanged) {
         propagateIndexChangedToValue(store);
+        releaseUnselectableSupports(store);
       }
       if (!variableQueue.isEmpty()) {
         processVariableQueue(store);
@@ -221,7 +225,8 @@ public class ElementVariable extends AbstractElement
     supports = new IntDomain[list.length];
     IntDomain temp = value.domain.cloneLight();
     for (int i = list.length - 1; i >= 0; i--) {
-      if (!temp.isEmpty()) {
+      // a position the index cannot select supports no value, and it never becomes selectable again
+      if (!temp.isEmpty() && index.domain.contains(i + 1 + indexOffset)) {
         supports[i] = temp.intersect(list[i].domain);
         if (!supports[i].isEmpty()) {
           temp = temp.subtract(supports[i]);
@@ -300,6 +305,29 @@ public class ElementVariable extends AbstractElement
         supports[position].subtractAdapt(lostSupport);
       } else {
         value.domain.inComplement(store.level, value, lostSupport);
+      }
+    }
+  }
+
+  /**
+   * Moves the values supported at positions the index can no longer select to other positions, and
+   * removes from value those that have no other support.
+   */
+  private void releaseUnselectableSupports(Store store) {
+    for (int position = 0; position < supports.length; position++) {
+      if (supports[position].isEmpty() || index.domain.contains(position + 1 + indexOffset)) {
+        continue;
+      }
+      IntDomain released = supports[position].intersect(value.domain);
+      for (ValueEnumeration e = released.valueEnumeration(); e.hasMoreElements(); ) {
+        int support = e.nextElement();
+        int nextSupportPosition = findNextSupportPosition(support);
+        if (nextSupportPosition != -1) {
+          supports[nextSupportPosition].unionAdapt(support);
+          supports[position].subtractAdapt(support);
+        } else {
+          value.domain.inComplement(store.level, value, support);
+        }
       }
     }
   }
@@ -391,6 +419,20 @@ public class ElementVariable extends AbstractElement
   @Override
   public String toString() {
     return buildToString("elementVariable", list, value, false);
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != ElementVariable.class) {
+      return Optional.empty();
+    }
+    return ElementSimplification.variables(
+        index,
+        list,
+        value,
+        indexOffset,
+        (i, l, offset) -> new ElementVariable(i, l, value, offset),
+        (i, l, offset) -> new ElementInteger(i, l, value, offset));
   }
 
   @Override

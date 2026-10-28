@@ -64,10 +64,13 @@ public final class Presolver {
 
   /**
    * The rules every presolve applies, in this order, before those added with {@link #rule(Rule)}. A
-   * new presolve rule is added here.
+   * new presolve rule is added here. The system property jacop.presolve.orderLiterals=false leaves
+   * out {@link OrderLiterals}, for example to measure it.
    */
   static final List<Supplier<Rule>> STANDARD =
-      List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
+      Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"))
+          ? List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE, () -> OrderLiterals.RULE)
+          : List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;
@@ -119,6 +122,21 @@ public final class Presolver {
    */
   public Presolver rule(Rule rule) {
     builder.rule(rule);
+    return this;
+  }
+
+  /**
+   * Probes the store in the rounds of rules, after the standard rules; see {@link ProbingRule}. Off
+   * by default.
+   *
+   * @param mode what probing tries; {@link Probing.Mode#OFF} adds nothing.
+   * @param budgetMillis the time probing may take over all rounds, in milliseconds.
+   * @return this presolver.
+   */
+  public Presolver probing(Probing.Mode mode, long budgetMillis) {
+    if (mode != Probing.Mode.OFF) {
+      builder.rule(new ProbingRule(mode, budgetMillis));
+    }
     return this;
   }
 
