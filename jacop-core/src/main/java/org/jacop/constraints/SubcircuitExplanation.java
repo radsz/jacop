@@ -549,10 +549,10 @@ final class SubcircuitExplanation {
         roots[k++] = r;
       }
     }
-    for (int r = 0, extra = 0; r < n && extra < ROOT_TRIES; r++) {
+    int limit = k + ROOT_TRIES;
+    for (int r = 0; r < n && k < limit; r++) {
       if (!selfLoop[r] && r != a && r != b && !contains(roots, k, r)) {
         roots[k++] = r;
-        extra++;
       }
     }
     return Arrays.copyOf(roots, k);
@@ -572,6 +572,17 @@ final class SubcircuitExplanation {
     return lo[s] == hi[s] && lo[s] >= offset && lo[s] - (long) offset < n ? lo[s] - offset : -1;
   }
 
+  // the number of nodes on the fixed arcs from t to v, or -1 when they do not lead to v
+  private int chainLength(int t, int v) {
+    int c = t;
+    int count = 1;
+    while (c >= 0 && c != v && count <= n) {
+      c = fixedSuccessor(c);
+      count++;
+    }
+    return c == v ? count : -1;
+  }
+
   // arc v -> t is removed
   private boolean arcRemoved(int v, int t, EntryList out) {
     int p = fixedBy[t];
@@ -581,21 +592,12 @@ final class SubcircuitExplanation {
     }
     if (circuit) {
       // the fixed arcs from t lead to v, and arc v -> t would close a cycle without every node
-      int count = 1;
-      for (int c = t; c != v && count < n; count++) {
-        c = fixedSuccessor(c);
-        if (c < 0) {
-          break;
+      int length = chainLength(t, v);
+      if (length > 0 && length < n) {
+        for (int k = t; k != v; k = fixedSuccessor(k)) {
+          addFixed(k, out);
         }
-        if (c == v) {
-          if (count + 1 == n) {
-            break;
-          }
-          for (int k = t; k != v; k = fixedSuccessor(k)) {
-            addFixed(k, out);
-          }
-          return true;
-        }
+        return true;
       }
     }
     startBest();
@@ -702,15 +704,15 @@ final class SubcircuitExplanation {
   }
 
   private boolean failure(EntryList out) {
-    int mark = out.size();
+    int from = out.size();
     if (clashA >= 0) {
       addFixed(clashA, out);
       addFixed(clashB, out);
-      out.sortUnique(mark);
+      out.sortUnique(from);
       return true;
     }
     if (circuit && shortCycle(out)) {
-      out.sortUnique(mark);
+      out.sortUnique(from);
       return true;
     }
     startBest();
@@ -747,7 +749,7 @@ final class SubcircuitExplanation {
       }
     }
     if (takeBest(out)) {
-      out.sortUnique(mark);
+      out.sortUnique(from);
       return true;
     }
     return AlldiffExplanation.explainFailure(trail, list, new IntervalDomain(), out);

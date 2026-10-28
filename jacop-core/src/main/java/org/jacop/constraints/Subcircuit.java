@@ -47,7 +47,6 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
 import org.jacop.util.DominatorTree;
 
 /**
@@ -65,7 +64,7 @@ import org.jacop.util.DominatorTree;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Subcircuit extends Alldiff implements Explainable {
+public class Subcircuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 

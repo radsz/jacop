@@ -46,7 +46,6 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian circuit. Value of every
@@ -59,7 +58,7 @@ import org.jacop.lcg.Explainable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Circuit extends Alldiff implements Explainable {
+public class Circuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
