@@ -78,6 +78,7 @@ class MznlibGlobalsTest {
         "hook_cost_regular",
         "hook_cost_regular_holes",
         "hook_cost_regular_cost_in_word",
+        "hook_multicost_regular",
         "hook_mdd",
         "hook_mdd_nondet",
         "hook_cost_mdd",

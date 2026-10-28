@@ -123,6 +123,11 @@ public class AltB extends AbstractAleqB implements Copyable<AltB> {
   }
 
   @Override
+  Boolean explainedOrder() {
+    return getClass() == AltB.class ? Boolean.TRUE : null;
+  }
+
+  @Override
   public String toString() {
 
     return id() + " : AltB(" + a + ", " + b + ")";
