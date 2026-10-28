@@ -103,6 +103,24 @@ public final class Probing {
     public boolean changed() {
       return !feasible || removed > 0;
     }
+
+    /**
+     * Adds up two results, for example of the rounds of one presolve.
+     *
+     * @param other the result of a later probing.
+     * @return the sum; feasible if both are, exhausted if the later one is.
+     */
+    public Result plus(Result other) {
+      return new Result(
+          feasible && other.feasible,
+          probes + other.probes,
+          failed + other.failed,
+          narrowed + other.narrowed,
+          removed + other.removed,
+          passes + other.passes,
+          other.exhausted,
+          timeNanos + other.timeNanos);
+    }
   }
 
   private final Store store;

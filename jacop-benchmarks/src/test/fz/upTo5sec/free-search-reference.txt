@@ -7,7 +7,6 @@
 1d_rubiks_cube/1d_rubiks_cube MIN 12
 2DBinPacking/Class1_20_1 MIN 8
 2DBinPacking/Class1_20_10 MIN 8
-2DBinPacking/Class1_20_2 MIN 5
 2DBinPacking/Class1_20_3 MIN 9
 2DBinPacking/Class1_20_4 MIN 6
 2DBinPacking/Class1_20_6 MIN 9

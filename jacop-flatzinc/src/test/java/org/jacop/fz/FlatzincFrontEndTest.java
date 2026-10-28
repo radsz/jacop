@@ -301,6 +301,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void twoImplicationsOfTheSameEqualityKeepTheirBooleansIndependent() throws IOException {
+    // int_eq_imp(x,0,a) and int_eq_imp(x,0,b) were collected as one channel and a = b was posted,
+    // as for reifications; with a false and the clause a \/ b the 2021 Challenge model
+    // flowshop-workers failed at the root on all its instances
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: x:: output_var;
+        constraint int_eq_imp(x,0,a);
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        List.of(
+            "a = false; b = false; x = 0;",
+            "a = false; b = false; x = 1;",
+            "a = false; b = false; x = 2;",
+            "a = false; b = true; x = 0;",
+            "a = true; b = false; x = 0;",
+            "a = true; b = true; x = 0;"),
+        solveAllInOrder(fzn).stream().sorted().toList());
+  }
+
+  @Test
   void seqSearchOfIgnoredAnnotationsFallsBackToDefaultSearch() throws IOException {
     // A seq_search whose annotations were all ignored had no search, which ended in a
     // NullPointerException, both nested (MiniZinc regression test_bug53) and at the top level.
@@ -1388,6 +1414,41 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("lcgExplanations"), out);
     String last = out.substring(out.lastIndexOf("x = "));
     assertTrue(last.startsWith("x = 5;") && last.contains("b = true;"), last);
+  }
+
+  @Test
+  void lcgStatisticsAfterTheShutdownHookStopsASearchBetweenRuns() throws Exception {
+    // MiniZinc stops a run at its time limit with SIGTERM, and the shutdown hook prints the
+    // statistics while LcgSolver may be between two runs of its search, holding no solution;
+    // LcgSolver.value then threw IllegalStateException: no solution. The clauses on p need more
+    // than 1024 decisions, so a run started past its deadline stops before it finds a solution.
+    StringBuilder model = new StringBuilder("array [1..4000] of var bool: p;\n");
+    model.append("var 0..1: i;\nvar 3..4: o :: output_var;\n");
+    for (int i = 1; i < 4000; i++) {
+      model.append("constraint bool_clause([p[%d], p[%d]], []);\n".formatted(i, i + 1));
+    }
+    model.append(
+        "constraint bool2int(p[1], i);\nconstraint int_plus(i, 3, o);\nsolve minimize o;\n");
+    Path fzn = tmp.resolve("hook.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(new Options(new String[] {"--lcg", "-s", fzn.toString()}));
+      parser.model();
+      // a new run drops the solution, as each run of the search does; past its deadline it stops
+      // at once without finding another
+      parser.solver.lcg.sat().setDeadline(System.nanoTime());
+      parser.solver.lcg.solve();
+      parser.solver.printStatisticsIterrupt();
+    } finally {
+      System.setOut(originalOut);
+    }
+    String text = out.toString(StandardCharsets.UTF_8);
+    assertTrue(text.contains("%%%mzn-stat: objective=3"), text);
   }
 
   @Test

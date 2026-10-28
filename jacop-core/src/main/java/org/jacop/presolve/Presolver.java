@@ -30,6 +30,8 @@
 
 package org.jacop.presolve;
 
+import java.util.List;
+import java.util.function.Supplier;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -51,21 +53,26 @@ import org.jacop.core.Var;
  * checking mode they are kept, and every returned solution is propagated in the original store,
  * which checks it against the whole model.
  *
+ * <p>The presolver applies the {@link #STANDARD standard rules} and any added with {@link
+ * #rule(Rule)}, in rounds alternated with propagation until a fixpoint; see {@link Rule}.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
 public final class Presolver {
 
+  /**
+   * The rules every presolve applies, in this order, before those added with {@link #rule(Rule)}. A
+   * new presolve rule is added here.
+   */
+  static final List<Supplier<Rule>> STANDARD = List.of(AtMostOneRule::new);
+
   private final Derivation.Builder builder;
-  private final Store store;
   private boolean checking;
-  private Probing.Mode probing = Probing.Mode.OFF;
-  private long probingBudget = 1000;
-  private Probing.Result probed;
 
   private Presolver(Store store) {
-    this.store = store;
     this.builder = Derivation.of(store);
+    STANDARD.forEach(rule -> builder.rule(rule.get()));
   }
 
   /**
@@ -103,25 +110,40 @@ public final class Presolver {
   }
 
   /**
-   * Probes the store at its level before deriving; see {@link Probing}. Off by default.
+   * Adds a rule after the standard ones.
    *
-   * @param mode what probing tries.
-   * @param budgetMillis the time probing may take, in milliseconds.
+   * @param rule the rule.
    * @return this presolver.
    */
-  public Presolver probing(Probing.Mode mode, long budgetMillis) {
-    this.probing = mode;
-    this.probingBudget = budgetMillis;
+  public Presolver rule(Rule rule) {
+    builder.rule(rule);
     return this;
   }
 
   /**
-   * Returns what probing did.
+   * Probes the store in the rounds of rules, after the standard rules; see {@link ProbingRule}. Off
+   * by default.
    *
-   * @return the result, or null if probing is off or {@link #presolve()} has not run.
+   * @param mode what probing tries; {@link Probing.Mode#OFF} adds nothing.
+   * @param budgetMillis the time probing may take over all rounds, in milliseconds.
+   * @return this presolver.
    */
-  public Probing.Result probed() {
-    return probed;
+  public Presolver probing(Probing.Mode mode, long budgetMillis) {
+    if (mode != Probing.Mode.OFF) {
+      builder.rule(new ProbingRule(mode, budgetMillis));
+    }
+    return this;
+  }
+
+  /**
+   * Sets the most rounds of rules; see {@link Derivation.Builder#rounds(int)}.
+   *
+   * @param max the most rounds, at least 1.
+   * @return this presolver.
+   */
+  public Presolver rounds(int max) {
+    builder.rounds(max);
+    return this;
   }
 
   /**
@@ -130,12 +152,6 @@ public final class Presolver {
    * @return the derivation, whose child is the store to search.
    */
   public Derivation presolve() {
-    if (probing != Probing.Mode.OFF) {
-      probed = Probing.of(store).mode(probing).budget(probingBudget).probe();
-      if (!probed.feasible()) {
-        return builder.infeasible().derive();
-      }
-    }
     return builder
         .retention(checking ? Derivation.Retention.KEPT : Derivation.Retention.RELEASED)
         .derive();

@@ -155,11 +155,13 @@ class ProbingTest {
     IntVar z = new IntVar(store, "z", 1, 2);
     pairwiseDifferent(store, x, y, z);
 
-    Presolver presolver = Presolver.of(store).probing(Probing.Mode.SHAVE, 1000);
-    Derivation d = presolver.presolve();
+    Derivation d = Presolver.of(store).probing(Probing.Mode.SHAVE, 1000).presolve();
 
-    assertThat(presolver.probed().feasible()).isFalse();
     assertThat(d.outcome()).isEqualTo(Derivation.Outcome.INFEASIBLE);
+    assertThat(d.rules())
+        .filteredOn(ProbingRule.class::isInstance)
+        .singleElement()
+        .satisfies(r -> assertThat(((ProbingRule) r).result().feasible()).isFalse());
   }
 
   @Test
@@ -201,12 +203,12 @@ class ProbingTest {
       long seed = random.nextLong();
       Set<List<Integer>> expected = solutions(seed, null);
       Model m = model(seed);
-      Presolver presolver =
+      Derivation d =
           Presolver.of(m.store())
               .keep(m.all())
               .checking(trial % 2 == 0)
-              .probing(Probing.Mode.SAC, 1000);
-      Derivation d = presolver.presolve();
+              .probing(Probing.Mode.SAC, 1000)
+              .presolve();
       Set<List<Integer>> found = new HashSet<>();
       if (d.outcome() != Derivation.Outcome.INFEASIBLE) {
         search(
