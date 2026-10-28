@@ -54,6 +54,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
@@ -106,6 +107,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Span;
 import org.jacop.constraints.Spread;
 import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
@@ -328,6 +330,8 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
         Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
+        Arguments.of("Alternative", optionalIntervals(false)),
+        Arguments.of("Span", optionalIntervals(true)),
         Arguments.of("CumulativeBasic", cumulative(false)),
         Arguments.of("CumulativeUnary", cumulative(true)),
         Arguments.of("Diffn", rectangles("Diffn")),
@@ -1117,6 +1121,52 @@ class GlobalConstraintBruteForceTest {
           },
           x -> tupleSet.contains(Arrays.stream(x).boxed().toList()) != conflict,
           "tuples=" + Arrays.deepToString(tuples));
+    };
+  }
+
+  /**
+   * Alternative or span: x = [p0, s0, d0, p[0..n-1], s[0..n-1], d[0..n-1]], presences 0/1, with
+   * negative durations in some instances.
+   */
+  private static Function<Random, Instance> optionalIntervals(boolean span) {
+    return random -> {
+      int n = random.nextInt(4);
+      int dLo = random.nextInt(4) == 0 ? -1 : 0;
+      List<int[]> domains = new ArrayList<>();
+      domains.add(domain(random, 0, 1));
+      domains.add(domain(random, 0, 3));
+      domains.add(domain(random, dLo, dLo + 2));
+      domains.addAll(Arrays.asList(domains(random, n, 0, 1)));
+      domains.addAll(Arrays.asList(domains(random, n, 0, 3)));
+      domains.addAll(Arrays.asList(domains(random, n, dLo, dLo + 2)));
+      return new Instance(
+          domains.toArray(int[][]::new),
+          (store, x) -> {
+            IntVar[] p = Arrays.copyOfRange(x, 3, 3 + n);
+            IntVar[] s = Arrays.copyOfRange(x, 3 + n, 3 + 2 * n);
+            IntVar[] d = Arrays.copyOfRange(x, 3 + 2 * n, 3 + 3 * n);
+            store.impose(
+                span
+                    ? new Span(x[0], x[1], x[2], p, s, d)
+                    : new Alternative(x[0], x[1], x[2], p, s, d));
+          },
+          x -> {
+            int present = 0;
+            int start = Integer.MAX_VALUE;
+            int end = Integer.MIN_VALUE;
+            for (int i = 0; i < n; i++) {
+              if (x[3 + i] == 1) {
+                present++;
+                start = Math.min(start, x[3 + n + i]);
+                end = Math.max(end, x[3 + n + i] + x[3 + 2 * n + i]);
+              }
+            }
+            if (x[0] == 0) {
+              return present == 0 && x[2] == 0;
+            }
+            return (span ? present >= 1 : present == 1) && x[1] == start && x[1] + x[2] == end;
+          },
+          "n=" + n);
     };
   }
 

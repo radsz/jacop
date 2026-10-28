@@ -44,6 +44,7 @@ import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
@@ -87,6 +88,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Span;
 import org.jacop.constraints.Spread;
 import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
@@ -2600,6 +2602,30 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.pose(
         Diffn.builder().origin1(str).origin2(ones).length1(dur).length2(opt).strict(true).build());
+  }
+
+  void gen_jacop_alternative(SimpleNode node) {
+    IntVar[][] a = intervalArgs(node);
+    support.pose(new Alternative(a[0][0], a[0][1], a[0][2], a[1], a[2], a[3]));
+  }
+
+  void gen_jacop_span(SimpleNode node) {
+    IntVar[][] a = intervalArgs(node);
+    support.pose(new Span(a[0][0], a[0][1], a[0][2], a[1], a[2], a[3]));
+  }
+
+  // {p0, s0, d0}, p, s and d of jacop_alternative and jacop_span
+  private IntVar[][] intervalArgs(SimpleNode node) {
+    IntVar[] master = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      master[i] = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
+    }
+    return new IntVar[][] {
+      master,
+      support.getVarArray((SimpleNode) node.jjtGetChild(3)),
+      support.getVarArray((SimpleNode) node.jjtGetChild(4)),
+      support.getVarArray((SimpleNode) node.jjtGetChild(5))
+    };
   }
 
   private static IntVar[] createFilledArray(IntVar value, int length) {
