@@ -49,6 +49,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * GCC constraint counts the number of occurences of given values in x variables. The counters are
@@ -66,7 +69,7 @@ import org.jacop.core.ValueEnumeration;
  */
 @SuppressWarnings(
     "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
-public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC> {
+public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -514,6 +517,21 @@ public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC> {
     }
 
     return true;
+  }
+
+  // the flow network of the counted values; GCC is closed, the variables take counted values only
+  private CardinalityExplanation.Network network() {
+    return new CardinalityExplanation.Network(x, domainHash, counters, null, null, false, null);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == GCC.class && network().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == GCC.class && network().explainFailure(trail, out);
   }
 
   @Override

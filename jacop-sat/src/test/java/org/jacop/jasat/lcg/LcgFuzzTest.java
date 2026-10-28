@@ -72,6 +72,7 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Implies;
@@ -415,7 +416,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(71)) {
+      return switch (rnd.nextInt(74)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -477,7 +478,11 @@ class LcgFuzzTest {
           yield new CountValuesBounds(
               q, lb, ub, rnd.nextBoolean() ? new int[] {0, 1} : new int[] {2, value()});
         }
-        case 21 -> new GCC(chain("g", 3, 0, 2), chain("c", 3, 0, 3));
+        case 21 ->
+            rnd.nextBoolean()
+                ? new GCC(chain("g", 3, 0, 2), chain("c", 3, 0, 3))
+                // the model's variables, counted over -1..3
+                : new GCC(q, chain("gn", 5, 0, 3), -1);
         case 22 -> new Among(q, new IntervalDomain(0, 1), one());
         case 23 -> new AmongVar(q, pick(x, 2), one());
         case 24 -> new AtMost(q, 1 + rnd.nextInt(2), value());
@@ -573,6 +578,16 @@ class LcgFuzzTest {
           }
           yield new ChannelOrder(one(), bs, t, atMost);
         }
+        case 70 ->
+            // counters of their own, or variables of the model that may also be counted
+            new GlobalCardinality(
+                q, new int[] {0, 1, 2}, rnd.nextBoolean() ? chain("gc", 3, 0, 3) : pick(x, 3));
+        case 71 ->
+            new GlobalCardinality(
+                q, new int[] {-1, 1, 2}, new int[] {0, 1, 0}, new int[] {2, 2, 1});
+        case 72 ->
+            new CountValues(
+                q, rnd.nextBoolean() ? chain("cv", 2, 0, 3) : pick(x, 2), new int[] {2, 0});
         case 63 ->
             new LinearIntDom(
                 p,

@@ -60,6 +60,8 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
+import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
@@ -863,6 +865,135 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * Random global cardinality and count constraints, with fixed bounds or with counters that are
+   * variables of the problem (counted themselves or not), against brute force. Their explanations
+   * are cuts of the flow network, which check that the negated atom makes it infeasible.
+   */
+  @Test
+  void cardinalityAgreesWithBruteForce() {
+    Random rnd = new Random(43);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(cardinality(x, rnd));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"GCC", "GlobalCardinality", "CountValues"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "cardinality: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(1000);
+    assertThat(own).isGreaterThan(50 * generic);
+  }
+
+  // a cardinality constraint over 3 or 4 of the variables
+  private static Relation cardinality(IntVar[] x, Random rnd) {
+    int n = x.length;
+    int[] at = new int[3 + rnd.nextInt(2)];
+    for (int k = 0; k < at.length; k++) {
+      at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+    }
+    IntVar[] q = new IntVar[at.length];
+    for (int k = 0; k < at.length; k++) {
+      q[k] = x[at[k]];
+    }
+    int kind = rnd.nextInt(4);
+    int[] values =
+        kind == 2
+            ? new int[] {2, 0, 3}
+            : kind == 3 ? new int[] {-1, 0, 1, 2, 3} : new int[] {0, 1, 2, 3};
+    // counters: variables of the problem, possibly counted too
+    int[] counterAt = new int[values.length];
+    IntVar[] counters = new IntVar[values.length];
+    for (int k = 0; k < values.length; k++) {
+      counterAt[k] = rnd.nextInt(n);
+      counters[k] = x[counterAt[k]];
+    }
+    int[] low = new int[values.length];
+    int[] up = new int[values.length];
+    for (int k = 0; k < values.length; k++) {
+      low[k] = rnd.nextInt(2);
+      up[k] = low[k] + rnd.nextInt(3);
+    }
+    boolean fixed = kind == 0;
+    boolean closed = kind == 3;
+    Constraint constraint =
+        switch (kind) {
+          case 0 -> new GlobalCardinality(q, values, low, up);
+          case 1 -> new GlobalCardinality(q, values, counters);
+          case 2 -> new CountValues(q, counters, values);
+          default -> new GCC(q, counters, -1);
+        };
+    return new Relation(
+        constraint,
+        t -> {
+          int[] count = new int[values.length];
+          for (int k : at) {
+            int a = -1;
+            for (int j = 0; j < values.length; j++) {
+              if (values[j] == t[k]) {
+                a = j;
+              }
+            }
+            if (a >= 0) {
+              count[a]++;
+            } else if (closed) {
+              return false;
+            }
+          }
+          for (int j = 0; j < values.length; j++) {
+            if (fixed ? count[j] < low[j] || count[j] > up[j] : count[j] != t[counterAt[j]]) {
+              return false;
+            }
+          }
+          return true;
+        });
   }
 
   @Test
