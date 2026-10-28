@@ -184,6 +184,7 @@ public class ElementVariable extends AbstractElement
       }
       if (indexHasChanged) {
         propagateIndexChangedToValue(store);
+        releaseUnselectableSupports(store);
       }
       if (!variableQueue.isEmpty()) {
         processVariableQueue(store);
@@ -221,7 +222,8 @@ public class ElementVariable extends AbstractElement
     supports = new IntDomain[list.length];
     IntDomain temp = value.domain.cloneLight();
     for (int i = list.length - 1; i >= 0; i--) {
-      if (!temp.isEmpty()) {
+      // a position the index cannot select supports no value, and it never becomes selectable again
+      if (!temp.isEmpty() && index.domain.contains(i + 1 + indexOffset)) {
         supports[i] = temp.intersect(list[i].domain);
         if (!supports[i].isEmpty()) {
           temp = temp.subtract(supports[i]);
@@ -300,6 +302,29 @@ public class ElementVariable extends AbstractElement
         supports[position].subtractAdapt(lostSupport);
       } else {
         value.domain.inComplement(store.level, value, lostSupport);
+      }
+    }
+  }
+
+  /**
+   * Moves the values supported at positions the index can no longer select to other positions, and
+   * removes from value those that have no other support.
+   */
+  private void releaseUnselectableSupports(Store store) {
+    for (int position = 0; position < supports.length; position++) {
+      if (supports[position].isEmpty() || index.domain.contains(position + 1 + indexOffset)) {
+        continue;
+      }
+      IntDomain released = supports[position].intersect(value.domain);
+      for (ValueEnumeration e = released.valueEnumeration(); e.hasMoreElements(); ) {
+        int support = e.nextElement();
+        int nextSupportPosition = findNextSupportPosition(support);
+        if (nextSupportPosition != -1) {
+          supports[nextSupportPosition].unionAdapt(support);
+          supports[position].subtractAdapt(support);
+        } else {
+          value.domain.inComplement(store.level, value, support);
+        }
       }
     }
   }

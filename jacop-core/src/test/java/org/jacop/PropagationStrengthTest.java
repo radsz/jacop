@@ -42,6 +42,7 @@ import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
@@ -248,6 +249,41 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, x[0], 0)).isTrue();
     assertThat(count.dom().toString()).isEqualTo("{2..3}");
+  }
+
+  // ElementVariable kept the supports of values at positions the index could not select, so a
+  // value lost by the selectable positions stayed in the value's domain
+  @Test
+  void testElementVariableDropsValuesSupportedOnlyByUnselectablePositions() {
+
+    // the index cannot select b from the start
+    assertThat(elementVariablePrunes(false)).isEqualTo("{0, 3..5}");
+    // the index stops selecting b during search
+    assertThat(elementVariablePrunes(true)).isEqualTo("{0, 3..5}");
+  }
+
+  /**
+   * Imposes value = [a, b, c][index] with a in 0..2, b in 0..5 and c in 3..5, where the index stops
+   * selecting b at the start or after propagation, removes 1 and 2 from a and returns the domain of
+   * value.
+   */
+  private static String elementVariablePrunes(boolean deselectBDuringSearch) {
+
+    Store store = new Store();
+    IntVar index =
+        deselectBDuringSearch ? new IntVar(store, "i", 1, 3) : variable(store, "i", 1, 3);
+    IntVar[] list = {
+      new IntVar(store, "a", 0, 2), new IntVar(store, "b", 0, 5), new IntVar(store, "c", 3, 5)
+    };
+    IntVar value = new IntVar(store, "value", 0, 5);
+    store.impose(new ElementVariable(index, list, value, 0));
+    assertThat(store.consistency()).isTrue();
+    if (deselectBDuringSearch) {
+      assertThat(removeValues(store, index, 2)).isTrue();
+    }
+
+    assertThat(removeValues(store, list[0], 1, 2)).isTrue();
+    return value.dom().toString();
   }
 
   /**
