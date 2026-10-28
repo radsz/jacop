@@ -70,8 +70,6 @@ public class LinearRelaxationCheck implements ParserTreeConstants {
   /** The most tableau entries updated by all pivots together, about a quarter of a second. */
   static final long MAX_WORK = 300_000_000L;
 
-  private static final double EPS = 1e-9;
-
   private final Support support;
 
   // the rows a * x <= c, or a * x = c, over the variables at the positions in vars
@@ -274,92 +272,10 @@ public class LinearRelaxationCheck implements ParserTreeConstants {
         }
       }
     }
-    boolean[] upper = new boolean[cols];
-    boolean[] basic = new boolean[cols];
-    for (int i = 0; i < m; i++) {
-      basic[basis[i]] = true;
-    }
-
     long limit = Math.min(50L * cols + 1000, MAX_WORK / ((long) m * cols));
-    long iter = 0;
-    for (; iter < limit; iter++) {
-      // entering: the steepest decrease of the sum, Bland's rule after a while against cycling
-      boolean bland = iter > 10 * cols;
-      int q = -1;
-      double best = EPS;
-      for (int j = 0; j < cols; j++) {
-        if (basic[j] || upperBound[j] == 0) {
-          continue;
-        }
-        double gain = upper[j] ? d[j] : -d[j];
-        if (gain > best) {
-          q = j;
-          best = gain;
-          if (bland) {
-            break;
-          }
-        }
-      }
-      if (q < 0) {
-        break;
-      }
-      double dir = upper[q] ? -1 : 1;
-      double step = upperBound[q];
-      int r = -1;
-      for (int i = 0; i < m; i++) {
-        double alpha = dir * t[i][q];
-        double ratio;
-        if (alpha > EPS) {
-          ratio = beta[i] / alpha;
-        } else if (alpha < -EPS && upperBound[basis[i]] < Double.POSITIVE_INFINITY) {
-          ratio = (upperBound[basis[i]] - beta[i]) / -alpha;
-        } else {
-          continue;
-        }
-        if (ratio < step - EPS || (r >= 0 && ratio <= step + EPS && basis[i] < basis[r])) {
-          step = ratio;
-          r = i;
-        }
-      }
-      if (Double.isInfinite(step)) {
-        return null; // unbounded decrease of a sum of nonnegative values: numerical trouble
-      }
-      step = Math.max(step, 0);
-      for (int i = 0; i < m; i++) {
-        beta[i] -= dir * step * t[i][q];
-      }
-      if (r < 0) {
-        // the entering variable reaches its other bound
-        upper[q] = !upper[q];
-        continue;
-      }
-      int leaving = basis[r];
-      upper[leaving] = dir * t[r][q] < 0;
-      beta[r] = (upper[q] ? upperBound[q] : 0) + dir * step;
-      basic[leaving] = false;
-      basic[q] = true;
-      upper[q] = false;
-      basis[r] = q;
-      double pivot = t[r][q];
-      double[] row = t[r];
-      for (int j = 0; j < cols; j++) {
-        row[j] /= pivot;
-      }
-      for (int i = 0; i < m; i++) {
-        double f = t[i][q];
-        if (i != r && f != 0) {
-          double[] ti = t[i];
-          for (int j = 0; j < cols; j++) {
-            ti[j] -= f * row[j];
-          }
-        }
-      }
-      double f = d[q];
-      for (int j = 0; j < cols; j++) {
-        d[j] -= f * row[j];
-      }
-    }
-    if (iter == limit) {
+    // an unbounded decrease of a sum of nonnegative values is numerical trouble
+    if (new BoundedSimplex(t, beta, basis, d, upperBound).run(limit, true)
+        != BoundedSimplex.Outcome.OPTIMAL) {
       return null;
     }
     double sum = 0;
