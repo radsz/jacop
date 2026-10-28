@@ -54,6 +54,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
@@ -106,6 +107,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Span;
 import org.jacop.constraints.Spread;
 import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
@@ -120,9 +122,12 @@ import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.EnergyPrecedence;
+import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnDecomposed;
 import org.jacop.constraints.diffn.DiffnK;
@@ -269,6 +274,11 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
         Arguments.of("Deviation", balance(false)),
         Arguments.of("Spread", balance(true)),
+        Arguments.of(
+            "EnergyPrecedence",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::energyPrecedence),
+        Arguments.of("Reservoir", reservoir(false)),
+        Arguments.of("ReservoirPrecedences", reservoir(true)),
         Arguments.of("StockingCost", stockingCost(false)),
         Arguments.of("StockingCostItemDependent", stockingCost(true)),
         Arguments.of(
@@ -328,6 +338,8 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
         Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
+        Arguments.of("Alternative", optionalIntervals(false)),
+        Arguments.of("Span", optionalIntervals(true)),
         Arguments.of("CumulativeBasic", cumulative(false)),
         Arguments.of("CumulativeUnary", cumulative(true)),
         Arguments.of("Diffn", rectangles("Diffn")),
@@ -1120,6 +1132,52 @@ class GlobalConstraintBruteForceTest {
     };
   }
 
+  /**
+   * Alternative or span: x = [p0, s0, d0, p[0..n-1], s[0..n-1], d[0..n-1]], presences 0/1, with
+   * negative durations in some instances.
+   */
+  private static Function<Random, Instance> optionalIntervals(boolean span) {
+    return random -> {
+      int n = random.nextInt(4);
+      int dLo = random.nextInt(4) == 0 ? -1 : 0;
+      List<int[]> domains = new ArrayList<>();
+      domains.add(domain(random, 0, 1));
+      domains.add(domain(random, 0, 3));
+      domains.add(domain(random, dLo, dLo + 2));
+      domains.addAll(Arrays.asList(domains(random, n, 0, 1)));
+      domains.addAll(Arrays.asList(domains(random, n, 0, 3)));
+      domains.addAll(Arrays.asList(domains(random, n, dLo, dLo + 2)));
+      return new Instance(
+          domains.toArray(int[][]::new),
+          (store, x) -> {
+            IntVar[] p = Arrays.copyOfRange(x, 3, 3 + n);
+            IntVar[] s = Arrays.copyOfRange(x, 3 + n, 3 + 2 * n);
+            IntVar[] d = Arrays.copyOfRange(x, 3 + 2 * n, 3 + 3 * n);
+            store.impose(
+                span
+                    ? new Span(x[0], x[1], x[2], p, s, d)
+                    : new Alternative(x[0], x[1], x[2], p, s, d));
+          },
+          x -> {
+            int present = 0;
+            int start = Integer.MAX_VALUE;
+            int end = Integer.MIN_VALUE;
+            for (int i = 0; i < n; i++) {
+              if (x[3 + i] == 1) {
+                present++;
+                start = Math.min(start, x[3 + n + i]);
+                end = Math.max(end, x[3 + n + i] + x[3 + 2 * n + i]);
+              }
+            }
+            if (x[0] == 0) {
+              return present == 0 && x[2] == 0;
+            }
+            return (span ? present >= 1 : present == 1) && x[1] == start && x[1] + x[2] == end;
+          },
+          "n=" + n);
+    };
+  }
+
   private static Function<Random, Instance> cumulative(boolean unary) {
     return random -> {
       int n = 1 + random.nextInt(3);
@@ -1908,6 +1966,157 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // n tasks (starts, durations, heights) on a resource of capacity limit, an extra time point, and
+  // random precedences to >= from + lag over the starts and the extra point
+  private static Instance energyPrecedence(Random random) {
+    int n = 2 + random.nextInt(2);
+    int points = n + 1;
+    int arcs = 1 + random.nextInt(4);
+    int[] from = new int[arcs];
+    int[] to = new int[arcs];
+    int[] lag = new int[arcs];
+    for (int k = 0; k < arcs; k++) {
+      from[k] = random.nextInt(points);
+      // most precedences end at the extra point, so that it has several predecessors
+      to[k] = random.nextInt(3) == 0 ? random.nextInt(points) : n;
+      if (to[k] == from[k]) {
+        to[k] = (from[k] + 1) % points;
+      }
+      lag[k] = random.nextInt(5) - 1;
+    }
+    List<int[]> domains = new ArrayList<>();
+    domains.addAll(Arrays.asList(domains(random, n, 0, 4))); // starts
+    domains.add(domain(random, 0, 7)); // extra point
+    domains.addAll(Arrays.asList(domains(random, n, 0, 2))); // durations
+    domains.addAll(Arrays.asList(domains(random, n, 0, 2))); // heights
+    domains.add(domain(random, 0, 3)); // limit
+    return new Instance(
+        domains.toArray(int[][]::new),
+        (store, x) -> {
+          IntVar[] p = Arrays.copyOfRange(x, 0, points);
+          IntVar[] f = new IntVar[arcs];
+          IntVar[] t = new IntVar[arcs];
+          for (int k = 0; k < arcs; k++) {
+            f[k] = p[from[k]];
+            t[k] = p[to[k]];
+          }
+          store.impose(
+              new EnergyPrecedence(
+                  Arrays.copyOfRange(x, 0, n),
+                  Arrays.copyOfRange(x, points, points + n),
+                  Arrays.copyOfRange(x, points + n, points + 2 * n),
+                  x[points + 2 * n],
+                  f,
+                  t,
+                  lag));
+          // the constraint enforces only the precedences it uses
+          for (int k = 0; k < arcs; k++) {
+            store.impose(new XplusClteqZ(f[k], lag[k], t[k]));
+          }
+        },
+        v -> {
+          for (int k = 0; k < arcs; k++) {
+            if (v[to[k]] < v[from[k]] + lag[k]) {
+              return false;
+            }
+          }
+          for (int time = 0; time <= 8; time++) {
+            int load = 0;
+            for (int i = 0; i < n; i++) {
+              if (v[i] <= time && time < v[i] + v[points + i]) {
+                load += v[points + n + i];
+              }
+            }
+            if (load > v[points + 2 * n]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "from="
+            + Arrays.toString(from)
+            + " to="
+            + Arrays.toString(to)
+            + " lag="
+            + Arrays.toString(lag));
+  }
+
+  // events at times t[0..n-1] change a level that starts at initial and stays within [min, max];
+  // with precedences t[to] >= t[from] + lag over the times and one extra variable
+  private static Function<Random, Instance> reservoir(boolean precedences) {
+    return random -> {
+      int n = 2 + random.nextInt(3);
+      int[] changes = randomInts(random, n, -3, 3);
+      int min = -random.nextInt(3);
+      int max = random.nextInt(4);
+      int initial = min + random.nextInt(max - min + 1);
+      int points = precedences ? n + 1 : n;
+      int arcs = precedences ? 1 + random.nextInt(3) : 0;
+      int[] from = new int[arcs];
+      int[] to = new int[arcs];
+      int[] lag = new int[arcs];
+      for (int k = 0; k < arcs; k++) {
+        from[k] = random.nextInt(points);
+        to[k] = (from[k] + 1 + random.nextInt(points - 1)) % points;
+        lag[k] = random.nextInt(4) - 1;
+      }
+      return new Instance(
+          domains(random, points, 0, 4),
+          (store, v) -> {
+            IntVar[] f = new IntVar[arcs];
+            IntVar[] t = new IntVar[arcs];
+            for (int k = 0; k < arcs; k++) {
+              f[k] = v[from[k]];
+              t[k] = v[to[k]];
+            }
+            IntVar[] times = Arrays.copyOf(v, n);
+            store.impose(
+                precedences
+                    ? new Reservoir(times, changes, initial, min, max, f, t, lag)
+                    : new Reservoir(times, changes, min - initial, max - initial));
+            // the reservoir enforces only the precedences between its events
+            for (int k = 0; k < arcs; k++) {
+              store.impose(new XplusClteqZ(f[k], lag[k], t[k]));
+            }
+          },
+          v -> {
+            for (int k = 0; k < arcs; k++) {
+              if (v[to[k]] < v[from[k]] + lag[k]) {
+                return false;
+              }
+            }
+            for (int x = 0; x < n; x++) {
+              int level = precedences ? initial : 0;
+              for (int y = 0; y < n; y++) {
+                if (v[y] <= v[x]) {
+                  level += changes[y];
+                }
+              }
+              if (precedences
+                  ? level < min || level > max
+                  : level < min - initial || level > max - initial) {
+                return false;
+              }
+            }
+            return true;
+          },
+          "changes="
+              + Arrays.toString(changes)
+              + " initial="
+              + initial
+              + " ["
+              + min
+              + ", "
+              + max
+              + "] from="
+              + Arrays.toString(from)
+              + " to="
+              + Arrays.toString(to)
+              + " lag="
+              + Arrays.toString(lag));
+    };
   }
 
   // starts s[0..n-1] of tasks that do not overlap, sum of w * (s + d) at most the last
