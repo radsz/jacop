@@ -66,6 +66,14 @@ import org.jacop.search.restart.GeometricCalculator;
  * restarts: when a run explores its whole tree before its fail limit, the last solution is optimal,
  * or the problem has no solution.
  *
+ * <p>With {@link Builder#probeObjective(double, long)} some runs are probes: they look for a
+ * solution with the objective close to its lower bound ({@code cost <= lb + d} when minimising),
+ * with a fail limit of their own. A probe that explores its whole tree proves that no such solution
+ * exists and raises the lower bound for good; a probe that finds a solution finds one close to the
+ * optimum. The offset {@code d} starts at 0 (objective lower-bound search) and doubles after each
+ * refuted probe and halves after a probe that ran out of failures (objective shaving), as in the
+ * {@code objective_lb_search} and {@code objective_shaving} workers of OR-Tools CP-SAT.
+ *
  * <pre>{@code
  * FreeSearch search = FreeSearch.builder(store, select)
  *     .minimize(cost)
@@ -161,6 +169,17 @@ public final class FreeSearch {
 
   private boolean hasBound;
   private int bound;
+
+  // objective probing (lower-bound search and shaving); probeShare 0 turns it off
+  private final double probeShare;
+  private long probeLimit;
+  private int probeOffset;
+  private boolean probing;
+  private int probeTarget;
+  private long probeFailures;
+  private long probeRuns;
+  private long probesRefuted;
+  private long regularRuns;
   private int[] lastSolution;
   private int lastCost;
 
@@ -199,6 +218,8 @@ public final class FreeSearch {
     learnNogoods = builder.nogoods && restarts != null;
     maxNogoods = builder.maxNogoods;
     maxNogoodLength = builder.maxNogoodLength;
+    probeShare = cost != null && restarts != null ? builder.probeShare : 0;
+    probeLimit = builder.probeFailLimit;
   }
 
   /**
@@ -264,6 +285,9 @@ public final class FreeSearch {
       }
     } finally {
       unwind();
+      if (probing) {
+        store.removeLevel(rootLevel + 1);
+      }
       if (nogoods != null) {
         nogoods.detach();
       }
@@ -280,8 +304,37 @@ public final class FreeSearch {
   private boolean runs() {
     while (true) {
       runFailures = 0;
-      select = branchingOfRun();
+      // a probe propagates above the root, so what the nogoods and bounds just added there must be
+      // propagated at the root first; otherwise the end of the probe would undo it
+      if (probeShare > 0 && !store.consistency()) {
+        return true;
+      }
+      probing = startProbe();
+      select = probing ? mainSelect : branchingOfRun();
+      System.err.println(
+          "RUN probe="
+              + probing
+              + " target="
+              + probeTarget
+              + " bound="
+              + (hasBound ? bound : "-")
+              + " cost="
+              + cost
+              + " level="
+              + store.level
+              + " fails="
+              + failures);
       RunEnd end = run();
+      System.err.println("  END " + end + " sol=" + runEndedBySolution);
+      boolean probe = probing;
+      if (probe) {
+        if (endProbe(end)) {
+          return true;
+        }
+        if (end == RunEnd.EXHAUSTED) {
+          continue;
+        }
+      }
       if (end == RunEnd.EXHAUSTED) {
         return true;
       }
@@ -291,12 +344,17 @@ public final class FreeSearch {
       restartCount++;
       int depth = stackSize;
       unwind();
-      if (nogoods != null) {
+      // the nogoods of a probe hold only under its bound on the objective
+      if (nogoods != null && !probe) {
         learnNogoods(depth);
       }
       for (SearchMonitor m : monitors) {
         m.onRestart(this);
       }
+      if (probe) {
+        continue;
+      }
+      regularRuns++;
       if (restarts != null) {
         if (runEndedBySolution && resetRestartsOnSolution) {
           restarts.reset();
@@ -305,6 +363,78 @@ public final class FreeSearch {
         }
       }
     }
+  }
+
+  /**
+   * Decides whether the next run is a probe and, if so, sets its target and opens the level of its
+   * bound. A probe runs when the failures spent in probes are below their share of the others and
+   * the target is tighter than the bound of a regular run.
+   */
+  private boolean startProbe() {
+    if (probeShare <= 0 || probeFailures > probeShare * (failures - probeFailures)) {
+      return false;
+    }
+    // the best value the objective can still take, a bound proven at the root
+    long target;
+    if (maximize) {
+      target = (long) cost.max() - probeOffset;
+      if (target <= (hasBound ? bound : cost.min())) {
+        return false;
+      }
+    } else {
+      target = (long) cost.min() + probeOffset;
+      if (target >= (hasBound ? bound : cost.max())) {
+        return false;
+      }
+    }
+    probeTarget = (int) target;
+    probeRuns++;
+    // the bound of the probe is imposed at a level of its own, removed when the probe ends
+    store.setLevel(rootLevel + 1);
+    return true;
+  }
+
+  /**
+   * Ends a probe: removes its level and, when it explored its whole tree, raises the lower bound of
+   * the objective at the root. Adapts the offset and the fail limit of the next probe. Returns true
+   * when raising the bound left no solution, so the search is complete.
+   */
+  private boolean endProbe(RunEnd end) {
+    int limit = probeLimit();
+    probing = false;
+    unwind();
+    store.removeLevel(rootLevel + 1);
+    store.setLevel(rootLevel);
+    store.recentlyFailedConstraint = null;
+    if (end == RunEnd.EXHAUSTED) {
+      // no solution has the objective within the probe's limit
+      probesRefuted++;
+      probeOffset = probeOffset >= (1 << 29) ? probeOffset : 2 * probeOffset + 1;
+      try {
+        if (maximize) {
+          cost.domain.inMax(rootLevel, cost, limit - 1);
+        } else {
+          cost.domain.inMin(rootLevel, cost, limit + 1);
+        }
+        return !store.consistency();
+      } catch (FailException e) {
+        store.recentlyFailedConstraint = null;
+        return true;
+      }
+    }
+    if (end == RunEnd.RESTART && !runEndedBySolution) {
+      probeOffset /= 2;
+      probeLimit += probeLimit / 2;
+    }
+    return false;
+  }
+
+  /** The limit on the objective in the current probe: its target, or the bound if tighter. */
+  private int probeLimit() {
+    if (!hasBound) {
+      return probeTarget;
+    }
+    return maximize ? Math.max(probeTarget, bound) : Math.min(probeTarget, bound);
   }
 
   /**
@@ -350,7 +480,7 @@ public final class FreeSearch {
       return mainSelect;
     }
     boolean useAlternative =
-        alternation == Alternation.EVERY_RESTART ? restartCount % 2 == 0 : solutions == 0;
+        alternation == Alternation.EVERY_RESTART ? regularRuns % 2 == 0 : solutions == 0;
     return useAlternative ? alternative : mainSelect;
   }
 
@@ -388,6 +518,9 @@ public final class FreeSearch {
       }
       failures++;
       runFailures++;
+      if (probing) {
+        probeFailures++;
+      }
       Var decision = failedFrame == null ? null : failedFrame.var;
       // failures under the alternative branching would teach the heuristics of the main one
       // about a search they do not make
@@ -404,7 +537,7 @@ public final class FreeSearch {
       if (backtrack()) {
         return RunEnd.EXHAUSTED;
       }
-      if (restarts != null && runFailures >= restarts.getFailLimit()) {
+      if (restarts != null && runFailures >= (probing ? probeLimit : restarts.getFailLimit())) {
         runEndedByFailure = true;
         return RunEnd.RESTART;
       }
@@ -551,14 +684,15 @@ public final class FreeSearch {
   /** Imposes the objective bound and propagates the current node. */
   private boolean propagate() {
     nodes++;
-    if (hasBound) {
+    if (hasBound || probing) {
+      int limit = probing ? probeLimit() : bound;
       try {
         if (maximize) {
-          if (cost.min() < bound) {
-            cost.domain.inMin(store.level, cost, bound);
+          if (cost.min() < limit) {
+            cost.domain.inMin(store.level, cost, limit);
           }
-        } else if (cost.max() > bound) {
-          cost.domain.inMax(store.level, cost, bound);
+        } else if (cost.max() > limit) {
+          cost.domain.inMax(store.level, cost, limit);
         }
       } catch (FailException e) {
         store.recentlyFailedConstraint = null;
@@ -573,6 +707,7 @@ public final class FreeSearch {
    * backtracking.
    */
   private RunEnd solution() {
+    System.err.println("  SOL cost=" + cost + " " + java.util.Arrays.toString(recorded));
     solutions++;
     if (lastSolution == null) {
       lastSolution = new int[recorded.length];
@@ -736,6 +871,34 @@ public final class FreeSearch {
   }
 
   /**
+   * Returns the number of probe runs of {@link Builder#probeObjective(double, long)}.
+   *
+   * @return the number of probes.
+   */
+  public long getProbes() {
+    return probeRuns;
+  }
+
+  /**
+   * Returns the number of probes that explored their whole tree and so raised the lower bound of
+   * the objective.
+   *
+   * @return the number of refuted probes.
+   */
+  public long getProbesRefuted() {
+    return probesRefuted;
+  }
+
+  /**
+   * Returns the number of failures spent in probe runs.
+   *
+   * @return the failures of probes.
+   */
+  public long getProbeFailures() {
+    return probeFailures;
+  }
+
+  /**
    * Returns the largest number of decisions on the stack.
    *
    * @return the peak depth.
@@ -776,6 +939,8 @@ public final class FreeSearch {
     private boolean nogoods;
     private int maxNogoods = RestartNoGoods.DEFAULT_MAX_NOGOODS;
     private int maxNogoodLength = RestartNoGoods.DEFAULT_MAX_LENGTH;
+    private double probeShare;
+    private long probeFailLimit;
 
     private Builder(Store store, SelectChoicePoint<? extends Var> select) {
       this.store = store;
@@ -880,6 +1045,27 @@ public final class FreeSearch {
      */
     public Builder resetRestartsOnSolution(boolean reset) {
       this.resetRestartsOnSolution = reset;
+      return this;
+    }
+
+    /**
+     * For optimisation with restarts, makes some runs probes that look for a solution with the
+     * objective at its lower bound, or a growing offset above it (below the upper bound when
+     * maximising). A probe that explores its whole tree raises the lower bound for good. Probes
+     * take about {@code share} failures per failure of the regular runs.
+     *
+     * @param share failures of probes per failure of regular runs; 0 (the default) turns probes
+     *     off.
+     * @param failLimit the fail limit of the first probe, growing by half after each probe that
+     *     reaches it.
+     * @return this builder.
+     */
+    public Builder probeObjective(double share, long failLimit) {
+      if (share < 0 || failLimit < 1) {
+        throw new IllegalArgumentException("The share must be >= 0 and the fail limit >= 1");
+      }
+      this.probeShare = share;
+      this.probeFailLimit = failLimit;
       return this;
     }
 

@@ -1962,6 +1962,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
+      builder.probeObjective(
+          Double.parseDouble(options.freeConfig("probe", "0")),
+          Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
     freeSearch = builder.build();
     if (options.debug()) {
@@ -2898,6 +2901,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(solutions)
             + (freeSearch != null && freeSearch.getNogoods() > 0
                 ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
+                : "")
+            + (freeSearch != null && freeSearch.getProbes() > 0
+                ? "\n%%%mzn-stat: objectiveProbes="
+                    + nf.format(freeSearch.getProbes())
+                    + "\n%%%mzn-stat: objectiveProbesRefuted="
+                    + nf.format(freeSearch.getProbesRefuted())
+                    + "\n%%%mzn-stat: objectiveProbeFailures="
+                    + nf.format(freeSearch.getProbeFailures())
                 : "")
             + "\n%%%mzn-stat-end");
 
