@@ -305,6 +305,52 @@ class AtomicTrailTest {
     assertThat(checked).isGreaterThan(1000);
   }
 
+  /**
+   * x + y + 2z <= 10 with x >= 1, then x >= 2, then y >= 4 propagating z <= 2: the bound z <= 2
+   * needs x + y >= 5 only, so its reason cites x >= 1, the earlier and weaker entry of x.
+   */
+  @Test
+  void linearReasonCitesTheEarliestBoundTheSlackAllows() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar z = new IntVar(store, "z", 0, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    LinearInt sum = new LinearInt(new IntVar[] {x, y, z}, new int[] {1, 1, 2}, "<=", 10);
+    store.impose(sum);
+    assertThat(store.consistency()).isTrue();
+    int[] steps = {1, 2};
+    for (int v : steps) {
+      store.setLevel(store.level + 1);
+      x.domain.inMin(store.level, x, v);
+      assertThat(store.consistency()).isTrue();
+    }
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 4);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.max()).isEqualTo(2);
+    int zBound = -1;
+    int xFirst = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.LE && trail.value(e) == 2) {
+        zBound = e;
+      }
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 1) {
+        xFirst = e;
+      }
+    }
+    assertThat(zBound).isNotNegative();
+    assertThat(xFirst).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(zBound, reason)).isTrue();
+    List<Integer> cited = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      cited.add(reason.get(k));
+    }
+    assertThat(cited).contains(xFirst).hasSize(2);
+    trail.detach();
+  }
+
   @Test
   void holesAreRecordedOnceForEveryDomainClass() {
     Random rnd = new Random(11);

@@ -35,8 +35,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -59,6 +61,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -97,6 +100,7 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -111,6 +115,7 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
@@ -129,12 +134,14 @@ import org.jacop.constraints.graph.Steiner;
 import org.jacop.constraints.graph.Tree;
 import org.jacop.constraints.graph.WeightedSpanningTree;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -193,6 +200,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
         Arguments.of("Alldistinct", alldiff("Alldistinct")),
         Arguments.of(
+            "OverlappingAlldiff",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::overlappingAlldiff),
+        Arguments.of(
             "AlldifferentExceptZero",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::alldifferentExceptZero),
         Arguments.of(
@@ -202,6 +212,9 @@ class GlobalConstraintBruteForceTest {
             "AllEqual", (Function<Random, Instance>) GlobalConstraintBruteForceTest::allEqual),
         Arguments.of("GCC", (Function<Random, Instance>) GlobalConstraintBruteForceTest::gcc),
         Arguments.of("Among", (Function<Random, Instance>) GlobalConstraintBruteForceTest::among),
+        Arguments.of(
+            "ChannelOrder",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::channelOrder),
         Arguments.of("Count", (Function<Random, Instance>) GlobalConstraintBruteForceTest::count),
         Arguments.of(
             "CountBounds",
@@ -229,6 +242,8 @@ class GlobalConstraintBruteForceTest {
             "Regular", (Function<Random, Instance>) GlobalConstraintBruteForceTest::regular),
         Arguments.of("CostRegular", costRegular(false)),
         Arguments.of("CostRegularDecomposition", costRegular(true)),
+        Arguments.of("CostMdd", costMdd(false)),
+        Arguments.of("CostMddDecomposition", costMdd(true)),
         Arguments.of(
             "Sequence", (Function<Random, Instance>) GlobalConstraintBruteForceTest::sequence),
         Arguments.of(
@@ -256,6 +271,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Spread", balance(true)),
         Arguments.of("StockingCost", stockingCost(false)),
         Arguments.of("StockingCostItemDependent", stockingCost(true)),
+        Arguments.of(
+            "WeightedCompletion",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::weightedCompletion),
         Arguments.of(
             "IncreasingNValue",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
@@ -768,6 +786,103 @@ class GlobalConstraintBruteForceTest {
   }
 
   /** Cost regular over the alphabet {0, 1, 2}; the last variable is the cost. */
+  /**
+   * A random cost MDD over values 0..2 with up to three nodes per level, sometimes
+   * non-deterministic (edges of a node sharing values) for the propagator, with labels that may
+   * mention 5, outside the domains, and nodes without outgoing edges.
+   */
+  private static Function<Random, Instance> costMdd(boolean decomposition) {
+    return random -> {
+      int n = random.nextInt(5);
+      // the decomposition fixes the cost only when its node variables are ground, which the
+      // variables of a deterministic diagram imply
+      boolean nondeterministic = !decomposition && random.nextBoolean();
+      // nodes 1..N, node 1 is the root, levels[l] lists the nodes of level l + 1
+      List<Integer> level = new ArrayList<>();
+      List<List<Integer>> levels = new ArrayList<>();
+      for (int l = 0; l < n; l++) {
+        int width = l == 0 ? 1 : 1 + random.nextInt(3);
+        List<Integer> nodes = new ArrayList<>();
+        for (int k = 0; k < width; k++) {
+          level.add(l + 1);
+          nodes.add(level.size());
+        }
+        levels.add(nodes);
+      }
+      if (n == 0) {
+        level.add(1);
+      }
+      List<Integer> from = new ArrayList<>();
+      List<IntDomain> label = new ArrayList<>();
+      List<Integer> edgeCost = new ArrayList<>();
+      List<Integer> to = new ArrayList<>();
+      for (int l = 0; l < n; l++) {
+        for (int u : levels.get(l)) {
+          boolean[] used = new boolean[6];
+          int edges = random.nextInt(4);
+          for (int k = 0; k < edges; k++) {
+            IntervalDomain values = new IntervalDomain();
+            for (int v : new int[] {0, 1, 2, 5}) {
+              if (random.nextInt(3) == 0 && (nondeterministic || !used[v])) {
+                values.unionAdapt(v, v);
+                used[v] = true;
+              }
+            }
+            from.add(u);
+            label.add(values);
+            edgeCost.add(random.nextInt(6) - 2);
+            List<Integer> next = l + 1 < n ? levels.get(l + 1) : List.of(0);
+            to.add(next.get(random.nextInt(next.size())));
+          }
+        }
+      }
+      int[] lv = level.stream().mapToInt(Integer::intValue).toArray();
+      int[] f = from.stream().mapToInt(Integer::intValue).toArray();
+      IntDomain[] lb = label.toArray(new IntDomain[0]);
+      int[] c = edgeCost.stream().mapToInt(Integer::intValue).toArray();
+      int[] t = to.stream().mapToInt(Integer::intValue).toArray();
+      return new Instance(
+          append(domains(random, n, 0, 2), domain(random, -3, 8)),
+          (store, x) -> {
+            CostMdd mdd = new CostMdd(Arrays.copyOf(x, n), lv, f, lb, c, t, x[n]);
+            if (decomposition) {
+              store.imposeDecomposition(mdd);
+            } else {
+              store.impose(mdd);
+            }
+          },
+          x -> {
+            // costs of the paths labelled by x reaching each node
+            Map<Integer, Set<Integer>> reached = new HashMap<>();
+            reached.put(1, Set.of(0));
+            for (int l = 0; l < n; l++) {
+              Map<Integer, Set<Integer>> next = new HashMap<>();
+              for (int e = 0; e < f.length; e++) {
+                Set<Integer> sums = reached.get(f[e]);
+                if (sums != null && lv[f[e] - 1] == l + 1 && lb[e].contains(x[l])) {
+                  for (int sum : sums) {
+                    next.computeIfAbsent(t[e], k -> new HashSet<>()).add(sum + c[e]);
+                  }
+                }
+              }
+              reached = next;
+            }
+            int terminal = n == 0 ? 1 : 0;
+            return reached.containsKey(terminal) && reached.get(terminal).contains(x[n]);
+          },
+          "level="
+              + Arrays.toString(lv)
+              + " from="
+              + Arrays.toString(f)
+              + " label="
+              + Arrays.toString(lb)
+              + " cost="
+              + Arrays.toString(c)
+              + " to="
+              + Arrays.toString(t));
+    };
+  }
+
   private static Function<Random, Instance> costRegular(boolean decomposition) {
     return random -> {
       int n = random.nextInt(5);
@@ -1060,6 +1175,29 @@ class GlobalConstraintBruteForceTest {
             "");
   }
 
+  /** alldifferent on s and on t; the variables of both are shared, each variable in s or t. */
+  private static Instance overlappingAlldiff(Random random) {
+    int n = 2 + random.nextInt(6);
+    // 0: only s, 1: only t, 2: both
+    int[] side = new int[n];
+    for (int i = 0; i < n; i++) {
+      side[i] = random.nextInt(3);
+    }
+    int[] s = IntStream.range(0, n).filter(i -> side[i] != 1).toArray();
+    int[] t = IntStream.range(0, n).filter(i -> side[i] != 0).toArray();
+    return new Instance(
+        domains(random, n, 0, 2 + random.nextInt(3)),
+        (store, x) ->
+            store.impose(
+                new OverlappingAlldiff(
+                    Arrays.stream(s).mapToObj(i -> x[i]).toArray(IntVar[]::new),
+                    Arrays.stream(t).mapToObj(i -> x[i]).toArray(IntVar[]::new))),
+        x ->
+            distinct(Arrays.stream(s).map(i -> x[i]).toArray())
+                && distinct(Arrays.stream(t).map(i -> x[i]).toArray()),
+        "s=" + Arrays.toString(s) + " t=" + Arrays.toString(t));
+  }
+
   private static Instance alldifferentExceptZero(Random random) {
     return new Instance(
         domains(random, 2 + random.nextInt(4), 0, 4),
@@ -1123,6 +1261,46 @@ class GlobalConstraintBruteForceTest {
             store.impose(new Among(Arrays.copyOfRange(x, 0, n), new IntervalDomain(lo, hi), x[n])),
         x -> IntStream.range(0, n).filter(i -> x[i] >= lo && x[i] <= hi).count() == x[n],
         "set=" + lo + ".." + hi);
+  }
+
+  /**
+   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold, and
+   * thresholds may lie outside the domain of x.
+   */
+  private static Instance channelOrder(Random random) {
+    int m = 1 + random.nextInt(4);
+    int n = 1 + random.nextInt(6);
+    int[] which = new int[n];
+    int[] t = new int[n];
+    boolean[] atMost = new boolean[n];
+    for (int i = 0; i < n; i++) {
+      which[i] = 1 + random.nextInt(m);
+      t[i] = random.nextInt(8) - 1;
+      atMost[i] = random.nextBoolean();
+    }
+    return new Instance(
+        append(new int[][] {domain(random, 0, 5)}, domains(random, m, 0, 1)),
+        (store, x) -> {
+          IntVar[] b = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            b[i] = x[which[i]];
+          }
+          store.impose(new ChannelOrder(x[0], b, t, atMost));
+        },
+        x -> {
+          for (int i = 0; i < n; i++) {
+            if ((x[which[i]] == 1) != ((x[0] <= t[i]) == atMost[i])) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "b="
+            + Arrays.toString(which)
+            + " t="
+            + Arrays.toString(t)
+            + " atMost="
+            + Arrays.toString(atMost));
   }
 
   private static Instance count(Random random) {
@@ -1730,6 +1908,30 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // starts s[0..n-1] of tasks that do not overlap, sum of w * (s + d) at most the last
+  private static Instance weightedCompletion(Random random) {
+    int n = 1 + random.nextInt(4);
+    int[] d = randomInts(random, n, 0, 3);
+    int[] w = randomInts(random, n, 0, 3);
+    int[][] domains = append(domains(random, n, 0, 7), domain(random, 0, 8 * n));
+    return new Instance(
+        domains,
+        (store, v) -> store.impose(new WeightedCompletion(Arrays.copyOf(v, n), d, w, v[n])),
+        t -> {
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            total += w[i] * (t[i] + d[i]);
+            for (int j = i + 1; j < n; j++) {
+              if (d[i] > 0 && d[j] > 0 && t[i] < t[j] + d[j] && t[j] < t[i] + d[i]) {
+                return false;
+              }
+            }
+          }
+          return total <= t[n];
+        },
+        "d=" + Arrays.toString(d) + " w=" + Arrays.toString(w));
   }
 
   // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
