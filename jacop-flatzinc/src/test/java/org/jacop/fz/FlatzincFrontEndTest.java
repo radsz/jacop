@@ -233,6 +233,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void intSearchAcceptsBool2intOfBooleans() throws IOException {
+    // MiniZinc 2.8 writes the Booleans of an int_search as bool2int(b) (rel2onto); the annotation
+    // was rejected with a ClassCastException
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: x:: output_var;
+        constraint bool_clause([a, b], []);
+        solve :: seq_search([int_search([bool2int(b), bool2int(a)], input_order, indomain_min,\
+         complete), int_search([x], input_order, indomain_max, complete)]) satisfy;
+        """;
+
+    for (String[] options : new String[][] {{}, {"--lcg"}}) {
+      String[] out = run(fzn, options);
+      assertTrue(
+          out[0].contains("a = true;")
+              && out[0].contains("b = false;")
+              && out[0].contains("x = 2;"),
+          out[0] + out[1]);
+    }
+  }
+
+  @Test
   void strictlyIncreasingOfARepeatedVariableIsUnsatisfiable() throws IOException {
     // strictly_increasing([x, x]) was posted as XltY(x, x), which throws, so the model was
     // reported as an error instead of unsatisfiable
@@ -1475,6 +1499,28 @@ class FlatzincFrontEndTest {
     }
     String text = out.toString(StandardCharsets.UTF_8);
     assertTrue(text.contains("%%%mzn-stat: objective=3"), text);
+  }
+
+  @Test
+  void lcgImpliedEqualityKeepsTheBoundsOfALargeDomain() throws IOException {
+    // liner-sf-repositioning fm3_5: int_eq_imp between a variable of a million values and one of
+    // four copied the holes of the small domain into the large one once b held, a != atom with its
+    // own literals for each of a million values, until the heap ran out
+    String model =
+        """
+        var 1..1000000: x :: output_var;
+        var {250000, 500000, 750000, 1000000}: y;
+        var bool: b;
+        var 0..3000000: cost :: output_var;
+        constraint int_eq_imp(x, y, b);
+        constraint int_lin_eq([1, -1000000, -1], [x, b, cost], -1000000);
+        solve minimize cost;
+        """;
+    String out = run(model, "--lcg", "-s")[0];
+    String last = out.substring(out.lastIndexOf("x = "));
+    assertTrue(last.startsWith("x = 250000;"), out);
+    String literals = out.substring(out.indexOf("lcgAtomLiterals=") + 16);
+    assertTrue(Long.parseLong(literals.substring(0, literals.indexOf('\n')).strip()) < 1000, out);
   }
 
   @Test

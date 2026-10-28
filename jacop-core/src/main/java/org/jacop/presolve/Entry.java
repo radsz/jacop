@@ -43,7 +43,9 @@ public sealed interface Entry {
 
   /**
    * The variable has a counterpart in the child store; postsolve restricts the variable to the
-   * counterpart's domain, its value once the child has a solution.
+   * counterpart's domain, its value once the child has a solution. A Boolean whose reification the
+   * child half-reifies is restricted only when the child gives it the value that enforces the
+   * half-reification; otherwise the parent's reification decides it.
    *
    * @param copy the counterpart in the child store.
    */
@@ -60,4 +62,10 @@ public sealed interface Entry {
    * child has no counterpart; postsolve leaves its domain as it is, so it can take any value.
    */
   record Free() implements Entry {}
+
+  /**
+   * The variable occurred only in clauses that presolve removed: it is neither fixed nor in the
+   * child, and postsolve gives it a value that satisfies the removed clauses.
+   */
+  record Eliminated() implements Entry {}
 }

@@ -65,6 +65,8 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
@@ -1863,6 +1865,36 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * Free search branches on the 0/1 variables before the others, as CP-SAT does: here the integer
+   * variable y is first on the heap, and only branching on b first ([b <= 0], then y above 50)
+   * gives b = 0 and y = 51. With the property off, y goes first ([y <= 50] makes b = 1, then y =
+   * 0).
+   */
+  @Test
+  void freeSearchBranchesOnBooleansFirst() {
+    for (boolean first : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", 0, 100);
+      BooleanVar b = new BooleanVar(store, "b");
+      store.impose(new Reified(new XlteqC(y, 50), b));
+      if (!first) {
+        System.setProperty("jacop.lcg.booleansFirst", "false");
+      }
+      LcgSolver solver;
+      try {
+        solver = new LcgSolver(store);
+      } finally {
+        System.clearProperty("jacop.lcg.booleansFirst");
+      }
+      solver.setChecking(true);
+      assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(new int[] {solver.value(b), solver.value(y)})
+          .as("Booleans first: %s", first)
+          .containsExactly(first ? new int[] {0, 51} : new int[] {1, 0});
+    }
+  }
+
   /** The literal map against a TreeMap, under random insertions and lookups. */
   @Test
   void literalMapAgreesWithTreeMap() {
@@ -1975,6 +2007,31 @@ class LcgSolverTest {
     assertThat(annotationDecisions).isPositive();
     // conflict analysis stops at some semantic UIPs, and the optima above still agree
     assertThat(semanticUips).isPositive();
+  }
+
+  /**
+   * An equality, decided during search, between a variable of a million values and one of five
+   * (liner-sf-repositioning fm3_5): the large variable takes only the bounds of the small one, not
+   * a million holes, each a {@code !=} atom with its own literals.
+   */
+  @Test
+  void equalityWithASparseDomainKeepsTheBoundsOfALargeOne() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1_000_000);
+    IntVar y = new IntVar(store, "y", new IntervalDomain(0, 0));
+    for (int v = 250_000; v <= 1_000_000; v += 250_000) {
+      y.domain.unionAdapt(v, v);
+    }
+    BooleanVar b = new BooleanVar(store, "b");
+    IntVar cost = new IntVar(store, "cost", 0, 3_000_000);
+    store.impose(new Reified(new XeqY(x, y), b));
+    store.impose(
+        new LinearInt(new IntVar[] {x, b, cost}, new int[] {1, -1_000_000, -1}, "==", -1_000_000));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(cost)).isEqualTo(250_000);
+    assertThat(solver.atomLiterals).isLessThan(1_000);
   }
 
   @Test

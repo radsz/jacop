@@ -103,4 +103,31 @@ public abstract class AbstractBoolSimple extends PrimitiveConstraint {
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
   }
+
+  /**
+   * Returns the first operand.
+   *
+   * @return variable a.
+   */
+  public IntVar a() {
+    return a;
+  }
+
+  /**
+   * Returns the second operand.
+   *
+   * @return variable b.
+   */
+  public IntVar b() {
+    return b;
+  }
+
+  /**
+   * Returns the result variable.
+   *
+   * @return the result variable.
+   */
+  public IntVar result() {
+    return result;
+  }
 }

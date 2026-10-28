@@ -353,6 +353,75 @@ Version 5.0 (unreleased)
     (--lcg -f, 60 s) the solved ones take 2 % less time (geometric mean)
     and gbac reaches a better objective on 5 of 6.
 
+27. New constraint GlobalCardinality(x, values, counters) and
+    GlobalCardinality(x, values, low, up): domain consistent global
+    cardinality (Regin, AAAI 1996) on x, with the counters as intervals;
+    values outside values are not restricted. The FlatZinc front end posts
+    it for global_cardinality (jacop_count_values, _bounds and the closed
+    forms) annotated :: domain, which used to be ignored. It explores the
+    search tree of Gecode's domain consistent gcc. On rows and columns
+    with cardinality bounds and forbidden values it solves 8 of 12 random
+    instances in 60 s where counting solves 6, with 3x to 900x fewer
+    nodes; on Challenge models that do not ask for :: domain counting is
+    as good and cheaper, so it stays the default.
+
+28. FlatZinc objective presolve (the objective equation shifted by the
+    exactly-one sets of the model) runs without --presolve too, with
+    degree weight 0. It reads n = count(x, v) (jacop_count) as
+    n = sum(x[i] = v) when every x[i] has a literal for v, and the shifted
+    cost terms of each variable encoded by value literals become one cost
+    variable y = c[x] (ElementInteger). The reformulated equation replaces
+    the constraint defining the objective when it has no more variables,
+    and is used only when it gives cost variables or has at most half the
+    variables of the definition; a stronger root bound alone did not pay
+    on vrp under --lcg. On jp-encoding (60 s) JaCoP proves data300 in
+    4.4 s instead of no proof and data200 in 17 s with --lcg -f, and
+    data1400 under --lcg -f ends at 62,978 instead of 68,422;
+    bus_scheduling r1a is proved in 3.1 s instead of not proved.
+    -Dorg.jacop.fz.objectivePresolve=false turns it off.
+
+28. With lazy clause generation (--lcg) an equality (XeqY, and int_eq_reif
+    and int_eq_imp in FlatZinc) gives a variable of more than 10,000
+    values only the bounds of the other one, not its holes: every value
+    removed between the bounds was a != atom with its own literals, so
+    copying a sparse domain into a large one made millions of them. On
+    liner-sf-repositioning fm3_5, --lcg -f created 8.9 million literals in
+    10 nodes and ran out of memory; it now finds 60 solutions in 60 s with
+    119 thousand literals (tp7_10 too goes from an error to a solution).
+    Of the 258 vs-ortools instances (60 s, --lcg -f) the limit changes 6;
+    groupsplitter u15g3pref2 also improves (232 against 181-189) and the
+    others keep their result. -Djacop.lcg.holeLimit changes the limit.
+
+29. New constraint AlldiffSum(x, rel, s): alldifferent(x) and
+    sum(x) rel s, rel ==, <= or >=, bounds consistent for <= and >=
+    (Beldiceanu, Carlsson, Petit and Regin, ECAI 2012, O(n log n)). The
+    FlatZinc front end posts it next to each int_lin_eq / int_lin_le with
+    unit coefficients over variables that all_different constraints make
+    pairwise different (killer sudoku cages, kakuro runs, magic square
+    rows); -Dorg.jacop.fz.alldiffSum=false turns this off. Enumerating all
+    solutions of 9x9 killer sudokus with cages of up to 5 or 7 cells needs
+    58 % fewer nodes; with free search 22x22 kakuro are solved in 10 s
+    instead of 115 s with one left unsolved. gardner_sum_square finds
+    another optimal solution.
+
+30. The FlatZinc front end adds the linear relaxation of the model's linear
+    constraints (org.jacop.constraints.lp.LinearRelaxation) as a
+    propagator; --lp off turns it off. A bounded dual simplex, warm-started
+    from the previous node, solves it during search. A Farkas certificate
+    of an infeasible relaxation, or the duals of the objective, are
+    rounded to integer multipliers and the combination of the rows is
+    computed exactly, so each deduction is a valid linear inequality,
+    explained by LinearForm under --lcg. Its cost is bounded: solves spend
+    a work credit earned by each call (a solve that only tightens bounds
+    a sixteenth of its work, a solve that fails the node refills it), a
+    simplex stalled at its pivot limit 32 times in a row is given up, and models whose tableau would exceed 4M entries are left
+    out (-Dorg.jacop.lp.maxTableau). On the 414 vs-ortools instances
+    (20 s) JaCoP proves 116 instead of 106 (153 instead of 147 with
+    --lcg) and loses no proof, including wwtpp-real UNSAT instances in
+    about a second and rel2onto optima. LinearExplanation now merges a
+    variable that occurs with weights of both signs and refuses reasons
+    whose sums overflow a long.
+
 Version 4.11
 =============
 

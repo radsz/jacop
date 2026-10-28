@@ -116,6 +116,24 @@ public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClau
   }
 
   /**
+   * Returns the variables of the positive literals.
+   *
+   * @return a copy of the variables x of x_0 \/ ... \/ x_n.
+   */
+  public IntVar[] positives() {
+    return Arrays.copyOf(x, lx);
+  }
+
+  /**
+   * Returns the variables of the negative literals.
+   *
+   * @return a copy of the variables y of not y_0 \/ ... \/ not y_n.
+   */
+  public IntVar[] negatives() {
+    return Arrays.copyOf(y, ly);
+  }
+
+  /**
    * It checks invariants required by the constraint. Namely that boolean variables have boolean
    * domain.
    *

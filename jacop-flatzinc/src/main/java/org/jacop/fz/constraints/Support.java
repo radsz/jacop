@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -42,6 +43,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
@@ -114,6 +116,12 @@ public class Support implements ParserTreeConstants {
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
   // the variables of every all_different of the model, for OverlappingAlldiff
   final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
+  // all different variables found by AlldifferentDetector, for AlldiffSum only
+  final ArrayList<IntVar[]> detectedAlldifferentLists = new ArrayList<>();
+  // sums with unit coefficients that get an AlldiffSum when their variables are all different
+  final ArrayList<UnitSum> unitSums = new ArrayList<>();
+  static final int ALLDIFF_SUM_MIN_VARIABLES = 3;
+  static final int ALLDIFF_SUM_MAX_VARIABLES = 64;
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
@@ -771,6 +779,7 @@ public class Support implements ParserTreeConstants {
     }
     poseAlldistinctConstraints();
     poseOverlappingAlldiffs();
+    poseAlldiffSums();
 
     // generate channeling constraints instead of reified constraints
     reif.pose();
@@ -856,6 +865,78 @@ public class Support implements ParserTreeConstants {
         }
       }
     }
+  }
+
+  /** sum(x) rel sum with rel one of ==, &lt;=, &gt;=, a candidate for an {@link AlldiffSum}. */
+  record UnitSum(List<IntVar> x, String rel, IntVar sum) {}
+
+  /**
+   * Records sum(x) rel sum for {@link #poseAlldiffSums()} when the linear constraint has between
+   * {@link #ALLDIFF_SUM_MIN_VARIABLES} and {@link #ALLDIFF_SUM_MAX_VARIABLES} distinct variables.
+   */
+  void recordUnitSum(IntVar[] x, String rel, IntVar sum) {
+    if (x.length < ALLDIFF_SUM_MIN_VARIABLES || x.length > ALLDIFF_SUM_MAX_VARIABLES) {
+      return;
+    }
+    unitSums.add(new UnitSum(List.of(x), rel, sum));
+  }
+
+  /**
+   * Posts an {@link AlldiffSum} next to each linear constraint with unit coefficients whose
+   * variables are pairwise different by the all_different constraints of the model (each pair is in
+   * some all_different), such as the cages of a killer sudoku or the rows of a magic square. The
+   * linear constraint alone sees only the sum of the bounds; the AlldiffSum also sees that the
+   * values are distinct. The system property {@code org.jacop.fz.alldiffSum} set to false turns it
+   * off.
+   */
+  void poseAlldiffSums() {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.alldiffSum"))
+        || unitSums.isEmpty()) {
+      return;
+    }
+    List<IntVar[]> lists = new ArrayList<>(alldifferentLists);
+    lists.addAll(detectedAlldifferentLists);
+    if (lists.isEmpty()) {
+      return;
+    }
+    Map<IntVar, BitSet> occurs = new IdentityHashMap<>();
+    for (int i = 0; i < lists.size(); i++) {
+      for (IntVar v : lists.get(i)) {
+        occurs.computeIfAbsent(v, k -> new BitSet()).set(i);
+      }
+    }
+    Set<UnitSum> posted = new HashSet<>();
+    for (UnitSum u : unitSums) {
+      IntVar[] x = u.x().toArray(new IntVar[0]);
+      if (pairwiseDifferent(x, occurs) && posted.add(u)) {
+        // an alldifferent on all of x (or a superset) does the pruning on Hall intervals
+        BitSet common = (BitSet) occurs.get(x[0]).clone();
+        for (IntVar v : x) {
+          common.and(occurs.get(v));
+        }
+        AlldiffSum c = new AlldiffSum(x, u.rel(), u.sum(), common.isEmpty());
+        store.impose(c);
+        if (options.debug()) {
+          FzConsole.println("% " + c);
+        }
+      }
+    }
+  }
+
+  private static boolean pairwiseDifferent(IntVar[] x, Map<IntVar, BitSet> occurs) {
+    BitSet[] in = new BitSet[x.length];
+    for (int i = 0; i < x.length; i++) {
+      in[i] = occurs.get(x[i]);
+      if (in[i] == null) {
+        return false;
+      }
+      for (int j = 0; j < i; j++) {
+        if (x[i] == x[j] || !in[i].intersects(in[j])) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   // =========== Specialized constraints ===================
@@ -1067,9 +1148,9 @@ public class Support implements ParserTreeConstants {
 
   private void propagateFzXeqYwhenBone(Store store, IntVar x, IntVar y) {
     do {
-      x.domain.in(store.level, x, y.domain);
+      AtomicTrail.in(store, x, y.domain);
       store.propagationHasOccurred = false;
-      y.domain.in(store.level, y, x.domain);
+      AtomicTrail.in(store, y, x.domain);
     } while (store.propagationHasOccurred);
   }
 

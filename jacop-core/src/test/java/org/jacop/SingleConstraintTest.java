@@ -138,8 +138,10 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
@@ -7518,6 +7520,43 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new XeqC(y, 3));
     assertThat(store.consistency()).isTrue();
     assertThat(b.max()).isZero();
+  }
+
+  // Implies(b, x >= 6) woke only on c's own consistency event, GROUND for XgteqC, so x <= 5 did
+  // not set b = 0 until x was fixed; a reification set it at once
+  @Test
+  void impliesSetsItsBooleanFalseAsSoonAsItsConstraintFails() {
+    Random random = new Random(20261027);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 9);
+      IntVar y = new IntVar(store, "y", 0, 9);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      int c = random.nextInt(10);
+      PrimitiveConstraint nested =
+          switch (random.nextInt(6)) {
+            case 0 -> new XgteqC(x, c);
+            case 1 -> new XlteqC(x, c);
+            case 2 -> new XltY(x, y);
+            case 3 -> new XlteqY(x, y);
+            case 4 -> new LinearInt(new IntVar[] {x, y}, new int[] {1, 2}, "<=", c);
+            default -> new XneqY(x, y);
+          };
+      store.impose(new Implies(b, nested));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      int lo = random.nextInt(10);
+      int hi = lo + random.nextInt(10 - lo);
+      x.domain.in(1, x, lo, hi);
+      if (random.nextBoolean()) {
+        int v = random.nextInt(10);
+        y.domain.in(1, y, v, v);
+      }
+      assertThat(store.consistency()).isTrue();
+      if (nested.notSatisfied()) {
+        assertThat(b.max()).as("trial %d, %s, x = %s, y = %s", trial, nested, x, y).isZero();
+      }
+    }
   }
 
   @Test

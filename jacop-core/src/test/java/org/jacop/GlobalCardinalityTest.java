@@ -49,6 +49,7 @@ import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqC;
@@ -366,6 +367,211 @@ class GlobalCardinalityTest {
         .isInstanceOf(IllegalArgumentException.class);
   }
 
+  @Test
+  void globalCardinalityFindsTheSolutionsOfBruteForce() {
+    // open: the values need not cover the domains, and need not occur in any of them
+    Random random = new Random(11);
+    for (int trial = 0; trial < 3000; trial++) {
+      assertSolutions(
+          countValuesModel(random), trial, random, GlobalCardinalityTest::imposeGlobalCardinality);
+    }
+  }
+
+  @Test
+  void globalCardinalityWithSharedVariablesFindsTheSolutionsOfBruteForce() {
+    Random random = new Random(12);
+    for (int trial = 0; trial < 3000; trial++) {
+      Model model = gccModel(random, random.nextBoolean(), random.nextBoolean());
+      assertSolutions(model, trial, random, GlobalCardinalityTest::imposeGlobalCardinality);
+    }
+  }
+
+  @Test
+  void globalCardinalityHasTheSolutionCountOfTheDecomposition() {
+    Random random = new Random(13);
+    for (int trial = 0; trial < 150; trial++) {
+      int n = 5 + random.nextInt(4);
+      int lo = random.nextInt(5) - 2;
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = randomSubset(random, lo, lo + 2 + random.nextInt(3), random.nextInt(40));
+      }
+      int[] union = union(domains, range(0, n - 1));
+      int[] values =
+          Arrays.stream(union).filter(v -> random.nextInt(4) != 0 || v == union[0]).toArray();
+      Model model = withCounters(random, domains, values, side(random, n + values.length, 4));
+      long expected = countSolutions(model, 0, 0, GlobalCardinalityTest::imposeCountDecomposition);
+      int seed = random.nextInt();
+      assertThat(
+              countSolutions(
+                  model,
+                  1 + random.nextInt(5),
+                  seed,
+                  GlobalCardinalityTest::imposeGlobalCardinality))
+          .as("trial %d %s seed %d", trial, model, seed)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void globalCardinalityWithBoundsHasTheSolutionCountOfTheDecomposition() {
+    Random random = new Random(14);
+    for (int trial = 0; trial < 3000; trial++) {
+      Model withCounters = countValuesModel(random);
+      int n = withCounters.x().length;
+      int m = withCounters.values().length;
+      Model model =
+          new Model(
+              Arrays.copyOf(withCounters.domains(), n),
+              withCounters.x(),
+              new int[0],
+              withCounters.values(),
+              side(random, n, random.nextInt(3)));
+      int[] lb = new int[m];
+      int[] ub = new int[m];
+      for (int j = 0; j < m; j++) {
+        lb[j] = random.nextBoolean() ? 0 : random.nextInt(n + 1);
+        ub[j] = lb[j] + random.nextInt(n + 1 - lb[j]);
+      }
+      long expected =
+          countSolutions(
+              model,
+              0,
+              0,
+              (store, pool) -> {
+                for (int j = 0; j < m; j++) {
+                  store.impose(
+                      new CountBounds(select(pool, model.x()), model.values()[j], lb[j], ub[j]));
+                }
+              });
+      int seed = random.nextInt();
+      assertThat(
+              countSolutions(
+                  model,
+                  1 + random.nextInt(5),
+                  seed,
+                  (store, pool) ->
+                      store.impose(
+                          new GlobalCardinality(select(pool, model.x()), model.values(), lb, ub))))
+          .as(
+              "trial %d %s lb=%s ub=%s seed %d",
+              trial, model, Arrays.toString(lb), Arrays.toString(ub), seed)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void globalCardinalitySolvesMagicSequences() {
+    long[] expected = {0, 0, 0, 2, 1, 0, 1, 1, 1, 1, 1, 1};
+    for (int n = 1; n <= expected.length; n++) {
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        domains[i] = range(0, n - 1);
+      }
+      Model model =
+          new Model(domains, range(0, n - 1), range(0, n - 1), range(0, n - 1), new int[0][]);
+      assertThat(countSolutions(model, 0, 0, GlobalCardinalityTest::imposeGlobalCardinality))
+          .as("GlobalCardinality n=%d", n)
+          .isEqualTo(expected[n - 1]);
+    }
+  }
+
+  @Test
+  void globalCardinalityIsDomainConsistentOnTheVariables() {
+    // After propagation, at the root and after random decisions, every value of every counted
+    // variable has a support in which the other counted variables take values of their domains and
+    // every counter a value between its bounds.
+    Random random = new Random(15);
+    for (int trial = 0; trial < 3000; trial++) {
+      Model model = countValuesModel(random).withoutSide();
+      Store store = new Store();
+      IntVar[] pool = pool(store, model);
+      imposeGlobalCardinality(store, pool, model);
+      int n = model.x().length;
+      for (int depth = 0; depth < 4; depth++) {
+        if (depth > 0) {
+          store.setLevel(store.level + 1);
+          IntVar v = pool[random.nextInt(pool.length)];
+          if (v.singleton()) {
+            continue;
+          }
+          int value = v.min() + random.nextInt(v.max() - v.min() + 1);
+          try {
+            if (random.nextBoolean()) {
+              v.domain.inComplement(store.level, v, value);
+            } else if (v.domain.contains(value)) {
+              v.domain.in(store.level, v, value, value);
+            } else {
+              continue;
+            }
+          } catch (org.jacop.core.FailException e) {
+            break;
+          }
+        }
+        int[][] domains = new int[pool.length][];
+        for (int i = 0; i < pool.length; i++) {
+          domains[i] = values(pool[i]);
+        }
+        Model before =
+            new Model(domains, model.x(), model.counters(), model.values(), new int[0][]);
+        if (!store.consistency()) {
+          assertThat(bruteForce(before)).as("trial %d depth %d %s", trial, depth, before).isEmpty();
+          break;
+        }
+        int[][] relaxed = new int[pool.length][];
+        for (int i = 0; i < pool.length; i++) {
+          relaxed[i] = i < n ? values(pool[i]) : range(pool[i].min(), pool[i].max());
+        }
+        Model after = new Model(relaxed, model.x(), model.counters(), model.values(), new int[0][]);
+        Set<List<Integer>> solutions = bruteForce(after);
+        for (int i = 0; i < n; i++) {
+          for (int value : relaxed[i]) {
+            int variable = i;
+            assertThat(solutions.stream().anyMatch(t -> t.get(variable) == value))
+                .as("trial %d depth %d %s: value %d of p%d", trial, depth, after, value, i)
+                .isTrue();
+          }
+        }
+      }
+    }
+  }
+
+  @Test
+  void globalCardinalityRemainsCorrectWhenSearchedTwice() {
+    Random random = new Random(16);
+    for (int trial = 0; trial < 500; trial++) {
+      Model model = countValuesModel(random).withoutSide();
+      Set<List<Integer>> expected = bruteForce(model);
+      Store store = new Store();
+      IntVar[] pool = pool(store, model);
+      imposeGlobalCardinality(store, pool, model);
+      if (!store.consistency()) {
+        assertThat(expected).as("trial %d %s", trial, model).isEmpty();
+        continue;
+      }
+      for (int round = 0; round < 2; round++) {
+        assertThat(search(store, pool, random.nextInt(6), random.nextInt()))
+            .as("trial %d round %d %s", trial, round, model)
+            .isEqualTo(expected);
+      }
+    }
+  }
+
+  @Test
+  void globalCardinalityRejectsRepeatedValues() {
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] c = {new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2)};
+
+    assertThatThrownBy(() -> new GlobalCardinality(x, new int[] {1, 1}, c))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new GlobalCardinality(x, new int[] {1}, c))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new GlobalCardinality(x, new int[] {0, 0}, new int[] {0, 0}, new int[] {2, 2}))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   // ------------------------------------------------------------------ models
 
   /**
@@ -464,6 +670,12 @@ class GlobalCardinalityTest {
 
   private static void imposeGcc(Store store, IntVar[] pool, Model model) {
     store.impose(new GCC(select(pool, model.x()), select(pool, model.counters())));
+  }
+
+  private static void imposeGlobalCardinality(Store store, IntVar[] pool, Model model) {
+    store.impose(
+        new GlobalCardinality(
+            select(pool, model.x()), model.values(), select(pool, model.counters())));
   }
 
   private static void imposeCountValues(Store store, IntVar[] pool, Model model) {
@@ -693,6 +905,15 @@ class GlobalCardinalityTest {
       }
     }
     return union.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static int[] values(IntVar v) {
+    int[] result = new int[v.getSize()];
+    int k = 0;
+    for (org.jacop.core.ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      result[k++] = e.nextElement();
+    }
+    return result;
   }
 
   private static int[] range(int lo, int hi) {
