@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
@@ -396,9 +397,9 @@ public class ElementVariable extends AbstractElement
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != ElementVariable.class) {
-      return null;
+      return Optional.empty();
     }
     return ElementSimplification.variables(
         index,

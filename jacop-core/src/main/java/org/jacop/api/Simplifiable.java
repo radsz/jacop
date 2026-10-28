@@ -30,6 +30,7 @@
 package org.jacop.api;
 
 import java.util.List;
+import java.util.Optional;
 import org.jacop.constraints.Constraint;
 
 /**
@@ -55,7 +56,7 @@ public interface Simplifiable {
    * Rewrites this constraint for the current domains.
    *
    * @return the constraints that replace this one, an empty list if every assignment of the current
-   *     domains satisfies it, or null if there is nothing simpler.
+   *     domains satisfies it, or nothing if there is nothing simpler.
    */
-  List<Constraint> simplify();
+  Optional<List<Constraint>> simplify();
 }

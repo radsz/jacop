@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Simplifiable;
@@ -272,9 +273,9 @@ public class ElementBool extends Constraint
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != ElementBool.class) {
-      return null;
+      return Optional.empty();
     }
     return ElementSimplification.integers(
         index, list, value, indexOffset, (i, l, offset) -> new ElementBool(i, l, value, offset));

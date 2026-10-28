@@ -33,6 +33,7 @@ package org.jacop.constraints.cumulative;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
@@ -814,9 +815,9 @@ public class Cumulative extends CumulativeBasic {
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != Cumulative.class) {
-      return null;
+      return Optional.empty();
     }
     return simplifyTasks(t -> withOptionsOf(new Cumulative(t[0], t[1], t[2], limit)));
   }

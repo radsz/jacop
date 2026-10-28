@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -318,6 +319,9 @@ public class HybridTable extends Constraint
       System.arraycopy(rows[t], 0, cells, t * arity, arity);
     }
   }
+
+  /** Domains up to this size are enumerated to check a restriction; larger ones are kept. */
+  private static final int SIMPLIFY_ENUMERATION_LIMIT = 1024;
 
   /** A tuple is expanded only if the columns it refers to have at most this many combinations. */
   private static final int EXPANSION_LIMIT = 64;
@@ -1901,9 +1905,9 @@ public class HybridTable extends Constraint
    * accept the fixed value. A table without columns left holds.
    */
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != HybridTable.class) {
-      return null;
+      return Optional.empty();
     }
     boolean[] removed = new boolean[arity];
     for (int i = 0; i < arity; i++) {
@@ -1924,7 +1928,12 @@ public class HybridTable extends Constraint
     int[] position = new int[arity];
     int columns = 0;
     for (int i = 0; i < arity; i++) {
-      position[i] = removed[i] ? -1 : columns++;
+      if (removed[i]) {
+        position[i] = -1;
+      } else {
+        position[i] = columns;
+        columns++;
+      }
     }
     List<Restriction[]> kept = new ArrayList<>(tupleCount);
     for (int t = 0; t < tupleCount; t++) {
@@ -1944,10 +1953,10 @@ public class HybridTable extends Constraint
     }
     if (kept.isEmpty() || (kept.size() == tupleCount && columns == arity)) {
       // an empty table cannot be at a fixpoint; leave it to propagation
-      return null;
+      return Optional.empty();
     }
     if (columns == 0) {
-      return List.of();
+      return Optional.of(List.of());
     }
     IntVar[] list = new IntVar[columns];
     for (int i = 0; i < arity; i++) {
@@ -1955,11 +1964,9 @@ public class HybridTable extends Constraint
         list[position[i]] = x[i];
       }
     }
-    return List.of(new HybridTable(list, kept.toArray(new Restriction[0][]), expandBetweenColumns));
+    return Optional.of(
+        List.of(new HybridTable(list, kept.toArray(new Restriction[0][]), expandBetweenColumns)));
   }
-
-  /** Domains up to this size are enumerated to check a restriction; larger ones are kept. */
-  private static final int SIMPLIFY_ENUMERATION_LIMIT = 1024;
 
   /**
    * Whether a unary restriction accepts a value of a domain, or the domain is too large to tell.

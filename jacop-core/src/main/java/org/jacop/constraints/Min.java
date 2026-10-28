@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Simplifiable;
@@ -170,9 +171,9 @@ public class Min extends AbstractMinMax implements Simplifiable, Copyable<Min>, 
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != Min.class) {
-      return null;
+      return Optional.empty();
     }
     return GlobalSimplification.extremum(list, min, false, l -> new Min(l, min));
   }

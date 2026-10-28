@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
@@ -509,9 +510,9 @@ public class ElementInteger extends AbstractElement
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != ElementInteger.class) {
-      return null;
+      return Optional.empty();
     }
     return ElementSimplification.integers(
         index,

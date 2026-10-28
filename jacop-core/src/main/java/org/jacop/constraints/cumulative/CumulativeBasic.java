@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
@@ -273,22 +274,23 @@ public class CumulativeBasic extends Constraint
    *     resources (in this order).
    * @return the replacing constraints, as {@link Simplifiable#simplify()}.
    */
-  List<Constraint> simplifyTasks(Function<IntVar[][], Constraint> factory) {
+  Optional<List<Constraint>> simplifyTasks(Function<IntVar[][], Constraint> factory) {
     int n = taskNormal.length;
     List<TaskView> kept = new ArrayList<>(n);
     long total = 0;
     for (TaskView t : taskNormal) {
-      if (t.res.max() == 0 || (t.dur.max() == 0 && t.res.max() <= limit.min())) {
-        continue;
+      // a task with no resource use, or no duration and a use under the limit, uses nothing
+      boolean usesResource = t.res.max() > 0 && (t.dur.max() > 0 || t.res.max() > limit.min());
+      if (usesResource) {
+        kept.add(t);
+        total += t.res.max();
       }
-      kept.add(t);
-      total += t.res.max();
     }
     if (total <= limit.min()) {
-      return List.of();
+      return Optional.of(List.of());
     }
     if (kept.size() == n) {
-      return null;
+      return Optional.empty();
     }
     IntVar[][] vars = new IntVar[3][kept.size()];
     for (int i = 0; i < kept.size(); i++) {
@@ -296,13 +298,13 @@ public class CumulativeBasic extends Constraint
       vars[1][i] = kept.get(i).dur;
       vars[2][i] = kept.get(i).res;
     }
-    return List.of(factory.apply(vars));
+    return Optional.of(List.of(factory.apply(vars)));
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != CumulativeBasic.class) {
-      return null;
+      return Optional.empty();
     }
     return simplifyTasks(t -> new CumulativeBasic(t[0], t[1], t[2], limit));
   }

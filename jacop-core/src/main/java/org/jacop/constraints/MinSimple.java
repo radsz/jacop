@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -142,9 +143,9 @@ public class MinSimple extends Constraint
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != MinSimple.class) {
-      return null;
+      return Optional.empty();
     }
     return GlobalSimplification.extremum(new IntVar[] {x1, x2}, min, false, null);
   }

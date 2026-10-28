@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Simplifiable;
@@ -222,19 +223,19 @@ public class XmulYeqZ extends AbstractXopYeqZ
 
   /** With a fixed factor the product becomes {@code XmulCeqZ}, or holds when it is zero. */
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != XmulYeqZ.class || x == y || !(x.singleton() || y.singleton())) {
-      return null;
+      return Optional.empty();
     }
     IntVar other = x.singleton() ? y : x;
-    int c = x.singleton() ? x.value() : y.value();
     if (other == z) {
-      return null;
+      return Optional.empty();
     }
+    int c = x.singleton() ? x.value() : y.value();
     if (c == 0) {
-      return z.singleton(0) ? List.of() : null;
+      return z.singleton(0) ? Optional.of(List.of()) : Optional.empty();
     }
-    return List.of(c == 1 ? new XeqY(other, z) : new XmulCeqZ(other, c, z));
+    return Optional.of(List.of(c == 1 ? new XeqY(other, z) : new XmulCeqZ(other, c, z)));
   }
 
   @Override

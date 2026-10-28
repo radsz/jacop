@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -201,9 +202,9 @@ public class Count extends AbstractCount implements Simplifiable, Copyable<Count
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != Count.class) {
-      return null;
+      return Optional.empty();
     }
     return GlobalSimplification.count(list, counter, value, l -> new Count(l, counter, value));
   }

@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -210,9 +211,9 @@ public class ElementVariableFast extends AbstractElement
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != ElementVariableFast.class) {
-      return null;
+      return Optional.empty();
     }
     return ElementSimplification.variables(
         index,

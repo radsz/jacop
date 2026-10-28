@@ -37,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -284,12 +285,12 @@ public final class Derivation implements VarMap {
     if (rules) {
       List<Constraint> rewritten = new ArrayList<>(carried.size());
       for (Constraint c : carried) {
-        List<Constraint> r = GlobalPresolve.rewrite(c);
-        if (r == null) {
-          rewritten.add(c);
-        } else {
-          rewritten.addAll(r);
+        Optional<List<Constraint>> r = GlobalPresolve.rewrite(c);
+        if (r.isPresent()) {
+          rewritten.addAll(r.get());
           simplified++;
+        } else {
+          rewritten.add(c);
         }
       }
       carried = rewritten;

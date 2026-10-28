@@ -31,6 +31,7 @@
 package org.jacop.constraints.cumulative;
 
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
@@ -322,9 +323,9 @@ public class CumulativeUnary extends Cumulative {
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != CumulativeUnary.class) {
-      return null;
+      return Optional.empty();
     }
     return simplifyTasks(
         t ->

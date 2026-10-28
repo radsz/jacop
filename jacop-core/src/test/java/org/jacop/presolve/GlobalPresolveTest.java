@@ -292,7 +292,7 @@ class GlobalPresolveTest {
   private static List<Constraint> rewrite(Store store, Constraint c) {
     store.impose(c);
     assertThat(store.consistency()).isTrue();
-    return GlobalPresolve.rewrite(c);
+    return GlobalPresolve.rewrite(c).orElseThrow();
   }
 
   // ----- generators -----

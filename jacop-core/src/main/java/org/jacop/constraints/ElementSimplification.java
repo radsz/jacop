@@ -64,10 +64,10 @@ final class ElementSimplification {
    *   <li>otherwise the list is cut to the positions between the index bounds.
    * </ul>
    */
-  static List<Constraint> integers(
+  static Optional<List<Constraint>> integers(
       IntVar index, int[] list, IntVar value, int indexOffset, Factory<int[]> factory) {
     if (index == value || !indexWithinList(index, list.length, indexOffset)) {
-      return null;
+      return Optional.empty();
     }
     int lo = index.min();
     long first = list[lo - indexOffset - 1];
@@ -83,18 +83,19 @@ final class ElementSimplification {
     }
     if (constant) {
       // at a fixpoint the value is the one the list holds there
-      return value.singleton() && value.value() == first ? List.of() : null;
+      return value.singleton() && value.value() == first
+          ? Optional.of(List.of())
+          : Optional.empty();
     }
     if (ascending && fitsInt(first - lo)) {
       int c = (int) (first - lo);
-      return List.of(c == 0 ? new XeqY(index, value) : new XplusCeqZ(index, c, value));
+      return Optional.of(List.of(c == 0 ? new XeqY(index, value) : new XplusCeqZ(index, c, value)));
     }
     if (descending && fitsInt(first + lo)) {
-      return List.of(new XplusYeqC(index, value, (int) (first + lo)));
+      return Optional.of(List.of(new XplusYeqC(index, value, (int) (first + lo))));
     }
     return cut(index, list.length, indexOffset, (from, to) -> Arrays.copyOfRange(list, from, to))
-        .map(l -> List.of(factory.element(index, l, index.min() - 1)))
-        .orElse(null);
+        .map(l -> List.of(factory.element(index, l, index.min() - 1)));
   }
 
   /**
@@ -107,44 +108,47 @@ final class ElementSimplification {
    *   <li>otherwise the list is cut to the positions between the index bounds.
    * </ul>
    */
-  static List<Constraint> variables(
+  static Optional<List<Constraint>> variables(
       IntVar index,
       IntVar[] list,
       IntVar value,
       int indexOffset,
       Factory<IntVar[]> factory,
       Factory<int[]> integers) {
-    if (index == value || !indexWithinList(index, list.length, indexOffset)) {
-      return null;
-    }
-    for (IntVar x : list) {
-      if (x == index) {
-        return null;
-      }
+    if (index == value
+        || !indexWithinList(index, list.length, indexOffset)
+        || Arrays.asList(list).contains(index)) {
+      return Optional.empty();
     }
     if (index.singleton()) {
       IntVar x = list[index.value() - indexOffset - 1];
-      return x == value ? List.of() : List.of(new XeqY(x, value));
+      return Optional.of(x == value ? List.of() : List.of(new XeqY(x, value)));
     }
     int lo = index.min();
     int hi = index.max();
-    boolean fixed = true;
-    for (ValueEnumeration e = index.domain.valueEnumeration(); fixed && e.hasMoreElements(); ) {
-      IntVar x = list[e.nextElement() - indexOffset - 1];
-      fixed = x.singleton() && x != value;
-    }
-    if (fixed) {
+    if (reachableFixed(index, list, value, indexOffset)) {
       // positions the index cannot take get any value, the one of the nearest smaller position
       int[] values = new int[hi - lo + 1];
       for (int i = lo; i <= hi; i++) {
         IntVar x = list[i - indexOffset - 1];
         values[i - lo] = index.domain.contains(i) ? x.value() : values[i - lo - 1];
       }
-      return List.of(integers.element(index, values, lo - 1));
+      return Optional.of(List.of(integers.element(index, values, lo - 1)));
     }
     return cut(index, list.length, indexOffset, (from, to) -> Arrays.copyOfRange(list, from, to))
-        .map(l -> List.of(factory.element(index, l, index.min() - 1)))
-        .orElse(null);
+        .map(l -> List.of(factory.element(index, l, index.min() - 1)));
+  }
+
+  /** Whether every position the index can take holds a fixed variable other than the value. */
+  private static boolean reachableFixed(
+      IntVar index, IntVar[] list, IntVar value, int indexOffset) {
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      IntVar x = list[e.nextElement() - indexOffset - 1];
+      if (!x.singleton() || x == value) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** At a fixpoint the index is restricted to the positions of the list. */

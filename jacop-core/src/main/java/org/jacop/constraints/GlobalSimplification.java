@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import org.jacop.core.IntVar;
@@ -40,7 +41,7 @@ import org.jacop.core.IntVar;
 /**
  * Global-specific presolve shared by several constraint classes ({@link
  * org.jacop.api.Simplifiable}), at a fixpoint of the store. Each method returns the replacing
- * constraints, an empty list if the constraint holds, or null if there is nothing simpler.
+ * constraints, an empty list if the constraint holds, or nothing if there is nothing simpler.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
@@ -53,9 +54,10 @@ final class GlobalSimplification {
    * All different: a fixed variable whose value no other variable can take is left out; with at
    * most one variable left the constraint holds.
    */
-  static List<Constraint> allDifferent(IntVar[] list, Function<IntVar[], Constraint> factory) {
+  static Optional<List<Constraint>> allDifferent(
+      IntVar[] list, Function<IntVar[], Constraint> factory) {
     if (!distinct(list)) {
-      return null;
+      return Optional.empty();
     }
     List<IntVar> kept = new ArrayList<>(list.length);
     for (IntVar x : list) {
@@ -64,9 +66,10 @@ final class GlobalSimplification {
       }
     }
     if (kept.size() == list.length) {
-      return null;
+      return Optional.empty();
     }
-    return kept.size() <= 1 ? List.of() : List.of(factory.apply(kept.toArray(new IntVar[0])));
+    return Optional.of(
+        kept.size() <= 1 ? List.of() : List.of(factory.apply(kept.toArray(new IntVar[0]))));
   }
 
   private static boolean takenByOther(IntVar[] list, IntVar x) {
@@ -84,41 +87,41 @@ final class GlobalSimplification {
    * smallest value of another one cannot be the maximum and is left out; with one variable left the
    * constraint is an equality.
    */
-  static List<Constraint> extremum(
+  static Optional<List<Constraint>> extremum(
       IntVar[] list, IntVar result, boolean maximum, Function<IntVar[], Constraint> factory) {
     if (list.length == 0 || !distinct(list) || contains(list, result)) {
-      return null;
+      return Optional.empty();
     }
     // the variable with the largest guaranteed value
     IntVar best = list[0];
     for (IntVar x : list) {
-      if (maximum ? x.min() > best.min() : x.max() < best.max()) {
+      if (maximum ? (x.min() > best.min()) : (x.max() < best.max())) {
         best = x;
       }
     }
     List<IntVar> kept = new ArrayList<>(list.length);
     for (IntVar x : list) {
-      if (x == best || (maximum ? x.max() > best.min() : x.min() < best.max())) {
+      if (x == best || (maximum ? (x.max() > best.min()) : (x.min() < best.max()))) {
         kept.add(x);
       }
     }
     if (kept.size() == list.length) {
-      return null;
+      return Optional.empty();
     }
     if (kept.size() == 1) {
-      return List.of(new XeqY(kept.get(0), result));
+      return Optional.of(List.of(new XeqY(kept.get(0), result)));
     }
-    return List.of(factory.apply(kept.toArray(new IntVar[0])));
+    return Optional.of(List.of(factory.apply(kept.toArray(new IntVar[0]))));
   }
 
   /**
    * Count of a value: a variable that cannot take the value never counts and is left out; with no
    * variable left the count is zero.
    */
-  static List<Constraint> count(
+  static Optional<List<Constraint>> count(
       IntVar[] list, IntVar counter, int value, Function<IntVar[], Constraint> factory) {
     if (contains(list, counter)) {
-      return null;
+      return Optional.empty();
     }
     List<IntVar> kept = new ArrayList<>(list.length);
     for (IntVar x : list) {
@@ -127,12 +130,12 @@ final class GlobalSimplification {
       }
     }
     if (kept.size() == list.length) {
-      return null;
+      return Optional.empty();
     }
     if (kept.isEmpty()) {
-      return counter.singleton(0) ? List.of() : null;
+      return counter.singleton(0) ? Optional.of(List.of()) : Optional.empty();
     }
-    return List.of(factory.apply(kept.toArray(new IntVar[0])));
+    return Optional.of(List.of(factory.apply(kept.toArray(new IntVar[0]))));
   }
 
   static boolean distinct(IntVar[] list) {

@@ -31,6 +31,7 @@ package org.jacop.presolve;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.jacop.api.Copyable;
 import org.jacop.api.Simplifiable;
 import org.jacop.constraints.Constraint;
@@ -57,16 +58,17 @@ public final class GlobalPresolve {
    * again while it simplifies.
    *
    * @param c the constraint.
-   * @return the constraints that replace it, not imposed and {@link Copyable}; an empty list if it
-   *     holds for the current domains; null if it has no simpler form.
+   * @return the constraints that replace it, not imposed and {@link Copyable}, an empty list if it
+   *     holds for the current domains, or nothing if it has no simpler form.
    */
-  public static List<Constraint> rewrite(Constraint c) {
+  public static Optional<List<Constraint>> rewrite(Constraint c) {
     List<Constraint> out = new ArrayList<>();
-    return rewrite(c, out, DEPTH) ? out : null;
+    return rewrite(c, out, DEPTH) ? Optional.of(out) : Optional.empty();
   }
 
   private static boolean rewrite(Constraint c, List<Constraint> out, int depth) {
-    List<Constraint> rewriting = depth > 0 && c instanceof Simplifiable s ? s.simplify() : null;
+    List<Constraint> rewriting =
+        depth > 0 && c instanceof Simplifiable s ? s.simplify().orElse(null) : null;
     if (rewriting == null || !Copyable.canCopyAll(rewriting.toArray())) {
       out.add(c);
       return false;

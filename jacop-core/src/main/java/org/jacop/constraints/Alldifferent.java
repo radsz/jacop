@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
@@ -525,9 +526,9 @@ public class Alldifferent extends Constraint
   }
 
   @Override
-  public List<Constraint> simplify() {
+  public Optional<List<Constraint>> simplify() {
     if (getClass() != Alldifferent.class) {
-      return null;
+      return Optional.empty();
     }
     return GlobalSimplification.allDifferent(list, Alldifferent::new);
   }
