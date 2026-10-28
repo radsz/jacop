@@ -78,7 +78,7 @@ public final class Probing {
    *
    * @param feasible false if probing proved the store infeasible at its level.
    * @param probes values or literals tried.
-   * @param failed probes that failed, each removing a value.
+   * @param failed probes that failed, each removing one value or a range of values.
    * @param narrowed bound reductions from constructive disjunction over 0-1 variables.
    * @param removed values removed from the domains, over all variables.
    * @param passes passes over the variables.
@@ -263,16 +263,41 @@ public final class Probing {
     return changed;
   }
 
-  /** Removes the bounds of x while their assignment fails. */
+  /**
+   * Removes the bounds of x while their assignment fails. After a failure the next probe tries a
+   * range twice as wide, x &lt;= min + step - 1 (or x &gt;= max - step + 1), so a long run of
+   * values without support costs a logarithmic number of probes; after a success on a range the
+   * step is halved until a single value succeeds.
+   */
   private boolean shave(IntVar x) {
     boolean changed = false;
-    while (!x.singleton() && !outOfBudget() && !probe(x, x.min(), false)) {
-      remove(x, x.min());
-      changed = true;
+    for (int step = 1; !x.singleton() && !outOfBudget(); ) {
+      int min = x.min();
+      int last = (int) Math.min((long) min + step - 1, x.max() - 1L);
+      if (probe(x, min, last, false)) {
+        if (step == 1) {
+          break;
+        }
+        step /= 2;
+      } else {
+        removeRange(x, min, last);
+        changed = true;
+        step = step <= Integer.MAX_VALUE / 2 ? step * 2 : step;
+      }
     }
-    while (!x.singleton() && !outOfBudget() && !probe(x, x.max(), false)) {
-      remove(x, x.max());
-      changed = true;
+    for (int step = 1; !x.singleton() && !outOfBudget(); ) {
+      int max = x.max();
+      int first = (int) Math.max((long) max - step + 1, x.min() + 1L);
+      if (probe(x, first, max, false)) {
+        if (step == 1) {
+          break;
+        }
+        step /= 2;
+      } else {
+        removeRange(x, first, max);
+        changed = true;
+        step = step <= Integer.MAX_VALUE / 2 ? step * 2 : step;
+      }
     }
     return changed;
   }
@@ -338,11 +363,19 @@ public final class Probing {
    * a successful probe.
    */
   private boolean probe(IntVar x, int value, boolean record) {
+    return probe(x, value, value, record);
+  }
+
+  /**
+   * Tries min &lt;= x &lt;= max one level above the root; with record, keeps the bounds of every
+   * variable after a successful probe.
+   */
+  private boolean probe(IntVar x, int min, int max, boolean record) {
     probes++;
     store.setLevel(root + 1);
     boolean consistent;
     try {
-      x.domain.inValue(store.level, x, value);
+      x.domain.in(store.level, x, min, max);
       consistent = store.consistency();
     } catch (FailException e) {
       consistent = false;
@@ -366,6 +399,12 @@ public final class Probing {
   private void remove(IntVar x, int value) {
     IntDomain d = x.domain;
     d.inComplement(root, x, value);
+    propagate();
+  }
+
+  /** Removes a range of values that belong to no solution at the root and propagates. */
+  private void removeRange(IntVar x, int min, int max) {
+    x.domain.inComplement(root, x, min, max);
     propagate();
   }
 
