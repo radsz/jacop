@@ -586,6 +586,15 @@ public final class Derivation implements VarMap {
   }
 
   /**
+   * Returns the presolve rules of this derivation, in the order they run.
+   *
+   * @return the rules.
+   */
+  public List<Rule> rules() {
+    return Collections.unmodifiableList(ruleList);
+  }
+
+  /**
    * Returns the rounds of presolve rules run, 0 when there are no rules.
    *
    * @return the rounds.

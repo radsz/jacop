@@ -47,6 +47,11 @@ class ImplicationConstraints extends ChannelMap {
     super(support);
   }
 
+  @Override
+  boolean mergesDuplicates() {
+    return false;
+  }
+
   void pose() {
     Set<Map.Entry<IntVar, Map<Integer, IntVar>>> entries = cs.entrySet();
 
