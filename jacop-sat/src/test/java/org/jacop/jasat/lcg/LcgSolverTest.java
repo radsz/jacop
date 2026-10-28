@@ -557,7 +557,8 @@ class LcgSolverTest {
       List<Relation> relations = new ArrayList<>();
       relations.add(
           new Relation(
-              new Binpacking(item, load, w, minBin, rnd.nextInt(4) != 0),
+              new Binpacking(item, load, w, minBin, rnd.nextInt(4) != 0)
+                  .cardinalityReasoning(rnd.nextInt(3) == 0),
               t -> {
                 int[] sum = new int[bins];
                 for (int k = 0; k < n; k++) {

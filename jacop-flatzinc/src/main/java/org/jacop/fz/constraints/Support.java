@@ -114,6 +114,7 @@ public class Support implements ParserTreeConstants {
   // the variables of every all_different of the model, for OverlappingAlldiff
   final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   // unary resources found by the disjunctive clique detection: starts and durations
   final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
@@ -738,6 +739,8 @@ public class Support implements ParserTreeConstants {
 
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
+    binPackingCardinality.attach();
+
     // generate channeling constraints for aliases
     // variables that are output variables
     aliasConstraints();
