@@ -1019,16 +1019,6 @@ public class LinearInt extends PrimitiveConstraint
   }
 
   /**
-   * Returns this constraint as a linear relation, for presolve; the variables fixed when it was
-   * created are folded into the right-hand side.
-   *
-   * @return the linear form, or null for a subclass other than {@link LinearIntDom}
-   */
-  public LinearForm linearRelation() {
-    return getClass() == LinearInt.class || getClass() == LinearIntDom.class ? lcgForm() : null;
-  }
-
-  /**
    * Returns the relation over the variables left after folding the fixed ones into b.
    *
    * @return the linear form

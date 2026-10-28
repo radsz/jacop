@@ -545,7 +545,9 @@ final class VariableElimination {
   /** The constraint as a linear relation, or null. */
   private static LinearForm linear(Constraint c) {
     if (c instanceof LinearInt li) {
-      return li.linearRelation();
+      // a subclass other than LinearIntDom may enforce more than its linear relation
+      boolean plain = li.getClass() == LinearInt.class || li.getClass() == LinearIntDom.class;
+      return plain ? li.linearRelation() : null;
     }
     return c instanceof LinearExplainable le ? le.linearForm() : null;
   }
