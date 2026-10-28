@@ -158,7 +158,8 @@ public class CountBounds extends AbstractCount implements Copyable<CountBounds>,
   @Override
   public boolean notSatisfied() {
     SatisfactionCounts sc = countSatisfaction(value);
-    return sc.eq() + sc.notEq() == list.length && (sc.eq() < lb || sc.eq() > ub);
+    // the count lies between the fixed occurrences and those still possible
+    return sc.eq() > ub || list.length - sc.notEq() < lb;
   }
 
   @Override

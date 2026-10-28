@@ -77,7 +77,7 @@ public class XplusYeqC extends AbstractConstraintXandY
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    // notSatisfied() also notices the removal of the one value a fixed variable needs
+    // notSatisfied() looks at the holes of the domains
     return IntDomain.ANY;
   }
 
@@ -129,13 +129,16 @@ public class XplusYeqC extends AbstractConstraintXandY
   public boolean notSatisfied() {
     IntDomain xDom = x.dom();
     IntDomain yDom = y.dom();
-    if (xDom.singleton()) {
-      return !yDom.contains(c - xDom.value());
+    if (xDom.max() + yDom.max() < c || xDom.min() + yDom.min() > c) {
+      return true;
     }
-    if (yDom.singleton()) {
-      return !xDom.contains(c - yDom.value());
+    // no value c - v for v in y is a value of x
+    for (int i = 0, n = yDom.noIntervals(); i < n; i++) {
+      if (xDom.isIntersecting(c - yDom.rightElement(i), c - yDom.leftElement(i))) {
+        return false;
+      }
     }
-    return xDom.max() + yDom.max() < c || xDom.min() + yDom.min() > c;
+    return true;
   }
 
   @Override

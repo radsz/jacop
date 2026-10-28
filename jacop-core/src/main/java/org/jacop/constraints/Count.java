@@ -173,7 +173,8 @@ public class Count extends AbstractCount implements Simplifiable, Copyable<Count
   @Override
   public boolean notSatisfied() {
     SatisfactionCounts sc = countSatisfaction(value);
-    return sc.eq() + sc.notEq() == list.length && !counter.domain.contains(sc.eq());
+    // the count lies between the fixed occurrences and those still possible
+    return !counter.domain.isIntersecting(sc.eq(), list.length - sc.notEq());
   }
 
   @Override
