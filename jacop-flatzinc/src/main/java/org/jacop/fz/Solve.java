@@ -578,6 +578,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {

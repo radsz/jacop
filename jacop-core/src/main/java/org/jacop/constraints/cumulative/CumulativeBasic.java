@@ -30,13 +30,17 @@
 
 package org.jacop.constraints.cumulative;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -53,7 +57,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 @Slf4j
-public class CumulativeBasic extends Constraint implements Copyable<CumulativeBasic>, Explainable {
+public class CumulativeBasic extends Constraint
+    implements Simplifiable, Copyable<CumulativeBasic>, Explainable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -258,6 +263,50 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
       vars[2][i] = map.get(taskNormal[i].res);
     }
     return vars;
+  }
+
+  /**
+   * Leaves out the tasks that never use the resource: those with no resource use, and those with no
+   * duration whose use fits under the limit. If the uses of all tasks fit under the limit together,
+   * the constraint holds.
+   *
+   * @param factory builds a constraint of the class being simplified from starts, durations and
+   *     resources (in this order).
+   * @return the replacing constraints, as {@link Simplifiable#simplify()}.
+   */
+  Optional<List<Constraint>> simplifyTasks(Function<IntVar[][], Constraint> factory) {
+    int n = taskNormal.length;
+    List<TaskView> kept = new ArrayList<>(n);
+    long total = 0;
+    for (TaskView t : taskNormal) {
+      // a task with no resource use, or no duration and a use under the limit, uses nothing
+      boolean usesResource = t.res.max() > 0 && (t.dur.max() > 0 || t.res.max() > limit.min());
+      if (usesResource) {
+        kept.add(t);
+        total += t.res.max();
+      }
+    }
+    if (total <= limit.min()) {
+      return Optional.of(List.of());
+    }
+    if (kept.size() == n) {
+      return Optional.empty();
+    }
+    IntVar[][] vars = new IntVar[3][kept.size()];
+    for (int i = 0; i < kept.size(); i++) {
+      vars[0][i] = kept.get(i).start;
+      vars[1][i] = kept.get(i).dur;
+      vars[2][i] = kept.get(i).res;
+    }
+    return Optional.of(List.of(factory.apply(vars)));
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != CumulativeBasic.class) {
+      return Optional.empty();
+    }
+    return simplifyTasks(t -> new CumulativeBasic(t[0], t[1], t[2], limit));
   }
 
   @Override
