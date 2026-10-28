@@ -70,12 +70,14 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -249,6 +251,9 @@ class GlobalConstraints implements ParserTreeConstants {
     if (s.length == 0) {
       return;
     }
+    if (poseInterDistance(s, d, r, b)) {
+      return;
+    }
     if (b.max() == 1) {
       poseCumulativeUnaryBranch(s, d, r, b);
       return;
@@ -267,6 +272,57 @@ class GlobalConstraints implements ParserTreeConstants {
     } else {
       poseCumulativeBasicWithImplied(s, d, r, b);
     }
+  }
+
+  /**
+   * The mode of the inter-distance detection, from the system property {@code
+   * org.jacop.fz.interDistance}: {@code true} (the default) replaces a cumulative of tasks with one
+   * length and one resource use by InterDistance or MultiInterDistance, {@code add} posts them next
+   * to the cumulative, {@code false} turns the detection off.
+   *
+   * @return the mode: true, add or false.
+   */
+  static String interDistanceMode() {
+    return System.getProperty("org.jacop.fz.interDistance", "true").toLowerCase();
+  }
+
+  /**
+   * A cumulative whose tasks have one fixed length p &gt; 1 and one fixed resource use k, with a
+   * fixed capacity b, is multi_inter_distance(s, b / k, p): at most b / k starts in any window of
+   * p. With b / k = 1 it is inter_distance(s, p).
+   *
+   * @return true if the cumulative is replaced.
+   */
+  private boolean poseInterDistance(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    String mode = interDistanceMode();
+    if ("false".equals(mode) || !b.singleton() || !d[0].singleton() || !r[0].singleton()) {
+      return false;
+    }
+    int p = d[0].value();
+    int k = r[0].value();
+    if (p < 2 || k < 1) {
+      return false;
+    }
+    for (int i = 1; i < s.length; i++) {
+      if (!d[i].singleton(p) || !r[i].singleton(k)) {
+        return false;
+      }
+    }
+    int m = b.value() / k;
+    if (m == 0) {
+      // no task fits under the capacity
+      throw Store.failException;
+    }
+    if (m >= s.length) {
+      return false;
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% cumulative of " + s.length + " tasks of length " + p + " as inter-distance, m = " + m);
+    }
+    support.delayedConstraints.add(
+        m == 1 ? new InterDistance(s, p) : new MultiInterDistance(s, m, p));
+    return !"add".equals(mode);
   }
 
   private IntVar[][] filterCumulativeTasks(IntVar[] str, IntVar[] dur, IntVar[] res) {
@@ -2046,6 +2102,30 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xs = xx.toArray(new IntVar[0]);
 
     support.pose(new SeqPrecedeChain(xs));
+  }
+
+  void gen_jacop_inter_distance(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int p = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+
+    if (p > 0 && x.length > 1) {
+      support.pose(new InterDistance(x, p));
+    }
+  }
+
+  void gen_jacop_multi_inter_distance(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int m = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int p = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+
+    if (p <= 0 || x.length <= m) {
+      return;
+    }
+    if (m < 1) {
+      // every start is in its own window
+      throw Store.failException;
+    }
+    support.pose(m == 1 ? new InterDistance(x, p) : new MultiInterDistance(x, m, p));
   }
 
   void gen_jacop_sort(SimpleNode node) {

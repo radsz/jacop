@@ -120,6 +120,9 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
 
   private IntVar selected;
 
+  private int flushEvery;
+  private long restarts;
+
   /**
    * Creates the heuristic for the given variables. The constraints are those attached to the
    * variables when it is created.
@@ -322,8 +325,30 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     }
   }
 
+  /**
+   * Forgets the weights every given number of restarts, as Choco does (every 32 restarts by default
+   * there), so the heuristic follows the part of the search the recent runs are in.
+   *
+   * @param restarts the number of restarts between two flushes; 0 (the default) never flushes.
+   * @return this heuristic.
+   */
+  public DomWdeg flushEvery(int restarts) {
+    this.flushEvery = restarts;
+    return this;
+  }
+
   @Override
   public void onRestart(FreeSearch search) {
+    restarts++;
+    if (flushEvery > 0 && restarts % flushEvery == 0) {
+      Arrays.fill(weights, weighting == Weighting.CHS ? 0.0d : 1.0d);
+      if (varWeights != null) {
+        for (double[] w : varWeights) {
+          Arrays.fill(w, 1.0d);
+        }
+      }
+      return;
+    }
     if (weighting == Weighting.CHS) {
       alpha = CHS_ALPHA;
       for (int k = 0; k < weights.length; k++) {

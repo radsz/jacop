@@ -84,6 +84,42 @@ public interface ExternalPropagator {
   default void notifyLearntLiteral(int lit) {}
 
   /**
+   * Shortens a clause just learnt by conflict analysis by removing literals that imply another
+   * literal of the clause, an implication only the propagator knows (semantic minimisation). The
+   * first literal, the one the clause asserts, stays first and is never removed.
+   *
+   * @param clause the literals, in DIMACS form; the kept ones are moved to the front in order
+   * @param size the number of literals
+   * @return the number of literals kept
+   */
+  default int minimizeLearnt(int[] clause, int size) {
+    return size;
+  }
+
+  /**
+   * The integer variable whose atom a solver variable is, for semantic UIPs.
+   *
+   * @param var the solver variable, from 1
+   * @return a non-negative index shared by the atoms of one integer variable, or -1 for none
+   */
+  default int integerVariable(int var) {
+    return -1;
+  }
+
+  /**
+   * Names a literal equivalent to the conjunction of true atoms of one integer variable, all set at
+   * the conflict level, so that conflict analysis can stop there: a learnt clause with that
+   * literal's negation in place of theirs is still implied, and asserting.
+   *
+   * @param lits the true literals, in DIMACS form, all of one {@link #integerVariable}
+   * @param size the number of literals
+   * @return a literal equivalent to their conjunction, or 0 for none
+   */
+  default int semanticUip(int[] lits, int size) {
+    return 0;
+  }
+
+  /**
    * Checks a complete assignment.
    *
    * @param model the value of every variable, as {@code model[v-1] = v} or {@code -v}

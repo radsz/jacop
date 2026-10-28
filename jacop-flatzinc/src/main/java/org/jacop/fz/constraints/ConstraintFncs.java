@@ -996,6 +996,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_seq_precede_chain_int(n);
   }
 
+  /** Handles the jacop_inter_distance FlatZinc constraint. */
+  public void jacop_inter_distance(SimpleNode n) {
+    gc.gen_jacop_inter_distance(n);
+  }
+
+  /** Handles the jacop_multi_inter_distance FlatZinc constraint. */
+  public void jacop_multi_inter_distance(SimpleNode n) {
+    gc.gen_jacop_multi_inter_distance(n);
+  }
+
   /** Handles the jacop_sort FlatZinc constraint. */
   public void jacop_sort(SimpleNode n) {
     gc.gen_jacop_sort(n);
