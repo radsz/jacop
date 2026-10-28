@@ -89,8 +89,6 @@ final class SetExplanation {
   static boolean explain(
       AtomicTrail trail, int entry, SetVar[] sets, Relation relation, EntryList out) {
     IntVar x = trail.variable(entry);
-    int kind = trail.kind(entry);
-    boolean value = kind == AtomicTrail.GE || kind == AtomicTrail.NE && trail.value(entry) == 0;
     for (SetVar s : sets) {
       SetMirror m = mirrorOf(s);
       if (m == null) {
@@ -99,7 +97,7 @@ final class SetExplanation {
       int[] elements = m.elements();
       for (int e : elements) {
         if (m.member(e) == x) {
-          return explainElement(trail, entry, sets, relation, e, x, value, out);
+          return explainElement(trail, entry, sets, relation, e, out);
         }
       }
     }
@@ -137,14 +135,9 @@ final class SetExplanation {
   }
 
   private static boolean explainElement(
-      AtomicTrail trail,
-      int entry,
-      SetVar[] sets,
-      Relation relation,
-      int e,
-      IntVar x,
-      boolean value,
-      EntryList out) {
+      AtomicTrail trail, int entry, SetVar[] sets, Relation relation, int e, EntryList out) {
+    IntVar x = trail.variable(entry);
+    boolean value = membership(trail, entry);
     int[] state = states(trail, sets, e, entry);
     // the atom is forced when the relation cannot hold with the opposite membership
     if (satisfiable(sets, state, relation, e, x, !value)) {
@@ -155,8 +148,21 @@ final class SetExplanation {
     return true;
   }
 
+  // the membership a 0/1 variable's atom gives
+  private static boolean membership(AtomicTrail trail, int entry) {
+    int kind = trail.kind(entry);
+    return kind == AtomicTrail.GE || (kind == AtomicTrail.NE && trail.value(entry) == 0);
+  }
+
   private static SetMirror mirrorOf(SetVar s) {
     return s.lcgMirror();
+  }
+
+  private static int fact(boolean inGlb, boolean inLub) {
+    if (inGlb) {
+      return IN;
+    }
+    return inLub ? OPEN : OUT;
   }
 
   // the membership of e in each set just before a trail position
@@ -175,10 +181,10 @@ final class SetExplanation {
           state[k] = OPEN;
         }
       } else if (m != null) {
-        state[k] = m.inRootGlb(e) ? IN : m.inRootLub(e) ? OPEN : OUT;
+        state[k] = fact(m.inRootGlb(e), m.inRootLub(e));
       } else {
         // a set without a mirror does not change
-        state[k] = s.domain.glb().contains(e) ? IN : s.domain.lub().contains(e) ? OPEN : OUT;
+        state[k] = fact(s.domain.glb().contains(e), s.domain.lub().contains(e));
       }
     }
     return state;

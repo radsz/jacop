@@ -119,8 +119,8 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
     IntDomain open = set.domain.lub().subtract(set.domain.glb());
     int[] elements = new int[open.getSize()];
     int k = 0;
-    for (var e = open.valueEnumeration(); e.hasMoreElements(); ) {
-      elements[k++] = e.nextElement();
+    for (var e = open.valueEnumeration(); e.hasMoreElements(); k++) {
+      elements[k] = e.nextElement();
     }
     return elements;
   }
@@ -193,16 +193,16 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
   public void follow() {
     int level = store.level;
     SetDomain d = set.domain;
-    IntDomain glb = d.glb();
-    IntDomain lub = d.lub();
+    IntDomain inSet = d.glb();
+    IntDomain mayBeInSet = d.lub();
     for (int i = 0; i < elements.length; i++) {
       // a membership fixed the other way fails, as it may not have reached the set yet
       IntVar b = members[i];
-      if (glb.contains(elements[i])) {
+      if (inSet.contains(elements[i])) {
         if (b.min() == 0) {
           b.domain.in(level, b, 1, 1);
         }
-      } else if (!lub.contains(elements[i]) && b.max() == 1) {
+      } else if (!mayBeInSet.contains(elements[i]) && b.max() == 1) {
         b.domain.in(level, b, 0, 0);
       }
     }
@@ -273,7 +273,7 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
               <= trail.value(entry)
           && addMembers(trail, entry, false, null, out);
     }
-    boolean in = kind == AtomicTrail.GE || kind == AtomicTrail.NE && trail.value(entry) == 0;
+    boolean in = kind == AtomicTrail.GE || (kind == AtomicTrail.NE && trail.value(entry) == 0);
     if (in) {
       // every element not out is in: the elements out leave exactly the minimum cardinality
       int possible = elements.length + glb.getSize() - countBefore(trail, entry, false, x);
