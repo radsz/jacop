@@ -106,7 +106,8 @@ public final class CoreSearch {
   private static final long PROBE_CONFLICTS = 100;
   // the lower bound's rate is measured over this many nanoseconds, and may grow this many times
   private static final long RATE_WINDOW = 2_000_000_000L;
-  private static final double RATE_SLACK = 3;
+  private static final double RATE_SLACK =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreSlack", "3"));
 
   private final LcgSolver lcg;
   private final CdclSolver sat;
