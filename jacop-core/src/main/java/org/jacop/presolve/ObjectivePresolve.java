@@ -128,7 +128,7 @@ public final class ObjectivePresolve {
     private final IntVar n;
 
     Count(IntVar[] x, int value, IntVar n) {
-      this.x = x;
+      this.x = x.clone();
       this.value = value;
       this.n = n;
     }
@@ -202,7 +202,7 @@ public final class ObjectivePresolve {
    * @param n the number of variables of x equal to the value.
    */
   public void addCount(IntVar[] x, int value, IntVar n) {
-    counts.add(new Count(x.clone(), value, n));
+    counts.add(new Count(x, value, n));
   }
 
   /**
@@ -322,7 +322,7 @@ public final class ObjectivePresolve {
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : encodings.entrySet()) {
       IntVar x = e.getKey();
       IntVar[] literals = literals(x, e.getValue());
-      if (literals == null || (long) x.max() - x.min() + 1 > MAX_COST_TABLE) {
+      if (literals.length == 0 || (long) x.max() - x.min() + 1 > MAX_COST_TABLE) {
         continue;
       }
       int[] costs = new int[x.max() - x.min() + 1];
@@ -491,7 +491,7 @@ public final class ObjectivePresolve {
     List<IntVar[]> sets = new ArrayList<>(exactlyOnes);
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : encodings.entrySet()) {
       IntVar[] literals = literals(e.getKey(), e.getValue());
-      if (literals != null) {
+      if (literals.length > 0) {
         sets.add(literals);
       }
     }
@@ -499,20 +499,20 @@ public final class ObjectivePresolve {
   }
 
   /**
-   * The literals of the values of x in increasing order of the values, or null if x is fixed, its
-   * domain is too large or a value has no literal.
+   * The literals of the values of x in increasing order of the values, or an empty array if x is
+   * fixed, its domain is too large or a value has no literal.
    */
   private static IntVar[] literals(IntVar x, Map<Integer, IntVar> byValue) {
     IntDomain d = x.dom();
     if (x.singleton() || d.getSize() > MAX_ENCODED_DOMAIN) {
-      return null;
+      return new IntVar[0];
     }
     IntVar[] literals = new IntVar[d.getSize()];
     int i = 0;
     for (ValueEnumeration values = d.valueEnumeration(); values.hasMoreElements(); ) {
       IntVar b = byValue.get(values.nextElement());
       if (b == null) {
-        return null;
+        return new IntVar[0];
       }
       literals[i++] = b;
     }
