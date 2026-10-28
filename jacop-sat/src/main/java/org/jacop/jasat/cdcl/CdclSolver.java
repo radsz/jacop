@@ -2045,7 +2045,9 @@ public final class CdclSolver {
           return SAT;
         }
       }
-      if ((++decisions & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+      // under an external propagator one decision can take milliseconds: read the clock on each
+      if (((++decisions & 1023) == 0 || external != null)
+          && (interrupted || System.nanoTime() > deadline)) {
         return UNKNOWN;
       }
       newDecisionLevel();
