@@ -51,12 +51,12 @@ import org.jacop.core.Store;
  * following Laborie, "Algorithms for propagating resource constraints in AI planning and
  * scheduling: existing approaches and new results", Artificial Intelligence 143 (2003).
  *
- * <p>The constraint holds when the tasks (starts, durations, heights) never use more than the limit
- * at any time and every precedence {@code to >= from + lag} holds. The precedences may involve
- * variables that are not task starts, for example a makespan. A task i precedes a time point v when
- * the longest path of precedences from the start of i to v is at least the duration of i, so that i
- * ends by v. If a set of tasks precedes v, all their energy has to be spent between the earliest
- * start of the set and v:
+ * <p>The precedences {@code to >= from + lag} may involve variables that are not task starts, for
+ * example a makespan or the tasks of other resources; they are only used to find which tasks come
+ * before or after which time points, and the model has to post them itself. A task i precedes a
+ * time point v when the longest path of precedences from the start of i to v is at least the
+ * duration of i, so that i ends by v. If a set of tasks precedes v, all their energy has to be
+ * spent between the earliest start of the set and v:
  *
  * <pre>
  *   v &gt;= min start(set) + ceil(energy(set) / limit)
@@ -68,11 +68,13 @@ import org.jacop.core.Store;
  * divided by the limit. Edge finding and time-tabling do not see this when the time windows of the
  * tasks are wide, since they do not know the precedences.
  *
- * <p>The constraint only adds pruning to a model with the cumulative and the precedences. It checks
- * both once the tasks are fixed, so it is a correct constraint on its own. To keep its cost low it
- * runs at the lowest priority, makes one pass per call rather than a fixpoint, and after 64 calls
- * in a row without pruning skips the following calls, 1, 2, 4, ... up to 64 of them, until it
- * prunes again.
+ * <p>The constraint only adds pruning to a model with the cumulative and the precedences. It bounds
+ * the starts of its tasks and the points that end or begin the precedences (such as a makespan),
+ * and only these are in its scope. It holds when the tasks never use more than the limit and the
+ * precedences it uses between these points hold, which it checks once they are fixed, so it is a
+ * correct constraint on its own. To keep its cost low it runs at the lowest priority, makes one
+ * pass per call rather than a fixpoint, and after 64 calls in a row without pruning skips the
+ * following calls, 1, 2, 4, ... up to 64 of them, until it prunes again.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -100,8 +102,6 @@ public class EnergyPrecedence extends Constraint
   final IntVar[] durations;
   final IntVar[] heights;
   final IntVar limit;
-  final IntVar[] from;
-  final IntVar[] to;
   final int[] lag;
 
   private final int n;
@@ -119,6 +119,8 @@ public class EnergyPrecedence extends Constraint
   private final int[] backwardTargets;
   // false when the precedences are contradictory (a cycle of positive length)
   private final boolean feasible;
+  // the precedences the rule uses, between points in the scope: points[p[1]] >= points[p[0]] + p[2]
+  private final int[][] pairs;
 
   // tasks with energy sorted by decreasing earliest start and by increasing latest end
   private final long[] keys;
@@ -173,8 +175,6 @@ public class EnergyPrecedence extends Constraint
     this.durations = Arrays.copyOf(durations, durations.length);
     this.heights = Arrays.copyOf(heights, heights.length);
     this.limit = limit;
-    this.from = Arrays.copyOf(from, from.length);
-    this.to = Arrays.copyOf(to, to.length);
     this.lag = Arrays.copyOf(lag, lag.length);
     this.n = starts.length;
 
@@ -230,31 +230,50 @@ public class EnergyPrecedence extends Constraint
     }
     this.feasible = ok;
 
+    // the points with arcs into them and out of them
+    boolean[] hasIn = new boolean[m];
+    boolean[] hasOut = new boolean[m];
+    boolean[] taskPoint = new boolean[m];
+    for (int k = 0; k < arcs; k++) {
+      hasOut[arcFrom[k]] = true;
+      hasIn[arcTo[k]] = true;
+    }
+    for (int i = 0; i < n; i++) {
+      taskPoint[pointOfTask[i]] = true;
+    }
+    // the rule bounds the starts of the tasks and the points that end or begin the precedences,
+    // such
+    // as a makespan; other points, starts of tasks of other resources for example, are left to the
+    // precedences, so that the constraint does not wake up on them
     List<Integer> fw = new ArrayList<>();
     List<Integer> bw = new ArrayList<>();
+    List<int[]> implied = new ArrayList<>();
     if (ok && n > 0 && after[0] != null) {
       for (int v = 0; v < m; v++) {
-        int preds = 0;
-        int succs = 0;
+        List<int[]> into = new ArrayList<>();
+        List<int[]> outOf = new ArrayList<>();
         for (int i = 0; i < n; i++) {
           if (pointOfTask[i] != v && after[i][v] != NONE && after[i][v] >= durations[i].min()) {
-            preds++;
+            into.add(new int[] {pointOfTask[i], v, after[i][v]});
           }
           if (pointOfTask[i] != v && before[v][i] != NONE && before[v][i] >= 0) {
-            succs++;
+            outOf.add(new int[] {v, pointOfTask[i], before[v][i]});
           }
         }
         // a single task gives no more than the precedence itself
-        if (preds >= 2) {
+        if (into.size() >= 2 && (taskPoint[v] || !hasOut[v])) {
           fw.add(v);
+          implied.addAll(into);
         }
-        if (succs >= 2) {
+        if (outOf.size() >= 2 && (taskPoint[v] || !hasIn[v])) {
           bw.add(v);
+          implied.addAll(outOf);
         }
       }
     }
     this.forwardTargets = fw.stream().mapToInt(Integer::intValue).toArray();
     this.backwardTargets = bw.stream().mapToInt(Integer::intValue).toArray();
+    this.pairs = implied.toArray(new int[0][]);
 
     this.keys = new long[n];
     this.byStart = new int[n];
@@ -266,8 +285,11 @@ public class EnergyPrecedence extends Constraint
     this.queueIndex = 4;
 
     setScope(
-        Stream.of(starts, durations, heights, new IntVar[] {limit}, from, to)
-            .flatMap(Arrays::stream));
+        Stream.concat(
+            Stream.of(starts, durations, heights, new IntVar[] {limit}).flatMap(Arrays::stream),
+            Stream.concat(
+                    Arrays.stream(forwardTargets).boxed(), Arrays.stream(backwardTargets).boxed())
+                .map(v -> points[v])));
   }
 
   /**
@@ -461,8 +483,8 @@ public class EnergyPrecedence extends Constraint
 
   // the precedences and the capacity hold for the fixed values
   private boolean holds() {
-    for (int k = 0; k < from.length; k++) {
-      if ((long) to[k].value() < (long) from[k].value() + lag[k]) {
+    for (int[] p : pairs) {
+      if ((long) points[p[1]].value() < (long) points[p[0]].value() + p[2]) {
         return false;
       }
     }
@@ -509,22 +531,25 @@ public class EnergyPrecedence extends Constraint
     result.append(", ").append(Arrays.toString(heights));
     result.append(", ").append(limit);
     result.append(", [");
-    for (int k = 0; k < from.length; k++) {
-      result.append(k > 0 ? ", " : "").append(from[k].id()).append(" + ").append(lag[k]);
-      result.append(" <= ").append(to[k].id());
+    for (int k = 0; k < pairs.length; k++) {
+      result.append(k > 0 ? ", " : "").append(points[pairs[k][0]].id()).append(" + ");
+      result.append(pairs[k][2]).append(" <= ").append(points[pairs[k][1]].id());
     }
     return result.append("])").toString();
   }
 
   @Override
   public EnergyPrecedence copy(VarMap map) {
+    // only the points the rule bounds are in the scope, so the copy keeps the precedences it uses
+    IntVar[] f = new IntVar[pairs.length];
+    IntVar[] t = new IntVar[pairs.length];
+    int[] l = new int[pairs.length];
+    for (int k = 0; k < pairs.length; k++) {
+      f[k] = map.get(points[pairs[k][0]]);
+      t[k] = map.get(points[pairs[k][1]]);
+      l[k] = pairs[k][2];
+    }
     return new EnergyPrecedence(
-        map.get(starts),
-        map.get(durations),
-        map.get(heights),
-        map.get(limit),
-        map.get(from),
-        map.get(to),
-        lag);
+        map.get(starts), map.get(durations), map.get(heights), map.get(limit), f, t, l);
   }
 }

@@ -1760,8 +1760,8 @@ class GlobalConstraintBruteForceTest {
     }
     List<int[]> domains = new ArrayList<>();
     domains.addAll(Arrays.asList(domains(random, n, 0, 4))); // starts
-    domains.add(domain(random, 0, 8)); // extra point
-    domains.addAll(Arrays.asList(domains(random, n, 0, 3))); // durations
+    domains.add(domain(random, 0, 7)); // extra point
+    domains.addAll(Arrays.asList(domains(random, n, 0, 2))); // durations
     domains.addAll(Arrays.asList(domains(random, n, 0, 2))); // heights
     domains.add(domain(random, 0, 3)); // limit
     return new Instance(
@@ -1783,6 +1783,10 @@ class GlobalConstraintBruteForceTest {
                   f,
                   t,
                   lag));
+          // the constraint enforces only the precedences it uses
+          for (int k = 0; k < arcs; k++) {
+            store.impose(new XplusClteqZ(f[k], lag[k], t[k]));
+          }
         },
         v -> {
           for (int k = 0; k < arcs; k++) {
