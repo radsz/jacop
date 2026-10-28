@@ -848,7 +848,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** sum(x) rel sum with rel one of ==, &lt;=, &gt;=, a candidate for an {@link AlldiffSum}. */
-  record UnitSum(IntVar[] x, String rel, IntVar sum) {}
+  record UnitSum(List<IntVar> x, String rel, IntVar sum) {}
 
   /**
    * Records sum(x) rel sum for {@link #poseAlldiffSums()} when the linear constraint has between
@@ -858,7 +858,7 @@ public class Support implements ParserTreeConstants {
     if (x.length < ALLDIFF_SUM_MIN_VARIABLES || x.length > ALLDIFF_SUM_MAX_VARIABLES) {
       return;
     }
-    unitSums.add(new UnitSum(x, rel, sum));
+    unitSums.add(new UnitSum(List.of(x), rel, sum));
   }
 
   /**
@@ -885,16 +885,16 @@ public class Support implements ParserTreeConstants {
         occurs.computeIfAbsent(v, k -> new BitSet()).set(i);
       }
     }
-    Set<List<Object>> posted = new HashSet<>();
+    Set<UnitSum> posted = new HashSet<>();
     for (UnitSum u : unitSums) {
-      if (pairwiseDifferent(u.x(), occurs)
-          && posted.add(List.of(List.of(u.x()), u.rel(), u.sum()))) {
+      IntVar[] x = u.x().toArray(new IntVar[0]);
+      if (pairwiseDifferent(x, occurs) && posted.add(u)) {
         // an alldifferent on all of x (or a superset) does the pruning on Hall intervals
-        BitSet common = (BitSet) occurs.get(u.x()[0]).clone();
-        for (IntVar v : u.x()) {
+        BitSet common = (BitSet) occurs.get(x[0]).clone();
+        for (IntVar v : x) {
           common.and(occurs.get(v));
         }
-        AlldiffSum c = new AlldiffSum(u.x(), u.rel(), u.sum(), common.isEmpty());
+        AlldiffSum c = new AlldiffSum(x, u.rel(), u.sum(), common.isEmpty());
         store.impose(c);
         if (options.debug()) {
           FzConsole.println("% " + c);

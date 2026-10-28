@@ -517,16 +517,18 @@ class LinearConstraints implements ParserTreeConstants {
       support.recordUnitSum(p2, rel, support.dictionary.getConstant(c));
     } else if (eq && p3 == 0 && (plus == 1 || minus == 1)) {
       int single = plus == 1 ? 1 : -1;
-      IntVar sum = null;
+      int pos = 0;
+      while (p1[pos] != single) {
+        pos++;
+      }
       IntVar[] x = new IntVar[n - 1];
       int k = 0;
       for (int i = 0; i < n; i++) {
-        if (p1[i] == single) {
-          sum = p2[i];
-        } else {
+        if (i != pos) {
           x[k++] = p2[i];
         }
       }
+      IntVar sum = p2[pos];
       support.recordUnitSum(x, "==", sum);
     }
   }
