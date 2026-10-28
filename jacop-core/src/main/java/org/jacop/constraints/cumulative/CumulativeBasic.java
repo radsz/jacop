@@ -456,7 +456,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     for (int i : order) {
       TaskView task = taskNormal[i];
       if (i != skip && covers(trail, position, task, t)) {
-        addTaskReason(trail, position, task, out);
+        addTaskReasonAt(trail, position, task, t, out);
         sum += rmin(position, task);
         if (sum > room) {
           break;
@@ -570,7 +570,7 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     if (bestLoad > trail.minBefore(limit, entry)) {
       for (TaskView task : taskNormal) {
         if (covers(trail, entry, task, best) && rmin(entry, task) > 0) {
-          addTaskReason(trail, entry, task, out);
+          addTaskReasonAt(trail, entry, task, best, out);
         }
       }
     } else {
@@ -655,6 +655,19 @@ public class CumulativeBasic extends Constraint implements Copyable<CumulativeBa
     limitMax = trail.maxBefore(limit, position);
     snapshotPosition = position;
     windowBudget = WINDOW_BUDGET;
+  }
+
+  /**
+   * Adds what makes a task's compulsory part cover time t, lifted: the earliest bounds of its start
+   * on the trail that keep it within [t - d + 1, t] for its smallest duration d, and the lower
+   * bounds of its duration and resource use.
+   */
+  private void addTaskReasonAt(
+      AtomicTrail trail, int position, TaskView task, int t, EntryList out) {
+    trail.addBoundReaching(task.start, position, true, (long) t - dmin(position, task) + 1, out);
+    trail.addBoundReaching(task.start, position, false, t, out);
+    trail.addLowerBound(task.dur, position, out);
+    trail.addLowerBound(task.res, position, out);
   }
 
   /** Adds the bounds of a task's start and the lower bounds of its duration and resource use. */

@@ -125,6 +125,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
@@ -323,6 +324,32 @@ class LcgFuzzTest {
       return new ExtensionalSupportMdd(pick(x, 3), tuples);
     }
 
+    /**
+     * A cost MDD on 3 of the variables with a fourth as its cost: up to two nodes per level, edges
+     * with random values and costs, possibly non-deterministic.
+     */
+    private CostMdd costMdd() {
+      IntVar[] v = pick(x, 4);
+      int[] level = {1, 2, 2, 3, 3};
+      List<int[]> edges = new ArrayList<>();
+      int[][] next = {{2, 3}, {4, 5}, {4, 5}, {0}, {0}};
+      for (int node = 1; node <= level.length; node++) {
+        for (int k = 1 + rnd.nextInt(3); k > 0; k--) {
+          int[] targets = next[node - 1];
+          edges.add(
+              new int[] {node, value(), targets[rnd.nextInt(targets.length)], rnd.nextInt(4)});
+        }
+      }
+      int[] from = edges.stream().mapToInt(e -> e[0]).toArray();
+      IntDomain[] label =
+          edges.stream()
+              .map(e -> new IntervalDomain(e[1], e[1] + rnd.nextInt(2)))
+              .toArray(IntDomain[]::new);
+      int[] to = edges.stream().mapToInt(e -> e[2]).toArray();
+      int[] cost = edges.stream().mapToInt(e -> e[3] - 1).toArray();
+      return new CostMdd(Arrays.copyOf(v, 3), level, from, label, cost, to, v[3]);
+    }
+
     /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
     private HybridTable hybridTable() {
       IntVar[] v = pick(x, 2 + rnd.nextInt(2));
@@ -385,7 +412,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(69)) {
+      return switch (rnd.nextInt(70)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -522,6 +549,7 @@ class LcgFuzzTest {
         case 65 -> regular();
         case 66 -> mdd();
         case 67 -> unaryTransition();
+        case 68 -> costMdd();
         case 63 ->
             new LinearIntDom(
                 p,
