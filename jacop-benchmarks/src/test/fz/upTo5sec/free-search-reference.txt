@@ -2554,3 +2554,7 @@ ttppv_cost_regular/rand6_1 MIN 38
 ttppv_cost_regular/rand6_4 MIN 38
 ttppv_cost_regular/rand6_12 MIN 36
 ttppv_cost_regular/rand8_0_unsat UNSAT
+cost_mdd_random/random_12_5_4_8_100_1 MIN 143
+cost_mdd_random/random_15_6_5_8_200_1 MIN 196
+cost_mdd_roster/roster_4_7_4_1 MIN 16
+cost_mdd_roster/roster_5_7_4_1 MIN 15
