@@ -33,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -54,10 +55,14 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XltC;
+import org.jacop.constraints.XltY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -172,6 +177,101 @@ class GlobalPresolveTest {
     assertThat(rewritten)
         .as("%s: instances rewritten (%d)", name, rewritten)
         .isGreaterThan(TRIALS / 20);
+  }
+
+  /**
+   * Variable aliasing keeps the solutions: random models with equations, among variables that other
+   * constraints may share and through elements that rewrite to equations.
+   */
+  @Test
+  void aliasingKeepsTheSolutions() {
+    Random random = new Random(17);
+    int aliased = 0;
+    for (int trial = 0; trial < TRIALS; trial++) {
+      long seed = random.nextLong();
+      boolean checking = trial % 2 == 0;
+      int order = random.nextInt();
+
+      Set<List<Integer>> expected = new HashSet<>();
+      IntVar[] x = aliasModel(new Random(seed));
+      search(x[0].getStore(), x, order, () -> expected.add(values(x)));
+
+      Set<List<Integer>> found = new HashSet<>();
+      IntVar[] y = aliasModel(new Random(seed));
+      Derivation d = Presolver.of(y[0].getStore()).keep(y).checking(checking).presolve();
+      if (d.outcome() == Derivation.Outcome.DERIVED) {
+        aliased += d.statistics().aliased() > 0 ? 1 : 0;
+        search(
+            d.child(),
+            d.counterparts(y),
+            order,
+            () -> {
+              if (d.returnSolution()) {
+                found.add(values(y));
+              }
+            });
+        d.discard();
+      }
+      assertThat(found).as("trial %d, checking %b", trial, checking).isEqualTo(expected);
+    }
+    assertThat(aliased).as("instances aliased (%d)", aliased).isGreaterThan(TRIALS / 4);
+  }
+
+  @Test
+  void anEquationMergesItsVariablesUnlessAnotherConstraintHasBoth() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar b = new IntVar(store, "b", 0, 5);
+    IntVar c = new IntVar(store, "c", 0, 5);
+    IntVar e = new IntVar(store, "e", 0, 5);
+    store.impose(new XeqY(a, b));
+    store.impose(new XeqY(b, c));
+    store.impose(new XeqY(c, a));
+    store.impose(new XeqY(c, e));
+    store.impose(new XneqY(a, e));
+    store.impose(new XltC(b, 4));
+    Derivation d = Presolver.of(store).keep(a, b, c, e).presolve();
+    // a, b and c become one variable; e stays apart, since a != e has a and e
+    assertThat(d.statistics().aliased()).isEqualTo(2);
+    assertThat(d.get(a)).isSameAs(d.get(b)).isSameAs(d.get(c)).isNotSameAs(d.get(e));
+    // c = e and a != e are left; b < 4 holds once propagated
+    assertThat(d.statistics().childConstraints()).isEqualTo(2);
+  }
+
+  /** Five variables over 0..3 with up to three equations and two other constraints. */
+  private static IntVar[] aliasModel(Random r) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain domain = new IntervalDomain();
+      for (int v : subset(r, 0, 3)) {
+        domain.unionAdapt(v, v);
+      }
+      x[i] = new IntVar(store, "x" + i, domain);
+    }
+    for (int k = 1 + r.nextInt(3); k > 0; k--) {
+      int[] p = distinct(r, 2);
+      store.impose(new XeqY(x[p[0]], x[p[1]]));
+    }
+    for (int k = 0; k < 2; k++) {
+      int[] p = distinct(r, 3);
+      store.impose(
+          switch (r.nextInt(5)) {
+            case 0 -> new XneqY(x[p[0]], x[p[1]]);
+            case 1 -> new XplusYeqZ(x[p[0]], x[p[1]], x[p[2]]);
+            case 2 -> new Alldistinct(new IntVar[] {x[p[0]], x[p[1]], x[p[2]]});
+            case 3 -> new XltY(x[p[0]], x[p[1]]);
+            default -> new ElementInteger(x[p[0]], new int[] {0, 1, 2, 3, 4}, x[p[1]], -1);
+          });
+    }
+    return x;
+  }
+
+  /** Distinct random indices of the five variables of {@link #aliasModel}. */
+  private static int[] distinct(Random r, int n) {
+    List<Integer> all = new ArrayList<>(List.of(0, 1, 2, 3, 4));
+    Collections.shuffle(all, r);
+    return all.subList(0, n).stream().mapToInt(Integer::intValue).toArray();
   }
 
   @Test

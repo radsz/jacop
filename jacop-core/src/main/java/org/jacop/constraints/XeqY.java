@@ -79,13 +79,12 @@ public class XeqY extends AbstractConstraintXandY implements Copyable<XeqY>, Lin
   @Override
   public void consistency(final Store store) {
 
-    // domain consistency; after the two intersections x and y are equal, a fixpoint unless x only
-    // keeps its bounds
-    x.domain.in(store.level, x, y.domain);
-    y.domain.in(store.level, y, x.domain);
-    if (x.domain.domainId() == IntDomain.BOUND_DOMAIN_ID) {
-      x.domain.in(store.level, x, y.domain);
-    }
+    // domain consistency; with lazy clause generation a large domain takes only the bounds of the
+    // other (AtomicTrail.in), so the intersections repeat until the bounds agree
+    do {
+      AtomicTrail.in(store, x, y.domain);
+      AtomicTrail.in(store, y, x.domain);
+    } while (x.min() != y.min() || x.max() != y.max());
   }
 
   @Override

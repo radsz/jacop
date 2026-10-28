@@ -255,7 +255,20 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
-21. Steiner (MiniZinc steiner and dsteiner) has a cost bound: the new
+21. CumulativeUnary (MiniZinc disjunctive) is faster again, with the same
+    search trees: 4.6x on job shops (geometric mean over 23 instances from
+    6x6 to 200x20; 1.2x to 40x, more tasks per machine gain more) and 2.2x
+    on open shops. A fixed task that ends before every other task can
+    start is left out of the unary rules and the time-table for the rest
+    of the subtree; in a search that schedules from left to right these
+    are most tasks. A rule that pruned nothing is not run again until a
+    bound changes. With constant durations and resource uses a unary
+    time-table replaces the sweep of the cumulative profile and removes
+    the same values, holes included. Edge finding updates only the Lambda
+    values on the path of a removed task and stops where they no longer
+    change.
+
+22. Steiner (MiniZinc steiner and dsteiner) has a cost bound: the new
     SteinerBound runs Wong's dual ascent on the directed cut relaxation
     (no LP solver) and, with the reduced costs, removes nodes and edges
     that no tree within max(cost) can use. Selected edges cost 0 and add
@@ -265,7 +278,7 @@ Version 5.0 (unreleased)
     with 20 to 80 nodes (60 s) JaCoP proves all 28 optima in under 2 s,
     against 3 before.
 
-22. Binpacking reasons on the number of items of each bin (bin packing
+23. Binpacking reasons on the number of items of each bin (bin packing
     with cardinality, Schaus et al. CP 2012; Derval, Regin and Schaus,
     Constraints 2018). A new optional argument card (constructor and
     builder) gives the number of items of each bin, items of weight 0
@@ -281,7 +294,7 @@ Version 5.0 (unreleased)
     in 60 s against 30 before. Without card the rules are off by default;
     cardinalityReasoning(true) turns them on.
 
-23. Subcircuit and Circuit explain their own propagation for lazy clause
+24. Subcircuit and Circuit explain their own propagation for lazy clause
     generation (--lcg), by cuts of the successor graph (Francis and
     Stuckey, Constraints 2014): an arc on no cycle, a node that cannot
     join the required ones, a node every path between two required nodes
@@ -293,7 +306,7 @@ Version 5.0 (unreleased)
     (all generic) to 19. tpp is proved about 1.7x faster; mario, cvrp,
     is, p1f and stochastic-vrp end as before within 60 s.
 
-24. --lcg -f finds solutions on cutstock and largescheduling, where it
+25. --lcg -f finds solutions on cutstock and largescheduling, where it
     found none in 60 s. Under lazy clause generation the time table of
     Cumulative keeps to the bounds of the starts: a hole of thousands of
     start values was thousands of atoms, each with its own literals. Its
@@ -306,7 +319,7 @@ Version 5.0 (unreleased)
     annotation (60 s), 3 go from no solution to a solution, 3 more are
     proved optimal, and none lose a solution or a proof.
 
-25. --lcg works on models with set variables; before, it printed "--lcg
+26. --lcg works on models with set variables; before, it printed "--lcg
     ignored: the model has float or set variables" and searched without
     learning. Each set variable is mirrored by a 0/1 variable for the
     membership of each element of its least upper bound that is not in its
@@ -329,7 +342,7 @@ Version 5.0 (unreleased)
     (steiner-triples 09: 1.1 s instead of 10.9 s). Float variables still
     turn --lcg off.
 
-26. Lazy clause generation explains XmulYeqZ removals by bounds first: the
+27. Lazy clause generation explains XmulYeqZ removals by bounds first: the
     product range of x and y (squares when x = y), the quotient range of a
     factor, and the square roots of z for x * x = z, citing only the
     bounds that matter. Before, a removal of more than 64 values, or with a
@@ -340,7 +353,46 @@ Version 5.0 (unreleased)
     (--lcg -f, 60 s) the solved ones take 2 % less time (geometric mean)
     and gbac reaches a better objective on 5 of 6.
 
-27. The FlatZinc front end adds the linear relaxation of the model's linear
+27. New constraint GlobalCardinality(x, values, counters) and
+    GlobalCardinality(x, values, low, up): domain consistent global
+    cardinality (Regin, AAAI 1996) on x, with the counters as intervals;
+    values outside values are not restricted. The FlatZinc front end posts
+    it for global_cardinality (jacop_count_values, _bounds and the closed
+    forms) annotated :: domain, which used to be ignored. It explores the
+    search tree of Gecode's domain consistent gcc. On rows and columns
+    with cardinality bounds and forbidden values it solves 8 of 12 random
+    instances in 60 s where counting solves 6, with 3x to 900x fewer
+    nodes; on Challenge models that do not ask for :: domain counting is
+    as good and cheaper, so it stays the default.
+
+28. FlatZinc objective presolve (the objective equation shifted by the
+    exactly-one sets of the model) runs without --presolve too, with
+    degree weight 0. It reads n = count(x, v) (jacop_count) as
+    n = sum(x[i] = v) when every x[i] has a literal for v, and the shifted
+    cost terms of each variable encoded by value literals become one cost
+    variable y = c[x] (ElementInteger). The reformulated equation replaces
+    the constraint defining the objective when it has no more variables,
+    and is used only when it gives cost variables or has at most half the
+    variables of the definition; a stronger root bound alone did not pay
+    on vrp under --lcg. On jp-encoding (60 s) JaCoP proves data300 in
+    4.4 s instead of no proof and data200 in 17 s with --lcg -f, and
+    data1400 under --lcg -f ends at 62,978 instead of 68,422;
+    bus_scheduling r1a is proved in 3.1 s instead of not proved.
+    -Dorg.jacop.fz.objectivePresolve=false turns it off.
+
+28. With lazy clause generation (--lcg) an equality (XeqY, and int_eq_reif
+    and int_eq_imp in FlatZinc) gives a variable of more than 10,000
+    values only the bounds of the other one, not its holes: every value
+    removed between the bounds was a != atom with its own literals, so
+    copying a sparse domain into a large one made millions of them. On
+    liner-sf-repositioning fm3_5, --lcg -f created 8.9 million literals in
+    10 nodes and ran out of memory; it now finds 60 solutions in 60 s with
+    119 thousand literals (tp7_10 too goes from an error to a solution).
+    Of the 258 vs-ortools instances (60 s, --lcg -f) the limit changes 6;
+    groupsplitter u15g3pref2 also improves (232 against 181-189) and the
+    others keep their result. -Djacop.lcg.holeLimit changes the limit.
+
+29. The FlatZinc front end adds the linear relaxation of the model's linear
     constraints (org.jacop.constraints.lp.LinearRelaxation) as a
     propagator; --lp off turns it off. A bounded dual simplex, warm-started
     from the previous node, solves it during search. A Farkas certificate
