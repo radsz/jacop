@@ -43,6 +43,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
@@ -326,6 +327,26 @@ class PropagationStrengthTest {
 
     assertThat(n.dom().toString()).isEqualTo("0");
     assertThat(y.dom().toString()).isEqualTo("{-2, 1..3}");
+  }
+
+  // Distance cleared the propagation flag after pruning x, so a pass that fixed x was not followed
+  // by the one that propagates a fixed x
+  @Test
+  void testDistancePropagatesAVariableItFixes() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 0, 3);
+    IntVar y = variable(store, "y", -1, 0, 2, 4, 5);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    store.impose(new Distance(x, y, z));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 2);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x.dom().toString()).isEqualTo("3");
+    assertThat(z.dom().toString()).isEqualTo("1");
   }
 
   /**
