@@ -37,6 +37,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 /**
  * CumulativeUnary implements the scheduling constraint for unary resources using the overload
@@ -87,6 +88,15 @@ public class CumulativeUnary extends Cumulative {
   private TaskView[] loadedNormal;
   private TaskView[] loadedReversed;
   private int loadedCount;
+  private int[] leftOutTasks = new int[0];
+  // with all tasks under the rules (no task can have a zero duration or resource use), the tasks
+  // left out stay out in the subtree: tasks[0, leftOut) are left out, tasks[leftOut, n) are not
+  private int[] tasks;
+  private int[] positionOf;
+  private TimeStamp<Integer> leftOut;
+  private boolean trailLeftOut;
+  private int from;
+  private boolean firstLoad;
 
   /**
    * It creates a cumulative constraint.
@@ -255,6 +265,11 @@ public class CumulativeUnary extends Cumulative {
     // the
     // time-table fail in the next pass
     leaveOutFixedPrefix = doProfile;
+    trailLeftOut = doProfile && !possibleZeroTasks;
+    if (tasks == null) {
+      initTasks(store);
+    }
+    from = trailLeftOut ? leftOut.value() : 0;
     do {
 
       store.propagationHasOccurred = false;
@@ -284,7 +299,10 @@ public class CumulativeUnary extends Cumulative {
       if (timetable == null) {
         timetable = newTimetable();
       }
-      if (timetable.prune(store)) {
+      if (tasks == null) {
+        initTasks(store);
+      }
+      if (timetable.prune(store, tasks, from)) {
         return;
       }
     }
@@ -336,6 +354,8 @@ public class CumulativeUnary extends Cumulative {
     boolean changed = store.propagationHasOccurred;
     store.propagationHasOccurred = false;
     boolean loaded = false;
+    // the time-table has just pruned nothing, so tasks left out now may stay out
+    firstLoad = true;
     for (int rule = overload ? OVERLOAD : DETECTABLE_NORMAL; rule <= EDGE_FIND_REVERSED; rule++) {
       if (quietAt[rule] == boundsVersion) {
         continue;
@@ -379,6 +399,17 @@ public class CumulativeUnary extends Cumulative {
     }
   }
 
+  private void initTasks(Store store) {
+    int n = tvn.length;
+    tasks = new int[n];
+    positionOf = new int[n];
+    for (int i = 0; i < n; i++) {
+      tasks[i] = i;
+      positionOf[i] = i;
+    }
+    leftOut = new TimeStamp<>(store, 0);
+  }
+
   // loads the bounds of the tasks into both views, leaving out the fixed tasks that end before the
   // other tasks when the time-table has checked that the compulsory parts do not overlap
   private void loadViews(TaskView[] tn, TaskView[] tr) {
@@ -387,19 +418,57 @@ public class CumulativeUnary extends Cumulative {
       if (keptNormal.length < n) {
         keptNormal = new TaskView[n];
         keptReversed = new TaskView[n];
+        leftOutTasks = new int[n];
       }
-      loadedCount = unaryNormal.loadNormalActive(tn, tr, n, keptNormal, keptReversed);
+      // without trailing, tn holds the tasks that may use the resource now, in positions 0..n-1
+      int[] order = trailLeftOut ? tasks : identity(n);
+      loadedCount =
+          unaryNormal.loadNormalActive(tn, tr, order, from, keptNormal, keptReversed, leftOutTasks);
       loadedNormal = keptNormal;
       loadedReversed = keptReversed;
+      if (trailLeftOut && firstLoad) {
+        leaveOut(unaryNormal.leftOutCount());
+      }
     } else {
       unaryNormal.loadNormal(tn, n);
       loadedCount = n;
       loadedNormal = tn;
       loadedReversed = tr;
     }
+    firstLoad = false;
     if (loadedCount > 0) {
       unaryReversed.loadReversed(unaryNormal, loadedCount);
     }
+  }
+
+  // moves the tasks just left out to the front of tasks and leaves them out in the subtree
+  private void leaveOut(int count) {
+    if (count == 0) {
+      return;
+    }
+    for (int k = 0; k < count; k++) {
+      int i = leftOutTasks[k];
+      int p = positionOf[i];
+      int j = tasks[from];
+      tasks[p] = j;
+      positionOf[j] = p;
+      tasks[from] = i;
+      positionOf[i] = from;
+      from++;
+    }
+    leftOut.update(from);
+  }
+
+  private int[] identityOrder = new int[0];
+
+  private int[] identity(int n) {
+    if (identityOrder.length != n) {
+      identityOrder = new int[n];
+      for (int i = 0; i < n; i++) {
+        identityOrder[i] = i;
+      }
+    }
+    return identityOrder;
   }
 
   @Override

@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.cumulative;
 
+import java.util.Arrays;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -57,11 +58,15 @@ final class UnaryTimetable {
   private final int[] dur;
   private final int[] res;
   private final IntVar limit;
+  private final int maxRes;
 
-  // the tasks that use the resource (positive duration and resource use)
-  private final int[] used;
-  // the tasks of used in the order of their latest start, kept between calls
+  // the tasks under pruning in the order of their latest start, kept between calls
   private final long[] lstKeys;
+  private int keyCount;
+  // marks the tasks under pruning and the tasks in lstKeys in one call
+  private final int[] active;
+  private final int[] keyed;
+  private int stamp;
   // the compulsory parts in the order of their start: task, start and end
   private final int[] partTask;
   private final int[] partStart;
@@ -80,23 +85,17 @@ final class UnaryTimetable {
     this.dur = dur;
     this.res = res;
     this.limit = limit;
-    int n = 0;
-    for (int i = 0; i < start.length; i++) {
-      if (dur[i] > 0 && res[i] > 0) {
-        n++;
+    int n = start.length;
+    int max = 0;
+    for (int i = 0; i < n; i++) {
+      if (dur[i] > 0) {
+        max = Math.max(max, res[i]);
       }
     }
-    used = new int[n];
-    n = 0;
-    for (int i = 0; i < start.length; i++) {
-      if (dur[i] > 0 && res[i] > 0) {
-        used[n++] = i;
-      }
-    }
+    maxRes = max;
     lstKeys = new long[n];
-    for (int m = 0; m < n; m++) {
-      lstKeys[m] = used[m];
-    }
+    active = new int[n];
+    keyed = new int[n];
     partTask = new int[n];
     partStart = new int[n];
     partEnd = new int[n];
@@ -106,17 +105,18 @@ final class UnaryTimetable {
    * Prunes the starts of the tasks and the limit against the compulsory parts.
    *
    * @param store the store.
+   * @param tasks the tasks, by index; the tasks from position from on are pruned and make the
+   *     profile, and the tasks before it are fixed tasks that end before all of them start.
+   * @param from the position of the first task to take into account.
    * @return false if the resource is not unary for the current limit, and nothing was pruned.
    */
-  boolean prune(Store store) {
+  boolean prune(Store store, int[] tasks, int from) {
     int limitMax = limit.max();
-    for (int i : used) {
-      if (res[i] > limitMax) {
-        // a task that does not fit under the limit overloads the resource wherever it runs
-        return false;
-      }
+    if (maxRes > limitMax) {
+      // a task that does not fit under the limit overloads the resource wherever it runs
+      return false;
     }
-    int parts = sortParts();
+    int parts = sortParts(tasks, from);
     if (parts == 0) {
       return true;
     }
@@ -137,7 +137,8 @@ final class UnaryTimetable {
     }
     int first = partStart[0];
     int last = partEnd[parts - 1];
-    for (int i : used) {
+    for (int m = 0; m < keyCount; m++) {
+      int i = (int) lstKeys[m];
       IntVar s = start[i];
       if (!s.singleton()) {
         int est = s.min();
@@ -150,15 +151,44 @@ final class UnaryTimetable {
     return true;
   }
 
-  // sorts the tasks by latest start and keeps those with a compulsory part; returns their number
-  private int sortParts() {
-    int n = used.length;
+  private void nextStamp() {
+    if (stamp == Integer.MAX_VALUE) {
+      Arrays.fill(active, 0);
+      Arrays.fill(keyed, 0);
+      stamp = 0;
+    }
+    stamp++;
+  }
+
+  // sorts the tasks under pruning by latest start, starting from the order of the previous call,
+  // and keeps those with a compulsory part; returns their number
+  private int sortParts(int[] tasks, int from) {
+    nextStamp();
+    int n = tasks.length;
+    for (int q = from; q < n; q++) {
+      active[tasks[q]] = stamp;
+    }
     long[] k = lstKeys;
-    for (int m = 0; m < n; m++) {
+    int count = 0;
+    for (int m = 0; m < keyCount; m++) {
+      int i = (int) k[m];
+      if (active[i] == stamp) {
+        k[count++] = i;
+        keyed[i] = stamp;
+      }
+    }
+    for (int q = from; q < n; q++) {
+      int i = tasks[q];
+      if (keyed[i] != stamp && dur[i] > 0 && res[i] > 0) {
+        k[count++] = i;
+      }
+    }
+    keyCount = count;
+    for (int m = 0; m < count; m++) {
       int i = (int) k[m];
       k[m] = ((long) start[i].max() << 32) | i;
     }
-    for (int a = 1; a < n; a++) {
+    for (int a = 1; a < count; a++) {
       long x = k[a];
       int b = a - 1;
       while (b >= 0 && k[b] > x) {
@@ -168,7 +198,7 @@ final class UnaryTimetable {
       k[b + 1] = x;
     }
     int parts = 0;
-    for (int m = 0; m < n; m++) {
+    for (int m = 0; m < count; m++) {
       int i = (int) k[m];
       int lst = (int) (k[m] >> 32);
       int ect = start[i].min() + dur[i];
