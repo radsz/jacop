@@ -460,6 +460,31 @@ class AtomicTrailTest {
   }
 
   /**
+   * 2a + b + c <= 1 fails with a, b, c >= 1, which leaves a slack of 2: it drops either a, or b and
+   * c. The reason drops the two cheaper terms and cites a >= 1 alone.
+   */
+  @Test
+  void linearReasonDropsTheCheapestTermsFirst() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar b = new IntVar(store, "b", 0, 5);
+    IntVar c = new IntVar(store, "c", 0, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    for (IntVar v : new IntVar[] {a, b, c}) {
+      store.setLevel(store.level + 1);
+      v.domain.inMin(store.level, v, 1);
+    }
+    EntryList reason = new EntryList();
+    assertThat(
+            LinearExplanation.explainFailure(
+                trail, new IntVar[] {a, b, c}, new long[] {2, 1, 1}, 1, true, false, reason))
+        .isTrue();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(trail.variable(reason.get(0))).isSameAs(a);
+    trail.detach();
+  }
+
+  /**
    * 3x + y - x <= 4, an aggregated row with x at weights of both signs: after y >= 2, the bound x
    * <= 1 follows from 2x <= 4 - 2, and its checked reason is y >= 2.
    */

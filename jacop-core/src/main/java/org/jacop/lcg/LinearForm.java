@@ -126,37 +126,45 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
     } catch (ArithmeticException overflow) {
       return false;
     }
+    // the bounds cited are lifted: on the side that holds, the sum's bound may move by the slack
     switch (relation) {
       case LE -> {
         if (largest > c) {
           return false;
         }
-        addBounds(trail, position, true, out);
+        addLifted(trail, position, false, c - largest, out);
       }
       case GE -> {
         if (smallest < c) {
           return false;
         }
-        addBounds(trail, position, false, out);
+        addLifted(trail, position, true, smallest - c, out);
       }
       case EQ -> {
         if (smallest != c || largest != c) {
           return false;
         }
-        addBounds(trail, position, true, out);
-        addBounds(trail, position, false, out);
+        addLifted(trail, position, false, 0, out);
+        addLifted(trail, position, true, 0, out);
       }
       default -> {
         if (smallest > c) {
-          addBounds(trail, position, false, out);
+          addLifted(trail, position, true, smallest - c - 1, out);
         } else if (largest < c) {
-          addBounds(trail, position, true, out);
+          addLifted(trail, position, false, c - 1 - largest, out);
         } else {
           return notEqualByHole(trail, position, out);
         }
       }
     }
     return true;
+  }
+
+  // the bounds that make the sum smallest (lowerSum) or largest, weakened within the slack
+  private void addLifted(
+      AtomicTrail trail, int position, boolean lowerSum, long slack, EntryList out) {
+    LinearExplanation.addLiftedBounds(
+        trail, position, vars, weights, -1, null, lowerSum, slack, out);
   }
 
   // != with every variable but one fixed, whose value that would make the sum c is a hole
@@ -203,20 +211,6 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
       if (i != free) {
         trail.addLowerBound(vars[i], position, out);
         trail.addUpperBound(vars[i], position, out);
-      }
-    }
-  }
-
-  // the bounds that make the sum largest (upper) or smallest
-  private void addBounds(AtomicTrail trail, int position, boolean upper, EntryList out) {
-    for (int i = 0; i < vars.length; i++) {
-      if (weights[i] == 0) {
-        continue;
-      }
-      if (upper == weights[i] > 0) {
-        trail.addUpperBound(vars[i], position, out);
-      } else {
-        trail.addLowerBound(vars[i], position, out);
       }
     }
   }

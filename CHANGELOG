@@ -443,6 +443,18 @@ Version 5.0 (unreleased)
     in 0.02 s, where it found none in 10 s. -Djacop.lcg.late=none turns it
     off.
 
+32. Shorter linear explanations for lazy clause generation (--lcg). A
+    lifted linear reason spends its slack on the terms that cost least
+    first, so it leaves out as many terms as the slack allows, and the
+    entailment reasons of reified linear constraints are lifted too. The
+    FlatZinc front end splits a linear constraint of more than 40 terms
+    into sums of blocks of about sqrt(n) terms, each with a new variable
+    (--free-config lcg-split=<n>, 0 = off): its reasons cite about sqrt(n)
+    bounds instead of n. On cutstock type10_TEST9 the demand sums' reasons
+    go from 841 to 17 atoms and learnt clauses from 574 to 19; on vrp,
+    spot5, gbac and cutstock (60 s, --lcg -f) more instances end better
+    than worse.
+
 Version 4.11
 =============
 

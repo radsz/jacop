@@ -399,12 +399,14 @@ public final class LinearExplanation {
 
   /**
    * Adds the bounds of the occurrences other than {@code skip} and the occurrences of {@code
-   * merged} (when not null) that bound one side of the relation, each weakened to the earliest
-   * trail entry the slack allows, largest weights first (lifting, as in Ohrimenko, Stuckey and
-   * Codish 2009): {@code slack} is how far the sum of their contributions may move against the side
-   * before the reason no longer implies the propagation.
+   * merged} (when not null) that bound one side of the relation, lifted (as in Ohrimenko, Stuckey
+   * and Codish 2009): {@code slack} is how far the sum of their contributions may move against the
+   * side before the reason no longer implies the propagation. The slack first drops whole terms,
+   * those whose move from the initial bound costs least first, which leaves out as many terms as
+   * the slack allows. What remains of it weakens the other terms, largest weights first, to the
+   * earliest trail entry that still serves.
    */
-  private static void addLiftedBounds(
+  static void addLiftedBounds(
       AtomicTrail trail,
       int position,
       IntVar[] vars,
@@ -415,34 +417,72 @@ public final class LinearExplanation {
       long slack,
       EntryList out) {
     long[] keys = null;
+    long[] costs = null;
     int n = 0;
     for (int i = 0; i < vars.length; i++) {
       if (i == skip || weights[i] == 0 || vars[i] == merged) {
         continue;
       }
       long w = Math.abs(weights[i]);
+      boolean lower = upperSide == weights[i] > 0;
       if (w > slack) {
-        if (upperSide == weights[i] > 0) {
-          trail.addLowerBound(vars[i], position, out);
-        } else {
-          trail.addUpperBound(vars[i], position, out);
-        }
+        addBound(trail, vars[i], position, lower, out);
+        continue;
+      }
+      long move = moveFromRoot(trail, vars[i], position, lower);
+      if (move == 0) {
         continue;
       }
       if (keys == null) {
         keys = new long[vars.length];
+        costs = new long[vars.length];
       }
-      keys[n++] = Math.min(w, Integer.MAX_VALUE) << 32 | i;
+      // the slack dropping the term takes; above the slack it can only be weakened
+      costs[i] = move > slack / w ? Long.MAX_VALUE : w * move;
+      keys[n++] = Math.min(costs[i], Integer.MAX_VALUE) << 32 | i;
     }
     if (n == 0) {
       return;
     }
-    Arrays.sort(keys, 0, n);
-    for (int k = n - 1; k >= 0; k--) {
-      int i = (int) keys[k];
+    int k = 0;
+    if (AtomicTrail.lifting()) {
+      Arrays.sort(keys, 0, n);
+      for (; k < n && costs[(int) keys[k]] <= slack; k++) {
+        slack -= costs[(int) keys[k]];
+      }
+    }
+    // the terms left, largest weights first
+    int m = 0;
+    for (int j = k; j < n; j++) {
+      int i = (int) keys[j];
+      keys[m++] = Math.min(Math.abs(weights[i]), Integer.MAX_VALUE) << 32 | i;
+    }
+    Arrays.sort(keys, 0, m);
+    for (int j = m - 1; j >= 0; j--) {
+      int i = (int) keys[j];
       long w = Math.abs(weights[i]);
       boolean lower = upperSide == weights[i] > 0;
-      slack -= w * trail.addBoundWithin(vars[i], position, lower, slack / w, out);
+      if (w > slack) {
+        addBound(trail, vars[i], position, lower, out);
+      } else {
+        slack -= w * trail.addBoundWithin(vars[i], position, lower, slack / w, out);
+      }
+    }
+  }
+
+  // how far a variable's lower (or upper) bound just before a position is from its initial one
+  private static long moveFromRoot(AtomicTrail trail, IntVar x, int position, boolean lower) {
+    return lower
+        ? (long) trail.minBefore(x, position) - trail.rootDomain(x).min()
+        : (long) trail.rootDomain(x).max() - trail.maxBefore(x, position);
+  }
+
+  private static void addBound(
+      AtomicTrail trail, IntVar x, int position, boolean lower, EntryList out) {
+    if (lower) {
+      trail.addLowerBound(x, position, out);
+    } else {
+      trail.addUpperBound(x, position, out);
     }
   }
 

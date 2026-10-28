@@ -157,7 +157,9 @@ public class Options {
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
                 lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
-                more, default 5000)
+                more, default 5000),
+                lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
+                blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
