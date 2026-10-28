@@ -63,6 +63,7 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
@@ -1549,6 +1550,36 @@ class LcgSolverTest {
         solver.setAnnotation(annotation, false);
       }
       assertThat(solver.solve()).isEqualTo(CdclSolver.UNSAT);
+    }
+  }
+
+  /**
+   * Free search branches on the 0/1 variables before the others, as CP-SAT does: here the integer
+   * variable y is first on the heap, and only branching on b first ([b <= 0], then y above 50)
+   * gives b = 0 and y = 51. With the property off, y goes first ([y <= 50] makes b = 1, then y =
+   * 0).
+   */
+  @Test
+  void freeSearchBranchesOnBooleansFirst() {
+    for (boolean first : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", 0, 100);
+      BooleanVar b = new BooleanVar(store, "b");
+      store.impose(new Reified(new XlteqC(y, 50), b));
+      if (!first) {
+        System.setProperty("jacop.lcg.booleansFirst", "false");
+      }
+      LcgSolver solver;
+      try {
+        solver = new LcgSolver(store);
+      } finally {
+        System.clearProperty("jacop.lcg.booleansFirst");
+      }
+      solver.setChecking(true);
+      assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(new int[] {solver.value(b), solver.value(y)})
+          .as("Booleans first: %s", first)
+          .containsExactly(first ? new int[] {0, 51} : new int[] {1, 0});
     }
   }
 
