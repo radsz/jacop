@@ -215,8 +215,8 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       case "jacop_cumulative" -> cumulative(node);
       case "int_lin_le" -> linear(node, false);
       case "int_lin_eq" -> linear(node, true);
-      case "int_le" -> arc(var(node, 0), var(node, 1), 0);
-      case "int_lt" -> arc(var(node, 0), var(node, 1), 1);
+      case "int_le" -> arc(variable(node, 0), variable(node, 1), 0);
+      case "int_lt" -> arc(variable(node, 0), variable(node, 1), 1);
       default -> {
         // not part of a weighted completion time
       }
@@ -227,7 +227,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     return (SimpleNode) node.jjtGetChild(i);
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar variable(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
@@ -236,7 +236,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     IntVar[] s = support.getVarArray(child(node, 0));
     IntVar[] d = support.getVarArray(child(node, 1));
     IntVar[] r = support.getVarArray(child(node, 2));
-    int capacity = var(node, 3).max();
+    int capacity = variable(node, 3).max();
     List<IntVar> starts = new ArrayList<>();
     List<IntVar> durations = new ArrayList<>();
     int least = Integer.MAX_VALUE;
@@ -286,18 +286,19 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     int k = Math.abs(a[0]);
     // k * (x0 - x1) <= c, so x1 >= x0 - floor(c / k); with a negative a[0] the roles swap
-    IntVar from = a[0] > 0 ? x[0] : x[1];
-    IntVar to = a[0] > 0 ? x[1] : x[0];
+    IntVar from = x[a[0] > 0 ? 0 : 1];
+    IntVar to = x[a[0] > 0 ? 1 : 0];
     arc(from, to, -Math.floorDiv(c, k));
     if (equation && c % k == 0) {
       arc(to, from, c / k);
     }
   }
 
-  private void arc(IntVar from, IntVar to, int lag) {
-    if (from != to) {
-      into.computeIfAbsent(to, k -> new ArrayList<>()).add(new Arc(from, lag));
-      outOf.computeIfAbsent(from, k -> new ArrayList<>()).add(to);
+  // an arc of the difference graph: head >= tail + lag
+  private void arc(IntVar tail, IntVar head, int lag) {
+    if (tail != head) {
+      into.computeIfAbsent(head, k -> new ArrayList<>()).add(new Arc(tail, lag));
+      outOf.computeIfAbsent(tail, k -> new ArrayList<>()).add(head);
     }
   }
 
@@ -310,7 +311,6 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     dist.put(x, 0L);
     ArrayDeque<IntVar> queue = new ArrayDeque<>();
     queue.add(x);
-    int work = 0;
     int steps = 0;
     while (!queue.isEmpty() && steps < PATH_BUDGET && work < TOTAL_BUDGET) {
       IntVar v = queue.poll();

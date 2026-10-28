@@ -1736,8 +1736,6 @@ class GlobalConstraintBruteForceTest {
         "strict=" + strict + " repeated=" + repeated);
   }
 
-  // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
-  // last
   // starts s[0..n-1] of tasks that do not overlap, sum of w * (s + d) at most the last
   private static Instance weightedCompletion(Random random) {
     int n = 1 + random.nextInt(4);
@@ -1762,6 +1760,8 @@ class GlobalConstraintBruteForceTest {
         "d=" + Arrays.toString(d) + " w=" + Arrays.toString(w));
   }
 
+  // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
+  // last
   private static Function<Random, Instance> stockingCost(boolean itemDependent) {
     return random -> {
       int n = 1 + random.nextInt(5);

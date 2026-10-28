@@ -211,7 +211,7 @@ public class WeightedCompletion extends Constraint
             double others = bound - (double) weights[i] * s.min();
             long last = (long) Math.floor((cost.max() - others + slack(cost.max())) / weights[i]);
             if (last < s.max()) {
-              s.domain.inMax(store.level, s, (int) Math.max(last, (long) IntDomain.MIN_INT));
+              s.domain.inMax(store.level, s, (int) Math.max(last, IntDomain.MIN_INT));
             }
           }
         } else if (fixedLimit(i, bound, totalWeight)) {
@@ -368,10 +368,9 @@ public class WeightedCompletion extends Constraint
 
       long t = lo;
       while (t <= hi) {
-        limit = hi - t;
+        limit = (double) hi - t;
         simulate(i, t);
-        double c0 =
-            q0 + constant + (double) weights[i] * ((double) t + p) - (double) weights[i] * p / 2.0;
+        double c0 = q0 + constant + (double) weights[i] * (t + p) - (double) weights[i] * p / 2.0;
         double c1 = q1 + weights[i];
         double c2 = q2;
         long length = (long) Math.floor(limit);
@@ -496,7 +495,7 @@ public class WeightedCompletion extends Constraint
   }
 
   private static double value(double c0, double c1, double c2, long delta) {
-    double d = delta;
+    double d = (double) delta;
     return c0 + c1 * d + c2 * d * d;
   }
 
@@ -726,7 +725,7 @@ public class WeightedCompletion extends Constraint
       if (!starts[i].singleton()) {
         return false;
       }
-      total += (long) weights[i] * ((long) starts[i].value() + durations[i]);
+      total += (long) weights[i] * starts[i].value() + (long) weights[i] * durations[i];
     }
     for (int i = 0; i < n; i++) {
       for (int j = i + 1; j < n; j++) {
