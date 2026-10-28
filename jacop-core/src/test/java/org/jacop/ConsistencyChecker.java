@@ -46,6 +46,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
@@ -866,6 +867,29 @@ class ConsistencyChecker {
         x);
   }
 
+  /** alldifferent(x) and sum(x) rel s, rel == or, with inequality set, <= or >=. */
+  private static Model alldiffSum(
+      Store store, Random random, boolean inequality, boolean hallIntervals) {
+    int n = 2 + random.nextInt(4);
+    int lo = random.nextInt(3) - 2;
+    int hi = lo + n + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, lo, hi, random);
+    int rel = inequality ? 1 + random.nextInt(2) : 0;
+    int sLo = n * lo + n * (n - 1) / 2;
+    int sHi = n * hi - n * (n - 1) / 2;
+    IntVar s = var(store, "s", sLo - 2, sHi + 2, random);
+    return new Model(
+        new AlldiffSum(x, rel == 0 ? "==" : rel == 1 ? "<=" : ">=", s, hallIntervals),
+        t -> {
+          if (Arrays.stream(t, 0, n).distinct().count() != n) {
+            return false;
+          }
+          int sum = Arrays.stream(t, 0, n).sum();
+          return rel == 0 ? sum == t[n] : rel == 1 ? sum <= t[n] : sum >= t[n];
+        },
+        concat(x, new IntVar[] {s}));
+  }
+
   /** alldifferent([x, w]) and alldifferent([w, y]) propagated together on the bounds. */
   private static Model overlappingAlldiff(Store store, Random random) {
     int nw = 1 + random.nextInt(3);
@@ -946,6 +970,12 @@ class ConsistencyChecker {
   static List<Case> cases() {
     int[] small = {-4, 4, -4, 4, -8, 8};
     return List.of(
+        // bounds consistency for an inequality (Beldiceanu et al.); an equality filters each side
+        new Case("AlldiffSumLeGe", Level.BOUNDS_Z, (s, r) -> alldiffSum(s, r, true, true)),
+        new Case("AlldiffSumEq", Level.NONE, (s, r) -> alldiffSum(s, r, false, true)),
+        // without the Hall intervals the pruning must stay sound
+        new Case(
+            "AlldiffSumNoHall", Level.NONE, (s, r) -> alldiffSum(s, r, r.nextBoolean(), false)),
         new Case(
             "XplusYeqZ",
             Level.BOUNDS_Z,

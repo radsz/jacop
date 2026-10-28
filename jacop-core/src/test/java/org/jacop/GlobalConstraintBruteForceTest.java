@@ -50,6 +50,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
@@ -204,6 +205,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Alldiff", alldiff("Alldiff")),
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
         Arguments.of("Alldistinct", alldiff("Alldistinct")),
+        Arguments.of("AlldiffSum", alldiffSum(true)),
+        Arguments.of("AlldiffSumNoHall", alldiffSum(false)),
         Arguments.of(
             "OverlappingAlldiff",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::overlappingAlldiff),
@@ -1239,6 +1242,33 @@ class GlobalConstraintBruteForceTest {
   }
 
   /** alldifferent on s and on t; the variables of both are shared, each variable in s or t. */
+  /** alldifferent(x) and sum(x) rel s, the last variable being s. */
+  private static Function<Random, Instance> alldiffSum(boolean hallIntervals) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int lo = random.nextInt(4) - 2;
+      int hi = lo + n + random.nextInt(3);
+      String rel = new String[] {"==", "<=", ">="}[random.nextInt(3)];
+      int[][] d = Arrays.copyOf(domains(random, n, lo, hi), n + 1);
+      d[n] = domain(random, n * lo, n * hi);
+      return new Instance(
+          d,
+          (store, x) -> store.impose(new AlldiffSum(Arrays.copyOf(x, n), rel, x[n], hallIntervals)),
+          x -> {
+            int[] v = Arrays.copyOf(x, n);
+            int sum = Arrays.stream(v).sum();
+            boolean holds =
+                switch (rel) {
+                  case "==" -> sum == x[n];
+                  case "<=" -> sum <= x[n];
+                  default -> sum >= x[n];
+                };
+            return distinct(v) && holds;
+          },
+          rel);
+    };
+  }
+
   private static Instance overlappingAlldiff(Random random) {
     int n = 2 + random.nextInt(6);
     // 0: only s, 1: only t, 2: both
