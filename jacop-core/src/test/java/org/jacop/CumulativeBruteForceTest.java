@@ -182,6 +182,35 @@ class CumulativeBruteForceTest {
                   return c;
                 }),
             new Config(
+                "TT+ER",
+                false,
+                false,
+                v -> {
+                  Cumulative c = (Cumulative) cumulative(v, false, false, false, false, false);
+                  c.doEnergeticReasoning(true);
+                  return c;
+                }),
+            new Config(
+                "all+HEEF+ER",
+                false,
+                false,
+                v -> {
+                  Cumulative c = (Cumulative) cumulative(v, true, true, true, true, false);
+                  c.doHorizontallyElasticEdgeFind(true);
+                  c.doEnergeticReasoning(true);
+                  return c;
+                }),
+            new Config(
+                "optional+ER",
+                true,
+                false,
+                v -> {
+                  CumulativeOptional c =
+                      new CumulativeOptional(v.s(), v.d(), v.r(), v.limit(), v.opt());
+                  c.doEnergeticReasoning(true);
+                  return c;
+                }),
+            new Config(
                 "optional",
                 true,
                 false,
@@ -258,13 +287,20 @@ class CumulativeBruteForceTest {
   @Test
   void rulesAreStrongerThanTimeTable() {
     record Rule(
-        String name, boolean ef, boolean overload, boolean ttef, boolean ttdr, boolean heef) {}
+        String name,
+        boolean ef,
+        boolean overload,
+        boolean ttef,
+        boolean ttdr,
+        boolean heef,
+        boolean er) {}
     List<Rule> rules =
         List.of(
-            new Rule("EF", true, false, false, false, false),
-            new Rule("TTEF", false, false, true, false, false),
-            new Rule("TTDR", false, false, false, true, false),
-            new Rule("HEEF", false, false, false, false, true));
+            new Rule("EF", true, false, false, false, false, false),
+            new Rule("TTEF", false, false, true, false, false, false),
+            new Rule("TTDR", false, false, false, true, false, false),
+            new Rule("HEEF", false, false, false, false, true, false),
+            new Rule("ER", false, false, false, false, false, true));
     Random random = new Random(42);
     int[] stronger = new int[rules.size()];
     for (int trial = 0; trial < 3000; trial++) {
@@ -281,6 +317,7 @@ class CumulativeBruteForceTest {
                           cumulative(
                               v, rule.ef(), rule.overload(), rule.ttef(), rule.ttdr(), false);
                   c.doHorizontallyElasticEdgeFind(rule.heef());
+                  c.doEnergeticReasoning(rule.er());
                   return c;
                 });
         if (base == null) {
@@ -298,6 +335,36 @@ class CumulativeBruteForceTest {
           .as("%s %s", rules.get(k).name(), Arrays.toString(stronger))
           .isPositive();
     }
+  }
+
+  /**
+   * Energetic reasoning keeps a subset of the values that all other rules together keep, at the
+   * root of random instances, and removes more on some of them.
+   */
+  @Test
+  void energeticReasoningPrunesBeyondOtherRules() {
+    Random random = new Random(7);
+    int stronger = 0;
+    for (int trial = 0; trial < 3000; trial++) {
+      Instance instance = instance(random, false, false, 7, 12, Long.MAX_VALUE);
+      Function<Boolean, Function<Vars, Constraint>> make =
+          er ->
+              v -> {
+                Cumulative c = (Cumulative) cumulative(v, true, true, true, true, false);
+                c.doHorizontallyElasticEdgeFind(true);
+                c.doEnergeticReasoning(er);
+                return c;
+              };
+      String base = rootDomains(instance, make.apply(false));
+      String withEr = rootDomains(instance, make.apply(true));
+      if (base == null) {
+        assertThat(withEr).as("%s", instance).isNull();
+      } else if (withEr == null || !withEr.equals(base)) {
+        assertThat(withEr == null || subset(withEr, base, instance)).as("%s", instance).isTrue();
+        stronger++;
+      }
+    }
+    assertThat(stronger).isPositive();
   }
 
   /** Three tasks of energy 4 each cannot fit in [0, 4) with capacity 2; no compulsory parts. */
