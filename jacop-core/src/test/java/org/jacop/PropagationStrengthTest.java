@@ -40,6 +40,7 @@ import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementVariable;
@@ -301,6 +302,30 @@ class PropagationStrengthTest {
     assertThat(removeValues(store, z, 0)).isTrue();
     assertThat(x.dom().toString()).isEqualTo("1");
     assertThat(y.dom().toString()).isEqualTo("{1, 3..4}");
+  }
+
+  // a pass of AmongVar pruned n to 0 after it had looked at Y, and it is not woken by its own
+  // pruning, so y kept the values of the fixed x
+  @Test
+  void testAmongVarPropagatesItsOwnPruningOfTheCount() {
+
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", -1, 4);
+    IntVar x3 = new IntVar(store, "x3", 0, 3);
+    IntVar y = variable(store, "y", -2, 0, 1, 2, 3, 4);
+    IntVar n = variable(store, "n", -1, 0, 2, 3, 4, 5);
+    store.impose(new AmongVar(new IntVar[] {x1, x3}, new IntVar[] {y}, n));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x3.domain.in(store.level, x3, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x1.domain.in(store.level, x1, 4, 4);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(n.dom().toString()).isEqualTo("0");
+    assertThat(y.dom().toString()).isEqualTo("{-2, 1..3}");
   }
 
   /**
