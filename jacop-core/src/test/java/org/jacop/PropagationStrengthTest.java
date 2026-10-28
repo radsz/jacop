@@ -61,6 +61,7 @@ import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.ValuePrecede;
+import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqC;
@@ -230,6 +231,23 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, t, 1)).isTrue();
     return x[0].dom().toString();
+  }
+
+  // the number of different values reads the domains, but Values woke on bounds only
+  @Test
+  void testValuesWakesOnRemovedValue() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", -2, 1), variable(store, "x1", 0), new IntVar(store, "x2", 0, 4)
+    };
+    IntVar count = new IntVar(store, "count", 1, 3);
+    store.impose(new Values(x, count));
+    assertThat(store.consistency()).isTrue();
+    assertThat(count.min()).isOne();
+
+    assertThat(removeValues(store, x[0], 0)).isTrue();
+    assertThat(count.dom().toString()).isEqualTo("{2..3}");
   }
 
   /**
