@@ -31,7 +31,9 @@
 package org.jacop.constraints.lp;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -102,6 +104,11 @@ public class LinearRelaxation extends Constraint
   private int period = 1;
   private int tick;
   private int idle;
+
+  // the largest tableau, rows times columns, that is built, and the tableau entries the pivots of
+  // one propagation below the root may update; the root propagation has the whole pivot limit
+  private static final long MAX_TABLEAU = Long.getLong("org.jacop.lp.maxTableau", 4_000_000L);
+  private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
 
   // the deductions of the current branch, for their explanations: variable, form, level
   private final List<IntVar> deducedVar = new ArrayList<>();
@@ -224,7 +231,8 @@ public class LinearRelaxation extends Constraint
    * @param store the store
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
-   * @return the relaxation, or null when the store has fewer than two rows
+   * @return the relaxation, or null when the store has fewer than two rows or the tableau would
+   *     have more than {@code org.jacop.lp.maxTableau} (4,000,000) entries
    */
   public static LinearRelaxation of(Store store, IntVar objective, boolean maximize) {
     // the constraints of the variables in the store and of the named ones, such as Boolean
@@ -243,11 +251,19 @@ public class LinearRelaxation extends Constraint
       store.watchedConstraints.values().forEach(constraints::addAll);
     }
     List<LinearForm> forms = new ArrayList<>();
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    long rows = 0;
     for (Constraint c : constraints) {
       LinearForm f = LinearForms.of(c);
-      if (f != null) {
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         forms.add(f);
+        vars.addAll(Arrays.asList(f.vars()));
+        rows++;
       }
+    }
+    // the dense tableau has a column for each variable and for each row
+    if (rows * (rows + vars.size() + 1) > MAX_TABLEAU) {
+      return null;
     }
     LinearRelaxation r = new LinearRelaxation(forms, objective, maximize);
     return r.rows() < 2 ? null : r;
@@ -311,7 +327,8 @@ public class LinearRelaxation extends Constraint
     for (int j = 0; j < x.length; j++) {
       lp.setBounds(j, x[j].min(), x[j].max());
     }
-    int status = lp.solve(pivotLimit);
+    long size = (long) rows() * (rows() + x.length);
+    int status = lp.solve(calls == 1 ? pivotLimit : (int) Math.clamp(WORK / size, 5, pivotLimit));
     if (status == DualSimplex.LIMIT) {
       limits++;
       return;
