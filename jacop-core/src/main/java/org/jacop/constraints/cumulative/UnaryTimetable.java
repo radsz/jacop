@@ -105,18 +105,18 @@ final class UnaryTimetable {
    * Prunes the starts of the tasks and the limit against the compulsory parts.
    *
    * @param store the store.
-   * @param tasks the tasks, by index; the tasks from position from on are pruned and make the
-   *     profile, and the tasks before it are fixed tasks that end before all of them start.
-   * @param from the position of the first task to take into account.
+   * @param tasks the indices of the tasks that are pruned and make the profile; the other tasks are
+   *     fixed tasks that end before all of them start.
+   * @param count the number of these tasks.
    * @return false if the resource is not unary for the current limit, and nothing was pruned.
    */
-  boolean prune(Store store, int[] tasks, int from) {
+  boolean prune(Store store, int[] tasks, int count) {
     int limitMax = limit.max();
     if (maxRes > limitMax) {
       // a task that does not fit under the limit overloads the resource wherever it runs
       return false;
     }
-    int parts = sortParts(tasks, from);
+    int parts = sortParts(tasks, count);
     if (parts == 0) {
       return true;
     }
@@ -162,10 +162,9 @@ final class UnaryTimetable {
 
   // sorts the tasks under pruning by latest start, starting from the order of the previous call,
   // and keeps those with a compulsory part; returns their number
-  private int sortParts(int[] tasks, int from) {
+  private int sortParts(int[] tasks, int n) {
     nextStamp();
-    int n = tasks.length;
-    for (int q = from; q < n; q++) {
+    for (int q = 0; q < n; q++) {
       active[tasks[q]] = stamp;
     }
     long[] k = lstKeys;
@@ -177,7 +176,7 @@ final class UnaryTimetable {
         keyed[i] = stamp;
       }
     }
-    for (int q = from; q < n; q++) {
+    for (int q = 0; q < n; q++) {
       int i = tasks[q];
       if (keyed[i] != stamp && dur[i] > 0 && res[i] > 0) {
         k[count++] = i;

@@ -253,8 +253,9 @@ class UnaryReasoning {
    *
    * @param ts the tasks in the normal view.
    * @param tsReversed the same tasks in the reversed view.
-   * @param tasks the indices of the tasks in ts; the tasks from position from on are considered.
-   * @param from the position in tasks of the first task considered.
+   * @param tasks the indices of the tasks in ts to consider, in increasing order: positions break
+   *     ties in the rules, so the tasks keep the relative order they have in ts.
+   * @param count the number of tasks to consider.
    * @param kept receives the tasks loaded.
    * @param keptReversed receives the same tasks in the reversed view.
    * @param leftOut receives the indices of the tasks left out.
@@ -264,17 +265,16 @@ class UnaryReasoning {
       TaskView[] ts,
       TaskView[] tsReversed,
       int[] tasks,
-      int from,
+      int count,
       TaskView[] kept,
       TaskView[] keptReversed,
       int[] leftOut) {
-    int total = ts.length;
-    ensureCapacity(total);
-    int n = total - from;
+    ensureCapacity(ts.length);
+    int n = count;
     // the earliest start of a task that is not fixed
     int cut = Integer.MAX_VALUE;
     for (int r = 0; r < n; r++) {
-      int i = tasks[from + r];
+      int i = tasks[r];
       TaskView t = ts[i];
       int sMin = t.start.min();
       int sMax = t.start.max();
@@ -423,25 +423,12 @@ class UnaryReasoning {
       lst[i] = lct[i] - dur[i];
       ect[i] = est[i] + dur[i];
     }
-    // the orders of the normal view backwards; tasks with equal keys come in the opposite order,
-    // which changes no rule
     if (normal.activeLoad) {
       remapOrders(n, normal.loadedTask);
     } else {
       initOrders(n);
     }
-    reverse(normal.lctOrder, estOrder, n);
-    reverse(normal.estOrder, lctOrder, n);
-    reverse(normal.ectOrder, lstOrder, n);
-    // with a variable duration the ect is not the opposite of the normal lst
-    sortBy(ect, ectOrder, n);
-    sortDecLct(n);
-  }
-
-  private static void reverse(int[] from, int[] to, int n) {
-    for (int m = 0; m < n; m++) {
-      to[m] = from[n - 1 - m];
-    }
+    sortOrders(n);
   }
 
   // insertion sort of order by (key, index), starting from the previous order

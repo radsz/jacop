@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.cumulative;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -90,12 +91,14 @@ public class CumulativeUnary extends Cumulative {
   private int loadedCount;
   private int[] leftOutTasks = new int[0];
   // with all tasks under the rules (no task can have a zero duration or resource use), the tasks
-  // left out stay out in the subtree: tasks[0, leftOut) are left out, tasks[leftOut, n) are not
-  private int[] tasks;
-  private int[] positionOf;
+  // left out stay out in the subtree: leftOutStack[0, leftOut) holds them
+  private int[] leftOutStack;
+  private int[] stackPosition;
   private TimeStamp<Integer> leftOut;
+  // the tasks not left out, in the order of their index, which breaks ties in the rules
+  private int[] activeTasks;
+  private int activeCount;
   private boolean trailLeftOut;
-  private int from;
   private boolean firstLoad;
 
   /**
@@ -266,10 +269,10 @@ public class CumulativeUnary extends Cumulative {
     // time-table fail in the next pass
     leaveOutFixedPrefix = doProfile;
     trailLeftOut = doProfile && !possibleZeroTasks;
-    if (tasks == null) {
+    if (leftOut == null) {
       initTasks(store);
     }
-    from = trailLeftOut ? leftOut.value() : 0;
+    collectActiveTasks();
     do {
 
       store.propagationHasOccurred = false;
@@ -299,10 +302,11 @@ public class CumulativeUnary extends Cumulative {
       if (timetable == null) {
         timetable = newTimetable();
       }
-      if (tasks == null) {
+      if (leftOut == null) {
         initTasks(store);
+        collectActiveTasks();
       }
-      if (timetable.prune(store, tasks, from)) {
+      if (timetable.prune(store, activeTasks, activeCount)) {
         return;
       }
     }
@@ -401,13 +405,26 @@ public class CumulativeUnary extends Cumulative {
 
   private void initTasks(Store store) {
     int n = tvn.length;
-    tasks = new int[n];
-    positionOf = new int[n];
-    for (int i = 0; i < n; i++) {
-      tasks[i] = i;
-      positionOf[i] = i;
-    }
+    leftOutStack = new int[n];
+    stackPosition = new int[n];
+    Arrays.fill(stackPosition, -1);
+    activeTasks = new int[n];
     leftOut = new TimeStamp<>(store, 0);
+  }
+
+  private boolean isLeftOut(int i) {
+    int p = stackPosition[i];
+    return p >= 0 && p < leftOut.value() && leftOutStack[p] == i;
+  }
+
+  private void collectActiveTasks() {
+    int n = tvn.length;
+    activeCount = 0;
+    for (int i = 0; i < n; i++) {
+      if (!trailLeftOut || !isLeftOut(i)) {
+        activeTasks[activeCount++] = i;
+      }
+    }
   }
 
   // loads the bounds of the tasks into both views, leaving out the fixed tasks that end before the
@@ -421,9 +438,11 @@ public class CumulativeUnary extends Cumulative {
         leftOutTasks = new int[n];
       }
       // without trailing, tn holds the tasks that may use the resource now, in positions 0..n-1
-      int[] order = trailLeftOut ? tasks : identity(n);
+      int[] order = trailLeftOut ? activeTasks : identity(n);
+      int count = trailLeftOut ? activeCount : n;
       loadedCount =
-          unaryNormal.loadNormalActive(tn, tr, order, from, keptNormal, keptReversed, leftOutTasks);
+          unaryNormal.loadNormalActive(
+              tn, tr, order, count, keptNormal, keptReversed, leftOutTasks);
       loadedNormal = keptNormal;
       loadedReversed = keptReversed;
       if (trailLeftOut && firstLoad) {
@@ -441,22 +460,20 @@ public class CumulativeUnary extends Cumulative {
     }
   }
 
-  // moves the tasks just left out to the front of tasks and leaves them out in the subtree
+  // leaves the tasks just left out by the rules out in the subtree, and of the time-table
   private void leaveOut(int count) {
     if (count == 0) {
       return;
     }
+    int top = leftOut.value();
     for (int k = 0; k < count; k++) {
       int i = leftOutTasks[k];
-      int p = positionOf[i];
-      int j = tasks[from];
-      tasks[p] = j;
-      positionOf[j] = p;
-      tasks[from] = i;
-      positionOf[i] = from;
-      from++;
+      leftOutStack[top] = i;
+      stackPosition[i] = top;
+      top++;
     }
-    leftOut.update(from);
+    leftOut.update(top);
+    collectActiveTasks();
   }
 
   private int[] identityOrder = new int[0];
