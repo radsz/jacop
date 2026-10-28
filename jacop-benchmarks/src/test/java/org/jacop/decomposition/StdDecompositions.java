@@ -139,6 +139,8 @@ final class StdDecompositions {
     DECOMPOSERS.put("jacop_cumulative", StdDecompositions::cumulative);
     DECOMPOSERS.put("jacop_cumulative_optional", StdDecompositions::cumulative);
     DECOMPOSERS.put("jacop_disjunctive_optional", StdDecompositions::disjunctiveOptional);
+    DECOMPOSERS.put("jacop_alternative", StdDecompositions::alternative);
+    DECOMPOSERS.put("jacop_span", StdDecompositions::span);
     DECOMPOSERS.put("jacop_networkflow", StdDecompositions::networkFlowCost);
     DECOMPOSERS.put("jacop_knapsack", StdDecompositions::knapsack);
     DECOMPOSERS.put("jacop_bin_packing", StdDecompositions::binPackingLoad);
@@ -815,6 +817,59 @@ final class StdDecompositions {
     List<Term> terms = new ArrayList<>(load);
     terms.add(cap);
     b.linear(coefs, terms, "le", 0);
+  }
+
+  /**
+   * fzn_alternative over (occurs, deopt) pairs: sum(p) = p0, p[i] -> (s0 = s[i] /\ d0 = d[i]) and
+   * not p0 -> d0 = 0 (std/fzn_alternative.mzn with span over a single present interval).
+   */
+  static void alternative(FznBuilder b, List<Expr> a) {
+    Term p0 = b.term(a.get(0));
+    Term s0 = b.term(a.get(1));
+    Term d0 = b.term(a.get(2));
+    List<Term> p = b.array(a.get(3));
+    List<Term> s = b.array(a.get(4));
+    List<Term> d = b.array(a.get(5));
+    long[] coefs = new long[p.size() + 1];
+    List<Term> xs = new ArrayList<>();
+    for (int i = 0; i < p.size(); i++) {
+      coefs[i] = 1;
+      xs.add(b.bool2int(p.get(i)));
+      b.clause(List.of(b.eqReif(s0, s.get(i))), List.of(p.get(i)));
+      b.clause(List.of(b.eqReif(d0, d.get(i))), List.of(p.get(i)));
+    }
+    coefs[p.size()] = -1;
+    xs.add(b.bool2int(p0));
+    b.linear(coefs, xs, "eq", 0);
+    b.clause(List.of(p0, b.eqReif(d0, FznBuilder.constant(0))), List.of());
+  }
+
+  /**
+   * fzn_span over (occurs, deopt) pairs (std/fzn_span.mzn): p0 <-> exists(p), not p0 -> d0 = 0, and
+   * for a present master s0 is the least start and s0 + d0 the greatest end of the present
+   * intervals.
+   */
+  static void span(FznBuilder b, List<Expr> a) {
+    Term p0 = b.term(a.get(0));
+    Term s0 = b.term(a.get(1));
+    Term d0 = b.term(a.get(2));
+    List<Term> p = b.array(a.get(3));
+    List<Term> s = b.array(a.get(4));
+    List<Term> d = b.array(a.get(5));
+    b.boolEq(p0, b.or(p));
+    b.clause(List.of(p0, b.eqReif(d0, FznBuilder.constant(0))), List.of());
+    List<Term> starts = new ArrayList<>();
+    List<Term> ends = new ArrayList<>();
+    for (int i = 0; i < p.size(); i++) {
+      List<Term> st = List.of(s0, s.get(i));
+      List<Term> en = List.of(s0, d0, s.get(i), d.get(i));
+      b.clause(List.of(b.linearReif(new long[] {1, -1}, st, "le", 0)), List.of(p.get(i)));
+      b.clause(List.of(b.linearReif(new long[] {-1, -1, 1, 1}, en, "le", 0)), List.of(p.get(i)));
+      starts.add(b.and(List.of(p.get(i), b.linearReif(new long[] {1, -1}, st, "eq", 0))));
+      ends.add(b.and(List.of(p.get(i), b.linearReif(new long[] {1, 1, -1, -1}, en, "eq", 0))));
+    }
+    b.clause(List.of(b.or(starts)), List.of(p0));
+    b.clause(List.of(b.or(ends)), List.of(p0));
   }
 
   /**
