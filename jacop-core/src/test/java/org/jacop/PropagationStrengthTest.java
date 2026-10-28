@@ -41,11 +41,16 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.And;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
@@ -197,6 +202,34 @@ class PropagationStrengthTest {
     assertThat(store.consistency()).isTrue();
     assertThat(removeValues(store, x, -2, -1, 0, 1, 2)).isTrue();
     assertThat(b.dom().toString()).isEqualTo("0");
+  }
+
+  // once only one variable can reach the maximum (minimum) it takes the target's domain, but the
+  // constraints woke on bounds only, so a value removed inside the target's domain stayed
+  @Test
+  void testMaxAndMinWakeOnValueRemovedFromTarget() {
+
+    assertThat(extremumPrunes((x, t) -> new MaxSimple(x[0], x[1], t), -1)).isEqualTo("{0, 2}");
+    assertThat(extremumPrunes((x, t) -> new MinSimple(x[0], x[1], t), 3)).isEqualTo("{0, 2}");
+    assertThat(extremumPrunes((x, t) -> new Max(x, t), -1)).isEqualTo("{0, 2}");
+    assertThat(extremumPrunes((x, t) -> new Min(x, t), 3)).isEqualTo("{0, 2}");
+  }
+
+  /**
+   * Imposes the extremum t of x0 in 0..2 and x1 = other with t in 0..2, removes 1 from inside t and
+   * returns the domain of x0.
+   */
+  private static String extremumPrunes(
+      BiFunction<IntVar[], IntVar, Constraint> extremum, int other) {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), variable(store, "x1", other)};
+    IntVar t = new IntVar(store, "t", 0, 2);
+    store.impose(extremum.apply(x, t));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(removeValues(store, t, 1)).isTrue();
+    return x[0].dom().toString();
   }
 
   /**

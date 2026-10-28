@@ -37,6 +37,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -115,6 +116,17 @@ public class MinSimple extends Constraint
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    // once one of x1 and x2 is above min, the other takes the domain of min, so a value
+    // removed inside the domain of min must wake the constraint as well
+    if (v == min
+        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))) {
+      return IntDomain.ANY;
+    }
+    return super.getConsistencyPruningEvent(v);
   }
 
   /**
