@@ -79,6 +79,7 @@ public class Options {
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean symmetry = true;
+  boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
   boolean complementarySearch;
   float decay = 0.99f;
@@ -157,6 +158,8 @@ public class Options {
             --symmetry <value> with presolve, break the variable symmetries of the model with
                 lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
                 problem asks for more than one solution (-a, -n).
+            --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
+                run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
             -cs, --complementary-search - gathers all model, non-defined
@@ -200,6 +203,7 @@ public class Options {
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
+      case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
@@ -307,6 +311,15 @@ public class Options {
       case "on" -> symmetry = true;
       case "off" -> symmetry = false;
       default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveDual(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> presolveDual = true;
+      case "off" -> presolveDual = false;
+      default -> System.err.println("%% Presolve dual mode " + args[i] + " not known; ignored");
     }
     return i + 1;
   }
@@ -644,6 +657,16 @@ public class Options {
    */
   public boolean symmetry() {
     return symmetry;
+  }
+
+  /**
+   * It defines whether presolve may use dual reductions (--presolve-dual); they run only when the
+   * search wants one solution or an optimum.
+   *
+   * @return true unless switched off
+   */
+  public boolean presolveDual() {
+    return presolveDual;
   }
 
   /**

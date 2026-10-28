@@ -77,6 +77,7 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
@@ -865,6 +866,25 @@ class ConsistencyChecker {
         x);
   }
 
+  /** alldifferent([x, w]) and alldifferent([w, y]) propagated together on the bounds. */
+  private static Model overlappingAlldiff(Store store, Random random) {
+    int nw = 1 + random.nextInt(3);
+    int nx = 1 + random.nextInt(2);
+    int ny = 1 + random.nextInt(2);
+    int hi = nw + Math.max(nx, ny) + random.nextInt(2);
+    IntVar[] w = vars(store, "w", nw, 0, hi, random);
+    IntVar[] x = vars(store, "x", nx, 0, hi, random);
+    IntVar[] y = vars(store, "y", ny, 0, hi, random);
+    IntVar[] s = concat(x, w);
+    IntVar[] t = concat(w, y);
+    return new Model(
+        new OverlappingAlldiff(s, t),
+        v ->
+            Arrays.stream(v, 0, nx + nw).distinct().count() == nx + nw
+                && Arrays.stream(v, nx, nx + nw + ny).distinct().count() == nw + ny,
+        concat(x, w, y));
+  }
+
   /**
    * Member over a list that may repeat variables and contain the element itself, plain, negated or
    * reified.
@@ -1104,6 +1124,8 @@ class ConsistencyChecker {
             Level.DOMAIN,
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
+        // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
+        new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
         new Case("Member", Level.DOMAIN, (s, r) -> member(s, r, "plain")),
         new Case("ReifiedMember", Level.DOMAIN, (s, r) -> member(s, r, "reified")),

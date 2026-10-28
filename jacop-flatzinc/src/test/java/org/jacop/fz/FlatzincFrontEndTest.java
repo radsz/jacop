@@ -170,6 +170,28 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void productOfZeroOneVariableAndConstantHasOnlyTwoValues() throws IOException {
+    // y2 = 7 * b2 cannot be 5, so only y1 = 5 * b1 can give the 5 the count needs and b1 = 1.
+    // XmulCeqZ is bounds consistent and left y2 in 0..7, which needed a failed decision b1 = 0
+    // (vaccine, fixed search).
+    String fzn =
+        """
+        var 0..1: b1:: output_var;
+        var 0..1: b2:: output_var;
+        var 0..5: y1;
+        var 0..7: y2;
+        constraint int_lin_eq([5,-1],[b1,y1],0);
+        constraint int_lin_eq([7,-1],[b2,y2],0);
+        constraint jacop_count_values_bounds([y1,y2],[5],[1],[2]);
+        solve :: int_search([b1,b2],input_order,indomain_min,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("b1 = 1;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
     // x1 and x3 have no common value, so b must be false before any search. Three variables
     // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and
@@ -298,6 +320,32 @@ class FlatzincFrontEndTest {
         """;
 
     assertEquals(List.of("x = 0;", "x = 1;"), solveAllInOrder(fzn));
+  }
+
+  @Test
+  void twoImplicationsOfTheSameEqualityKeepTheirBooleansIndependent() throws IOException {
+    // int_eq_imp(x,0,a) and int_eq_imp(x,0,b) were collected as one channel and a = b was posted,
+    // as for reifications; with a false and the clause a \/ b the 2021 Challenge model
+    // flowshop-workers failed at the root on all its instances
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: x:: output_var;
+        constraint int_eq_imp(x,0,a);
+        constraint int_eq_imp(x,0,b);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        List.of(
+            "a = false; b = false; x = 0;",
+            "a = false; b = false; x = 1;",
+            "a = false; b = false; x = 2;",
+            "a = false; b = true; x = 0;",
+            "a = true; b = false; x = 0;",
+            "a = true; b = true; x = 0;"),
+        solveAllInOrder(fzn).stream().sorted().toList());
   }
 
   @Test

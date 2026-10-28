@@ -59,8 +59,12 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XltC;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -184,6 +188,105 @@ class PresolveTest {
     assertThat(derivation.get(w).max()).isEqualTo(8);
   }
 
+  @Test
+  void orderReificationsOfOneVariableBecomeOneChannel() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    BooleanVar[] b = new BooleanVar[4];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new BooleanVar(store, "b" + i);
+    }
+    store.impose(new Reified(new XlteqC(x, 3), b[0]));
+    store.impose(new Reified(new XltC(x, 6), b[1]));
+    store.impose(new Reified(new XgteqC(x, 2), b[2]));
+    store.impose(new Reified(new XgtC(x, 7), b[3]));
+    // the only order reification of y stays as it is
+    store.impose(new Reified(new XlteqC(y, 4), b[0]));
+
+    Derivation derivation = Presolver.of(store).presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    // the four reifications of x are left out of the child, which gets one channel instead
+    assertThat(derivation.statistics().dropped()).isEqualTo(4);
+    assertThat(derivation.statistics().childConstraints()).isEqualTo(2);
+    Store child = derivation.child();
+    IntVar cx = derivation.get(x);
+    child.setLevel(1);
+    cx.domain.in(child.level, cx, 4, 5);
+    assertThat(child.consistency()).isTrue();
+    assertThat(
+            Arrays.stream(b)
+                .map(v -> derivation.get(v))
+                .mapToInt(v -> v.singleton() ? v.value() : -1))
+        .containsExactly(0, 1, 1, 0);
+    assertThat(derivation.get(y).max()).isEqualTo(9);
+
+    // a derivation without the standard rules keeps the reifications
+    assertThat(Derivation.of(rebuilt(b.length)).derive().statistics().childConstraints())
+        .isEqualTo(b.length);
+    assertThat(Presolver.of(rebuilt(b.length)).presolve().statistics().childConstraints())
+        .isEqualTo(1);
+  }
+
+  private static Store rebuilt(int booleans) {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    for (int i = 0; i < booleans; i++) {
+      store.impose(new Reified(new XlteqC(x, i), new BooleanVar(store, "b" + i)));
+    }
+    return store;
+  }
+
+  @Test
+  void randomOrderReificationsHaveTheSameSolutionsThroughPresolve() {
+    Random random = new Random(20261027);
+    // reifications left out of the child, merged into a channel or entailed
+    int dropped = 0;
+    for (int trial = 0; trial < TRIALS; trial++) {
+      // the reifications are on the first one or two variables; random constraints need three
+      int n = 1 + random.nextInt(2);
+      int[][] domains = new int[3][];
+      for (int i = 0; i < domains.length; i++) {
+        domains[i] = new int[] {0, 3 + random.nextInt(3)};
+      }
+      int booleans = 2 + random.nextInt(3);
+      int reifications = 2 + random.nextInt(5);
+      boolean extra = random.nextBoolean();
+      long seed = random.nextLong();
+      Model model =
+          new Model(
+              domains,
+              booleans,
+              vars -> {
+                Random r = new Random(seed);
+                for (int k = 0; k < reifications; k++) {
+                  IntVar x = vars.x()[r.nextInt(n)];
+                  int c = r.nextInt(5);
+                  PrimitiveConstraint order =
+                      switch (r.nextInt(4)) {
+                        case 0 -> new XlteqC(x, c);
+                        case 1 -> new XltC(x, c);
+                        case 2 -> new XgteqC(x, c);
+                        default -> new XgtC(x, c);
+                      };
+                  vars.store().impose(new Reified(order, vars.b()[r.nextInt(vars.b().length)]));
+                }
+                if (extra) {
+                  vars.store().impose(randomConstraint(r, vars));
+                }
+              });
+      Set<List<Integer>> expected = solveDirectly(model);
+      boolean checking = trial % 2 == 0;
+      Result result = solveThroughPresolve(model, checking, -1, 0, random.nextInt());
+      assertThat(result.solutions())
+          .as("trial %d, checking %b", trial, checking)
+          .isEqualTo(expected);
+      dropped += result.dropped();
+    }
+    assertThat(dropped).isGreaterThan(TRIALS);
+  }
+
   // a derived variable keeps the static degree of its parent, which degree-based selections read
   @Test
   void derivedVariablesKeepTheStaticDegreeOfTheParent() {
@@ -262,10 +365,10 @@ class PresolveTest {
     store.impose(new XltY(x, w));
     // the first rule only applies once the second has fixed x and propagation has run
     Derivation derivation =
-        Presolver.of(store)
+        Derivation.of(store)
             .rule(equalOnceFixed(x, y))
             .rule(context -> x.domain.in(context.level(), x, 4, 4))
-            .presolve();
+            .derive();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     // round 1 fixes x, round 2 fixes y and so z, round 3 changes nothing
@@ -341,7 +444,7 @@ class PresolveTest {
     IntVar y = new IntVar(store, "y", 0, 9);
     store.impose(new XltY(x, y));
     Derivation derivation =
-        Presolver.of(store).rounds(4).rule(context -> context.impose(new XltY(x, y))).presolve();
+        Derivation.of(store).rounds(4).rule(context -> context.impose(new XltY(x, y))).derive();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     assertThat(derivation.rounds()).isEqualTo(4);
@@ -367,7 +470,8 @@ class PresolveTest {
     IntVar y = new IntVar(store, "y", 0, 9);
     store.impose(new XltY(x, y));
 
-    assertThat(Presolver.of(store).presolve().rounds()).isZero();
+    // a derivation without rules; the presolver adds the standard ones
+    assertThat(Derivation.of(store).derive().rounds()).isZero();
   }
 
   @Test
@@ -630,7 +734,12 @@ class PresolveTest {
     assertThat(store.model()).isEmpty();
   }
 
-  private record Result(Derivation.Outcome outcome, Set<List<Integer>> solutions) {}
+  private record Result(Derivation.Outcome outcome, Set<List<Integer>> solutions, int dropped) {
+
+    Result(Derivation.Outcome outcome, Set<List<Integer>> solutions) {
+      this(outcome, solutions, 0);
+    }
+  }
 
   private static Model randomModel(Random random) {
     int n = 3 + random.nextInt(3);
@@ -762,7 +871,7 @@ class PresolveTest {
           }
         });
     derivation.discard();
-    return new Result(derivation.outcome(), found);
+    return new Result(derivation.outcome(), found, derivation.statistics().dropped());
   }
 
   private static IntVar[] decisions(Model.Vars vars) {
