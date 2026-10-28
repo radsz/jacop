@@ -112,10 +112,12 @@ public class LinearRelaxation extends Constraint
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
-  // its pivots update and is skipped while the credit is negative, and a solve that deduces
-  // something fills the credit, so a relaxation that finds nothing costs a bounded share of the
-  // search
+  // its pivots update, a solve that only tightens bounds a PRUNE_DISCOUNT-th of them, and a solve
+  // that fails the node fills the credit; while the credit is negative the relaxation is not
+  // solved,
+  // so a relaxation that finds little costs a bounded share of the search
   private static final long WORK_PER_CALL = Long.getLong("org.jacop.lp.workPerCall", 4096L);
+  private static final long PRUNE_DISCOUNT = Long.getLong("org.jacop.lp.pruneDiscount", 16L);
   private long credit = WORK;
 
   // the solves in a row stopped at the pivot limit; after IDLE_RUNS of them the simplex is taken to
@@ -320,18 +322,24 @@ public class LinearRelaxation extends Constraint
       return;
     }
     tick = 0;
-    long before = prunings + failures;
+    long failed = failures;
+    long pruned = prunings;
     long pivots = lp.totalPivots;
     try {
       solveAndPropagate(store);
     } finally {
+      long cost = (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + x.length));
       // back off while the relaxation finds nothing, come back as soon as it does
-      if (prunings + failures > before) {
+      if (failures > failed) {
         idle = 0;
         period = Math.max(1, period / 2);
         credit = WORK;
+      } else if (prunings > pruned) {
+        idle = 0;
+        period = Math.max(1, period / 2);
+        credit -= PRUNE_DISCOUNT == 0 ? 0 : cost / PRUNE_DISCOUNT;
       } else {
-        credit -= (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + x.length));
+        credit -= cost;
         if (++idle >= IDLE_RUNS && period < MAX_PERIOD) {
           idle = 0;
           period *= 2;
