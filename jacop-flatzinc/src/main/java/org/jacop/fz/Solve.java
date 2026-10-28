@@ -68,9 +68,12 @@ import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.presolve.AtMostOneRule;
+import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
+import org.jacop.presolve.Rule;
 import org.jacop.presolve.Tabling;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
@@ -442,6 +445,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
       s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
       s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
+    }
+    for (Rule rule : d.rules()) {
+      if (!(rule instanceof AtMostOneRule r)) {
+        continue;
+      }
+      AtMostOnes.Statistics amo = r.statistics();
+      s.append("%%%mzn-stat: presolveAtMostOnes=").append(amo.atMostOnes()).append('\n');
+      s.append("%%%mzn-stat: presolveCliques=").append(amo.cliques()).append('\n');
+      s.append("%%%mzn-stat: presolveExactlyOnes=").append(amo.exactlyOnes()).append('\n');
+      s.append("%%%mzn-stat: presolveCliqueReplaced=").append(amo.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveCliqueFixed=").append(amo.fixed()).append('\n');
     }
     s.append("%%%mzn-stat-end");
     IO.println(s.toString());
