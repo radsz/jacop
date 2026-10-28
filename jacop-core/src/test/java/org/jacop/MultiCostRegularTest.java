@@ -170,13 +170,9 @@ class MultiCostRegularTest {
     // windows inside the costs of the accepted words make the resources conflict
     Set<List<Integer>> words = bruteForce(free, domains);
     for (int r = 0; r < resources; r++) {
-      int lo = 0;
-      int hi = 0;
-      if (!words.isEmpty()) {
-        final int k = n + r;
-        lo = words.stream().mapToInt(s -> s.get(k)).min().getAsInt();
-        hi = words.stream().mapToInt(s -> s.get(k)).max().getAsInt();
-      }
+      final int k = n + r;
+      int lo = words.stream().mapToInt(s -> s.get(k)).min().orElse(0);
+      int hi = words.stream().mapToInt(s -> s.get(k)).max().orElse(0);
       int a = lo + random.nextInt(hi - lo + 1);
       int b = lo + random.nextInt(hi - lo + 1);
       domains[n + r] =
