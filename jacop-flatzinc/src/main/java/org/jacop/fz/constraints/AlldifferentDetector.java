@@ -342,5 +342,6 @@ public class AlldifferentDetector implements ParserTreeConstants {
       FzConsole.println("% alldifferent on " + clique.length + " variables");
     }
     support.delayedConstraints.add(new Alldiff(x).setDegreeWeight(0));
+    support.detectedAlldifferentLists.add(x);
   }
 }

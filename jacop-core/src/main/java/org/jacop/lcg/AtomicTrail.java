@@ -91,6 +91,10 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int[] shadowMax = new int[0];
   private IntDomain[] root = new IntDomain[0]; // the domain when recording started
   private int[] last = new int[0];
+  // the variable's GE entries (at 2 * id) and LE entries (at 2 * id + 1) in trail order, so that
+  // the bound before a position is found by binary search instead of a walk along the chain
+  private int[][] bounds = new int[0][];
+  private int[] numBounds = new int[0];
 
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
@@ -116,6 +120,32 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         .forEach(this::slot);
     store.domainChangeRecorder = this;
     store.registerRemoveLevelLateListener(this);
+  }
+
+  /**
+   * Domains with more values than this keep only the bounds of a domain {@link #in} copies into
+   * them while the changes are recorded; {@code -Djacop.lcg.holeLimit} changes it.
+   */
+  public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 10_000);
+
+  /**
+   * Intersects the domain of x with d, as {@code x.domain.in} does, but while a trail records the
+   * changes and x has more than {@link #HOLE_LIMIT} values only with d's bounds. Every value
+   * removed between the bounds is a {@code !=} atom with its own literals, so copying a sparse
+   * domain into a large one (an equality between a variable of millions of values and one of a few)
+   * would make millions of them. The weaker pruning is sound; the holes come once x is small
+   * enough.
+   *
+   * @param store the store
+   * @param x the variable
+   * @param d the domain x is restricted to
+   */
+  public static void in(Store store, IntVar x, IntDomain d) {
+    if (store.domainChangeRecorder != null && x.getSize() > HOLE_LIMIT) {
+      x.domain.in(store.level, x, d.min(), d.max());
+    } else {
+      x.domain.in(store.level, x, d);
+    }
   }
 
   /** Stops recording. */
@@ -152,6 +182,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       root = Arrays.copyOf(root, n);
       last = Arrays.copyOf(last, n);
       Arrays.fill(last, old, n, -1);
+      bounds = Arrays.copyOf(bounds, 2 * n);
+      numBounds = Arrays.copyOf(numBounds, 2 * n);
     }
     if (root[i] == null) {
       root[i] = x.dom().cloneLight();
@@ -331,6 +363,15 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     reason[size] = store.currentConstraint;
     previous[size] = last[i];
     last[i] = size;
+    if (k != NE) {
+      int b = 2 * i + k;
+      if (bounds[b] == null) {
+        bounds[b] = new int[8];
+      } else if (numBounds[b] == bounds[b].length) {
+        bounds[b] = Arrays.copyOf(bounds[b], 2 * numBounds[b]);
+      }
+      bounds[b][numBounds[b]++] = size;
+    }
     size++;
   }
 
@@ -341,6 +382,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       IntVar x = entryVar[size];
       int i = id(x);
       last[i] = previous[size];
+      if (kind[size] != NE) {
+        numBounds[2 * i + kind[size]]--;
+      }
       if (last[i] < 0 || level[last[i]] < removedLevel) {
         setShadow(i, x.dom()); // the variable's last removed entry: its domain is restored
       }
@@ -474,6 +518,25 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   private int latest(IntVar x, int position, int k) {
+    if (k != NE) {
+      int b = 2 * id(x) + k;
+      if (b >= numBounds.length) {
+        return -1;
+      }
+      // the last of the variable's k entries before the position
+      int[] list = bounds[b];
+      int lo = 0;
+      int hi = numBounds[b] - 1;
+      while (lo <= hi) {
+        int mid = (lo + hi) >>> 1;
+        if (list[mid] < position) {
+          lo = mid + 1;
+        } else {
+          hi = mid - 1;
+        }
+      }
+      return hi >= 0 ? list[hi] : -1;
+    }
     int e = lastBefore(x, position);
     while (e >= 0 && kind[e] != k) {
       e = previous[e];
