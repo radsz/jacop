@@ -87,6 +87,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
@@ -930,6 +931,94 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(1000);
     assertThat(own).isGreaterThan(50 * generic);
+  }
+
+  /**
+   * Random knapsacks over the variables, with a capacity and a profit that are variables of the
+   * problem, against brute force. Knapsack explains the bounds of its linear relaxation by
+   * surrogate rows, which are checked to imply the atom; prunings of its dynamic program keep the
+   * generic reason.
+   */
+  @Test
+  void knapsackAgreesWithBruteForce() {
+    Random rnd = new Random(47);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      int k = 3 + rnd.nextInt(2);
+      int[] w = new int[k];
+      int[] p = new int[k];
+      IntVar[] q = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        w[i] = 1 + rnd.nextInt(4);
+        p[i] = 1 + rnd.nextInt(4);
+        q[i] = x[i];
+        // quantities are not negative
+        q[i].domain.in(store.level, q[i], 0, Math.min(q[i].max(), 1 + rnd.nextInt(2)));
+      }
+      int c = k;
+      int f = k + 1;
+      for (IntVar v : new IntVar[] {x[c], x[f]}) {
+        v.domain.in(store.level, v, 0, v.max() + 3 * rnd.nextInt(3));
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Knapsack(p, w, q, x[c], x[f]),
+              t -> {
+                long weight = 0;
+                long profit = 0;
+                for (int i = 0; i < k; i++) {
+                  weight += (long) w[i] * t[i];
+                  profit += (long) p[i] * t[i];
+                }
+                return weight == t[c] && profit == t[f];
+              }));
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Knapsack");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "knapsack: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(100);
   }
 
   // a cardinality constraint over 3 or 4 of the variables

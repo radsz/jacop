@@ -129,6 +129,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
@@ -416,7 +417,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(74)) {
+      return switch (rnd.nextInt(75)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -588,6 +589,14 @@ class LcgFuzzTest {
         case 72 ->
             new CountValues(
                 q, rnd.nextBoolean() ? chain("cv", 2, 0, 3) : pick(x, 2), new int[] {2, 0});
+        case 73 ->
+            // 0/1 items shared with the model, or quantities up to 2
+            new Knapsack(
+                new int[] {3, 2, 4},
+                new int[] {2, 2, 3},
+                rnd.nextBoolean() ? pick(b, 3) : chain("kq", 3, 0, 2),
+                intVar("kc", 0, 2 + rnd.nextInt(5)),
+                intVar("kp", rnd.nextInt(5), 12));
         case 63 ->
             new LinearIntDom(
                 p,
