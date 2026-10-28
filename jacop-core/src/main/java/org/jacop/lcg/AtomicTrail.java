@@ -523,6 +523,72 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Adds to {@code out} the earliest entry of a variable's bound before trail position {@code
+   * position} that still reaches {@code limit} (a lower bound of at least it, or an upper bound of
+   * at most it), unless the initial bound already does: the weakest atom on the trail that serves.
+   * Explanations weaken bounds this way where the propagation leaves slack (lifting).
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param lower whether it is the lower bound, else the upper bound
+   * @param limit the weakest bound that serves; the bound just before the position reaches it
+   * @param out where the entry is added
+   * @return the bound added, or the initial bound
+   */
+  public int addBoundReaching(IntVar x, int position, boolean lower, long limit, EntryList out) {
+    int e = latest(x, position, lower ? GE : LE);
+    return addWeakest(x, e, lower, limit, out);
+  }
+
+  /**
+   * Adds to {@code out} the earliest entry of a variable's bound before trail position {@code
+   * position} that is at most {@code room} weaker than the bound just before it, as {@link
+   * #addBoundReaching} does with the limit that far from the current bound.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param lower whether it is the lower bound, else the upper bound
+   * @param room how much weaker the cited bound may be, at least 0
+   * @param out where the entry is added
+   * @return how much weaker the cited bound (or the initial one) is than the current bound
+   */
+  public long addBoundWithin(IntVar x, int position, boolean lower, long room, EntryList out) {
+    int e = latest(x, position, lower ? GE : LE);
+    int now = e >= 0 ? value[e] : lower ? root[slot(x)].min() : root[slot(x)].max();
+    int used = addWeakest(x, e, lower, lower ? now - room : now + room, out);
+    return Math.abs((long) now - used);
+  }
+
+  // lifted reasons: bounds weakened as far as the propagation allows, unless -Djacop.lcg.lift=false
+  private static final boolean LIFTING = !"false".equals(System.getProperty("jacop.lcg.lift"));
+
+  // adds the earliest entry of e's kind, from e back, that still reaches limit; e < 0 for none
+  private int addWeakest(IntVar x, int e, boolean lower, long limit, EntryList out) {
+    int rootBound = lower ? root[slot(x)].min() : root[slot(x)].max();
+    if (e < 0) {
+      return rootBound;
+    }
+    if (!LIFTING) {
+      out.add(e);
+      return value[e];
+    }
+    if (lower ? rootBound >= limit : rootBound <= limit) {
+      return rootBound;
+    }
+    int k = kind[e];
+    for (int f = previous[e]; f >= 0; f = previous[f]) {
+      if (kind[f] == k) {
+        if (lower ? value[f] < limit : value[f] > limit) {
+          break;
+        }
+        e = f;
+      }
+    }
+    out.add(e);
+    return value[e];
+  }
+
+  /**
    * Returns a variable's minimum just before a trail position.
    *
    * @param x the variable

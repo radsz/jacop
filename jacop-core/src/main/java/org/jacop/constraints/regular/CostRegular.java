@@ -286,6 +286,36 @@ public class CostRegular extends Constraint
     setScope(Stream.concat(Arrays.stream(list), Stream.of(cost)));
   }
 
+  /**
+   * It constructs a cost constraint over a layered graph that a subclass gives in {@link
+   * #buildGraph()} through {@link #installGraph(int[], int[], int[])}, instead of an automaton.
+   *
+   * @param list the variables, the i-th of them labels the edges of the i-th layer, without
+   *     duplicates.
+   * @param cost the variable equal to the sum of the costs of the edges of the path.
+   */
+  protected CostRegular(IntVar[] list, IntVar cost) {
+    checkInputForNullness(new String[] {"list", "cost"}, new Object[][] {list, {cost}});
+    checkInputForDuplicationSkipSingletons("list", list);
+    for (IntVar x : list) {
+      if (x == cost && !cost.singleton()) {
+        throw new IllegalArgumentException(
+            getClass().getSimpleName() + ": cost must not be one of the variables in list");
+      }
+    }
+    this.queueIndex = 1;
+    this.numberId = idNumber.incrementAndGet();
+    this.list = Arrays.copyOf(list, list.length);
+    this.cost = cost;
+    this.transition = null;
+    this.firstValue = 0;
+    this.initialState = -1;
+    this.finalStates = null;
+    this.costs = null;
+
+    setScope(Stream.concat(Arrays.stream(list), Stream.of(cost)));
+  }
+
   private static int[][][] repeat(int[][] costs, IntVar[] list) {
     if (list == null) {
       throw new IllegalArgumentException("CostRegular: list is null");
@@ -298,9 +328,10 @@ public class CostRegular extends Constraint
   /**
    * It unfolds the automaton into the layered graph. A forward pass collects the states reachable
    * at each level, a backward pass keeps the states from which a final state can be reached, and
-   * the edges between kept states are created level by level.
+   * the edges between kept states are created level by level. A subclass that describes its graph
+   * in another way overrides it and calls {@link #installGraph(int[], int[], int[])}.
    */
-  private void buildGraph() {
+  protected void buildGraph() {
     int levels = list.length;
     int states = transition.length;
     int symbols = transition[0].length;
@@ -444,6 +475,67 @@ public class CostRegular extends Constraint
 
     edge = Arrays.copyOf(edges, 4 * edgeCount);
     slotValue = Arrays.copyOf(slots, slotCount);
+    allocate(nodes, slotCount);
+  }
+
+  /**
+   * It installs a layered graph given by a subclass. Level 0 must hold only the source (node 0) or
+   * no node at all, which makes the constraint fail, and every node of the last level is a sink.
+   *
+   * @param nodeStart the nodes of level l are nodeStart[l]..nodeStart[l+1]-1, for the levels 0 to
+   *     list.length.
+   * @param edgeStart the edges of level l, which go from a node of level l to a node of level l +
+   *     1, are edgeStart[l]..edgeStart[l+1]-1, for the levels 0 to list.length - 1.
+   * @param edges four ints per edge: its source, its target, its value (of the variable of its
+   *     level) and its cost.
+   */
+  protected final void installGraph(int[] nodeStart, int[] edgeStart, int[] edges) {
+    int levels = list.length;
+    if (nodeStart.length != levels + 2 || edgeStart.length != levels + 1) {
+      throw new IllegalArgumentException("CostRegular: graph without one layer per variable");
+    }
+    if (nodeStart[1] > 1) {
+      throw new IllegalArgumentException("CostRegular: graph with more than one source");
+    }
+    this.levelNodeStart = Arrays.copyOf(nodeStart, nodeStart.length);
+    this.edgeStart = Arrays.copyOf(edgeStart, edgeStart.length);
+    this.edge = Arrays.copyOf(edges, 4 * edgeStart[levels]);
+    this.levelSlotStart = new int[levels + 1];
+    // Slots of a level: its distinct values in increasing order.
+    int[] slots = new int[16];
+    int slotCount = 0;
+    for (int level = 0; level < levels; level++) {
+      levelSlotStart[level] = slotCount;
+      int first = edgeStart[level];
+      int count = edgeStart[level + 1] - first;
+      int[] values = new int[count];
+      for (int i = 0; i < count; i++) {
+        values[i] = edge[4 * (first + i) + 2];
+      }
+      Arrays.sort(values);
+      int distinct = 0;
+      for (int i = 0; i < count; i++) {
+        if (i == 0 || values[i] != values[i - 1]) {
+          values[distinct++] = values[i];
+        }
+      }
+      if (slotCount + distinct > slots.length) {
+        slots = Arrays.copyOf(slots, Math.max(2 * slots.length, slotCount + distinct));
+      }
+      System.arraycopy(values, 0, slots, slotCount, distinct);
+      for (int i = 0; i < count; i++) {
+        int p = 4 * (first + i) + 2;
+        edge[p] = slotCount + Arrays.binarySearch(values, 0, distinct, edge[p]);
+      }
+      slotCount += distinct;
+    }
+    levelSlotStart[levels] = slotCount;
+    this.slotValue = Arrays.copyOf(slots, slotCount);
+    allocate(nodeStart[levels + 1], slotCount);
+  }
+
+  private void allocate(int nodes, int slotCount) {
+    int levels = list.length;
     alive = new int[levels];
     for (int level = 0; level < levels; level++) {
       alive[level] = edgeStart[level + 1] - edgeStart[level];

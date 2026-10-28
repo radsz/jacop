@@ -805,6 +805,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_cost_regular(n);
   }
 
+  /** Handles the jacop_cost_mdd FlatZinc constraint. */
+  public void jacop_cost_mdd(SimpleNode n) {
+    gc.gen_jacop_cost_mdd(n);
+  }
+
   /** Handles the jacop_mdd FlatZinc constraint. */
   public void jacop_mdd(SimpleNode n) {
     gc.gen_jacop_mdd(n);
@@ -1147,6 +1152,11 @@ public final class ConstraintFncs {
   /** Handles the jacop_link_set_to_booleans FlatZinc constraint. */
   public void jacop_link_set_to_booleans(SimpleNode n) {
     sc.gen_link_set_to_booleans(n);
+  }
+
+  /** Handles the jacop_all_disjoint FlatZinc constraint. */
+  public void jacop_all_disjoint(SimpleNode n) {
+    sc.gen_all_disjoint(n);
   }
 
   /** Handles the jacop_partition_set FlatZinc constraint. */

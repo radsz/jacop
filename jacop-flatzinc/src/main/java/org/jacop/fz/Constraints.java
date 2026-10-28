@@ -45,6 +45,7 @@ import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
+import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
@@ -169,6 +170,10 @@ public class Constraints implements ParserTreeConstants {
 
     if (DisjunctiveCliqueDetector.enabled()) {
       new DisjunctiveCliqueDetector(support).detect(astTree);
+    }
+
+    if (WeightedCompletionDetector.enabled()) {
+      new WeightedCompletionDetector(support).detect(astTree);
     }
 
     if (CardinalityDetector.enabled()) {

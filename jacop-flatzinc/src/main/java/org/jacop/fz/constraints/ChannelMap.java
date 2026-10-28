@@ -63,8 +63,13 @@ class ChannelMap {
   }
 
   public void add(IntVar x, int v, IntVar b) {
-    collected.add(new Entry(x, v, b));
     Map<Integer, IntVar> map = cs.get(x);
+
+    if (map != null && map.get(v) != null && !mergesDuplicates()) {
+      // not collected, so the constraint is posted on its own
+      return;
+    }
+    collected.add(new Entry(x, v, b));
 
     if (map != null) {
       if (map.get(v) != null) {
@@ -78,6 +83,17 @@ class ChannelMap {
       map.put(v, b);
       cs.put(x, map);
     }
+  }
+
+  /**
+   * Whether a second Boolean for the same x = v is made equal to the first one. True for
+   * reifications, where both are equivalent to x = v; implications b -> (x = v) only share the
+   * consequence, so their Booleans stay independent.
+   *
+   * @return true if Booleans of the same pair are merged
+   */
+  boolean mergesDuplicates() {
+    return true;
   }
 
   /**
