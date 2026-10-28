@@ -815,6 +815,11 @@ public class Cumulative extends CumulativeBasic {
   }
 
   @Override
+  CumulativeBasic withTasks(IntVar[] s, IntVar[] d, IntVar[] r) {
+    return getClass() == Cumulative.class ? withOptionsOf(new Cumulative(s, d, r, limit)) : null;
+  }
+
+  @Override
   public Optional<List<Constraint>> simplify() {
     if (getClass() != Cumulative.class) {
       return Optional.empty();

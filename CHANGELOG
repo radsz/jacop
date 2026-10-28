@@ -411,6 +411,57 @@ Version 5.0 (unreleased)
     are now proved in 60 s: in 0.6 to 13 s under --lcg -f (2 before) and
     0.6 to 38 s by default (2 before).
 
+31. Free search (-f, with and without --lcg) tries the cost variables of
+    FlatZinc objective presolve first, cheapest value first (largest when
+    maximising), before the annotation it alternates with, and with
+    --lcg gives core-guided search 0.1 of the time instead of 0.5 when
+    there are such variables. On jp-encoding (60 s, --lcg -f) the four
+    large instances end 0.3% to 2.4% above the optimum instead of 13% to
+    57% (data1400: 44,693 against 68,403, optimum 43,626), and data200
+    and data300 are proved in about 7 s. Models without cost variables
+    search as before.
+
+32. The FlatZinc front end adds the linear relaxation of the model's linear
+    constraints (org.jacop.constraints.lp.LinearRelaxation) as a
+    propagator; --lp off turns it off. A bounded dual simplex, warm-started
+    from the previous node, solves it during search. A Farkas certificate
+    of an infeasible relaxation, or the duals of the objective, are
+    rounded to integer multipliers and the combination of the rows is
+    computed exactly, so each deduction is a valid linear inequality,
+    explained by LinearForm under --lcg. Its cost is bounded: solves spend
+    a work credit earned by each call (a solve that only tightens bounds
+    a sixteenth of its work, a solve that fails the node refills it), a
+    simplex stalled at its pivot limit 32 times in a row is given up, and models whose tableau would exceed 4M entries are left
+    out (-Dorg.jacop.lp.maxTableau). On the 414 vs-ortools instances
+    (20 s) JaCoP proves 116 instead of 106 (153 instead of 147 with
+    --lcg) and loses no proof, including wwtpp-real UNSAT instances in
+    about a second and rel2onto optima. LinearExplanation now merges a
+    variable that occurs with weights of both signs and refuses reasons
+    whose sums overflow a long.
+
+33. --lcg -f branches on defined variables last. Activity branching picked
+    the variables of defines_var annotations (sums, shortest-path values,
+    the objective) as often as the model's decision variables, though they
+    follow from those; it now branches on them only once every other
+    variable is fixed. On the 42 instances of road-cons, city-position,
+    gbac, celar, vrp, spot5 and trucking (60 s) the objective is better on
+    32 and worse on 4: celar 1.4x to 3.5x, gbac about 2x, city-position
+    1.5x to 2x. Trucking solved as a satisfaction problem finds a solution
+    in 0.02 s, where it found none in 10 s. -Djacop.lcg.late=none turns it
+    off.
+
+34. Shorter linear explanations for lazy clause generation (--lcg). A
+    lifted linear reason spends its slack on the terms that cost least
+    first, so it leaves out as many terms as the slack allows, and the
+    entailment reasons of reified linear constraints are lifted too. The
+    FlatZinc front end splits a linear constraint of more than 40 terms
+    into sums of blocks of about sqrt(n) terms, each with a new variable
+    (--free-config lcg-split=<n>, 0 = off): its reasons cite about sqrt(n)
+    bounds instead of n. On cutstock type10_TEST9 the demand sums' reasons
+    go from 841 to 17 atoms and learnt clauses from 574 to 19; on vrp,
+    spot5, gbac and cutstock (60 s, --lcg -f) more instances end better
+    than worse.
+
 Version 4.11
 =============
 

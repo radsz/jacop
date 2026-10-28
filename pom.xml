@@ -199,7 +199,9 @@ setup to run configuration. -->
                                 <grounding.trials>10</grounding.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
+                                <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
+                                <lp.test.runs>300</lp.test.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
                                 <wakeup.trials>1000</wakeup.trials>
@@ -215,6 +217,8 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/DualSimplexTest.java</include>
+                                <include>**/LinearRelaxationTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -261,6 +265,7 @@ setup to run configuration. -->
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
+                                <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
@@ -270,6 +275,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
@@ -330,6 +336,8 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/DualSimplexTest.java</include>
+                                <include>**/LinearRelaxationTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -360,6 +368,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
@@ -389,6 +398,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
@@ -448,6 +458,8 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/DualSimplexTest.java</include>
+                                <include>**/LinearRelaxationTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -478,6 +490,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
@@ -507,6 +520,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
@@ -566,6 +580,8 @@ setup to run configuration. -->
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/DualSimplexTest.java</include>
+                                <include>**/LinearRelaxationTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -595,6 +611,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
@@ -624,6 +641,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>

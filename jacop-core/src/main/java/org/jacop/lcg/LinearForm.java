@@ -111,48 +111,60 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
    * @param position the trail position (an entry index, or {@link AtomicTrail#size()} for now)
    * @param out where the reason entries are added
    * @return false when it is not entailed by the bounds (and, for one free variable of {@code !=},
-   *     its holes)
+   *     its holes), or a sum overflows a {@code long}
    */
   public boolean explainEntailed(AtomicTrail trail, int position, EntryList out) {
     long smallest = 0;
     long largest = 0;
-    for (int i = 0; i < vars.length; i++) {
-      long lo = weights[i] * trail.minBefore(vars[i], position);
-      long hi = weights[i] * trail.maxBefore(vars[i], position);
-      smallest += Math.min(lo, hi);
-      largest += Math.max(lo, hi);
+    try {
+      for (int i = 0; i < vars.length; i++) {
+        long lo = Math.multiplyExact(weights[i], trail.minBefore(vars[i], position));
+        long hi = Math.multiplyExact(weights[i], trail.maxBefore(vars[i], position));
+        smallest = Math.addExact(smallest, Math.min(lo, hi));
+        largest = Math.addExact(largest, Math.max(lo, hi));
+      }
+    } catch (ArithmeticException overflow) {
+      return false;
     }
+    // the bounds cited are lifted: on the side that holds, the sum's bound may move by the slack
     switch (relation) {
       case LE -> {
         if (largest > c) {
           return false;
         }
-        addBounds(trail, position, true, out);
+        addLifted(trail, position, false, c - largest, out);
       }
       case GE -> {
         if (smallest < c) {
           return false;
         }
-        addBounds(trail, position, false, out);
+        addLifted(trail, position, true, smallest - c, out);
       }
       case EQ -> {
         if (smallest != c || largest != c) {
           return false;
         }
-        addBounds(trail, position, true, out);
-        addBounds(trail, position, false, out);
+        addLifted(trail, position, false, 0, out);
+        addLifted(trail, position, true, 0, out);
       }
       default -> {
         if (smallest > c) {
-          addBounds(trail, position, false, out);
+          addLifted(trail, position, true, smallest - c - 1, out);
         } else if (largest < c) {
-          addBounds(trail, position, true, out);
+          addLifted(trail, position, false, c - 1 - largest, out);
         } else {
           return notEqualByHole(trail, position, out);
         }
       }
     }
     return true;
+  }
+
+  // the bounds that make the sum smallest (lowerSum) or largest, weakened within the slack
+  private void addLifted(
+      AtomicTrail trail, int position, boolean lowerSum, long slack, EntryList out) {
+    LinearExplanation.addLiftedBounds(
+        trail, position, vars, weights, -1, null, lowerSum, slack, out);
   }
 
   // != with every variable but one fixed, whose value that would make the sum c is a hole
@@ -162,7 +174,11 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
     for (int i = 0; i < vars.length; i++) {
       int lo = trail.minBefore(vars[i], position);
       if (lo == trail.maxBefore(vars[i], position)) {
-        rest -= weights[i] * lo;
+        try {
+          rest = Math.subtractExact(rest, Math.multiplyExact(weights[i], lo));
+        } catch (ArithmeticException overflow) {
+          return false;
+        }
       } else if (free < 0 || vars[free] == vars[i]) {
         // a repeated free variable would need its weights summed; only one occurrence is handled
         if (free >= 0) {
@@ -195,20 +211,6 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
       if (i != free) {
         trail.addLowerBound(vars[i], position, out);
         trail.addUpperBound(vars[i], position, out);
-      }
-    }
-  }
-
-  // the bounds that make the sum largest (upper) or smallest
-  private void addBounds(AtomicTrail trail, int position, boolean upper, EntryList out) {
-    for (int i = 0; i < vars.length; i++) {
-      if (weights[i] == 0) {
-        continue;
-      }
-      if (upper == weights[i] > 0) {
-        trail.addUpperBound(vars[i], position, out);
-      } else {
-        trail.addLowerBound(vars[i], position, out);
       }
     }
   }

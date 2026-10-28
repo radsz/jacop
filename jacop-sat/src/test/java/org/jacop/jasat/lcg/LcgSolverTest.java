@@ -66,6 +66,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
@@ -1864,6 +1865,36 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * Free search branches on the 0/1 variables before the others, as CP-SAT does: here the integer
+   * variable y is first on the heap, and only branching on b first ([b <= 0], then y above 50)
+   * gives b = 0 and y = 51. With the property off, y goes first ([y <= 50] makes b = 1, then y =
+   * 0).
+   */
+  @Test
+  void freeSearchBranchesOnBooleansFirst() {
+    for (boolean first : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", 0, 100);
+      BooleanVar b = new BooleanVar(store, "b");
+      store.impose(new Reified(new XlteqC(y, 50), b));
+      if (!first) {
+        System.setProperty("jacop.lcg.booleansFirst", "false");
+      }
+      LcgSolver solver;
+      try {
+        solver = new LcgSolver(store);
+      } finally {
+        System.clearProperty("jacop.lcg.booleansFirst");
+      }
+      solver.setChecking(true);
+      assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(new int[] {solver.value(b), solver.value(y)})
+          .as("Booleans first: %s", first)
+          .containsExactly(first ? new int[] {0, 51} : new int[] {1, 0});
+    }
+  }
+
   /** The literal map against a TreeMap, under random insertions and lookups. */
   @Test
   void literalMapAgreesWithTreeMap() {
@@ -1917,8 +1948,8 @@ class LcgSolverTest {
         int a = rnd.nextInt(n - 1);
         prec[p] = new int[] {a, a + 1 + rnd.nextInt(n - a - 1)};
       }
-      int[] optimum = new int[5];
-      for (int mode = 0; mode < 5; mode++) {
+      int[] optimum = new int[6];
+      for (int mode = 0; mode < 6; mode++) {
         Store store = new Store();
         IntVar[] s = new IntVar[n];
         IntVar[] ends = new IntVar[n];
@@ -1951,9 +1982,15 @@ class LcgSolverTest {
           if (mode == 2 || mode == 4) {
             solver.setLowerBoundSearch(1, 1);
           }
-          if (mode >= 3) {
+          if (mode == 3 || mode == 4) {
             solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), mode == 4);
             solver.sat().setRestarts(mode == 4);
+          }
+          if (mode == 5) {
+            // the ends and the makespan follow from the starts
+            List<IntVar> late = new ArrayList<>(Arrays.asList(ends));
+            late.add(makespan);
+            solver.setLateVariables(late);
           }
           assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
           optimum[mode] = solver.value(makespan);
@@ -1964,9 +2001,13 @@ class LcgSolverTest {
           lowerBoundRaised += solver.lowerBoundRaised;
           annotationDecisions += solver.annotationDecisions;
           semanticUips += solver.sat().semanticUips;
+          if (mode == 5) {
+            // every start fixed fixes the ends and the makespan: no decision is left for them
+            assertThat(solver.lateDecisions).as("instance %d", instance).isZero();
+          }
         }
       }
-      for (int mode = 1; mode < 5; mode++) {
+      for (int mode = 1; mode < 6; mode++) {
         assertThat(optimum[mode]).as("instance %d, mode %d", instance, mode).isEqualTo(optimum[0]);
       }
     }

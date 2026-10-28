@@ -76,7 +76,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public final class ObjectivePresolve {
+public final class ObjectivePresolve implements Rule {
 
   /** Largest number of terms an expanded objective may have. */
   static final int MAX_TERMS = 100_000;
@@ -136,7 +136,9 @@ public final class ObjectivePresolve {
 
   private int expanded;
   private int shifted;
+  private LinearInt imposed;
   private IntVar[] definitionVariables;
+  private final List<IntVar> costVariables = new ArrayList<>();
 
   /**
    * Starts an objective presolve.
@@ -225,6 +227,59 @@ public final class ObjectivePresolve {
   }
 
   /**
+   * As a presolve rule, imposes the equation of {@link #reformulate()} once, in the first round in
+   * which there is one; the domains narrowed by earlier rounds can complete a value encoding.
+   *
+   * @param context the derivation in progress.
+   */
+  @Override
+  public void apply(Context context) {
+    if (imposed == null) {
+      imposed = reformulate();
+      if (imposed != null) {
+        context.impose(imposed);
+      }
+    }
+  }
+
+  /**
+   * Returns the equation imposed by {@link #apply(Context)}.
+   *
+   * @return the equation, or null if the rule imposed none.
+   */
+  public LinearInt imposed() {
+    return imposed;
+  }
+
+  /**
+   * Returns the objective variable.
+   *
+   * @return the objective.
+   */
+  public IntVar objective() {
+    return objective;
+  }
+
+  /**
+   * Returns true when the objective is minimised.
+   *
+   * @return true for minimisation, false for maximisation.
+   */
+  public boolean minimize() {
+    return minimize;
+  }
+
+  /**
+   * Returns the cost variables made by the last {@link #reformulate(Store)}, one per variable
+   * encoded by value literals with costs, in the order of the variables.
+   *
+   * @return the cost variables, empty if none were made.
+   */
+  public List<IntVar> costVariables() {
+    return List.copyOf(costVariables);
+  }
+
+  /**
    * Returns the variables of the equation that defines the objective, as used by the last {@link
    * #reformulate()}. The reformulated equation, with the other equations, exactly-one sets and
    * counts of the model, implies this one, so a constraint posting it can be replaced by the
@@ -271,6 +326,7 @@ public final class ObjectivePresolve {
     expanded = 0;
     shifted = 0;
     definitionVariables = null;
+    costVariables.clear();
     if (objective.singleton()) {
       return null;
     }
@@ -352,6 +408,7 @@ public final class ObjectivePresolve {
         expression.remove(b);
       }
       expression.put(y, 1L);
+      costVariables.add(y);
       elements.add(new ElementInteger(x, costs, y, x.min() - 1));
     }
   }

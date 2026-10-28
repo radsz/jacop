@@ -21,6 +21,7 @@
         ["--format", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
         ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
         ["--lcg", "solve with lazy clause generation (integer and Boolean models).", "bool", "false"],
+        ["--lp", "linear relaxation of the linear constraints, solved by a dual simplex during search", "opt:on:off", "on"],
         ["--presolve", "presolve the model before search; check also checks every solution against the loaded model", "opt:off:on:check", "off"],
         ["--presolve-tabling", "with --presolve, replace small groups of constraints by the tables of their solutions", "bool", "false"],
         ["--presolve-implied", "with presolve, post sum bounds implied by all-different constraints", "opt:off:on", "off"],

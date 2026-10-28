@@ -43,6 +43,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.Eq;
@@ -69,6 +70,7 @@ import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -216,6 +218,87 @@ class PropagationStrengthTest {
     assertThat(reifiedSumIsFalse((x, y, z) -> new XplusCeqZ(x, 1, z))).isTrue();
     assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqC(x, z, 11))).isTrue();
     assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqZ(x, y, z))).isTrue();
+  }
+
+  // neither variable fixed: x + 1 = z with x in {7, 10} and z without 8 and 11 cannot hold (photo)
+  @Test
+  void testReifiedSumNoticesShiftedDomainsAreDisjoint() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 7, 10);
+    IntVar z = variable(store, "z", 0, 1, 2, 3, 5, 7, 10);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new XplusCeqZ(x, 1, z), b));
+    store.impose(new Reified(new XplusYeqC(x, z, 16), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
+  // -x = -9 with 9 a hole in x, from int_lin_eq_reif([-1], [x], -9, b) (giant_cat_army_riddle)
+  @Test
+  void testReifiedMulByConstantNoticesHoles() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 1, 7, 8, 13);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(x, -1, new IntVar(store, -9, -9)), b));
+    IntVar y = variable(store, "y", 4);
+    IntVar z = variable(store, "z", 0, 4, 12, 16);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(y, 2, z), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
+  // count(x, y == 2) = c with c in {3..6}: two variables give at most 2 occurrences
+  @Test
+  void testReifiedCountNoticesTooFewPossibleOccurrences() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 0, 2, 3);
+    IntVar y = variable(store, "y", 1);
+    IntVar c = new IntVar(store, "c", 3, 6);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Count(new IntVar[] {x, y}, c, 2), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+  }
+
+  // |x - y| = z with z negative, and |8 - y| = 4 with 4 and 12 holes in y
+  @Test
+  void testReifiedDistanceNoticesBoundsAndHoles() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 8);
+    IntVar y = variable(store, "y", -3, -1, 1, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Distance(x, y, variable(store, "z", -4)), b));
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new Distance(x, y, variable(store, "w", 4)), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
+  // x * y = 6 with x = -4, and with x = 2 and 3 a hole in y
+  @Test
+  void testReifiedProductWithConstantNoticesFixedFactor() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", -4);
+    IntVar y = variable(store, "y", -4, 0, 1, 2, 3, 7, 8);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulYeqC(x, y, 6), b));
+    IntVar u = variable(store, "u", 2);
+    IntVar v = variable(store, "v", 1, 2, 4, 5);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new XmulYeqC(u, v, 6), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
   }
 
   /**

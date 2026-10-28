@@ -696,6 +696,7 @@ public class Support implements ParserTreeConstants {
         Var v = getAnnVar(expr);
 
         definedVar = (IntVar) v;
+        dictionary.addDefinedVar(v);
       } else if ("priority".equals(ann.getAnnId())) {
         SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
         ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);
@@ -966,6 +967,14 @@ public class Support implements ParserTreeConstants {
   }
 
   void pose(Constraint c) throws FailException {
+
+    if (options.lcg()) {
+      Constraint split =
+          LinearSplit.split(store, c, Integer.parseInt(options.freeConfig("lcg-split", "40")));
+      if (split != null) {
+        c = split;
+      }
+    }
 
     if (constraintPriority >= 0 && constraintPriority <= 4) {
       store.imposeWithConsistency(c, constraintPriority);

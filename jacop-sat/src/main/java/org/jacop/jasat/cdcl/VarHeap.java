@@ -111,6 +111,26 @@ public final class VarHeap {
   }
 
   /**
+   * Removes a variable, if it is in the heap.
+   *
+   * @param v the variable
+   */
+  public void remove(int v) {
+    int i = index[v];
+    if (i < 0) {
+      return;
+    }
+    index[v] = -1;
+    int last = heap[--size];
+    if (i < size) {
+      heap[i] = last;
+      index[last] = i;
+      up(i);
+      down(index[last]);
+    }
+  }
+
+  /**
    * Returns the variable of highest activity, leaving it in the heap.
    *
    * @return the variable; the heap must not be empty

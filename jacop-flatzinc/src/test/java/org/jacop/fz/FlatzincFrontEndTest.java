@@ -233,6 +233,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void intSearchAcceptsBool2intOfBooleans() throws IOException {
+    // MiniZinc 2.8 writes the Booleans of an int_search as bool2int(b) (rel2onto); the annotation
+    // was rejected with a ClassCastException
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: x:: output_var;
+        constraint bool_clause([a, b], []);
+        solve :: seq_search([int_search([bool2int(b), bool2int(a)], input_order, indomain_min,\
+         complete), int_search([x], input_order, indomain_max, complete)]) satisfy;
+        """;
+
+    for (String[] options : new String[][] {{}, {"--lcg"}}) {
+      String[] out = run(fzn, options);
+      assertTrue(
+          out[0].contains("a = true;")
+              && out[0].contains("b = false;")
+              && out[0].contains("x = 2;"),
+          out[0] + out[1]);
+    }
+  }
+
+  @Test
   void strictlyIncreasingOfARepeatedVariableIsUnsatisfiable() throws IOException {
     // strictly_increasing([x, x]) was posted as XltY(x, x), which throws, so the model was
     // reported as an error instead of unsatisfiable
@@ -1443,6 +1467,71 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
+    // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
+    // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the
+    // linear reasons, about 32 atoms on the flat sums, get below 16
+    java.util.Random rnd = new java.util.Random(3);
+    for (int run = 0; run < 12; run++) {
+      int n = 60;
+      StringBuilder model = new StringBuilder();
+      // 60 terms over 6 independent values: each x(i) equals y(i mod 6), so the search is small
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..2: y%d;\n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..2: x%d;\n".formatted(i));
+      }
+      model.append("var -1000..1000: obj :: output_var;\n");
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);\n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);\n".formatted(i % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      int[][] w = new int[3][n];
+      for (int[] row : w) {
+        for (int i = 0; i < n; i++) {
+          row[i] = rnd.nextInt(9) - 3;
+        }
+      }
+      String[] ws = new String[3];
+      for (int k = 0; k < 3; k++) {
+        ws[k] = Arrays.stream(w[k]).mapToObj(Integer::toString).collect(Collectors.joining(","));
+      }
+      model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[0], xs, 20 + 3 * run));
+      model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[1], xs, 30 - run));
+      model.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(ws[2], xs));
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
+              .formatted(run % 2 == 0 ? "minimize" : "maximize"));
+      String flat = lastObjective(run(model.toString(), "--lcg", "--free-config", "lcg-split=0"));
+      String cp = lastObjective(run(model.toString()));
+      String[] split = run(model.toString(), "--lcg", "-s");
+      assertEquals(cp, flat, model.toString());
+      assertEquals(cp, lastObjective(split), model.toString());
+      java.util.regex.Matcher m =
+          java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
+              .matcher(split[0]);
+      if (m.find() && Long.parseLong(m.group(1)) > 0) {
+        assertTrue(Double.parseDouble(m.group(2)) < 16, split[0]);
+      }
+    }
+  }
+
+  // the last obj = value or status line printed
+  private static String lastObjective(String[] out) {
+    List<String> lines =
+        out[0]
+            .lines()
+            .filter(line -> line.startsWith("obj = ") || line.startsWith("====="))
+            .toList();
+    return lines.isEmpty() ? "" : lines.get(lines.size() - 1);
+  }
+
+  @Test
   void lcgStatisticsAfterTheShutdownHookStopsASearchBetweenRuns() throws Exception {
     // MiniZinc stops a run at its time limit with SIGTERM, and the shutdown hook prints the
     // statistics while LcgSolver may be between two runs of its search, holding no solution;
@@ -1475,6 +1564,30 @@ class FlatzincFrontEndTest {
     }
     String text = out.toString(StandardCharsets.UTF_8);
     assertTrue(text.contains("%%%mzn-stat: objective=3"), text);
+  }
+
+  @Test
+  void lcgFreeSearchBranchesOnDefinedVariablesLast() throws IOException {
+    // with -f, the activity of the variables chose the defined sum s and the objective as often as
+    // the others; they follow from x, so the search now branches on x first and never needs them
+    StringBuilder model =
+        new StringBuilder("array [1..8] of var 0..3: x :: output_array([1..8]);\n");
+    model.append("var 0..24: s :: output_var;\nvar 0..24: obj;\n");
+    for (int i = 1; i < 8; i++) {
+      model.append("constraint int_lin_le([-1, -1], [x[%d], x[%d]], -3);\n".formatted(i, i + 1));
+      model.append("constraint int_ne(x[%d], x[%d]);\n".formatted(i, i + 1));
+    }
+    model.append(
+        """
+        constraint int_lin_eq([1, 1, 1, 1, 1, 1, 1, 1, -1], [x[1], x[2], x[3], x[4], x[5], x[6], \
+        x[7], x[8], s], 0) :: defines_var(s);
+        constraint int_lin_eq([2, -1, 1], [s, obj, x[1]], 0) :: defines_var(obj);
+        solve minimize obj;
+        """);
+    String out = run(model.toString(), "--lcg", "-f", "-s")[0];
+    assertTrue(out.strip().contains("=========="), out);
+    assertTrue(out.contains("%%%mzn-stat: lcgLateDecisions=0\n"), out);
+    assertTrue(out.contains("%%%mzn-stat: objective="), out);
   }
 
   @Test

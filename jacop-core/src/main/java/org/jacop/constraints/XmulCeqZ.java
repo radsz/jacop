@@ -126,7 +126,21 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ
   public boolean notSatisfied() {
 
     Interval r = IntDomain.mulBounds(x.min(), x.max(), c, c);
-    return !z.domain.isIntersecting(r.min(), r.max());
+    if (!z.domain.isIntersecting(r.min(), r.max())) {
+      return true;
+    }
+    if (x == z) {
+      return c != 1 && !x.domain.contains(0);
+    }
+    // a fixed side decides it from the holes of the other one
+    if (x.singleton()) {
+      return !z.domain.contains(x.value() * c);
+    }
+    if (z.singleton() && c != 0) {
+      int v = z.value();
+      return v % c != 0 || !x.domain.contains(v / c);
+    }
+    return false;
   }
 
   @Override
@@ -141,7 +155,7 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    // notSatisfied() looks for a value of z between the bounds of c * x, so a hole in z decides it
+    // notSatisfied() looks at the holes of the domains
     return IntDomain.ANY;
   }
 
