@@ -477,7 +477,8 @@ public class SumWeight extends Constraint
       return false;
     }
     lcgModel();
-    return LinearExplanation.explain(trail, entry, lcgVars, lcgWeights, true, true, out);
+    return LinearExplanation.explainChecked(
+        trail, entry, lcgVars, lcgWeights, equalTo, true, true, out);
   }
 
   @Override
