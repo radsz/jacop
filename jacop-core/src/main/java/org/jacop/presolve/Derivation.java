@@ -46,6 +46,7 @@ import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.StoreState;
@@ -106,6 +107,8 @@ public final class Derivation implements VarMap {
    *     removed them.
    * @param simplified constraints rewritten by {@link GlobalPresolve} for the domains at the level
    *     of the derivation; those rewritten to nothing are counted here too.
+   * @param aliased parent variables merged with another variable by an equation; they share its
+   *     copy, and the equation is counted in {@code dropped}.
    */
   public record Statistics(
       int parentVariables,
@@ -114,7 +117,8 @@ public final class Derivation implements VarMap {
       int childConstraints,
       int fixed,
       int dropped,
-      int simplified) {}
+      int simplified,
+      int aliased) {}
 
   /**
    * What the dual reductions did.
@@ -152,8 +156,7 @@ public final class Derivation implements VarMap {
   private final Set<Var> frozen;
   private final boolean rules;
   private final List<IntVar[][]> clauses;
-  private final Set<Var> protect;
-  private final boolean keepAllSolutions;
+  private final boolean solutionPreserving;
   private final List<Rule> ruleList;
   private final int maxRounds;
   private final DualReductions dual;
@@ -166,6 +169,8 @@ public final class Derivation implements VarMap {
   private List<Var> variables = List.of();
   private List<Constraint> collected = List.of();
   private Statistics statistics;
+  private final Map<String, Integer> reductions = new LinkedHashMap<>();
+  private Map<Var, Integer> relaxed = Map.of();
   private DualStatistics dualStatistics;
   private boolean solutionWritten;
   private SatPresolve.Reconstruction reconstruction;
@@ -179,8 +184,7 @@ public final class Derivation implements VarMap {
     this.frozen = builder.frozen;
     this.rules = builder.rules;
     this.clauses = builder.clauses;
-    this.protect = builder.protect;
-    this.keepAllSolutions = builder.keepAllSolutions;
+    this.solutionPreserving = builder.solutionPreserving;
     this.dual =
         builder.dual
             ? new DualReductions(
@@ -215,8 +219,7 @@ public final class Derivation implements VarMap {
     private Set<Var> frozen;
     private boolean rules = true;
     private List<IntVar[][]> clauses;
-    private Set<Var> protect;
-    private boolean keepAllSolutions;
+    private boolean solutionPreserving = true;
     private boolean dual;
     private IntVar objective;
     private boolean minimize;
@@ -283,6 +286,27 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Sets whether the child must have every solution of the parent, projected on the frozen
+     * variables ({@link #keep(Var...)}), once each. With false, rules may also apply that keep only
+     * satisfiability and optima, for example half-reification, so the child can have several
+     * solutions for one solution of the parent, or a solution whose non-frozen variables postsolve
+     * leaves open; use true for all-solution search and counting. These rules also need the frozen
+     * variables to be given. True by default.
+     *
+     * <p>Once frozen variables are given, the SAT preprocessing of the clauses may remove the other
+     * variables that occur only in clauses, and postsolve gives them their values: with true only a
+     * variable equivalent to another literal, with false also variables eliminated by resolution or
+     * freed by blocked clauses.
+     *
+     * @param on true to keep every solution.
+     * @return this builder.
+     */
+    public Builder solutionPreserving(boolean on) {
+      this.solutionPreserving = on;
+      return this;
+    }
+
+    /**
      * Adds a presolve rule; the rules run in the order added, in rounds alternated with propagation
      * of the parent until a fixpoint, see {@link Rule}.
      *
@@ -291,40 +315,6 @@ public final class Derivation implements VarMap {
      */
     public Builder rule(Rule rule) {
       ruleList.add(rule);
-      return this;
-    }
-
-    /**
-     * Lets the presolve rules remove variables that occur only in clauses: a variable equivalent to
-     * another literal, and, unless {@link #keepAllSolutions(boolean)} is set, variables eliminated
-     * by resolution or freed by blocked clauses. Postsolve gives a removed variable a value that
-     * satisfies the removed clauses. Without this call every variable keeps its meaning in the
-     * child.
-     *
-     * @param protect the variables that must not be removed, besides those of {@link
-     *     #keep(Var...)}: the variables the caller reads in the child, for example the objective
-     *     and the variables of the search heuristics.
-     * @return this builder.
-     */
-    public Builder eliminate(Var... protect) {
-      if (this.protect == null) {
-        this.protect = Collections.newSetFromMap(new IdentityHashMap<>());
-      }
-      Collections.addAll(this.protect, protect);
-      return this;
-    }
-
-    /**
-     * Keeps one solution of the child for every solution of the parent: rules that keep
-     * satisfiability and optimal values but merge solutions (variable elimination by resolution,
-     * pure literals, blocked clauses) do not run. Use it when all solutions are enumerated or
-     * counted. Off by default.
-     *
-     * @param on true to keep all solutions.
-     * @return this builder.
-     */
-    public Builder keepAllSolutions(boolean on) {
-      this.keepAllSolutions = on;
       return this;
     }
 
@@ -439,8 +429,8 @@ public final class Derivation implements VarMap {
           new SatPresolve(
               collected.stream().filter(c -> !removed.contains(c)).toList(),
               clauses,
-              protect == null ? null : this::isProtected,
-              !keepAllSolutions);
+              frozen == null ? null : frozen::contains,
+              !solutionPreserving);
       sat.run();
       if (sat.infeasible()) {
         outcome = Outcome.INFEASIBLE;
@@ -458,6 +448,16 @@ public final class Derivation implements VarMap {
     Set<Constraint> absorbed = sat == null ? Set.of() : sat.absorbed();
     List<IntVar[][]> childClauses =
         sat != null ? sat.clauses() : clauses != null ? clauses : List.of();
+    // the variables of the clauses, and those postsolve reads for the removed ones: the rules on
+    // the carried constraints do not see them, and the child keeps them
+    Set<Var> clauseVariables = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar[][] c : childClauses) {
+      Collections.addAll(clauseVariables, c[0]);
+      Collections.addAll(clauseVariables, c[1]);
+    }
+    if (sat != null && sat.reconstruction() != null) {
+      clauseVariables.addAll(sat.reconstruction().read());
+    }
 
     List<Constraint> carried = new ArrayList<>();
     int dropped = 0;
@@ -472,6 +472,11 @@ public final class Derivation implements VarMap {
       }
     }
     int simplified = 0;
+    for (Rule rule : ruleList) {
+      if (rule instanceof GlobalPresolveRule g) {
+        simplified += g.simplified();
+      }
+    }
     if (rules) {
       List<Constraint> rewritten = new ArrayList<>(carried.size());
       for (Constraint c : carried) {
@@ -485,25 +490,40 @@ public final class Derivation implements VarMap {
       }
       carried = rewritten;
     }
+    int equations = carried.size();
+    Map<Var, Var> aliases = rules && Aliases.ENABLED ? Aliases.merge(carried) : Map.of();
+    dropped += equations - carried.size();
+
+    ReificationCleanup reifications =
+        new ReificationCleanup(carried, frozenWith(clauseVariables), !solutionPreserving);
+    if (rules) {
+      reifications.run();
+      carried.removeIf(reifications::dropped);
+      reductions.put("reificationsSimplified", reifications.simplified());
+      reductions.put("halfReified", reifications.halfReified());
+      reductions.put("reificationsDropped", reifications.dropped());
+    }
 
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
-      used.addAll(c.arguments());
+      used.addAll(reifications.arguments(c));
     }
-    for (IntVar[][] c : childClauses) {
-      Collections.addAll(used, c[0]);
-      Collections.addAll(used, c[1]);
-    }
+    used.addAll(clauseVariables);
     Set<Var> eliminatedVars = Collections.newSetFromMap(new IdentityHashMap<>());
     if (sat != null) {
       eliminatedVars.addAll(sat.eliminated());
       reconstruction = sat.reconstruction();
     }
+    // the variable that stays for a class is kept, so every merged variable has a copy
+    used.addAll(aliases.values());
 
     child = new Store();
     int fixed = 0;
     try {
       for (Var v : variables) {
+        if (aliases.containsKey(v)) {
+          continue;
+        }
         if (used.contains(v) || !rules) {
           keep(v);
         } else if (eliminatedVars.contains(v) && !v.singleton()) {
@@ -522,8 +542,18 @@ public final class Derivation implements VarMap {
       live();
       return;
     }
+    int childVariables = copies.size();
+    for (Map.Entry<Var, Var> e : aliases.entrySet()) {
+      Var copy = copies.get(e.getValue());
+      copies.put(e.getKey(), copy);
+      entries.put(e.getKey(), new Entry.Kept(copy));
+    }
 
     for (Constraint c : carried) {
+      if (reifications.rewritten(c)) {
+        child.impose(reifications.rewrite(c, this));
+        continue;
+      }
       Constraint copy = ((Copyable<?>) c).copy(this);
       if (copy.getClass() != c.getClass()) {
         throw new IllegalStateException(
@@ -545,22 +575,25 @@ public final class Derivation implements VarMap {
       clauses.addAll(mappedClauses);
     }
     // degree-based variable selections choose in the child as in the parent, whose static degrees
-    // also count the constraints entailed or dropped since
+    // also count the constraints entailed or dropped since; a merged variable has the degrees of
+    // its class added up
+    Map<Var, Integer> degrees = new IdentityHashMap<>();
     for (Map.Entry<Var, Var> e : copies.entrySet()) {
-      e.getValue()
-          .adjustDegree(
-              e.getKey().sizeConstraintsOriginal() - e.getValue().sizeConstraintsOriginal());
+      degrees.merge(e.getValue(), e.getKey().sizeConstraintsOriginal(), Integer::sum);
     }
+    degrees.forEach((copy, degree) -> copy.adjustDegree(degree - copy.sizeConstraintsOriginal()));
 
+    relaxed = reifications.relaxed();
     statistics =
         new Statistics(
             variables.size(),
             collected.size(),
-            copies.size(),
+            childVariables,
             carried.size(),
             fixed,
             dropped,
-            simplified);
+            simplified,
+            aliases.size());
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -583,8 +616,15 @@ public final class Derivation implements VarMap {
     }
   }
 
-  private boolean isProtected(Var v) {
-    return protect.contains(v) || frozen != null && frozen.contains(v);
+  /** Returns the frozen variables and the given ones, or null if every variable is frozen. */
+  private Set<Var> frozenWith(Set<Var> vars) {
+    if (frozen == null || vars.isEmpty()) {
+      return frozen;
+    }
+    Set<Var> result = Collections.newSetFromMap(new IdentityHashMap<>());
+    result.addAll(frozen);
+    result.addAll(vars);
+    return result;
   }
 
   /**
@@ -774,7 +814,7 @@ public final class Derivation implements VarMap {
     copies.clear();
     statistics =
         new Statistics(
-            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0);
+            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0, 0);
   }
 
   /**
@@ -895,6 +935,27 @@ public final class Derivation implements VarMap {
   }
 
   /**
+   * Returns how much each presolve rule reduced, by name, in the order the rules ran.
+   *
+   * @return the reductions; empty if no child was derived.
+   */
+  public Map<String, Integer> reductions() {
+    return Collections.unmodifiableMap(reductions);
+  }
+
+  /**
+   * Returns the parent variables that the child half-reifies: Booleans that are not frozen. Once
+   * the other variables of the child are fixed, propagation leaves each of them either fixed or
+   * free to take the value that satisfies every constraint on it, so a search of the child can
+   * leave them out; postsolve gives them their value in the parent.
+   *
+   * @return the relaxed variables.
+   */
+  public Set<Var> relaxed() {
+    return Collections.unmodifiableSet(relaxed.keySet());
+  }
+
+  /**
    * Returns what the dual reductions did.
    *
    * @return the statistics, or null if they were not run.
@@ -988,10 +1049,18 @@ public final class Derivation implements VarMap {
                 reconstruction == null ? Map.of() : reconstruction.values(this::solutionValue);
             for (Map.Entry<Var, Var> e : copies.entrySet()) {
               Var v = e.getKey();
-              if (!reconstructed.containsKey(v)) {
-                v.dom().in(parent.level, v, e.getValue().dom());
+              if (reconstructed.containsKey(v)) {
+                continue;
               }
+              Integer enforcing = relaxed.get(v);
+              if (enforcing != null && !((IntDomain) e.getValue().dom()).singleton(enforcing)) {
+                // a half-reified Boolean: the parent's reification gives it its value
+                continue;
+              }
+              v.dom().in(parent.level, v, e.getValue().dom());
             }
+            // the variables the clause preprocessing removed, from the values of the child; none
+            // is half-reified, since the variables of the clauses are frozen for that rule
             for (Map.Entry<IntVar, Integer> e : reconstructed.entrySet()) {
               IntVar x = e.getKey();
               x.domain.in(parent.level, x, e.getValue(), e.getValue());

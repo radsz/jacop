@@ -91,6 +91,12 @@ public abstract class Domain {
    */
   @Setter public int stamp;
 
+  /**
+   * True for a domain that saves its changes on the store's {@link DomainTrail}, which restores it
+   * when a level is removed, so the store does not record its variable for backtracking.
+   */
+  boolean onDomainTrail;
+
   /** It removes all elements. */
   public abstract void clear();
 

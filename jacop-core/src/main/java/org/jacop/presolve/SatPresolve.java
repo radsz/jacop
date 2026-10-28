@@ -1313,6 +1313,27 @@ final class SatPresolve {
     }
 
     /**
+     * Returns the variables the removed clauses read that are not removed themselves; postsolve
+     * needs their values in the solution.
+     *
+     * @return the variables.
+     */
+    List<IntVar> read() {
+      boolean[] seen = new boolean[vars.length];
+      List<IntVar> result = new ArrayList<>();
+      for (int[] e : stack) {
+        for (int j = 1; j < e.length; j++) {
+          int v = e[j] >> 1;
+          if (!seen[v] && !eliminated[v]) {
+            seen[v] = true;
+            result.add(vars[v]);
+          }
+        }
+      }
+      return result;
+    }
+
+    /**
      * Computes the values of the variables the stack decides.
      *
      * @param current the value of a variable that is not removed, from the solution.

@@ -67,6 +67,9 @@ class SatPresolveTest {
   /** Random models per mode. */
   private static final int TRIALS = Integer.getInteger("satpresolve.trials", 3000);
 
+  /** The value recorded for a variable postsolve leaves open, or one a projection leaves out. */
+  private static final int OPEN = -1;
+
   /** A random model: the store, its variables, the clauses kept outside it and the solutions. */
   private record Model(
       Store store,
@@ -76,9 +79,9 @@ class SatPresolveTest {
       Set<IntVar> frozen) {}
 
   private enum Mode {
-    /** No variable is removed: the child has exactly the parent's solutions. */
+    /** No frozen variables are given: the child has exactly the parent's solutions. */
     KEEP_VARIABLES,
-    /** Removed variables only where solutions stay one to one. */
+    /** Solution preserving: every solution once, apart from variables postsolve leaves free. */
     ALL_SOLUTIONS,
     /** Every rule: satisfiability and the values of protected variables are kept. */
     MERGE
@@ -150,7 +153,7 @@ class SatPresolveTest {
     store.impose(new XeqY(a, b));
     store.impose(new BoolClause(new IntVar[] {b, c}, new IntVar[0]));
     store.impose(new LinearInt(new IntVar[] {a, c}, new int[] {1, 1}, "<=", 1));
-    Derivation d = Derivation.of(store).retention(Derivation.Retention.KEPT).eliminate().derive();
+    Derivation d = Derivation.of(store).retention(Derivation.Retention.KEPT).keep().derive();
     assertThat(d.clauseStatistics().equivalent()).isEqualTo(1);
     assertThat(d.entry(b)).isInstanceOf(Entry.Eliminated.class);
     assertThat(d.child().consistency()).isTrue();
@@ -176,7 +179,12 @@ class SatPresolveTest {
     store.impose(new BoolClause(new IntVar[] {x, a}, new IntVar[0]));
     store.impose(new BoolClause(new IntVar[] {b}, new IntVar[] {x}));
     store.impose(new LinearInt(new IntVar[] {a, b}, new int[] {1, 1}, "<=", 1));
-    Derivation d = Derivation.of(store).retention(Derivation.Retention.KEPT).eliminate().derive();
+    Derivation d =
+        Derivation.of(store)
+            .retention(Derivation.Retention.KEPT)
+            .keep()
+            .solutionPreserving(false)
+            .derive();
     assertThat(d.clauseStatistics().eliminated()).isEqualTo(1);
     assertThat(d.entry(x)).isInstanceOf(Entry.Eliminated.class);
   }
@@ -195,7 +203,7 @@ class SatPresolveTest {
       b.clauses(m.external());
     }
     if (mode != Mode.KEEP_VARIABLES) {
-      b.eliminate(protect.toArray(new Var[0])).keepAllSolutions(mode == Mode.ALL_SOLUTIONS);
+      b.keep(protect.toArray(new Var[0])).solutionPreserving(mode == Mode.ALL_SOLUTIONS);
     }
     Derivation d = b.derive();
     String what = "seed " + seed + " " + mode + (external ? " external" : "");
@@ -216,9 +224,6 @@ class SatPresolveTest {
       Runnable record =
           () -> {
             assertThat(d.returnSolution()).as(what).isTrue();
-            for (IntVar x : m.vars()) {
-              assertThat(x.singleton()).as(what + " " + x).isTrue();
-            }
             found.add(values(m.vars()));
           };
       if (counterparts.length == 0) {
@@ -228,28 +233,61 @@ class SatPresolveTest {
       }
     }
     d.discard();
-    assertThat(m.solutions()).as(what).containsAll(found);
-    if (mode == Mode.MERGE) {
-      Set<IntVar> kept = new HashSet<>(m.frozen());
-      protect.forEach(v -> kept.add((IntVar) v));
-      assertThat(project(found, m.vars(), kept))
-          .as(what)
-          .isEqualTo(project(m.solutions(), m.vars(), kept));
-    } else {
-      assertThat(found).as(what).doesNotHaveDuplicates();
-      assertThat(new HashSet<>(found)).as(what).isEqualTo(m.solutions());
+    // a variable postsolve leaves open is free: every value of it completes the solution
+    List<List<Integer>> completed = new ArrayList<>();
+    for (List<Integer> s : found) {
+      completed.addAll(completions(s));
     }
+    assertThat(m.solutions()).as(what).containsAll(completed);
+    if (mode != Mode.MERGE) {
+      assertThat(found).as(what).doesNotHaveDuplicates();
+      assertThat(completed).as(what).doesNotHaveDuplicates();
+      assertThat(new HashSet<>(completed)).as(what).isEqualTo(m.solutions());
+      if (mode == Mode.KEEP_VARIABLES) {
+        assertThat(completed).as(what).hasSameSizeAs(found);
+      }
+      return;
+    }
+    Set<IntVar> kept = new HashSet<>(m.frozen());
+    protect.forEach(v -> kept.add((IntVar) v));
+    assertThat(project(completed, m.vars(), kept))
+        .as(what)
+        .isEqualTo(project(m.solutions(), m.vars(), kept));
   }
 
   private static Set<List<Integer>> project(
       java.util.Collection<List<Integer>> solutions, IntVar[] vars, Set<IntVar> kept) {
     Set<List<Integer>> result = new HashSet<>();
     for (List<Integer> s : solutions) {
-      List<Integer> p = new ArrayList<>();
-      for (int i = 0; i < vars.length; i++) {
-        p.add(kept.contains(vars[i]) ? s.get(i) : -1);
+      result.add(project(s, vars, kept));
+    }
+    return result;
+  }
+
+  private static List<Integer> project(List<Integer> solution, IntVar[] vars, Set<IntVar> kept) {
+    List<Integer> p = new ArrayList<>();
+    for (int i = 0; i < vars.length; i++) {
+      p.add(kept.contains(vars[i]) ? solution.get(i) : OPEN);
+    }
+    return p;
+  }
+
+  /** The assignments that give each open variable of a solution the value 0 or 1. */
+  private static List<List<Integer>> completions(List<Integer> solution) {
+    List<List<Integer>> result = new ArrayList<>();
+    result.add(new ArrayList<>(solution));
+    for (int i = 0; i < solution.size(); i++) {
+      if (solution.get(i) == OPEN) {
+        List<List<Integer>> next = new ArrayList<>();
+        for (List<Integer> s : result) {
+          for (int value = 0; value <= 1; value++) {
+            List<Integer> t = new ArrayList<>(s);
+            t.set(i, value);
+            next.add(t);
+          }
+        }
+        result = next;
       }
-      result.add(p);
     }
     return result;
   }
@@ -354,7 +392,7 @@ class SatPresolveTest {
   }
 
   private static List<Integer> values(IntVar[] vars) {
-    return Arrays.stream(vars).map(IntVar::value).toList();
+    return Arrays.stream(vars).map(x -> x.singleton() ? x.value() : OPEN).toList();
   }
 
   private static void solve(Store store, IntVar[] vars, Runnable onSolution) {
