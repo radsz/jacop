@@ -266,6 +266,11 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent, E
     }
 
     if (x.singleton()) {
+      if (!valueMap.containsKey(x.value())) {
+        // x is also one of the b variables and was fixed during this pass to a value without an
+        // item; the next pass sets the remaining b to 0
+        return true;
+      }
       propagateWhenXisSingleton(store, start);
     }
     return true;

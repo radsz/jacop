@@ -64,6 +64,11 @@ public class PgteqQ extends AbstractPcompQ {
 
   @Override
   public void notConsistency(Store store) {
+    // a strict order of a variable with itself has no solution; one pass of the bounds below
+    // does not always see it, and the store does not run it again for its own changes
+    if (p == q) {
+      throw Store.failException;
+    }
     p.domain.inMax(store.level, p, FloatDomain.previous(q.max()));
     q.domain.inMin(store.level, q, FloatDomain.next(p.min()));
   }

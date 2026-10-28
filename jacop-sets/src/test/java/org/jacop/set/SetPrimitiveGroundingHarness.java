@@ -286,6 +286,60 @@ public final class SetPrimitiveGroundingHarness {
     }
   }
 
+  private static void checkWrapped(String label, Case c, Random random, List<String> failures) {
+    if (c.primitive() != null) {
+      for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
+        checkCase(label + " " + wrapper, wrap(c, wrapper), random, failures);
+      }
+      checkSatisfied(label, c, random, failures);
+    }
+  }
+
+  /**
+   * The case with two variables of the same specification merged into one, or null when it has no
+   * two such variables. The aliased case has one variable fewer: position {@code j} of the original
+   * reads the variable of position {@code i}.
+   */
+  static Case alias(Case c, Random random) {
+    int n = c.specs().length;
+    List<int[]> pairs = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (i != j
+            && c.specs()[i].isSet() == c.specs()[j].isSet()
+            && c.specs()[i].toText().equals(c.specs()[j].toText())) {
+          pairs.add(new int[] {i, j});
+        }
+      }
+    }
+    if (pairs.isEmpty()) {
+      return null;
+    }
+    int[] pair = pairs.get(random.nextInt(pairs.size()));
+    int i = pair[0];
+    int j = pair[1];
+    int[] map = new int[n];
+    Spec[] specs = new Spec[n - 1];
+    for (int p = 0, q = 0; p < n; p++) {
+      if (p == j) {
+        continue;
+      }
+      map[p] = q;
+      specs[q++] = c.specs()[p];
+    }
+    map[j] = map[i];
+    Function<Var[], Var[]> expand = x -> Arrays.stream(map).mapToObj(p -> x[p]).toArray(Var[]::new);
+    Predicate<Object[]> semantics =
+        t -> c.semantics().test(Arrays.stream(map).mapToObj(p -> t[p]).toArray());
+    String description = c.description() + " (x" + j + " is x" + i + " of the original)";
+    Function<Var[], PrimitiveConstraint> build = c.primitive();
+    if (build != null) {
+      return Case.primitive(specs, x -> build.apply(expand.apply(x)), semantics, description);
+    }
+    return Case.of(
+        specs, (store, x) -> c.impose().accept(store, expand.apply(x)), semantics, description);
+  }
+
   /**
    * Runs all grounding plans on {@code trials} random instances of a constraint and throws an
    * {@link AssertionError} listing the first failures.
@@ -300,11 +354,12 @@ public final class SetPrimitiveGroundingHarness {
     for (int trial = 0; trial < trials && failures.size() < MAX_REPORTED; trial++) {
       Case c = generator.apply(random);
       checkCase(name + " trial " + trial, c, random, failures);
-      if (c.primitive() != null) {
-        for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
-          checkCase(name + " trial " + trial + " " + wrapper, wrap(c, wrapper), random, failures);
-        }
-        checkSatisfied(name + " trial " + trial, c, random, failures);
+      checkWrapped(name + " trial " + trial, c, random, failures);
+      Case aliased = alias(c, random);
+      if (aliased != null) {
+        String label = name + " trial " + trial + " aliased";
+        checkCase(label, aliased, random, failures);
+        checkWrapped(label, aliased, random, failures);
       }
     }
     if (!failures.isEmpty()) {
