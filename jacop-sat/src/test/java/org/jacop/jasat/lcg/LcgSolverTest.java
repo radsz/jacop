@@ -356,6 +356,28 @@ class LcgSolverTest {
   }
 
   /**
+   * A passed deadline stops the search at the next decision. The solver checked the clock only
+   * every 1024 decisions, and LCG decisions can take milliseconds each: city-position ran 166 s on
+   * a 60 s limit.
+   */
+  @Test
+  void passedDeadlineStopsTheNextDecision() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[20];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+      if (i > 0) {
+        store.impose(new XlteqY(x[i - 1], x[i]));
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.sat().setDeadline(System.nanoTime() - 1);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.UNKNOWN);
+    solver.sat().setDeadline(Long.MAX_VALUE);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+  }
+
+  /**
    * Large ground tables over a key variable with many values, a few tuples per value, so that the
    * tables keep sparse supports and the explanations pick among many dead tuples. Each table
    * explains everything itself.
