@@ -45,6 +45,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
@@ -385,12 +386,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     options = opt;
     dictionary = table;
     output = table;
-    presolveObjective(node);
+    ObjectivePresolve objective = objectiveRule(node);
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolve(node);
+      presolve(node, objective);
       if (sat.collecting() && !opt.lcg()) {
         postClausesToSat();
       }
+    } else if (objective != null && store.consistency()) {
+      imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
     if (opt.lp()) {
@@ -490,22 +493,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Objective presolve: imposes the objective, expanded through its defining equations and shifted
-   * by the exactly-one sets of the model, as a redundant equation in the loaded store, so presolve
-   * copies it into the derived store. It runs with and without --presolve, since it only adds
-   * redundant constraints; their degree weight is 0, so static variable orders do not change. See
-   * {@link ObjectivePresolve}.
+   * The objective presolve rule: the objective, expanded through its defining equations and shifted
+   * by the exactly-one sets of the model, as a redundant equation. See {@link ObjectivePresolve}.
    *
    * @param node the solve item.
+   * @return the rule, or null for a satisfaction problem, an objective that is not an integer
+   *     variable, or when the rule is off.
    */
-  private void presolveObjective(ASTSolveItem node) {
+  private ObjectivePresolve objectiveRule(ASTSolveItem node) {
     if (!ObjectiveDetector.enabled()
         || !(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
-      return;
+      return null;
     }
     int k = getKind(kind.getKind());
     if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
-      return;
+      return null;
     }
     IntVar objective =
         switch (expr.getType()) {
@@ -516,17 +518,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           }
           default -> null;
         };
-    if (objective == null || objective.singleton() || !store.consistency()) {
-      return;
+    if (objective == null || objective.singleton()) {
+      return null;
     }
     SimpleNode root = node;
     while (root.jjtGetParent() != null) {
       root = (SimpleNode) root.jjtGetParent();
     }
+    return new ObjectiveDetector(new Support(store, dictionary, sat))
+        .collect(root, objective, k == 1);
+  }
+
+  /**
+   * Objective presolve: imposes the objective, expanded through its defining equations and shifted
+   * by the exactly-one sets of the model, as a redundant equation. Their degree weight is 0, so
+   * static variable orders do not change.
+   *
+   * @param presolve the objective presolve.
+   * @param target the store of the cost variables.
+   * @param impose imposes a constraint.
+   * @param remove removes the objective's defining constraint, replaced by the equation.
+   * @return true if a constraint was imposed.
+   */
+  private boolean imposeObjective(
+      ObjectivePresolve presolve,
+      Store target,
+      Consumer<Constraint> impose,
+      Consumer<Constraint> remove) {
     long start = timer.getCpuTime();
-    ObjectivePresolve presolve =
-        new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
-    List<Constraint> reformulation = presolve.reformulate(store);
+    List<Constraint> reformulation = presolve.reformulate(target);
     if (reformulation.size() == 1 && !halves(presolve, reformulation.getFirst())) {
       // no cost variables and an equation as long as the objective's definition: the stronger root
       // bound alone did not pay on vrp under lazy clause generation (four of six instances worse)
@@ -535,18 +555,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Constraint replaced =
         reformulation.isEmpty()
             ? null
-            : objectiveDefinition(objective, presolve, reformulation.getLast());
+            : objectiveDefinition(presolve.objective(), presolve, reformulation.getLast());
     if (replaced != null) {
-      replaced.removeConstraint();
+      remove.accept(replaced);
     }
     for (Constraint c : reformulation) {
-      store.impose(c.setDegreeWeight(0));
+      impose.accept(c.setDegreeWeight(0));
     }
     if (!reformulation.isEmpty()) {
       objectiveCosts = presolve.costVariables().toArray(new IntVar[0]);
-      objectiveMinimized = k == 1;
+      objectiveMinimized = presolve.minimize();
     }
-    if (options.getStatistics()) {
+    // under presolve the rule runs every round until it imposes the equation
+    if (options.getStatistics()
+        && (!reformulation.isEmpty() || options.presolve() == Options.Presolve.OFF)) {
       IO.println(
           "%%%mzn-stat: presolveObjectiveTime="
               + (timer.getCpuTime() - start) / 1_000_000_000.0
@@ -557,6 +579,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + "\n%%%mzn-stat: presolveObjectiveReplaced="
               + (replaced == null ? 0 : 1));
     }
+    return !reformulation.isEmpty();
   }
 
   /** True if the equation has at most half as many variables as the objective's definition. */
@@ -618,14 +641,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Derives the store to search from the loaded store. Search, annotations and the objective use
    * the derived store's variables through a mapped copy of the tables; each solution is written
    * back into the loaded variables, which the output prints.
+   *
+   * @param node the solve item.
+   * @param objective the objective presolve rule, or null.
    */
-  private void presolve(ASTSolveItem node) {
+  private void presolve(ASTSolveItem node, ObjectivePresolve objective) {
     long start = timer.getCpuTime();
     Presolver presolver =
         Presolver.of(store)
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
+    if (objective != null) {
+      // a rule, imposed in the first round in which there is an equation: the domains narrowed by
+      // earlier rounds can complete a value encoding
+      boolean[] imposed = new boolean[1];
+      presolver.rule(
+          context -> {
+            if (!imposed[0]) {
+              imposed[0] =
+                  imposeObjective(objective, context.store(), context::impose, context::remove);
+            }
+          });
+    }
     Var[] frozen = frozenVariables(node);
     if (frozen != null) {
       presolver.keep(frozen).solutionPreserving(false);
@@ -656,6 +694,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       case DERIVED -> {
         VarMap map = completeMap(d);
         dictionary = dictionary.mapTo(map);
+        if (objectiveCosts != null) {
+          // the cost variables of the objective rule are made in the loaded store
+          objectiveCosts = map.get(objectiveCosts);
+        }
         if (!d.relaxed().isEmpty()) {
           // half-reified Booleans: any value completes a solution, and postsolve sets them
           Set<Var> relaxed = Collections.newSetFromMap(new IdentityHashMap<>());
