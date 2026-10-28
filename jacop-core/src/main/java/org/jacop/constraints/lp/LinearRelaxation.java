@@ -349,6 +349,9 @@ public class LinearRelaxation extends Constraint
   }
 
   private void solveAndPropagate(Store store) {
+    if (rows() == 0) {
+      return; // the bounds of the variables alone deduce nothing
+    }
     calls++;
     for (int j = 0; j < x.length; j++) {
       lp.setBounds(j, x[j].min(), x[j].max());
