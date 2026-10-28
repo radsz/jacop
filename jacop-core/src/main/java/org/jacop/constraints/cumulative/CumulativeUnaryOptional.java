@@ -223,6 +223,8 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
         }
         TaskView[] tr = filterZeroTasks(tvr);
 
+        // the tasks taken into account change with the optional tasks
+        boundsChanged();
         unaryRules(store, tn, tr, !doProfile);
       }
 

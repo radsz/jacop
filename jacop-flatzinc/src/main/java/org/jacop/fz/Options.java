@@ -83,6 +83,7 @@ public class Options {
   boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
+  boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
           probeMode(System.getProperty("jacop.presolve.probe", "off")), Probing.Mode.OFF);
@@ -174,6 +175,8 @@ public class Options {
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
+            --presolve-tabling replace small groups of constraints by the tables of their
+                solutions when presolving (default false)
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
                 of "off" (default), "shave" (bound shaving and failed-literal probing of 0-1
                 variables), "sac" (as "shave", and every value of small domains)
@@ -222,6 +225,7 @@ public class Options {
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
+      case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
@@ -359,6 +363,11 @@ public class Options {
     } else {
       System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
+    return i + 1;
+  }
+
+  private int handlePresolveTabling(int i) {
+    presolveTabling = true;
     return i + 1;
   }
 
@@ -738,6 +747,16 @@ public class Options {
    */
   public int presolveRounds() {
     return presolveRounds;
+  }
+
+  /**
+   * It defines whether presolve replaces small groups of constraints by tables
+   * (--presolve-tabling).
+   *
+   * @return true if presolve tabulates, false by default
+   */
+  public boolean presolveTabling() {
+    return presolveTabling;
   }
 
   /**
