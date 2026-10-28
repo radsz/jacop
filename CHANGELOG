@@ -432,6 +432,17 @@ Version 5.0 (unreleased)
     variable that occurs with weights of both signs and refuses reasons
     whose sums overflow a long.
 
+31. --lcg -f branches on defined variables last. Activity branching picked
+    the variables of defines_var annotations (sums, shortest-path values,
+    the objective) as often as the model's decision variables, though they
+    follow from those; it now branches on them only once every other
+    variable is fixed. On the 42 instances of road-cons, city-position,
+    gbac, celar, vrp, spot5 and trucking (60 s) the objective is better on
+    32 and worse on 4: celar 1.4x to 3.5x, gbac about 2x, city-position
+    1.5x to 2x. Trucking solved as a satisfaction problem finds a solution
+    in 0.02 s, where it found none in 10 s. -Djacop.lcg.late=none turns it
+    off.
+
 32. Shorter linear explanations for lazy clause generation (--lcg). A
     lifted linear reason spends its slack on the terms that cost least
     first, so it leaves out as many terms as the slack allows, and the

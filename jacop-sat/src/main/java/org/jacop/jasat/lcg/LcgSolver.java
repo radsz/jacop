@@ -150,6 +150,9 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public long searchDecisions;
 
+  /** Statistics: activity decisions on late variables (see {@link #setLateVariables}). */
+  public long lateDecisions;
+
   /** Statistics: decisions taken from the model's search annotation. */
   public long annotationDecisions;
 
@@ -175,6 +178,9 @@ public final class LcgSolver implements ExternalPropagator {
   private final boolean booleansFirst =
       !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
   private final VarHeap wide = new VarHeap();
+  // variables branched on only when every variable of heap and wide is fixed (defined variables)
+  private final VarHeap lateHeap = new VarHeap();
+  private boolean[] late;
   private double activityInc = 1;
   private long activityConflicts;
   // variables taken off the heap because they were fixed, with the decision level at the time
@@ -247,6 +253,8 @@ public final class LcgSolver implements ExternalPropagator {
     activity = new double[n];
     heap.grow(n, activity);
     wide.grow(n, activity);
+    lateHeap.grow(n, activity);
+    late = new boolean[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
@@ -1147,8 +1155,11 @@ public final class LcgSolver implements ExternalPropagator {
     return -geLit(best, vars[best].min() + 1);
   }
 
-  // the heap of a variable: wide for a variable that is not 0/1
+  // the heap of a variable: lateHeap for a late variable, else wide for one that is not 0/1
   private VarHeap heapOf(int i) {
+    if (late[i]) {
+      return lateHeap;
+    }
     return root[i].min() < 0 || root[i].max() > 1 ? wide : heap;
   }
 
@@ -1173,17 +1184,24 @@ public final class LcgSolver implements ExternalPropagator {
       h = wide;
     }
     if (h.isEmpty()) {
-      return 0;
+      popFixed(lateHeap);
+      h = lateHeap;
+      if (h.isEmpty()) {
+        return 0;
+      }
     }
     int i = h.max();
     if (lastConflict
         && conflictVar >= 0
         && !vars[conflictVar].singleton()
-        && (!booleansFirst || heapOf(conflictVar) == h)) {
+        && (heapOf(conflictVar) == h || !booleansFirst && h != lateHeap && !late[conflictVar])) {
       i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
     }
     conflictVar = -1;
     decisionVar = i;
+    if (late[i]) {
+      lateDecisions++;
+    }
     IntVar x = vars[i];
     searchDecisions++;
     if (phase != null && x.domain.contains(phase[i])) {
@@ -1194,6 +1212,26 @@ public final class LcgSolver implements ExternalPropagator {
       case "split" -> -geLit(i, x.min() + (x.max() - x.min()) / 2 + 1);
       default -> -geLit(i, x.min() + 1);
     };
+  }
+
+  /**
+   * Sets the variables branched on by activity only after every other variable is fixed, such as
+   * variables defined by a constraint from the others. Set them before solving.
+   *
+   * @param defined the variables to branch on last
+   */
+  public void setLateVariables(Iterable<? extends Var> defined) {
+    for (Var v : defined) {
+      int i = idOf(v);
+      if (i >= 0 && !late[i]) {
+        VarHeap h = heapOf(i);
+        late[i] = true;
+        if (h.contains(i)) {
+          h.remove(i);
+          lateHeap.insert(i);
+        }
+      }
+    }
   }
 
   private void bump(int i) {

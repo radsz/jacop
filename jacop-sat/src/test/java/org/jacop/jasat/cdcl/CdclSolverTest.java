@@ -566,4 +566,41 @@ class CdclSolverTest {
       }
     }
   }
+
+  @Test
+  void varHeapRemoveKeepsTheOrder() {
+    Random rnd = new Random(5);
+    for (int run = 0; run < 200; run++) {
+      int n = 1 + rnd.nextInt(40);
+      double[] activity = new double[n];
+      VarHeap heap = new VarHeap();
+      heap.grow(n, activity);
+      Set<Integer> in = new HashSet<>();
+      for (int v = 0; v < n; v++) {
+        activity[v] = rnd.nextInt(10);
+        heap.insert(v);
+        in.add(v);
+      }
+      for (int step = 0; step < 3 * n; step++) {
+        int v = rnd.nextInt(n);
+        if (rnd.nextBoolean()) {
+          heap.remove(v);
+          in.remove(v);
+        } else {
+          heap.insert(v);
+          in.add(v);
+        }
+        assertEquals(in.contains(v), heap.contains(v));
+      }
+      double last = Double.MAX_VALUE;
+      int count = 0;
+      while (!heap.isEmpty()) {
+        int v = heap.removeMax();
+        assertTrue(in.contains(v) && activity[v] <= last, "run " + run);
+        last = activity[v];
+        count++;
+      }
+      assertEquals(in.size(), count, "run " + run);
+    }
+  }
 }
