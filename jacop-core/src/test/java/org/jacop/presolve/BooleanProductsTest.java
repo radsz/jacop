@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.function.Function;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
@@ -123,6 +124,19 @@ class BooleanProductsTest {
     int[][] domains = {{0, 6}, {1, 7}, {0, 7}};
     Function<IntVar[], List<Constraint>> f =
         x -> list(new XplusCeqZ(x[0], 1, x[1]), new XmulYeqZ(x[1], x[3], x[2]));
+    assertThat(replaced(model(domains, 1, f))).isOne();
+    assertThat(solve(model(domains, 1, f), true)).isEqualTo(solve(model(domains, 1, f), false));
+  }
+
+  @Test
+  void constraintsWithoutALinearFormAreSkipped() {
+    // a subclass of SumInt has no linear form: linearForm() returns null
+    int[][] domains = {{-2, 5}, {-10, 10}, {-3, 3}};
+    Function<IntVar[], List<Constraint>> f =
+        x ->
+            list(
+                new SumInt(new IntVar[] {x[0], x[2]}, "==", x[1]) {},
+                new XmulYeqZ(x[0], x[3], x[1]));
     assertThat(replaced(model(domains, 1, f))).isOne();
     assertThat(solve(model(domains, 1, f), true)).isEqualTo(solve(model(domains, 1, f), false));
   }

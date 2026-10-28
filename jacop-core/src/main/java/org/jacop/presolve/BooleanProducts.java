@@ -110,7 +110,9 @@ public final class BooleanProducts implements Rule {
     for (Constraint c : context.constraints()) {
       if (c instanceof LinearExplainable e && !context.removed(c)) {
         LinearForm f = e.linearForm();
-        if (f.relation() == LinearForm.EQ
+        // a constraint may have no linear form for its current arguments
+        if (f != null
+            && f.relation() == LinearForm.EQ
             && f.vars().length == 2
             && f.vars()[0] != f.vars()[1]
             && Math.abs(f.weights()[0]) == 1
