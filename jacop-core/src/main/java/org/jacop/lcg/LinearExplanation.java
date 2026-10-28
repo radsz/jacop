@@ -380,11 +380,7 @@ public final class LinearExplanation {
       int i = (int) keys[k];
       long w = Math.abs(weights[i]);
       boolean lower = upperSide == weights[i] > 0;
-      int now = lower ? trail.minBefore(vars[i], position) : trail.maxBefore(vars[i], position);
-      long room = slack / w;
-      int used =
-          trail.addBoundReaching(vars[i], position, lower, lower ? now - room : now + room, out);
-      slack -= w * Math.abs((long) now - used);
+      slack -= w * trail.addBoundWithin(vars[i], position, lower, slack / w, out);
     }
   }
 
