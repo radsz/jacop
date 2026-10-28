@@ -166,7 +166,7 @@ public class AdiffBeqC extends AbstractSetOpBeqC implements Copyable<AdiffBeqC> 
   }
 
   @Override
-  SetExplanation.Relation relation() {
+  public SetExplanation.Relation relation() {
     return getClass() == AdiffBeqC.class ? (e, in) -> in[2] == (in[0] && !in[1]) : null;
   }
 

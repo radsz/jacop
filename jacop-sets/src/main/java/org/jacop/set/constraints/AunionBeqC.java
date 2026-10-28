@@ -136,7 +136,7 @@ public class AunionBeqC extends AbstractSetOpBeqC implements Copyable<AunionBeqC
   }
 
   @Override
-  SetExplanation.Relation relation() {
+  public SetExplanation.Relation relation() {
     return getClass() == AunionBeqC.class ? (e, in) -> in[2] == (in[0] || in[1]) : null;
   }
 

@@ -137,7 +137,7 @@ public class AintersectBeqC extends AbstractSetOpBeqC implements Copyable<Ainter
   }
 
   @Override
-  SetExplanation.Relation relation() {
+  public SetExplanation.Relation relation() {
     return getClass() == AintersectBeqC.class ? (e, in) -> in[2] == (in[0] && in[1]) : null;
   }
 
