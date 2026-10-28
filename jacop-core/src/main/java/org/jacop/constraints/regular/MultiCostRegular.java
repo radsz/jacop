@@ -315,7 +315,8 @@ public class MultiCostRegular extends Constraint
   public static List<Constraint> merge(List<Constraint> constraints) {
     Map<List<Object>, List<CostRegular>> groups = new LinkedHashMap<>();
     for (Constraint c : constraints) {
-      if (c instanceof CostRegular cr) {
+      // a subclass such as CostMdd describes its graph without an automaton
+      if (c instanceof CostRegular cr && c.getClass() == CostRegular.class) {
         groups.computeIfAbsent(key(cr), k -> new ArrayList<>()).add(cr);
       }
     }

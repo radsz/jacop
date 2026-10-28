@@ -43,11 +43,13 @@ import java.util.Set;
 import java.util.TreeSet;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
@@ -440,6 +442,21 @@ class MultiCostRegularTest {
     assertThat(((MultiCostRegular) merged.get(0)).cost).containsExactly(c[0], c[2]);
     assertThat(merged.subList(1, 4)).containsExactly(other, constraints.get(2), constraints.get(4));
     assertThat(MultiCostRegular.merge(List.of(other))).containsExactly(other);
+
+    // CostMdd extends CostRegular without an automaton and is left alone
+    List<Constraint> mdds = new ArrayList<>();
+    for (int k = 0; k < 2; k++) {
+      mdds.add(
+          new CostMdd(
+              new IntVar[] {x[0]},
+              new int[] {1, 2},
+              new int[] {1},
+              new IntDomain[] {new IntervalDomain(0, 1)},
+              new int[] {k},
+              new int[] {2},
+              c[k]));
+    }
+    assertThat(MultiCostRegular.merge(mdds)).containsExactlyElementsOf(mdds);
   }
 
   @Test
