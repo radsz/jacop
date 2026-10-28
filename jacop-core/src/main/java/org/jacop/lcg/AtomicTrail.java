@@ -562,6 +562,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // lifted reasons: bounds weakened as far as the propagation allows, unless -Djacop.lcg.lift=false
   private static final boolean LIFTING = !"false".equals(System.getProperty("jacop.lcg.lift"));
 
+  // whether reasons are lifted, so an explanation may leave out a bound the slack covers
+  static boolean lifting() {
+    return LIFTING;
+  }
+
   // adds the earliest entry of e's kind, from e back, that still reaches limit; e < 0 for none
   private int addWeakest(IntVar x, int e, boolean lower, long limit, EntryList out) {
     int rootBound = lower ? root[slot(x)].min() : root[slot(x)].max();
