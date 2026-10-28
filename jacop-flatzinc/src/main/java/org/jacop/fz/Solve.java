@@ -548,6 +548,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
+    Var[] frozen = frozenVariables(node);
+    if (frozen != null) {
+      presolver.keep(frozen).solutionPreserving(false);
+    }
     Tabling tabling = options.presolveTabling() ? new Tabling() : null;
     if (tabling != null) {
       presolver.rule(tabling);
@@ -574,8 +578,82 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clause[1] = map.get(clause[1]);
         }
         dictionary = dictionary.mapTo(map);
+        if (!d.relaxed().isEmpty()) {
+          // half-reified Booleans: any value completes a solution, and postsolve sets them
+          Set<Var> relaxed = Collections.newSetFromMap(new IdentityHashMap<>());
+          d.relaxed().forEach(v -> relaxed.add(map.get(v)));
+          dictionary.removeFromDefaultSearch(relaxed);
+        }
         store = d.child();
         presolve = d;
+      }
+    }
+  }
+
+  /**
+   * The variables whose values must be those of a solution of the loaded model: the output
+   * variables, the objective and the variables of clauses posted after presolve. Returns null when
+   * presolve has to keep every solution, under all-solution or several-solution satisfaction
+   * search, or when an on_restart model reads variables between runs.
+   */
+  private Var[] frozenVariables(ASTSolveItem node) {
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(node.jjtGetNumChildren() - 1);
+    int solve = getKind(kind.getKind());
+    boolean severalSolutions = options.getAll() || options.getNumberSolutions() > 1;
+    if (solve == 0 && severalSolutions || dictionary.onRestart != null) {
+      return null;
+    }
+    Set<Var> frozen = Collections.newSetFromMap(new IdentityHashMap<>());
+    frozen.addAll(dictionary.outputVariables);
+    for (OutputArrayAnnotation a : dictionary.outputArray) {
+      frozen.addAll(Arrays.asList(a.getArray()));
+    }
+    if (solve != 0) {
+      ASTSolveExpr cost = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (cost.getType() == 0) {
+        Var v = dictionary.getVariable(cost.getIdent());
+        frozen.add(v != null ? v : dictionary.getFloatVariable(cost.getIdent()));
+      } else {
+        Var[] a = dictionary.getVariableArray(cost.getIdent());
+        frozen.add(a != null ? a[cost.getIndex()] : null);
+        Var[] fa = dictionary.getVariableFloatArray(cost.getIdent());
+        frozen.add(fa != null ? fa[cost.getIndex()] : null);
+      }
+    }
+    addSearchVariables(node, frozen);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      frozen.addAll(Arrays.asList(clause[0]));
+      frozen.addAll(Arrays.asList(clause[1]));
+    }
+    frozen.remove(null);
+    return frozen.toArray(new Var[0]);
+  }
+
+  /**
+   * Adds the variables of the search annotations: a half-reified Boolean that the search sets to
+   * false no longer prunes with the negation of its constraint, so the search tree grows.
+   */
+  private void addSearchVariables(ASTSolveItem node, Set<Var> frozen) {
+    int count = node.jjtGetNumChildren();
+    if (count < 2) {
+      return;
+    }
+    SearchItem<T> si = new SearchItem<>(store, dictionary);
+    if (count == 2) {
+      si.searchParameters(node, 0);
+    } else {
+      si.searchParametersForSeveralAnnotations(node, 0);
+    }
+    addSearchVariables(si, frozen);
+  }
+
+  private static void addSearchVariables(SearchItem<?> si, Set<Var> frozen) {
+    if (si.vars() != null) {
+      frozen.addAll(Arrays.asList(si.vars()));
+    }
+    if (si.getSearchItems() != null) {
+      for (SearchItem<?> sub : si.getSearchItems()) {
+        addSearchVariables(sub, frozen);
       }
     }
   }
@@ -675,6 +753,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
+    d.reductions()
+        .forEach(
+            (rule, n) ->
+                s.append("%%%mzn-stat: presolve")
+                    .append(Character.toUpperCase(rule.charAt(0)))
+                    .append(rule, 1, rule.length())
+                    .append('=')
+                    .append(n)
+                    .append('\n'));
     if (tabling != null) {
       Tabling.Statistics t = tabling.statistics();
       s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
