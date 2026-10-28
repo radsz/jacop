@@ -1148,7 +1148,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // core-guided search for a sum objective before branch and bound: its share of the time,
       // and the conflicts one call of the solver may take before it stops
       lcg.setCoreSearch(
-          Double.parseDouble(options.freeConfig("lcg-core", "0")),
+          Double.parseDouble(options.freeConfig("lcg-core", "0.5")),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
     }
