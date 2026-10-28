@@ -79,6 +79,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.ReifiedExplanation;
+import org.jacop.lcg.ValueIndicator;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -1173,7 +1174,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = c, reified with b or implied by b. */
-  final class FzXeqC extends Constraint implements Copyable<FzXeqC>, Explainable {
+  final class FzXeqC extends Constraint implements Copyable<FzXeqC>, Explainable, ValueIndicator {
 
     final IntVar x;
     final int c;
@@ -1188,6 +1189,21 @@ public class Support implements ParserTreeConstants {
       this.b = b;
       this.isReified = isReified;
       this.numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
+    }
+
+    @Override
+    public IntVar indicator() {
+      return isReified ? b : null;
+    }
+
+    @Override
+    public IntVar variable() {
+      return x;
+    }
+
+    @Override
+    public int value() {
+      return c;
     }
 
     @Override

@@ -490,6 +490,9 @@ public final class LcgSolver implements ExternalPropagator {
    * search finds would have to improve, which makes its strata hard, so the bound comes only after
    * it. Branch and bound then starts from the variables' activity before the core-guided search.
    */
+  // the most times the core-guided phase gets another share of the time
+  private static final int MAX_CORE_EXTENSIONS = 8;
+
   private int minimizeWithCores() {
     long deadline = sat.deadline();
     long now = System.nanoTime();
@@ -515,6 +518,19 @@ public final class LcgSolver implements ExternalPropagator {
           result = coreSearch.run(phaseLimit, coreCallLimit);
         }
       } else {
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
+      // a phase that ran out of its time while its lower bound, at its rate so far, would meet the
+      // best solution before the deadline gets another share of the time left
+      for (int extension = 0;
+          extension < MAX_CORE_EXTENSIONS
+              && result == CdclSolver.UNKNOWN
+              && deadline != Long.MAX_VALUE
+              && System.nanoTime() >= sat.deadline()
+              && coreSearch.closing(deadline);
+          extension++) {
+        now = System.nanoTime();
+        sat.setDeadline(now + (long) (coreShare * Math.max(0, deadline - now)));
         result = coreSearch.run(phaseLimit, coreCallLimit);
       }
     } finally {
@@ -616,6 +632,25 @@ public final class LcgSolver implements ExternalPropagator {
     }
     boolean atom = litKind[d] == GE_KIND ? v >= litValue[d] : v == litValue[d];
     return atom == lit > 0;
+  }
+
+  /** The domain of variable i when the solver was made. */
+  IntDomain rootDomain(int i) {
+    return root[i];
+  }
+
+  /** Probes a literal at the root, see {@link CdclSolver#probe(int)}. */
+  int[] probe(int lit) {
+    if (rootFailed) {
+      return null;
+    }
+    store.setReturnAfterPruning(!FULL_FIXPOINT);
+    try {
+      return sat.probe(lit);
+    } finally {
+      store.setReturnAfterPruning(false);
+      notifyBacktrack(0);
+    }
   }
 
   int solveUnder(int... assumed) {

@@ -32,6 +32,7 @@
 package org.jacop.jasat.lcg;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -39,10 +40,12 @@ import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ValueIndicator;
 
 /**
  * Core-guided search for an objective that is a linear sum: the OLL algorithm (Andres et al. 2012,
@@ -104,7 +107,8 @@ public final class CoreSearch {
 
   // the conflicts of one probe of a term's level
   private static final long PROBE_CONFLICTS = 100;
-  // the lower bound's rate is measured over this many nanoseconds, and may grow this many times
+  // the lower bound's rate is measured once this many nanoseconds passed, and may grow this many
+  // times
   private static final long RATE_WINDOW = 2_000_000_000L;
   private static final double RATE_SLACK = 3;
 
@@ -139,15 +143,24 @@ public final class CoreSearch {
   /** Statistics: solutions found under the assumptions. */
   public long stratumSolutions;
 
+  /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
+  public long amoGroups;
+
+  /** Statistics: objective terms expanded into the values of a variable. */
+  public long expandedTerms;
+
+  /** Statistics: what those groups added to the lower bound. */
+  public long amoBound;
+
   /** The objective's lower bound proved by the cores. */
   public long lowerBound;
 
   /** Whether the phase proved its best solution optimal, or that there is none. */
   public boolean proved;
 
-  private long checkTime; // when the rate of the lower bound was last measured, and the bound then
-  private long checkBound;
-  private long startTime; // when the rate was first measured
+  private long startTime; // when the first call of the solver started, and the bound then
+  private long startBound;
+  private boolean grouped; // the at-most-one groups were looked for
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
 
@@ -193,47 +206,112 @@ public final class CoreSearch {
     // objective = constant + sum of weight * variable, over the solver's variable indices
     Map<Integer, Long> terms = new HashMap<>();
     terms.put(objective, 1L);
-    long constant = 0;
     Set<Constraint> used = new HashSet<>();
+    long[] constant = new long[1];
     for (int round = 0; round < 4 && terms.size() == 1; round++) {
-      Map.Entry<Integer, Long> only = terms.entrySet().iterator().next();
-      LinearForm f = definition(lcg.variable(only.getKey()), used);
+      int only = terms.keySet().iterator().next();
+      LinearForm f = definition(lcg.variable(only), used);
       if (f == null) {
         break;
       }
-      // a * y + sum of w_j * z_j = c, so y = (c - sum of w_j * z_j) / a with a = 1 or -1
-      long a = 0;
-      for (int k = 0; k < f.vars().length; k++) {
-        if (f.vars()[k] == lcg.variable(only.getKey())) {
-          a = f.weights()[k];
-        }
+      if (!substitute(lcg, terms, only, f, constant)) {
+        return null;
       }
-      long scale = only.getValue() * a; // a is its own inverse
-      Map<Integer, Long> next = new HashMap<>();
-      for (int k = 0; k < f.vars().length; k++) {
-        IntVar z = f.vars()[k];
-        if (z == lcg.variable(only.getKey())) {
-          continue;
-        }
-        long w = -scale * f.weights()[k];
-        if (z.singleton()) {
-          constant += w * z.value();
-          continue;
-        }
-        int j = lcg.index(z);
-        if (j < 0) {
-          return null;
-        }
-        next.merge(j, w, Long::sum);
-      }
-      constant += scale * f.c();
-      next.values().removeIf(w -> w == 0);
-      terms = next;
     }
     if (terms.containsKey(objective) || terms.isEmpty()) {
       return null;
     }
-    return new CoreSearch(lcg, objective, terms, constant);
+    Map<Integer, Long> sums = new HashMap<>(terms);
+    long sumsConstant = constant[0];
+    // a term that is only a sum defined for the objective, such as a block of a long sum split for
+    // shorter explanations, is replaced by its own terms
+    for (int round = 0; round < 4; round++) {
+      boolean changed = false;
+      for (int t : new ArrayList<>(terms.keySet())) {
+        IntVar y = lcg.variable(t);
+        if (t == objective || !terms.containsKey(t) || otherConstraints(y, used) != 1) {
+          continue;
+        }
+        LinearForm f = definition(y, used);
+        if (f != null) {
+          if (!substitute(lcg, terms, t, f, constant)) {
+            return null;
+          }
+          changed = true;
+        }
+      }
+      if (!changed) {
+        break;
+      }
+    }
+    if (terms.equals(sums)) {
+      return new CoreSearch(lcg, objective, terms, constant[0]);
+    }
+    // the terms of the sums are kept only when they form at-most-one groups: the cores of the sums
+    // themselves are found faster otherwise (celar graph05: 9 cores against one)
+    CoreSearch flat = new CoreSearch(lcg, objective, terms, constant[0]);
+    flat.addTermSofts();
+    if (!flat.relaxAtMostOnes() || flat.amoGroups > 0) {
+      return flat;
+    }
+    return new CoreSearch(lcg, objective, sums, sumsConstant);
+  }
+
+  /**
+   * Replaces term y of the sum by its definition f, {@code a * y + sum of w_j * z_j = c} with a = 1
+   * or -1, so {@code y = (c - sum of w_j * z_j) / a}. Returns false when a z_j is not a variable of
+   * the solver.
+   */
+  private static boolean substitute(
+      LcgSolver lcg, Map<Integer, Long> terms, int y, LinearForm f, long[] constant) {
+    IntVar yv = lcg.variable(y);
+    long a = 0;
+    for (int k = 0; k < f.vars().length; k++) {
+      if (f.vars()[k] == yv) {
+        a = f.weights()[k];
+      }
+    }
+    long scale = terms.remove(y) * a; // a is its own inverse
+    for (int k = 0; k < f.vars().length; k++) {
+      IntVar z = f.vars()[k];
+      if (z == yv) {
+        continue;
+      }
+      long w = -scale * f.weights()[k];
+      if (z.singleton()) {
+        constant[0] += w * z.value();
+        continue;
+      }
+      int j = lcg.index(z);
+      if (j < 0) {
+        return false;
+      }
+      terms.merge(j, w, Long::sum);
+    }
+    constant[0] += scale * f.c();
+    terms.values().removeIf(w -> w == 0);
+    return true;
+  }
+
+  /**
+   * The number of constraints on x that are not used yet, apart from the linear relaxation, which
+   * only relaxes the others.
+   */
+  private static int otherConstraints(IntVar x, Set<Constraint> used) {
+    IntDomain dom = x.dom();
+    if (dom.modelConstraints == null) {
+      return 0;
+    }
+    Set<Constraint> on = new HashSet<>();
+    for (int e = 0; e < dom.modelConstraints.length; e++) {
+      Constraint[] list = dom.modelConstraints[e];
+      for (int k = 0; list != null && k < dom.modelConstraintsToEvaluate[e]; k++) {
+        if (!used.contains(list[k]) && !(list[k] instanceof LinearRelaxation)) {
+          on.add(list[k]);
+        }
+      }
+    }
+    return on.size();
   }
 
   /** A linear equality on x with coefficient 1 or -1 that is not used yet, or null. */
@@ -277,7 +355,8 @@ public final class CoreSearch {
    * limit stops it. Each run picks up where the last one stopped.
    *
    * @param phaseLimit the solver's conflict count at which the run stops
-   * @param callLimit the conflicts one call of the solver may take before the run stops
+   * @param callLimit the conflicts one call of the solver may take before the run stops, doubled
+   *     each time a call runs out of them while the lower bound still rises fast enough
    * @return {@link CdclSolver#SAT} when the best solution is optimal, {@link CdclSolver#UNSAT} when
    *     there is no solution, {@link CdclSolver#UNKNOWN} otherwise
    */
@@ -294,10 +373,15 @@ public final class CoreSearch {
       return CdclSolver.UNKNOWN;
     }
     if (threshold < 0) {
-      for (int t = 0; t < termVar.length; t++) {
-        addTermSoft(t, 1, termWeight[t]);
+      if (!grouped) {
+        addTermSofts();
+      }
+      if (!grouped && !relaxAtMostOnes()) {
+        return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
+      startTime = System.nanoTime();
+      startBound = lowerBound;
     }
     while (true) {
       if (!relaxTrueAtRoot()) {
@@ -319,7 +403,13 @@ public final class CoreSearch {
       sat.setConflictLimit(Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap));
       int result = lcg.solveUnder(assumed.stream().mapToInt(Integer::intValue).toArray());
       if (result == CdclSolver.UNKNOWN) {
-        return result;
+        if (sat.conflicts < cap || cap >= phaseLimit || !rising()) {
+          return result;
+        }
+        // the call ran out of its own conflicts while the bound rose fast enough so far: the
+        // clauses it learnt stay, and the next call of the same assumptions may take twice as many
+        callLimit = 2 * callLimit;
+        continue;
       }
       if (result == CdclSolver.SAT) {
         stratumSolutions++;
@@ -375,30 +465,345 @@ public final class CoreSearch {
   }
 
   /**
+   * Relaxes the groups of soft literals of which at most one can be false, before any core: the
+   * cores of two such literals each raise the bound by one weight, and a group of k needs k - 1 of
+   * them, with a totalizer each. Probing each literal false at the root shows the soft literals it
+   * makes true; a greedy cover of that graph by cliques, the heaviest literals first, gives the
+   * groups. A group of k literals of smallest weight m raises the lower bound by (k - 1) m, takes m
+   * from each, and adds a soft literal of weight m that is true when all k are (the at-most-one
+   * relaxation of Ignatiev, Morgado and Marques-Silva 2019; CP-SAT's am1 presolve of the
+   * objective).
+   *
+   * <p>A term {@code w * b} with {@code b <=> x = c} can also be seen through the values of x: b is
+   * 0 exactly when x takes one of its k other values, so {@code w * b} is {@code w} times the
+   * number of those values that x does not take, less {@code (k - 1) w}. The literals {@code [x !=
+   * v]} are then soft, each of weight w, and the groups can mix values of different variables, for
+   * example observations that cannot share an instrument. Both covers are computed, and the one
+   * with the larger bound is kept. Returns false when the solver is unsatisfiable at the root.
+   */
+  private void addTermSofts() {
+    for (int t = 0; t < termVar.length; t++) {
+      addTermSoft(t, 1, termWeight[t]);
+    }
+  }
+
+  private boolean relaxAtMostOnes() {
+    grouped = true;
+    // the nodes: soft literals of terms, then the value literals of the terms that expand
+    List<Integer> lits = new ArrayList<>();
+    List<Long> weights = new ArrayList<>();
+    List<Soft> owner = new ArrayList<>(); // the term's soft literal of each node
+    for (Soft s : softs) {
+      if (s.term >= 0 && s.weight > 0 && sat.value(s.lit) == 0) {
+        lits.add(s.lit);
+        weights.add(s.weight);
+        owner.add(s);
+      }
+    }
+    int terms = lits.size();
+    long expansionCost = 0; // what the expansion takes from the bound
+    BitSet expanded = new BitSet();
+    for (int i = 0; i < terms; i++) {
+      int[] values = valueLiterals(owner.get(i));
+      if (values.length == 0) {
+        continue;
+      }
+      expanded.set(i);
+      expansionCost += (values.length - 1) * weights.get(i);
+      for (int v : values) {
+        lits.add(-v);
+        weights.add(weights.get(i));
+        owner.add(owner.get(i));
+      }
+    }
+    int n = lits.size();
+    if (n > MAX_GROUP_NODES) {
+      return true;
+    }
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int i = 0; i < n; i++) {
+      position.put(lits.get(i), i);
+    }
+    BitSet[] adjacent = new BitSet[n];
+    for (int i = 0; i < n; i++) {
+      adjacent[i] = new BitSet();
+    }
+    BitSet free = new BitSet(n);
+    long start = System.nanoTime();
+    long deadline = sat.deadline();
+    long budget =
+        deadline == Long.MAX_VALUE
+            ? PROBE_TIME
+            : Math.min(PROBE_TIME, Math.max(0, deadline - start) / PROBE_SHARE);
+    for (int i = 0; i < n && System.nanoTime() - start < budget; i++) {
+      int lit = lits.get(i);
+      if (sat.value(lit) != 0) {
+        continue;
+      }
+      int[] implied = lcg.probe(-lit);
+      if (implied == null) {
+        // the literal is true in every solution
+        if (!sat.addClause(lit)) {
+          return false;
+        }
+        continue;
+      }
+      free.set(i);
+      for (int l : implied) {
+        Integer k = position.get(l);
+        if (k != null && k != i) {
+          adjacent[i].set(k);
+          adjacent[k].set(i);
+        }
+      }
+    }
+    // the literals of each cover: terms only, or the values in place of the terms that expand
+    BitSet plain = new BitSet(n);
+    plain.set(0, terms);
+    plain.and(free);
+    BitSet byValues = (BitSet) free.clone();
+    byValues.andNot(expanded);
+    if (expanded.isEmpty()) {
+      byValues = null;
+    }
+    List<List<Integer>> plainCover = cover(plain, adjacent, weights);
+    List<List<Integer>> valueCover = byValues == null ? null : cover(byValues, adjacent, weights);
+    List<List<Integer>> chosen = plainCover;
+    if (valueCover != null
+        && gain(valueCover, weights) - expansionCost > gain(plainCover, weights)) {
+      chosen = valueCover;
+      for (int i = expanded.nextSetBit(0); i >= 0; i = expanded.nextSetBit(i + 1)) {
+        Soft s = owner.get(i);
+        for (int k = terms; k < n; k++) {
+          if (owner.get(k) == s) {
+            Soft value = new Soft(lits.get(k), s.weight, -1, 0, null, 0);
+            value.expanded = true; // nothing follows it
+            addSoft(value);
+          }
+        }
+        s.weight = 0;
+        s.expanded = true;
+        expandedTerms++;
+      }
+      lowerBound -= expansionCost;
+    }
+    for (List<Integer> clique : chosen) {
+      long m = Long.MAX_VALUE;
+      for (int k : clique) {
+        m = Math.min(m, byLiteral.get(lits.get(k)).weight);
+      }
+      int[] all = new int[clique.size() + 1];
+      int z = lcg.newAuxiliary();
+      all[0] = z;
+      for (int j = 0; j < clique.size(); j++) {
+        Soft s = byLiteral.get(lits.get(clique.get(j)));
+        s.weight -= m;
+        all[j + 1] = -s.lit;
+        if (!sat.addClause(-z, s.lit)) {
+          return false;
+        }
+      }
+      if (!sat.addClause(all)) {
+        return false;
+      }
+      Soft group = new Soft(z, m, -1, 0, null, 0);
+      group.expanded = true; // nothing follows it
+      addSoft(group);
+      lowerBound += m * (clique.size() - 1);
+      amoGroups++;
+      amoBound += m * (clique.size() - 1);
+    }
+    return boundObjective();
+  }
+
+  /**
+   * A greedy cover of the given nodes by cliques of two or more, the heaviest nodes first. A clique
+   * takes its smallest weight from each of its nodes, and a node whose weight is not used up can be
+   * in further cliques, as a literal can be in several cores.
+   */
+  private static List<List<Integer>> cover(BitSet nodes, BitSet[] adjacent, List<Long> weights) {
+    long[] left = new long[weights.size()];
+    BitSet open = new BitSet();
+    for (int i = nodes.nextSetBit(0); i >= 0; i = nodes.nextSetBit(i + 1)) {
+      left[i] = weights.get(i);
+      open.set(i);
+    }
+    List<List<Integer>> cliques = new ArrayList<>();
+    boolean found = true;
+    while (found) {
+      found = false;
+      List<Integer> order = new ArrayList<>();
+      for (int i = open.nextSetBit(0); i >= 0; i = open.nextSetBit(i + 1)) {
+        order.add(i);
+      }
+      order.sort((a, b) -> Long.compare(left[b], left[a]));
+      for (int i : order) {
+        if (left[i] == 0) {
+          continue;
+        }
+        List<Integer> clique = new ArrayList<>();
+        clique.add(i);
+        BitSet candidates = (BitSet) adjacent[i].clone();
+        candidates.and(open);
+        while (!candidates.isEmpty()) {
+          int best = -1;
+          for (int k = candidates.nextSetBit(0); k >= 0; k = candidates.nextSetBit(k + 1)) {
+            if (best < 0 || left[k] > left[best]) {
+              best = k;
+            }
+          }
+          clique.add(best);
+          candidates.and(adjacent[best]);
+        }
+        if (clique.size() < 2) {
+          open.clear(i); // no neighbour has weight left
+          continue;
+        }
+        long m = Long.MAX_VALUE;
+        for (int k : clique) {
+          m = Math.min(m, left[k]);
+        }
+        for (int k : clique) {
+          left[k] -= m;
+          if (left[k] == 0) {
+            open.clear(k);
+          }
+        }
+        cliques.add(clique);
+        found = true;
+      }
+    }
+    return cliques;
+  }
+
+  /** What a cover adds to the lower bound. */
+  private static long gain(List<List<Integer>> cover, List<Long> weights) {
+    long[] left = new long[weights.size()];
+    for (int i = 0; i < left.length; i++) {
+      left[i] = weights.get(i);
+    }
+    long sum = 0;
+    for (List<Integer> clique : cover) {
+      long m = Long.MAX_VALUE;
+      for (int k : clique) {
+        m = Math.min(m, left[k]);
+      }
+      for (int k : clique) {
+        left[k] -= m;
+      }
+      sum += m * (clique.size() - 1);
+    }
+    return sum;
+  }
+
+  // the most soft literals probed for at-most-one groups, the most time the probes may take, and
+  // at most this part of the time left
+  private static final int MAX_GROUP_NODES = 20_000;
+  private static final long PROBE_TIME = 2_000_000_000L;
+  private static final long PROBE_SHARE = 10;
+
+  private static final int[] NO_VALUES = new int[0];
+
+  /** The most values of a variable whose objective term is seen through its values. */
+  private static final int MAX_EXPANDED_VALUES = 64;
+
+  /**
+   * The literals {@code [x = v]} for the values v of x other than c, when s is the soft literal
+   * {@code [b >= 1]} of a term {@code w * b} with {@code w > 0} and {@code b <=> x = c}, and x has
+   * three to {@link #MAX_EXPANDED_VALUES} values; else none.
+   */
+  private int[] valueLiterals(Soft s) {
+    if (s.level != 1 || !termUp[s.term] || termSpan[s.term] != 1) {
+      return NO_VALUES;
+    }
+    IntVar b = lcg.variable(termVar[s.term]);
+    ValueIndicator indicator = indicatorOf(b);
+    if (indicator == null || b.min() != 0) {
+      return NO_VALUES;
+    }
+    int x = lcg.index(indicator.variable());
+    if (x < 0) {
+      return NO_VALUES;
+    }
+    IntDomain dom = lcg.rootDomain(x);
+    int c = indicator.value();
+    if (dom.getSize() > MAX_EXPANDED_VALUES || !dom.contains(c) || dom.getSize() < 3) {
+      return NO_VALUES;
+    }
+    int[] values = new int[dom.getSize() - 1];
+    int k = 0;
+    for (var e = dom.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      if (v != c) {
+        values[k++] = lcg.eqLiteral(x, v);
+      }
+    }
+    return values;
+  }
+
+  /** The constraint {@code b <=> x = c} on b, or null. */
+  private static ValueIndicator indicatorOf(IntVar b) {
+    IntDomain dom = b.dom();
+    if (dom.modelConstraints == null) {
+      return null;
+    }
+    for (int e = 0; e < dom.modelConstraints.length; e++) {
+      Constraint[] list = dom.modelConstraints[e];
+      for (int k = 0; list != null && k < dom.modelConstraintsToEvaluate[e]; k++) {
+        if (list[k] instanceof ValueIndicator v && v.indicator() == b) {
+          return v;
+        }
+      }
+    }
+    return null;
+  }
+
+  /**
    * Whether the lower bound rises too slowly to meet the best solution before the deadline, at
-   * three times its rate of the last two seconds; for example when each core of two terms with
-   * large domains raises it by 1. Branch and bound then gets the time. Without a deadline the time
-   * left is taken as the time the phase has run: cores that cost no conflicts never reach its
-   * budget of conflicts, and one per level of a term of a million values would run for hours.
+   * three times its rate since the first call of the solver, once that is two seconds ago; for
+   * example when each core of two terms with large domains raises it by 1. Branch and bound then
+   * gets the time. The rate is taken since the start, not over the last seconds, so that a few slow
+   * cores near the optimum do not end the phase.
    */
   private boolean tooSlow() {
-    long now = System.nanoTime();
-    if (checkTime == 0) {
-      checkTime = now;
-      startTime = now;
-      checkBound = lowerBound;
+    return System.nanoTime() - startTime >= RATE_WINDOW
+        && lcg.bestObjective() != Long.MAX_VALUE
+        && !rising();
+  }
+
+  /**
+   * Whether the lower bound, at its rate since the first call of the solver, would meet the best
+   * solution before the given deadline.
+   *
+   * @param deadline a time of {@link System#nanoTime()}
+   * @return false when there is no solution yet
+   */
+  boolean closing(long deadline) {
+    long best = lcg.bestObjective();
+    if (best == Long.MAX_VALUE || startTime == 0) {
       return false;
     }
-    if (now - checkTime < RATE_WINDOW) {
+    long now = System.nanoTime();
+    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startTime);
+    return rate * (deadline - now) >= best - lowerBound;
+  }
+
+  /**
+   * Whether the lower bound, at three times its rate since the first call of the solver, would meet
+   * the best solution before the deadline. False when there is no solution yet. Without a deadline
+   * the time left is taken as the time the phase has run: cores that cost no conflicts never reach
+   * its budget of conflicts, and one per level of a term of a million values would run for hours.
+   */
+  private boolean rising() {
+    long best = lcg.bestObjective();
+    if (best == Long.MAX_VALUE) {
       return false;
     }
     long deadline = sat.deadline();
-    long best = lcg.bestObjective();
-    double rate = (double) (lowerBound - checkBound) / (now - checkTime);
-    checkTime = now;
-    checkBound = lowerBound;
+    long now = System.nanoTime();
+    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startTime);
     long left = deadline != Long.MAX_VALUE ? deadline - now : now - startTime;
-    return best != Long.MAX_VALUE && RATE_SLACK * rate * left < best - lowerBound;
+    return RATE_SLACK * rate * left >= best - lowerBound;
   }
 
   /**
