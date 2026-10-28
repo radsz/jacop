@@ -40,6 +40,7 @@ import java.util.TreeMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
@@ -417,7 +418,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(75)) {
+      return switch (rnd.nextInt(76)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -597,6 +598,12 @@ class LcgFuzzTest {
                 rnd.nextBoolean() ? pick(b, 3) : chain("kq", 3, 0, 2),
                 intVar("kc", 0, 2 + rnd.nextInt(5)),
                 intVar("kp", rnd.nextInt(5), 12));
+        case 74 ->
+            new AlldiffSum(
+                q,
+                new String[] {"==", "<=", ">="}[rnd.nextInt(3)],
+                rnd.nextBoolean() ? one() : intVar("as", value() + 2, 9),
+                rnd.nextBoolean());
         case 63 ->
             new LinearIntDom(
                 p,
