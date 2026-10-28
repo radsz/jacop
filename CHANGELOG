@@ -238,6 +238,19 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. --lcg works on models with set variables; before, it printed "--lcg
+    ignored: the model has float or set variables" and searched without
+    learning. Each set variable is mirrored by a 0/1 variable for the
+    membership of each element of its least upper bound that is not in its
+    greatest lower bound and by a variable for its cardinality (new
+    constraint org.jacop.set.constraints.SetMirror). Every change of the
+    set's domain is passed to the mirror inside the constraint that made
+    it, so the mirror's atoms have that constraint as reason and stand for
+    the set in the generic explanations of the set constraints (new
+    interface org.jacop.lcg.Mirrored). The explanation checker
+    (-Djacop.lcg.check=true) checks the set constraints too. Float
+    variables still turn --lcg off.
+
 Version 4.11
 =============
 
