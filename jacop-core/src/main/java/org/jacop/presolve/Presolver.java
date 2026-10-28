@@ -66,7 +66,8 @@ public final class Presolver {
    * The rules every presolve applies, in this order, before those added with {@link #rule(Rule)}. A
    * new presolve rule is added here.
    */
-  static final List<Supplier<Rule>> STANDARD = List.of(AtMostOneRule::new);
+  static final List<Supplier<Rule>> STANDARD =
+      List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;

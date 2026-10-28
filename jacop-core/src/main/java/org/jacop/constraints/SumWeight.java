@@ -51,6 +51,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearForm;
 
 /**
  * SumWeight constraint implements the weighted summation over several variables. It provides the
@@ -486,5 +487,14 @@ public class SumWeight extends Constraint
     }
     lcgModel();
     return LinearExplanation.explainFailure(trail, lcgVars, lcgWeights, equalTo, true, true, out);
+  }
+
+  /**
+   * Returns the linear relation this constraint states, for presolve.
+   *
+   * @return the linear form.
+   */
+  public LinearForm linearForm() {
+    return new LinearForm(list.clone(), weights.clone(), equalTo, LinearForm.EQ);
   }
 }

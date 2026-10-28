@@ -49,6 +49,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearExplanation;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Linear constraint over 0/1 variables: w[0]*x[0] + ... + w[n-1]*x[n-1] rel z, where rel is one of
@@ -648,5 +649,26 @@ public class LinearBool extends Constraint
     lcgModel();
     return LinearExplanation.explainFailure(
         trail, lcgVars, lcgWeights, z == null ? c : 0, relationType != GE, relationType != LE, out);
+  }
+
+  /**
+   * Returns the linear relation this constraint states, for presolve.
+   *
+   * @return the linear form.
+   */
+  public LinearForm linearForm() {
+    IntVar[] vars = z == null ? x.clone() : Arrays.copyOf(x, x.length + 1);
+    long[] weights = z == null ? w.clone() : Arrays.copyOf(w, w.length + 1);
+    if (z != null) {
+      vars[x.length] = z;
+      weights[x.length] = -1;
+    }
+    int rel =
+        switch (relationType) {
+          case EQ -> LinearForm.EQ;
+          case LE -> LinearForm.LE;
+          default -> LinearForm.GE;
+        };
+    return new LinearForm(vars, weights, z == null ? c : 0, rel);
   }
 }
