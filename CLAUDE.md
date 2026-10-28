@@ -88,6 +88,20 @@ generator returning a `Model` (the constraint, the relation as a `Predicate<int[
 assignments, and the variables in the relation's order). Keep the instances small, since every node
 enumerates the whole box (nodes above 200,000 tuples are skipped).
 
+## Checking wake-up events (fresh fixpoint)
+
+`jacop-core/src/test/java/org/jacop/WakeUpFixpointTest.java` (in the build, `wakeup.trials`, 1000 in
+`min` and 3000 otherwise) makes random dives over primitive constraints, constraints composed of them
+(Reified, Implies, Not, Xor, Eq, And, Or, IfThen, IfThenElse, Conditional) and globals, and at every
+node imposes the same constraint in a fresh store over the current domains. Any value the fresh store
+prunes is a missed wake-up event or a constraint that does not propagate its own pruning. After
+changing a pruning event or a composed constraint, run it at volume:
+
+```
+mvn -Pmin -pl jacop-core test -Dtest=WakeUpFixpointTest -Dsurefire.rerunFailingTestsCount=0 \
+    -Dwakeup.trials=100000
+```
+
 ## Checking globals against their decompositions
 
 `jacop-benchmarks/src/test/java/org/jacop/decomposition/DecompositionCheck.java` replaces each
