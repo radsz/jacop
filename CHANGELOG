@@ -238,6 +238,15 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. With lazy clause generation (--lcg) an equality (XeqY, and int_eq_reif
+    and int_eq_imp in FlatZinc) gives a variable of more than 1000 values
+    only the bounds of the other one, not its holes: every value removed
+    between the bounds was a != atom with its own literals, so copying a
+    sparse domain into a large one made millions of them. On
+    liner-sf-repositioning fm3_5 --lcg -f created 8.9 million literals in
+    10 nodes and ran out of memory; it now finds 60 solutions in 60 s with
+    119 thousand literals. -Djacop.lcg.holeLimit changes the limit.
+
 Version 4.11
 =============
 
