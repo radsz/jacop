@@ -51,6 +51,7 @@ import org.jacop.core.Var;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
 import org.jacop.set.constraints.AleB;
+import org.jacop.set.constraints.AllDisjoint;
 import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.AunionBeqC;
 import org.jacop.set.constraints.CardA;
@@ -130,6 +131,156 @@ class SingleConstraintTest {
     card.domain.in(1, card, 1, 1);
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testAllDisjointIsBoundsConsistent() {
+
+    // At every node of random dives, with backtracking, the lower and upper bounds of each set
+    // are exactly the intersection and the union of the solutions, and a node fails exactly when
+    // there is no solution.
+    Random random = new Random(5);
+    for (int trial = 0; trial < 1500; trial++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(3);
+      SetVar[] s = new SetVar[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = randomSetVar(store, random, "s" + i, 6);
+      }
+      store.impose(new AllDisjoint(s));
+      boolean consistent = store.consistency();
+      assertAllDisjointBounds(s, consistent, "trial " + trial + " root");
+      for (int step = 0; consistent && step < 6; step++) {
+        if (step == 3 && store.level > 0) {
+          // Back to an earlier node, so the next call starts from a stale assignment.
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        }
+        SetVar x = s[random.nextInt(n)];
+        IntDomain open = x.domain.lub().subtract(x.domain.glb());
+        if (open.isEmpty()) {
+          continue;
+        }
+        int[] values = open.toIntArray();
+        int v = values[random.nextInt(values.length)];
+        store.setLevel(store.level + 1);
+        try {
+          if (random.nextBoolean()) {
+            x.domain.inGlb(store.level, x, v);
+          } else {
+            x.domain.inLubComplement(store.level, x, v);
+          }
+          consistent = store.consistency();
+        } catch (FailException e) {
+          consistent = false;
+        }
+        if (consistent) {
+          assertAllDisjointBounds(s, true, "trial " + trial + " step " + step);
+        }
+      }
+    }
+  }
+
+  @Test
+  void testAllDisjointUsesCardinalities() {
+
+    // Three sets of two elements in {1..6} cover it, so 6 must go to z, the only set that may
+    // take it; pairwise disjointness alone does not see this.
+    Store store = new Store();
+    SetVar x = new SetVar(store, "x", new BoundSetDomain(new IntervalDomain(), dom(1, 2, 3, 4)));
+    SetVar y = new SetVar(store, "y", new BoundSetDomain(new IntervalDomain(), dom(1, 2, 3, 4)));
+    SetVar z = new SetVar(store, "z", new BoundSetDomain(new IntervalDomain(), dom(4, 5, 6)));
+    for (SetVar v : new SetVar[] {x, y, z}) {
+      v.domain.inCardinality(store.level, v, 2, 2);
+    }
+    store.impose(new AllDisjoint(new SetVar[] {x, y, z}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().glb().eq(dom(5, 6))).isTrue();
+    assertThat(z.dom().lub().eq(dom(5, 6))).isTrue();
+    assertThat(x.dom().lub().eq(dom(1, 2, 3, 4))).isTrue();
+  }
+
+  @Test
+  void testAllDisjointReachesFixpoint() {
+
+    Random random = new Random(6);
+    int notAtFixpoint =
+        countNotAtFixpoint(
+            random,
+            store -> {
+              SetVar[] s = new SetVar[3];
+              for (int i = 0; i < s.length; i++) {
+                s[i] = randomSetVar(store, random, "s" + i, 5);
+              }
+              return new AllDisjoint(s);
+            });
+
+    assertThat(notAtFixpoint).isZero();
+  }
+
+  /** Compares the bounds of the sets with the union and intersection of all disjoint solutions. */
+  private static void assertAllDisjointBounds(SetVar[] s, boolean consistent, String where) {
+    int n = s.length;
+    int[] union = new int[n];
+    int[] inter = new int[n];
+    Arrays.fill(inter, -1);
+    int[] chosen = new int[n];
+    boolean found = enumerateDisjoint(s, 0, 0, chosen, union, inter);
+    String state = where + ": " + Arrays.toString(s);
+    assertThat(consistent).as(state).isEqualTo(found);
+    if (!found) {
+      return;
+    }
+    for (int i = 0; i < n; i++) {
+      assertThat(s[i].dom().lub().eq(maskToDomain(union[i]))).as(state + " lub of " + i).isTrue();
+      assertThat(s[i].dom().glb().eq(maskToDomain(inter[i]))).as(state + " glb of " + i).isTrue();
+    }
+  }
+
+  // Elements are 1..30; bit e - 1 of a mask stands for element e.
+  private static boolean enumerateDisjoint(
+      SetVar[] s, int i, int used, int[] chosen, int[] union, int[] inter) {
+    if (i == s.length) {
+      for (int j = 0; j < s.length; j++) {
+        union[j] |= chosen[j];
+        inter[j] &= chosen[j];
+      }
+      return true;
+    }
+    int glb = domainToMask(s[i].dom().glb());
+    int lub = domainToMask(s[i].dom().lub());
+    boolean found = false;
+    for (int mask = lub; ; mask = (mask - 1) & lub) {
+      if ((mask & glb) == glb
+          && (mask & used) == 0
+          && s[i].dom().card().contains(Integer.bitCount(mask))) {
+        chosen[i] = mask;
+        found |= enumerateDisjoint(s, i + 1, used | mask, chosen, union, inter);
+      }
+      if (mask == 0) {
+        break;
+      }
+    }
+    return found;
+  }
+
+  private static int domainToMask(IntDomain d) {
+    int mask = 0;
+    for (int v : d.toIntArray()) {
+      mask |= 1 << (v - 1);
+    }
+    return mask;
+  }
+
+  private static IntDomain maskToDomain(int mask) {
+    IntervalDomain d = new IntervalDomain();
+    for (int e = 1; e <= 30; e++) {
+      if ((mask & 1 << (e - 1)) != 0) {
+        d.unionAdapt(e, e);
+      }
+    }
+    return d;
   }
 
   @Test
