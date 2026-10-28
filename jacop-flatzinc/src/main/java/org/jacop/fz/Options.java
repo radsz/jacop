@@ -150,7 +150,11 @@ public class Options {
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
-                conflict of branch and bound, default 0.5; 0 = off)
+                conflict of branch and bound, default 0.5; 0 = off),
+                lcg-core=<share> (with --lcg and a linear objective: share of the time for
+                core-guided search before branch and bound, default 0.5; 0 = off),
+                lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
+                more, default 5000)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
