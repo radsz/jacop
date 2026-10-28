@@ -365,10 +365,10 @@ class PresolveTest {
     store.impose(new XltY(x, w));
     // the first rule only applies once the second has fixed x and propagation has run
     Derivation derivation =
-        Presolver.of(store)
+        Derivation.of(store)
             .rule(equalOnceFixed(x, y))
             .rule(context -> x.domain.in(context.level(), x, 4, 4))
-            .presolve();
+            .derive();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     // round 1 fixes x, round 2 fixes y and so z, round 3 changes nothing
@@ -444,7 +444,7 @@ class PresolveTest {
     IntVar y = new IntVar(store, "y", 0, 9);
     store.impose(new XltY(x, y));
     Derivation derivation =
-        Presolver.of(store).rounds(4).rule(context -> context.impose(new XltY(x, y))).presolve();
+        Derivation.of(store).rounds(4).rule(context -> context.impose(new XltY(x, y))).derive();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     assertThat(derivation.rounds()).isEqualTo(4);
