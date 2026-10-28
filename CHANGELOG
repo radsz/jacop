@@ -238,6 +238,18 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. New constraint AlldiffSum(x, rel, s): alldifferent(x) and
+    sum(x) rel s, rel ==, <= or >=, bounds consistent for <= and >=
+    (Beldiceanu, Carlsson, Petit and Regin, ECAI 2012, O(n log n)). The
+    FlatZinc front end posts it next to each int_lin_eq / int_lin_le with
+    unit coefficients over variables that all_different constraints make
+    pairwise different (killer sudoku cages, kakuro runs, magic square
+    rows); -Dorg.jacop.fz.alldiffSum=false turns this off. Enumerating all
+    solutions of 9x9 killer sudokus with cages of up to 5 or 7 cells needs
+    58 % fewer nodes; with free search 22x22 kakuro are solved in 10 s
+    instead of 115 s with one left unsolved. gardner_sum_square finds
+    another optimal solution.
+
 Version 4.11
 =============
 
