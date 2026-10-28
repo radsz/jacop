@@ -56,6 +56,8 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -168,6 +170,54 @@ class PresolveFlatzincTest {
     result.sort(null);
     result.add(last);
     return result;
+  }
+
+  private static final String DUAL_MODEL =
+      """
+      var 0..9: x :: output_var;
+      var 0..9: y :: output_var;
+      var 0..50: obj :: output_var;
+      var bool: b :: output_var;
+      constraint int_lin_le([1, 1], [x, y], 12);
+      constraint int_lin_eq([2, 3, -1], [x, y, obj], 0);
+      constraint bool_clause([b], []);
+      """;
+
+  /**
+   * Dual reductions run when an optimum is searched for, keep it, and stay off when all solutions
+   * of a satisfaction problem are printed.
+   */
+  @Test
+  void dualReductionsKeepTheOptimumAndStayOffForAllSolutions(@TempDir Path dir) throws IOException {
+    Path optimisation = dir.resolve("dual-max.fzn");
+    Files.writeString(optimisation, DUAL_MODEL + "solve maximize obj;\n");
+    String reduced = run("-s", "--presolve", "check", optimisation.toString());
+    assertThat(reduced).contains("%%%mzn-stat: presolveDualTightened=2");
+    assertThat(reduced).contains("obj = 33;").contains("==========");
+    assertThat(run("-s", "--presolve", "check", "--presolve-dual", "off", optimisation.toString()))
+        .doesNotContain("presolveDual")
+        .contains("obj = 33;");
+
+    Path satisfaction = dir.resolve("dual-sat.fzn");
+    Files.writeString(satisfaction, DUAL_MODEL + "solve satisfy;\n");
+    String all = run("-a", "-s", "--presolve", "check", satisfaction.toString());
+    assertThat(all).doesNotContain("presolveDual");
+    assertThat(all.split("----------", -1)).hasSize(80);
+    assertThat(run("-s", "--presolve", "check", satisfaction.toString()))
+        .contains("%%%mzn-stat: presolveDualRounds=");
+  }
+
+  /** Runs the front end, as from the command line, and returns what it prints. */
+  private static String run(String... args) {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream out = System.out;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(out);
+    }
+    return buffer.toString(StandardCharsets.UTF_8);
   }
 
   /** Solves a model with the front end, as from the command line, and returns what it prints. */

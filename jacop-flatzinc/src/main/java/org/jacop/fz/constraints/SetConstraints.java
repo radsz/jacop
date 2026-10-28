@@ -44,6 +44,7 @@ import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AinB;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.AleB;
+import org.jacop.set.constraints.AllDisjoint;
 import org.jacop.set.constraints.AltB;
 import org.jacop.set.constraints.AunionBeqC;
 import org.jacop.set.constraints.CardAeqX;
@@ -299,6 +300,12 @@ class SetConstraints implements ParserTreeConstants {
     int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     support.pose(new ChannelBoolSet(b, s, offset));
+  }
+
+  void gen_all_disjoint(SimpleNode node) {
+    SetVar[] s = support.getSetVarArray((SimpleNode) node.jjtGetChild(0));
+
+    support.pose(new AllDisjoint(s));
   }
 
   void gen_partition_set(SimpleNode node) {
