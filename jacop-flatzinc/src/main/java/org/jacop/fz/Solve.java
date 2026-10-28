@@ -445,6 +445,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ObjectivePresolve presolve =
         new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
     List<Constraint> reformulation = presolve.reformulate(store);
+    if (reformulation.size() == 1 && !halves(presolve, reformulation.getFirst())) {
+      // no cost variables and an equation as long as the objective's definition: the stronger root
+      // bound alone did not pay on vrp under lazy clause generation (four of six instances worse)
+      reformulation = List.of();
+    }
     Constraint replaced =
         reformulation.isEmpty()
             ? null
@@ -466,6 +471,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + "\n%%%mzn-stat: presolveObjectiveReplaced="
               + (replaced == null ? 0 : 1));
     }
+  }
+
+  /** True if the equation has at most half as many variables as the objective's definition. */
+  private static boolean halves(ObjectivePresolve presolve, Constraint equation) {
+    IntVar[] vars = presolve.definitionVariables();
+    return vars != null && 2L * equation.arguments().size() <= vars.length;
   }
 
   /**
