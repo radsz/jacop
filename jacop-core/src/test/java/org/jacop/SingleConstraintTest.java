@@ -598,6 +598,63 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  // Bins 0 and 1 take at most 3, so each holds at most one of the items 2, 2, 2 and 3; bin 2 gets
+  // at least two items and a load of at least 2 + 2. The load coherence and NoSum give only 3.
+  @Test
+  void testBinpackingCardinalityFromLoads() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 4, 3);
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 0, 3), new IntVar(store, "l1", 0, 3), new IntVar(store, "l2", 0, 9)
+    };
+    store.impose(
+        new Binpacking(items, binLoad, new int[] {2, 2, 2, 3}, 0).cardinalityReasoning(true));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(binLoad[2].min()).isEqualTo(4);
+  }
+
+  // Bin 0 holds at least two items and at most 5, so the item of size 5 cannot go there: the
+  // lightest other item makes 6 ("too big", Derval, Régin and Schaus 2018).
+  @Test
+  void testBinpackingCardinalityTooBig() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 4, 2);
+    IntVar[] binLoad = {new IntVar(store, "l0", 0, 5), new IntVar(store, "l1", 0, 10)};
+    IntVar[] card = {new IntVar(store, "c0", 2, 4), new IntVar(store, "c1", 0, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 3, 1, 1}, 0, card));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].singleton(1)).isTrue();
+  }
+
+  // The items of weight 0 are counted too: three items and two bins of at most one item each.
+  @Test
+  void testBinpackingCardinalityCountsZeroWeights() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 3, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    IntVar[] card = getIntVars(store, "card", 2, 2);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 4, 0}, 0, card));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testBinpackingCardinalityRejectsSharedVariable() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 3, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    IntVar[] card = {binLoad[0], new IntVar(store, "c1", 0, 3)};
+
+    assertThatThrownBy(() -> new Binpacking(items, binLoad, new int[] {1, 2, 3}, 0, card))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
   @Test
   void testCheckForInputDuplicationSkippsingSingletons2() {
 

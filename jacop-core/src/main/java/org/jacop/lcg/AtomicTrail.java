@@ -781,9 +781,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     }
     out.truncate(mark);
     for (Var v : failed.arguments()) {
-      if (v instanceof IntVar x) {
-        atomsBefore(x, size, out);
-      }
+      atomsBefore(v, size, out);
     }
     return false;
   }
@@ -799,8 +797,25 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   public void genericReason(int entry, EntryList out) {
     Constraint c = reason[entry];
     for (Var v : c.arguments()) {
-      if (v instanceof IntVar x) {
-        atomsBefore(x, entry, out);
+      atomsBefore(v, entry, out);
+    }
+  }
+
+  /**
+   * Adds to {@code out} the entries that describe a variable's domain just before a trail position:
+   * those of an integer variable, or of the integer variables mirroring a {@link Mirrored} one.
+   * Other variables have none.
+   *
+   * @param v the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param out where the entries are added
+   */
+  public void atomsBefore(Var v, int position, EntryList out) {
+    if (v instanceof IntVar x) {
+      atomsBefore(x, position, out);
+    } else if (v instanceof Mirrored m && m.mirror() != null) {
+      for (IntVar x : m.mirror()) {
+        atomsBefore(x, position, out);
       }
     }
   }

@@ -78,6 +78,16 @@ class UnaryReasoning {
   private int[] ectOrder = new int[0];
   private int[] decLctOrder = new int[0];
   private int ordered = -1;
+  // the task at each position of the last loadNormalActive and of the orders kept between calls
+  private boolean activeLoad;
+  private int[] loadedTask = new int[0];
+  private int[] orderedTask = new int[0];
+  private int[] positionOf = new int[0];
+  private int[] appended = new int[0];
+  private int[] mark = new int[0];
+  private int[] oldMark = new int[0];
+  private int markStamp;
+  private int leftOutCount;
   private long[] sortKeys = new long[0];
 
   // Theta-Lambda tree with leaves in est order; root at 1, leaves at size + rank
@@ -125,6 +135,13 @@ class UnaryReasoning {
     decLctOrder = new int[n];
     sortKeys = new long[n];
     ordered = -1;
+    loadedTask = new int[n];
+    orderedTask = new int[n];
+    positionOf = new int[n];
+    appended = new int[n];
+    mark = new int[n];
+    oldMark = new int[n];
+    markStamp = 0;
     int s = 1;
     while (s < n) {
       s <<= 1;
@@ -165,10 +182,20 @@ class UnaryReasoning {
   }
 
   private void sortAll(int n) {
-    for (int i = 0; i < n; i++) {
-      negLct[i] = -lct[i];
-      negEst[i] = -est[i];
-    }
+    initOrders(n);
+    activeLoad = false;
+    sortOrders(n);
+  }
+
+  private void sortOrders(int n) {
+    sortBy(est, estOrder, n);
+    sortBy(lct, lctOrder, n);
+    sortBy(lst, lstOrder, n);
+    sortBy(ect, ectOrder, n);
+    sortDecLct(n);
+  }
+
+  private void initOrders(int n) {
     if (ordered != n) {
       for (int i = 0; i < n; i++) {
         estOrder[i] = i;
@@ -179,11 +206,14 @@ class UnaryReasoning {
       }
       ordered = n;
     }
-    sortBy(est, estOrder, n);
-    sortBy(lct, lctOrder, n);
-    sortBy(lst, lstOrder, n);
-    sortBy(ect, ectOrder, n);
-    // the order in which the edge finding of CumulativeUnary always visited the tasks
+  }
+
+  // the order in which the edge finding of CumulativeUnary always visited the tasks
+  private void sortDecLct(int n) {
+    for (int i = 0; i < n; i++) {
+      negLct[i] = -lct[i];
+      negEst[i] = -est[i];
+    }
     sortBy(negLct, negEst, decLctOrder, n);
   }
 
@@ -211,6 +241,170 @@ class UnaryReasoning {
   }
 
   /**
+   * Loads the normal view as {@link #loadNormal(TaskView[], int)} for some of the tasks, and leaves
+   * out the fixed tasks among them that end before every other task can start, when the tasks left
+   * out do not overlap; the caller makes sure the tasks with a compulsory part do not overlap, as
+   * the time-table does. Such tasks change no bound of the other tasks in any rule, and no rule
+   * changes them (it would fail only on an overload among the other tasks, which edge finding
+   * detects without them). In a search that fixes tasks from left to right most tasks are such.
+   *
+   * <p>The task orders of the previous call are kept for the tasks loaded again, so the sorts stay
+   * short when the set of tasks changes.
+   *
+   * @param ts the tasks in the normal view.
+   * @param tsReversed the same tasks in the reversed view.
+   * @param tasks the indices of the tasks in ts to consider, in increasing order: positions break
+   *     ties in the rules, so the tasks keep the relative order they have in ts.
+   * @param count the number of tasks to consider.
+   * @param kept receives the tasks loaded.
+   * @param keptReversed receives the same tasks in the reversed view.
+   * @param leftOut receives the indices of the tasks left out.
+   * @return the number of tasks loaded; {@link #leftOutCount()} gives the number left out.
+   */
+  int loadNormalActive(
+      TaskView[] ts,
+      TaskView[] tsReversed,
+      int[] tasks,
+      int count,
+      TaskView[] kept,
+      TaskView[] keptReversed,
+      int[] leftOut) {
+    ensureCapacity(ts.length);
+    int n = count;
+    // the earliest start of a task that is not fixed
+    int cut = Integer.MAX_VALUE;
+    for (int r = 0; r < n; r++) {
+      int i = tasks[r];
+      TaskView t = ts[i];
+      int sMin = t.start.min();
+      int sMax = t.start.max();
+      int dMin = t.dur.min();
+      est[r] = sMin;
+      lst[r] = sMax;
+      lct[r] = sMax + t.dur.max();
+      ect[r] = sMin + dMin;
+      dur[r] = dMin;
+      loadedTask[r] = i;
+      if (!fixed(r)) {
+        cut = Math.min(cut, sMin);
+      }
+    }
+    // the latest end of the tasks left out; the other tasks must not start before it
+    int end = Integer.MIN_VALUE;
+    for (int r = 0; r < n; r++) {
+      if (fixed(r) && lct[r] <= cut) {
+        end = Math.max(end, lct[r]);
+      }
+    }
+    boolean leave = true;
+    for (int r = 0; r < n; r++) {
+      if (!(fixed(r) && lct[r] <= cut) && est[r] < end) {
+        // a fixed task that starts before the end of the tasks left out
+        leave = false;
+        break;
+      }
+    }
+    int m = 0;
+    leftOutCount = 0;
+    for (int r = 0; r < n; r++) {
+      int i = loadedTask[r];
+      if (leave && fixed(r) && lct[r] <= cut) {
+        leftOut[leftOutCount++] = i;
+        continue;
+      }
+      est[m] = est[r];
+      lst[m] = lst[r];
+      lct[m] = lct[r];
+      ect[m] = ect[r];
+      dur[m] = dur[r];
+      loadedTask[m] = i;
+      kept[m] = ts[i];
+      keptReversed[m] = tsReversed[i];
+      m++;
+    }
+    activeLoad = true;
+    if (m > 0) {
+      remapOrders(m, loadedTask);
+      sortOrders(m);
+    }
+    return m;
+  }
+
+  /**
+   * Gives the number of tasks left out by the last {@link #loadNormalActive}.
+   *
+   * @return the number of tasks left out.
+   */
+  int leftOutCount() {
+    return leftOutCount;
+  }
+
+  private boolean fixed(int i) {
+    return est[i] == lst[i] && ect[i] == lct[i];
+  }
+
+  private void nextMark() {
+    if (markStamp == Integer.MAX_VALUE) {
+      Arrays.fill(mark, 0);
+      Arrays.fill(oldMark, 0);
+      markStamp = 0;
+    }
+    markStamp++;
+  }
+
+  // rewrites the orders of the previous load, whose positions held the tasks of orderedTask, for
+  // positions holding the tasks of newTask: tasks no longer loaded are dropped, tasks loaded anew
+  // are added at the end
+  private void remapOrders(int m, int[] newTask) {
+    if (ordered < 0) {
+      initOrders(m);
+      System.arraycopy(newTask, 0, orderedTask, 0, m);
+      return;
+    }
+    boolean same = ordered == m;
+    for (int q = 0; same && q < m; q++) {
+      same = orderedTask[q] == newTask[q];
+    }
+    if (same) {
+      return;
+    }
+    nextMark();
+    for (int q = 0; q < m; q++) {
+      mark[newTask[q]] = markStamp;
+      positionOf[newTask[q]] = q;
+    }
+    for (int p = 0; p < ordered; p++) {
+      oldMark[orderedTask[p]] = markStamp;
+    }
+    int added = 0;
+    for (int q = 0; q < m; q++) {
+      if (oldMark[newTask[q]] != markStamp) {
+        appended[added++] = q;
+      }
+    }
+    remap(estOrder, added);
+    remap(lctOrder, added);
+    remap(lstOrder, added);
+    remap(ectOrder, added);
+    remap(decLctOrder, added);
+    System.arraycopy(newTask, 0, orderedTask, 0, m);
+    ordered = m;
+  }
+
+  private void remap(int[] order, int added) {
+    int k = 0;
+    for (int p = 0; p < ordered; p++) {
+      int task = orderedTask[order[p]];
+      if (mark[task] == markStamp) {
+        order[k++] = positionOf[task];
+      }
+    }
+    for (int a = 0; a < added; a++) {
+      order[k++] = appended[a];
+    }
+  }
+
+  /**
    * Loads the reversed view of the tasks loaded in the normal view by another instance, without
    * reading the variables; the same as {@link #load(TaskView[], int)} for {@link TaskReversedView}
    * tasks.
@@ -219,7 +413,8 @@ class UnaryReasoning {
    * @param n the number of tasks.
    */
   void loadReversed(UnaryReasoning normal, int n) {
-    ensureCapacity(n);
+    // the tasks loaded by loadNormalActive are numbered up to the capacity of normal
+    ensureCapacity(Math.max(n, normal.est.length));
     for (int i = 0; i < n; i++) {
       // the reversed task runs from -(sMax + dMax) to -sMin
       est[i] = -normal.lct[i];
@@ -228,7 +423,12 @@ class UnaryReasoning {
       lst[i] = lct[i] - dur[i];
       ect[i] = est[i] + dur[i];
     }
-    sortAll(n);
+    if (normal.activeLoad) {
+      remapOrders(n, normal.loadedTask);
+    } else {
+      initOrders(n);
+    }
+    sortOrders(n);
   }
 
   // insertion sort of order by (key, index), starting from the previous order
@@ -341,10 +541,15 @@ class UnaryReasoning {
     updatePath(leaf);
   }
 
+  // the Theta values do not change, and the path stops at the first node whose Lambda values do not
   private void removeLambda(int leaf) {
     treePLambda[leaf] = EMPTY;
     treeEctLambda[leaf] = EMPTY;
-    updatePath(leaf);
+    for (int v = leaf >> 1; v >= 1; v >>= 1) {
+      if (!combineLambda(v)) {
+        return;
+      }
+    }
   }
 
   private void updatePath(int leaf) {
@@ -389,6 +594,56 @@ class UnaryReasoning {
         responsibleEct[v] = responsibleEct[r];
       }
     }
+  }
+
+  // the Lambda values of node v from its children; tells whether they changed
+  private boolean combineLambda(int v) {
+    int l = 2 * v;
+    int r = l + 1;
+    long pLambda;
+    int pResponsible;
+    long viaLeft = treePLambda[l] + treeP[r];
+    long viaRight = treePLambda[r] + treeP[l];
+    if (viaLeft > viaRight) {
+      pLambda = viaLeft;
+      pResponsible = responsibleP[l];
+    } else {
+      pLambda = viaRight;
+      pResponsible = responsibleP[r];
+    }
+
+    long ectLambda;
+    int ectResponsible;
+    long a = treeEctLambda[l] + treeP[r];
+    long b = treePLambda[r] + treeEct[l];
+    if (a > b) {
+      if (a > treeEctLambda[r]) {
+        ectLambda = a;
+        ectResponsible = responsibleEct[l];
+      } else {
+        ectLambda = treeEctLambda[r];
+        ectResponsible = responsibleEct[r];
+      }
+    } else {
+      if (b > treeEctLambda[r]) {
+        ectLambda = b;
+        ectResponsible = responsibleP[r];
+      } else {
+        ectLambda = treeEctLambda[r];
+        ectResponsible = responsibleEct[r];
+      }
+    }
+    if (pLambda == treePLambda[v]
+        && pResponsible == responsibleP[v]
+        && ectLambda == treeEctLambda[v]
+        && ectResponsible == responsibleEct[v]) {
+      return false;
+    }
+    treePLambda[v] = pLambda;
+    responsibleP[v] = pResponsible;
+    treeEctLambda[v] = ectLambda;
+    responsibleEct[v] = ectResponsible;
+    return true;
   }
 
   // ect of Theta without task i, read from the path of i without changing the tree
