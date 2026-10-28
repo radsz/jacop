@@ -774,6 +774,18 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
+60. New decomposed constraint VectorBinpacking(bin, load, w, minBin) for
+    vector (multidimensional) bin packing, after Gualandi and Lombardi,
+    CP 2013: one Binpacking per dimension plus an Alldistinct on each
+    clique of the conflict graph (items that exceed the capacity of some
+    dimension together). The FlatZinc front end can post the same cliques
+    for bin_packing constraints over the same bin variables, one per
+    dimension; it is off by default and
+    -Dorg.jacop.fz.binPackingCliques=vector (or all, which includes single
+    bin packing constraints) turns it on. On 75 random vector bin packing
+    instances it lowered the failure count of few instances and proved no
+    more optima within 30 s, hence the default.
+
 Version 4.11
 =============
 

@@ -207,6 +207,8 @@ public class Constraints implements ParserTreeConstants {
       new KnapsackDetector(support).detect(astTree);
     }
 
+    support.detectBinPackingCliques();
+
     support.poseDelayedConstraints();
 
     // to be sure that all constraints queues are empty and the
