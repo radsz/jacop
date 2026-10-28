@@ -117,6 +117,15 @@ Results go to `jacop-benchmarks/src/test/fz/decomposition/state-<category>.tsv` 
 where the last one stopped; commit the state file with the work. Every `DIFF` or `ERROR` must be
 investigated, explained and fixed with a regression test. Details: `src/test/fz/decomposition/README.md`.
 
+`StdDecompositionsTest` checks each of those decompositions against JaCoP's constraint on a small
+model. It enumerates every solution of several scheduling models and takes about two hours, so it
+is not in any profile either; run it on demand after changing `StdDecompositions` or a global it
+covers:
+
+```
+mvn -Pmin -pl jacop-benchmarks test -Dtest=StdDecompositionsTest -Dsurefire.rerunFailingTestsCount=0
+```
+
 ## Fuzzing the SAT core
 
 `jacop-sat/src/test/java/org/jacop/jasat/cdcl/CdclFuzzTest.java` fuzzes the CDCL core in process.

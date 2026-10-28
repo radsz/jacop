@@ -249,6 +249,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/AtMostOnesTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -261,7 +262,6 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
-                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
@@ -346,6 +346,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/AtMostOnesTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -363,7 +364,6 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
-                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -447,6 +447,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/AtMostOnesTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -464,7 +465,6 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
-                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -547,6 +547,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/AtMostOnesTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
