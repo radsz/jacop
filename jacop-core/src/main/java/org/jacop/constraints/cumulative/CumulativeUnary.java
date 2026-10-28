@@ -67,6 +67,19 @@ public class CumulativeUnary extends Cumulative {
   // the time-table rule for constant durations and resource uses, created on first use
   private UnaryTimetable timetable;
 
+  // the rules in the order unaryRules runs them
+  private static final int OVERLOAD = 0;
+  private static final int DETECTABLE_NORMAL = 1;
+  private static final int DETECTABLE_REVERSED = 2;
+  private static final int NOT_LAST_NORMAL = 3;
+  private static final int NOT_LAST_REVERSED = 4;
+  private static final int EDGE_FIND_NORMAL = 5;
+  private static final int EDGE_FIND_REVERSED = 6;
+  // counts the changes of the bounds seen by the rules; a rule that pruned nothing at the current
+  // count would prune nothing again
+  private int boundsVersion;
+  private final int[] quietAt = new int[EDGE_FIND_REVERSED + 1];
+
   /**
    * It creates a cumulative constraint.
    *
@@ -228,12 +241,16 @@ public class CumulativeUnary extends Cumulative {
     }
     TaskView[] tr = filterZeroTasks(tvr);
 
+    boundsChanged();
     do {
 
       store.propagationHasOccurred = false;
 
       if (doProfile) {
         unaryProfile(store);
+        if (store.propagationHasOccurred) {
+          boundsChanged();
+        }
       }
 
       if (doUnaryEdgeFind && !store.propagationHasOccurred) {
@@ -294,7 +311,8 @@ public class CumulativeUnary extends Cumulative {
   /**
    * The overload check (optional), detectable precedences, not-last and edge finding on the normal
    * and the reversed view. Each rule sees the current bounds: the bounds are read once and again
-   * only after a rule changed some of them.
+   * only after a rule changed some of them. A rule that pruned nothing is skipped until some bound
+   * changes, which saves most of the last pass that only confirms the fixpoint.
    *
    * @param store the constraint store.
    * @param tn the tasks in the normal view.
@@ -305,37 +323,51 @@ public class CumulativeUnary extends Cumulative {
     int n = tn.length;
     boolean changed = store.propagationHasOccurred;
     store.propagationHasOccurred = false;
-    loadViews(tn, n);
-    if (overload) {
-      unaryNormal.overload(n);
+    boolean loaded = false;
+    for (int rule = overload ? OVERLOAD : DETECTABLE_NORMAL; rule <= EDGE_FIND_REVERSED; rule++) {
+      if (quietAt[rule] == boundsVersion) {
+        continue;
+      }
+      if (!loaded) {
+        loadViews(tn, n);
+        loaded = true;
+      }
+      runRule(rule, store, tn, tr, n);
+      if (store.propagationHasOccurred) {
+        store.propagationHasOccurred = false;
+        changed = true;
+        loaded = false;
+        boundsChanged();
+      } else {
+        quietAt[rule] = boundsVersion;
+      }
     }
-    unaryNormal.detectable(tn, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryReversed.detectable(tr, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryNormal.notLast(tn, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryReversed.notLast(tr, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryNormal.edgeFind(tn, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryReversed.edgeFind(tr, n, store);
     store.propagationHasOccurred |= changed;
+  }
+
+  /**
+   * Tells the rules that the bounds of the tasks may have changed since they last ran, so each of
+   * them runs again. A rule is skipped only while no bound changed since it last pruned nothing.
+   */
+  void boundsChanged() {
+    boundsVersion++;
+  }
+
+  private void runRule(int rule, Store store, TaskView[] tn, TaskView[] tr, int n) {
+    switch (rule) {
+      case OVERLOAD -> unaryNormal.overload(n);
+      case DETECTABLE_NORMAL -> unaryNormal.detectable(tn, n, store);
+      case DETECTABLE_REVERSED -> unaryReversed.detectable(tr, n, store);
+      case NOT_LAST_NORMAL -> unaryNormal.notLast(tn, n, store);
+      case NOT_LAST_REVERSED -> unaryReversed.notLast(tr, n, store);
+      case EDGE_FIND_NORMAL -> unaryNormal.edgeFind(tn, n, store);
+      default -> unaryReversed.edgeFind(tr, n, store);
+    }
   }
 
   private void loadViews(TaskView[] tn, int n) {
     unaryNormal.loadNormal(tn, n);
     unaryReversed.loadReversed(unaryNormal, n);
-  }
-
-  // reloads the bounds if the previous rule changed some, and tells whether it did
-  private boolean reloadIfChanged(Store store, TaskView[] tn, int n) {
-    if (!store.propagationHasOccurred) {
-      return false;
-    }
-    store.propagationHasOccurred = false;
-    loadViews(tn, n);
-    return true;
   }
 
   @Override

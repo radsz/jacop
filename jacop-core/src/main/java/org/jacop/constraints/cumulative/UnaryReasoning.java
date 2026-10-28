@@ -165,10 +165,15 @@ class UnaryReasoning {
   }
 
   private void sortAll(int n) {
-    for (int i = 0; i < n; i++) {
-      negLct[i] = -lct[i];
-      negEst[i] = -est[i];
-    }
+    initOrders(n);
+    sortBy(est, estOrder, n);
+    sortBy(lct, lctOrder, n);
+    sortBy(lst, lstOrder, n);
+    sortBy(ect, ectOrder, n);
+    sortDecLct(n);
+  }
+
+  private void initOrders(int n) {
     if (ordered != n) {
       for (int i = 0; i < n; i++) {
         estOrder[i] = i;
@@ -179,11 +184,14 @@ class UnaryReasoning {
       }
       ordered = n;
     }
-    sortBy(est, estOrder, n);
-    sortBy(lct, lctOrder, n);
-    sortBy(lst, lstOrder, n);
-    sortBy(ect, ectOrder, n);
-    // the order in which the edge finding of CumulativeUnary always visited the tasks
+  }
+
+  // the order in which the edge finding of CumulativeUnary always visited the tasks
+  private void sortDecLct(int n) {
+    for (int i = 0; i < n; i++) {
+      negLct[i] = -lct[i];
+      negEst[i] = -est[i];
+    }
     sortBy(negLct, negEst, decLctOrder, n);
   }
 
@@ -228,7 +236,21 @@ class UnaryReasoning {
       lst[i] = lct[i] - dur[i];
       ect[i] = est[i] + dur[i];
     }
-    sortAll(n);
+    // the orders of the normal view backwards; tasks with equal keys come in the opposite order,
+    // which changes no rule
+    initOrders(n);
+    reverse(normal.lctOrder, estOrder, n);
+    reverse(normal.estOrder, lctOrder, n);
+    reverse(normal.ectOrder, lstOrder, n);
+    // with a variable duration the ect is not the opposite of the normal lst
+    sortBy(ect, ectOrder, n);
+    sortDecLct(n);
+  }
+
+  private static void reverse(int[] from, int[] to, int n) {
+    for (int m = 0; m < n; m++) {
+      to[m] = from[n - 1 - m];
+    }
   }
 
   // insertion sort of order by (key, index), starting from the previous order
@@ -341,10 +363,15 @@ class UnaryReasoning {
     updatePath(leaf);
   }
 
+  // the Theta values do not change, and the path stops at the first node whose Lambda values do not
   private void removeLambda(int leaf) {
     treePLambda[leaf] = EMPTY;
     treeEctLambda[leaf] = EMPTY;
-    updatePath(leaf);
+    for (int v = leaf >> 1; v >= 1; v >>= 1) {
+      if (!combineLambda(v)) {
+        return;
+      }
+    }
   }
 
   private void updatePath(int leaf) {
@@ -389,6 +416,56 @@ class UnaryReasoning {
         responsibleEct[v] = responsibleEct[r];
       }
     }
+  }
+
+  // the Lambda values of node v from its children; tells whether they changed
+  private boolean combineLambda(int v) {
+    int l = 2 * v;
+    int r = l + 1;
+    long pLambda;
+    int pResponsible;
+    long viaLeft = treePLambda[l] + treeP[r];
+    long viaRight = treePLambda[r] + treeP[l];
+    if (viaLeft > viaRight) {
+      pLambda = viaLeft;
+      pResponsible = responsibleP[l];
+    } else {
+      pLambda = viaRight;
+      pResponsible = responsibleP[r];
+    }
+
+    long ectLambda;
+    int ectResponsible;
+    long a = treeEctLambda[l] + treeP[r];
+    long b = treePLambda[r] + treeEct[l];
+    if (a > b) {
+      if (a > treeEctLambda[r]) {
+        ectLambda = a;
+        ectResponsible = responsibleEct[l];
+      } else {
+        ectLambda = treeEctLambda[r];
+        ectResponsible = responsibleEct[r];
+      }
+    } else {
+      if (b > treeEctLambda[r]) {
+        ectLambda = b;
+        ectResponsible = responsibleP[r];
+      } else {
+        ectLambda = treeEctLambda[r];
+        ectResponsible = responsibleEct[r];
+      }
+    }
+    if (pLambda == treePLambda[v]
+        && pResponsible == responsibleP[v]
+        && ectLambda == treeEctLambda[v]
+        && ectResponsible == responsibleEct[v]) {
+      return false;
+    }
+    treePLambda[v] = pLambda;
+    responsibleP[v] = pResponsible;
+    treeEctLambda[v] = ectLambda;
+    responsibleEct[v] = ectResponsible;
+    return true;
   }
 
   // ect of Theta without task i, read from the path of i without changing the tree
