@@ -46,7 +46,10 @@ import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
@@ -100,6 +103,23 @@ class AtomicTrailTest {
         s -> {
           IntVar[] v = {newVar(s, "x", rnd), new IntVar(s, "b", 0, 1), newVar(s, "z", rnd)};
           return new Model(new XmulYeqZ(v[0], v[1], v[2]), t -> t[0] * t[1] == t[2], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), newVar(s, "z", rnd)};
+          return new Model(
+              new XdivYeqZ(v[0], v[1], v[2]), t -> t[1] != 0 && t[0] / t[1] == t[2], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), newVar(s, "z", rnd)};
+          return new Model(
+              new XmodYeqZ(v[0], v[1], v[2]), t -> t[1] != 0 && t[0] % t[1] == t[2], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), newVar(s, "z", rnd)};
+          return new Model(new XexpYeqZ(v[0], v[1], v[2]), AtomicTrailTest::pow, v);
         });
     m.add(
         s -> {
@@ -301,6 +321,18 @@ class AtomicTrailTest {
       }
     }
     return true;
+  }
+
+  // x^y as MiniZinc's int_pow: 1 div x^-y for y < 0, none for x = 0 then
+  private static boolean pow(int[] t) {
+    if (t[1] < 0) {
+      return t[0] != 0 && t[2] == (t[0] == 1 ? 1 : t[0] == -1 ? ((t[1] & 1) == 0 ? 1 : -1) : 0);
+    }
+    long p = 1;
+    for (int i = 0; i < t[1]; i++) {
+      p *= t[0];
+    }
+    return p == t[2];
   }
 
   @Test

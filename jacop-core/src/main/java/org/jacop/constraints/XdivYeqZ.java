@@ -33,18 +33,22 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
- * Constraint X div Y #= Z.
+ * Constraint X div Y #= Z, with the division rounding towards zero.
+ *
+ * <p>Bounds consistency: every bound has a support with the other variables in their intervals (see
+ * {@link DivModPowBounds#div}).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XdivYeqZ extends AbstractXopYeqZ implements Copyable<XdivYeqZ> {
+public class XdivYeqZ extends AbstractXopYeqZ implements Copyable<XdivYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -62,62 +66,28 @@ public class XdivYeqZ extends AbstractXopYeqZ implements Copyable<XdivYeqZ> {
   @Override
   public void consistency(final Store store) {
 
-    // it must stay as the code below assumes y is never equal to 0.
     y.domain.inComplement(store.level, y, 0);
 
-    int reminderMin;
-    int reminderMax;
-
     do {
-
       store.propagationHasOccurred = false;
-
-      if (x.min() >= 0) {
-        reminderMin = 0;
-        reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
-
-        reminderMax = Math.min(reminderMax, x.max());
-
-      } else if (x.max() < 0) {
-        reminderMax = 0;
-        reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
-      } else {
-        reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
-        reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
-      }
-
-      // Bounds for Z
-      Interval zBounds = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
-
-      z.domain.in(store.level, z, zBounds.min(), zBounds.max());
-
-      // Bounds for Y
-      Interval yBounds =
-          IntDomain.divBounds(x.min() - reminderMax, x.max() - reminderMin, z.min(), z.max());
-
-      y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-
-      // Bounds for X
-      Interval xBounds = IntDomain.mulBounds(z.min(), z.max(), y.min(), y.max());
-      int xMin = xBounds.min();
-      int xMax = xBounds.max();
-
-      int rMin = IntDomain.subtractInt(x.min(), xMax);
-      int rMax = IntDomain.subtractInt(x.max(), xMin);
-
-      if (reminderMin > rMin) {
-        rMin = reminderMin;
-      }
-      if (reminderMax < rMax) {
-        rMax = reminderMax;
-      }
-      if (rMin > rMax) {
+      long[] b = {x.min(), x.max(), y.min(), y.max(), z.min(), z.max()};
+      if (!DivModPowBounds.div(b)) {
         throw Store.failException;
       }
-
-      x.domain.in(store.level, x, IntDomain.addInt(xMin, rMin), IntDomain.addInt(xMax, rMax));
-
+      x.domain.in(store.level, x, (int) b[0], (int) b[1]);
+      y.domain.in(store.level, y, (int) b[2], (int) b[3]);
+      z.domain.in(store.level, z, (int) b[4], (int) b[5]);
     } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return BoxExplanation.explain(trail, entry, new IntVar[] {x, y, z}, DivModPowBounds::div, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return BoxExplanation.explainFailure(trail, new IntVar[] {x, y, z}, DivModPowBounds::div, out);
   }
 
   @Override
