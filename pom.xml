@@ -256,6 +256,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -359,6 +360,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -461,6 +463,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -562,6 +565,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
+                                <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
