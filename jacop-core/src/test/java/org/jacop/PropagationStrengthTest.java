@@ -70,6 +70,7 @@ import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -277,6 +278,24 @@ class PropagationStrengthTest {
     store.impose(new Reified(new Distance(x, y, variable(store, "z", -4)), b));
     IntVar d = new IntVar(store, "d", 0, 1);
     store.impose(new Reified(new Distance(x, y, variable(store, "w", 4)), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
+  // x * y = 6 with x = -4, and with x = 2 and 3 a hole in y
+  @Test
+  void testReifiedProductWithConstantNoticesFixedFactor() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", -4);
+    IntVar y = variable(store, "y", -4, 0, 1, 2, 3, 7, 8);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulYeqC(x, y, 6), b));
+    IntVar u = variable(store, "u", 2);
+    IntVar v = variable(store, "v", 1, 2, 4, 5);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new XmulYeqC(u, v, 6), d));
     assertThat(store.consistency()).isTrue();
     assertThat(b.dom()).hasToString("0");
     assertThat(d.dom()).hasToString("0");
