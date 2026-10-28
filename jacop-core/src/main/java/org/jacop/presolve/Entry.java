@@ -64,8 +64,10 @@ public sealed interface Entry {
   record Free() implements Entry {}
 
   /**
-   * The variable occurred only in clauses that presolve removed: it is neither fixed nor in the
-   * child, and postsolve gives it a value that satisfies the removed clauses.
+   * The variable was removed and postsolve gives it its value: either it occurred only in clauses
+   * that presolve removed, and its value satisfies them, or it occurred in one or two constraints
+   * that, together with the domains, leave it a value for every assignment of the other variables,
+   * and was removed with its defining constraint (presolve rule 8).
    */
   record Eliminated() implements Entry {}
 }

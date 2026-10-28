@@ -650,6 +650,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     Presolver presolver =
         Presolver.of(store)
+            .keep(keptVariables(node))
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
@@ -667,7 +668,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Var[] frozen = frozenVariables(node);
     if (frozen != null) {
-      presolver.keep(frozen).solutionPreserving(false);
+      // the frozen variables, and those the front end uses outside the constraints
+      Set<Var> keep = Collections.newSetFromMap(new IdentityHashMap<>());
+      keep.addAll(Arrays.asList(frozen));
+      keep.addAll(Arrays.asList(keptVariables(node)));
+      presolver.keep(keep.toArray(new Var[0])).solutionPreserving(false);
     }
     if (sat.collecting()) {
       // the clauses for the SAT solver of -sat or --lcg, kept outside the store
@@ -712,6 +717,80 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         store = d.child();
         presolve = d;
       }
+    }
+  }
+
+  /**
+   * The variables presolve must keep: the output variables, the variables named by the solve item
+   * (the objective and the search annotations), and those the front end uses outside the
+   * constraints (collected clauses, aliases, on_restart). The others may be eliminated.
+   */
+  private Var[] keptVariables(SimpleNode solveItem) {
+    Set<Var> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+    kept.addAll(output.outputVariables);
+    for (OutputArrayAnnotation a : output.outputArray) {
+      Collections.addAll(kept, a.getArray());
+    }
+    keepNamed(solveItem, kept);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      Collections.addAll(kept, clause[0]);
+      Collections.addAll(kept, clause[1]);
+    }
+    output.aliasTable.forEach(
+        (k, v) -> {
+          kept.add(k);
+          kept.add(v);
+        });
+    OnRestart r = output.onRestart;
+    if (r != null) {
+      for (List<? extends Var> vars :
+          List.of(
+              r.status,
+              r.solIn,
+              r.solOut,
+              r.solFloatIn,
+              r.solFloatOut,
+              r.lastValIn,
+              r.lastValOut,
+              r.lastValFloatIn,
+              r.lastValFloatOut,
+              r.uniformOut,
+              r.uniformFloatOut,
+              r.completeMarkers)) {
+        kept.addAll(vars);
+      }
+    }
+    kept.remove(null);
+    return kept.toArray(new Var[0]);
+  }
+
+  /** Adds the variables and arrays of variables named anywhere in a node. */
+  private void keepNamed(Node node, Set<Var> kept) {
+    String ident =
+        switch (node) {
+          case ASTScalarFlatExpr e -> e.getIdent();
+          case ASTVariableExpr e -> e.getIdent();
+          case ASTSolveExpr e -> e.getIdent();
+          case ASTAnnExpr e -> e.getIdent();
+          default -> null;
+        };
+    if (ident != null) {
+      Tables t = output;
+      for (Map<String, ? extends Var> m :
+          List.of(t.variableTable, t.variableFloatTable, t.setVariableTable)) {
+        if (m.get(ident) != null) {
+          kept.add(m.get(ident));
+        }
+      }
+      for (Map<String, ? extends Var[]> m :
+          List.of(t.variableArrayTable, t.variableFloatArrayTable, t.setVariableArrayTable)) {
+        if (m.get(ident) != null) {
+          Collections.addAll(kept, m.get(ident));
+        }
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      keepNamed(node.jjtGetChild(i), kept);
     }
   }
 
@@ -873,7 +952,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * The derivation's map, completed with a constant in the derived store for every variable fixed
-   * by presolve, so annotations and output arrays that name such a variable stay valid.
+   * or eliminated by presolve, so annotations and output arrays that name such a variable stay
+   * valid. An eliminated variable becomes a constant too, so search does not branch on it;
+   * postsolve gives it its value.
    */
   private static VarMap completeMap(Derivation d) {
     Map<Var, Var> fixed = new IdentityHashMap<>();
@@ -932,6 +1013,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveEliminated=").append(d.eliminated()).append('\n');
+      s.append("%%%mzn-stat: presolveSubstituted=").append(d.substitutions()).append('\n');
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
       s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');

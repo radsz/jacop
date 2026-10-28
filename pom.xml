@@ -204,6 +204,7 @@ setup to run configuration. -->
                                 <lp.test.runs>300</lp.test.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
+                                <presolve.elimination.trials>300</presolve.elimination.trials>
                                 <wakeup.trials>1000</wakeup.trials>
                             </systemPropertyVariables>
                             <includes>
@@ -368,6 +369,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/VariableEliminationTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
@@ -490,6 +492,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/VariableEliminationTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
@@ -611,6 +614,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/VariableEliminationTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
