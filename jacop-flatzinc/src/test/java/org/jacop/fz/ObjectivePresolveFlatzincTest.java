@@ -57,6 +57,7 @@ class ObjectivePresolveFlatzincTest {
 
   private static final Pattern SHIFTED = Pattern.compile("presolveObjectiveShifted=(\\d+)");
   private static final Pattern EXPANDED = Pattern.compile("presolveObjectiveExpanded=(\\d+)");
+  private static final Pattern REPLACED = Pattern.compile("presolveObjectiveReplaced=(\\d+)");
 
   /**
    * An assignment of three tasks to machines, each by an exactly-one set and one by a value literal
@@ -170,6 +171,8 @@ class ObjectivePresolveFlatzincTest {
     String out = FlatzincTestRunner.run(tmp, ENCODING, "-s");
     assertThat(stat(EXPANDED, out)).isEqualTo(1);
     assertThat(stat(SHIFTED, out)).isEqualTo(3);
+    // the equation defining cost is replaced by the reformulated one
+    assertThat(stat(REPLACED, out)).isEqualTo(1);
     assertThat(out).contains("cost = 21;").contains("==========");
     for (String[] options : List.of(new String[] {"-a"}, new String[] {})) {
       String reference = reference(ENCODING, options);
@@ -210,6 +213,7 @@ class ObjectivePresolveFlatzincTest {
   void randomModelsGiveTheSameSolutions() throws IOException {
     Random random = new Random(27102026L);
     int shifted = 0;
+    int replaced = 0;
     for (int run = 0; run < 60; run++) {
       String model = randomModel(random);
       String off = reference(model, "-a");
@@ -218,8 +222,10 @@ class ObjectivePresolveFlatzincTest {
       if (stat(SHIFTED, stats) > 0) {
         shifted++;
       }
+      replaced += Math.max(0, stat(REPLACED, stats));
     }
     assertThat(shifted).isGreaterThan(20);
+    assertThat(replaced).isGreaterThan(10);
   }
 
   private static String randomModel(Random r) {

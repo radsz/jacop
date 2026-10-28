@@ -67,8 +67,9 @@ import org.jacop.core.ValueEnumeration;
  * <p>The equation {@code objective = expanded and shifted expression} holds in every solution of
  * the model, since it is derived from the model's own equations, so imposing it keeps every
  * solution; it is useful with all solutions and with counting too. It is returned only when
- * shifting tightens the bound of the expression in the direction of optimisation, and the original
- * equations stay in the model.
+ * shifting tightens the bound of the expression in the direction of optimisation. With the other
+ * equations, exactly-one sets and counts it is equivalent to the equation defining the objective,
+ * so the caller may drop that one ({@link #definitionVariables()}).
  *
  * <p>All variables are read at their current domains, which should be at a fixpoint.
  *
@@ -135,6 +136,7 @@ public final class ObjectivePresolve {
 
   private int expanded;
   private int shifted;
+  private IntVar[] definitionVariables;
 
   /**
    * Starts an objective presolve.
@@ -223,6 +225,18 @@ public final class ObjectivePresolve {
   }
 
   /**
+   * Returns the variables of the equation that defines the objective, as used by the last {@link
+   * #reformulate()}. The reformulated equation, with the other equations, exactly-one sets and
+   * counts of the model, implies this one, so a constraint posting it can be replaced by the
+   * reformulated equation.
+   *
+   * @return the variables of the defining equation, or null if there is none.
+   */
+  public IntVar[] definitionVariables() {
+    return definitionVariables == null ? null : definitionVariables.clone();
+  }
+
+  /**
    * Expands and shifts the objective.
    *
    * @return the equation {@code objective = expression} as a constraint to impose, or null if the
@@ -256,6 +270,7 @@ public final class ObjectivePresolve {
   private LinearInt reformulate(Store store, List<Constraint> elements) {
     expanded = 0;
     shifted = 0;
+    definitionVariables = null;
     if (objective.singleton()) {
       return null;
     }
@@ -264,6 +279,7 @@ public final class ObjectivePresolve {
     if (definition == null) {
       return null;
     }
+    definitionVariables = definition.vars().clone();
 
     // objective = constant + sum(expression)
     Map<IntVar, Long> expression = new LinkedHashMap<>();

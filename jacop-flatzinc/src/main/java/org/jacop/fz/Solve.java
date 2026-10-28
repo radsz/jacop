@@ -445,6 +445,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ObjectivePresolve presolve =
         new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
     List<Constraint> reformulation = presolve.reformulate(store);
+    Constraint replaced = reformulation.isEmpty() ? null : objectiveDefinition(objective, presolve);
+    if (replaced != null) {
+      replaced.removeConstraint();
+    }
     for (Constraint c : reformulation) {
       store.impose(c.setDegreeWeight(0));
     }
@@ -455,8 +459,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + "\n%%%mzn-stat: presolveObjectiveExpanded="
               + (reformulation.isEmpty() ? 0 : presolve.expanded())
               + "\n%%%mzn-stat: presolveObjectiveShifted="
-              + (reformulation.isEmpty() ? 0 : presolve.shifted()));
+              + (reformulation.isEmpty() ? 0 : presolve.shifted())
+              + "\n%%%mzn-stat: presolveObjectiveReplaced="
+              + (replaced == null ? 0 : 1));
     }
+  }
+
+  /**
+   * The constraint of the objective whose variables are those of the objective's defining equation,
+   * if exactly one constraint has them. The reformulated equation implies it, so it is replaced
+   * instead of kept next to the reformulated equation: on vrp under lazy clause generation the two
+   * equations of 1,800 terms halve the node rate.
+   */
+  private static Constraint objectiveDefinition(IntVar objective, ObjectivePresolve presolve) {
+    IntVar[] vars = presolve.definitionVariables();
+    if (vars == null) {
+      return null;
+    }
+    Set<Var> definition = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : vars) {
+      if (!v.singleton()) {
+        definition.add(v);
+      }
+    }
+    Set<Constraint> candidates = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint[] cs : objective.dom().modelConstraints) {
+      if (cs != null) {
+        for (Constraint c : cs) {
+          if (c != null) {
+            candidates.add(c);
+          }
+        }
+      }
+    }
+    Constraint found = null;
+    for (Constraint c : candidates) {
+      Set<Var> scope = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Var v : c.arguments()) {
+        if (!v.singleton()) {
+          scope.add(v);
+        }
+      }
+      if (scope.equals(definition)) {
+        if (found != null) {
+          return null;
+        }
+        found = c;
+      }
+    }
+    return found;
   }
 
   /**
