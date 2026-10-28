@@ -337,6 +337,9 @@ class GlobalConstraintBruteForceTest {
             "BinpackingTight",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
         Arguments.of(
+            "BinpackingCardinality",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingCardinality),
+        Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
         Arguments.of("Alternative", optionalIntervals(false)),
         Arguments.of("Span", optionalIntervals(true)),
@@ -374,6 +377,8 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::denseArborescence),
         Arguments.of("Steiner", weightedGraph("Steiner", false)),
         Arguments.of("DSteiner", weightedGraph("Steiner", true)),
+        Arguments.of("SteinerDense", (Function<Random, Instance>) r -> denseSteiner(r, false)),
+        Arguments.of("DSteinerDense", (Function<Random, Instance>) r -> denseSteiner(r, true)),
         Arguments.of("BoundedPath", weightedGraph("BoundedPath", false)),
         Arguments.of("BoundedDPath", weightedGraph("BoundedPath", true)));
   }
@@ -1801,6 +1806,82 @@ class GlobalConstraintBruteForceTest {
             + Arrays.toString(w));
   }
 
+  /**
+   * A Steiner tree on a denser multigraph than {@link #weightedGraph}: 3 to 5 nodes, 3 to 7 edges,
+   * weights in 0..6, a third of the nodes required and a narrow cost window, so that the dual
+   * ascent bound of {@link org.jacop.constraints.graph.SteinerBound} and its reduced-cost filtering
+   * decide often. Variables: ns, es, the root of a directed tree, then the cost.
+   */
+  private static Instance denseSteiner(Random random, boolean directed) {
+    int n = 3 + random.nextInt(3);
+    int m = 3 + random.nextInt(5);
+    int base = random.nextInt(2);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] w = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(n);
+      w[e] = random.nextInt(7);
+    }
+    int roots = directed ? 1 : 0;
+    int[][] domains = new int[n + m + roots + 1][];
+    for (int v = 0; v < n; v++) {
+      domains[v] = random.nextInt(3) == 0 ? new int[] {1} : new int[] {0, 1};
+    }
+    for (int e = 0; e < m; e++) {
+      int r = random.nextInt(10);
+      domains[n + e] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    if (directed) {
+      domains[n + m] = domain(random, base, base + n - 1);
+    }
+    int lo = random.nextInt(3 * n);
+    domains[n + m + roots] = domain(random, lo, lo + 2 + random.nextInt(8));
+    int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+    int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.imposeDecomposition(
+                new Steiner(
+                    fromNumber,
+                    toNumber,
+                    w,
+                    directed ? x[n + m] : null,
+                    Arrays.copyOfRange(x, 0, n),
+                    Arrays.copyOfRange(x, n, n + m),
+                    x[n + m + roots],
+                    base,
+                    directed)),
+        x -> {
+          int[] ns = Arrays.copyOfRange(x, 0, n);
+          int[] es = Arrays.copyOfRange(x, n, n + m);
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += es[e] * w[e];
+          }
+          if (sum != x[n + m + roots]) {
+            return false;
+          }
+          if (directed) {
+            return GraphSemantics.dtree(from, to, ns, es, x[n + m] - base);
+          }
+          for (int r = 0; r < n; r++) {
+            if (GraphSemantics.tree(from, to, ns, es, r)) {
+              return true;
+            }
+          }
+          return false;
+        },
+        "from="
+            + Arrays.toString(fromNumber)
+            + " to="
+            + Arrays.toString(toNumber)
+            + " w="
+            + Arrays.toString(w));
+  }
+
   private static Instance stretch(Random random) {
     int n = 2 + random.nextInt(4);
     int[] values = {1, 2};
@@ -2650,20 +2731,25 @@ class GlobalConstraintBruteForceTest {
         "weights=" + Arrays.toString(weights));
   }
 
-  /** Larger items and tight loads, so that the bin-count bounds prune during the search. */
+  /**
+   * Larger items and tight loads, so that the bin-count bounds prune during the search; half of the
+   * instances also use the cardinality rules.
+   */
   private static Instance binpackingTight(Random random) {
     int items = 3 + random.nextInt(4);
     int bins = 2 + random.nextInt(2);
     int[] weights = randomInts(random, items, 1, 6);
+    boolean cardinality = random.nextBoolean();
     return new Instance(
         append(domains(random, items, 0, bins - 1), domains(random, bins, 0, 7)),
         (store, x) ->
             store.impose(
                 new Binpacking(
-                    Arrays.copyOfRange(x, 0, items),
-                    Arrays.copyOfRange(x, items, items + bins),
-                    weights.clone(),
-                    0)),
+                        Arrays.copyOfRange(x, 0, items),
+                        Arrays.copyOfRange(x, items, items + bins),
+                        weights.clone(),
+                        0)
+                    .cardinalityReasoning(cardinality)),
         x -> {
           int[] load = new int[bins];
           for (int i = 0; i < items; i++) {
@@ -2676,7 +2762,54 @@ class GlobalConstraintBruteForceTest {
           }
           return true;
         },
-        "weights=" + Arrays.toString(weights));
+        "weights=" + Arrays.toString(weights) + " cardinality=" + cardinality);
+  }
+
+  /**
+   * Bin packing with the number of items of each bin as variables; items of weight 0 and items
+   * sharing a bin variable are counted once per occurrence.
+   */
+  private static Instance binpackingCardinality(Random random) {
+    int vars = 2 + random.nextInt(4);
+    int items = vars + random.nextInt(2);
+    int bins = 2 + random.nextInt(2);
+    int[] var = new int[items];
+    for (int i = 0; i < items; i++) {
+      var[i] = i < vars ? i : random.nextInt(vars);
+    }
+    int[] weights = randomInts(random, items, 0, 4);
+    return new Instance(
+        append(
+            append(domains(random, vars, 0, bins - 1), domains(random, bins, 0, 7)),
+            domains(random, bins, 0, 3)),
+        (store, x) -> {
+          IntVar[] item = new IntVar[items];
+          for (int i = 0; i < items; i++) {
+            item[i] = x[var[i]];
+          }
+          store.impose(
+              new Binpacking(
+                  item,
+                  Arrays.copyOfRange(x, vars, vars + bins),
+                  weights.clone(),
+                  0,
+                  Arrays.copyOfRange(x, vars + bins, vars + 2 * bins)));
+        },
+        x -> {
+          int[] load = new int[bins];
+          int[] count = new int[bins];
+          for (int i = 0; i < items; i++) {
+            load[x[var[i]]] += weights[i];
+            count[x[var[i]]]++;
+          }
+          for (int b = 0; b < bins; b++) {
+            if (load[b] != x[vars + b] || count[b] != x[vars + bins + b]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "items=" + Arrays.toString(var) + " weights=" + Arrays.toString(weights));
   }
 
   private static Instance knapsack(Random random) {

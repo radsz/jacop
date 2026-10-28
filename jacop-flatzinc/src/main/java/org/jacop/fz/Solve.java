@@ -79,6 +79,7 @@ import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
 import org.jacop.presolve.ProbingRule;
 import org.jacop.presolve.Rule;
+import org.jacop.presolve.Tabling;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -100,6 +101,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
@@ -113,6 +115,7 @@ import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
 import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
+import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
@@ -475,6 +478,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
+    Tabling tabling = options.presolveTabling() ? new Tabling() : null;
+    if (tabling != null) {
+      presolver.rule(tabling);
+    }
     dualReductions(presolver, node);
     ImpliedConstraints implied = new ImpliedConstraints();
     if (options.presolveImplied()) {
@@ -483,7 +490,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, implied.imposed(), time);
+      printPresolveStatistics(d, tabling, implied.imposed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -573,7 +580,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
-  private void printPresolveStatistics(Derivation d, int implied, long time) {
+  private void printPresolveStatistics(Derivation d, Tabling tabling, int implied, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -590,12 +597,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
+      s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {
       s.append("%%%mzn-stat: presolveDualRounds=").append(dual.rounds()).append('\n');
       s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
+    }
+    if (tabling != null) {
+      Tabling.Statistics t = tabling.statistics();
+      s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
+      s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
+      s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
     }
     for (Rule rule : d.rules()) {
       if (rule instanceof BooleanProducts p) {
@@ -1119,7 +1134,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       postCollectedClauses();
       return false;
     }
+    mirrorSetVariables();
     return true;
+  }
+
+  /**
+   * Mirrors every set variable by integer variables, the membership of its elements and its
+   * cardinality, whose atoms stand for the set in the explanations of the set constraints.
+   */
+  private void mirrorSetVariables() {
+    List<SetVar> sets = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof SetVar s && !s.singleton()) {
+        sets.add(s);
+      }
+    }
+    for (SetVar s : sets) {
+      store.impose(new SetMirror(s));
+    }
   }
 
   /**
@@ -1141,8 +1173,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return "the objective is not an integer variable";
     }
     for (int i = 0; i < store.size(); i++) {
-      if (!(store.vars[i] instanceof IntVar)) {
-        return "the model has float or set variables";
+      if (!(store.vars[i] instanceof IntVar) && !(store.vars[i] instanceof SetVar)) {
+        return "the model has float variables";
       }
     }
     return null;
@@ -1164,6 +1196,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         free && "none".equals(options.freeConfig("interleave", "restart"))
             ? null
             : annotationSelect(annotatedSearch);
+    if (free && annotated == null && !"none".equals(options.freeConfig("interleave", "restart"))) {
+      annotated = lcgDefaultSelect(costVar);
+    }
     lcg.setAnnotation(annotated, free);
     if (free) {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
@@ -1184,6 +1219,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     return numberSolutions > 0;
+  }
+
+  /**
+   * The branching that the runs of LCG free search alternate with when the model has no search
+   * annotation: dom/wdeg on the default search variables, smallest value first. The store's
+   * constraints fail under LCG too, so their weights grow as without learning. Activity alone
+   * misses first solutions this finds, for example on cutstock, where each item's demand is a sum
+   * over hundreds of variables.
+   */
+  private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar[] group : List.of(searchVars.getIntVars(), searchVars.getBoolVars())) {
+      for (IntVar x : group) {
+        if (x != costVar) {
+          vars.add(x);
+        }
+      }
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    SimpleSelect<IntVar> select =
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[0]), new WeightedDegree<>(store), new IndomainMin<>());
+    // ties go to the first variable met, without the input-order lookups per tie
+    select.inputOrderTieBreaking = false;
+    return select;
   }
 
   private void printLcgStatistics(boolean interrupted) {
