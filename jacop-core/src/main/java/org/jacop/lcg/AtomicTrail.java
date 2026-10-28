@@ -122,7 +122,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * Domains with more values than this keep only the bounds of a domain {@link #in} copies into
    * them while the changes are recorded; {@code -Djacop.lcg.holeLimit} changes it.
    */
-  public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 1000);
+  public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 10_000);
 
   /**
    * Intersects the domain of x with d, as {@code x.domain.in} does, but while a trail records the
