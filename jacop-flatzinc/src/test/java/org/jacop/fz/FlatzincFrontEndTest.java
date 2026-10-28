@@ -1439,6 +1439,71 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
+    // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
+    // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the
+    // linear reasons, about 32 atoms on the flat sums, get below 16
+    java.util.Random rnd = new java.util.Random(3);
+    for (int run = 0; run < 12; run++) {
+      int n = 60;
+      StringBuilder model = new StringBuilder();
+      // 60 terms over 6 independent values: each x(i) equals y(i mod 6), so the search is small
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..2: y%d;\n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..2: x%d;\n".formatted(i));
+      }
+      model.append("var -1000..1000: obj :: output_var;\n");
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);\n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);\n".formatted(i % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      int[][] w = new int[3][n];
+      for (int[] row : w) {
+        for (int i = 0; i < n; i++) {
+          row[i] = rnd.nextInt(9) - 3;
+        }
+      }
+      String[] ws = new String[3];
+      for (int k = 0; k < 3; k++) {
+        ws[k] = Arrays.stream(w[k]).mapToObj(Integer::toString).collect(Collectors.joining(","));
+      }
+      model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[0], xs, 20 + 3 * run));
+      model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[1], xs, 30 - run));
+      model.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(ws[2], xs));
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
+              .formatted(run % 2 == 0 ? "minimize" : "maximize"));
+      String flat = lastObjective(run(model.toString(), "--lcg", "--free-config", "lcg-split=0"));
+      String cp = lastObjective(run(model.toString()));
+      String[] split = run(model.toString(), "--lcg", "-s");
+      assertEquals(cp, flat, model.toString());
+      assertEquals(cp, lastObjective(split), model.toString());
+      java.util.regex.Matcher m =
+          java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
+              .matcher(split[0]);
+      if (m.find() && Long.parseLong(m.group(1)) > 0) {
+        assertTrue(Double.parseDouble(m.group(2)) < 16, split[0]);
+      }
+    }
+  }
+
+  // the last obj = value or status line printed
+  private static String lastObjective(String[] out) {
+    List<String> lines =
+        out[0]
+            .lines()
+            .filter(line -> line.startsWith("obj = ") || line.startsWith("====="))
+            .toList();
+    return lines.isEmpty() ? "" : lines.get(lines.size() - 1);
+  }
+
+  @Test
   void lcgStatisticsAfterTheShutdownHookStopsASearchBetweenRuns() throws Exception {
     // MiniZinc stops a run at its time limit with SIGTERM, and the shutdown hook prints the
     // statistics while LcgSolver may be between two runs of its search, holding no solution;

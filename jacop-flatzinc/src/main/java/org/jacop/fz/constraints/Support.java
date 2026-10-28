@@ -866,6 +866,14 @@ public class Support implements ParserTreeConstants {
 
   void pose(Constraint c) throws FailException {
 
+    if (options.lcg()) {
+      Constraint split =
+          LinearSplit.split(store, c, Integer.parseInt(options.freeConfig("lcg-split", "40")));
+      if (split != null) {
+        c = split;
+      }
+    }
+
     if (constraintPriority >= 0 && constraintPriority <= 4) {
       store.imposeWithConsistency(c, constraintPriority);
     } else {
