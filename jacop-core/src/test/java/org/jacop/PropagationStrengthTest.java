@@ -266,6 +266,22 @@ class PropagationStrengthTest {
     assertThat(b.dom()).hasToString("0");
   }
 
+  // |x - y| = z with z negative, and |8 - y| = 4 with 4 and 12 holes in y
+  @Test
+  void testReifiedDistanceNoticesBoundsAndHoles() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 8);
+    IntVar y = variable(store, "y", -3, -1, 1, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Distance(x, y, variable(store, "z", -4)), b));
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new Distance(x, y, variable(store, "w", 4)), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
   /**
    * x = 5, y = 1, z in {2..3, 8..10}, then 6 also leaves z: the reified sum must be false at once.
    */
