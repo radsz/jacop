@@ -637,8 +637,15 @@ public class LinearBool extends Constraint
       return false;
     }
     lcgModel();
-    return LinearExplanation.explain(
-        trail, entry, lcgVars, lcgWeights, relationType != GE, relationType != LE, out);
+    return LinearExplanation.explainChecked(
+        trail,
+        entry,
+        lcgVars,
+        lcgWeights,
+        z == null ? c : 0,
+        relationType != GE,
+        relationType != LE,
+        out);
   }
 
   @Override

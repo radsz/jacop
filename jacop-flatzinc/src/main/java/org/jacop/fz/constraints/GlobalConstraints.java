@@ -122,6 +122,7 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
@@ -1822,6 +1823,28 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.delayedConstraints.add(new Regular(nfa, xx));
+  }
+
+  void gen_jacop_cost_mdd(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] level = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] from = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntDomain[] label = support.getSetArray((SimpleNode) node.jjtGetChild(3));
+    int[] edgeCost = support.getIntArray((SimpleNode) node.jjtGetChild(4));
+    int[] to = support.getIntArray((SimpleNode) node.jjtGetChild(5));
+    IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(6));
+
+    // the layered graph must not have duplicated variables, nor the cost among them
+    IntVar[] xx = removeDuplicates(x);
+    for (int i = 0; i < xx.length; i++) {
+      if (xx[i] == cost && !cost.singleton()) {
+        IntVar tmp = new IntVar(store, cost.min(), cost.max());
+        support.pose(new XeqY(cost, tmp));
+        xx[i] = tmp;
+      }
+    }
+
+    support.delayedConstraints.add(new CostMdd(xx, level, from, label, edgeCost, to, cost));
   }
 
   void gen_jacop_mdd(SimpleNode node) {

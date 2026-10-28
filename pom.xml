@@ -247,6 +247,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
@@ -257,6 +258,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -352,6 +354,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
@@ -360,6 +363,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -454,6 +458,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
@@ -462,6 +467,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -555,6 +561,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
+                                <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
@@ -563,6 +570,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
