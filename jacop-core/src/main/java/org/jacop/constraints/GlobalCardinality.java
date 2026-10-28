@@ -88,10 +88,13 @@ public class GlobalCardinality extends Constraint
   /** The counted values, in increasing order. */
   private final int[] values;
 
-  /** The counter of each value of values, or null when the bounds are fixed. */
+  /** Whether the bounds of the values are fixed instead of given by counters. */
+  private final boolean fixedBounds;
+
+  /** The counter of each value of values, empty when the bounds are fixed. */
   private final IntVar[] counters;
 
-  /** The fixed lower and upper bounds of each value, or null when there are counters. */
+  /** The fixed lower and upper bounds of each value, empty when there are counters. */
   private final int[] fixedLow;
 
   private final int[] fixedUp;
@@ -160,7 +163,7 @@ public class GlobalCardinality extends Constraint
    * @param counters counters[i] is the number of variables equal to values[i].
    */
   public GlobalCardinality(IntVar[] list, int[] values, IntVar[] counters) {
-    this(list, values, counters, null, null);
+    this(list, values, counters, new int[0], new int[0], false);
   }
 
   /**
@@ -172,7 +175,7 @@ public class GlobalCardinality extends Constraint
    * @param up up[i] is the largest number of variables equal to values[i].
    */
   public GlobalCardinality(IntVar[] list, int[] values, int[] low, int[] up) {
-    this(list, values, null, low, up);
+    this(list, values, new IntVar[0], low, up, true);
   }
 
   /**
@@ -186,12 +189,13 @@ public class GlobalCardinality extends Constraint
     this(list.toArray(new IntVar[0]), values, counters);
   }
 
-  private GlobalCardinality(IntVar[] list, int[] values, IntVar[] counters, int[] low, int[] up) {
+  private GlobalCardinality(
+      IntVar[] list, int[] values, IntVar[] counters, int[] low, int[] up, boolean fixedBounds) {
 
     checkInputForNullness("list", list);
     checkInputForNullness("values", values);
     int length = values.length;
-    if (counters != null) {
+    if (!fixedBounds) {
       checkInputForNullness("counters", counters);
       if (counters.length != length) {
         throw new IllegalArgumentException(
@@ -221,10 +225,11 @@ public class GlobalCardinality extends Constraint
       order[i] = i;
     }
     Arrays.sort(order, (a, b) -> Integer.compare(values[a], values[b]));
+    this.fixedBounds = fixedBounds;
     this.values = new int[length];
-    this.counters = counters == null ? null : new IntVar[length];
-    this.fixedLow = counters == null ? new int[length] : null;
-    this.fixedUp = counters == null ? new int[length] : null;
+    this.counters = new IntVar[fixedBounds ? 0 : length];
+    this.fixedLow = new int[fixedBounds ? length : 0];
+    this.fixedUp = new int[fixedBounds ? length : 0];
     for (int i = 0; i < length; i++) {
       int k = order[i];
       this.values[i] = values[k];
@@ -232,7 +237,7 @@ public class GlobalCardinality extends Constraint
         throw new IllegalArgumentException(
             "Constraint GlobalCardinality has value " + values[k] + " twice.");
       }
-      if (counters != null) {
+      if (!fixedBounds) {
         this.counters[i] = counters[k];
       } else {
         this.fixedLow[i] = low[k];
@@ -292,7 +297,7 @@ public class GlobalCardinality extends Constraint
     sccStack = new int[nodes];
     onStack = new boolean[nodes];
 
-    if (counters == null) {
+    if (fixedBounds) {
       setScope(this.list);
     } else {
       setScope(Stream.concat(Arrays.stream(this.list), Arrays.stream(this.counters)));
@@ -344,8 +349,8 @@ public class GlobalCardinality extends Constraint
   private boolean readCapacities() {
     boolean changed = false;
     for (int a = 0; a < m; a++) {
-      int l = counters == null ? fixedLow[a] : counters[a].min();
-      int u = counters == null ? fixedUp[a] : counters[a].max();
+      int l = fixedBounds ? fixedLow[a] : counters[a].min();
+      int u = fixedBounds ? fixedUp[a] : counters[a].max();
       if (l != low[a] || u != up[a]) {
         low[a] = l;
         up[a] = u;
@@ -473,7 +478,7 @@ public class GlobalCardinality extends Constraint
     if (sumLow > n || sumUp < mustCount) {
       throw Store.failException;
     }
-    if (counters == null) {
+    if (fixedBounds) {
       return false;
     }
     boolean changed = false;
@@ -838,7 +843,7 @@ public class GlobalCardinality extends Constraint
       }
     }
     for (int a = 0; a < m; a++) {
-      if (counters == null) {
+      if (fixedBounds) {
         if (count[a] < fixedLow[a] || count[a] > fixedUp[a]) {
           return false;
         }
@@ -854,7 +859,7 @@ public class GlobalCardinality extends Constraint
     StringBuilder buf = new StringBuilder(id());
     buf.append(" : GlobalCardinality(").append(Arrays.asList(list));
     buf.append(", ").append(Arrays.toString(values));
-    if (counters != null) {
+    if (!fixedBounds) {
       buf.append(", ").append(Arrays.asList(counters));
     } else {
       buf.append(", ").append(Arrays.toString(fixedLow));
@@ -865,7 +870,7 @@ public class GlobalCardinality extends Constraint
 
   @Override
   public GlobalCardinality copy(VarMap map) {
-    return counters == null
+    return fixedBounds
         ? new GlobalCardinality(map.get(list), values, fixedLow, fixedUp)
         : new GlobalCardinality(map.get(list), values, map.get(counters));
   }

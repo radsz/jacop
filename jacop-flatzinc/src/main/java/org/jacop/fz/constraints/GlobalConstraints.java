@@ -879,6 +879,10 @@ class GlobalConstraints implements ParserTreeConstants {
    * once within the intersection of its bounds.
    */
   private void poseGlobalCardinality(IntVar[] x, int[] values, int[] lb, int[] ub) {
+    if (lb.length != values.length || ub.length != values.length) {
+      throw new IllegalArgumentException(
+          "global cardinality needs one lower and one upper bound for each value");
+    }
     Map<Integer, int[]> bounds = new LinkedHashMap<>();
     for (int i = 0; i < values.length; i++) {
       int[] b = bounds.putIfAbsent(values[i], new int[] {lb[i], ub[i]});
