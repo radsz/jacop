@@ -238,6 +238,17 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. FlatZinc objective presolve (the redundant objective equation shifted
+    by the exactly-one sets of the model) runs without --presolve too, with
+    degree weight 0. It reads n = count(x, v) (jacop_count) as
+    n = sum(x[i] = v) when every x[i] has a literal for v, and the shifted
+    cost terms of each variable encoded by value literals become one cost
+    variable y = c[x] (ElementInteger). On jp-encoding (60 s) JaCoP proves
+    data300 in 5 s instead of no proof, data200 with --lcg -f, and ends
+    1% to 4% closer elsewhere; bus_scheduling r1a is proved. Under
+    --lcg -f vrp ends 2% to 5% worse: the 1,800-term equation halves the
+    node rate. -Dorg.jacop.fz.objectivePresolve=false turns it off.
+
 Version 4.11
 =============
 
