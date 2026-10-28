@@ -66,4 +66,22 @@ public abstract class AbstractConstraintXandY extends PrimitiveConstraint {
 
     setScope(x, y);
   }
+
+  /**
+   * Returns variable x.
+   *
+   * @return variable x.
+   */
+  public IntVar x() {
+    return x;
+  }
+
+  /**
+   * Returns variable y.
+   *
+   * @return variable y.
+   */
+  public IntVar y() {
+    return y;
+  }
 }
