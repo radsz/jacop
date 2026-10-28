@@ -377,6 +377,8 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::denseArborescence),
         Arguments.of("Steiner", weightedGraph("Steiner", false)),
         Arguments.of("DSteiner", weightedGraph("Steiner", true)),
+        Arguments.of("SteinerDense", (Function<Random, Instance>) r -> denseSteiner(r, false)),
+        Arguments.of("DSteinerDense", (Function<Random, Instance>) r -> denseSteiner(r, true)),
         Arguments.of("BoundedPath", weightedGraph("BoundedPath", false)),
         Arguments.of("BoundedDPath", weightedGraph("BoundedPath", true)));
   }
@@ -1795,6 +1797,82 @@ class GlobalConstraintBruteForceTest {
           Arrays.fill(ns, 1);
           return sum == x[m + 1]
               && GraphSemantics.dtree(from, to, ns, Arrays.copyOfRange(x, 0, m), x[m] - base);
+        },
+        "from="
+            + Arrays.toString(fromNumber)
+            + " to="
+            + Arrays.toString(toNumber)
+            + " w="
+            + Arrays.toString(w));
+  }
+
+  /**
+   * A Steiner tree on a denser multigraph than {@link #weightedGraph}: 3 to 5 nodes, 3 to 7 edges,
+   * weights in 0..6, a third of the nodes required and a narrow cost window, so that the dual
+   * ascent bound of {@link org.jacop.constraints.graph.SteinerBound} and its reduced-cost filtering
+   * decide often. Variables: ns, es, the root of a directed tree, then the cost.
+   */
+  private static Instance denseSteiner(Random random, boolean directed) {
+    int n = 3 + random.nextInt(3);
+    int m = 3 + random.nextInt(5);
+    int base = random.nextInt(2);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] w = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(n);
+      w[e] = random.nextInt(7);
+    }
+    int roots = directed ? 1 : 0;
+    int[][] domains = new int[n + m + roots + 1][];
+    for (int v = 0; v < n; v++) {
+      domains[v] = random.nextInt(3) == 0 ? new int[] {1} : new int[] {0, 1};
+    }
+    for (int e = 0; e < m; e++) {
+      int r = random.nextInt(10);
+      domains[n + e] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    if (directed) {
+      domains[n + m] = domain(random, base, base + n - 1);
+    }
+    int lo = random.nextInt(3 * n);
+    domains[n + m + roots] = domain(random, lo, lo + 2 + random.nextInt(8));
+    int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+    int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+    return new Instance(
+        domains,
+        (store, x) ->
+            store.imposeDecomposition(
+                new Steiner(
+                    fromNumber,
+                    toNumber,
+                    w,
+                    directed ? x[n + m] : null,
+                    Arrays.copyOfRange(x, 0, n),
+                    Arrays.copyOfRange(x, n, n + m),
+                    x[n + m + roots],
+                    base,
+                    directed)),
+        x -> {
+          int[] ns = Arrays.copyOfRange(x, 0, n);
+          int[] es = Arrays.copyOfRange(x, n, n + m);
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += es[e] * w[e];
+          }
+          if (sum != x[n + m + roots]) {
+            return false;
+          }
+          if (directed) {
+            return GraphSemantics.dtree(from, to, ns, es, x[n + m] - base);
+          }
+          for (int r = 0; r < n; r++) {
+            if (GraphSemantics.tree(from, to, ns, es, r)) {
+              return true;
+            }
+          }
+          return false;
         },
         "from="
             + Arrays.toString(fromNumber)
