@@ -62,6 +62,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
@@ -1019,6 +1020,71 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(100);
+  }
+
+  /**
+   * A constraint without an explanation of its own, {@link IncreasingSum}, is explained by
+   * replaying a copy of it: the answers agree with brute force, every reason is checked, and the
+   * reasons come from the replay rather than the generic reason.
+   */
+  @Test
+  void replayedExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(53);
+    int sat = 0;
+    int unsat = 0;
+    long replayed = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      boolean strict = rnd.nextBoolean();
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new IncreasingSum(new IntVar[] {x[0], x[1], x[2]}, x[3], strict),
+              t ->
+                  (strict ? t[0] < t[1] && t[1] < t[2] : t[0] <= t[1] && t[1] <= t[2])
+                      && t[0] + t[1] + t[2] == t[3]));
+      relations.add(relation(x, rnd));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("IncreasingSum");
+      if (counts != null) {
+        replayed += counts[6] + counts[7];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "replay: %d sat, %d unsat, %d replayed and %d generic explanations%n",
+        sat, unsat, replayed, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(replayed).isGreaterThan(100);
+    assertThat(generic).isLessThan(replayed / 10);
   }
 
   // a cardinality constraint over 3 or 4 of the variables

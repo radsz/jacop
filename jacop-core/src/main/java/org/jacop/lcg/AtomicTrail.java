@@ -821,12 +821,42 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public boolean explain(int entry, EntryList out) {
     int mark = out.size();
+    replayed = false;
     if (reason[entry] instanceof Explainable c && c.explain(this, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (replay(reason[entry], entry, out)) {
       return true;
     }
     out.truncate(mark);
     genericReason(entry, out);
     return false;
+  }
+
+  /**
+   * Whether the last {@link #explain} or {@link #explainFailure} that gave an explanation of the
+   * constraint's own found it by replaying the constraint ({@link ReplayExplanation}) rather than
+   * by the constraint's explanation.
+   *
+   * @return true for a replayed explanation
+   */
+  public boolean replayed() {
+    return replayed;
+  }
+
+  private boolean replayed;
+
+  // the replay of each constraint asked for one, or null when it cannot be replayed
+  private final Map<Constraint, ReplayExplanation> replays = new IdentityHashMap<>();
+
+  private boolean replay(Constraint c, int entry, EntryList out) {
+    if (!ReplayExplanation.ENABLED || c == null) {
+      return false;
+    }
+    ReplayExplanation r = replays.computeIfAbsent(c, k -> ReplayExplanation.of(this, k));
+    replayed = r != null && r.explain(entry, out);
+    return replayed;
   }
 
   /**
@@ -839,7 +869,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public boolean explainFailure(Constraint failed, EntryList out) {
     int mark = out.size();
+    replayed = false;
     if (failed instanceof Explainable c && c.explainFailure(this, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (replay(failed, -1, out)) {
       return true;
     }
     out.truncate(mark);

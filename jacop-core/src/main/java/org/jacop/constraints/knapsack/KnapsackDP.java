@@ -33,7 +33,9 @@ package org.jacop.constraints.knapsack;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -76,7 +78,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class KnapsackDP extends Constraint implements SatisfiedPresent {
+public class KnapsackDP extends Constraint implements SatisfiedPresent, Copyable<KnapsackDP> {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -776,5 +778,18 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent {
     result.append("], Capacity: ").append(knapsackCapacity);
     result.append(", Profit: ").append(knapsackProfit).append(')');
     return result.toString();
+  }
+
+  @Override
+  public KnapsackDP copy(VarMap map) {
+    return new KnapsackDP(
+            profits,
+            weights,
+            map.get(quantity),
+            map.get(knapsackCapacity),
+            map.get(knapsackProfit),
+            limit)
+        .adaptive(adaptive)
+        .workRatio(workRatio);
   }
 }

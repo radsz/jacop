@@ -45,6 +45,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
@@ -58,6 +59,7 @@ import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -65,6 +67,7 @@ import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -79,7 +82,11 @@ import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
+import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -88,21 +95,28 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBool;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
+import org.jacop.constraints.Span;
+import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
@@ -129,9 +143,11 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
+import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
@@ -409,6 +425,61 @@ class LcgFuzzTest {
       return new HybridTable(v, tuples, rnd.nextBoolean());
     }
 
+    // the globals added in 5.0 that have no explanation of their own, explained by replay
+    private Constraint recentGlobal() {
+      IntVar[] p = pick(x, 3);
+      return switch (rnd.nextInt(16)) {
+        case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
+        case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
+        case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
+        case 3 -> new InterDistance(p, 1 + rnd.nextInt(2));
+        case 4 -> new MultiInterDistance(p, 2, 2);
+        case 5 ->
+            new StockingCost(
+                chain("st", 3, 0, 4),
+                new int[] {rnd.nextInt(5), rnd.nextInt(5), rnd.nextInt(5)},
+                intVar("sc", 0, 8),
+                1 + rnd.nextInt(2));
+        case 6 -> new Spread(p, rnd.nextInt(6), intVar("sp", 0, 20));
+        case 7 -> new Deviation(p, rnd.nextInt(6), intVar("dv", 0, 12));
+        case 8 -> new SubcircuitCost(chain("sn", 4, 1, 4), costs(4), intVar("sk", 0, 20));
+        case 9 -> new CircuitCost(chain("cn", 4, 1, 4), costs(4), intVar("ck", 0, 20));
+        case 10 ->
+            new Alternative(
+                bool(), one(), intVar("ad", 0, 2), pick(b, 2), pick(x, 2), chain("ai", 2, 0, 2));
+        case 11 ->
+            new Span(
+                bool(), one(), intVar("pd", 0, 4), pick(b, 2), pick(x, 2), chain("pi", 2, 0, 2));
+        case 12 ->
+            new Reservoir(
+                p, new int[] {rnd.nextInt(5) - 2, rnd.nextInt(5) - 2, rnd.nextInt(5) - 2}, 0, 2);
+        case 13 ->
+            new WeightedCompletion(
+                p,
+                new int[] {1 + rnd.nextInt(2), 1 + rnd.nextInt(2), 1 + rnd.nextInt(2)},
+                new int[] {1 + rnd.nextInt(3), 1 + rnd.nextInt(3), 1 + rnd.nextInt(3)},
+                intVar("wc", 0, 30));
+        case 14 ->
+            new KnapsackDP(
+                new int[] {3, 2, 4},
+                new int[] {2, 2, 3},
+                chain("dq", 3, 0, 2),
+                intVar("dc", 0, 2 + rnd.nextInt(5)),
+                intVar("dp", rnd.nextInt(5), 12));
+        default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
+      };
+    }
+
+    private int[][] costs(int n) {
+      int[][] c = new int[n][n];
+      for (int[] row : c) {
+        for (int j = 0; j < n; j++) {
+          row[j] = rnd.nextInt(6);
+        }
+      }
+      return c;
+    }
+
     private IntVar[] chain(String name, int k, int min, int max) {
       IntVar[] y = new IntVar[k];
       for (int i = 0; i < k; i++) {
@@ -447,7 +518,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(79)) {
+      return switch (rnd.nextInt(81)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -650,6 +721,7 @@ class LcgFuzzTest {
               new IntVar[] {end, end, end},
               new int[] {2, 2, 2});
         }
+        case 78, 79 -> recentGlobal();
         case 63 ->
             new LinearIntDom(
                 p,
@@ -820,8 +892,8 @@ class LcgFuzzTest {
       statistics.forEach(
           (k, v) ->
               System.out.printf(
-                  "  %-24s reasons=%d generic=%d failures=%d generic=%d%n",
-                  k, v[0], v[1], v[3], v[4]));
+                  "  %-24s reasons=%d generic=%d failures=%d generic=%d replayed=%d/%d%n",
+                  k, v[0], v[1], v[3], v[4], v[6], v[7]));
     }
     assertThat(sat).isPositive();
     assertThat(unsat).isPositive();
