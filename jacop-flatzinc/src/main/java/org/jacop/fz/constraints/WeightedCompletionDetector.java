@@ -43,6 +43,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ASTSolveExpr;
+import org.jacop.fz.ASTSolveKind;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
@@ -60,8 +62,11 @@ import org.jacop.fz.SimpleNode;
  * later task of the same job, as in single machine models and in job shops whose objective weighs
  * the last task of each job. Then sum(mapped) a * x &ge; sum(tasks) w * (s + d) + sum(mapped) a *
  * (L - d), with w the sum of the coefficients mapped to the task, so a new variable z, defined by
- * the other terms of the sum, bounds the weighted completion time of the resource. With at least
- * two weighted tasks on a resource the constraint is posted on all its tasks, unweighted ones with
+ * the other terms of the sum, bounds the weighted completion time of the resource. The sum must
+ * contain the objective of the model among those other terms, with the sign that makes branch and
+ * bound lower z, and the objective must not be bounded by a task start itself (as a makespan is),
+ * so that sums that only define differences of start times are left alone. With at least two
+ * weighted tasks on a resource the constraint is posted on all its tasks, unweighted ones with
  * weight 0. All constraints are still posted as usual, so it only adds pruning.
  *
  * <p>Setting the system property {@code org.jacop.fz.weightedCompletion} to false turns the
@@ -98,6 +103,10 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
   private final List<IntVar[][]> resources = new ArrayList<>();
 
   private final List<ASTConstElem> linears = new ArrayList<>();
+
+  // the objective and 1 to minimize it, -1 to maximize it
+  private IntVar objective;
+  private int direction;
 
   /**
    * It creates a detector reading variables through the given support.
@@ -136,7 +145,8 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       }
     }
     resources.addAll(support.unaryResources);
-    if (resources.isEmpty() || linears.isEmpty()) {
+    objective(astTree);
+    if (objective == null || resources.isEmpty() || linears.isEmpty()) {
       return;
     }
     // the variables that can bound a completion time: reachable from a start of a resource
@@ -155,11 +165,47 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
         }
       }
     }
+    if (reachable.contains(objective)) {
+      // the objective is itself bounded by a task start, as in a makespan, not a weighted sum
+      return;
+    }
     int posted = 0;
     for (ASTConstElem node : linears) {
       posted += sum(node, MAX_POSTED - posted);
       if (posted >= MAX_POSTED) {
         break;
+      }
+    }
+  }
+
+  // the variable of minimize (direction 1) or maximize (direction -1), null for satisfy
+  private void objective(SimpleNode astTree) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() != JJTMODELEND || node.jjtGetNumChildren() == 0) {
+        continue;
+      }
+      SimpleNode item = child(node, 0);
+      SimpleNode last = child(item, item.jjtGetNumChildren() - 1);
+      if (!(last instanceof ASTSolveKind kind) || last.jjtGetNumChildren() == 0) {
+        return;
+      }
+      direction =
+          switch (kind.getKind()) {
+            case "minimize" -> 1;
+            case "maximize" -> -1;
+            default -> 0;
+          };
+      if (direction != 0 && child(kind, 0) instanceof ASTSolveExpr expr) {
+        if (expr.getType() == 0) {
+          objective = support.dictionary.getVariable(expr.getIdent());
+        } else if (expr.getType() == 1) {
+          IntVar[] array = support.dictionary.getVariableArray(expr.getIdent());
+          objective =
+              array != null && expr.getIndex() >= 0 && expr.getIndex() < array.length
+                  ? array[expr.getIndex()]
+                  : null;
+        }
       }
     }
   }
@@ -397,7 +443,14 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       low += Math.min(b * x[k].min(), b * x[k].max());
       high += Math.max(b * x[k].min(), b * x[k].max());
     }
-    if (others.isEmpty()) {
+    // the objective is among the other terms, so its bound in branch and bound bounds z from above
+    boolean bounded = false;
+    for (int k = 0; k < x.length; k++) {
+      if (!mapped[k] && x[k] == objective && (long) sign * a[k] * direction < 0) {
+        bounded = true;
+      }
+    }
+    if (!bounded) {
       return false;
     }
     int[] w = new int[n];

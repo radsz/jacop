@@ -42,8 +42,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Random;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -51,8 +49,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Checks the detection of weighted completion times on unary resources in the FlatZinc front end,
- * which posts a redundant WeightedCompletion: the solutions and optima must match those of the
- * model without it.
+ * which posts a redundant WeightedCompletion: the optima must match those of the model without it,
+ * and models without an objective are left alone.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -163,27 +161,25 @@ class WeightedCompletionFlatzincTest {
   }
 
   @Test
-  void detectedConstraintKeepsAllSolutions() throws IOException {
+  void satisfactionModelsAreLeftAlone() throws IOException {
     Random random = new Random(5);
-    int detected = 0;
-    for (int trial = 0; trial < 200; trial++) {
+    for (int trial = 0; trial < 20; trial++) {
       String model = randomModel(random, false);
-      String out = run(model, true, "-a", "-debug");
-      detected += out.contains("WeightedCompletion") ? 1 : 0;
-      assertEquals(
-          solutions(run(model, false, "-a")), solutions(out), "trial " + trial + "\n" + model);
+      assertFalse(run(model, true, "-debug").contains("WeightedCompletion"), model);
     }
-    assertTrue(detected > 60, "detected " + detected);
   }
 
   @Test
   void detectedConstraintKeepsOptima() throws IOException {
     Random random = new Random(6);
-    for (int trial = 0; trial < 200; trial++) {
+    int detected = 0;
+    for (int trial = 0; trial < 300; trial++) {
       String model = randomModel(random, true);
-      assertEquals(
-          optimum(run(model, false)), optimum(run(model, true)), "trial " + trial + "\n" + model);
+      String out = run(model, true, "-debug");
+      detected += out.contains("% redundant WeightedCompletion") ? 1 : 0;
+      assertEquals(optimum(run(model, false)), optimum(out), "trial " + trial + "\n" + model);
     }
+    assertTrue(detected > 100, "detected " + detected);
   }
 
   @Test
@@ -250,21 +246,6 @@ class WeightedCompletionFlatzincTest {
       System.clearProperty(PROPERTY);
     }
     return buffer.toString(StandardCharsets.UTF_8);
-  }
-
-  private static Set<String> solutions(String out) {
-    Set<String> solutions = new TreeSet<>();
-    Arrays.stream(out.split("----------"))
-        .map(
-            s ->
-                String.join(
-                    " ",
-                    Arrays.stream(s.strip().split("\\R"))
-                        .filter(l -> !l.isBlank() && !l.startsWith("%"))
-                        .toList()))
-        .filter(s -> !s.isEmpty() && !s.startsWith("==========") && !s.contains("UNSATISFIABLE"))
-        .forEach(solutions::add);
-    return solutions;
   }
 
   // the value of y0 or cost in the last solution, or the status when there is none
