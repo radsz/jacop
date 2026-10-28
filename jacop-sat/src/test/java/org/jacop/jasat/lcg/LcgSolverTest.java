@@ -1605,8 +1605,8 @@ class LcgSolverTest {
         int a = rnd.nextInt(n - 1);
         prec[p] = new int[] {a, a + 1 + rnd.nextInt(n - a - 1)};
       }
-      int[] optimum = new int[5];
-      for (int mode = 0; mode < 5; mode++) {
+      int[] optimum = new int[6];
+      for (int mode = 0; mode < 6; mode++) {
         Store store = new Store();
         IntVar[] s = new IntVar[n];
         IntVar[] ends = new IntVar[n];
@@ -1639,9 +1639,15 @@ class LcgSolverTest {
           if (mode == 2 || mode == 4) {
             solver.setLowerBoundSearch(1, 1);
           }
-          if (mode >= 3) {
+          if (mode == 3 || mode == 4) {
             solver.setAnnotation(new SimpleSelect<>(s, null, new IndomainMin<>()), mode == 4);
             solver.sat().setRestarts(mode == 4);
+          }
+          if (mode == 5) {
+            // the ends and the makespan follow from the starts
+            List<IntVar> late = new ArrayList<>(Arrays.asList(ends));
+            late.add(makespan);
+            solver.setLateVariables(late);
           }
           assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
           optimum[mode] = solver.value(makespan);
@@ -1652,9 +1658,13 @@ class LcgSolverTest {
           lowerBoundRaised += solver.lowerBoundRaised;
           annotationDecisions += solver.annotationDecisions;
           semanticUips += solver.sat().semanticUips;
+          if (mode == 5) {
+            // every start fixed fixes the ends and the makespan: no decision is left for them
+            assertThat(solver.lateDecisions).as("instance %d", instance).isZero();
+          }
         }
       }
-      for (int mode = 1; mode < 5; mode++) {
+      for (int mode = 1; mode < 6; mode++) {
         assertThat(optimum[mode]).as("instance %d, mode %d", instance, mode).isEqualTo(optimum[0]);
       }
     }

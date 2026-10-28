@@ -80,6 +80,8 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
   final ArrayList<Var> defaultSearchSetVariables = new ArrayList<>();
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
+  // variables named by a defines_var annotation of a constraint
+  final ArrayList<Var> definedVariables = new ArrayList<>();
   // IntVar zero, one;
   Store store;
   int numberBoolVariables;
@@ -234,6 +236,7 @@ public class Tables {
     defaultSearchArrays.forEach(a -> t.defaultSearchArrays.add(map.get(a)));
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
+    t.definedVariables.addAll(map.get(definedVariables));
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;
@@ -605,6 +608,15 @@ public class Tables {
    */
   public void addOutArray(OutputArrayAnnotation v) {
     outputArray.add(v);
+  }
+
+  /**
+   * Records a variable named by a defines_var annotation.
+   *
+   * @param v the defined variable
+   */
+  public void addDefinedVar(Var v) {
+    definedVariables.add(v);
   }
 
   /**
