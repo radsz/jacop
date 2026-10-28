@@ -157,7 +157,7 @@ public final class VarHeap {
   }
 
   /** Rebuilds the heap from the given variables (all others are removed). */
-  void rebuild(int[] vars, int n) {
+  public void rebuild(int[] vars, int n) {
     for (int i = 0; i < size; i++) {
       index[heap[i]] = -1;
     }

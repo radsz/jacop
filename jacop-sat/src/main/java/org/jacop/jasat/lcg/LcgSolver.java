@@ -207,6 +207,10 @@ public final class LcgSolver implements ExternalPropagator {
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
+  private static final boolean CORE_RESTORE = Boolean.getBoolean("jacop.lcg.coreRestore");
+  private static final double CORE_NO_SOLUTION =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreNoSolution", "0"));
+  private static final boolean CORE_TRACE = Boolean.getBoolean("jacop.lcg.coreTrace");
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
@@ -451,17 +455,44 @@ public final class LcgSolver implements ExternalPropagator {
     } else {
       phaseLimit = sat.conflicts + coreBudget;
     }
+    double[] saved = CORE_RESTORE ? activity.clone() : null;
+    double savedInc = activityInc;
     coreMode = true;
     int result;
     try {
-      result = coreSearch.run(phaseLimit, coreCallLimit);
+      long full = sat.deadline();
+      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+        // without a solution by this share of the phase, branch and bound gets the time
+        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        sat.setDeadline(first);
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
+          sat.setDeadline(full);
+          result = coreSearch.run(phaseLimit, coreCallLimit);
+        }
+      } else {
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
     } finally {
       coreMode = false;
       sat.setDeadline(deadline);
       sat.setConflictLimit(Long.MAX_VALUE);
     }
+    if (CORE_TRACE) {
+      System.err.println("%%core-phase: t=" + (System.nanoTime() - now) / 1_000_000 + "ms result=" + result
+          + " cores=" + coreSearch.cores + " lb=" + coreSearch.lowerBound + " best=" + bestObjective());
+    }
     if (result != CdclSolver.UNKNOWN) {
       return result;
+    }
+    if (saved != null) {
+      // branch and bound starts from the activity before the core phase, whose conflicts were
+      // under the assumptions
+      System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
+      activityInc = savedInc;
+      rebuildHeap(heap);
+      rebuildHeap(wide);
+      rebuildHeap(lateHeap);
     }
     if (!requireBetter()) {
       return CdclSolver.SAT;
@@ -1156,6 +1187,17 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   // the heap of a variable: lateHeap for a late variable, else wide for one that is not 0/1
+  private void rebuildHeap(VarHeap h) {
+    int[] members = new int[activity.length];
+    int n = 0;
+    for (int i = 0; i < activity.length; i++) {
+      if (h.contains(i)) {
+        members[n++] = i;
+      }
+    }
+    h.rebuild(members, n);
+  }
+
   private VarHeap heapOf(int i) {
     if (late[i]) {
       return lateHeap;
