@@ -203,7 +203,11 @@ class SatPresolveTest {
       b.clauses(m.external());
     }
     if (mode != Mode.KEEP_VARIABLES) {
-      b.keep(protect.toArray(new Var[0])).solutionPreserving(mode == Mode.ALL_SOLUTIONS);
+      // the variables of the constraint that is not a clause are compared too, so they are kept:
+      // variable elimination (rule 8) could otherwise give one of them a single value
+      b.keep(protect.toArray(new Var[0]))
+          .keep(m.frozen().toArray(new Var[0]))
+          .solutionPreserving(mode == Mode.ALL_SOLUTIONS);
     }
     Derivation d = b.derive();
     String what = "seed " + seed + " " + mode + (external ? " external" : "");

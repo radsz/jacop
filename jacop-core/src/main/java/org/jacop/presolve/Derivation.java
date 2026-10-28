@@ -495,19 +495,6 @@ public final class Derivation implements VarMap {
       }
       carried = rewritten;
     }
-
-    // rule 8 needs to know which variables must be kept; the variables of the clauses stay
-    if (rules && frozen != null) {
-      VariableElimination elimination = new VariableElimination(frozenWith(clauseVariables));
-      carried = elimination.apply(carried);
-      for (Var v : elimination.eliminated()) {
-        entries.put(v, new Entry.Eliminated());
-      }
-      eliminated = elimination.eliminated().size();
-      substitutions = elimination.substitutions();
-      eliminationReconstruction = elimination.reconstruction();
-    }
-
     int equations = carried.size();
     Map<Var, Var> aliases = rules && Aliases.ENABLED ? Aliases.merge(carried) : Map.of();
     dropped += equations - carried.size();
@@ -520,6 +507,31 @@ public final class Derivation implements VarMap {
       reductions.put("reificationsSimplified", reifications.simplified());
       reductions.put("halfReified", reifications.halfReified());
       reductions.put("reificationsDropped", reifications.dropped());
+    }
+
+    // rule 8 needs to know which variables must be kept; it leaves alone the merged variables,
+    // which the constraints still name, the variables of the clauses and the constraints the
+    // reification cleanup rewrites
+    if (rules && frozen != null) {
+      Set<Var> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+      kept.addAll(frozen);
+      kept.addAll(aliases.keySet());
+      kept.addAll(aliases.values());
+      kept.addAll(clauseVariables);
+      Map<Var, Integer> half = reifications.relaxed();
+      for (Constraint c : carried) {
+        if (reifications.rewritten(c) || c.arguments().stream().anyMatch(half::containsKey)) {
+          kept.addAll(c.arguments());
+        }
+      }
+      VariableElimination elimination = new VariableElimination(kept, solutionPreserving);
+      carried = elimination.apply(carried);
+      for (Var v : elimination.eliminated()) {
+        entries.put(v, new Entry.Eliminated());
+      }
+      eliminated = elimination.eliminated().size();
+      substitutions = elimination.substitutions();
+      eliminationReconstruction = elimination.reconstruction();
     }
 
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -831,6 +843,7 @@ public final class Derivation implements VarMap {
     child = parent;
     entries.clear();
     copies.clear();
+    reconstruction = null;
     eliminationReconstruction = null;
     eliminated = 0;
     substitutions = 0;
@@ -1106,7 +1119,8 @@ public final class Derivation implements VarMap {
               IntVar x = e.getKey();
               x.domain.in(parent.level, x, e.getValue(), e.getValue());
             }
-            // then the variables rule 8 eliminated, from the values of the others
+            // then the variables rule 8 eliminated, from the parent's values of the others; their
+            // definitions name no variable of the clauses
             accepted[0] =
                 (eliminationReconstruction == null || eliminationReconstruction.apply(parent))
                     && parent.consistency();
