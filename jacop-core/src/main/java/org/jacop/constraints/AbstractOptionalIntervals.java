@@ -151,7 +151,7 @@ public abstract class AbstractOptionalIntervals extends Constraint implements Sa
   }
 
   /** It makes the domains of x and y equal. */
-  static void equal(Store store, IntVar x, IntVar y) {
+  static void unify(Store store, IntVar x, IntVar y) {
     if (x == y) {
       return;
     }

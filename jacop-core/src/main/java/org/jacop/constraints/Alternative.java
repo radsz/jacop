@@ -100,8 +100,8 @@ public class Alternative extends AbstractOptionalIntervals implements Copyable<A
             fix(store, p[i], 0);
           }
         }
-        equal(store, s0, s[one]);
-        equal(store, d0, d[one]);
+        unify(store, s0, s[one]);
+        unify(store, d0, d[one]);
         continue;
       }
       if (candidates == 0) {
