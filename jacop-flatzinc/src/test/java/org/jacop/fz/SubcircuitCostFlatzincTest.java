@@ -68,7 +68,7 @@ class SubcircuitCostFlatzincTest {
    * jacop_array_var_int_element_nonshifted) and one linear constraint over the element values,
    * with coefficients a[i], and reified tests t[i] (x[i] = v or x[i] != v) with coefficients p[i]:
    * either an equation with the cost variable (either sign, first or last) or an inequality with a
-   * bound, as a length budget.
+   * bound, as a length budget. Some fixed successors are written as constants, as MiniZinc does.
    */
   private static Model randomModel(Random random) {
     int n = 1 + random.nextInt(6);
@@ -102,8 +102,17 @@ class SubcircuitCostFlatzincTest {
               .filter(j -> j == node ? random.nextDouble() < self : random.nextInt(4) != 0)
               .map(j -> j + 1)
               .toArray();
-      if (domains[i].length == 0) {
-        domains[i] = new int[] {i + 1};
+      if (domains[i].length == 0 || random.nextInt(6) == 0) {
+        domains[i] = new int[] {domains[i].length == 0 ? i + 1 : domains[i][0]};
+      }
+    }
+    // a fixed successor written as a constant, as MiniZinc writes x[i] = v: a literal in x, a
+    // literal index in its element and a fixed element value, with no test
+    boolean[] literal = new boolean[n];
+    for (int i = 0; i < n; i++) {
+      literal[i] = domains[i].length == 1 && random.nextBoolean();
+      if (literal[i]) {
+        tested[i] = -1;
       }
     }
 
@@ -132,10 +141,18 @@ class SubcircuitCostFlatzincTest {
 
     StringBuilder fzn = new StringBuilder();
     for (int i = 0; i < n; i++) {
-      fzn.append("var ").append(set(domains[i])).append(": x").append(i).append(";\n");
+      if (!literal[i]) {
+        fzn.append("var ").append(set(domains[i])).append(": x").append(i).append(";\n");
+      }
     }
     for (int i = 0; i < n; i++) {
-      fzn.append("var -5..25: c").append(i).append(";\n");
+      if (literal[i]) {
+        int value = d[i][domains[i][0] - 1];
+        fzn.append("var ").append(value).append("..").append(value);
+      } else {
+        fzn.append("var -5..25");
+      }
+      fzn.append(": c").append(i).append(";\n");
       if (tested[i] >= 0) {
         fzn.append("var bool: b").append(i).append(";\n");
         fzn.append("var 0..1: t").append(i).append(";\n");
@@ -146,7 +163,7 @@ class SubcircuitCostFlatzincTest {
     }
     StringBuilder xs = new StringBuilder();
     for (int i = 0; i < n; i++) {
-      xs.append(i == 0 ? "" : ",").append('x').append(i);
+      xs.append(i == 0 ? "" : ",").append(literal[i] ? String.valueOf(domains[i][0]) : "x" + i);
     }
     fzn.append("array [1..")
         .append(n)
@@ -157,11 +174,12 @@ class SubcircuitCostFlatzincTest {
         .append("];\n");
     for (int i = 0; i < n; i++) {
       String array = Arrays.toString(d[i]).replace(" ", "");
+      String index = literal[i] ? String.valueOf(domains[i][0]) : "x" + i;
       if (style == 0) {
-        fzn.append("constraint array_int_element(x").append(i).append(',').append(array);
+        fzn.append("constraint array_int_element(").append(index).append(',').append(array);
         fzn.append(",c").append(i).append(");\n");
       } else {
-        fzn.append("constraint jacop_array_var_int_element_nonshifted(x").append(i);
+        fzn.append("constraint jacop_array_var_int_element_nonshifted(").append(index);
         fzn.append(',').append(array).append(",c").append(i).append(",1);\n");
       }
       if (tested[i] >= 0) {
@@ -266,7 +284,7 @@ class SubcircuitCostFlatzincTest {
       }
       assertEquals(model.bruteForce(), solutions(out), "trial " + trial + "\n" + model.fzn());
     }
-    // models whose successors are fixed before the detection runs are not detected
+    // a fixed successor whose arc cost is still a variable keeps a model from being detected
     assertTrue(detected > 100, "detected " + detected);
   }
 
@@ -280,6 +298,40 @@ class SubcircuitCostFlatzincTest {
     } finally {
       System.clearProperty(property);
     }
+  }
+
+  @Test
+  void fixedSuccessorWrittenAsConstantIsDetected() throws IOException {
+    // as MiniZinc flattens succ[2] = 1 in mario: a literal in x, a literal element index and a
+    // fixed arc cost; the fuel budget c0 + c1 + c2 + c3 <= 11 is still detected
+    String fzn =
+        """
+        var 1..4: x0;
+        var 1..4: x2;
+        var 1..4: x3;
+        var 0..9: c0;
+        var 2..2: c1;
+        var 0..9: c2;
+        var 0..9: c3;
+        array [1..4] of var int: x:: output_array([1..4]) = [x0,1,x2,x3];
+        constraint array_int_element(x0,[0,1,5,3],c0);
+        constraint array_int_element(1,[2,0,4,6],c1);
+        constraint array_int_element(x2,[5,4,0,1],c2);
+        constraint array_int_element(x3,[3,6,1,0],c3);
+        constraint jacop_subcircuit(x);
+        constraint int_lin_le([1,1,1,1],[c0,c1,c2,c3],11);
+        solve satisfy;
+        """;
+    String out = run(fzn, "-a", "-debug");
+    assertTrue(out.contains("% redundant SubcircuitCost"), out);
+    // the subcircuits through 1 and 2 with arc costs at most 11 in total
+    assertEquals(
+        Set.of(
+            "x = array1d(1..4, [2, 1, 3, 4]);",
+            "x = array1d(1..4, [3, 1, 2, 4]);",
+            "x = array1d(1..4, [4, 1, 2, 3]);",
+            "x = array1d(1..4, [4, 1, 3, 2]);"),
+        solutions(out));
   }
 
   @Test

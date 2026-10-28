@@ -404,6 +404,13 @@ Version 5.0 (unreleased)
     instead of 115 s with one left unsolved. gardner_sum_square finds
     another optimal solution.
 
+30. The FlatZinc front end also posts the redundant SubcircuitCost when a
+    successor is fixed and written as a constant, as MiniZinc writes
+    succ[LuigiHouse] = MarioHouse in mario; before, the detection gave up on
+    such a subcircuit. All 6 mario instances of the OR-Tools comparison
+    are now proved in 60 s: in 0.6 to 13 s under --lcg -f (2 before) and
+    0.6 to 38 s by default (2 before).
+
 Version 4.11
 =============
 
