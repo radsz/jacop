@@ -185,7 +185,22 @@ Version 5.0 (unreleased)
     with time windows (one to three runways, 30 to 90 aircraft, 60 s) it
     answers 79 instead of 63; Gecode answers 59 and Chuffed 60.
 
-18. New set constraint AllDisjoint(s): the sets s are pairwise disjoint.
+18. New constraint OverlappingAlldiff(s, t): alldifferent(s) and
+    alldifferent(t) on lists that share variables, propagated together on
+    the bounds (Bessiere, Katsirelos, Narodytska, Quimper and Walsh,
+    AAAI 2010). It bounds how many shared and how many own variables of
+    each list can take values in each interval, closes the bounds under
+    additivity of the counts, and couples them through the two
+    alldifferents, which detects every failure of the bound relaxation and
+    applies the paper's rules 2a-2d. The FlatZinc front end posts it next
+    to the two all_different constraints when they share at least half of
+    the unfixed variables of each; -Dorg.jacop.fz.overlappingAlldiff=false
+    turns this off. On the paper's random instances (three alldifferents
+    sharing 10 to 12 variables, 90 instances, 60 s) JaCoP solves 80
+    instead of 65; on the paper's pathological family it proves
+    unsatisfiability at the root where it timed out from n = 4.
+
+19. New set constraint AllDisjoint(s): the sets s are pairwise disjoint.
     Besides the pairwise rule of AdisjointB it uses the cardinalities of
     the sets (Bessiere, Hebrard, Hnich and Walsh, CP 2004): elements are
     assigned to sets, or to no set, by a flow that meets the minimal

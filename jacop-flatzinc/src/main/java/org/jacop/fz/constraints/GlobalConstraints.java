@@ -618,6 +618,7 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     checkForDuplicateVariables(v);
+    support.alldifferentLists.add(v);
 
     IntervalDomain dom = new IntervalDomain();
     for (IntVar vv : v) {
@@ -674,6 +675,7 @@ class GlobalConstraints implements ParserTreeConstants {
     checkForDuplicateVariables(v);
 
     support.parameterListForAlldistincts.add(v);
+    support.alldifferentLists.add(v);
   }
 
   // the capacity and the cost sum are posted by the predicate; this only adds the cost reasoning

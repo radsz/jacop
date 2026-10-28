@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -99,11 +101,18 @@ public class Support implements ParserTreeConstants {
   static final AtomicInteger n5 = new AtomicInteger(0);
   static final AtomicInteger n6 = new AtomicInteger(0);
   static final AtomicInteger n7 = new AtomicInteger(0);
+  // pairs of all_different that get an OverlappingAlldiff
+  static final int OVERLAP_MIN_SHARED = 2;
+  static final int OVERLAP_MAX_VARIABLES = 64;
+  static final int OVERLAP_MAX_PAIRS = 10_000;
+
   final Store store;
   final Tables dictionary;
   // ============ SAT solver interface ==============
   final SatTranslation sat;
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  // the variables of every all_different of the model, for OverlappingAlldiff
+  final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   // unary resources found by the disjunctive clique detection: starts and durations
@@ -741,6 +750,7 @@ public class Support implements ParserTreeConstants {
       }
     }
     poseAlldistinctConstraints();
+    poseOverlappingAlldiffs();
 
     // generate channeling constraints instead of reified constraints
     reif.pose();
@@ -770,6 +780,60 @@ public class Support implements ParserTreeConstants {
       if (options.debug()) {
         String s = "% " + ad;
         FzConsole.println(s.replace("\n", "\n% "));
+      }
+    }
+  }
+
+  /**
+   * Posts an {@link OverlappingAlldiff} next to each pair of all_different constraints that share
+   * at least {@link #OVERLAP_MIN_SHARED} variables and at least half of the variables of each, each
+   * with a variable of its own, and that have at most {@link #OVERLAP_MAX_VARIABLES} variables
+   * together. Pairs sharing less, such as the rows and blocks of a sudoku, gain little pruning for
+   * the cost of the propagator. The system property {@code org.jacop.fz.overlappingAlldiff} set to
+   * false turns it off.
+   */
+  void poseOverlappingAlldiffs() {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
+        || alldifferentLists.size() < 2) {
+      return;
+    }
+    // fixed variables (often one constant object shared by many lists) are left out: the
+    // all_different constraints remove their values, so the rest is all different on its own
+    List<IntVar[]> lists = new ArrayList<>();
+    for (IntVar[] v : alldifferentLists) {
+      lists.add(Arrays.stream(v).filter(x -> !x.singleton()).toArray(IntVar[]::new));
+    }
+    Map<IntVar, List<Integer>> occurs = new IdentityHashMap<>();
+    for (int i = 0; i < lists.size(); i++) {
+      for (IntVar v : lists.get(i)) {
+        occurs.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+      }
+    }
+    int posted = 0;
+    for (int i = 0; i < lists.size() && posted < OVERLAP_MAX_PAIRS; i++) {
+      IntVar[] s = lists.get(i);
+      int[] shared = new int[lists.size()];
+      for (IntVar v : s) {
+        for (int j : occurs.get(v)) {
+          if (j > i) {
+            shared[j]++;
+          }
+        }
+      }
+      for (int j = i + 1; j < shared.length && posted < OVERLAP_MAX_PAIRS; j++) {
+        IntVar[] t = lists.get(j);
+        if (shared[j] >= OVERLAP_MIN_SHARED
+            && shared[j] < s.length
+            && shared[j] < t.length
+            && 2 * shared[j] >= Math.max(s.length, t.length)
+            && s.length + t.length - shared[j] <= OVERLAP_MAX_VARIABLES) {
+          OverlappingAlldiff c = new OverlappingAlldiff(s, t);
+          store.impose(c);
+          posted++;
+          if (options.debug()) {
+            FzConsole.println("% " + c);
+          }
+        }
       }
     }
   }

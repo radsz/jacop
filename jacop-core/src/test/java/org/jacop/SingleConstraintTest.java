@@ -118,6 +118,7 @@ import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBoolVector;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
@@ -255,6 +256,54 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x);
 
     assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  @Test
+  void testOverlappingAlldiffFailsWhenTheOwnVariablesCannotShare() {
+
+    // x in 1..2 and z in 3..4 cannot share a value, so x, w1, w2, w3 and z need five of four
+    // values;
+    // each alldifferent apart is domain consistent
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar w1 = new IntVar(store, "w1", 1, 4);
+    IntVar w2 = new IntVar(store, "w2", 1, 4);
+    IntVar w3 = new IntVar(store, "w3", 1, 4);
+    IntVar z = new IntVar(store, "z", 3, 4);
+    IntVar[] s = {x, w1, w2, w3};
+    IntVar[] t = {w1, w2, w3, z};
+
+    store.impose(new Alldistinct(s));
+    store.impose(new Alldistinct(t));
+    assertThat(store.consistency()).isTrue();
+
+    store.impose(new OverlappingAlldiff(s, t));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testOverlappingAlldiffPrunesWhatTwoAlldistinctsMiss() {
+
+    // w1 and w2 take two of 1..3 and x and z both take the third, which must be 2
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 3);
+    IntVar w1 = new IntVar(store, "w1", 1, 3);
+    IntVar w2 = new IntVar(store, "w2", 1, 3);
+    IntVar z = new IntVar(store, "z", 1, 2);
+    IntVar[] s = {x, w1, w2};
+    IntVar[] t = {w1, w2, z};
+
+    store.impose(new Alldistinct(s));
+    store.impose(new Alldistinct(t));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.getSize()).isEqualTo(2);
+
+    store.impose(new OverlappingAlldiff(s, t));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.value()).isEqualTo(2);
+    assertThat(z.value()).isEqualTo(2);
+    assertThat(w1.dom().contains(2)).isFalse();
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, w1, w2, z})).isEqualTo(2);
   }
 
   @Test
