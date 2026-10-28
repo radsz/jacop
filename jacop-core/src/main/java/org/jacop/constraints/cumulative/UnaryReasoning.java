@@ -219,6 +219,88 @@ class UnaryReasoning {
   }
 
   /**
+   * Loads the normal view as {@link #loadNormal(TaskView[], int)}, but leaves out the fixed tasks
+   * that end before every other task can start, when the tasks left out do not overlap; the caller
+   * makes sure the tasks with a compulsory part do not overlap, as the time-table does. Such tasks
+   * change no bound of the other tasks in any rule, and no rule changes them (it would fail only on
+   * an overload among the other tasks, which edge finding detects without them). In a search that
+   * fixes tasks from left to right most tasks are such.
+   *
+   * @param ts the tasks in the normal view, with the field index equal to their position in ts.
+   * @param tsReversed the same tasks in the reversed view, in the same order.
+   * @param n the number of tasks.
+   * @param kept receives the tasks loaded, in the order of ts.
+   * @param keptReversed receives the same tasks in the reversed view.
+   * @return the number of tasks loaded.
+   */
+  int loadNormalActive(
+      TaskView[] ts, TaskView[] tsReversed, int n, TaskView[] kept, TaskView[] keptReversed) {
+    ensureCapacity(n);
+    // the earliest start of a task that is not fixed
+    int cut = Integer.MAX_VALUE;
+    for (int i = 0; i < n; i++) {
+      TaskView t = ts[i];
+      int sMin = t.start.min();
+      int sMax = t.start.max();
+      int dMin = t.dur.min();
+      est[i] = sMin;
+      lst[i] = sMax;
+      lct[i] = sMax + t.dur.max();
+      ect[i] = sMin + dMin;
+      dur[i] = dMin;
+      if (!fixed(i)) {
+        cut = Math.min(cut, sMin);
+      }
+    }
+    // the latest end of the tasks left out; the other tasks must not start before it
+    int end = Integer.MIN_VALUE;
+    for (int i = 0; i < n; i++) {
+      if (fixed(i) && lct[i] <= cut) {
+        end = Math.max(end, lct[i]);
+      }
+    }
+    int m = 0;
+    for (int i = 0; i < n; i++) {
+      if (fixed(i) && lct[i] <= cut) {
+        continue;
+      }
+      if (est[i] < end) {
+        // a fixed task that starts before the end of the tasks left out
+        m = n;
+        break;
+      }
+      m++;
+    }
+    if (m == n) {
+      System.arraycopy(ts, 0, kept, 0, n);
+      System.arraycopy(tsReversed, 0, keptReversed, 0, n);
+    } else {
+      m = 0;
+      for (int i = 0; i < n; i++) {
+        if (fixed(i) && lct[i] <= cut) {
+          continue;
+        }
+        est[m] = est[i];
+        lst[m] = lst[i];
+        lct[m] = lct[i];
+        ect[m] = ect[i];
+        dur[m] = dur[i];
+        kept[m] = ts[i];
+        keptReversed[m] = tsReversed[i];
+        m++;
+      }
+    }
+    if (m > 0) {
+      sortAll(m);
+    }
+    return m;
+  }
+
+  private boolean fixed(int i) {
+    return est[i] == lst[i] && ect[i] == lct[i];
+  }
+
+  /**
    * Loads the reversed view of the tasks loaded in the normal view by another instance, without
    * reading the variables; the same as {@link #load(TaskView[], int)} for {@link TaskReversedView}
    * tasks.

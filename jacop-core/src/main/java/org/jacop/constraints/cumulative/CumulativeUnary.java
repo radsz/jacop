@@ -79,6 +79,14 @@ public class CumulativeUnary extends Cumulative {
   // count would prune nothing again
   private int boundsVersion;
   private final int[] quietAt = new int[EDGE_FIND_REVERSED + 1];
+  // the tasks loaded into the rules: all of them, or those left after the fixed tasks that end
+  // before all others, which only the time-table of CumulativeUnary must still check
+  private boolean leaveOutFixedPrefix;
+  private TaskView[] keptNormal = new TaskView[0];
+  private TaskView[] keptReversed = new TaskView[0];
+  private TaskView[] loadedNormal;
+  private TaskView[] loadedReversed;
+  private int loadedCount;
 
   /**
    * It creates a cumulative constraint.
@@ -242,6 +250,11 @@ public class CumulativeUnary extends Cumulative {
     TaskView[] tr = filterZeroTasks(tvr);
 
     boundsChanged();
+    // the rules run only after a time-table call that pruned nothing, so the compulsory parts do
+    // not overlap when the rules first load the tasks; a rule that fixes overlapping tasks makes
+    // the
+    // time-table fail in the next pass
+    leaveOutFixedPrefix = doProfile;
     do {
 
       store.propagationHasOccurred = false;
@@ -320,7 +333,6 @@ public class CumulativeUnary extends Cumulative {
    * @param overload true to run the overload check first.
    */
   void unaryRules(Store store, TaskView[] tn, TaskView[] tr, boolean overload) {
-    int n = tn.length;
     boolean changed = store.propagationHasOccurred;
     store.propagationHasOccurred = false;
     boolean loaded = false;
@@ -329,10 +341,12 @@ public class CumulativeUnary extends Cumulative {
         continue;
       }
       if (!loaded) {
-        loadViews(tn, n);
+        loadViews(tn, tr);
         loaded = true;
       }
-      runRule(rule, store, tn, tr, n);
+      if (loadedCount > 0) {
+        runRule(rule, store, loadedNormal, loadedReversed, loadedCount);
+      }
       if (store.propagationHasOccurred) {
         store.propagationHasOccurred = false;
         changed = true;
@@ -365,9 +379,27 @@ public class CumulativeUnary extends Cumulative {
     }
   }
 
-  private void loadViews(TaskView[] tn, int n) {
-    unaryNormal.loadNormal(tn, n);
-    unaryReversed.loadReversed(unaryNormal, n);
+  // loads the bounds of the tasks into both views, leaving out the fixed tasks that end before the
+  // other tasks when the time-table has checked that the compulsory parts do not overlap
+  private void loadViews(TaskView[] tn, TaskView[] tr) {
+    int n = tn.length;
+    if (leaveOutFixedPrefix) {
+      if (keptNormal.length < n) {
+        keptNormal = new TaskView[n];
+        keptReversed = new TaskView[n];
+      }
+      loadedCount = unaryNormal.loadNormalActive(tn, tr, n, keptNormal, keptReversed);
+      loadedNormal = keptNormal;
+      loadedReversed = keptReversed;
+    } else {
+      unaryNormal.loadNormal(tn, n);
+      loadedCount = n;
+      loadedNormal = tn;
+      loadedReversed = tr;
+    }
+    if (loadedCount > 0) {
+      unaryReversed.loadReversed(unaryNormal, loadedCount);
+    }
   }
 
   @Override
