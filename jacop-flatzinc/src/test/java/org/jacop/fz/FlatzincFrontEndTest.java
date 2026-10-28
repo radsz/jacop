@@ -48,6 +48,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.floats.core.FloatDomain;
 import org.junit.jupiter.api.Test;
@@ -1473,6 +1475,53 @@ class FlatzincFrontEndTest {
     }
     String text = out.toString(StandardCharsets.UTF_8);
     assertTrue(text.contains("%%%mzn-stat: objective=3"), text);
+  }
+
+  @Test
+  void lcgFreeSearchWithoutAnnotationAlternatesWithDomWdeg() throws IOException {
+    // cutstock without a search annotation: --lcg -f branched on activity alone and found no
+    // solution in 60 s on type04_TEST9, where dom/wdeg finds one; its runs now alternate with
+    // dom/wdeg on the default search variables, as they alternate with an annotation
+    int[] length = {45, 36, 31, 14};
+    int[] demand = {3, 4, 5, 6};
+    int pieces = 12;
+    StringBuilder model = new StringBuilder();
+    StringBuilder used = new StringBuilder();
+    for (int k = 1; k <= pieces; k++) {
+      model.append("var 0..1: p%d;\n".formatted(k));
+      used.append("p%d, ".formatted(k));
+      for (int i = 1; i <= length.length; i++) {
+        model.append("var 0..6: q%d_%d;\n".formatted(k, i));
+      }
+    }
+    model.append("var 0..%d: used :: output_var;\n".formatted(pieces));
+    for (int k = 1; k <= pieces; k++) {
+      StringBuilder vars = new StringBuilder();
+      StringBuilder weights = new StringBuilder();
+      for (int i = 1; i <= length.length; i++) {
+        vars.append("q%d_%d, ".formatted(k, i));
+        weights.append(length[i - 1]).append(", ");
+      }
+      model.append("constraint int_lin_le([%s-100], [%sp%d], 0);\n".formatted(weights, vars, k));
+    }
+    for (int i = 1; i <= length.length; i++) {
+      StringBuilder vars = new StringBuilder();
+      for (int k = 1; k <= pieces; k++) {
+        vars.append(k == 1 ? "" : ", ").append("q%d_%d".formatted(k, i));
+      }
+      model.append(
+          "constraint int_lin_le([%s], [%s], %d);\n"
+              .formatted("-1, ".repeat(pieces - 1) + "-1", vars, -demand[i - 1]));
+    }
+    model.append(
+        "constraint int_lin_eq([%s-1], [%sused], 0);\n".formatted("1, ".repeat(pieces), used));
+    model.append("solve minimize used;\n");
+    // proving that six pieces are optimal takes long among the symmetric pieces
+    String out = run(model.toString(), "--lcg", "-f", "-s", "-t", "1000")[0];
+    Matcher u = Pattern.compile("used = (\\d+);").matcher(out);
+    assertTrue(u.find() && Integer.parseInt(u.group(1)) >= 6, out);
+    Matcher m = Pattern.compile("lcgAnnotationDecisions=(\\d+)").matcher(out);
+    assertTrue(m.find() && Long.parseLong(m.group(1)) > 0, out);
   }
 
   @Test
