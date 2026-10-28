@@ -745,6 +745,17 @@ public class Store {
     }
   }
 
+  /**
+   * It clears the queue of constraints which need to be reevaluated usefull if different scheme
+   * propagation scheme needs to be implemented.
+   */
+  public void clearChanged() {
+
+    while (currentQueue < queueNo) {
+      changed[currentQueue++].clear();
+    }
+  }
+
   private void handleConsistencyFailure() {
     if (currentConstraint != null) {
       currentConstraint.cleanAfterFailure();
