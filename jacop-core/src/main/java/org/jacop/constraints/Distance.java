@@ -189,8 +189,8 @@ public class Distance extends AbstractConstraintXandYandZ {
   private void propagateWhenNoneSingleton(Store store) {
     IntervalDomain xDom1 = new IntervalDomain(y.min() - z.max(), y.max() - z.min());
     xDom1.unionAdapt(y.min() + z.min(), y.max() + z.max());
+    // x can become a singleton here, and only the next round propagates on it with the domains
     x.domain.in(store.level, x, xDom1);
-    store.propagationHasOccurred = false;
     IntervalDomain yDom1 = new IntervalDomain(x.min() + z.min(), x.max() + z.max());
     yDom1.unionAdapt(x.min() - z.max(), x.max() - z.min());
     y.domain.in(store.level, y, yDom1);
