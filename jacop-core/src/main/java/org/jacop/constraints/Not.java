@@ -91,7 +91,7 @@ public class Not extends PrimitiveConstraint
 
   @Override
   public int getConsistencyPruningEvent(Var v) {
-    return getPruningEventForNested(v, consistencyPruningEvents, c, false);
+    return getPruningEventForConstraints(v, consistencyPruningEvents, c);
   }
 
   @Override
@@ -101,7 +101,7 @@ public class Not extends PrimitiveConstraint
 
   @Override
   public int getNotConsistencyPruningEvent(Var v) {
-    return getPruningEventForNested(v, notConsistencyPruningEvents, c, true);
+    return getPruningEventForConstraints(v, notConsistencyPruningEvents, c);
   }
 
   @Override
