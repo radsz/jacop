@@ -181,6 +181,24 @@ class ObjectivePresolveFlatzincTest {
     }
   }
 
+  /**
+   * Free search, with and without lazy clause generation, branches first on the cost variable of
+   * each byte, cheapest value first: the first solution is the optimum, where the annotation alone
+   * (largest value first) starts at cost 300.
+   */
+  @Test
+  void freeSearchTriesTheCheapestValueOfEachCostVariableFirst() throws IOException {
+    for (String[] options :
+        List.of(new String[] {"-f", "-a"}, new String[] {"-f", "-a", "--lcg"})) {
+      String out = FlatzincTestRunner.run(tmp, ENCODING, options);
+      assertThat(out)
+          .as(String.join(" ", options))
+          .contains("cost = 21;")
+          .doesNotContain("cost = 300;");
+      assertThat(out.split("cost = ", -1)).as(String.join(" ", options)).hasSize(2);
+    }
+  }
+
   @Test
   void checkingModePrintsTheSameAsNoPresolve() throws IOException {
     // the search annotation fixes the order, so the improving solutions are the same; free search

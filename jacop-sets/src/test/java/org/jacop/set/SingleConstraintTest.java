@@ -59,6 +59,7 @@ import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
 import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.ElementSetVariable;
 import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.constraints.SumWeightedSet;
@@ -111,6 +112,26 @@ class SingleConstraintTest {
     assertThat(x.singleton()).isTrue();
     assertThat(y.singleton()).isTrue();
     assertThat(y.dom().glb().eq(new IntervalDomain(5, 6))).isTrue();
+  }
+
+  @Test
+  void testElementSetVariableWakesOnGlbChange() {
+
+    // index = 1, so value = a. Growing the glb of a must reach value; the constraint used to be
+    // registered with IntDomain.ANY, which for a set variable is the LUB event only.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 1);
+    SetVar a = new SetVar(store, "a", 1, 5);
+    SetVar b = new SetVar(store, "b", 1, 5);
+    SetVar value = new SetVar(store, "value", 1, 5);
+    store.impose(new ElementSetVariable(index, new SetVar[] {a, b}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    a.domain.inGlb(1, a, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().glb().contains(3)).isTrue();
   }
 
   @Test

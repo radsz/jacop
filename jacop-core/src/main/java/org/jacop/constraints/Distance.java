@@ -206,7 +206,8 @@ public class Distance extends AbstractConstraintXandYandZ {
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
+    // notSatisfied() looks at the bounds and at the holes of the domains
+    return IntDomain.ANY;
   }
 
   @Override
@@ -229,13 +230,25 @@ public class Distance extends AbstractConstraintXandYandZ {
   @Override
   public boolean notSatisfied() {
 
-    IntDomain xDom = x.dom();
-    IntDomain yDom = y.dom();
-    IntDomain zDom = z.dom();
-    return xDom.singleton()
-        && yDom.singleton()
-        && zDom.singleton()
-        && Math.abs(xDom.min() - yDom.min()) != zDom.min();
+    if (x.singleton() && y.singleton()) {
+      return !z.domain.contains(Math.abs(x.value() - y.value()));
+    }
+    // |x - y| lies between these bounds
+    int distanceMin = Math.max(0, Math.max(x.min() - y.max(), y.min() - x.max()));
+    int distanceMax = Math.max(x.max() - y.min(), y.max() - x.min());
+    if (!z.domain.isIntersecting(distanceMin, distanceMax)) {
+      return true;
+    }
+    if (z.singleton()) {
+      int d = z.value();
+      if (x.singleton()) {
+        return !y.domain.contains(x.value() - d) && !y.domain.contains(x.value() + d);
+      }
+      if (y.singleton()) {
+        return !x.domain.contains(y.value() - d) && !x.domain.contains(y.value() + d);
+      }
+    }
+    return false;
   }
 
   @Override
