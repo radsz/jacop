@@ -32,10 +32,12 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -61,7 +63,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementVariableFast extends AbstractElement
-    implements SatisfiedPresent, Copyable<ElementVariableFast>, Explainable {
+    implements Simplifiable, SatisfiedPresent, Copyable<ElementVariableFast>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -206,6 +208,20 @@ public class ElementVariableFast extends AbstractElement
   @Override
   public String toString() {
     return buildToString("elementVariableFast", list, value, true);
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != ElementVariableFast.class) {
+      return Optional.empty();
+    }
+    return ElementSimplification.variables(
+        index,
+        list,
+        value,
+        indexOffset,
+        (i, l, offset) -> new ElementVariableFast(i, l, value, offset),
+        (i, l, offset) -> new ElementIntegerFast(i, l, value, offset));
   }
 
   @Override

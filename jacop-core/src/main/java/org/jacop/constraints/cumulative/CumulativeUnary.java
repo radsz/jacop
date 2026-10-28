@@ -31,8 +31,10 @@
 package org.jacop.constraints.cumulative;
 
 import java.util.List;
+import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -318,6 +320,17 @@ public class CumulativeUnary extends Cumulative {
     result.append(" ]").append(", limit = ").append(limit).append(" )");
 
     return result.toString();
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != CumulativeUnary.class) {
+      return Optional.empty();
+    }
+    return simplifyTasks(
+        t ->
+            withOptionsOf(
+                new CumulativeUnary(t[0], t[1], t[2], limit, doProfile, doUnaryEdgeFind)));
   }
 
   @Override

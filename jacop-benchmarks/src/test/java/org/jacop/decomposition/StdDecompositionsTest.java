@@ -317,6 +317,7 @@ class StdDecompositionsTest {
         model("link_set_to_booleans", d.toString(), "jacop_link_set_to_booleans(t1," + b + ",1)"));
     models.add(model("disjoint", d.toString(), "jacop_disjoint(t1,t2)"));
     models.add(model("partition_set", d.toString(), "jacop_partition_set(" + sets + ",1..3)"));
+    models.add(model("all_disjoint", d.toString(), "jacop_all_disjoint(" + sets + ")"));
     models.add(
         model(
             "if_then_else_set",

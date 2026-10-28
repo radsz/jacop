@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_cost_mdd"],
+  "constraintFamilies": ["linear", "mdd"],
+  "domains": []
+}

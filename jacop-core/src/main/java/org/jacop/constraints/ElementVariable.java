@@ -35,11 +35,13 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
@@ -67,7 +69,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementVariable extends AbstractElement
-    implements UsesQueueVariable,
+    implements Simplifiable,
+        UsesQueueVariable,
         SatisfiedPresent,
         Stateful,
         Copyable<ElementVariable>,
@@ -391,6 +394,20 @@ public class ElementVariable extends AbstractElement
   @Override
   public String toString() {
     return buildToString("elementVariable", list, value, false);
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != ElementVariable.class) {
+      return Optional.empty();
+    }
+    return ElementSimplification.variables(
+        index,
+        list,
+        value,
+        indexOffset,
+        (i, l, offset) -> new ElementVariable(i, l, value, offset),
+        (i, l, offset) -> new ElementInteger(i, l, value, offset));
   }
 
   @Override
