@@ -53,6 +53,7 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -122,6 +123,7 @@ public class Support implements ParserTreeConstants {
   static final int ALLDIFF_SUM_MIN_VARIABLES = 3;
   static final int ALLDIFF_SUM_MAX_VARIABLES = 64;
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   // unary resources found by the disjunctive clique detection: starts and durations
   final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
@@ -746,9 +748,27 @@ public class Support implements ParserTreeConstants {
 
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
+    binPackingCardinality.attach();
+
     // generate channeling constraints for aliases
     // variables that are output variables
     aliasConstraints();
+
+    // cost_regular constraints over the same word and automaton are filtered together;
+    // org.jacop.fz.multiCostRegular=false keeps them apart, =lagrangian adds the relaxation
+    String multiCost = System.getProperty("org.jacop.fz.multiCostRegular", "true");
+    if (!"false".equalsIgnoreCase(multiCost)) {
+      List<Constraint> merged = MultiCostRegular.merge(delayedConstraints);
+      if (merged != delayedConstraints) {
+        delayedConstraints.clear();
+        for (Constraint c : merged) {
+          if (c instanceof MultiCostRegular m && "lagrangian".equalsIgnoreCase(multiCost)) {
+            m.setLagrangian(true);
+          }
+          delayedConstraints.add(c);
+        }
+      }
+    }
 
     for (Constraint c : delayedConstraints) {
       store.impose(c);
