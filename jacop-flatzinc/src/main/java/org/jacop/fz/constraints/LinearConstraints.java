@@ -583,19 +583,19 @@ class LinearConstraints implements ParserTreeConstants {
       return false;
     }
     if (p1[0] == 1) {
-      support.pose(new XmulCeqZ(p2[1], -p1[1], p2[0]));
+      support.poseXmulCeqZ(p2[1], -p1[1], p2[0]);
       return true;
     }
     if (p1[1] == 1) {
-      support.pose(new XmulCeqZ(p2[0], -p1[0], p2[1]));
+      support.poseXmulCeqZ(p2[0], -p1[0], p2[1]);
       return true;
     }
     if (p1[0] == -1) {
-      support.pose(new XmulCeqZ(p2[1], p1[1], p2[0]));
+      support.poseXmulCeqZ(p2[1], p1[1], p2[0]);
       return true;
     }
     if (p1[1] == -1) {
-      support.pose(new XmulCeqZ(p2[0], p1[0], p2[1]));
+      support.poseXmulCeqZ(p2[0], p1[0], p2[1]);
       return true;
     }
     return false;

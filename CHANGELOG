@@ -185,6 +185,18 @@ Version 5.0 (unreleased)
     with time windows (one to three runways, 30 to 90 aircraft, 60 s) it
     answers 79 instead of 63; Gecode answers 59 and Chuffed 60.
 
+18. New set constraint AllDisjoint(s): the sets s are pairwise disjoint.
+    Besides the pairwise rule of AdisjointB it uses the cardinalities of
+    the sets (Bessiere, Hebrard, Hnich and Walsh, CP 2004): elements are
+    assigned to sets, or to no set, by a flow that meets the minimal
+    cardinalities, and the strongly connected components of its residual
+    graph give bounds consistency on the set bounds. MiniZinc all_disjoint
+    now posts it instead of n(n-1)/2 jacop_disjoint. Social golfers search
+    the same trees as before; on project allocation models (sets of
+    students with cardinality bounds, 8 to 32 projects, 60 s) it finds
+    a first solution on 3 of 18 instances where the pairwise version finds
+    none and a better objective on 8 more.
+
 Version 4.11
 =============
 

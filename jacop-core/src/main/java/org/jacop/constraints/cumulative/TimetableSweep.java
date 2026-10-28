@@ -55,6 +55,7 @@ class TimetableSweep {
   static final int PROFILE = 0;
   static final int PRUNE_START = 1;
   static final int PRUNE_END = 2;
+  static final int PRUNE_HEIGHT = 3;
 
   private static final int SEQUENCE_MASK = (1 << 30) - 1;
 
@@ -81,9 +82,9 @@ class TimetableSweep {
 
   private void ensureCapacity(int n) {
     if (inProfile.length < n) {
-      eventKeys = new long[4 * n];
-      eventTask = new TaskView[4 * n];
-      eventValue = new int[4 * n];
+      eventKeys = new long[5 * n];
+      eventTask = new TaskView[5 * n];
+      eventValue = new int[5 * n];
       tasksToPrune = new BitSet(n);
       inProfile = new boolean[n];
       startExcluded = new int[n];
@@ -171,6 +172,13 @@ class TimetableSweep {
         j++;
         addEvent(j, PRUNE_END, t, max, 0);
         j++;
+        // a task with a compulsory part but no resource use in the profile gets no profile event
+        // at its latest start, where its resource use must be checked against the profile
+        int lst = t.lst();
+        if (t.res.min() == 0 && lst < t.ect() && lst > min) {
+          addEvent(j, PRUNE_HEIGHT, t, lst, 0);
+          j++;
+        }
       }
     }
 
@@ -235,6 +243,12 @@ class TimetableSweep {
 
         case PRUNE_END:
           pruneEnd(store, t, date, curProfile, limitMax, debugNarr);
+          break;
+
+        case PRUNE_HEIGHT:
+          if (limitMax - curProfile < t.res.max()) {
+            t.res.domain.inMax(store.level, t.res, limitMax - curProfile);
+          }
           break;
 
         default:

@@ -1,0 +1,3 @@
+source: written for jacop_all_disjoint (social golfers with a resting golfer)
+mode: all (satisfaction)
+verified: JaCoP (with jacop_all_disjoint and with pairwise jacop_disjoint), Gecode 6.3.0 and OR-Tools CP-SAT 9.14 find 870 solutions
