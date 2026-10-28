@@ -234,6 +234,23 @@ class PropagationStrengthTest {
     assertThat(d.dom()).hasToString("0");
   }
 
+  // -x = -9 with 9 a hole in x, from int_lin_eq_reif([-1], [x], -9, b) (giant_cat_army_riddle)
+  @Test
+  void testReifiedMulByConstantNoticesHoles() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 1, 7, 8, 13);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(x, -1, new IntVar(store, -9, -9)), b));
+    IntVar y = variable(store, "y", 4);
+    IntVar z = variable(store, "z", 0, 4, 12, 16);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new XmulCeqZ(y, 2, z), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
   /**
    * x = 5, y = 1, z in {2..3, 8..10}, then 6 also leaves z: the reified sum must be false at once.
    */
