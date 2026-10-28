@@ -248,8 +248,10 @@ Version 5.0 (unreleased)
     it, so the mirror's atoms have that constraint as reason and stand for
     the set in the generic explanations of the set constraints (new
     interface org.jacop.lcg.Mirrored). The explanation checker
-    (-Djacop.lcg.check=true) checks the set constraints too. Float
-    variables still turn --lcg off.
+    (-Djacop.lcg.check=true) checks the set constraints too. Under --lcg
+    the decisions of a set_search annotation on an element are taken as
+    the literal that the element is in the set. Float variables still
+    turn --lcg off.
 
 Version 4.11
 =============

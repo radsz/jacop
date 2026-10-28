@@ -145,6 +145,18 @@ public class SetMirror extends Constraint implements SatisfiedPresent {
     return mirror;
   }
 
+  /**
+   * Returns the membership variable of an element.
+   *
+   * @param element the element
+   * @return the variable, or null for an element that was in the greatest lower bound or outside
+   *     the least upper bound when the mirror was made
+   */
+  public IntVar member(int element) {
+    int i = Arrays.binarySearch(elements, element);
+    return i >= 0 ? members[i] : null;
+  }
+
   /** Passes the set's current domain to the mirror. */
   public void follow() {
     int level = store.level;

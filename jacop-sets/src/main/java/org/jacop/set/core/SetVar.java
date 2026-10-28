@@ -334,6 +334,11 @@ public class SetVar extends Var implements Mirrored {
   }
 
   @Override
+  public IntVar decisionVariable(int value) {
+    return lcgMirror == null ? null : lcgMirror.member(value);
+  }
+
+  @Override
   public SetVar copyMirrored(Store target, IntVar[] mirror) {
     return lcgMirror.copyTo(target, mirror);
   }

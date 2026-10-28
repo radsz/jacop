@@ -54,6 +54,15 @@ public interface Mirrored {
   IntVar[] mirror();
 
   /**
+   * Returns the mirror's 0/1 variable that is 1 exactly when the left branch of a search decision
+   * on this variable and a value holds; for a set variable, the membership of that element.
+   *
+   * @param value the value of the decision
+   * @return the variable, or null when the mirror has none for the value
+   */
+  IntVar decisionVariable(int value);
+
+  /**
    * Creates in another store a copy of this variable, with its domain when the mirror was made,
    * kept equal to copies of its mirror. {@link ExplanationChecker} checks the explanations of
    * constraints on this variable with it.

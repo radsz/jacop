@@ -1557,11 +1557,15 @@ class FlatzincFrontEndTest {
         constraint set_in_reif(2, s, b2);
         constraint set_in_reif(3, s, b3);
         constraint bool_clause([], [b2, b3]);
-        solve satisfy;
+        solve :: set_search([s], input_order, indomain_min, complete) satisfy;
         """;
-    String out = run(model, "--lcg")[0];
+    String out = run(model, "--lcg", "-s")[0];
     assertTrue(!out.contains("--lcg ignored"), out);
     assertTrue(out.contains("----------"), out);
+    // the annotation's decisions on the set are followed, as without --lcg: 1 and 2 are put in s,
+    // which leaves 3 out, then 4
+    assertTrue(out.contains("s = {1, 2, 4};"), out);
+    assertTrue(!out.contains("lcgAnnotationDecisions=0"), out);
   }
 
   /**

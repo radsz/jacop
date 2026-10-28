@@ -53,6 +53,7 @@ import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.Mirrored;
 import org.jacop.search.SelectChoicePoint;
 
 /**
@@ -1055,6 +1056,11 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int annotationDecision() {
     Var v = annotation.getChoiceVariable(0);
+    if (v instanceof Mirrored m) {
+      // the left branch on a set variable's element is that the element is in the set
+      int i = idOf(m.decisionVariable(annotation.getChoiceValue()));
+      return i < 0 ? 0 : eqVar(i, 1);
+    }
     if (v != null) {
       int i = idOf(v);
       if (i < 0) {
