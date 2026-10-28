@@ -492,6 +492,14 @@ Version 5.0 (unreleased)
     60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
     on 24 of the others and a worse one on 21.
 
+37. Not-last in CumulativeUnary (MiniZinc disjunctive) now tests every
+    task, as Vilim's algorithm does. A task whose latest completion lets
+    no new task into Theta was skipped, and a task bounded by its own
+    latest start now gets the largest latest start of the other tasks.
+    Pruning is stronger, so search trees can change: the job shop and
+    open shop instances solved to optimality keep their node counts, and
+    a 150x15 job shop reaches makespan 8992 in 30 s instead of 9003.
+
 Version 4.11
 =============
 
