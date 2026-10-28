@@ -204,11 +204,14 @@ public abstract class PrimitiveConstraint extends Constraint
 
   /**
    * Computes the maximum pruning event for a variable across a set of nested constraints. For each
-   * constraint that contains the variable in its arguments, both consistency and notConsistency
-   * nested pruning events are checked and the maximum is returned.
+   * constraint that contains the variable in its arguments, the events of every method a composed
+   * constraint calls are checked and the maximum is returned: the nested pruning events, which
+   * decide satisfied() and notSatisfied(), and the events of consistency() and notConsistency().
+   * The nested events alone can be narrower than the pruning ones, for example XplusCeqZ is decided
+   * only once its variables are ground while its consistency() prunes on any change.
    *
-   * <p>This helper eliminates duplicated pruning-event computation in reified constraints such as
-   * IfThen, Eq, Reified, Xor, Implies, etc.
+   * <p>This helper eliminates duplicated pruning-event computation in composed constraints such as
+   * And, Or, Not, IfThen, Eq, Reified, Xor, Implies, etc.
    *
    * @param v the variable for which to compute the pruning event.
    * @param constraints the nested constraints to query.
@@ -218,14 +221,16 @@ public abstract class PrimitiveConstraint extends Constraint
     int eventAcross = -1;
     for (PrimitiveConstraint constraint : constraints) {
       if (constraint.arguments().contains(v)) {
-        int event = constraint.getNestedPruningEvent(v, true);
-        if (event > eventAcross) {
-          eventAcross = event;
-        }
-        event = constraint.getNestedPruningEvent(v, false);
-        if (event > eventAcross) {
-          eventAcross = event;
-        }
+        eventAcross =
+            Math.max(
+                eventAcross,
+                Math.max(
+                    Math.max(
+                        constraint.getNestedPruningEvent(v, true),
+                        constraint.getNestedPruningEvent(v, false)),
+                    Math.max(
+                        constraint.getConsistencyPruningEvent(v),
+                        constraint.getNotConsistencyPruningEvent(v))));
       }
     }
     return eventAcross == -1 ? Domain.NONE : eventAcross;
@@ -308,30 +313,6 @@ public abstract class PrimitiveConstraint extends Constraint
       }
     }
     return computeMaxPruningEvent(v, constraints);
-  }
-
-  /**
-   * Computes the pruning event for a variable by first checking a custom events map, then
-   * delegating to a nested constraint's getNestedPruningEvent with a specified mode.
-   *
-   * <p>This helper eliminates duplicated pruning-event computation in constraints such as Not.
-   *
-   * @param v the variable for which to compute the pruning event.
-   * @param eventsMap the map of custom pruning events, or null if none.
-   * @param nestedConstraint the nested constraint to query.
-   * @param mode the mode to use when querying the nested constraint (true for consistency, false
-   *     for notConsistency).
-   * @return the pruning event for the variable.
-   */
-  protected static int getPruningEventForNested(
-      Var v, Map<Var, Integer> eventsMap, PrimitiveConstraint nestedConstraint, boolean mode) {
-    if (eventsMap != null) {
-      Integer possibleEvent = eventsMap.get(v);
-      if (possibleEvent != null) {
-        return possibleEvent;
-      }
-    }
-    return nestedConstraint.getNestedPruningEvent(v, mode);
   }
 
   /**

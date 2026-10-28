@@ -1043,9 +1043,11 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
     return result.toString();
   }
 
+  // the matching and the values no other variable can take read the domains, so a value removed
+  // inside a domain can change the number of different values
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    return IntDomain.ANY;
   }
 
   @Override

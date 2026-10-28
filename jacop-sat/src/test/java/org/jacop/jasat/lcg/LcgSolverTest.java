@@ -70,6 +70,7 @@ import org.jacop.constraints.Xor;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -1723,5 +1724,118 @@ class LcgSolverTest {
     assertThat(annotationDecisions).isPositive();
     // conflict analysis stops at some semantic UIPs, and the optima above still agree
     assertThat(semanticUips).isPositive();
+  }
+
+  @Test
+  void coreGuidedSearchAgreesWithSearch() {
+    Random rnd = new Random(17);
+    long cores = 0;
+    long proved = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = coreModelOptimum(seed, -1, new long[2]);
+      for (int mode = 0; mode < 3; mode++) {
+        // mode 0: core-guided search alone; 1: a few conflicts, then branch and bound; 2: the
+        // objective maximised through its negation
+        long[] stats = new long[2];
+        Integer found = coreModelOptimum(seed, mode, stats);
+        assertThat(found)
+            .as("instance %d (seed %d), mode %d", instance, seed, mode)
+            .isEqualTo(expected);
+        cores += stats[0];
+        proved += stats[1];
+      }
+      if (expected == null) {
+        unsat++;
+      }
+    }
+    assertThat(cores).isPositive();
+    // core-guided search alone proves some optima
+    assertThat(proved).isPositive();
+    assertThat(unsat).isPositive();
+  }
+
+  /**
+   * Builds a random model with a weighted sum objective and minimises it: by depth-first search
+   * (mode -1) or by LCG with core-guided search (modes 0 to 2). Returns the optimum, or null when
+   * there is no solution; stats gets the cores and whether core-guided search proved the optimum.
+   */
+  private static Integer coreModelOptimum(long seed, int mode, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 4 + rnd.nextInt(5);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      int lo = rnd.nextInt(3) - 1;
+      // a few wider domains, for terms that must move far above their bounds
+      x[i] = new IntVar(store, "x" + i, lo, lo + 1 + rnd.nextInt(i < 2 ? 10 : 4));
+    }
+    int m = 2 + rnd.nextInt(2 * n);
+    for (int k = 0; k < m; k++) {
+      int a = rnd.nextInt(n);
+      int b = (a + 1 + rnd.nextInt(n - 1)) % n;
+      switch (rnd.nextInt(5)) {
+        case 0 -> store.impose(new XneqY(x[a], x[b]));
+        case 3 -> {
+          // x[a] >= high or x[a] >= low by a 0/1 choice: x[a] >= low holds in every solution but
+          // not at the root, so core-guided search proves it by probing
+          int low = 2 + rnd.nextInt(3);
+          int high = low + 1 + rnd.nextInt(3);
+          IntVar choice = new IntVar(store, "c" + k, 0, 1);
+          store.impose(new LinearInt(new IntVar[] {x[a], choice}, new int[] {1, -high}, ">=", 0));
+          store.impose(new LinearInt(new IntVar[] {x[a], choice}, new int[] {1, low}, ">=", low));
+        }
+        case 1 -> store.impose(new XlteqY(x[a], x[b]));
+        case 2 -> store.impose(new XplusClteqZ(x[a], rnd.nextInt(3) - 1, x[b]));
+        default -> {
+          // x[a] + x[b] + x[c] >= c: pushes costs up
+          int c = rnd.nextInt(n);
+          store.impose(
+              new LinearInt(
+                  new IntVar[] {x[a], x[b], x[c]}, new int[] {1, 1, 1}, ">=", rnd.nextInt(6)));
+        }
+      }
+    }
+    int[] w = new int[n + 1];
+    IntVar[] terms = Arrays.copyOf(x, n + 1);
+    int lo = 0;
+    int hi = 0;
+    for (int i = 0; i < n; i++) {
+      w[i] = rnd.nextInt(4) == 0 ? -1 - rnd.nextInt(2) : 1 + rnd.nextInt(5);
+      lo += Math.min(w[i] * x[i].min(), w[i] * x[i].max());
+      hi += Math.max(w[i] * x[i].min(), w[i] * x[i].max());
+    }
+    IntVar objective = new IntVar(store, "obj", lo, hi);
+    terms[n] = objective;
+    w[n] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    IntVar cost = objective;
+    if (mode == 2) {
+      // as fz2jacop maximises: the negation of a variable that is minus the sum
+      IntVar negated = new IntVar(store, "neg", -hi, -lo);
+      store.impose(new XplusYeqZ(objective, negated, new IntVar(store, 0, 0)));
+      IntVar max = new IntVar(store, "max", lo, hi);
+      store.impose(new XplusYeqC(max, negated, 0));
+      cost = max;
+    }
+    if (mode < 0) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(
+        1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    if (solver.coreSearch() != null) {
+      stats[0] += solver.coreSearch().cores;
+      stats[1] += solver.coreSearch().proved ? 1 : 0;
+    }
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 }
