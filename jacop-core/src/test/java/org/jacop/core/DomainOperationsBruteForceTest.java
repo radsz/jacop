@@ -86,6 +86,11 @@ class DomainOperationsBruteForceTest {
               "LazyBitSetDomain " + scale.name(),
               scale,
               (Function<TreeSet<Integer>, IntDomain>) s -> lazy(s)));
+      kinds.add(
+          Arguments.of(
+              "LazyBitSetDomain ranges " + scale.name(),
+              scale,
+              (Function<TreeSet<Integer>, IntDomain>) s -> lazyIntervals(s)));
     }
     kinds.add(
         Arguments.of(
@@ -646,6 +651,7 @@ class DomainOperationsBruteForceTest {
       result.add(smallDense(b));
     }
     result.add(lazy(b));
+    result.add(lazyIntervals(b));
     if (b.last() - b.first() + 1 == b.size()) {
       result.add(new BoundDomain(b.first(), b.last()));
     }
@@ -654,6 +660,12 @@ class DomainOperationsBruteForceTest {
 
   private static IntDomain lazy(TreeSet<Integer> values) {
     LazyBitSetDomain d = new LazyBitSetDomain(values.first(), values.last());
+    d.setDomain(interval(values));
+    return d;
+  }
+
+  private static IntDomain lazyIntervals(TreeSet<Integer> values) {
+    LazyBitSetDomain d = new LazyBitSetDomain(values.first(), values.last(), true);
     d.setDomain(interval(values));
     return d;
   }

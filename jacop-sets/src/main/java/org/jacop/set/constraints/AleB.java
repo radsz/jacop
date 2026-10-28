@@ -120,6 +120,11 @@ public class AleB extends AbstractAleqB implements Copyable<AleB> {
   }
 
   @Override
+  Boolean explainedOrder() {
+    return getClass() == AleB.class ? Boolean.FALSE : null;
+  }
+
+  @Override
   public String toString() {
 
     return id() + " : AleB(" + a + ", " + b + ")";

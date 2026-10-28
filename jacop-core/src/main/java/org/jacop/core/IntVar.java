@@ -119,9 +119,7 @@ public class IntVar extends Var {
    */
   public IntVar(Store store, String name, int min, int max) {
 
-    if ((long) max - min >= LazyBitSetDomain.MAX_SPAN) {
-      commonInitialization(store, name, new IntervalDomain(min, max));
-    } else if ((long) max - min > 63L) {
+    if ((long) max - min > 63L) {
       commonInitialization(store, name, new LazyBitSetDomain(min, max));
     } else {
       commonInitialization(store, name, new SmallDenseDomain(min, max));
@@ -172,31 +170,26 @@ public class IntVar extends Var {
   }
 
   /**
-   * Replaces a bit set domain that cannot hold the values min..max as well by the representation
-   * that IntVar(store, name, min, max) chooses for the joined span: a SmallDenseDomain holds at
-   * most 64 values and a LazyBitSetDomain is kept below LazyBitSetDomain.MAX_SPAN.
+   * Replaces a domain that cannot hold the values min..max as well by the representation that
+   * IntVar(store, name, min, max) chooses for the joined span: a SmallDenseDomain holds at most 64
+   * values and a LazyBitSetDomain keeps its holes as bits below LazyBitSetDomain.MAX_SPAN values.
    */
   private void widenDomainFor(int min, int max) {
     if (domain.isEmpty()) {
       return;
     }
     long span = (long) Math.max(domain.max(), max) - Math.min(domain.min(), min);
-    int id = domain.domainId();
     boolean tooSmall =
-        id == IntDomain.SMALL_DENSE_DOMAIN_ID && span > 63L
-            || id == IntDomain.LAZY_BIT_SET_DOMAIN_ID && span >= LazyBitSetDomain.MAX_SPAN;
+        domain.domainId() == IntDomain.SMALL_DENSE_DOMAIN_ID && span > 63L
+            || domain instanceof LazyBitSetDomain lazy
+                && !lazy.rangeHoles
+                && span >= LazyBitSetDomain.MAX_SPAN;
     if (!tooSmall) {
       return;
     }
-    IntDomain wider;
-    if (span >= LazyBitSetDomain.MAX_SPAN) {
-      IntervalDomain intervals = new IntervalDomain();
-      intervals.addDom(domain);
-      wider = intervals;
-    } else {
-      wider = new LazyBitSetDomain(domain.min(), domain.max());
-      wider.setDomain(domain);
-    }
+    IntDomain wider =
+        new LazyBitSetDomain(domain.min(), domain.max(), span >= LazyBitSetDomain.MAX_SPAN);
+    wider.setDomain(domain);
     wider.searchConstraints = domain.searchConstraints;
     wider.modelConstraints = domain.modelConstraints;
     wider.modelConstraintsToEvaluate = domain.modelConstraintsToEvaluate;

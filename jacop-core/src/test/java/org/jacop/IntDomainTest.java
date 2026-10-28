@@ -919,13 +919,13 @@ class IntDomainTest {
     far.unionAdapt(200_000, 200_000);
     y.addDom(far);
     assertThat(y.dom()).hasToString("{0..3, 70..71, 200000}");
-    assertThat(y.dom().domainId()).isEqualTo(IntDomain.INTERVAL_DOMAIN_ID);
+    assertThat(y.dom().domainId()).isEqualTo(IntDomain.LAZY_BIT_SET_DOMAIN_ID);
 
-    // a LazyBitSetDomain is not grown to a span of a million values either
+    // a LazyBitSetDomain is not grown to a bit set of a million values either; it keeps ranges
     IntVar z = new IntVar(store, "z", 0, 100);
     z.addDom(-1_000_000, -1_000_000);
     assertThat(z.dom()).hasToString("{-1000000, 0..100}");
-    assertThat(z.dom().domainId()).isEqualTo(IntDomain.INTERVAL_DOMAIN_ID);
+    assertThat(z.dom().domainId()).isEqualTo(IntDomain.LAZY_BIT_SET_DOMAIN_ID);
 
     store.impose(new XneqC(x, 100));
     assertThat(store.consistency()).isTrue();

@@ -38,6 +38,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.Var;
 
 /**
  * Abstract base class for Min and Max constraints. Provides shared fields, constructor logic, swap,
@@ -103,6 +104,17 @@ public abstract class AbstractMinMax extends Constraint implements SatisfiedPres
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    // once a single variable of the list can reach the target, it takes the domain of the target,
+    // so a value removed inside the domain of the target must wake the constraint as well
+    if (v == target
+        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))) {
+      return IntDomain.ANY;
+    }
+    return super.getConsistencyPruningEvent(v);
   }
 
   @Override
