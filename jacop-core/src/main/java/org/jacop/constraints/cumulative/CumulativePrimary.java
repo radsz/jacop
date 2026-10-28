@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -69,6 +70,10 @@ class CumulativePrimary extends Constraint {
    * start times of tasks
    */
   private final IntVar[] start;
+
+  /** The start that lost all its values when the last sweep failed, or null. */
+  IntVar noStartLeft;
+
   /*
    * All durations and resources of the constraint
    */
@@ -218,6 +223,7 @@ class CumulativePrimary extends Constraint {
   // Sweep algorithm for PROFILE
   void sweepPruning(Store store) {
 
+    noStartLeft = null;
     int count = buildSweepEventArray();
     if (count == 0) {
       return;
@@ -362,7 +368,12 @@ class CumulativePrimary extends Constraint {
               new IntervalDomain(startExcluded[ti], date - 1));
           log.debug(" => {}", start[ti]);
         }
-        start[ti].domain.inComplement(store.level, start[ti], startExcluded[ti], date - 1);
+        try {
+          TimetableSweep.removeStarts(store, start[ti], startExcluded[ti], date - 1);
+        } catch (FailException e) {
+          noStartLeft = start[ti];
+          throw e;
+        }
         startConsidered[ti] = false;
       }
     }
@@ -385,7 +396,12 @@ class CumulativePrimary extends Constraint {
             startExcluded[ti] - 1,
             start[ti]);
       }
-      start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
+      try {
+        start[ti].domain.inMax(store.level, start[ti], startExcluded[ti] - 1);
+      } catch (FailException e) {
+        noStartLeft = start[ti];
+        throw e;
+      }
     }
     startConsidered[ti] = false;
     tasksToPrune.set(ti, false);

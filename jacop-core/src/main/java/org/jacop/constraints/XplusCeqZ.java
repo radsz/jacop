@@ -73,7 +73,8 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // notSatisfied() also notices the removal of the one value a fixed variable needs
+    return IntDomain.ANY;
   }
 
   @Override
@@ -130,6 +131,12 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
   public boolean notSatisfied() {
     if (x == z) {
       return c != 0;
+    }
+    if (x.singleton()) {
+      return !z.domain.contains(x.value() + c);
+    }
+    if (z.singleton()) {
+      return !x.domain.contains(z.value() - c);
     }
     return x.max() + c < z.min() || x.min() + c > z.max();
   }

@@ -40,9 +40,12 @@ import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian circuit. Value of every
@@ -58,6 +61,9 @@ import org.jacop.core.Var;
 public class Circuit extends Alldiff {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  // a circuit has no dominator pruning to suggest roots to its explanations
+  private static final int[] NO_ROOTS = {};
   final int[] val;
   private final int[] low;
   private final int[] dfsNode;
@@ -350,6 +356,21 @@ public class Circuit extends Alldiff {
     graph[i].update(new CircuitVarValue(vMin, ((CircuitVarValue) graph[i].value()).previous));
     graph[vMin - 1].update(
         new CircuitVarValue(((CircuitVarValue) graph[vMin - 1].value()).next, i + 1));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    int mark = out.size();
+    if (SubcircuitExplanation.explain(trail, entry, list, offset, true, NO_ROOTS, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return AlldiffExplanation.explain(trail, entry, list, new IntervalDomain(), out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return SubcircuitExplanation.explainFailure(trail, list, offset, true, NO_ROOTS, out);
   }
 
   @Override
