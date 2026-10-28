@@ -35,7 +35,6 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.Comparator;
 import java.util.List;
 import lombok.Builder;
 import lombok.extern.slf4j.Slf4j;
@@ -69,13 +68,26 @@ public class Diffn extends Nooverlap {
   static final int PRUNE_START = 2;
   static final int PRUNE_END = 3;
   private static final boolean DEBUG = false;
+
   private static final boolean DEBUG_NARR = false;
   private static final String DEBUG_ARROW = " => {}";
   protected final List<Var> auxVar = new ArrayList<>();
-  final Comparator<Event> eventComparator =
-      (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
   // for decomposed diffn
   protected List<Constraint> constraints;
+
+  // compulsory parts of the rectangles per dimension, see buildParts
+  private final long[][] parts = new long[2][];
+  private final int[] partCount = new int[2];
+  private final long[] partsStamp = {-1, -1};
+  private final Event[][] addWithin = new Event[2][];
+  private final Event[][] subtractWithin = new Event[2][];
+  private final Event[][] addOutside = new Event[2][];
+  private final Event[][] subtractOutside = new Event[2][];
+  private final int[][] partEst = new int[2][];
+  private final int[][] partLct = new int[2][];
+  private Event[] sweepEvents;
+  private boolean[] inProfile;
+  private final List<Interval> sweepLine = new ArrayList<>();
 
   /**
    * It specifies a diff constraint.
@@ -201,73 +213,72 @@ public class Diffn extends Nooverlap {
 
   private void areaCheck() {
     startPass(AREA_PASS);
-    for (int k = 0; k < rectangle.length; k++) {
-      Rectangle r = rectangle[k];
+    int n = rectangle.length;
+    boolean read = false;
+    for (int k = 0; k < n; k++) {
       BitSet o = overlapping[k].value();
-      if (o.cardinality() == 0 || !mustExamine(AREA_PASS, k, o)) {
+      if (o.isEmpty() || !mustExamine(AREA_PASS, k, o)) {
         continue;
+      }
+      if (!read) {
+        // the area check prunes nothing, so the bounds are read once
+        invalidateBounds();
+        syncBounds();
+        read = true;
       }
       int commonArea = 0;
       for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
-        Rectangle s = rectangle[j];
-        int partialCommonArea =
-            areaCheckPartialCommonForRectangle(r, s, 0)
-                * areaCheckPartialCommonForRectangle(r, s, 1);
+        int partialCommonArea = partialCommonArea(k, j, 0) * partialCommonArea(k, j, 1);
         commonArea += partialCommonArea;
       }
-      if (commonArea + r.getLength(X).min() * r.getLength(Y).min()
-          > (r.lct(X) - r.est(X)) * (r.lct(Y) - r.est(Y))) {
+      if (commonArea + lMin[X][k] * lMin[Y][k]
+          > (lst[X][k] + lMax[X][k] - est[X][k]) * (lst[Y][k] + lMax[Y][k] - est[Y][k])) {
         throw Store.failException;
       }
     }
   }
 
-  private int areaCheckPartialCommonForRectangle(Rectangle r, Rectangle s, int dim) {
-    int rMin = r.est(dim);
-    int rMax = r.lct(dim);
-    int slengthMinValue = s.getLength(dim).min();
-    if (s.getOrigin(dim).min() <= rMin) {
-      slengthMinValue = areaCheckSoriginBeforeRmin(r, s, dim, rMin, rMax);
-    } else if (s.getOrigin(dim).max() + s.getLength(dim).min() > rMax) {
-      slengthMinValue = areaCheckSoriginAfterRmin(r, s, dim, slengthMinValue);
-    }
-    return slengthMinValue;
-  }
-
-  private int areaCheckSoriginBeforeRmin(
-      Rectangle r, Rectangle s, int dim, int rminValue, int rmaxValue) {
-    if (s.getOrigin(dim).max() + s.getLength(dim).min() <= rmaxValue) {
-      return Math.max(s.ect(dim) - rminValue, 0);
-    }
-    int rmax = r.getOrigin(dim).max() + r.getLength(dim).min();
-    int distance1 = Math.min(s.ect(dim) - rminValue, rmax - rminValue);
-    int distance2 = Math.min(-s.getOrigin(dim).max() + rmax, rmax - rminValue);
-    if (distance1 < distance2) {
-      return Math.max(distance1, 0);
-    } else if (distance2 > 0) {
-      return distance2 < s.getLength(dim).min() ? distance2 : s.getLength(dim).min();
-    }
-    return 0;
-  }
-
-  private int areaCheckSoriginAfterRmin(Rectangle r, Rectangle s, int dim, int slengthMinValue) {
-    int distance2 = -s.getOrigin(dim).max() + r.origin[dim].max() + r.length[dim].min();
-    if (distance2 > 0 && distance2 < s.getLength(dim).min()) {
-      return distance2;
-    } else if (distance2 <= 0) {
+  // the part of rectangle s that must lie within the extent of rectangle r in dimension d
+  private int partialCommonArea(int r, int s, int d) {
+    int rMin = est[d][r];
+    int rMax = lst[d][r] + lMax[d][r];
+    int sEst = est[d][s];
+    int sLst = lst[d][s];
+    int sLengthMin = lMin[d][s];
+    if (sEst <= rMin) {
+      if (sLst + sLengthMin <= rMax) {
+        return Math.max(sEst + sLengthMin - rMin, 0);
+      }
+      int rmax = lst[d][r] + lMin[d][r];
+      int distance1 = Math.min(sEst + sLengthMin - rMin, rmax - rMin);
+      int distance2 = Math.min(-sLst + rmax, rmax - rMin);
+      if (distance1 < distance2) {
+        return Math.max(distance1, 0);
+      } else if (distance2 > 0) {
+        return distance2 < sLengthMin ? distance2 : sLengthMin;
+      }
       return 0;
+    } else if (sLst + sLengthMin > rMax) {
+      int distance2 = -sLst + lst[d][r] + lMin[d][r];
+      if (distance2 > 0 && distance2 < sLengthMin) {
+        return distance2;
+      } else if (distance2 <= 0) {
+        return 0;
+      }
     }
-    return slengthMinValue;
+    return sLengthMin;
   }
 
   private void profile() {
 
     startPass(PROFILE_PASS);
+    partsStamp[0] = -1;
+    partsStamp[1] = -1;
     for (int i = 0; i < rectangle.length; i++) {
       Rectangle r = rectangle[i];
       BitSet o = overlapping[i].value();
 
-      if (o.cardinality() > 0 && mustExamine(PROFILE_PASS, i, o)) {
+      if (!o.isEmpty() && mustExamine(PROFILE_PASS, i, o)) {
         sweepPruning(r, o, 0);
         sweepPruning(r, o, 1);
       }
@@ -282,25 +293,26 @@ public class Diffn extends Nooverlap {
     }
 
     int[] limitOut = new int[1];
-    Event[] es = buildSweepEvents(r, o, dim, oDim, limitOut);
-    if (es == null) {
+    int n = buildSweepEvents(r, o, dim, oDim, limitOut);
+    if (n == 0) {
       return;
     }
 
     final int limit = limitOut[0];
-    int n = es.length;
-    Arrays.sort(es, 0, n, eventComparator);
+    Event[] es = sweepEvents;
 
     if (DEBUG_NARR) {
       log.debug("===========================");
       log.debug("Profile in dimension {}", dim);
-      log.debug("{}", Arrays.asList(es));
+      log.debug("{}", Arrays.asList(es).subList(0, n));
       log.debug("limit = {}", limit);
       log.debug("===========================");
     }
 
-    boolean[] inProfile = new boolean[rectangle.length];
-    List<Interval> sweepLine = new ArrayList<>();
+    boolean[] inProfile = this.inProfile;
+    Arrays.fill(inProfile, false);
+    List<Interval> sweepLine = this.sweepLine;
+    sweepLine.clear();
     int[] curProfile = new int[] {0};
     int[] startExcluded = new int[] {Integer.MAX_VALUE};
     int[] lastBarier = new int[] {Integer.MAX_VALUE};
@@ -342,16 +354,28 @@ public class Diffn extends Nooverlap {
     }
   }
 
-  /** Builds event array; returns null if no mandatory events. Sets limitOut[0] to limit. */
-  private Event[] buildSweepEvents(Rectangle r, BitSet o, int dim, int otherDim, int[] limitOut) {
-    Event[] es = new Event[2 * o.cardinality() + 2];
-    boolean mandatoryExists = false;
-    int j = 0;
-    int minLimit = r.est(otherDim);
-    int maxLimit = r.lct(otherDim);
-    for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
+  /**
+   * Collects the compulsory parts of all rectangles in dimension dim, sorted by date, then type,
+   * then rectangle. It is done once per profile pass and dimension, and again only when a domain
+   * changed since, so each rectangle's sweep only filters this list instead of sorting its own.
+   */
+  private void buildParts(int dim, int otherDim) {
+    int n = rectangle.length;
+    if (parts[dim] == null) {
+      parts[dim] = new long[2 * n];
+      addWithin[dim] = new Event[n];
+      subtractWithin[dim] = new Event[n];
+      addOutside[dim] = new Event[n];
+      subtractOutside[dim] = new Event[n];
+      partEst[dim] = new int[n];
+      partLct[dim] = new int[n];
+      sweepEvents = new Event[2 * n + 2];
+      inProfile = new boolean[n];
+    }
+    long[] keys = parts[dim];
+    int m = 0;
+    for (int i = 0; i < n; i++) {
       Rectangle rr = rectangle[i];
-      rr.index = i;
       int min = rr.lst(dim);
       int max = rr.ect(dim);
       int lMin = rr.getLength(otherDim).min();
@@ -360,30 +384,94 @@ public class Diffn extends Nooverlap {
       }
       int oMin = rr.lst(otherDim);
       int oMax = rr.ect(otherDim);
-      boolean withinR = rr.est(otherDim) >= r.est(otherDim) && rr.lct(otherDim) <= r.lct(otherDim);
-      if (withinR) {
-        Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
-        es[j++] = new Event(PROFILE_ADD, rr, min, lMin, block);
-        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
-        // only rectangles within r in the other dimension widen the limit of the profile
-        minLimit = Math.min(rr.est(otherDim), minLimit);
-        maxLimit = Math.max(rr.lct(otherDim), maxLimit);
-        mandatoryExists = true;
-      } else if (oMin < oMax) {
-        // a rectangle reaching outside r adds no height, only its compulsory part as a block
-        Interval block = new Interval(oMin, oMax);
-        es[j++] = new Event(PROFILE_ADD, rr, min, 0, block);
-        es[j++] = new Event(PROFILE_SUBTRACT, rr, max, 0, block);
-        mandatoryExists = true;
+      Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
+      addWithin[dim][i] = new Event(PROFILE_ADD, rr, min, lMin, block);
+      subtractWithin[dim][i] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
+      // a rectangle reaching outside the swept one adds no height, only its compulsory part as a
+      // block
+      addOutside[dim][i] = block == null ? null : new Event(PROFILE_ADD, rr, min, 0, block);
+      subtractOutside[dim][i] =
+          block == null ? null : new Event(PROFILE_SUBTRACT, rr, max, 0, block);
+      partEst[dim][i] = rr.est(otherDim);
+      partLct[dim][i] = rr.lct(otherDim);
+      keys[m++] = partKey(min, PROFILE_ADD, i);
+      keys[m++] = partKey(max, PROFILE_SUBTRACT, i);
+    }
+    Arrays.sort(keys, 0, m);
+    partCount[dim] = m;
+    partsStamp[dim] = store.domainChanges();
+  }
+
+  // orders by date, then type, then rectangle index, as the stable sort of the events did
+  private static long partKey(int date, int type, int index) {
+    return ((long) date << 32) | ((long) type << 31) | index;
+  }
+
+  /**
+   * Fills sweepEvents with the events of the sweep of r in dimension dim, sorted, and returns their
+   * number, or 0 if no rectangle that r may overlap has a compulsory part. Sets limitOut[0] to the
+   * limit.
+   */
+  private int buildSweepEvents(Rectangle r, BitSet o, int dim, int otherDim, int[] limitOut) {
+    if (partsStamp[dim] != store.domainChanges()) {
+      buildParts(dim, otherDim);
+    }
+    long[] keys = parts[dim];
+    int m = partCount[dim];
+    Event[] es = sweepEvents;
+    int rEst = r.est(otherDim);
+    int rLct = r.lct(otherDim);
+    int minLimit = rEst;
+    int maxLimit = rLct;
+    int startDate = r.est(dim);
+    int endDate = r.lct(dim);
+    boolean startPlaced = false;
+    boolean endPlaced = false;
+    boolean mandatoryExists = false;
+    int j = 0;
+    for (int t = 0; t < m; t++) {
+      long key = keys[t];
+      int i = (int) (key & Integer.MAX_VALUE);
+      if (!o.get(i)) {
+        continue;
       }
+      boolean add = (key & (1L << 31)) != 0;
+      Event e;
+      if (partEst[dim][i] >= rEst && partLct[dim][i] <= rLct) {
+        e = add ? addWithin[dim][i] : subtractWithin[dim][i];
+        // only rectangles within r in the other dimension widen the limit of the profile
+        minLimit = Math.min(partEst[dim][i], minLimit);
+        maxLimit = Math.max(partLct[dim][i], maxLimit);
+      } else {
+        e = add ? addOutside[dim][i] : subtractOutside[dim][i];
+        if (e == null) {
+          continue;
+        }
+      }
+      mandatoryExists = true;
+      // the prune events come after the profile events of the same date
+      int date = (int) (key >> 32);
+      if (!startPlaced && startDate < date) {
+        es[j++] = new Event(PRUNE_START, r, startDate, 0, null);
+        startPlaced = true;
+      }
+      if (!endPlaced && endDate < date) {
+        es[j++] = new Event(PRUNE_END, r, endDate, 0, null);
+        endPlaced = true;
+      }
+      es[j++] = e;
     }
     if (!mandatoryExists) {
-      return null;
+      return 0;
+    }
+    if (!startPlaced) {
+      es[j++] = new Event(PRUNE_START, r, startDate, 0, null);
+    }
+    if (!endPlaced) {
+      es[j++] = new Event(PRUNE_END, r, endDate, 0, null);
     }
     limitOut[0] = maxLimit - minLimit;
-    es[j++] = new Event(PRUNE_START, r, r.est(dim), 0, null);
-    es[j++] = new Event(PRUNE_END, r, r.lct(dim), 0, null);
-    return Arrays.copyOf(es, j);
+    return j;
   }
 
   private void processProfileAddSubtract(

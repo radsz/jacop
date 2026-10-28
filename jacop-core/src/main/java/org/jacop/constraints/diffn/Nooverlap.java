@@ -79,6 +79,13 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   boolean doAreaCheck = true;
 
+  // bounds of the rectangles per dimension, read again whenever a domain changed (see syncBounds)
+  int[][] est;
+  int[][] lst;
+  int[][] lMin;
+  int[][] lMax;
+  private long boundsStamp = -1;
+
   /*
    * What a pass of the pairwise pruning, the profile or the area check finds for a rectangle depends
    * only on the bounds of the rectangle and of the rectangles that may overlap it. A pass examines
@@ -310,6 +317,7 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
   void pruning() {
 
     startPass(PRUNING_PASS);
+    invalidateBounds();
     // the area check runs in Diffn if the last rectangle checked here asks for it
     int last = -1;
     boolean lastExamined = false;
@@ -328,26 +336,84 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
       if (!lastExamined) {
         continue;
       }
-      BitSet o = (BitSet) os.clone();
-      for (int i = o.nextSetBit(0); i >= 0; i = o.nextSetBit(i + 1)) {
-        if (!r.possibleOverlap(rectangle[i])) {
-          o.set(i, false);
+      syncBounds();
+      BitSet o = os;
+      for (int i = os.nextSetBit(0); i >= 0; i = os.nextSetBit(i + 1)) {
+        if (!possibleOverlap(j, i)) {
+          if (o == os) {
+            o = (BitSet) os.clone();
+          }
+          o.clear(i);
         }
       }
-      if (o.cardinality() != os.cardinality()) {
+      if (o != os) {
         // the profile and the area check of r depend on the rectangles that may overlap it
         changed[PROFILE_PASS].set(j);
         changed[AREA_PASS].set(j);
+        overlapping[j].update(o);
       }
-      overlapping[j].update(o);
 
-      energyCheck(r, o);
+      energyCheck(j, o);
 
       prune(r, o);
     }
     if (last >= 0 && !lastExamined) {
       doAreaCheck = areaExceedsSpace(rectangle[last], overlapping[last].value());
     }
+  }
+
+  /** Marks the bounds read by syncBounds as out of date, as at the start of a consistency call. */
+  void invalidateBounds() {
+    boundsStamp = -1;
+  }
+
+  /**
+   * Reads the bounds of all rectangles into est, lst, lMin and lMax unless no domain changed since
+   * they were last read in this consistency call. All of them are read again, because a variable
+   * can belong to several rectangles.
+   */
+  void syncBounds() {
+    long stamp = store.domainChanges();
+    if (stamp == boundsStamp) {
+      return;
+    }
+    int n = rectangle.length;
+    if (est == null) {
+      est = new int[2][n];
+      lst = new int[2][n];
+      lMin = new int[2][n];
+      lMax = new int[2][n];
+    }
+    for (int i = 0; i < n; i++) {
+      Rectangle r = rectangle[i];
+      for (int d = 0; d < 2; d++) {
+        est[d][i] = r.origin[d].min();
+        lst[d][i] = r.origin[d].max();
+        lMin[d][i] = r.length[d].min();
+        lMax[d][i] = r.length[d].max();
+      }
+    }
+    boundsStamp = stamp;
+  }
+
+  // Rectangle.possibleOverlap on the bounds read by syncBounds
+  private boolean possibleOverlap(int a, int b) {
+    for (int d = 0; d < 2; d++) {
+      if (est[d][a] >= lst[d][b] + lMax[d][b] || est[d][b] >= lst[d][a] + lMax[d][a]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Rectangle.overlap on the bounds read by syncBounds
+  private boolean overlap(int a, int b, int d) {
+    int lstA = lst[d][a];
+    int ectA = est[d][a] + lMin[d][a];
+    int lstB = lst[d][b];
+    int ectB = est[d][b] + lMin[d][b];
+    return (lstA < ectA && ectB > lstA && ectA > lstB)
+        || (lstB < ectB && ectA > lstB && ectB > lstA);
   }
 
   /**
@@ -442,7 +508,8 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     for (int i = rects.nextSetBit(0); i >= 0; i = rects.nextSetBit(i + 1)) {
       for (int dim = 0; dim < 2; dim++) {
         int oDim = dim == 0 ? 1 : 0;
-        if (r.overlap(rectangle[i], dim)) {
+        syncBounds();
+        if (overlap(r.index, i, dim)) {
           prune(r, rectangle[i], oDim);
         }
       }
@@ -495,24 +562,25 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
    * @param r the rectangle to check
    * @param rects the set of potentially overlapping rectangles
    */
-  void energyCheck(Rectangle r, BitSet rects) {
+  void energyCheck(int k, BitSet rects) {
 
-    int xMin = r.est(X);
-    int xMax = r.lct(X);
-    int yMin = r.est(Y);
-    int yMax = r.lct(Y);
+    int xMin = est[X][k];
+    int xMax = lst[X][k] + lMax[X][k];
+    int yMin = est[Y][k];
+    int yMax = lst[Y][k] + lMax[Y][k];
     long rSpace = (long) (xMax - xMin) * (yMax - yMin);
-    int xLengthMin = r.getLength(X).min();
-    int yLengthMin = r.getLength(Y).min();
+    int xLengthMin = lMin[X][k];
+    int yLengthMin = lMin[Y][k];
     long minArea = (long) xLengthMin * yLengthMin;
+    int count = 1;
     for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
-      Rectangle rectj = rectangle[j];
-      xMin = Math.min(xMin, rectj.est(X));
-      xMax = Math.max(xMax, rectj.lct(X));
-      yMin = Math.min(yMin, rectj.est(Y));
-      yMax = Math.max(yMax, rectj.lct(Y));
-      int rjxLength = rectj.getLength(X).min();
-      int rjyLength = rectj.getLength(Y).min();
+      count++;
+      xMin = Math.min(xMin, est[X][j]);
+      xMax = Math.max(xMax, lst[X][j] + lMax[X][j]);
+      yMin = Math.min(yMin, est[Y][j]);
+      yMax = Math.max(yMax, lst[Y][j] + lMax[Y][j]);
+      int rjxLength = lMin[X][j];
+      int rjyLength = lMin[Y][j];
       xLengthMin = Math.min(xLengthMin, rjxLength);
       yLengthMin = Math.min(yLengthMin, rjyLength);
       minArea += (long) rjxLength * rjyLength;
@@ -522,7 +590,7 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     }
     if (xLengthMin > 0 && yLengthMin > 0) {
       int maxNumberRectangles = (xMax - xMin) / xLengthMin * ((yMax - yMin) / yLengthMin);
-      if (maxNumberRectangles < rects.cardinality() + 1) {
+      if (maxNumberRectangles < count) {
         throw Store.failException;
       }
     }

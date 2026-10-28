@@ -765,6 +765,17 @@ public class Store {
   }
 
   /**
+   * It returns the number of domain changes so far. It grows with every pruning event and does not
+   * go back on backtracking, so a constraint can tell whether any domain changed between two points
+   * of one consistency call.
+   *
+   * @return the number of domain changes.
+   */
+  public long domainChanges() {
+    return domainChanges;
+  }
+
+  /**
    * It sets the time after which consistency() fails at once. A failure caused by the deadline is
    * not a proof of inconsistency: the caller must check its own time-out after a failure.
    *
