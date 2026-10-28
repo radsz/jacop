@@ -163,7 +163,8 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
   // the bounds that make the sum smallest (lowerSum) or largest, weakened within the slack
   private void addLifted(
       AtomicTrail trail, int position, boolean lowerSum, long slack, EntryList out) {
-    LinearExplanation.addLiftedBounds(trail, position, vars, weights, -1, null, lowerSum, slack, out);
+    LinearExplanation.addLiftedBounds(
+        trail, position, vars, weights, -1, null, lowerSum, slack, out);
   }
 
   // != with every variable but one fixed, whose value that would make the sum c is a hole

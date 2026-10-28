@@ -402,9 +402,9 @@ public final class LinearExplanation {
    * merged} (when not null) that bound one side of the relation, lifted (as in Ohrimenko, Stuckey
    * and Codish 2009): {@code slack} is how far the sum of their contributions may move against the
    * side before the reason no longer implies the propagation. The slack first drops whole terms,
-   * those whose move from the initial bound costs least first, which leaves out as many terms as the
-   * slack allows. What remains of it weakens the other terms, largest weights first, to the earliest
-   * trail entry that still serves.
+   * those whose move from the initial bound costs least first, which leaves out as many terms as
+   * the slack allows. What remains of it weakens the other terms, largest weights first, to the
+   * earliest trail entry that still serves.
    */
   static void addLiftedBounds(
       AtomicTrail trail,
