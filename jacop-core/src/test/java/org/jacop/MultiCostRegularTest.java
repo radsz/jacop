@@ -109,6 +109,25 @@ class MultiCostRegularTest {
     }
 
     @Override
+    public boolean equals(Object o) {
+      return o instanceof Instance i
+          && n == i.n
+          && resources == i.resources
+          && firstValue == i.firstValue
+          && layered == i.layered
+          && Arrays.deepEquals(delta, i.delta)
+          && Arrays.equals(finals, i.finals)
+          && Arrays.deepEquals(costs, i.costs)
+          && Arrays.deepEquals(domains, i.domains);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.deepHashCode(
+          new Object[] {n, resources, delta, firstValue, finals, costs, domains, layered});
+    }
+
+    @Override
     public String toString() {
       return "delta="
           + Arrays.deepToString(delta)

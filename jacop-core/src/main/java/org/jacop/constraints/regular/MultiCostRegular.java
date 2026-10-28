@@ -770,7 +770,7 @@ public class MultiCostRegular extends Constraint
           double we = (double) sign * c[ce + k];
           for (int r = 0; r < rs; r++) {
             double m = up[r] - low[r];
-            if (m != 0) {
+            if (Double.compare(m, 0.0) != 0) {
               we += m * c[ce + r];
             }
           }
@@ -884,7 +884,7 @@ public class MultiCostRegular extends Constraint
         // the best path within all bounds is found and proven
         break;
       }
-      if (norm == 0) {
+      if (norm <= 0) {
         break;
       }
       if (bound > best + EPS) {
