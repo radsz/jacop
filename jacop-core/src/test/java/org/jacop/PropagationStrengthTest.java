@@ -208,6 +208,41 @@ class PropagationStrengthTest {
     assertThat(b.dom()).hasToString("0");
   }
 
+  // reified x + c = z and x + y = c decided disentailment from the bounds only, so with x fixed and
+  // the value z needs a hole in z the Boolean stayed open (photo: x + 1 = z for neighbours)
+  @Test
+  void testReifiedSumNoticesMissingValueOfFixedVariable() {
+
+    assertThat(reifiedSumIsFalse((x, y, z) -> new XplusCeqZ(x, 1, z))).isTrue();
+    assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqC(x, z, 11))).isTrue();
+    assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqZ(x, y, z))).isTrue();
+  }
+
+  /**
+   * x = 5, y = 1, z in {2..3, 8..10}, then 6 also leaves z: the reified sum must be false at once.
+   */
+  private static boolean reifiedSumIsFalse(
+      TriFunction<IntVar, IntVar, IntVar, PrimitiveConstraint> sum) {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = variable(store, "y", 1);
+    IntVar z = variable(store, "z", 2, 3, 6, 8, 9, 10);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(sum.apply(x, y, z), b));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 5, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("{0..1}");
+    assertThat(removeValues(store, z, 6)).isTrue();
+    return b.singleton(0);
+  }
+
+  @FunctionalInterface
+  private interface TriFunction<A, B, C, R> {
+    R apply(A a, B b, C c);
+  }
+
   // once only one variable can reach the maximum (minimum) it takes the target's domain, but the
   // constraints woke on bounds only, so a value removed inside the target's domain stayed
   @Test
