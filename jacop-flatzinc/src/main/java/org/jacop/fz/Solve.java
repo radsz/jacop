@@ -1401,9 +1401,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
       // core-guided search for a sum objective before branch and bound: its share of the time,
-      // and the conflicts one call of the solver may take before it stops
+      // and the conflicts one call of the solver may take before it stops. With cost variables
+      // first, branch and bound finds near-optimal solutions at once and needs the time more:
+      // jp-encoding data300 is proved in 1.7 s with a share of 0.1, in 25 s with 0.5.
+      boolean costsFirst = objectiveCosts != null && objectiveCosts.length > 0;
       lcg.setCoreSearch(
-          Double.parseDouble(options.freeConfig("lcg-core", "0.5")),
+          Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
     }
@@ -1553,8 +1556,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * The annotation that free search alternates with, preceded by the cost variables of objective
    * presolve, cheapest value first (largest when maximising). On jp-encoding data1000 (60 s, --lcg
-   * -f) the search then reaches 36,011 instead of 40,489 (optimum 35,931): each byte takes its cheapest encoding
-   * unless that is infeasible, so the first solutions are already good.
+   * -f) the search then reaches 36,011 instead of 40,489 (optimum 35,931): each byte takes its
+   * cheapest encoding unless that is infeasible, so the first solutions are already good.
    */
   private SelectChoicePoint<? extends Var> withObjectiveCosts(
       SelectChoicePoint<? extends Var> annotated) {
