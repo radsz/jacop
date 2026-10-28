@@ -146,6 +146,16 @@ class PresolveFlatzincTest {
   }
 
   /**
+   * With -sat the clauses go to the SAT solver after presolve has preprocessed them; the front end
+   * prints the same solutions in the same order.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameWithPresolveAndSat(String model) {
+    assertThat(solve(model, "check", "-sat")).as(model).isEqualTo(solve(model, "off", "-sat"));
+  }
+
+  /**
    * Automatic tabulation keeps the solutions: a table holds exactly the solutions of the
    * constraints it replaces. The order can differ, since a group of auxiliary variables labelled by
    * the default search may become one table.

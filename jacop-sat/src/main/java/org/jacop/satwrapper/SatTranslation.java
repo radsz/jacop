@@ -73,6 +73,15 @@ public class SatTranslation {
   }
 
   /**
+   * Tells whether clauses are kept instead of given to the SAT solver.
+   *
+   * @return true after {@link #collectClauses}
+   */
+  public boolean collecting() {
+    return collected != null;
+  }
+
+  /**
    * Returns the clauses kept since {@link #collectClauses}, each as its positive and its negative
    * variables; a variable stands for its value 1.
    *
