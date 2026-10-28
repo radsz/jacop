@@ -69,8 +69,12 @@ public final class Presolver {
    */
   static final List<Supplier<Rule>> STANDARD =
       Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"))
-          ? List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE, () -> OrderLiterals.RULE)
-          : List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
+          ? List.of(
+              GlobalPresolveRule::new,
+              AtMostOneRule::new,
+              () -> RedundantConstraints.RULE,
+              () -> OrderLiterals.RULE)
+          : List.of(GlobalPresolveRule::new, AtMostOneRule::new, () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;
