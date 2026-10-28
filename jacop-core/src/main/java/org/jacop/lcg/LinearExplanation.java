@@ -38,6 +38,8 @@ import org.jacop.core.IntVar;
  * bounds of the other variables: the reasoning of bounds propagation. Sums, weighted sums and
  * pseudo-Boolean constraints share it. A variable may occur more than once; each occurrence is
  * treated as a variable of its own, as the propagators do, which gives weaker but sound reasons.
+ * The checked explanations merge the occurrences of the explained variable when they have weights
+ * of both signs, as an aggregated row can have. Sums that overflow a {@code long} give no reason.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -74,6 +76,7 @@ public final class LinearExplanation {
     }
     int own = ownOccurrence(vars, weights, trail.variable(entry));
     if (own < 0) {
+      // y occurs with weights of both signs: unchecked, the merged weight need not imply the entry
       return false;
     }
     long weight = weights[own];
@@ -119,47 +122,72 @@ public final class LinearExplanation {
     }
     IntVar y = trail.variable(entry);
     int own = ownOccurrence(vars, weights, y);
-    if (own < 0) {
+    // y with weights of both signs: its occurrences are merged into one of their summed weight
+    IntVar merged = own == MIXED ? y : null;
+    long weight;
+    if (merged != null) {
+      weight = mergedWeight(vars, weights, y);
+      if (weight == 0) {
+        return false;
+      }
+    } else if (own < 0) {
       return false;
+    } else {
+      weight = weights[own];
     }
-    long weight = weights[own];
     boolean upperSide = (kind == AtomicTrail.LE) == (weight > 0);
     if (upperSide ? !lessOrEqual : !greaterOrEqual) {
       return false;
     }
-    // weight * y <= rest on the upper side, >= rest on the lower side
-    long rest = c;
-    for (int i = 0; i < vars.length; i++) {
-      if (i == own || weights[i] == 0) {
-        continue;
-      }
-      boolean low = upperSide == weights[i] > 0;
-      rest -=
-          weights[i] * (low ? trail.minBefore(vars[i], entry) : trail.maxBefore(vars[i], entry));
-    }
-    // the implied bound of y: an upper bound when kind is LE, a lower bound when GE
-    long bound =
-        kind == AtomicTrail.LE ? Math.floorDiv(rest, weight) : -Math.floorDiv(-rest, weight);
     long a = trail.value(entry);
     int mark = out.size();
-    if (kind == AtomicTrail.LE ? bound > a : bound < a) {
-      if (Math.abs(bound - a) > 4096) {
-        return false;
+    try {
+      // weight * y <= rest on the upper side, >= rest on the lower side
+      long rest = c;
+      for (int i = 0; i < vars.length; i++) {
+        if (i == own || weights[i] == 0 || vars[i] == merged) {
+          continue;
+        }
+        boolean low = upperSide == weights[i] > 0;
+        rest =
+            Math.subtractExact(
+                rest,
+                Math.multiplyExact(
+                    weights[i],
+                    low ? trail.minBefore(vars[i], entry) : trail.maxBefore(vars[i], entry)));
       }
-      for (long u = Math.min(a, bound); u <= Math.max(a, bound); u++) {
-        if (u != a
-            && (kind == AtomicTrail.LE ? u > a : u < a)
-            && !trail.excludedBefore(y, (int) u, entry, out)) {
-          out.truncate(mark);
+      // the implied bound of y: an upper bound when kind is LE, a lower bound when GE
+      long bound =
+          kind == AtomicTrail.LE ? Math.floorDiv(rest, weight) : -Math.floorDiv(-rest, weight);
+      if (kind == AtomicTrail.LE ? bound > a : bound < a) {
+        if (Math.abs(Math.subtractExact(bound, a)) > 4096) {
           return false;
         }
+        for (long u = Math.min(a, bound); u <= Math.max(a, bound); u++) {
+          if (u != a
+              && (kind == AtomicTrail.LE ? u > a : u < a)
+              && !trail.excludedBefore(y, (int) u, entry, out)) {
+            out.truncate(mark);
+            return false;
+          }
+        }
       }
+      // the value next to the bound reached, which the other bounds must keep out
+      long beyond =
+          kind == AtomicTrail.LE
+              ? Math.addExact(Math.max(bound, a), 1)
+              : Math.subtractExact(Math.min(bound, a), 1);
+      long product = Math.multiplyExact(weight, beyond);
+      long slack =
+          upperSide
+              ? Math.subtractExact(Math.subtractExact(product, 1), rest)
+              : Math.subtractExact(Math.subtractExact(rest, 1), product);
+      addLiftedBounds(trail, entry, vars, weights, own, merged, upperSide, slack, out);
+      return true;
+    } catch (ArithmeticException overflow) {
+      out.truncate(mark);
+      return false;
     }
-    // the value next to the bound reached, which the other bounds must keep out
-    long beyond = (kind == AtomicTrail.LE ? Math.max(bound, a) + 1 : Math.min(bound, a) - 1);
-    long slack = upperSide ? weight * beyond - 1 - rest : rest - 1 - weight * beyond;
-    addLiftedBounds(trail, entry, vars, weights, own, upperSide, slack, out);
-    return true;
   }
 
   /**
@@ -186,11 +214,20 @@ public final class LinearExplanation {
     int now = trail.size();
     long smallest = 0;
     long largest = 0;
-    for (int i = 0; i < vars.length; i++) {
-      long lo = weights[i] * trail.minBefore(vars[i], now);
-      long hi = weights[i] * trail.maxBefore(vars[i], now);
-      smallest += Math.min(lo, hi);
-      largest += Math.max(lo, hi);
+    long slack;
+    try {
+      for (int i = 0; i < vars.length; i++) {
+        long lo = Math.multiplyExact(weights[i], trail.minBefore(vars[i], now));
+        long hi = Math.multiplyExact(weights[i], trail.maxBefore(vars[i], now));
+        smallest = Math.addExact(smallest, Math.min(lo, hi));
+        largest = Math.addExact(largest, Math.max(lo, hi));
+      }
+      slack =
+          lessOrEqual && smallest > c
+              ? Math.subtractExact(Math.subtractExact(smallest, c), 1)
+              : Math.subtractExact(Math.subtractExact(c, 1), largest);
+    } catch (ArithmeticException overflow) {
+      return false;
     }
     boolean upperSide;
     if (lessOrEqual && smallest > c) {
@@ -200,8 +237,7 @@ public final class LinearExplanation {
     } else {
       return false;
     }
-    long slack = upperSide ? smallest - c - 1 : c - 1 - largest;
-    addLiftedBounds(trail, now, vars, weights, -1, upperSide, slack, out);
+    addLiftedBounds(trail, now, vars, weights, -1, null, upperSide, slack, out);
     return true;
   }
 
@@ -234,10 +270,16 @@ public final class LinearExplanation {
       return false;
     }
     long rest = c;
-    for (int i = 0; i < vars.length; i++) {
-      if (i != own) {
-        rest -= weights[i] * trail.minBefore(vars[i], entry);
+    try {
+      for (int i = 0; i < vars.length; i++) {
+        if (i != own) {
+          rest =
+              Math.subtractExact(
+                  rest, Math.multiplyExact(weights[i], trail.minBefore(vars[i], entry)));
+        }
       }
+    } catch (ArithmeticException overflow) {
+      return false;
     }
     if (rest % weights[own] != 0) {
       return false;
@@ -291,8 +333,12 @@ public final class LinearExplanation {
       return false;
     }
     long sum = 0;
-    for (int i = 0; i < vars.length; i++) {
-      sum += weights[i] * trail.minBefore(vars[i], now);
+    try {
+      for (int i = 0; i < vars.length; i++) {
+        sum = Math.addExact(sum, Math.multiplyExact(weights[i], trail.minBefore(vars[i], now)));
+      }
+    } catch (ArithmeticException overflow) {
+      return false;
     }
     if (sum != c) {
       return false;
@@ -320,16 +366,19 @@ public final class LinearExplanation {
     }
   }
 
+  // ownOccurrence: y occurs with weights of both signs
+  private static final int MIXED = -2;
+
   /**
-   * Returns the occurrence of y with a nonzero weight the bound of y comes from, or -1 when y has
-   * none or occurs with weights of both signs.
+   * Returns the occurrence of y with a nonzero weight the bound of y comes from, -1 when y has
+   * none, or {@link #MIXED} when it occurs with weights of both signs.
    */
   private static int ownOccurrence(IntVar[] vars, long[] weights, IntVar y) {
     int own = -1;
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == y && weights[i] != 0) {
         if (own >= 0 && weights[own] > 0 != weights[i] > 0) {
-          return -1;
+          return MIXED;
         }
         own = i;
       }
@@ -337,13 +386,25 @@ public final class LinearExplanation {
     return own;
   }
 
+  // the summed weight of y's occurrences; ArithmeticException on overflow
+  private static long mergedWeight(IntVar[] vars, long[] weights, IntVar y) {
+    long w = 0;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == y) {
+        w = Math.addExact(w, weights[i]);
+      }
+    }
+    return w;
+  }
+
   /**
-   * Adds the bounds of the occurrences other than {@code skip} that bound one side of the relation,
-   * lifted (as in Ohrimenko, Stuckey and Codish 2009): {@code slack} is how far the sum of their
-   * contributions may move against the side before the reason no longer implies the propagation.
-   * The slack first drops whole terms, those whose move from the initial bound costs least first,
-   * which leaves out as many terms as the slack allows. What remains of it weakens the other terms,
-   * largest weights first, to the earliest trail entry that still serves.
+   * Adds the bounds of the occurrences other than {@code skip} and the occurrences of {@code
+   * merged} (when not null) that bound one side of the relation, lifted (as in Ohrimenko, Stuckey
+   * and Codish 2009): {@code slack} is how far the sum of their contributions may move against the
+   * side before the reason no longer implies the propagation. The slack first drops whole terms,
+   * those whose move from the initial bound costs least first, which leaves out as many terms as the
+   * slack allows. What remains of it weakens the other terms, largest weights first, to the earliest
+   * trail entry that still serves.
    */
   static void addLiftedBounds(
       AtomicTrail trail,
@@ -351,6 +412,7 @@ public final class LinearExplanation {
       IntVar[] vars,
       long[] weights,
       int skip,
+      IntVar merged,
       boolean upperSide,
       long slack,
       EntryList out) {
@@ -358,7 +420,7 @@ public final class LinearExplanation {
     long[] costs = null;
     int n = 0;
     for (int i = 0; i < vars.length; i++) {
-      if (i == skip || weights[i] == 0) {
+      if (i == skip || weights[i] == 0 || vars[i] == merged) {
         continue;
       }
       long w = Math.abs(weights[i]);

@@ -42,6 +42,7 @@ import java.util.Set;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
@@ -128,10 +129,33 @@ public final class Derivation implements VarMap {
    */
   public record DualStatistics(int rounds, int fixed, int tightened) {}
 
+  /**
+   * What the SAT preprocessing of the clauses did (rule 9).
+   *
+   * @param clauses clauses in the parent: clause constraints and clauses kept outside the store.
+   * @param clausesAfter clauses given to the child.
+   * @param fixed variables fixed because the clauses imply their value.
+   * @param equivalent variables replaced by an equivalent literal.
+   * @param eliminated variables eliminated by resolution, pure literals included.
+   * @param subsumed clauses removed because another clause subsumes them.
+   * @param strengthened literals removed from clauses by self-subsuming resolution or vivification.
+   * @param blocked blocked clauses removed.
+   */
+  public record ClauseStatistics(
+      int clauses,
+      int clausesAfter,
+      int fixed,
+      int equivalent,
+      int eliminated,
+      int subsumed,
+      int strengthened,
+      int blocked) {}
+
   private final Store parent;
   private final Retention retention;
   private final Set<Var> frozen;
   private final boolean rules;
+  private final List<IntVar[][]> clauses;
   private final boolean solutionPreserving;
   private final List<Rule> ruleList;
   private final int maxRounds;
@@ -149,6 +173,8 @@ public final class Derivation implements VarMap {
   private Map<Var, Integer> relaxed = Map.of();
   private DualStatistics dualStatistics;
   private boolean solutionWritten;
+  private SatPresolve.Reconstruction reconstruction;
+  private ClauseStatistics clauseStatistics;
   private int rounds;
   private final Set<Constraint> removed = Collections.newSetFromMap(new IdentityHashMap<>());
 
@@ -157,6 +183,7 @@ public final class Derivation implements VarMap {
     this.retention = builder.retention;
     this.frozen = builder.frozen;
     this.rules = builder.rules;
+    this.clauses = builder.clauses;
     this.solutionPreserving = builder.solutionPreserving;
     this.dual =
         builder.dual
@@ -191,6 +218,7 @@ public final class Derivation implements VarMap {
     private Retention retention = Retention.RELEASED;
     private Set<Var> frozen;
     private boolean rules = true;
+    private List<IntVar[][]> clauses;
     private boolean solutionPreserving = true;
     private boolean dual;
     private IntVar objective;
@@ -242,12 +270,33 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Gives the derivation clauses kept outside the parent store, for a SAT solver that takes them
+     * itself, each as its positive and its negative 0/1 variables. They are preprocessed with the
+     * clauses of the store; once the child is derived the list holds the clauses for the child, in
+     * its variables, and the clause constraints of the store that preprocessing changed are in the
+     * list instead of the child. With {@link Retention#KEPT} the original clauses are also imposed
+     * on the parent, so that it checks them.
+     *
+     * @param clauses the clauses, a list the derivation changes in place.
+     * @return this builder.
+     */
+    public Builder clauses(List<IntVar[][]> clauses) {
+      this.clauses = clauses;
+      return this;
+    }
+
+    /**
      * Sets whether the child must have every solution of the parent, projected on the frozen
      * variables ({@link #keep(Var...)}), once each. With false, rules may also apply that keep only
      * satisfiability and optima, for example half-reification, so the child can have several
      * solutions for one solution of the parent, or a solution whose non-frozen variables postsolve
      * leaves open; use true for all-solution search and counting. These rules also need the frozen
      * variables to be given. True by default.
+     *
+     * <p>Once frozen variables are given, the SAT preprocessing of the clauses may remove the other
+     * variables that occur only in clauses, and postsolve gives them their values: with true only a
+     * variable equivalent to another literal, with false also variables eliminated by resolution or
+     * freed by blocked clauses.
      *
      * @param on true to keep every solution.
      * @return this builder.
@@ -373,9 +422,49 @@ public final class Derivation implements VarMap {
       return;
     }
 
+    SatPresolve sat = null;
+    List<IntVar[][]> originalClauses = clauses == null ? null : new ArrayList<>(clauses);
+    if (rules) {
+      sat =
+          new SatPresolve(
+              collected.stream().filter(c -> !removed.contains(c)).toList(),
+              clauses,
+              frozen == null ? null : frozen::contains,
+              !solutionPreserving);
+      sat.run();
+      if (sat.infeasible()) {
+        outcome = Outcome.INFEASIBLE;
+        return;
+      }
+      clauseStatistics = sat.statistics();
+      if (!fixImplied(sat.implied())) {
+        outcome = Outcome.INFEASIBLE;
+        return;
+      }
+      if (!sat.changed()) {
+        sat = null;
+      }
+    }
+    Set<Constraint> absorbed = sat == null ? Set.of() : sat.absorbed();
+    List<IntVar[][]> childClauses =
+        sat != null ? sat.clauses() : clauses != null ? clauses : List.of();
+    // the variables of the clauses, and those postsolve reads for the removed ones: the rules on
+    // the carried constraints do not see them, and the child keeps them
+    Set<Var> clauseVariables = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar[][] c : childClauses) {
+      Collections.addAll(clauseVariables, c[0]);
+      Collections.addAll(clauseVariables, c[1]);
+    }
+    if (sat != null && sat.reconstruction() != null) {
+      clauseVariables.addAll(sat.reconstruction().read());
+    }
+
     List<Constraint> carried = new ArrayList<>();
     int dropped = 0;
     for (Constraint c : collected) {
+      if (absorbed.contains(c)) {
+        continue;
+      }
       if (rules && (removed.contains(c) || entailed(c))) {
         dropped++;
       } else {
@@ -405,7 +494,8 @@ public final class Derivation implements VarMap {
     Map<Var, Var> aliases = rules && Aliases.ENABLED ? Aliases.merge(carried) : Map.of();
     dropped += equations - carried.size();
 
-    ReificationCleanup reifications = new ReificationCleanup(carried, frozen, !solutionPreserving);
+    ReificationCleanup reifications =
+        new ReificationCleanup(carried, frozenWith(clauseVariables), !solutionPreserving);
     if (rules) {
       reifications.run();
       carried.removeIf(reifications::dropped);
@@ -417,6 +507,12 @@ public final class Derivation implements VarMap {
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
       used.addAll(reifications.arguments(c));
+    }
+    used.addAll(clauseVariables);
+    Set<Var> eliminatedVars = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (sat != null) {
+      eliminatedVars.addAll(sat.eliminated());
+      reconstruction = sat.reconstruction();
     }
     // the variable that stays for a class is kept, so every merged variable has a copy
     used.addAll(aliases.values());
@@ -430,6 +526,8 @@ public final class Derivation implements VarMap {
         }
         if (used.contains(v) || !rules) {
           keep(v);
+        } else if (eliminatedVars.contains(v) && !v.singleton()) {
+          entries.put(v, new Entry.Eliminated());
         } else if (v.singleton()) {
           entries.put(v, new Entry.Fixed());
           fixed++;
@@ -463,6 +561,19 @@ public final class Derivation implements VarMap {
       }
       child.impose(copy);
     }
+    List<IntVar[][]> mappedClauses = new ArrayList<>();
+    for (IntVar[][] c : childClauses) {
+      IntVar[][] m = {get(c[0]), get(c[1])};
+      if (clauses != null) {
+        mappedClauses.add(m);
+      } else {
+        child.impose(new BoolClause(m[0], m[1]));
+      }
+    }
+    if (clauses != null) {
+      clauses.clear();
+      clauses.addAll(mappedClauses);
+    }
     // degree-based variable selections choose in the child as in the parent, whose static degrees
     // also count the constraints entailed or dropped since; a merged variable has the degrees of
     // its class added up
@@ -492,12 +603,54 @@ public final class Derivation implements VarMap {
     }
 
     outcome = Outcome.DERIVED;
+    if (retention == Retention.KEPT && originalClauses != null) {
+      for (IntVar[][] c : originalClauses) {
+        parent.impose(new BoolClause(c[0], c[1]));
+      }
+    }
     if (retention == Retention.RELEASED) {
       release();
       parent.setState(StoreState.SINK);
     } else {
       parent.setState(StoreState.SUSPENDED);
     }
+  }
+
+  /** Returns the frozen variables and the given ones, or null if every variable is frozen. */
+  private Set<Var> frozenWith(Set<Var> vars) {
+    if (frozen == null || vars.isEmpty()) {
+      return frozen;
+    }
+    Set<Var> result = Collections.newSetFromMap(new IdentityHashMap<>());
+    result.addAll(frozen);
+    result.addAll(vars);
+    return result;
+  }
+
+  /**
+   * Fixes in the parent the values the clauses imply and propagates them.
+   *
+   * @return false if the parent becomes inconsistent.
+   */
+  private boolean fixImplied(Map<IntVar, Integer> implied) {
+    if (implied.isEmpty()) {
+      return true;
+    }
+    try {
+      for (Map.Entry<IntVar, Integer> e : implied.entrySet()) {
+        IntVar x = e.getKey();
+        x.domain.in(level, x, e.getValue(), e.getValue());
+      }
+    } catch (FailException f) {
+      return false;
+    }
+    if (!parent.consistency()) {
+      return false;
+    }
+    level = parent.level;
+    variables = variables(parent);
+    collected = constraints(parent, variables);
+    return true;
   }
 
   /**
@@ -773,6 +926,15 @@ public final class Derivation implements VarMap {
   }
 
   /**
+   * Returns what the SAT preprocessing of the clauses did.
+   *
+   * @return the statistics, or null if it did not run.
+   */
+  public ClauseStatistics clauseStatistics() {
+    return clauseStatistics;
+  }
+
+  /**
    * Returns how much each presolve rule reduced, by name, in the order the rules ran.
    *
    * @return the reductions; empty if no child was derived.
@@ -883,14 +1045,25 @@ public final class Derivation implements VarMap {
           parent.setLevel(level + 1);
           solutionWritten = true;
           try {
+            Map<IntVar, Integer> reconstructed =
+                reconstruction == null ? Map.of() : reconstruction.values(this::solutionValue);
             for (Map.Entry<Var, Var> e : copies.entrySet()) {
               Var v = e.getKey();
+              if (reconstructed.containsKey(v)) {
+                continue;
+              }
               Integer enforcing = relaxed.get(v);
               if (enforcing != null && !((IntDomain) e.getValue().dom()).singleton(enforcing)) {
                 // a half-reified Boolean: the parent's reification gives it its value
                 continue;
               }
               v.dom().in(parent.level, v, e.getValue().dom());
+            }
+            // the variables the clause preprocessing removed, from the values of the child; none
+            // is half-reified, since the variables of the clauses are frozen for that rule
+            for (Map.Entry<IntVar, Integer> e : reconstructed.entrySet()) {
+              IntVar x = e.getKey();
+              x.domain.in(parent.level, x, e.getValue(), e.getValue());
             }
             accepted[0] = parent.consistency();
           } catch (FailException f) {
@@ -902,6 +1075,13 @@ public final class Derivation implements VarMap {
           "A solution of the derived store violates the model of the parent store");
     }
     return accepted[0];
+  }
+
+  /** The value of a variable in the child's solution, its smallest value if it is not fixed. */
+  private int solutionValue(IntVar x) {
+    Var copy = copies.get(x);
+    IntVar v = copy instanceof IntVar c ? c : x;
+    return v.singleton() ? v.value() : v.min();
   }
 
   /**

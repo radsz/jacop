@@ -137,6 +137,7 @@ public final class ObjectivePresolve {
   private int expanded;
   private int shifted;
   private IntVar[] definitionVariables;
+  private final List<IntVar> costVariables = new ArrayList<>();
 
   /**
    * Starts an objective presolve.
@@ -225,6 +226,16 @@ public final class ObjectivePresolve {
   }
 
   /**
+   * Returns the cost variables made by the last {@link #reformulate(Store)}, one per variable
+   * encoded by value literals with costs, in the order of the variables.
+   *
+   * @return the cost variables, empty if none were made.
+   */
+  public List<IntVar> costVariables() {
+    return List.copyOf(costVariables);
+  }
+
+  /**
    * Returns the variables of the equation that defines the objective, as used by the last {@link
    * #reformulate()}. The reformulated equation, with the other equations, exactly-one sets and
    * counts of the model, implies this one, so a constraint posting it can be replaced by the
@@ -271,6 +282,7 @@ public final class ObjectivePresolve {
     expanded = 0;
     shifted = 0;
     definitionVariables = null;
+    costVariables.clear();
     if (objective.singleton()) {
       return null;
     }
@@ -352,6 +364,7 @@ public final class ObjectivePresolve {
         expression.remove(b);
       }
       expression.put(y, 1L);
+      costVariables.add(y);
       elements.add(new ElementInteger(x, costs, y, x.min() - 1));
     }
   }

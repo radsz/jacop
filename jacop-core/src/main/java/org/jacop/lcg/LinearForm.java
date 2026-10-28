@@ -111,16 +111,20 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
    * @param position the trail position (an entry index, or {@link AtomicTrail#size()} for now)
    * @param out where the reason entries are added
    * @return false when it is not entailed by the bounds (and, for one free variable of {@code !=},
-   *     its holes)
+   *     its holes), or a sum overflows a {@code long}
    */
   public boolean explainEntailed(AtomicTrail trail, int position, EntryList out) {
     long smallest = 0;
     long largest = 0;
-    for (int i = 0; i < vars.length; i++) {
-      long lo = weights[i] * trail.minBefore(vars[i], position);
-      long hi = weights[i] * trail.maxBefore(vars[i], position);
-      smallest += Math.min(lo, hi);
-      largest += Math.max(lo, hi);
+    try {
+      for (int i = 0; i < vars.length; i++) {
+        long lo = Math.multiplyExact(weights[i], trail.minBefore(vars[i], position));
+        long hi = Math.multiplyExact(weights[i], trail.maxBefore(vars[i], position));
+        smallest = Math.addExact(smallest, Math.min(lo, hi));
+        largest = Math.addExact(largest, Math.max(lo, hi));
+      }
+    } catch (ArithmeticException overflow) {
+      return false;
     }
     // the bounds cited are lifted: on the side that holds, the sum's bound may move by the slack
     switch (relation) {
@@ -159,7 +163,7 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
   // the bounds that make the sum smallest (lowerSum) or largest, weakened within the slack
   private void addLifted(
       AtomicTrail trail, int position, boolean lowerSum, long slack, EntryList out) {
-    LinearExplanation.addLiftedBounds(trail, position, vars, weights, -1, lowerSum, slack, out);
+    LinearExplanation.addLiftedBounds(trail, position, vars, weights, -1, null, lowerSum, slack, out);
   }
 
   // != with every variable but one fixed, whose value that would make the sum c is a hole
@@ -169,7 +173,11 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
     for (int i = 0; i < vars.length; i++) {
       int lo = trail.minBefore(vars[i], position);
       if (lo == trail.maxBefore(vars[i], position)) {
-        rest -= weights[i] * lo;
+        try {
+          rest = Math.subtractExact(rest, Math.multiplyExact(weights[i], lo));
+        } catch (ArithmeticException overflow) {
+          return false;
+        }
       } else if (free < 0 || vars[free] == vars[i]) {
         // a repeated free variable would need its weights summed; only one occurrence is handled
         if (free >= 0) {

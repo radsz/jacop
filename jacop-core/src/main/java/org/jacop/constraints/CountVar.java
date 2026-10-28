@@ -345,9 +345,8 @@ public class CountVar extends AbstractCount implements Copyable<CountVar> {
       }
     }
 
-    return eq > counter.max() // equal values is more than allowed
-        || list.length - notEq < counter.min() // possibly equal values is too low
-        || (eq + notEq == list.length && !counter.domain.contains(eq)); // final check
+    // the count lies between the fixed occurrences and those still possible
+    return !counter.domain.isIntersecting(eq, list.length - notEq);
   }
 
   @Override

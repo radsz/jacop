@@ -484,6 +484,64 @@ class AtomicTrailTest {
     trail.detach();
   }
 
+  /**
+   * 3x + y - x <= 4, an aggregated row with x at weights of both signs: after y >= 2, the bound x
+   * <= 1 follows from 2x <= 4 - 2, and its checked reason is y >= 2.
+   */
+  @Test
+  void checkedLinearReasonMergesAVariableOfBothSigns() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 2);
+    x.domain.inMax(store.level, x, 1);
+    int yBound = trail.size() - 2;
+    int xBound = trail.size() - 1;
+    assertThat(trail.variable(xBound)).isSameAs(x);
+    IntVar[] vars = {x, y, x};
+    long[] weights = {3, 1, -1};
+    EntryList reason = new EntryList();
+    assertThat(
+            LinearExplanation.explainChecked(trail, xBound, vars, weights, 4, true, false, reason))
+        .isTrue();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(yBound);
+    // x <= 0 does not follow, so the checked reason refuses it
+    store.setLevel(store.level + 1);
+    x.domain.inMax(store.level, x, 0);
+    reason = new EntryList();
+    assertThat(
+            LinearExplanation.explainChecked(
+                trail, trail.size() - 1, vars, weights, 4, true, false, reason))
+        .isFalse();
+    trail.detach();
+  }
+
+  /**
+   * 2^62 x + 2^62 y >= 0 with x = y = 1 holds, but its sum, 2^63, overflows a long to a negative
+   * number: neither a failure nor a disentailment may be claimed.
+   */
+  @Test
+  void linearReasonsRefuseSumsThatOverflow() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 1, 1);
+    y.domain.in(store.level, y, 1, 1);
+    IntVar[] vars = {x, y};
+    long[] weights = {1L << 62, 1L << 62};
+    EntryList reason = new EntryList();
+    assertThat(LinearExplanation.explainFailure(trail, vars, weights, 0, false, true, reason))
+        .isFalse();
+    LinearForm violated = new LinearForm(vars, weights, -1, LinearForm.LE);
+    assertThat(violated.explainEntailed(trail, trail.size(), reason)).isFalse();
+    trail.detach();
+  }
+
   @Test
   void holesAreRecordedOnceForEveryDomainClass() {
     Random rnd = new Random(11);
