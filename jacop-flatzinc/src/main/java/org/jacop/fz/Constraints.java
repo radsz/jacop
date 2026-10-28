@@ -43,6 +43,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
@@ -202,6 +203,10 @@ public class Constraints implements ParserTreeConstants {
     // model is consistent; it can happen that search will not
     // find out inconsistency if all variables are ground
     if (!store.consistency()) {
+      throw Store.failException;
+    }
+
+    if (LinearRelaxationCheck.enabled() && new LinearRelaxationCheck(support).infeasible(astTree)) {
       throw Store.failException;
     }
 
