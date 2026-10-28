@@ -264,6 +264,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -360,6 +361,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
@@ -382,6 +384,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -477,6 +480,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
@@ -499,6 +503,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -593,6 +598,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/SatPresolveTest.java</include>
                                 <include>**/TablingTest.java</include>
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
@@ -615,6 +621,7 @@ setup to run configuration. -->
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>

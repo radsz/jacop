@@ -112,6 +112,24 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
   }
 
   /**
+   * Returns the boolean variables of the constraint.
+   *
+   * @return a copy of the list.
+   */
+  public IntVar[] list() {
+    return Arrays.copyOf(list, list.length);
+  }
+
+  /**
+   * Returns the result variable.
+   *
+   * @return the result variable.
+   */
+  public IntVar result() {
+    return result;
+  }
+
+  /**
    * Checks that all boolean variables have valid boolean domains.
    *
    * @return null if invariants hold, error message otherwise.
