@@ -30,9 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -52,7 +55,7 @@ import org.jacop.lcg.MaxExplanation;
  * @version 5.0
  */
 public class MaxSimple extends Constraint
-    implements SatisfiedPresent, Copyable<MaxSimple>, Explainable {
+    implements Simplifiable, SatisfiedPresent, Copyable<MaxSimple>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -134,6 +137,14 @@ public class MaxSimple extends Constraint
   public String toString() {
 
     return id() + " : maxSimple(" + x1 + ", " + x2 + ", " + max + ")";
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != MaxSimple.class) {
+      return Optional.empty();
+    }
+    return GlobalSimplification.extremum(new IntVar[] {x1, x2}, max, true, null);
   }
 
   @Override

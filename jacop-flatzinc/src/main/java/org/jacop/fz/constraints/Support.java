@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +45,10 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.regular.MultiCostRegular;
@@ -55,6 +58,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.ASTAnnExpr;
@@ -98,13 +102,22 @@ public class Support implements ParserTreeConstants {
   static final AtomicInteger n5 = new AtomicInteger(0);
   static final AtomicInteger n6 = new AtomicInteger(0);
   static final AtomicInteger n7 = new AtomicInteger(0);
+  // pairs of all_different that get an OverlappingAlldiff
+  static final int OVERLAP_MIN_SHARED = 2;
+  static final int OVERLAP_MAX_VARIABLES = 64;
+  static final int OVERLAP_MAX_PAIRS = 10_000;
+
   final Store store;
   final Tables dictionary;
   // ============ SAT solver interface ==============
   final SatTranslation sat;
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  // the variables of every all_different of the model, for OverlappingAlldiff
+  final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
+  // unary resources found by the disjunctive clique detection: starts and durations
+  final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
@@ -754,6 +767,7 @@ public class Support implements ParserTreeConstants {
       }
     }
     poseAlldistinctConstraints();
+    poseOverlappingAlldiffs();
 
     // generate channeling constraints instead of reified constraints
     reif.pose();
@@ -783,6 +797,60 @@ public class Support implements ParserTreeConstants {
       if (options.debug()) {
         String s = "% " + ad;
         FzConsole.println(s.replace("\n", "\n% "));
+      }
+    }
+  }
+
+  /**
+   * Posts an {@link OverlappingAlldiff} next to each pair of all_different constraints that share
+   * at least {@link #OVERLAP_MIN_SHARED} variables and at least half of the variables of each, each
+   * with a variable of its own, and that have at most {@link #OVERLAP_MAX_VARIABLES} variables
+   * together. Pairs sharing less, such as the rows and blocks of a sudoku, gain little pruning for
+   * the cost of the propagator. The system property {@code org.jacop.fz.overlappingAlldiff} set to
+   * false turns it off.
+   */
+  void poseOverlappingAlldiffs() {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
+        || alldifferentLists.size() < 2) {
+      return;
+    }
+    // fixed variables (often one constant object shared by many lists) are left out: the
+    // all_different constraints remove their values, so the rest is all different on its own
+    List<IntVar[]> lists = new ArrayList<>();
+    for (IntVar[] v : alldifferentLists) {
+      lists.add(Arrays.stream(v).filter(x -> !x.singleton()).toArray(IntVar[]::new));
+    }
+    Map<IntVar, List<Integer>> occurs = new IdentityHashMap<>();
+    for (int i = 0; i < lists.size(); i++) {
+      for (IntVar v : lists.get(i)) {
+        occurs.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+      }
+    }
+    int posted = 0;
+    for (int i = 0; i < lists.size() && posted < OVERLAP_MAX_PAIRS; i++) {
+      IntVar[] s = lists.get(i);
+      int[] shared = new int[lists.size()];
+      for (IntVar v : s) {
+        for (int j : occurs.get(v)) {
+          if (j > i) {
+            shared[j]++;
+          }
+        }
+      }
+      for (int j = i + 1; j < shared.length && posted < OVERLAP_MAX_PAIRS; j++) {
+        IntVar[] t = lists.get(j);
+        if (shared[j] >= OVERLAP_MIN_SHARED
+            && shared[j] < s.length
+            && shared[j] < t.length
+            && 2 * shared[j] >= Math.max(s.length, t.length)
+            && s.length + t.length - shared[j] <= OVERLAP_MAX_VARIABLES) {
+          OverlappingAlldiff c = new OverlappingAlldiff(s, t);
+          store.impose(c);
+          posted++;
+          if (options.debug()) {
+            FzConsole.println("% " + c);
+          }
+        }
       }
     }
   }
@@ -825,6 +893,38 @@ public class Support implements ParserTreeConstants {
       String s = "% " + c;
       FzConsole.println(s.replace("\n", "\n% "));
     }
+  }
+
+  /** Largest domain of x for which z of x * c = z gets the holes of c * dom(x) at the root. */
+  static final int MUL_C_HOLES_MAX_SIZE = 64;
+
+  /**
+   * Poses x * c = z. XmulCeqZ is bounds consistent, so when x has few values z is first restricted
+   * to c * dom(x): for a 0/1 variable x, z gets {0, c}, and bounds on z then decide x both ways.
+   *
+   * @param x the variable multiplied by c
+   * @param c the constant
+   * @param z the result
+   */
+  void poseXmulCeqZ(IntVar x, int c, IntVar z) throws FailException {
+    if (c != 0 && !z.singleton() && x.getSize() <= MUL_C_HOLES_MAX_SIZE) {
+      IntDomain values = new IntervalDomain();
+      ValueEnumeration e = x.dom().valueEnumeration();
+      int[] products = new int[x.getSize()];
+      int n = 0;
+      while (e.hasMoreElements()) {
+        long product = (long) e.nextElement() * c;
+        if (product >= IntDomain.MIN_INT && product <= IntDomain.MAX_INT) {
+          products[n++] = (int) product;
+        }
+      }
+      Arrays.sort(products, 0, n);
+      for (int i = 0; i < n; i++) {
+        values.unionAdapt(products[i], products[i]);
+      }
+      z.domain.in(store.level, z, values);
+    }
+    pose(new XmulCeqZ(x, c, z));
   }
 
   /**

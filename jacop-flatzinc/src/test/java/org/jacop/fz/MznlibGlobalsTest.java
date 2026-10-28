@@ -81,6 +81,8 @@ class MznlibGlobalsTest {
         "hook_multicost_regular",
         "hook_mdd",
         "hook_mdd_nondet",
+        "hook_cost_mdd",
+        "hook_cost_mdd_cost_in_word",
         "hook_network_flow_isolated",
         "hook_network_flow_cost_zero_based",
         "hook_network_flow_cost_loop",

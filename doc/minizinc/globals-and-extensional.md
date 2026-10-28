@@ -41,7 +41,7 @@ all_different_int, alldifferent_except, alldifferent_except_0, all_equal_int, am
 - **Scheduling with optional tasks:** `alternative`, `span`, `disjunctive_strict_opt` beyond the current form, `cumulative` with variable resource. These appear often in MiniZinc Challenge scheduling models.
 - **Sorting family:** `sort`, `arg_sort_int/float`, `arg_val_*`. JaCoP has no sortedness propagator.
 - **Graph family:** `connected`, `dconnected`, `tree`, `dtree`, `path`, `dpath`, `bounded_path`, `reachable`, `dreachable`, `steiner`, `dsteiner`, `wst`, `dwst`, `dag`, `subgraph`. JaCoP has graph matching constraints in `jacop.mzn` but none of the MiniZinc graph globals.
-- **Cost automata:** `cost_regular` (done, `regular/CostRegular`), `cost_mdd`, `regular_nfa`, `regular_regexp` (the last is a front-end translation to `regular`).
+- **Cost automata:** `cost_regular` (done, `regular/CostRegular`), `cost_mdd` (done, `regular/CostMdd`), `regular_nfa`, `regular_regexp` (the last is a front-end translation to `regular`).
 - **Others:** `symmetric_all_different`, `inverse_set`, `inverse_in_range`, `roots`, `range`, `piecewise_linear` (+ non-continuous), `var_perm_sym`, `var_sqr_sym`, `neural_net`, `arg_max/min_float`, `write`/`writes`/`writes_seq`, `sum_pred`, `sum_set`, `geost_nonoverlap_k`, `geost_smallest_bb`, `diffn_nonstrict_k`, `seq_precede_chain_set`, `fzn_assume` (2.10), `blackbox` (2.10).
 
 ### 3c. Library hygiene that blocks "following the standard"

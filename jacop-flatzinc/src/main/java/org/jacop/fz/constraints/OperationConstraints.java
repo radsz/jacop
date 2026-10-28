@@ -33,7 +33,6 @@ import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
-import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusCeqZ;
@@ -185,7 +184,7 @@ class OperationConstraints implements ParserTreeConstants {
       IntVar v3 = support.getVariable(p3);
       v3.domain.inValue(store.level, v3, 0);
     } else {
-      support.pose(new XmulCeqZ(support.getVariable(p2), c, support.getVariable(p3)));
+      support.poseXmulCeqZ(support.getVariable(p2), c, support.getVariable(p3));
     }
   }
 
@@ -196,7 +195,7 @@ class OperationConstraints implements ParserTreeConstants {
       IntVar v3 = support.getVariable(p3);
       v3.domain.inValue(store.level, v3, 0);
     } else {
-      support.pose(new XmulCeqZ(support.getVariable(p1), c, support.getVariable(p3)));
+      support.poseXmulCeqZ(support.getVariable(p1), c, support.getVariable(p3));
     }
   }
 

@@ -398,7 +398,7 @@ public class MultiCostRegular extends Constraint
     int edgeCount = graph.edges();
     levelNodeStart = graph.levelNodeStart;
     edgeStart = graph.edgeStart;
-    slots = new LevelSlots(list, graph, getClass());
+    slots = new LevelSlots(list, graph.levelSlotStart, graph.slotValue, getClass());
     edgeSource = graph.edgeSource;
     edgeTarget = graph.edgeTarget;
     edgeSlot = graph.edgeSlot;

@@ -30,8 +30,11 @@
 
 package org.jacop.constraints;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -51,7 +54,8 @@ import org.jacop.lcg.Explainable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Explainable {
+public class XmulYeqZ extends AbstractXopYeqZ
+    implements Simplifiable, Copyable<XmulYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -215,6 +219,23 @@ public class XmulYeqZ extends AbstractXopYeqZ implements Copyable<XmulYeqZ>, Exp
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == XmulYeqZ.class
         && new MulExplanation(trail, x, y, z, trail.size()).explainFailure(out);
+  }
+
+  /** With a fixed factor the product becomes {@code XmulCeqZ}, or holds when it is zero. */
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != XmulYeqZ.class || x == y || !(x.singleton() || y.singleton())) {
+      return Optional.empty();
+    }
+    IntVar other = x.singleton() ? y : x;
+    if (other == z) {
+      return Optional.empty();
+    }
+    int c = x.singleton() ? x.value() : y.value();
+    if (c == 0) {
+      return z.singleton(0) ? Optional.of(List.of()) : Optional.empty();
+    }
+    return Optional.of(List.of(c == 1 ? new XeqY(other, z) : new XmulCeqZ(other, c, z)));
   }
 
   @Override

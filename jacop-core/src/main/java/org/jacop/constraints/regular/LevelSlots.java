@@ -68,10 +68,10 @@ final class LevelSlots {
 
   private int stamp;
 
-  LevelSlots(IntVar[] list, CostAutomatonGraph graph, Class<?> owner) {
+  LevelSlots(IntVar[] list, int[] levelStart, int[] value, Class<?> owner) {
     this.list = list;
-    this.levelStart = graph.levelSlotStart;
-    this.value = graph.slotValue;
+    this.levelStart = levelStart;
+    this.value = value;
     this.mapping = Var.positionMapping(list, true, owner);
     this.removed = new int[value.length];
     this.supported = new int[value.length];

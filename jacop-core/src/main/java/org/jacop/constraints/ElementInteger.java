@@ -33,10 +33,12 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
@@ -63,7 +65,11 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementInteger extends AbstractElement
-    implements UsesQueueVariable, SatisfiedPresent, Copyable<ElementInteger>, Explainable {
+    implements Simplifiable,
+        UsesQueueVariable,
+        SatisfiedPresent,
+        Copyable<ElementInteger>,
+        Explainable {
 
   /**
    * It specifies the size of index domain from which the values supported by the index are
@@ -501,6 +507,19 @@ public class ElementInteger extends AbstractElement
   @Override
   public String toString() {
     return buildToString("elementInteger", list, value, true);
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != ElementInteger.class) {
+      return Optional.empty();
+    }
+    return ElementSimplification.integers(
+        index,
+        list,
+        value,
+        indexOffset,
+        (i, l, offset) -> new ElementInteger(i, l, value, offset, checkDuplicates));
   }
 
   @Override
