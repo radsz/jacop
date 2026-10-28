@@ -311,21 +311,7 @@ public final class FreeSearch {
       }
       probing = startProbe();
       select = probing ? mainSelect : branchingOfRun();
-      System.err.println(
-          "RUN probe="
-              + probing
-              + " target="
-              + probeTarget
-              + " bound="
-              + (hasBound ? bound : "-")
-              + " cost="
-              + cost
-              + " level="
-              + store.level
-              + " fails="
-              + failures);
       RunEnd end = run();
-      System.err.println("  END " + end + " sol=" + runEndedBySolution);
       boolean probe = probing;
       if (probe) {
         if (endProbe(end)) {
@@ -344,15 +330,16 @@ public final class FreeSearch {
       restartCount++;
       int depth = stackSize;
       unwind();
-      // the nogoods of a probe hold only under its bound on the objective
-      if (nogoods != null && !probe) {
+      if (probe) {
+        // the nogoods of a probe hold only under its bound on the objective, and the monitors
+        // count restarts of the regular runs (dom/wdeg flushes its weights every k of them)
+        continue;
+      }
+      if (nogoods != null) {
         learnNogoods(depth);
       }
       for (SearchMonitor m : monitors) {
         m.onRestart(this);
-      }
-      if (probe) {
-        continue;
       }
       regularRuns++;
       if (restarts != null) {
@@ -523,8 +510,9 @@ public final class FreeSearch {
       }
       Var decision = failedFrame == null ? null : failedFrame.var;
       // failures under the alternative branching would teach the heuristics of the main one
-      // about a search they do not make
-      if (select == mainSelect) {
+      // about a search they do not make, and so would the failures of a probe, whose bound on
+      // the objective is not part of the problem
+      if (select == mainSelect && !probing) {
         for (SearchMonitor m : monitors) {
           m.onFailure(store.recentlyFailedConstraint, decision);
         }
@@ -707,7 +695,6 @@ public final class FreeSearch {
    * backtracking.
    */
   private RunEnd solution() {
-    System.err.println("  SOL cost=" + cost + " " + java.util.Arrays.toString(recorded));
     solutions++;
     if (lastSolution == null) {
       lastSolution = new int[recorded.length];
