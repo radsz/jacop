@@ -47,7 +47,6 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -134,17 +133,11 @@ public class MultiCostRegular extends Constraint
   /** Whether the Lagrangian relaxation of the side resources is used. */
   private boolean lagrangian;
 
-  private Map<IntVar, Integer> mapping;
-
   /** One-time work of the first consistency call. */
   private final InitOnce init = new InitOnce();
 
   /** Set while this constraint prunes domains, so its own changes are not queued again. */
   private boolean pruning;
-
-  private int[] levelQueue;
-  private int levelQueueSize;
-  private boolean[] levelQueued;
 
   // Nodes of level l are levelNodeStart[l]..levelNodeStart[l+1]-1; node 0 is the source.
   private int[] levelNodeStart;
@@ -160,10 +153,8 @@ public class MultiCostRegular extends Constraint
   private int[] edgeStart;
   private int[] alive;
 
-  // Slots: the values labelling edges of level l are
-  // slotValue[levelSlotStart[l]..levelSlotStart[l+1]-1].
-  private int[] levelSlotStart;
-  private int[] slotValue;
+  /** The values labelling the edges of every level. */
+  private LevelSlots slots;
 
   // Paths per node and resource, at node * resources + r.
   private long[] forwardMin;
@@ -198,8 +189,6 @@ public class MultiCostRegular extends Constraint
 
   private int[] levelSupported;
 
-  private int stamp;
-
   /**
    * True while the graph has not changed since the last call, which then left the costs with the
    * bounds in lastMin and lastMax; while they keep them there is nothing to prune.
@@ -209,16 +198,8 @@ public class MultiCostRegular extends Constraint
   private int[] lastMin;
   private int[] lastMax;
 
-  // Trail of alive counts: pairs of level and previous count, with a mark per store level.
-  private int[] savedEpoch;
-  private int epoch;
-  private int epochLevel = -1;
-  private int currentLevel;
-  private int[] trail = new int[64];
-  private int trailTop;
-  private int[] markLevel = new int[16];
-  private int[] markPosition = new int[16];
-  private int markTop;
+  /** The numbers of alive edges per level, trailed. */
+  private AliveCounts counts;
 
   /**
    * It constructs a multi-cost regular constraint whose transition costs do not depend on the
@@ -287,52 +268,15 @@ public class MultiCostRegular extends Constraint
           "MultiCostRegular: costs must have one entry per cost variable");
     }
 
-    int states = transition.length;
-    if (states == 0) {
-      throw new IllegalArgumentException("MultiCostRegular: the automaton has no states");
-    }
-    int symbols = transition[0] == null ? 0 : transition[0].length;
-    if (initialState < 0 || initialState >= states) {
-      throw new IllegalArgumentException(
-          "MultiCostRegular: initial state " + initialState + " is not a state");
-    }
-    for (int q : finalStates) {
-      if (q < 0 || q >= states) {
-        throw new IllegalArgumentException(
-            "MultiCostRegular: final state " + q + " is not a state");
-      }
-    }
-    for (int[] row : transition) {
-      if (row == null || row.length != symbols) {
-        throw new IllegalArgumentException(
-            "MultiCostRegular: transition rows must have equal lengths");
-      }
-      for (int t : row) {
-        if (t < -1 || t >= states) {
-          throw new IllegalArgumentException(
-              "MultiCostRegular: transition to " + t + " is not a state");
-        }
-      }
-    }
     for (int[][][] resource : costs) {
-      if (resource == null || resource.length != list.length) {
-        throw new IllegalArgumentException(
-            "MultiCostRegular: costs must have one matrix per variable for each resource");
-      }
-      for (int[][] matrix : resource) {
-        if (matrix == null || matrix.length != states) {
-          throw new IllegalArgumentException("MultiCostRegular: costs must have a row per state");
-        }
-        for (int[] row : matrix) {
-          if (row == null || row.length != symbols) {
-            throw new IllegalArgumentException(
-                "MultiCostRegular: costs must have a column per value");
-          }
-        }
-      }
-    }
-    if ((long) firstValue + symbols - 1 > IntDomain.MAX_INT) {
-      throw new IllegalArgumentException("MultiCostRegular: values out of range");
+      CostAutomatonGraph.check(
+          "MultiCostRegular",
+          list.length,
+          transition,
+          firstValue,
+          initialState,
+          finalStates,
+          resource);
     }
 
     this.queueIndex = 2;
@@ -446,171 +390,33 @@ public class MultiCostRegular extends Constraint
     return this;
   }
 
-  /**
-   * It unfolds the automaton into the layered graph. A forward pass collects the states reachable
-   * at each level, a backward pass keeps the states from which a final state can be reached, and
-   * the edges between kept states are created level by level.
-   */
+  /** It unfolds the automaton into the layered graph and collects the costs of every edge. */
   private void buildGraph() {
+    CostAutomatonGraph graph =
+        new CostAutomatonGraph(list, transition, firstValue, initialState, finalStates);
     int levels = list.length;
-    int states = transition.length;
-    int symbols = transition[0].length;
-
-    boolean[] accepting = new boolean[states];
-    for (int q : finalStates) {
-      accepting[q] = true;
-    }
-
-    // Values of each level that are in the domain and in the alphabet.
-    int[][] values = new int[levels][];
+    int edgeCount = graph.edges();
+    levelNodeStart = graph.levelNodeStart;
+    edgeStart = graph.edgeStart;
+    slots = new LevelSlots(list, graph, getClass());
+    edgeSource = graph.edgeSource;
+    edgeTarget = graph.edgeTarget;
+    edgeSlot = graph.edgeSlot;
+    edgeCost = new int[edgeCount * resources];
     for (int level = 0; level < levels; level++) {
-      IntDomain dom = list[level].dom();
-      int[] buffer = new int[Math.max(0, Math.min(dom.getSize(), symbols))];
-      int count = 0;
-      for (var e = dom.valueEnumeration(); e.hasMoreElements(); ) {
-        int v = e.nextElement();
-        if (v >= firstValue && (long) v - firstValue < symbols) {
-          buffer[count++] = v - firstValue;
+      for (int e = edgeStart[level]; e < edgeStart[level + 1]; e++) {
+        for (int r = 0; r < resources; r++) {
+          edgeCost[e * resources + r] = costs[r][level][graph.edgeState[e]][graph.edgeSymbol[e]];
         }
       }
-      values[level] = Arrays.copyOf(buffer, count);
     }
-
-    // Forward pass: states reachable at each level.
-    int[][] reachable = new int[levels + 1][];
-    boolean[] marked = new boolean[states];
-    int[] buffer = new int[states];
-    reachable[0] = new int[] {initialState};
-    for (int level = 0; level < levels; level++) {
-      int count = 0;
-      for (int q : reachable[level]) {
-        for (int j : values[level]) {
-          int t = transition[q][j];
-          if (t >= 0 && !marked[t] && (level < levels - 1 || accepting[t])) {
-            marked[t] = true;
-            buffer[count++] = t;
-          }
-        }
-      }
-      reachable[level + 1] = Arrays.copyOf(buffer, count);
-      for (int i = 0; i < count; i++) {
-        marked[buffer[i]] = false;
-      }
-    }
-    if (levels == 0 && !accepting[initialState]) {
-      reachable[0] = new int[0];
-    }
-
-    // Backward pass: keep the states with a transition to a kept state of the next level.
-    int[][] kept = new int[levels + 1][];
-    kept[levels] = reachable[levels];
-    int[] position = new int[states];
-    Arrays.fill(position, -1);
-    for (int level = levels - 1; level >= 0; level--) {
-      for (int i = 0; i < kept[level + 1].length; i++) {
-        position[kept[level + 1][i]] = i;
-      }
-      int count = 0;
-      for (int q : reachable[level]) {
-        for (int j : values[level]) {
-          int t = transition[q][j];
-          if (t >= 0 && position[t] >= 0) {
-            buffer[count++] = q;
-            break;
-          }
-        }
-      }
-      kept[level] = Arrays.copyOf(buffer, count);
-      for (int t : kept[level + 1]) {
-        position[t] = -1;
-      }
-    }
-
-    levelNodeStart = new int[levels + 2];
-    for (int level = 0; level <= levels; level++) {
-      levelNodeStart[level + 1] = levelNodeStart[level] + kept[level].length;
-    }
-    int nodes = levelNodeStart[levels + 1];
-
-    // Edges and slots, level by level.
-    edgeStart = new int[levels + 1];
-    levelSlotStart = new int[levels + 1];
-    int[] sources = new int[16];
-    int[] targets = new int[16];
-    int[] edgeSlots = new int[16];
-    int[] edgeCosts = new int[16 * resources];
-    int edgeCount = 0;
-    int[] slots = new int[16];
-    int slotCount = 0;
-    int[] slotOf = new int[symbols];
-    for (int level = 0; level < levels; level++) {
-      edgeStart[level] = edgeCount;
-      levelSlotStart[level] = slotCount;
-      for (int i = 0; i < kept[level + 1].length; i++) {
-        position[kept[level + 1][i]] = i;
-      }
-      Arrays.fill(slotOf, -1);
-      // Slots in increasing order of values.
-      for (int j : values[level]) {
-        boolean used = false;
-        for (int q : kept[level]) {
-          int t = transition[q][j];
-          if (t >= 0 && position[t] >= 0) {
-            used = true;
-            break;
-          }
-        }
-        if (used) {
-          if (slotCount == slots.length) {
-            slots = Arrays.copyOf(slots, 2 * slotCount);
-          }
-          slotOf[j] = slotCount;
-          slots[slotCount++] = firstValue + j;
-        }
-      }
-      for (int i = 0; i < kept[level].length; i++) {
-        int q = kept[level][i];
-        for (int j : values[level]) {
-          int t = transition[q][j];
-          if (t < 0 || position[t] < 0) {
-            continue;
-          }
-          if (edgeCount == sources.length) {
-            sources = Arrays.copyOf(sources, 2 * edgeCount);
-            targets = Arrays.copyOf(targets, 2 * edgeCount);
-            edgeSlots = Arrays.copyOf(edgeSlots, 2 * edgeCount);
-            edgeCosts = Arrays.copyOf(edgeCosts, 2 * edgeCount * resources);
-          }
-          sources[edgeCount] = levelNodeStart[level] + i;
-          targets[edgeCount] = levelNodeStart[level + 1] + position[t];
-          edgeSlots[edgeCount] = slotOf[j];
-          for (int r = 0; r < resources; r++) {
-            edgeCosts[edgeCount * resources + r] = costs[r][level][q][j];
-          }
-          edgeCount++;
-        }
-      }
-      for (int t : kept[level + 1]) {
-        position[t] = -1;
-      }
-    }
-    edgeStart[levels] = edgeCount;
-    levelSlotStart[levels] = slotCount;
-
-    edgeSource = Arrays.copyOf(sources, edgeCount);
-    edgeTarget = Arrays.copyOf(targets, edgeCount);
-    edgeSlot = Arrays.copyOf(edgeSlots, edgeCount);
-    edgeCost = Arrays.copyOf(edgeCosts, edgeCount * resources);
     order = new int[edgeCount];
     for (int e = 0; e < edgeCount; e++) {
       order[e] = e;
     }
-    slotValue = Arrays.copyOf(slots, slotCount);
-    alive = new int[levels];
-    for (int level = 0; level < levels; level++) {
-      alive[level] = edgeStart[level + 1] - edgeStart[level];
-    }
-    savedEpoch = new int[levels];
+    counts = new AliveCounts(graph.edgesPerLevel());
+    alive = counts.alive;
+    int nodes = graph.nodes();
     forwardMin = new long[nodes * resources];
     forwardMax = new long[nodes * resources];
     backwardMin = new long[nodes * resources];
@@ -626,9 +432,9 @@ public class MultiCostRegular extends Constraint
     pathCost = new long[resources];
     lastMin = new int[resources];
     lastMax = new int[resources];
-    slotRemoved = new int[slotCount];
-    slotSupported = new int[slotCount];
-    levelSupported = new int[levels];
+    slotRemoved = slots.removed;
+    slotSupported = slots.supported;
+    levelSupported = slots.levelSupported;
   }
 
   @Override
@@ -636,79 +442,29 @@ public class MultiCostRegular extends Constraint
 
     buildGraph();
 
-    mapping = Var.positionMapping(list, true, this.getClass());
-    levelQueue = new int[list.length];
-    levelQueued = new boolean[list.length];
-
     super.impose(store);
   }
 
   @Override
   public void queueVariable(int level, Var v) {
 
-    if (pruning) {
-      return;
-    }
-    Integer p = mapping.get(v);
-    if (p != null && !levelQueued[p]) {
-      levelQueued[p] = true;
-      levelQueue[levelQueueSize++] = p;
+    if (!pruning) {
+      slots.queue(v);
     }
   }
 
   @Override
   public void removeLevel(int level) {
 
-    while (markTop > 0 && markLevel[markTop - 1] >= level) {
-      int start = markPosition[--markTop];
-      while (trailTop > start) {
-        trailTop -= 2;
-        alive[trail[trailTop]] = trail[trailTop + 1];
-      }
-    }
-    epochLevel = -1;
+    counts.removeLevel(level);
     stable = false;
-    for (int i = 0; i < levelQueueSize; i++) {
-      levelQueued[levelQueue[i]] = false;
-    }
-    levelQueueSize = 0;
-  }
-
-  /** It sets the number of alive edges of a level, trailing the previous number. */
-  private void setAlive(int level, int count) {
-    if (savedEpoch[level] != epoch) {
-      savedEpoch[level] = epoch;
-      if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
-        if (markTop == markLevel.length) {
-          markLevel = Arrays.copyOf(markLevel, 2 * markTop);
-          markPosition = Arrays.copyOf(markPosition, 2 * markTop);
-        }
-        markLevel[markTop] = currentLevel;
-        markPosition[markTop++] = trailTop;
-      }
-      if (trailTop + 2 > trail.length) {
-        trail = Arrays.copyOf(trail, 2 * trail.length);
-      }
-      trail[trailTop] = level;
-      trail[trailTop + 1] = alive[level];
-      trailTop += 2;
-    }
-    alive[level] = count;
+    slots.clearQueue();
   }
 
   private void swap(int i, int j) {
     int t = order[i];
     order[i] = order[j];
     order[j] = t;
-  }
-
-  private int nextStamp() {
-    if (++stamp == Integer.MAX_VALUE) {
-      Arrays.fill(slotRemoved, 0);
-      Arrays.fill(slotSupported, 0);
-      stamp = 1;
-    }
-    return stamp;
   }
 
   private boolean costsUnchanged() {
@@ -723,35 +479,15 @@ public class MultiCostRegular extends Constraint
   @Override
   public void consistency(Store store) {
 
-    currentLevel = store.level;
-    if (epochLevel != currentLevel) {
-      if (++epoch == Integer.MAX_VALUE) {
-        Arrays.fill(savedEpoch, 0);
-        epoch = 1;
-      }
-      epochLevel = currentLevel;
-    }
+    counts.begin(store.level);
 
     int levels = list.length;
     if (init.begin(store)) {
       pruning = true;
       try {
-        for (int level = 0; level < levels; level++) {
-          IntervalDomain labels = new IntervalDomain();
-          for (int s = levelSlotStart[level]; s < levelSlotStart[level + 1]; s++) {
-            labels.unionAdapt(slotValue[s], slotValue[s]);
-          }
-          list[level].domain.in(store.level, list[level], labels);
-        }
+        slots.restrictToSlots(store);
       } finally {
         pruning = false;
-      }
-      // the graph was built at impose; values removed since then must be checked on every level
-      for (int level = 0; level < levels; level++) {
-        if (!levelQueued[level]) {
-          levelQueued[level] = true;
-          levelQueue[levelQueueSize++] = level;
-        }
       }
     }
 
@@ -765,22 +501,12 @@ public class MultiCostRegular extends Constraint
       return;
     }
 
-    if (stable && levelQueueSize == 0 && costsUnchanged()) {
+    if (stable && slots.queueEmpty() && costsUnchanged()) {
       return;
     }
 
-    int removedStamp = nextStamp();
-    for (int i = 0; i < levelQueueSize; i++) {
-      int level = levelQueue[i];
-      levelQueued[level] = false;
-      IntDomain dom = list[level].domain;
-      for (int s = levelSlotStart[level]; s < levelSlotStart[level + 1]; s++) {
-        if (!dom.contains(slotValue[s])) {
-          slotRemoved[s] = removedStamp;
-        }
-      }
-    }
-    levelQueueSize = 0;
+    int removedStamp = slots.nextStamp();
+    slots.markRemoved(removedStamp);
 
     pruning = true;
     try {
@@ -795,18 +521,7 @@ public class MultiCostRegular extends Constraint
         changed = lagrangian && resources > 1 && rounds++ < 3 && relax(store);
       }
 
-      int supported = stamp;
-      for (int level = 0; level < levels; level++) {
-        IntVar x = list[level];
-        if (levelSupported[level] == x.getSize()) {
-          continue;
-        }
-        for (int s = levelSlotStart[level]; s < levelSlotStart[level + 1]; s++) {
-          if (slotSupported[s] != supported && x.domain.contains(slotValue[s])) {
-            x.domain.inComplement(store.level, x, slotValue[s]);
-          }
-        }
-      }
+      slots.pruneUnsupported(store);
     } finally {
       pruning = false;
     }
@@ -864,7 +579,7 @@ public class MultiCostRegular extends Constraint
         throw Store.failException;
       }
       if (end - start != alive[level]) {
-        setAlive(level, end - start);
+        counts.set(level, end - start);
       }
     }
   }
@@ -885,7 +600,7 @@ public class MultiCostRegular extends Constraint
     final long[] bMax = backwardMax;
     final int[] c = edgeCost;
     final int[] supported = slotSupported;
-    final int support = nextStamp();
+    final int support = slots.nextStamp();
     final long[] costMin = new long[rs];
     final long[] costMax = new long[rs];
     for (int r = 0; r < rs; r++) {
@@ -943,7 +658,7 @@ public class MultiCostRegular extends Constraint
         throw Store.failException;
       }
       if (end - start != alive[level]) {
-        setAlive(level, end - start);
+        counts.set(level, end - start);
       }
       levelSupported[level] = count;
     }
@@ -1052,7 +767,7 @@ public class MultiCostRegular extends Constraint
         for (int i = edgeStart[level]; i < end; i++) {
           int e = order[i];
           int ce = e * rs;
-          double we = sign * c[ce + k];
+          double we = (double) sign * c[ce + k];
           for (int r = 0; r < rs; r++) {
             double m = up[r] - low[r];
             if (m != 0) {
@@ -1116,7 +831,7 @@ public class MultiCostRegular extends Constraint
             throw Store.failException;
           }
           if (end - start != alive[level]) {
-            setAlive(level, end - start);
+            counts.set(level, end - start);
           }
         }
       }
@@ -1275,15 +990,9 @@ public class MultiCostRegular extends Constraint
   @Override
   public String toString() {
 
-    StringBuilder result = new StringBuilder(id());
-    result.append("([");
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i].id()).append(i + 1 < list.length ? ", " : "");
-    }
-    result.append("], transition=").append(Arrays.deepToString(transition));
-    result.append(", firstValue=").append(firstValue);
-    result.append(", initialState=").append(initialState);
-    result.append(", finalStates=").append(Arrays.toString(finalStates));
+    StringBuilder result =
+        CostAutomatonGraph.describe(
+            new StringBuilder(id()), list, transition, firstValue, initialState, finalStates);
     result.append(", cost=[");
     for (int r = 0; r < resources; r++) {
       result.append(cost[r].id()).append(r + 1 < resources ? ", " : "");
