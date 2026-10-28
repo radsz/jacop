@@ -111,6 +111,7 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
@@ -256,6 +257,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Spread", balance(true)),
         Arguments.of("StockingCost", stockingCost(false)),
         Arguments.of("StockingCostItemDependent", stockingCost(true)),
+        Arguments.of(
+            "WeightedCompletion",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::weightedCompletion),
         Arguments.of(
             "IncreasingNValue",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
@@ -1730,6 +1734,30 @@ class GlobalConstraintBruteForceTest {
           return total == t[n];
         },
         "strict=" + strict + " repeated=" + repeated);
+  }
+
+  // starts s[0..n-1] of tasks that do not overlap, sum of w * (s + d) at most the last
+  private static Instance weightedCompletion(Random random) {
+    int n = 1 + random.nextInt(4);
+    int[] d = randomInts(random, n, 0, 3);
+    int[] w = randomInts(random, n, 0, 3);
+    int[][] domains = append(domains(random, n, 0, 7), domain(random, 0, 8 * n));
+    return new Instance(
+        domains,
+        (store, v) -> store.impose(new WeightedCompletion(Arrays.copyOf(v, n), d, w, v[n])),
+        t -> {
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            total += w[i] * (t[i] + d[i]);
+            for (int j = i + 1; j < n; j++) {
+              if (d[i] > 0 && d[j] > 0 && t[i] < t[j] + d[j] && t[j] < t[i] + d[i]) {
+                return false;
+              }
+            }
+          }
+          return total <= t[n];
+        },
+        "d=" + Arrays.toString(d) + " w=" + Arrays.toString(w));
   }
 
   // production periods x[0..n-1] before their due dates, at most c per period, cost at most the
