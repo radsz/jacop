@@ -112,6 +112,7 @@ import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
 import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
+import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
@@ -1115,7 +1116,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       postCollectedClauses();
       return false;
     }
+    mirrorSetVariables();
     return true;
+  }
+
+  /**
+   * Mirrors every set variable by integer variables, the membership of its elements and its
+   * cardinality, whose atoms stand for the set in the explanations of the set constraints.
+   */
+  private void mirrorSetVariables() {
+    List<SetVar> sets = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof SetVar s && !s.singleton()) {
+        sets.add(s);
+      }
+    }
+    for (SetVar s : sets) {
+      store.impose(new SetMirror(s));
+    }
   }
 
   /**
@@ -1137,8 +1155,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return "the objective is not an integer variable";
     }
     for (int i = 0; i < store.size(); i++) {
-      if (!(store.vars[i] instanceof IntVar)) {
-        return "the model has float or set variables";
+      if (!(store.vars[i] instanceof IntVar) && !(store.vars[i] instanceof SetVar)) {
+        return "the model has float variables";
       }
     }
     return null;

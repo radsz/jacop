@@ -255,7 +255,30 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
-21. Lazy clause generation explains XmulYeqZ removals by bounds first: the
+21. --lcg works on models with set variables; before, it printed "--lcg
+    ignored: the model has float or set variables" and searched without
+    learning. Each set variable is mirrored by a 0/1 variable for the
+    membership of each element of its least upper bound that is not in its
+    greatest lower bound and by a variable for its cardinality (new
+    constraint org.jacop.set.constraints.SetMirror). Every change of the
+    set's domain is passed to the mirror inside the constraint that made
+    it, so the mirror's atoms have that constraint as reason and stand for
+    the set in the generic explanations of the set constraints (new
+    interface org.jacop.lcg.Mirrored). The explanation checker
+    (-Djacop.lcg.check=true) checks the set constraints too. Under --lcg
+    the decisions of a set_search annotation on an element are taken as
+    the literal that the element is in the set. Set constraints that hold
+    element by element (AintersectBeqC, AunionBeqC, AdiffBeqC, AinB, AeqB,
+    AdisjointB, EinA) explain a membership by the memberships of the same
+    element in their other sets, and SetMirror explains what the
+    cardinality gives, instead of the generic reason over every element.
+    AleB and AltB (set_le, set_lt) explain a membership by the memberships
+    and cardinalities that leave their order automaton no solution with
+    the other membership, found by relaxing them one at a time
+    (steiner-triples 09: 1.1 s instead of 10.9 s). Float variables still
+    turn --lcg off.
+
+22. Lazy clause generation explains XmulYeqZ removals by bounds first: the
     product range of x and y (squares when x = y), the quotient range of a
     factor, and the square roots of z for x * x = z, citing only the
     bounds that matter. Before, a removal of more than 64 values, or with a
