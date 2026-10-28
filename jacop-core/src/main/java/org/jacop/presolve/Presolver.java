@@ -72,9 +72,14 @@ public final class Presolver {
           ? List.of(
               GlobalPresolveRule::new,
               AtMostOneRule::new,
+              BooleanProducts::new,
               () -> RedundantConstraints.RULE,
               () -> OrderLiterals.RULE)
-          : List.of(GlobalPresolveRule::new, AtMostOneRule::new, () -> RedundantConstraints.RULE);
+          : List.of(
+              GlobalPresolveRule::new,
+              AtMostOneRule::new,
+              BooleanProducts::new,
+              () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;
@@ -103,6 +108,19 @@ public final class Presolver {
    */
   public Presolver keep(Var... vars) {
     builder.keep(vars);
+    return this;
+  }
+
+  /**
+   * Sets whether the child keeps every solution; see {@link
+   * Derivation.Builder#solutionPreserving(boolean)}. True by default; false lets half-reification
+   * run, which needs the frozen variables given with {@link #keep(Var...)}.
+   *
+   * @param on true to keep every solution, as all-solution search and counting need.
+   * @return this presolver.
+   */
+  public Presolver solutionPreserving(boolean on) {
+    builder.solutionPreserving(on);
     return this;
   }
 
