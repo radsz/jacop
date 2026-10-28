@@ -47,17 +47,10 @@ import org.jacop.constraints.regular.CostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
-import org.jacop.search.Indomain;
 import org.jacop.search.IndomainMax;
-import org.jacop.search.IndomainMin;
-import org.jacop.search.IndomainRandom;
-import org.jacop.search.Search;
-import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
-import org.jacop.search.SimpleSolutionListener;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -135,76 +128,21 @@ class CostRegularTest {
     int states = 1 + random.nextInt(maxStates);
     int symbols = 2 + random.nextInt(maxSymbols - 1);
     int firstValue = random.nextInt(4) - 1;
-    int[][] delta = new int[states][symbols];
-    for (int[] row : delta) {
-      for (int j = 0; j < symbols; j++) {
-        // transitions are more likely than dead ends
-        row[j] = random.nextInt(4) == 0 ? -1 : random.nextInt(states);
-      }
-    }
-    List<Integer> finalList = new ArrayList<>();
-    for (int q = 0; q < states; q++) {
-      if (random.nextInt(3) != 0) {
-        finalList.add(q);
-      }
-    }
-    int[] finals = finalList.stream().mapToInt(Integer::intValue).toArray();
+    int[][] delta = RandomAutomata.transitions(random, states, symbols);
+    int[] finals = RandomAutomata.finals(random, states);
     boolean layered = random.nextBoolean();
     int[][][] costs = new int[n][][];
-    int[][] shared = randomCosts(random, states, symbols);
+    int[][] shared = RandomAutomata.costs(random, states, symbols, 7);
     for (int i = 0; i < n; i++) {
-      costs[i] = layered ? randomCosts(random, states, symbols) : shared;
+      costs[i] = layered ? RandomAutomata.costs(random, states, symbols, 7) : shared;
     }
     int[][] domains = new int[n + 1][];
     for (int i = 0; i < n; i++) {
-      domains[i] = subset(random, firstValue - 1, firstValue + symbols);
+      domains[i] = RandomAutomata.subset(random, firstValue - 1, firstValue + symbols);
     }
-    domains[n] = wideCost ? range(-1000, 1000) : subset(random, -6, 3 * n + 4);
+    domains[n] =
+        wideCost ? RandomAutomata.range(-1000, 1000) : RandomAutomata.subset(random, -6, 3 * n + 4);
     return new Instance(n, delta, firstValue, finals, costs, domains, layered);
-  }
-
-  private static int[][] randomCosts(Random random, int states, int symbols) {
-    int[][] c = new int[states][symbols];
-    for (int[] row : c) {
-      for (int j = 0; j < symbols; j++) {
-        row[j] = random.nextInt(7) - 2;
-      }
-    }
-    return c;
-  }
-
-  private static int[] range(int lo, int hi) {
-    int[] values = new int[hi - lo + 1];
-    for (int i = 0; i < values.length; i++) {
-      values[i] = lo + i;
-    }
-    return values;
-  }
-
-  /** A random non-empty subset of lo..hi, so domains may have holes. */
-  private static int[] subset(Random random, int lo, int hi) {
-    List<Integer> values = new ArrayList<>();
-    for (int v = lo; v <= hi; v++) {
-      if (random.nextInt(4) != 0) {
-        values.add(v);
-      }
-    }
-    if (values.isEmpty()) {
-      values.add(lo + random.nextInt(hi - lo + 1));
-    }
-    return values.stream().mapToInt(Integer::intValue).toArray();
-  }
-
-  private static IntVar[] variables(Store store, int[][] domains) {
-    IntVar[] x = new IntVar[domains.length];
-    for (int i = 0; i < x.length; i++) {
-      IntervalDomain domain = new IntervalDomain();
-      for (int v : domains[i]) {
-        domain.unionAdapt(v, v);
-      }
-      x[i] = new IntVar(store, "x" + i, domain);
-    }
-    return x;
   }
 
   private static Set<List<Integer>> bruteForce(Instance instance) {
@@ -234,44 +172,20 @@ class CostRegularTest {
   private static Set<List<Integer>> solveAll(
       Instance instance, boolean decomposition, boolean costFirst, int valueOrder, int seed) {
     Store store = new Store();
-    IntVar[] x = variables(store, instance.domains());
+    IntVar[] x = RandomAutomata.variables(store, instance.domains());
     CostRegular c = instance.constraint(x);
     if (decomposition) {
       store.imposeDecomposition(c);
     } else {
       store.impose(c);
     }
-    Set<List<Integer>> found = new HashSet<>();
-    if (!store.consistency()) {
-      return found;
-    }
     IntVar[] order = x.clone();
     if (costFirst) {
       order[0] = x[x.length - 1];
       System.arraycopy(x, 0, order, 1, x.length - 1);
     }
-    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
-    search.setPrintInfo(false);
-    search.setSolutionListener(
-        new SimpleSolutionListener<>() {
-          @Override
-          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
-            boolean result = super.executeAfterSolution(s, select);
-            assertTrue(c.satisfied() || decomposition, "satisfied() at a solution");
-            found.add(Arrays.stream(x).map(IntVar::value).toList());
-            return result;
-          }
-        });
-    search.getSolutionListener().searchAll(true);
-    search.getSolutionListener().recordSolutions(false);
-    Indomain<IntVar> indomain =
-        switch (valueOrder) {
-          case 0 -> new IndomainMin<>();
-          case 1 -> new IndomainMax<>();
-          default -> new IndomainRandom<>(seed);
-        };
-    search.labeling(store, new SimpleSelect<>(order, null, indomain));
-    return found;
+    return RandomAutomata.solveAll(
+        store, x, order, () -> c.satisfied() || decomposition, valueOrder, seed);
   }
 
   @Test
@@ -319,33 +233,21 @@ class CostRegularTest {
     for (int trial = 0; trial < 400; trial++) {
       Instance instance = randomInstance(random, 4, 10, 6, 4, random.nextBoolean());
       Store store = new Store();
-      IntVar[] x = variables(store, instance.domains());
+      IntVar[] x = RandomAutomata.variables(store, instance.domains());
       store.impose(instance.constraint(x));
       if (!store.consistency()) {
         continue;
       }
       for (int step = 0; step < 40; step++) {
-        if (store.level > 0 && random.nextInt(4) == 0) {
-          int back = 1 + random.nextInt(store.level);
-          for (int k = 0; k < back; k++) {
-            store.removeLevel(store.level);
-            store.setLevel(store.level - 1);
-          }
-        }
+        RandomAutomata.randomBacktrack(store, random);
         store.setLevel(store.level + 1);
         IntVar v = x[random.nextInt(x.length)];
         if (v.singleton()) {
           continue;
         }
-        int value = v.min() + random.nextInt(v.max() - v.min() + 1);
         boolean consistent;
         try {
-          switch (random.nextInt(4)) {
-            case 0 -> v.domain.in(store.level, v, value, value);
-            case 1 -> v.domain.inComplement(store.level, v, value);
-            case 2 -> v.domain.inMax(store.level, v, value);
-            default -> v.domain.inMin(store.level, v, value);
-          }
+          RandomAutomata.randomDecision(store, v, random);
           consistent = store.consistency();
         } catch (FailException e) {
           consistent = false;
@@ -363,7 +265,7 @@ class CostRegularTest {
           continue;
         }
         Store fresh = new Store();
-        IntVar[] y = variables(fresh, current);
+        IntVar[] y = RandomAutomata.variables(fresh, current);
         fresh.impose(instance.constraint(y));
         assertTrue(fresh.consistency(), where);
         for (int i = 0; i < x.length; i++) {
@@ -384,7 +286,7 @@ class CostRegularTest {
       Instance instance = randomInstance(random, 6, true);
       Set<List<Integer>> solutions = bruteForce(instance);
       Store store = new Store();
-      IntVar[] x = variables(store, instance.domains());
+      IntVar[] x = RandomAutomata.variables(store, instance.domains());
       store.impose(instance.constraint(x));
       boolean consistent = store.consistency();
       assertEquals(!solutions.isEmpty(), consistent, "trial " + trial + " " + instance);
@@ -420,12 +322,12 @@ class CostRegularTest {
     for (int trial = 0; trial < 1000; trial++) {
       Instance instance = randomInstance(random, 6, false);
       Store store = new Store();
-      IntVar[] x = variables(store, instance.domains());
+      IntVar[] x = RandomAutomata.variables(store, instance.domains());
       // the cost as an interval, so a word within the bounds supports its values
       IntVar costVar = x[instance.n()];
       int lo = costVar.min();
       int hi = costVar.max();
-      instance.domains()[instance.n()] = range(lo, hi);
+      instance.domains()[instance.n()] = RandomAutomata.range(lo, hi);
       x[instance.n()] = new IntVar(store, "c", lo, hi);
       store.impose(instance.constraint(x));
       Set<List<Integer>> solutions = bruteForce(instance);
@@ -458,7 +360,7 @@ class CostRegularTest {
       }
       Set<List<Integer>> solutions = bruteForce(instance);
       Store store = new Store();
-      IntVar[] x = variables(store, instance.domains());
+      IntVar[] x = RandomAutomata.variables(store, instance.domains());
       store.impose(instance.constraint(x));
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);

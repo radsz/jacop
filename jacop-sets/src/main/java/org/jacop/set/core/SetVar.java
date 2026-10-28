@@ -34,8 +34,11 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.ArrayList;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.Mirrored;
+import org.jacop.set.constraints.SetMirror;
 
 /**
  * Defines a Finite Domain Variable (FDV) and related operations on it.
@@ -43,7 +46,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SetVar extends Var {
+public class SetVar extends Var implements Mirrored {
 
   // Ensure search handlers are registered when SetVar is first used
   static {
@@ -58,6 +61,9 @@ public class SetVar extends Var {
 
   /** It specifies the current domain associated with this set variable. */
   public SetDomain domain;
+
+  /** The integer variables that mirror this variable for lazy clause generation, or null. */
+  private SetMirror lcgMirror;
 
   /**
    * It creates a variable in a given store, with a given name and a given domain.
@@ -306,6 +312,44 @@ public class SetVar extends Var {
     }
 
     store.addChanged(this, event, Integer.MIN_VALUE);
+    // after addChanged, which trails the new domain, as the mirror may fail
+    if (lcgMirror != null) {
+      lcgMirror.follow();
+    }
+  }
+
+  /**
+   * Sets the constraint whose integer variables mirror this variable for lazy clause generation;
+   * every change of the domain is then passed on to them.
+   *
+   * @param mirror the mirror constraint
+   */
+  public void setMirror(SetMirror mirror) {
+    lcgMirror = mirror;
+  }
+
+  /**
+   * Returns the constraint whose integer variables mirror this variable for lazy clause generation.
+   *
+   * @return the mirror, or null
+   */
+  public SetMirror lcgMirror() {
+    return lcgMirror;
+  }
+
+  @Override
+  public IntVar[] mirror() {
+    return lcgMirror == null ? null : lcgMirror.mirrorVariables();
+  }
+
+  @Override
+  public IntVar decisionVariable(int value) {
+    return lcgMirror == null ? null : lcgMirror.member(value);
+  }
+
+  @Override
+  public SetVar copyMirrored(Store target, IntVar[] mirror) {
+    return lcgMirror.copyTo(target, mirror);
   }
 
   /**
