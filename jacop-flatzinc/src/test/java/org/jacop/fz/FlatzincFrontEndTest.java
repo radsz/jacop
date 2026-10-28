@@ -112,6 +112,46 @@ class FlatzincFrontEndTest {
         .toString();
   }
 
+  /**
+   * Three plants each release 16 units over four hours, and the plant takes at most 11 an hour.
+   * Every row and column alone is satisfiable, so propagation sees nothing; the sum of the rows
+   * against the sum of the columns (48 > 44) is what the root LP check finds (wwtpp-real).
+   */
+  @Test
+  void rootLinearRelaxationProvesInfeasibilityBeforeSearch() throws IOException {
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 4; j++) {
+        fzn.append("var 0..10: x").append(i).append(j).append(":: output_var;\n");
+      }
+    }
+    for (int i = 0; i < 3; i++) {
+      fzn.append("constraint int_lin_eq([1,1,1,1],[x")
+          .append(i)
+          .append("0,x")
+          .append(i)
+          .append("1,x")
+          .append(i)
+          .append("2,x")
+          .append(i)
+          .append("3],16);\n");
+    }
+    for (int j = 0; j < 4; j++) {
+      fzn.append("constraint int_lin_le([1,1,1],[x0")
+          .append(j)
+          .append(",x1")
+          .append(j)
+          .append(",x2")
+          .append(j)
+          .append("],11);\n");
+    }
+    fzn.append("solve :: int_search([x00,x01,x02,x03,x10,x11,x12,x13,x20,x21,x22,x23],")
+        .append("input_order,indomain_min,complete) satisfy;\n");
+    String out = run(fzn.toString(), "-s")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("%%%mzn-stat: lpCheckOutcome=infeasible"), out);
+  }
+
   @Test
   void completionSearchBacktracksToTheLastConflict() throws IOException {
     // The variables the annotation leaves out are labelled by a search JaCoP adds. Without last

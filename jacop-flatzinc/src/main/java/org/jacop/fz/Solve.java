@@ -74,6 +74,7 @@ import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Entry;
 import org.jacop.presolve.ImpliedConstraints;
+import org.jacop.presolve.LinearRelaxation;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
@@ -132,6 +133,10 @@ import org.jacop.set.search.IndomainSetMin;
 public class Solve<T extends Var> implements ParserTreeConstants {
 
   static final String P = System.getProperty("fz_system_timer");
+
+  // the root check of the linear relaxation, and the time its simplex may take
+  static final boolean LP_CHECK = Boolean.parseBoolean(System.getProperty("jacop.lpCheck", "true"));
+  static final long LP_CHECK_BUDGET_MILLIS = 500;
   // the store searched: the loaded store, or the store derived from it by presolve
   Store store;
   final boolean debug = false;
@@ -381,6 +386,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     dictionary = table;
     output = table;
     presolveObjective(node);
+    checkLinearRelaxation();
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node);
       if (sat.collecting() && !opt.lcg()) {
@@ -416,6 +422,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       throw new IllegalArgumentException(
           "%% Error: Not recognized structure of solve statement; compilation aborted");
+    }
+  }
+
+  /**
+   * Root check of the linear relaxation: fails, and the model is unsatisfiable, when the linear
+   * constraints have no real solution within the bounds of the variables, which propagation, one
+   * constraint at a time, does not see (wwtpp-real). It only fails or does nothing, so it runs with
+   * and without --presolve. See {@link LinearRelaxation}; -Djacop.lpCheck=false leaves it out.
+   */
+  private void checkLinearRelaxation() {
+    if (!LP_CHECK || !store.consistency()) {
+      return;
+    }
+    long start = timer.getCpuTime();
+    LinearRelaxation.Result r = LinearRelaxation.check(store, LP_CHECK_BUDGET_MILLIS);
+    if (options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: lpCheckTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: lpCheckRows="
+              + r.rows()
+              + "\n%%%mzn-stat: lpCheckColumns="
+              + r.columns()
+              + "\n%%%mzn-stat: lpCheckIterations="
+              + r.iterations()
+              + "\n%%%mzn-stat: lpCheckOutcome="
+              + (r.infeasible() ? "infeasible" : r.skipped() ? "skipped" : "feasible"));
+    }
+    if (r.infeasible()) {
+      throw Store.failException;
     }
   }
 

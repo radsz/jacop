@@ -404,6 +404,17 @@ Version 5.0 (unreleased)
     instead of 115 s with one left unsolved. gardner_sum_square finds
     another optimal solution.
 
+30. The FlatZinc front end checks the linear relaxation at the root before
+    search (org.jacop.presolve.LinearRelaxation): phase 1 of a simplex over
+    every constraint that states a linear relation, within the variables'
+    bounds. When it has no real solution, the Farkas multipliers are
+    rounded to integers and the summed constraint is checked exactly, and
+    the model is reported UNSATISFIABLE. It runs in every mode (default,
+    -f, --lcg, --presolve), takes at most 500 ms and 4M tableau entries,
+    and -Djacop.lpCheck=false turns it off; -s prints lpCheck* statistics.
+    wwtpp-real: 144 of 401 instances are proved UNSAT in under 0.1 s, none
+    before; 2014 solbat sb_13_13_5_5 is UNSAT in 0.07 s.
+
 Version 4.11
 =============
 
