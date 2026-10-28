@@ -180,6 +180,19 @@ public class Alldiff extends Alldifferent {
     } while (store.propagationHasOccurred);
   }
 
+  /**
+   * One pass of the bounds-consistency reasoning on Hall intervals, for constraints that use this
+   * one without imposing it ({@link AlldiffSum}). It does not process grounded variables.
+   *
+   * @param store the constraint store
+   */
+  void hallIntervalPass(Store store) {
+    this.store = store;
+    init();
+    updateLb();
+    updateUb();
+  }
+
   @Override
   public void queueVariable(int level, Var v) {
     if (v.singleton()) {
