@@ -40,6 +40,10 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Cumulative implements the scheduling constraint using.
@@ -399,8 +403,52 @@ public class Cumulative extends CumulativeBasic {
         return;
       }
     }
-    if (doEnergeticReasoning) {
+    if (doEnergeticReasoning && !DEFERRED) {
       energeticRule(tn, tr, n, capacity, store);
+    }
+  }
+
+  static final boolean DEFERRED = Boolean.getBoolean("fz_cumulative_er_deferred");
+
+  @Override
+  public void impose(Store store) {
+    super.impose(store);
+    if (doEnergeticReasoning && DEFERRED && taskNormal.length > 0) {
+      store.impose(new DeferredEnergetic());
+    }
+  }
+
+  // energetic reasoning in its own constraint in the last queue, so that it runs only once every
+  // other constraint, this one included, has reached its fixpoint
+  private final class DeferredEnergetic extends Constraint implements Explainable {
+    DeferredEnergetic() {
+      queueIndex = 4;
+      setScope(Cumulative.this.arguments().toArray(new Var[0]));
+    }
+
+    @Override
+    public void consistency(Store store) {
+      TaskView[] tn = filterZeroTasks(taskNormal);
+      if (tn == null) {
+        return;
+      }
+      TaskView[] tr = filterZeroTasks(taskReversed);
+      energeticRule(tn, tr, tn.length, limit.max(), store);
+    }
+
+    @Override
+    public int getDefaultConsistencyPruningEvent() {
+      return IntDomain.BOUND;
+    }
+
+    @Override
+    public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      return Cumulative.this.explain(trail, entry, out);
+    }
+
+    @Override
+    public boolean explainFailure(AtomicTrail trail, EntryList out) {
+      return Cumulative.this.explainFailure(trail, out);
     }
   }
 

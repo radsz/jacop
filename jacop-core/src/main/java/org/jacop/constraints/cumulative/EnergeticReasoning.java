@@ -69,6 +69,8 @@ class EnergeticReasoning {
       2; // lst + ect - t1, ending it, if est < t1 <= lst, t1 < ect
   private static final int AT_ECT = 3; // ect, ending it if lst < t1 < ect; else no change
   private static final int STREAMS = 4;
+  // not a stream: the order by est, used with those by lst and ect to sweep the window starts
+  private static final int BY_EST = 4;
 
   private int[] est = new int[0];
   private int[] lst = new int[0];
@@ -78,10 +80,13 @@ class EnergeticReasoning {
   private int[] update = new int[0];
   private int[] windowStarts = new int[0];
   // sort keys and task orders of the streams, kept between calls and re-sorted by insertion
-  private final long[][] keys = new long[STREAMS][0];
-  private final int[][] orders = new int[STREAMS][0];
+  private final long[][] keys = new long[STREAMS + 1][0];
+  private final int[][] orders = new int[STREAMS + 1][0];
   private final int[] next = new int[STREAMS];
   private int ordered = -1;
+  static final boolean EST_ONLY = Boolean.getBoolean("fz_cumulative_er_est");
+  // the breakpoints from here on start windows too loose to fail or to adjust a task
+  private long horizon;
 
   private void ensureCapacity(int n) {
     if (est.length >= n) {
@@ -94,7 +99,7 @@ class EnergeticReasoning {
     res = new int[n];
     update = new int[n];
     windowStarts = new int[3 * n];
-    for (int k = 0; k < STREAMS; k++) {
+    for (int k = 0; k <= STREAMS; k++) {
       keys[k] = new long[n];
       orders[k] = new int[n];
     }
@@ -117,14 +122,55 @@ class EnergeticReasoning {
     for (int i = 0; i < n; i++) {
       maxEnergy = Math.max(maxEnergy, (long) dur[i] * res[i]);
       windowStarts[m++] = est[i];
-      windowStarts[m++] = lst[i];
-      windowStarts[m++] = ect[i];
+      if (!EST_ONLY) {
+        windowStarts[m++] = lst[i];
+        windowStarts[m++] = ect[i];
+      }
     }
     Arrays.sort(windowStarts, 0, m);
+    // for the window start t1, swept upwards: the minimal energy of the tasks in [t1, infinity),
+    // which is the sum over the tasks with ect > t1 of c * p, less c * (t1 - est) for those with
+    // est < t1 < ect, and the slope of the minimal energy at t1, the sum of c over the tasks with
+    // lst < t1 < ect
+    long total = 0;
+    int[] byEst = orders[BY_EST];
+    int[] byLst = orders[AT_LST];
+    int[] byEct = orders[AT_ECT];
+    int pe = 0;
+    int pl = 0;
+    int pc = 0;
+    long started = 0;
+    long startedEst = 0;
+    long slope = 0;
+    for (int i = 0; i < n; i++) {
+      total += (long) dur[i] * res[i];
+    }
     for (int k = 0; k < m; k++) {
-      if (k == 0 || windowStarts[k] != windowStarts[k - 1]) {
-        windowsFrom(windowStarts[k], n, capacity, maxEnergy);
+      int t1 = windowStarts[k];
+      if (k > 0 && t1 == windowStarts[k - 1]) {
+        continue;
       }
+      for (; pe < n && est[byEst[pe]] < t1; pe++) {
+        started += res[byEst[pe]];
+        startedEst += (long) res[byEst[pe]] * est[byEst[pe]];
+      }
+      for (; pl < n && lst[byLst[pl]] < t1; pl++) {
+        int i = byLst[pl];
+        if (lst[i] < ect[i]) {
+          slope += res[i];
+        }
+      }
+      for (; pc < n && ect[byEct[pc]] <= t1; pc++) {
+        int i = byEct[pc];
+        total -= (long) dur[i] * res[i];
+        started -= res[i];
+        startedEst -= (long) res[i] * est[i];
+        if (lst[i] < ect[i]) {
+          slope -= res[i];
+        }
+      }
+      long remaining = total - (started * t1 - startedEst);
+      windowsFrom(t1, n, capacity, maxEnergy, remaining, slope);
     }
     for (int i = 0; i < n; i++) {
       if (update[i] > est[i]) {
@@ -146,16 +192,17 @@ class EnergeticReasoning {
       keys[AT_LST_DUR][i] = (long) lst[i] + dur[i];
       keys[AT_LST_ECT][i] = (long) lst[i] + ect[i];
       keys[AT_ECT][i] = ect[i];
+      keys[BY_EST][i] = est[i];
     }
     if (ordered != n) {
-      for (int k = 0; k < STREAMS; k++) {
+      for (int k = 0; k <= STREAMS; k++) {
         for (int i = 0; i < n; i++) {
           orders[k][i] = i;
         }
       }
       ordered = n;
     }
-    for (int k = 0; k < STREAMS; k++) {
+    for (int k = 0; k <= STREAMS; k++) {
       sortBy(keys[k], orders[k], n);
     }
   }
@@ -191,13 +238,17 @@ class EnergeticReasoning {
     };
   }
 
-  // the first position from p of a task in the stream for windows starting at t1, or n
+  // the first position from p of a task in the stream for windows starting at t1 whose breakpoint
+  // is before the horizon, or n
   private int skip(int stream, int p, int n, int t1) {
     int[] order = orders[stream];
     while (p < n && !inStream(stream, order[p], t1)) {
+      if (time(stream, p, t1) >= horizon) {
+        return n;
+      }
       p++;
     }
-    return p;
+    return p < n && time(stream, p, t1) < horizon ? p : n;
   }
 
   private long time(int stream, int p, int t1) {
@@ -205,22 +256,36 @@ class EnergeticReasoning {
     return stream == AT_LST_ECT ? key - t1 : key;
   }
 
-  // checks the windows [t1, t2) for every breakpoint t2 of the minimal energy
-  private void windowsFrom(int t1, int n, long capacity, long maxEnergy) {
-    long slope = 0;
-    // minimal energy of the tasks in [t1, infinity) not yet counted in the window
-    long remaining = 0;
-    for (int i = 0; i < n; i++) {
-      if (t1 < ect[i]) {
-        remaining += (long) res[i] * Math.min(dur[i], ect[i] - t1);
-        if (lst[i] < t1) {
-          slope += res[i];
-        }
+  // the first position in the stream whose key is larger than bound
+  private int firstAbove(int stream, long bound, int n) {
+    long[] key = keys[stream];
+    int[] order = orders[stream];
+    int lo = 0;
+    int hi = n;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (key[order[mid]] > bound) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
       }
     }
-    for (int k = 0; k < STREAMS; k++) {
-      next[k] = skip(k, 0, n, t1);
-    }
+    return lo;
+  }
+
+  // checks the windows [t1, t2) for every breakpoint t2 of the minimal energy; remaining is the
+  // minimal energy of the tasks in [t1, infinity) and slope its slope at t1
+  private void windowsFrom(
+      int t1, int n, long capacity, long maxEnergy, long remaining, long slope) {
+    // every window [t1, t2) with capacity * (t2 - t1) >= remaining + maxEnergy has a slack of at
+    // least maxEnergy
+    horizon = t1 + (remaining + maxEnergy + capacity - 1) / capacity;
+    // a task enters a stream only at a key past these bounds: lst >= t1 for AT_LST, lst + p > est
+    // >= t1 for AT_LST_DUR, lst + ect > 2 * t1 for AT_LST_ECT and ect > t1 for AT_ECT
+    next[AT_LST] = skip(AT_LST, firstAbove(AT_LST, t1 - 1L, n), n, t1);
+    next[AT_LST_DUR] = skip(AT_LST_DUR, firstAbove(AT_LST_DUR, t1, n), n, t1);
+    next[AT_LST_ECT] = skip(AT_LST_ECT, firstAbove(AT_LST_ECT, 2L * t1, n), n, t1);
+    next[AT_ECT] = skip(AT_ECT, firstAbove(AT_ECT, t1, n), n, t1);
     long energy = 0;
     long previous = t1;
     while (true) {
