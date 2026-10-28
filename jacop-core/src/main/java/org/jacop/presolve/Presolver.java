@@ -130,6 +130,21 @@ public final class Presolver {
   }
 
   /**
+   * Probes the store in the rounds of rules, after the standard rules; see {@link ProbingRule}. Off
+   * by default.
+   *
+   * @param mode what probing tries; {@link Probing.Mode#OFF} adds nothing.
+   * @param budgetMillis the time probing may take over all rounds, in milliseconds.
+   * @return this presolver.
+   */
+  public Presolver probing(Probing.Mode mode, long budgetMillis) {
+    if (mode != Probing.Mode.OFF) {
+      builder.rule(new ProbingRule(mode, budgetMillis));
+    }
+    return this;
+  }
+
+  /**
    * Switches the dual reductions on; see {@link Derivation.Builder#dualReductions(boolean)}. They
    * keep one solution and every optimum but not every solution, so they are only for a search that
    * wants one solution or an optimum.

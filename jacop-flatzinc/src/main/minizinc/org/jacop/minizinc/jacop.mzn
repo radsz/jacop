@@ -58,6 +58,7 @@ include "weighted_subcircuits.mzn";
 include "deviation.mzn";
 include "inter_distance.mzn";
 include "multi_inter_distance.mzn";
+include "reservoir.mzn";
 
 %% ===== JaCoP graph constraints =====
 opt bool: use_jacop_graph_constraints;

@@ -533,6 +533,15 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the wall-clock deadline of {@link #solve}.
+   *
+   * @return a {@link System#nanoTime()} value, or {@link Long#MAX_VALUE} for none
+   */
+  public long deadline() {
+    return deadline;
+  }
+
+  /**
    * Limits the total number of conflicts.
    *
    * @param limit the conflict count at which {@link #solve} returns {@link #UNKNOWN}
