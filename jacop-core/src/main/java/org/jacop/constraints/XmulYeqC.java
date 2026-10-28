@@ -130,7 +130,8 @@ public class XmulYeqC extends AbstractConstraintXandY implements Copyable<XmulYe
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // notSatisfied() looks at the holes of the domains once a factor is fixed
+    return IntDomain.ANY;
   }
 
   @Override
@@ -165,7 +166,21 @@ public class XmulYeqC extends AbstractConstraintXandY implements Copyable<XmulYe
       return true;
     }
     Interval r = IntDomain.mulBounds(x.min(), x.max(), y.min(), y.max());
-    return c < r.min() || c > r.max();
+    if (c < r.min() || c > r.max()) {
+      return true;
+    }
+    // a fixed factor leaves one value for the other one
+    if (x.singleton()) {
+      return missingFactor(x.value(), y);
+    }
+    if (y.singleton()) {
+      return missingFactor(y.value(), x);
+    }
+    return false;
+  }
+
+  private boolean missingFactor(int a, IntVar other) {
+    return a == 0 ? c != 0 : c % a != 0 || !other.domain.contains(c / a);
   }
 
   @Override

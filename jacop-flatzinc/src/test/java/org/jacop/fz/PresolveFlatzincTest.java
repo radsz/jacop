@@ -145,6 +145,43 @@ class PresolveFlatzincTest {
     assertThat(solve(model, "check")).as(model).isEqualTo(solve(model, "off"));
   }
 
+  /**
+   * With -sat the clauses go to the SAT solver after presolve has preprocessed them; the front end
+   * prints the same solutions in the same order.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameWithPresolveAndSat(String model) {
+    assertThat(solve(model, "check", "-sat")).as(model).isEqualTo(solve(model, "off", "-sat"));
+  }
+
+  /**
+   * Automatic tabulation keeps the solutions: a table holds exactly the solutions of the
+   * constraints it replaces. The order can differ, since a group of auxiliary variables labelled by
+   * the default search may become one table.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameSolutionsWithTabling(String model) {
+    List<String> expected = solutions(solve(model, "off"));
+    List<String> found = solutions(solve(model, "check", "--presolve-tabling"));
+    if (expected.size() >= LIMIT) {
+      // the first solutions in another order are other solutions
+      assertThat(found).as(model).hasSameSizeAs(expected);
+    } else {
+      assertThat(found).as(model).isEqualTo(expected);
+    }
+  }
+
+  /** The printed solutions, sorted, and the line that ends the output. */
+  private static List<String> solutions(String printed) {
+    List<String> result = new ArrayList<>(Arrays.asList(printed.split("----------\\R")));
+    String last = result.remove(result.size() - 1);
+    result.sort(null);
+    result.add(last);
+    return result;
+  }
+
   private static final String DUAL_MODEL =
       """
       var 0..9: x :: output_var;
@@ -194,23 +231,19 @@ class PresolveFlatzincTest {
   }
 
   /** Solves a model with the front end, as from the command line, and returns what it prints. */
-  private static String solve(String model, String presolve) {
+  private static String solve(String model, String presolve, String... options) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream out = System.out;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop()
-          .callMain(
-              new String[] {
-                "-a",
-                "-n",
-                String.valueOf(LIMIT),
-                "--default-search",
-                "input",
-                "--presolve",
-                presolve,
-                DIR + model
-              });
+      List<String> args =
+          new ArrayList<>(
+              List.of(
+                  "-a", "-n", String.valueOf(LIMIT), "--default-search", "input", "--presolve"));
+      args.add(presolve);
+      args.addAll(Arrays.asList(options));
+      args.add(DIR + model);
+      new Fz2jacop().callMain(args.toArray(new String[0]));
     } finally {
       System.setOut(out);
     }

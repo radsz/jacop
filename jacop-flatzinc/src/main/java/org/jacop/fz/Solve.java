@@ -50,8 +50,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -71,6 +71,7 @@ import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
+import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Entry;
 import org.jacop.presolve.ImpliedConstraints;
@@ -79,6 +80,7 @@ import org.jacop.presolve.Presolver;
 import org.jacop.presolve.Probing;
 import org.jacop.presolve.ProbingRule;
 import org.jacop.presolve.Rule;
+import org.jacop.presolve.Tabling;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
@@ -87,6 +89,7 @@ import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
 import org.jacop.search.Indomain;
+import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
@@ -100,6 +103,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
@@ -113,6 +117,7 @@ import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
 import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
+import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMin;
 
@@ -162,6 +167,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   FreeSearch.Status freeSearchStatus;
   LcgSolver lcg;
   int lcgStatus;
+
+  // the linear relaxation (--lp), or null
+  private LinearRelaxation linearRelaxation;
   // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
   // LcgSolver is between two runs and holds no solution
   int lcgLastCost;
@@ -377,9 +385,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     options = opt;
     dictionary = table;
     output = table;
+    presolveObjective(node);
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolveObjective(node);
       presolve(node);
+      if (sat.collecting() && !opt.lcg()) {
+        postClausesToSat();
+      }
+    }
+
+    if (opt.lp()) {
+      imposeLinearRelaxation(node);
     }
 
     if (opt.debug()) {
@@ -414,9 +429,72 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
+   * with the objective of the solve item.
+   *
+   * @param node the solve item.
+   */
+  private void imposeLinearRelaxation(ASTSolveItem node) {
+    IntVar objective = null;
+    boolean maximize = false;
+    if (node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind) {
+      int k = getKind(kind.getKind());
+      if (k != 0 && kind.jjtGetChild(0) instanceof ASTSolveExpr expr) {
+        objective =
+            switch (expr.getType()) {
+              case 0 -> dictionary.getVariable(expr.getIdent());
+              case 1 -> {
+                IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+                yield a == null ? null : a[expr.getIndex()];
+              }
+              default -> null;
+            };
+        maximize = k == 2;
+      }
+    }
+    long start = timer.getCpuTime();
+    linearRelaxation = LinearRelaxation.of(store, objective, maximize);
+    if (linearRelaxation != null) {
+      store.impose(linearRelaxation);
+    }
+    if (options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: lpTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: lpRows="
+              + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat-end");
+    }
+  }
+
+  /** Prints the counts of the linear relaxation (--lp). */
+  private void printLinearRelaxationStatistics() {
+    LinearRelaxation r = linearRelaxation;
+    if (r == null || !options.getStatistics()) {
+      return;
+    }
+    IO.println(
+        "%%%mzn-stat: lpCalls="
+            + r.calls
+            + "\n%%%mzn-stat: lpPivots="
+            + r.pivots()
+            + "\n%%%mzn-stat: lpLimits="
+            + r.limits
+            + "\n%%%mzn-stat: lpInfeasible="
+            + r.infeasible
+            + "\n%%%mzn-stat: lpFailures="
+            + r.failures
+            + "\n%%%mzn-stat: lpPrunings="
+            + r.prunings
+            + "\n%%%mzn-stat-end");
+  }
+
+  /**
    * Objective presolve: imposes the objective, expanded through its defining equations and shifted
    * by the exactly-one sets of the model, as a redundant equation in the loaded store, so presolve
-   * copies it into the derived store. See {@link ObjectivePresolve}.
+   * copies it into the derived store. It runs with and without --presolve, since it only adds
+   * redundant constraints; their degree weight is 0, so static variable orders do not change. See
+   * {@link ObjectivePresolve}.
    *
    * @param node the solve item.
    */
@@ -448,19 +526,92 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     ObjectivePresolve presolve =
         new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
-    LinearInt equation = presolve.reformulate();
-    if (equation != null) {
-      store.impose(equation);
+    List<Constraint> reformulation = presolve.reformulate(store);
+    if (reformulation.size() == 1 && !halves(presolve, reformulation.getFirst())) {
+      // no cost variables and an equation as long as the objective's definition: the stronger root
+      // bound alone did not pay on vrp under lazy clause generation (four of six instances worse)
+      reformulation = List.of();
+    }
+    Constraint replaced =
+        reformulation.isEmpty()
+            ? null
+            : objectiveDefinition(objective, presolve, reformulation.getLast());
+    if (replaced != null) {
+      replaced.removeConstraint();
+    }
+    for (Constraint c : reformulation) {
+      store.impose(c.setDegreeWeight(0));
+    }
+    if (!reformulation.isEmpty()) {
+      objectiveCosts = presolve.costVariables().toArray(new IntVar[0]);
+      objectiveMinimized = k == 1;
     }
     if (options.getStatistics()) {
       IO.println(
           "%%%mzn-stat: presolveObjectiveTime="
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: presolveObjectiveExpanded="
-              + (equation == null ? 0 : presolve.expanded())
+              + (reformulation.isEmpty() ? 0 : presolve.expanded())
               + "\n%%%mzn-stat: presolveObjectiveShifted="
-              + (equation == null ? 0 : presolve.shifted()));
+              + (reformulation.isEmpty() ? 0 : presolve.shifted())
+              + "\n%%%mzn-stat: presolveObjectiveReplaced="
+              + (replaced == null ? 0 : 1));
     }
+  }
+
+  /** True if the equation has at most half as many variables as the objective's definition. */
+  private static boolean halves(ObjectivePresolve presolve, Constraint equation) {
+    IntVar[] vars = presolve.definitionVariables();
+    return vars != null && 2L * equation.arguments().size() <= vars.length;
+  }
+
+  /**
+   * The constraint of the objective whose variables are those of the objective's defining equation,
+   * if exactly one constraint has them and the reformulated equation has no more variables. The
+   * reformulated equation implies it, so it is replaced instead of kept next to the reformulated
+   * equation: on vrp under lazy clause generation the two equations of 1,800 terms halve the node
+   * rate. A longer reformulated equation, expanded through intermediate variables, is only added:
+   * on routing-flexible it propagates less than the chain of definitions it expands, and replacing
+   * the definition lost a proof.
+   */
+  private static Constraint objectiveDefinition(
+      IntVar objective, ObjectivePresolve presolve, Constraint equation) {
+    IntVar[] vars = presolve.definitionVariables();
+    if (vars == null || equation.arguments().size() > vars.length) {
+      return null;
+    }
+    Set<Var> definition = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : vars) {
+      if (!v.singleton()) {
+        definition.add(v);
+      }
+    }
+    Set<Constraint> candidates = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint[] cs : objective.dom().modelConstraints) {
+      if (cs != null) {
+        for (Constraint c : cs) {
+          if (c != null) {
+            candidates.add(c);
+          }
+        }
+      }
+    }
+    Constraint found = null;
+    for (Constraint c : candidates) {
+      Set<Var> scope = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Var v : c.arguments()) {
+        if (!v.singleton()) {
+          scope.add(v);
+        }
+      }
+      if (scope.equals(definition)) {
+        if (found != null) {
+          return null;
+        }
+        found = c;
+      }
+    }
+    return found;
   }
 
   /**
@@ -476,6 +627,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .probing(options.probe(), options.probeBudget());
+    Var[] frozen = frozenVariables(node);
+    if (frozen != null) {
+      // the frozen variables, and those the front end uses outside the constraints
+      Set<Var> keep = Collections.newSetFromMap(new IdentityHashMap<>());
+      keep.addAll(Arrays.asList(frozen));
+      keep.addAll(Arrays.asList(keptVariables(node)));
+      presolver.keep(keep.toArray(new Var[0])).solutionPreserving(false);
+    }
+    if (sat.collecting()) {
+      // the clauses for the SAT solver of -sat or --lcg, kept outside the store
+      presolver.clauses(sat.collectedClauses());
+    }
+    Tabling tabling = options.presolveTabling() ? new Tabling() : null;
+    if (tabling != null) {
+      presolver.rule(tabling);
+    }
     dualReductions(presolver, node);
     ImpliedConstraints implied = new ImpliedConstraints();
     if (options.presolveImplied()) {
@@ -484,7 +651,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
-      printPresolveStatistics(d, implied.imposed(), time);
+      printPresolveStatistics(d, tabling, implied.imposed(), time);
     }
     switch (d.outcome()) {
       case INFEASIBLE -> throw Store.failException;
@@ -493,11 +660,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       case DERIVED -> {
         VarMap map = completeMap(d);
-        for (IntVar[][] clause : sat.collectedClauses()) {
-          clause[0] = map.get(clause[0]);
-          clause[1] = map.get(clause[1]);
-        }
         dictionary = dictionary.mapTo(map);
+        if (!d.relaxed().isEmpty()) {
+          // half-reified Booleans: any value completes a solution, and postsolve sets them
+          Set<Var> relaxed = Collections.newSetFromMap(new IdentityHashMap<>());
+          d.relaxed().forEach(v -> relaxed.add(map.get(v)));
+          dictionary.removeFromDefaultSearch(relaxed);
+        }
         store = d.child();
         presolve = d;
       }
@@ -579,6 +748,70 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * The variables whose values must be those of a solution of the loaded model: the output
+   * variables, the objective and the variables of clauses posted after presolve. Returns null when
+   * presolve has to keep every solution, under all-solution or several-solution satisfaction
+   * search, or when an on_restart model reads variables between runs.
+   */
+  private Var[] frozenVariables(ASTSolveItem node) {
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(node.jjtGetNumChildren() - 1);
+    int solve = getKind(kind.getKind());
+    boolean severalSolutions = options.getAll() || options.getNumberSolutions() > 1;
+    if (solve == 0 && severalSolutions || dictionary.onRestart != null) {
+      return null;
+    }
+    Set<Var> frozen = Collections.newSetFromMap(new IdentityHashMap<>());
+    frozen.addAll(dictionary.outputVariables);
+    for (OutputArrayAnnotation a : dictionary.outputArray) {
+      frozen.addAll(Arrays.asList(a.getArray()));
+    }
+    if (solve != 0) {
+      ASTSolveExpr cost = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (cost.getType() == 0) {
+        Var v = dictionary.getVariable(cost.getIdent());
+        frozen.add(v != null ? v : dictionary.getFloatVariable(cost.getIdent()));
+      } else {
+        Var[] a = dictionary.getVariableArray(cost.getIdent());
+        frozen.add(a != null ? a[cost.getIndex()] : null);
+        Var[] fa = dictionary.getVariableFloatArray(cost.getIdent());
+        frozen.add(fa != null ? fa[cost.getIndex()] : null);
+      }
+    }
+    addSearchVariables(node, frozen);
+    frozen.remove(null);
+    return frozen.toArray(new Var[0]);
+  }
+
+  /**
+   * Adds the variables of the search annotations: a half-reified Boolean that the search sets to
+   * false no longer prunes with the negation of its constraint, so the search tree grows.
+   */
+  private void addSearchVariables(ASTSolveItem node, Set<Var> frozen) {
+    int count = node.jjtGetNumChildren();
+    if (count < 2) {
+      return;
+    }
+    SearchItem<T> si = new SearchItem<>(store, dictionary);
+    if (count == 2) {
+      si.searchParameters(node, 0);
+    } else {
+      si.searchParametersForSeveralAnnotations(node, 0);
+    }
+    addSearchVariables(si, frozen);
+  }
+
+  private static void addSearchVariables(SearchItem<?> si, Set<Var> frozen) {
+    if (si.vars() != null) {
+      frozen.addAll(Arrays.asList(si.vars()));
+    }
+    if (si.getSearchItems() != null) {
+      for (SearchItem<?> sub : si.getSearchItems()) {
+        addSearchVariables(sub, frozen);
+      }
+    }
+  }
+
+  /**
    * Switches presolve's dual reductions on when the search wants one solution or an optimum: they
    * keep both but not every solution, so they stay off for all solutions of a satisfaction problem
    * (-a, -n), and with a float or constant objective. With -a an optimisation prints improving
@@ -645,20 +878,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           return null;
         }
         V copy = d.get(v);
-        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> constant(d, x));
+        return copy != null ? copy : (V) fixed.computeIfAbsent(v, x -> absent(d, x));
       }
     };
   }
 
-  private static Var constant(Derivation d, Var v) {
-    Var copy = v.copyTo(d.child());
-    if (d.entry(v) instanceof Entry.Eliminated && copy instanceof IntVar c) {
-      c.domain.in(d.child().level, c, c.min(), c.min());
+  /**
+   * The counterpart of a variable the child has none of: a copy of a fixed variable, and a constant
+   * for a variable presolve removed, whose value postsolve gives, so search does not branch on it.
+   */
+  private static Var absent(Derivation d, Var x) {
+    if (d.entry(x) instanceof Entry.Eliminated && x instanceof IntVar v) {
+      return new IntVar(d.child(), v.min(), v.min());
     }
-    return copy;
+    return x.copyTo(d.child());
   }
 
-  private void printPresolveStatistics(Derivation d, int implied, long time) {
+  /** Gives the clauses kept for the SAT solver of -sat to a SAT solver in the searched store. */
+  private void postClausesToSat() {
+    SatTranslation translation = new SatTranslation(store);
+    translation.impose();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      translation.generateClause(clause[0], clause[1]);
+    }
+    sat.collectedClauses().clear();
+  }
+
+  private void printPresolveStatistics(Derivation d, Tabling tabling, int implied, long time) {
     StringBuilder s = new StringBuilder();
     s.append("%%%mzn-stat: presolveTime=").append(time / 1_000_000_000.0).append('\n');
     s.append("%%%mzn-stat: presolveOutcome=")
@@ -677,6 +923,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveSubstituted=").append(d.substitutions()).append('\n');
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
+      s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
     }
     Derivation.DualStatistics dual = d.dualStatistics();
     if (dual != null) {
@@ -684,7 +931,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
+    Derivation.ClauseStatistics cs = d.clauseStatistics();
+    if (cs != null && cs.clauses() > 0) {
+      s.append("%%%mzn-stat: presolveClausesBefore=").append(cs.clauses()).append('\n');
+      s.append("%%%mzn-stat: presolveClausesAfter=").append(cs.clausesAfter()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseFixed=").append(cs.fixed()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseEquivalent=").append(cs.equivalent()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseEliminated=").append(cs.eliminated()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseSubsumed=").append(cs.subsumed()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseStrengthened=").append(cs.strengthened()).append('\n');
+      s.append("%%%mzn-stat: presolveClauseBlocked=").append(cs.blocked()).append('\n');
+    }
+    d.reductions()
+        .forEach(
+            (rule, n) ->
+                s.append("%%%mzn-stat: presolve")
+                    .append(Character.toUpperCase(rule.charAt(0)))
+                    .append(rule, 1, rule.length())
+                    .append('=')
+                    .append(n)
+                    .append('\n'));
+    if (tabling != null) {
+      Tabling.Statistics t = tabling.statistics();
+      s.append("%%%mzn-stat: presolveTables=").append(t.tables()).append('\n');
+      s.append("%%%mzn-stat: presolveTabledConstraints=").append(t.replaced()).append('\n');
+      s.append("%%%mzn-stat: presolveTableTuples=").append(t.tuples()).append('\n');
+      s.append("%%%mzn-stat: presolveTablingNodes=").append(t.nodes()).append('\n');
+    }
     for (Rule rule : d.rules()) {
+      if (rule instanceof BooleanProducts p) {
+        s.append("%%%mzn-stat: presolveBooleanProducts=").append(p.replaced()).append('\n');
+      }
       if (rule instanceof ProbingRule p) {
         Probing.Result probed = p.result();
         s.append("%%%mzn-stat: probeTime=").append(probed.timeNanos() / 1e9).append('\n');
@@ -1203,7 +1480,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       postCollectedClauses();
       return false;
     }
+    mirrorSetVariables();
     return true;
+  }
+
+  /**
+   * Mirrors every set variable by integer variables, the membership of its elements and its
+   * cardinality, whose atoms stand for the set in the explanations of the set constraints.
+   */
+  private void mirrorSetVariables() {
+    List<SetVar> sets = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof SetVar s && !s.singleton()) {
+        sets.add(s);
+      }
+    }
+    for (SetVar s : sets) {
+      store.impose(new SetMirror(s));
+    }
   }
 
   /**
@@ -1225,8 +1519,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return "the objective is not an integer variable";
     }
     for (int i = 0; i < store.size(); i++) {
-      if (!(store.vars[i] instanceof IntVar)) {
-        return "the model has float or set variables";
+      if (!(store.vars[i] instanceof IntVar) && !(store.vars[i] instanceof SetVar)) {
+        return "the model has float variables";
       }
     }
     return null;
@@ -1248,14 +1542,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         free && "none".equals(options.freeConfig("interleave", "restart"))
             ? null
             : annotationSelect(annotatedSearch);
+    if (free && annotated == null && !"none".equals(options.freeConfig("interleave", "restart"))) {
+      annotated = lcgDefaultSelect(costVar);
+    }
+    if (free && annotated != null) {
+      annotated = withObjectiveCosts(annotated);
+    }
     lcg.setAnnotation(annotated, free);
     if (free) {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
       // core-guided search for a sum objective before branch and bound: its share of the time,
-      // and the conflicts one call of the solver may take before it stops
+      // and the conflicts one call of the solver may take before it stops. With cost variables
+      // first, branch and bound finds near-optimal solutions at once and needs the time more:
+      // jp-encoding data300 is proved in 1.7 s with a share of 0.1, in 25 s with 0.5.
+      boolean costsFirst = objectiveCosts != null && objectiveCosts.length > 0;
       lcg.setCoreSearch(
-          Double.parseDouble(options.freeConfig("lcg-core", "0.5")),
+          Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
     }
@@ -1268,6 +1571,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     return numberSolutions > 0;
+  }
+
+  /**
+   * The branching that the runs of LCG free search alternate with when the model has no search
+   * annotation: dom/wdeg on the default search variables, smallest value first. The store's
+   * constraints fail under LCG too, so their weights grow as without learning. Activity alone
+   * misses first solutions this finds, for example on cutstock, where each item's demand is a sum
+   * over hundreds of variables.
+   */
+  private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar[] group : List.of(searchVars.getIntVars(), searchVars.getBoolVars())) {
+      for (IntVar x : group) {
+        if (x != costVar) {
+          vars.add(x);
+        }
+      }
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    SimpleSelect<IntVar> select =
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[0]), new WeightedDegree<>(store), new IndomainMin<>());
+    // ties go to the first variable met, without the input-order lookups per tie
+    select.inputOrderTieBreaking = false;
+    return select;
   }
 
   private void printLcgStatistics(boolean interrupted) {
@@ -1367,6 +1699,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && defaultSearch
         && relaxVars == null
         && (costVar == null || costVar instanceof IntVar);
+  }
+
+  // the cost variables of objective presolve, searched first under free search; null if none
+  private IntVar[] objectiveCosts;
+  private boolean objectiveMinimized;
+
+  /**
+   * The annotation that free search alternates with, preceded by the cost variables of objective
+   * presolve, cheapest value first (largest when maximising). On jp-encoding data1000 (60 s, --lcg
+   * -f) the search then reaches 36,011 instead of 40,489 (optimum 35,931): each byte takes its
+   * cheapest encoding unless that is infeasible, so the first solutions are already good.
+   */
+  private SelectChoicePoint<? extends Var> withObjectiveCosts(
+      SelectChoicePoint<? extends Var> annotated) {
+    if (objectiveCosts == null || objectiveCosts.length == 0) {
+      return annotated;
+    }
+    SelectChoicePoint<IntVar> costs =
+        new SimpleSelect<>(
+            objectiveCosts, null, objectiveMinimized ? new IndomainMin<>() : new IndomainMax<>());
+    return annotated == null ? costs : new SequenceSelect(List.of(costs, annotated));
   }
 
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
@@ -1473,7 +1826,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // all solutions are found in one run without restarts, which interleaving would give to the
     // annotation
     SelectChoicePoint<? extends Var> annotated =
-        "none".equals(interleave) || allSolutions ? null : annotationSelect(annotatedSearch);
+        "none".equals(interleave) || allSolutions
+            ? null
+            : withObjectiveCosts(annotationSelect(annotatedSearch));
     if (annotated != null) {
       // free search completes what the annotation leaves unfixed
       builder.alternateWith(
@@ -1808,6 +2163,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param result whether a solution was found
    */
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
+
+    printLinearRelaxationStatistics();
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
@@ -2339,6 +2696,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
+
+    printLinearRelaxationStatistics();
 
     if (lcg != null) {
       printLcgStatistics(interrupted);

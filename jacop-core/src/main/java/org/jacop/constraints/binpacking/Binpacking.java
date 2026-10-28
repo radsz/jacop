@@ -33,6 +33,8 @@ package org.jacop.constraints.binpacking;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -87,6 +89,27 @@ public class Binpacking extends Constraint
 
   /** It specifies a list of variables which define bin load. */
   private final IntVar[] load;
+
+  /** The number of items in each bin, or null when the constraint has no cardinality variables. */
+  private final IntVar[] card;
+
+  /** Number of items given for each entry of item, which merges items sharing a bin variable. */
+  private final int[] itemCount;
+
+  /** Number of items given for each entry of zeroWeightBins. */
+  private final int[] zeroWeightCount;
+
+  /** Number of items given to the constraint, weight 0 included. */
+  private final int totalCount;
+
+  /** True when no two items share a bin variable, so the weight-based cardinality rules apply. */
+  private final boolean unitItems;
+
+  /**
+   * True if the cardinality rules also run without card variables. Off by default: on bin packing
+   * benchmarks without cardinalities they cut few failures and cost 10-15% per node with many bins.
+   */
+  private boolean cardinalityReasoning;
 
   private final LinkedHashSet<IntVar> itemQueue = new LinkedHashSet<>();
   private final LinkedHashSet<IntVar> binQueue = new LinkedHashSet<>();
@@ -148,9 +171,38 @@ public class Binpacking extends Constraint
    * @param minBin minimal index of a bin; overrides the value computed from bin variable domains
    */
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
+    this(bin, load, w, minBin, (IntVar[]) null);
+  }
+
+  /**
+   * It constructs the binpacking constraint with the number of items in each bin (bin packing with
+   * cardinality, Schaus et al. CP 2012).
+   *
+   * @param bin which are constrained to define bin for item i.
+   * @param load which are constrained to define load for bin i.
+   * @param w which define size of item i.
+   * @param minBin minimal index of a bin; overrides the value computed from bin variable domains
+   * @param card the number of items in bin i, items of weight 0 included; null for none.
+   */
+  public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, IntVar[] card) {
 
     checkInputForNullness(new String[] {"bin", "load", "w"}, bin, load, new Object[] {w});
     checkInputForDuplication("load", load);
+    if (card != null) {
+      checkInputForNullness("card", card);
+      if (card.length != load.length) {
+        throw new IllegalArgumentException(
+            "Constraint BinPacking has arguments load and card that are of different sizes");
+      }
+      Set<IntVar> others = new HashSet<>(Arrays.asList(bin));
+      others.addAll(Arrays.asList(load));
+      for (IntVar c : card) {
+        if (others.contains(c)) {
+          throw new IllegalArgumentException(
+              "Constraint BinPacking has a card variable that is also a bin or load variable");
+        }
+      }
+    }
     checkInput(w, t -> t >= 0, "weight for item is not >=0");
 
     if (bin.length != w.length) {
@@ -195,6 +247,7 @@ public class Binpacking extends Constraint
     }
 
     this.load = Arrays.copyOf(load, load.length);
+    this.card = card == null ? null : Arrays.copyOf(card, card.length);
     this.sizes = new int[item.length + load.length];
     this.counts = new int[item.length + load.length];
 
@@ -207,7 +260,31 @@ public class Binpacking extends Constraint
         Var.positionMapping(
             Arrays.stream(item).map(BinItem::bin).toArray(IntVar[]::new), false, this.getClass());
 
-    setScope(Stream.concat(Arrays.stream(item).map(BinItem::bin), Arrays.stream(load)));
+    Map<IntVar, Integer> occurrences = new HashMap<>();
+    for (IntVar b : bin) {
+      occurrences.merge(b, 1, Integer::sum);
+    }
+    this.itemCount = Arrays.stream(item).mapToInt(it -> occurrences.get(it.bin())).toArray();
+    this.zeroWeightCount = Arrays.stream(zeroWeightBins).mapToInt(occurrences::get).toArray();
+    this.totalCount = bin.length;
+    this.unitItems = Arrays.stream(itemCount).allMatch(c -> c == 1);
+    int m = load.length;
+    this.packedCount = new int[m];
+    this.required = new long[m];
+    this.candidateCount = new int[m];
+    this.candidateStart = new int[m + 1];
+    this.zeroCandidates = new int[m];
+    this.cardMin = new long[m];
+    this.cardMax = new long[m];
+
+    // with card variables the items of weight 0 are counted, so their bins are in the scope
+    Stream<Var> scope =
+        Stream.concat(Arrays.stream(item).<Var>map(BinItem::bin), Arrays.stream(load));
+    if (card != null) {
+      scope =
+          Stream.concat(scope, Stream.concat(Arrays.stream(zeroWeightBins), Arrays.stream(card)));
+    }
+    setScope(scope);
   }
 
   /**
@@ -241,10 +318,38 @@ public class Binpacking extends Constraint
    * @param minBin minimum bin number to consider.
    * @param lbPruning flag indicating whether to enable lower bound pruning.
    */
-  @Builder
   public Binpacking(IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean lbPruning) {
-    this(bin, load, w, minBin);
+    this(bin, load, w, minBin, lbPruning, null);
+  }
+
+  /**
+   * It constructs a binpacking constraint.
+   *
+   * @param bin array of variables representing bin assignment for each item.
+   * @param load array of variables representing the load in each bin.
+   * @param w array of weights for each item.
+   * @param minBin minimum bin number to consider.
+   * @param lbPruning flag indicating whether to enable lower bound pruning.
+   * @param card the number of items in each bin, items of weight 0 included; null for none.
+   */
+  @Builder
+  public Binpacking(
+      IntVar[] bin, IntVar[] load, int[] w, int minBin, boolean lbPruning, IntVar[] card) {
+    this(bin, load, w, minBin, card);
     this.lbPruning = lbPruning;
+  }
+
+  /**
+   * It switches on the cardinality rules for a constraint without card variables: bounds on the
+   * number of items of each bin derived from the loads and from the total number of items, which
+   * tighten the loads and remove items from bins (Schaus et al., CP 2012).
+   *
+   * @param on true to use the rules.
+   * @return this constraint.
+   */
+  public Binpacking cardinalityReasoning(boolean on) {
+    this.cardinalityReasoning = on;
+    return this;
   }
 
   /** Rule "Pack All" -- applied only on first consistency check. */
@@ -458,6 +563,9 @@ public class Binpacking extends Constraint
         processBin(store, i);
       }
       applyLoadAndSizeCoherence(store);
+      if (todo.isEmpty() && (cardinalityReasoning || card != null)) {
+        applyCardinality(store);
+      }
     } while (!todo.isEmpty());
     if (lbPruning) {
       if (rootLevel < 0) {
@@ -467,6 +575,263 @@ public class Binpacking extends Constraint
       // during search they saved few failures for 10-30% more time per node.
       strongBinCountBound = store.level == rootLevel;
       lbNumberBins();
+    }
+  }
+
+  /** Number of packed items of each bin (cardinality rules). */
+  private final int[] packedCount;
+
+  /** Weight of the packed items of each bin (cardinality rules). */
+  private final long[] required;
+
+  /** Number of candidate items of positive weight of each bin (cardinality rules). */
+  private final int[] candidateCount;
+
+  /** Start of each bin's candidates in candidates, which lists them by decreasing weight. */
+  private final int[] candidateStart;
+
+  /** Number of candidate items of weight 0 of each bin (cardinality rules). */
+  private final int[] zeroCandidates;
+
+  /** Bounds on the number of items in each bin (cardinality rules). */
+  private final long[] cardMin;
+
+  private final long[] cardMax;
+
+  /** Indices into item of the candidates of each bin, and their prefix sums of weights. */
+  private int[] candidates = new int[0];
+
+  private long[] prefix = new long[0];
+
+  /**
+   * Cardinality reasoning for bin packing: Schaus, Régin, Van Schaeren, Dullaert and Raa, CP 2012
+   * (bounds on the number of items in a bin from its load and back), the global count of items, and
+   * the "too big"/"too small" rules of Derval, Régin and Schaus, Constraints 23 (2018). With card
+   * variables the counts include items of weight 0; without them only the groups of items of
+   * positive weight (one per bin variable) are counted, so the rules strengthen plain bin packing.
+   */
+  private void applyCardinality(Store store) {
+    int m = load.length;
+    boolean counted = card != null;
+    Arrays.fill(packedCount, 0);
+    Arrays.fill(required, 0);
+    Arrays.fill(candidateCount, 0);
+    Arrays.fill(zeroCandidates, 0);
+    int entries = 0;
+    for (int k = 0; k < item.length; k++) {
+      IntVar b = item[k].bin();
+      int c = counted ? itemCount[k] : 1;
+      if (b.singleton()) {
+        int j = b.value() - minBinNumber;
+        packedCount[j] += c;
+        required[j] += item[k].weight();
+      } else {
+        for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
+          candidateCount[e.nextElement() - minBinNumber]++;
+          entries++;
+        }
+      }
+    }
+    if (counted) {
+      for (int z = 0; z < zeroWeightBins.length; z++) {
+        IntVar b = zeroWeightBins[z];
+        if (b.singleton()) {
+          packedCount[b.value() - minBinNumber] += zeroWeightCount[z];
+        } else {
+          for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
+            zeroCandidates[e.nextElement() - minBinNumber] += zeroWeightCount[z];
+          }
+        }
+      }
+    }
+    if (candidates.length < entries || prefix.length < entries + m) {
+      candidates = new int[entries];
+      prefix = new long[entries + m];
+    }
+    candidateStart[0] = 0;
+    for (int j = 0; j < m; j++) {
+      candidateStart[j + 1] = candidateStart[j] + candidateCount[j];
+      candidateCount[j] = 0;
+    }
+    for (int k = 0; k < item.length; k++) {
+      IntVar b = item[k].bin();
+      if (!b.singleton()) {
+        for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
+          int j = e.nextElement() - minBinNumber;
+          candidates[candidateStart[j] + candidateCount[j]++] = k;
+        }
+      }
+    }
+    // the weight-based rules count one item per candidate, so they need unit items
+    boolean unit = !counted || unitItems;
+
+    // bounds on the number of items of each bin
+    long total = counted ? totalCount : item.length;
+    long sumMin = 0;
+    long sumMax = 0;
+    for (int j = 0; j < m; j++) {
+      int s = candidateStart[j];
+      int n = candidateCount[j];
+      long candidateItems = 0;
+      long sum = 0;
+      for (int t = 0; t < n; t++) {
+        int k = candidates[s + t];
+        candidateItems += counted ? itemCount[k] : 1;
+        sum += item[k].weight();
+        prefix[s + j + t + 1] = sum; // prefix of bin j starts at s + j
+      }
+      prefix[s + j] = 0;
+      long lo = packedCount[j];
+      long hi = (long) packedCount[j] + candidateItems + zeroCandidates[j];
+      if (counted) {
+        lo = Math.max(lo, card[j].min());
+        hi = Math.min(hi, card[j].max());
+      }
+      if (unit) {
+        // fewest items reaching the minimum load: the heaviest ones
+        long r = load[j].min() - required[j];
+        if (r > 0) {
+          int a = 0;
+          while (a < n && prefix[s + j + a] < r) {
+            a++;
+          }
+          if (prefix[s + j + a] < r) {
+            throw Store.failException;
+          }
+          lo = Math.max(lo, (long) packedCount[j] + a);
+        }
+        // most items within the maximum load: the lightest ones
+        long free = load[j].max() - required[j];
+        int b = 0;
+        while (b < n && prefix[s + j + n] - prefix[s + j + n - b - 1] <= free) {
+          b++;
+        }
+        hi = Math.min(hi, (long) packedCount[j] + zeroCandidates[j] + b);
+      }
+      if (lo > hi) {
+        throw Store.failException;
+      }
+      cardMin[j] = lo;
+      cardMax[j] = hi;
+      sumMin += lo;
+      sumMax += hi;
+    }
+    // every item is in exactly one bin
+    if (sumMin > total || sumMax < total) {
+      throw Store.failException;
+    }
+    for (int j = 0; j < m; j++) {
+      long lo = Math.max(cardMin[j], total - (sumMax - cardMax[j]));
+      long hi = Math.min(cardMax[j], total - (sumMin - cardMin[j]));
+      if (counted) {
+        card[j].domain.in(store.level, card[j], clamp(lo), clamp(hi));
+        lo = Math.max(lo, card[j].min());
+        hi = Math.min(hi, card[j].max());
+      }
+      cardMin[j] = lo;
+      cardMax[j] = hi;
+    }
+    for (int j = 0; j < m; j++) {
+      applyCardinalityToBin(store, j, unit);
+    }
+  }
+
+  private void applyCardinalityToBin(Store store, int j, boolean unit) {
+    boolean counted = card != null;
+    int s = candidateStart[j];
+    int n = candidateCount[j];
+    int p = s + j; // prefix sums of bin j
+    int binIdx = j + minBinNumber;
+    long lo = cardMin[j];
+    long hi = cardMax[j];
+    long packed = packedCount[j];
+    long all = packed + zeroCandidates[j];
+    for (int t = 0; t < n; t++) {
+      all += counted ? itemCount[candidates[s + t]] : 1;
+    }
+    // counts alone: a bin at its largest count takes no more items, a bin that needs all its
+    // candidates takes them
+    if (packed >= hi || all <= lo) {
+      boolean in = packed < hi;
+      for (int t = 0; t < n; t++) {
+        IntVar b = item[candidates[s + t]].bin();
+        if (in) {
+          assignBin(store, b, binIdx);
+        } else {
+          removeBin(store, b, binIdx);
+        }
+      }
+      if (counted) {
+        for (IntVar b : zeroWeightBins) {
+          if (!b.singleton() && b.domain.contains(binIdx)) {
+            if (in) {
+              assignBin(store, b, binIdx);
+            } else {
+              removeBin(store, b, binIdx);
+            }
+          }
+        }
+      }
+      return;
+    }
+    if (counted && !unit) {
+      for (int t = 0; t < n; t++) {
+        int c = itemCount[candidates[s + t]];
+        IntVar b = item[candidates[s + t]].bin();
+        if (packed + c > hi) {
+          removeBin(store, b, binIdx);
+        } else if (all - c < lo) {
+          assignBin(store, b, binIdx);
+        }
+      }
+      return;
+    }
+    long minLoad = load[j].min();
+    long maxLoad = load[j].max();
+    long req = required[j];
+    // load bounds from the count bounds: the lightest and the heaviest candidates
+    long need = lo - packed - zeroCandidates[j];
+    if (need > 0) {
+      long lightest = prefix[p + n] - prefix[p + n - (int) need];
+      if (req + lightest > minLoad) {
+        minLoad = req + lightest;
+        load[j].domain.inMin(store.level, load[j], clamp(minLoad));
+        todo.set(j);
+      }
+    }
+    long most = hi - packed;
+    if (most < n) {
+      long heaviest = prefix[p + (int) most];
+      if (req + heaviest < maxLoad) {
+        maxLoad = req + heaviest;
+        load[j].domain.inMax(store.level, load[j], clamp(maxLoad));
+        todo.set(j);
+      }
+    }
+    // too big and too small (Derval, Régin and Schaus 2018): with the item, the bin needs at least
+    // lo - packed - 1 and takes at most hi - packed - 1 other items
+    long others = lo - packed - 1 - zeroCandidates[j];
+    int h = (int) Math.min(hi - packed - 1, n - 1L);
+    for (int t = 0; t < n; t++) {
+      int k = candidates[s + t];
+      long w = item[k].weight();
+      if (others > 0) {
+        int o = (int) others;
+        // the o lightest candidates other than t
+        long light =
+            t >= n - o
+                ? prefix[p + n] - prefix[p + n - o - 1] - w
+                : prefix[p + n] - prefix[p + n - o];
+        if (req + w + light > maxLoad) {
+          removeBin(store, item[k].bin(), binIdx);
+          continue;
+        }
+      }
+      // the h heaviest candidates other than t
+      long heavy = t < h ? prefix[p + h + 1] - w : prefix[p + h];
+      if (req + w + heavy < minLoad) {
+        removeBin(store, item[k].bin(), binIdx);
+      }
     }
   }
 
@@ -724,7 +1089,7 @@ public class Binpacking extends Constraint
   public void queueVariable(int level, Var v) {
     if (itemMap.containsKey(v)) {
       itemQueue.add((IntVar) v);
-    } else {
+    } else if (binMap.containsKey(v)) {
       binQueue.add((IntVar) v);
     }
   }
@@ -930,18 +1295,38 @@ public class Binpacking extends Constraint
 
   @Override
   public Binpacking copy(VarMap map) {
+    if (card != null) {
+      // every item again, so that the copy counts the same items
+      IntVar[] bins = new IntVar[totalCount];
+      int[] w = new int[totalCount];
+      int n = 0;
+      for (int i = 0; i < item.length; i++) {
+        for (int c = 0; c < itemCount[i]; c++) {
+          bins[n] = map.get(item[i].bin());
+          w[n++] = c == 0 ? item[i].weight() : 0;
+        }
+      }
+      for (int z = 0; z < zeroWeightBins.length; z++) {
+        for (int c = 0; c < zeroWeightCount[z]; c++) {
+          bins[n++] = map.get(zeroWeightBins[z]);
+        }
+      }
+      return new Binpacking(bins, map.get(load), w, minBinNumber, lbPruning, map.get(card));
+    }
     IntVar[] bins = new IntVar[item.length];
     int[] w = new int[item.length];
     for (int i = 0; i < item.length; i++) {
       bins[i] = map.get(item[i].bin());
       w[i] = item[i].weight();
     }
-    return new Binpacking(bins, map.get(load), w, minBinNumber, lbPruning);
+    Binpacking copy = new Binpacking(bins, map.get(load), w, minBinNumber, lbPruning);
+    copy.cardinalityReasoning = cardinalityReasoning;
+    return copy;
   }
 
   /** Bins of items of weight 0 are restricted by the first consistency; they are not arguments. */
   @Override
   public boolean canCopy() {
-    return zeroWeightBins.length == 0 || !packAll.due();
+    return card != null || zeroWeightBins.length == 0 || !packAll.due();
   }
 }

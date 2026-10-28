@@ -138,8 +138,10 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
@@ -596,6 +598,63 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new Binpacking(items, binLoad, w, 0));
 
     assertThat(store.consistency()).isFalse();
+  }
+
+  // Bins 0 and 1 take at most 3, so each holds at most one of the items 2, 2, 2 and 3; bin 2 gets
+  // at least two items and a load of at least 2 + 2. The load coherence and NoSum give only 3.
+  @Test
+  void testBinpackingCardinalityFromLoads() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 4, 3);
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 0, 3), new IntVar(store, "l1", 0, 3), new IntVar(store, "l2", 0, 9)
+    };
+    store.impose(
+        new Binpacking(items, binLoad, new int[] {2, 2, 2, 3}, 0).cardinalityReasoning(true));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(binLoad[2].min()).isEqualTo(4);
+  }
+
+  // Bin 0 holds at least two items and at most 5, so the item of size 5 cannot go there: the
+  // lightest other item makes 6 ("too big", Derval, Régin and Schaus 2018).
+  @Test
+  void testBinpackingCardinalityTooBig() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 4, 2);
+    IntVar[] binLoad = {new IntVar(store, "l0", 0, 5), new IntVar(store, "l1", 0, 10)};
+    IntVar[] card = {new IntVar(store, "c0", 2, 4), new IntVar(store, "c1", 0, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 3, 1, 1}, 0, card));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].singleton(1)).isTrue();
+  }
+
+  // The items of weight 0 are counted too: three items and two bins of at most one item each.
+  @Test
+  void testBinpackingCardinalityCountsZeroWeights() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 3, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    IntVar[] card = getIntVars(store, "card", 2, 2);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 4, 0}, 0, card));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testBinpackingCardinalityRejectsSharedVariable() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 3, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    IntVar[] card = {binLoad[0], new IntVar(store, "c1", 0, 3)};
+
+    assertThatThrownBy(() -> new Binpacking(items, binLoad, new int[] {1, 2, 3}, 0, card))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
@@ -7461,6 +7520,43 @@ class SingleConstraintTest extends TestHelper {
     store.impose(new XeqC(y, 3));
     assertThat(store.consistency()).isTrue();
     assertThat(b.max()).isZero();
+  }
+
+  // Implies(b, x >= 6) woke only on c's own consistency event, GROUND for XgteqC, so x <= 5 did
+  // not set b = 0 until x was fixed; a reification set it at once
+  @Test
+  void impliesSetsItsBooleanFalseAsSoonAsItsConstraintFails() {
+    Random random = new Random(20261027);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 9);
+      IntVar y = new IntVar(store, "y", 0, 9);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      int c = random.nextInt(10);
+      PrimitiveConstraint nested =
+          switch (random.nextInt(6)) {
+            case 0 -> new XgteqC(x, c);
+            case 1 -> new XlteqC(x, c);
+            case 2 -> new XltY(x, y);
+            case 3 -> new XlteqY(x, y);
+            case 4 -> new LinearInt(new IntVar[] {x, y}, new int[] {1, 2}, "<=", c);
+            default -> new XneqY(x, y);
+          };
+      store.impose(new Implies(b, nested));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      int lo = random.nextInt(10);
+      int hi = lo + random.nextInt(10 - lo);
+      x.domain.in(1, x, lo, hi);
+      if (random.nextBoolean()) {
+        int v = random.nextInt(10);
+        y.domain.in(1, y, v, v);
+      }
+      assertThat(store.consistency()).isTrue();
+      if (nested.notSatisfied()) {
+        assertThat(b.max()).as("trial %d, %s, x = %s, y = %s", trial, nested, x, y).isZero();
+      }
+    }
   }
 
   @Test

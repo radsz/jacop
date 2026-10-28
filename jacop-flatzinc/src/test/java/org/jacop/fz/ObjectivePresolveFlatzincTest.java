@@ -57,6 +57,7 @@ class ObjectivePresolveFlatzincTest {
 
   private static final Pattern SHIFTED = Pattern.compile("presolveObjectiveShifted=(\\d+)");
   private static final Pattern EXPANDED = Pattern.compile("presolveObjectiveExpanded=(\\d+)");
+  private static final Pattern REPLACED = Pattern.compile("presolveObjectiveReplaced=(\\d+)");
 
   /**
    * An assignment of three tasks to machines, each by an exactly-one set and one by a value literal
@@ -115,12 +116,97 @@ class ObjectivePresolveFlatzincTest {
     assertThat(out).contains("cost = 14;").contains("==========");
   }
 
+  /**
+   * jp-encoding in small: three bytes, each read as encoding 1 or 2 at a cost or as unknown (3),
+   * which costs 100 through a count of the unknown bytes. The count is expanded into the value
+   * literals, so each byte's literals are shifted by its cheapest cost.
+   */
+  private static final String ENCODING =
+      """
+      var 1..3: x1:: output_var;
+      var 1..3: x2:: output_var;
+      var 1..3: x3:: output_var;
+      array [1..3] of var int: x = [x1,x2,x3];
+      var bool: b11;
+      var bool: b12;
+      var bool: b13;
+      var bool: b21;
+      var bool: b22;
+      var bool: b23;
+      var bool: b31;
+      var bool: b32;
+      var bool: b33;
+      var 0..1: i11;
+      var 0..1: i12;
+      var 0..1: i21;
+      var 0..1: i22;
+      var 0..1: i31;
+      var 0..1: i32;
+      var 0..3: n;
+      var 0..1000: cost:: output_var:: is_defined_var;
+      constraint int_eq_reif(x1,1,b11);
+      constraint int_eq_reif(x1,2,b12);
+      constraint int_eq_reif(x1,3,b13);
+      constraint int_eq_reif(x2,1,b21);
+      constraint int_eq_reif(x2,2,b22);
+      constraint int_eq_reif(x2,3,b23);
+      constraint int_eq_reif(x3,1,b31);
+      constraint int_eq_reif(x3,2,b32);
+      constraint int_eq_reif(x3,3,b33);
+      constraint bool2int(b11,i11);
+      constraint bool2int(b12,i12);
+      constraint bool2int(b21,i21);
+      constraint bool2int(b22,i22);
+      constraint bool2int(b31,i31);
+      constraint bool2int(b32,i32);
+      constraint int_ne(x1,1);
+      constraint jacop_count(x,3,n);
+      constraint int_lin_eq([6,9,8,5,7,7,100,-1],[i11,i12,i21,i22,i31,i32,n,cost],0):: defines_var(cost);
+      solve :: int_search(x,input_order,indomain_max,complete) minimize cost;
+      """;
+
+  @Test
+  void aCountIsExpandedAndEachByteGetsACostVariable() throws IOException {
+    // objective presolve runs without --presolve too
+    String out = FlatzincTestRunner.run(tmp, ENCODING, "-s");
+    assertThat(stat(EXPANDED, out)).isEqualTo(1);
+    assertThat(stat(SHIFTED, out)).isEqualTo(3);
+    // the equation defining cost is replaced by the reformulated one
+    assertThat(stat(REPLACED, out)).isEqualTo(1);
+    assertThat(out).contains("cost = 21;").contains("==========");
+    for (String[] options : List.of(new String[] {"-a"}, new String[] {})) {
+      String reference = reference(ENCODING, options);
+      assertThat(run(ENCODING, "check", options)).isEqualTo(reference);
+      assertThat(run(ENCODING, "off", options)).isEqualTo(reference);
+    }
+  }
+
+  /**
+   * Free search, with and without lazy clause generation, branches first on the cost variable of
+   * each byte, cheapest value first: the first solution is the optimum, where the annotation alone
+   * (largest value first) starts at cost 300.
+   */
+  @Test
+  void freeSearchTriesTheCheapestValueOfEachCostVariableFirst() throws IOException {
+    for (String[] options :
+        List.of(new String[] {"-f", "-a"}, new String[] {"-f", "-a", "--lcg"})) {
+      String out = FlatzincTestRunner.run(tmp, ENCODING, options);
+      assertThat(out)
+          .as(String.join(" ", options))
+          .contains("cost = 21;")
+          .doesNotContain("cost = 300;");
+      assertThat(out.split("cost = ", -1)).as(String.join(" ", options)).hasSize(2);
+    }
+  }
+
   @Test
   void checkingModePrintsTheSameAsNoPresolve() throws IOException {
     // the search annotation fixes the order, so the improving solutions are the same; free search
     // would choose by domain sizes, which the stronger bound changes
     for (String[] options : List.of(new String[] {"-a"}, new String[] {})) {
-      assertThat(run(ASSIGNMENT, "check", options)).isEqualTo(run(ASSIGNMENT, "off", options));
+      String reference = reference(ASSIGNMENT, options);
+      assertThat(run(ASSIGNMENT, "check", options)).isEqualTo(reference);
+      assertThat(run(ASSIGNMENT, "off", options)).isEqualTo(reference);
     }
   }
 
@@ -145,16 +231,19 @@ class ObjectivePresolveFlatzincTest {
   void randomModelsGiveTheSameSolutions() throws IOException {
     Random random = new Random(27102026L);
     int shifted = 0;
+    int replaced = 0;
     for (int run = 0; run < 60; run++) {
       String model = randomModel(random);
-      String off = run(model, "off", "-a");
+      String off = reference(model, "-a");
       assertThat(run(model, "check", "-a")).as(model).isEqualTo(off);
       String stats = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "on");
       if (stat(SHIFTED, stats) > 0) {
         shifted++;
       }
+      replaced += Math.max(0, stat(REPLACED, stats));
     }
     assertThat(shifted).isGreaterThan(20);
+    assertThat(replaced).isGreaterThan(10);
   }
 
   private static String randomModel(Random r) {
@@ -275,6 +364,17 @@ class ObjectivePresolveFlatzincTest {
       l.add("1");
     }
     return l;
+  }
+
+  /** The output with neither presolve nor objective presolve. */
+  private String reference(String model, String... options) throws IOException {
+    String key = "org.jacop.fz.objectivePresolve";
+    System.setProperty(key, "false");
+    try {
+      return run(model, "off", options);
+    } finally {
+      System.clearProperty(key);
+    }
   }
 
   private String run(String model, String presolve, String... options) throws IOException {

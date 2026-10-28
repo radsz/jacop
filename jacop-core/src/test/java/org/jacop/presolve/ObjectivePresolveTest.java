@@ -38,6 +38,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
@@ -194,6 +196,91 @@ class ObjectivePresolveTest {
   }
 
   /**
+   * A count of a value over encoded variables is expanded into the value literals, so its cost
+   * takes part in the shift: each byte is ASCII-free here and costs at least its cheapest of the
+   * other encodings or the unknown one, as in jp-encoding.
+   */
+  @Test
+  void aCountIsExpandedIntoTheValueLiteralsOfItsVariables() {
+    Store store = new Store();
+    // x[i] in 1..3, value 3 is "unknown" and costs 100 through the count n
+    int[][] cost = {{6, 9}, {8, 5}, {7, 7}};
+    IntVar[] x = new IntVar[cost.length];
+    List<IntVar> vars = new ArrayList<>();
+    List<Integer> coefs = new ArrayList<>();
+    IntVar obj = new IntVar(store, "obj", 0, 1000);
+    ObjectivePresolve presolve = new ObjectivePresolve(obj, true);
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 3);
+      for (int v = 1; v <= 3; v++) {
+        IntVar b = new IntVar(store, 0, 1);
+        store.impose(new Reified(new XeqC(x[i], v), b));
+        presolve.addValueLiteral(x[i], v, b);
+        if (v < 3) {
+          vars.add(b);
+          coefs.add(cost[i][v - 1]);
+        }
+      }
+    }
+    IntVar n = new IntVar(store, "n", 0, x.length);
+    store.impose(new Count(x, n, 3));
+    presolve.addCount(x, 3, n);
+    vars.add(n);
+    coefs.add(100);
+    vars.add(obj);
+    coefs.add(-1);
+    equation(
+        store,
+        presolve,
+        vars.toArray(new IntVar[0]),
+        coefs.stream().mapToInt(Integer::intValue).toArray(),
+        0,
+        obj);
+    assertThat(store.consistency()).isTrue();
+    assertThat(obj.min()).isEqualTo(0);
+
+    List<Constraint> reformulation = presolve.reformulate(store);
+    assertThat(presolve.expanded()).isEqualTo(1);
+    assertThat(presolve.shifted()).isEqualTo(3);
+    // one element constraint per variable, then the equation
+    assertThat(reformulation).hasSize(4);
+    reformulation.forEach(store::impose);
+    assertThat(store.consistency()).isTrue();
+    assertThat(obj.min()).isEqualTo(6 + 5 + 7);
+
+    // a cost bound prunes the values of each variable through its cost variable
+    obj.domain.inMax(store.level, obj, 6 + 5 + 7);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].singleton(1)).isTrue();
+    assertThat(x[1].singleton(2)).isTrue();
+    assertThat(x[2].min()).isEqualTo(1);
+    assertThat(x[2].max()).isEqualTo(2);
+  }
+
+  /** A count over a variable without a literal for the counted value is not expanded. */
+  @Test
+  void aCountWithoutAllLiteralsIsNotExpanded() {
+    Store store = new Store();
+    IntVar obj = new IntVar(store, "obj", 0, 1000);
+    ObjectivePresolve presolve = new ObjectivePresolve(obj, true);
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    IntVar[] bx = bools(store, 2);
+    for (int v = 1; v <= 2; v++) {
+      store.impose(new Reified(new XeqC(x, v), bx[v - 1]));
+      presolve.addValueLiteral(x, v, bx[v - 1]);
+    }
+    IntVar n = new IntVar(store, "n", 0, 2);
+    store.impose(new Count(new IntVar[] {x, y}, n, 2));
+    presolve.addCount(new IntVar[] {x, y}, 2, n);
+    // obj = 3 (x = 1) + 10 n: y = 2 has no literal
+    equation(store, presolve, new IntVar[] {obj, bx[0], n}, new int[] {1, -3, -10}, 0, obj);
+    assertThat(store.consistency()).isTrue();
+    assertThat(presolve.reformulate(store)).isEmpty();
+    assertThat(presolve.expanded()).isZero();
+  }
+
+  /**
    * Random models with exactly-one sets, value literals, defined intermediate costs and side
    * constraints have the same solutions with the equation imposed, and its bound is no weaker.
    */
@@ -203,10 +290,14 @@ class ObjectivePresolveTest {
     int checked = 0;
     for (int run = 0; run < 300; run++) {
       long seed = random.nextLong();
-      List<List<Integer>> without = solutions(seed, false);
-      List<List<Integer>> with = solutions(seed, true);
-      assertThat(new HashSet<>(with)).as("seed %d", seed).isEqualTo(new HashSet<>(without));
-      assertThat(with).as("seed %d", seed).hasSameSizeAs(without);
+      List<List<Integer>> without = solutions(seed, Mode.NONE);
+      for (Mode mode : new Mode[] {Mode.EQUATION, Mode.COST_VARIABLES}) {
+        List<List<Integer>> with = solutions(seed, mode);
+        assertThat(new HashSet<>(with))
+            .as("seed %d %s", seed, mode)
+            .isEqualTo(new HashSet<>(without));
+        assertThat(with).as("seed %d %s", seed, mode).hasSameSizeAs(without);
+      }
       if (lastReformulated) {
         checked++;
       }
@@ -216,7 +307,14 @@ class ObjectivePresolveTest {
 
   private static boolean lastReformulated;
 
-  private static List<List<Integer>> solutions(long seed, boolean presolved) {
+  /** How the random models are solved: as given, with the equation, with cost variables too. */
+  private enum Mode {
+    NONE,
+    EQUATION,
+    COST_VARIABLES
+  }
+
+  private static List<List<Integer>> solutions(long seed, Mode mode) {
     Random r = new Random(seed);
     Store store = new Store();
     boolean minimize = r.nextBoolean();
@@ -228,6 +326,7 @@ class ObjectivePresolveTest {
 
     int sets = 1 + r.nextInt(3);
     List<IntVar> lits = new ArrayList<>();
+    List<IntVar> encodedVars = new ArrayList<>();
     for (int s = 0; s < sets; s++) {
       if (r.nextBoolean()) {
         IntVar[] b = bools(store, 2 + r.nextInt(3));
@@ -238,6 +337,7 @@ class ObjectivePresolveTest {
         int n = 2 + r.nextInt(3);
         IntVar x = new IntVar(store, "x" + s, 0, n - 1);
         all.add(x);
+        encodedVars.add(x);
         int encoded = r.nextInt(4) == 0 ? n - 1 : n;
         for (int v = 0; v < encoded; v++) {
           IntVar b = new IntVar(store, 0, 1);
@@ -248,6 +348,16 @@ class ObjectivePresolveTest {
       }
     }
     all.addAll(lits);
+    // a count of a value over the encoded variables, as a cost
+    List<IntVar> counted = new ArrayList<>();
+    if (!encodedVars.isEmpty() && r.nextBoolean()) {
+      IntVar n = new IntVar(store, "n", 0, encodedVars.size());
+      int value = r.nextInt(3);
+      store.impose(new Count(encodedVars, n, value));
+      presolve.addCount(encodedVars.toArray(new IntVar[0]), value, n);
+      all.add(n);
+      counted.add(n);
+    }
     // a random clause over the literals
     if (lits.size() > 2 && r.nextBoolean()) {
       IntVar[] p = {lits.get(r.nextInt(lits.size())), lits.get(r.nextInt(lits.size()))};
@@ -255,6 +365,7 @@ class ObjectivePresolveTest {
     }
     // costs, some through an intermediate variable defined by an equation
     List<IntVar> pending = new ArrayList<>(lits);
+    pending.addAll(counted);
     while (!pending.isEmpty()) {
       int k = Math.min(pending.size(), 1 + r.nextInt(4));
       List<IntVar> part = new ArrayList<>(pending.subList(0, k));
@@ -296,12 +407,13 @@ class ObjectivePresolveTest {
     if (!store.consistency()) {
       return List.of();
     }
-    if (presolved) {
-      LinearInt equation = presolve.reformulate();
-      if (equation != null) {
+    if (mode != Mode.NONE) {
+      List<Constraint> reformulation =
+          mode == Mode.EQUATION ? listOf(presolve.reformulate()) : presolve.reformulate(store);
+      if (!reformulation.isEmpty()) {
         lastReformulated = true;
         int before = minimize ? obj.min() : obj.max();
-        store.impose(equation);
+        reformulation.forEach(store::impose);
         if (!store.consistency()) {
           return List.of();
         }
@@ -330,6 +442,10 @@ class ObjectivePresolveTest {
     search.setPrintInfo(false);
     search.labeling(store, select);
     return found;
+  }
+
+  private static List<Constraint> listOf(LinearInt equation) {
+    return equation == null ? List.of() : List.of(equation);
   }
 
   private static void equation(

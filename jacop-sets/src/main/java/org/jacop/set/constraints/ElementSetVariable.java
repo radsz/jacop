@@ -42,6 +42,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
 /**
@@ -196,6 +198,25 @@ public class ElementSetVariable extends AbstractElement implements Copyable<Elem
       value.domain.inCardinality(
           store.level, value, lp.domain.card().min(), lp.domain.card().max());
     }
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+    // the set variables need the set ANY event; IntDomain.ANY is the set LUB event
+    return v == index ? IntDomain.ANY : SetDomain.ANY;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    throw new IllegalStateException("Not implemented as more precise variants exist.");
   }
 
   @Override

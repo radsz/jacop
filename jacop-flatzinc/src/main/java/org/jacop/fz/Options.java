@@ -74,6 +74,7 @@ public class Options {
   boolean runSearch = true;
   boolean useSat;
   boolean lcg;
+  boolean lp = true;
   // the default can be changed by the system property jacop.presolve, for example to run the
   // FlatZinc test suites with presolve
   Presolve presolve =
@@ -83,6 +84,7 @@ public class Options {
   boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
+  boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
           probeMode(System.getProperty("jacop.presolve.probe", "off")), Probing.Mode.OFF);
@@ -152,7 +154,8 @@ public class Options {
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
-                core-guided search before branch and bound, default 0.5; 0 = off),
+                core-guided search before branch and bound, default 0.5, 0.1 with
+                objective cost variables; 0 = off),
                 lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
                 more, default 5000)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
@@ -163,6 +166,9 @@ public class Options {
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
                 the SAT core); the search annotation is followed without restarts, or with -f
                 alternated per restart with branching on the most active variables.
+            --lp <value> the linear relaxation of the linear constraints as a propagator, solved
+                by a dual simplex during search; its deductions are integer combinations of the
+                rows, explained under --lcg; one of "on" (default), "off".
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
@@ -174,6 +180,8 @@ public class Options {
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
+            --presolve-tabling replace small groups of constraints by the tables of their
+                solutions when presolving (default false)
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
                 of "off" (default), "shave" (bound shaving and failed-literal probing of 0-1
                 variables), "sac" (as "shave", and every value of small domains)
@@ -217,11 +225,13 @@ public class Options {
       case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
+      case "--lp" -> i = handleLp(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
+      case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
@@ -316,6 +326,15 @@ public class Options {
     return i + 1;
   }
 
+  private int handleLp(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> lp = true;
+      case "off" -> lp = false;
+      default -> System.err.println("%% Linear relaxation mode " + args[i] + " not known; ignored");
+    }
+    return i + 1;
+  }
+
   private int handlePresolve(String[] args, int i) {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
@@ -359,6 +378,11 @@ public class Options {
     } else {
       System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
+    return i + 1;
+  }
+
+  private int handlePresolveTabling(int i) {
+    presolveTabling = true;
     return i + 1;
   }
 
@@ -684,6 +708,15 @@ public class Options {
     return lcg;
   }
 
+  /**
+   * It defines whether the linear relaxation is added as a propagator (--lp).
+   *
+   * @return false when --lp off was given
+   */
+  public boolean lp() {
+    return lp;
+  }
+
   /** Whether the model is presolved before search, and how. */
   public enum Presolve {
     /** The model is searched in the store it was loaded into. */
@@ -738,6 +771,16 @@ public class Options {
    */
   public int presolveRounds() {
     return presolveRounds;
+  }
+
+  /**
+   * It defines whether presolve replaces small groups of constraints by tables
+   * (--presolve-tabling).
+   *
+   * @return true if presolve tabulates, false by default
+   */
+  public boolean presolveTabling() {
+    return presolveTabling;
   }
 
   /**

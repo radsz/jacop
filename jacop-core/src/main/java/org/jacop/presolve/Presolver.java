@@ -69,8 +69,17 @@ public final class Presolver {
    */
   static final List<Supplier<Rule>> STANDARD =
       Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"))
-          ? List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE, () -> OrderLiterals.RULE)
-          : List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
+          ? List.of(
+              GlobalPresolveRule::new,
+              AtMostOneRule::new,
+              BooleanProducts::new,
+              () -> RedundantConstraints.RULE,
+              () -> OrderLiterals.RULE)
+          : List.of(
+              GlobalPresolveRule::new,
+              AtMostOneRule::new,
+              BooleanProducts::new,
+              () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;
@@ -99,6 +108,32 @@ public final class Presolver {
    */
   public Presolver keep(Var... vars) {
     builder.keep(vars);
+    return this;
+  }
+
+  /**
+   * Gives clauses kept outside the store to preprocess with the store's clauses; see {@link
+   * Derivation.Builder#clauses(java.util.List)}.
+   *
+   * @param clauses the clauses, a list changed in place to the child's clauses.
+   * @return this presolver.
+   */
+  public Presolver clauses(java.util.List<org.jacop.core.IntVar[][]> clauses) {
+    builder.clauses(clauses);
+    return this;
+  }
+
+  /**
+   * Sets whether the child keeps every solution; see {@link
+   * Derivation.Builder#solutionPreserving(boolean)}. True by default; false lets half-reification
+   * and the clause rules that merge solutions run, which need the frozen variables given with
+   * {@link #keep(Var...)}.
+   *
+   * @param on true to keep every solution, as all-solution search and counting need.
+   * @return this presolver.
+   */
+  public Presolver solutionPreserving(boolean on) {
+    builder.solutionPreserving(on);
     return this;
   }
 
