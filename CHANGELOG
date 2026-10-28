@@ -404,6 +404,16 @@ Version 5.0 (unreleased)
     instead of 115 s with one left unsolved. gardner_sum_square finds
     another optimal solution.
 
+30. Free search (-f, with and without --lcg) tries the cost variables of
+    FlatZinc objective presolve first, cheapest value first (largest when
+    maximising), before the annotation it alternates with, and with
+    --lcg gives core-guided search 0.1 of the time instead of 0.5 when
+    there are such variables. On jp-encoding (60 s, --lcg -f) the four
+    large instances end 0.3% to 2.4% above the optimum instead of 13% to
+    57% (data1400: 44,693 against 68,403, optimum 43,626), and data200
+    and data300 are proved in about 7 s. Models without cost variables
+    search as before.
+
 Version 4.11
 =============
 
