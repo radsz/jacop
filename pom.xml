@@ -250,6 +250,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
@@ -352,6 +353,7 @@ setup to run configuration. -->
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -459,6 +461,7 @@ setup to run configuration. -->
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -565,6 +568,7 @@ setup to run configuration. -->
                                 <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
+                                <include>**/BooleanProductsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>

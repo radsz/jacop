@@ -70,6 +70,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
+import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.ObjectivePresolve;
 import org.jacop.presolve.Presolver;
@@ -587,6 +588,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
     for (Rule rule : d.rules()) {
+      if (rule instanceof BooleanProducts p) {
+        s.append("%%%mzn-stat: presolveBooleanProducts=").append(p.replaced()).append('\n');
+      }
       if (!(rule instanceof AtMostOneRule r)) {
         continue;
       }
