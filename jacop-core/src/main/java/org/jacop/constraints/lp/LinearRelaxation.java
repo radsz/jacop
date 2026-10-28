@@ -106,9 +106,21 @@ public class LinearRelaxation extends Constraint
   private int idle;
 
   // the largest tableau, rows times columns, that is built, and the tableau entries the pivots of
-  // one propagation below the root may update; the root propagation has the whole pivot limit
+  // one propagation may update, below the root and at the root
   private static final long MAX_TABLEAU = Long.getLong("org.jacop.lp.maxTableau", 4_000_000L);
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
+  private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
+
+  // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
+  // its pivots update and is skipped while the credit is negative, and a solve that deduces
+  // something fills the credit, so a relaxation that finds nothing costs a bounded share of the
+  // search
+  private static final long WORK_PER_CALL = Long.getLong("org.jacop.lp.workPerCall", 4096L);
+  private long credit = WORK;
+
+  // the solves in a row stopped at the pivot limit; after IDLE_RUNS of them the simplex is taken to
+  // be stalling and the relaxation is not solved again
+  private int stalled;
 
   // the deductions of the current branch, for their explanations: variable, form, level
   private final List<IntVar> deducedVar = new ArrayList<>();
@@ -303,11 +315,13 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
-    if (++tick < period) {
+    credit = Math.min(credit + WORK_PER_CALL, WORK);
+    if (++tick < period || credit < 0 || stalled >= IDLE_RUNS) {
       return;
     }
     tick = 0;
     long before = prunings + failures;
+    long pivots = lp.totalPivots;
     try {
       solveAndPropagate(store);
     } finally {
@@ -315,9 +329,13 @@ public class LinearRelaxation extends Constraint
       if (prunings + failures > before) {
         idle = 0;
         period = Math.max(1, period / 2);
-      } else if (++idle >= IDLE_RUNS && period < MAX_PERIOD) {
-        idle = 0;
-        period *= 2;
+        credit = WORK;
+      } else {
+        credit -= (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + x.length));
+        if (++idle >= IDLE_RUNS && period < MAX_PERIOD) {
+          idle = 0;
+          period *= 2;
+        }
       }
     }
   }
@@ -328,11 +346,13 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = (long) rows() * (rows() + x.length);
-    int status = lp.solve(calls == 1 ? pivotLimit : (int) Math.clamp(WORK / size, 5, pivotLimit));
+    int status = lp.solve((int) Math.clamp((calls == 1 ? ROOT_WORK : WORK) / size, 5, pivotLimit));
     if (status == DualSimplex.LIMIT) {
       limits++;
+      stalled++;
       return;
     }
+    stalled = 0;
     double[] y;
     if (status == DualSimplex.INFEASIBLE) {
       infeasible++;

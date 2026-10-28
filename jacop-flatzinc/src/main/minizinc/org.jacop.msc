@@ -21,6 +21,7 @@
         ["--format", "defines format (number digits after decimal point); for floating variables.", "float", "1e-11"],
         ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
         ["--lcg", "solve with lazy clause generation (integer and Boolean models).", "bool", "false"],
+        ["--lp", "linear relaxation of the linear constraints, solved by a dual simplex during search", "opt:on:off", "on"],
         ["--presolve", "presolve the model before search; check also checks every solution against the loaded model", "opt:off:on:check", "off"],
         ["--presolve-dual", "dual reductions in presolve, only when one solution or an optimum is searched for", "opt:on:off", "on"],
         ["--decay", "decay factor for accumulated failure count (afc) and activity-based variable selection heuristic", "float", "0.99"],
