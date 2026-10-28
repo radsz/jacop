@@ -273,11 +273,11 @@ public class LinearRelaxation extends Constraint
         forms.add(f);
         vars.addAll(Arrays.asList(f.vars()));
         rows++;
+        // the dense tableau has a column for each variable and for each row
+        if (rows * (rows + vars.size() + 1) > MAX_TABLEAU) {
+          return null;
+        }
       }
-    }
-    // the dense tableau has a column for each variable and for each row
-    if (rows * (rows + vars.size() + 1) > MAX_TABLEAU) {
-      return null;
     }
     LinearRelaxation r = new LinearRelaxation(forms, objective, maximize);
     return r.rows() < 2 ? null : r;
