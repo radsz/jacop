@@ -238,6 +238,18 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. New constraint GlobalCardinality(x, values, counters) and
+    GlobalCardinality(x, values, low, up): domain consistent global
+    cardinality (Regin, AAAI 1996) on x, with the counters as intervals;
+    values outside values are not restricted. The FlatZinc front end posts
+    it for global_cardinality (jacop_count_values, _bounds and the closed
+    forms) annotated :: domain, which used to be ignored. It explores the
+    search tree of Gecode's domain consistent gcc. On rows and columns
+    with cardinality bounds and forbidden values it solves 8 of 12 random
+    instances in 60 s where counting solves 6, with 3x to 900x fewer
+    nodes; on Challenge models that do not ask for :: domain counting is
+    as good and cheaper, so it stays the default.
+
 Version 4.11
 =============
 
