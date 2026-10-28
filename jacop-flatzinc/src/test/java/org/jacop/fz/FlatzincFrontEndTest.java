@@ -229,6 +229,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void intSearchAcceptsBool2intOfBooleans() throws IOException {
+    // MiniZinc 2.8 writes the Booleans of an int_search as bool2int(b) (rel2onto); the annotation
+    // was rejected with a ClassCastException
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: x:: output_var;
+        constraint bool_clause([a, b], []);
+        solve :: seq_search([int_search([bool2int(b), bool2int(a)], input_order, indomain_min,\
+         complete), int_search([x], input_order, indomain_max, complete)]) satisfy;
+        """;
+
+    for (String[] options : new String[][] {{}, {"--lcg"}}) {
+      String[] out = run(fzn, options);
+      assertTrue(
+          out[0].contains("a = true;")
+              && out[0].contains("b = false;")
+              && out[0].contains("x = 2;"),
+          out[0] + out[1]);
+    }
+  }
+
+  @Test
   void strictlyIncreasingOfARepeatedVariableIsUnsatisfiable() throws IOException {
     // strictly_increasing([x, x]) was posted as XltY(x, x), which throws, so the model was
     // reported as an error instead of unsatisfiable

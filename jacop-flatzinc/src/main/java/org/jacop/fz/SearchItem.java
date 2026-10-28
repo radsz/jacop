@@ -1130,6 +1130,24 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * The scalar inside an element of an annotation's variable array. MiniZinc before 2.9 writes
+   * Boolean variables of an int_search as bool2int(b); the 0/1 variable b stands for its value.
+   */
+  private static ASTScalarFlatExpr scalarOf(SimpleNode n) {
+    Node child = n;
+    while (!(child instanceof ASTScalarFlatExpr) && child.jjtGetNumChildren() == 1) {
+      if (child instanceof ASTAnnExpr e && e.idPresent() && !"bool2int".equals(e.getIdent())) {
+        break;
+      }
+      child = child.jjtGetChild(0);
+    }
+    if (!(child instanceof ASTScalarFlatExpr scalar)) {
+      throw new IllegalArgumentException("Wrong element of a variable array: " + child);
+    }
+    return scalar;
+  }
+
+  /**
    * Retrieves an array of integer variables from a parse tree node.
    *
    * @param node the parse tree node
@@ -1142,9 +1160,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       IntVar[] aa = new IntVar[count];
       for (int i = 0; i < count; i++) {
         SimpleNode n = (SimpleNode) node.jjtGetChild(i).jjtGetChild(0);
-        ASTScalarFlatExpr child = (ASTScalarFlatExpr) n.jjtGetChild(0);
-        IntVar el = getVariable(child);
-        aa[i] = el;
+        aa[i] = getVariable(scalarOf(n));
       }
       return aa;
     } else if (Objects.equals(((ASTAnnotation) node).getAnnId(), ANN_EXPR)) {
