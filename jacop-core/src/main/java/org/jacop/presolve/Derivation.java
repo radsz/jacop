@@ -106,6 +106,8 @@ public final class Derivation implements VarMap {
    *     removed them.
    * @param simplified constraints rewritten by {@link GlobalPresolve} for the domains at the level
    *     of the derivation; those rewritten to nothing are counted here too.
+   * @param aliased parent variables merged with another variable by an equation; they share its
+   *     copy, and the equation is counted in {@code dropped}.
    */
   public record Statistics(
       int parentVariables,
@@ -114,7 +116,8 @@ public final class Derivation implements VarMap {
       int childConstraints,
       int fixed,
       int dropped,
-      int simplified) {}
+      int simplified,
+      int aliased) {}
 
   /**
    * What the dual reductions did.
@@ -380,6 +383,11 @@ public final class Derivation implements VarMap {
       }
     }
     int simplified = 0;
+    for (Rule rule : ruleList) {
+      if (rule instanceof GlobalPresolveRule g) {
+        simplified += g.simplified();
+      }
+    }
     if (rules) {
       List<Constraint> rewritten = new ArrayList<>(carried.size());
       for (Constraint c : carried) {
@@ -393,6 +401,9 @@ public final class Derivation implements VarMap {
       }
       carried = rewritten;
     }
+    int equations = carried.size();
+    Map<Var, Var> aliases = rules && Aliases.ENABLED ? Aliases.merge(carried) : Map.of();
+    dropped += equations - carried.size();
 
     ReificationCleanup reifications = new ReificationCleanup(carried, frozen, !solutionPreserving);
     if (rules) {
@@ -407,11 +418,16 @@ public final class Derivation implements VarMap {
     for (Constraint c : carried) {
       used.addAll(reifications.arguments(c));
     }
+    // the variable that stays for a class is kept, so every merged variable has a copy
+    used.addAll(aliases.values());
 
     child = new Store();
     int fixed = 0;
     try {
       for (Var v : variables) {
+        if (aliases.containsKey(v)) {
+          continue;
+        }
         if (used.contains(v) || !rules) {
           keep(v);
         } else if (v.singleton()) {
@@ -428,6 +444,12 @@ public final class Derivation implements VarMap {
       live();
       return;
     }
+    int childVariables = copies.size();
+    for (Map.Entry<Var, Var> e : aliases.entrySet()) {
+      Var copy = copies.get(e.getValue());
+      copies.put(e.getKey(), copy);
+      entries.put(e.getKey(), new Entry.Kept(copy));
+    }
 
     for (Constraint c : carried) {
       if (reifications.rewritten(c)) {
@@ -442,23 +464,25 @@ public final class Derivation implements VarMap {
       child.impose(copy);
     }
     // degree-based variable selections choose in the child as in the parent, whose static degrees
-    // also count the constraints entailed or dropped since
+    // also count the constraints entailed or dropped since; a merged variable has the degrees of
+    // its class added up
+    Map<Var, Integer> degrees = new IdentityHashMap<>();
     for (Map.Entry<Var, Var> e : copies.entrySet()) {
-      e.getValue()
-          .adjustDegree(
-              e.getKey().sizeConstraintsOriginal() - e.getValue().sizeConstraintsOriginal());
+      degrees.merge(e.getValue(), e.getKey().sizeConstraintsOriginal(), Integer::sum);
     }
+    degrees.forEach((copy, degree) -> copy.adjustDegree(degree - copy.sizeConstraintsOriginal()));
 
     relaxed = reifications.relaxed();
     statistics =
         new Statistics(
             variables.size(),
             collected.size(),
-            copies.size(),
+            childVariables,
             carried.size(),
             fixed,
             dropped,
-            simplified);
+            simplified,
+            aliases.size());
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -637,7 +661,7 @@ public final class Derivation implements VarMap {
     copies.clear();
     statistics =
         new Statistics(
-            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0);
+            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0, 0);
   }
 
   /**
