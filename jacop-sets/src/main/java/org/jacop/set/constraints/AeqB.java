@@ -44,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AeqB extends PrimitiveConstraint implements Copyable<AeqB> {
+public class AeqB extends PrimitiveConstraint implements Copyable<AeqB>, ElementwiseExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -98,6 +98,16 @@ public class AeqB extends PrimitiveConstraint implements Copyable<AeqB> {
     }
 
     return a.singleton() && b.singleton() && !a.domain.glb().eq(b.domain.glb());
+  }
+
+  @Override
+  public SetExplanation.Relation relation() {
+    return getClass() == AeqB.class ? (e, in) -> in[0] == in[1] : null;
+  }
+
+  @Override
+  public SetVar[] explainedSets() {
+    return new SetVar[] {a, b};
   }
 
   @Override

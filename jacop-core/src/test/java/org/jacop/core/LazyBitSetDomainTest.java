@@ -39,17 +39,47 @@ import java.util.function.Supplier;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XplusYeqC;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
- * Compares a variable with a lazy bit set domain against the same variable with an interval domain
- * under random pruning, new levels and backtracking: values, events, stamps, previous domains and
- * constraint lists must be the same after every step.
+ * Compares variables with a lazy domain (a lazy bit set or a lazy interval domain) against the same
+ * variables with interval domains under random pruning, new levels and backtracking: values,
+ * events, stamps, previous domains and constraint lists must be the same after every step. Several
+ * variables share a store, so their entries are interleaved on the store's domain trail.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 class LazyBitSetDomainTest {
+
+  /** The ways a lazy domain keeps its holes. */
+  enum Kind {
+    BITS,
+    INTERVALS;
+
+    final int id = IntDomain.LAZY_BIT_SET_DOMAIN_ID;
+
+    IntDomain create(int lo, int hi) {
+      return new LazyBitSetDomain(lo, hi, this == INTERVALS);
+    }
+
+    /** A lazy domain of this kind with the values of d, with holes when d has them. */
+    IntDomain of(IntervalDomain d) {
+      IntDomain result = create(d.min(), d.max());
+      result.setDomain(d);
+      return result;
+    }
+  }
+
+  /** The values of a lazy domain as an interval domain. */
+  static IntervalDomain values(IntDomain d) {
+    return ((LazyBitSetDomain) d).toIntervalDomain();
+  }
+
+  static boolean isLazy(IntDomain d) {
+    return d instanceof LazyBitSetDomain;
+  }
 
   /** A variable that records the events it reports. */
   static final class RecordingVar extends IntVar {
@@ -66,19 +96,38 @@ class LazyBitSetDomainTest {
     }
   }
 
-  /** One side of the comparison: a store and its variable. */
+  /**
+   * One side of the comparison: a store and its variables, each with its own constraints. A step
+   * works on the variable x, which is one of xs.
+   */
   static final class Side {
     final Store store = new Store();
-    final RecordingVar x;
-    final Constraint[] constraints = new Constraint[6];
-    final Constraint[] searchConstraints = new Constraint[6];
+    final RecordingVar[] xs;
+    final Constraint[][] constraints;
+    final Constraint[][] searchConstraints;
+    RecordingVar x;
 
-    Side(IntDomain dom) {
-      x = new RecordingVar(store, "x", dom);
-      for (int i = 0; i < constraints.length; i++) {
-        constraints[i] = new XneqC(x, 1000 + i);
-        searchConstraints[i] = new XneqC(x, 2000 + i);
+    Side(IntDomain... doms) {
+      xs = new RecordingVar[doms.length];
+      constraints = new Constraint[doms.length][6];
+      searchConstraints = new Constraint[doms.length][6];
+      for (int k = 0; k < doms.length; k++) {
+        xs[k] = new RecordingVar(store, "x" + k, doms[k]);
+        for (int i = 0; i < 6; i++) {
+          constraints[k][i] = new XneqC(xs[k], 1000 + i);
+          searchConstraints[k][i] = new XneqC(xs[k], 2000 + i);
+        }
       }
+      x = xs[0];
+    }
+
+    int current() {
+      for (int k = 0; k < xs.length; k++) {
+        if (xs[k] == x) {
+          return k;
+        }
+      }
+      throw new IllegalStateException();
     }
   }
 
@@ -86,16 +135,27 @@ class LazyBitSetDomainTest {
     void apply(Side side);
   }
 
-  @Test
-  void randomPruningMatchesIntervalDomain() {
+  @ParameterizedTest
+  @EnumSource(Kind.class)
+  void randomPruningMatchesIntervalDomain(Kind kind) {
     Random random = new Random(7);
     for (int run = 0; run < 3000; run++) {
-      int lo = random.nextInt(200) - 100;
-      int hi = lo + 64 + random.nextInt(run % 3 == 0 ? 300 : 80);
-      Side reference = new Side(new IntervalDomain(lo, hi));
-      Side lazy = new Side(new LazyBitSetDomain(lo, hi));
+      int vars = 1 + run % 3;
+      IntDomain[] referenceDomains = new IntDomain[vars];
+      IntDomain[] lazyDomains = new IntDomain[vars];
+      for (int k = 0; k < vars; k++) {
+        int lo = random.nextInt(200) - 100;
+        int hi = lo + 64 + random.nextInt(run % 3 == 0 ? 300 : 80);
+        referenceDomains[k] = new IntervalDomain(lo, hi);
+        lazyDomains[k] = kind.create(lo, hi);
+      }
+      Side reference = new Side(referenceDomains);
+      Side lazy = new Side(lazyDomains);
       int level = 0;
-      for (int step = 0; step < 60; step++) {
+      for (int step = 0; step < 60 * vars; step++) {
+        int k = random.nextInt(vars);
+        reference.x = reference.xs[k];
+        lazy.x = lazy.xs[k];
         int action = random.nextInt(20);
         String context = "run " + run + " step " + step + " level " + level;
         if (action < 4) {
@@ -108,11 +168,11 @@ class LazyBitSetDomainTest {
           backtrack(reference, level);
           backtrack(lazy, level);
           level--;
-          compare(reference, lazy, level, context + " after backtracking");
+          compareAll(reference, lazy, level, kind, context + " after backtracking");
           continue;
         }
-        Step pruning = randomStep(random, reference.x.domain);
-        context += " " + pruning;
+        Step pruning = randomStep(random, reference.x.domain, kind);
+        context += " x" + k + " " + pruning;
         boolean referenceFailed = apply(reference, pruning);
         boolean lazyFailed = apply(lazy, pruning);
         assertThat(lazyFailed).as(context + " failure").isEqualTo(referenceFailed);
@@ -126,22 +186,22 @@ class LazyBitSetDomainTest {
           backtrack(reference, level);
           backtrack(lazy, level);
           level--;
-          compare(reference, lazy, level, context + " after failure");
+          compareAll(reference, lazy, level, kind, context + " after failure");
         } else {
-          compare(reference, lazy, level, context);
+          compareAll(reference, lazy, level, kind, context);
         }
       }
     }
   }
 
-  @Test
-  void solutionsRecordedDuringSearchKeepTheirValues() {
-    // a solution listener records the domain objects of the variables; a lazy bit set domain
-    // object changes afterwards, so the recorded solution must not be that object
+  @ParameterizedTest
+  @EnumSource(Kind.class)
+  void solutionsRecordedDuringSearchKeepTheirValues(Kind kind) {
+    // a solution listener records the domain objects of the variables; a lazy domain object
+    // changes afterwards, so the recorded solution must not be that object
     Store store = new Store();
-    IntVar x = new IntVar(store, "x", 0, 100);
-    IntVar y = new IntVar(store, "y", 0, 100);
-    assertThat(x.dom()).isInstanceOf(LazyBitSetDomain.class);
+    IntVar x = new IntVar(store, "x", kind.create(0, 100));
+    IntVar y = new IntVar(store, "y", kind.create(0, 100));
     store.impose(new XplusYeqC(x, y, 90));
     store.impose(new XneqC(x, 50));
     org.jacop.search.DepthFirstSearch<IntVar> search = new org.jacop.search.DepthFirstSearch<>();
@@ -166,33 +226,35 @@ class LazyBitSetDomainTest {
     }
   }
 
-  @Test
-  void otherDomainsTreatItAsTheSameValues() {
+  @ParameterizedTest
+  @EnumSource(Kind.class)
+  void otherDomainsTreatItAsTheSameValues(Kind kind) {
     Random random = new Random(11);
     for (int run = 0; run < 3000; run++) {
       int lo = random.nextInt(100) - 50;
       int hi = lo + 64 + random.nextInt(100);
-      Side lazy = new Side(new LazyBitSetDomain(lo, hi));
+      Side lazy = new Side(kind.create(lo, hi));
       for (int step = 0; step < 8; step++) {
         IntervalDomain values = randomDomain(random, lo, hi);
         apply(lazy, s -> s.x.domain.in(s.store.level, s.x, values));
       }
       IntDomain argument =
           run % 3 == 0
-              ? lazyOf(new IntervalDomain(lo + random.nextInt(30), hi - random.nextInt(30)))
+              ? kind.of(new IntervalDomain(lo + random.nextInt(30), hi - random.nextInt(30)))
               : lazy.x.domain;
-      IntervalDomain same = ((LazyBitSetDomain) argument).toIntervalDomain();
+      IntervalDomain same = values(argument);
       IntervalDomain other = randomDomain(random, lo - 10, hi + 10);
       IntDomain[] receivers = {
         other,
         toSmallDense(randomDomain(random, lo + 10, lo + 70)),
         new BoundDomain(lo + 5, hi - 5),
+        kind.of(randomDomain(random, lo - 10, hi + 10)),
+        kind.of(new IntervalDomain(lo - random.nextInt(20), hi + random.nextInt(20))),
         lazyOf(randomDomain(random, lo - 10, hi + 10)),
-        lazyOf(new IntervalDomain(lo - random.nextInt(20), hi + random.nextInt(20)))
+        new LazyBitSetDomain(lo - 3, hi + 3, true)
       };
       for (IntDomain receiver : receivers) {
-        IntDomain reference =
-            receiver instanceof LazyBitSetDomain l ? l.toIntervalDomain() : receiver;
+        IntDomain reference = isLazy(receiver) ? values(receiver) : receiver;
         String context = "run " + run + " " + receiver + " with " + argument;
         assertThat(receiver.intersect(argument).toString())
             .as(context + " intersect")
@@ -213,7 +275,7 @@ class LazyBitSetDomainTest {
         assertThat(receiver.sizeOfIntersection(argument))
             .as(context + " sizeOfIntersection")
             .isEqualTo(reference.sizeOfIntersection(same));
-        if (receiver instanceof LazyBitSetDomain) {
+        if (isLazy(receiver)) {
           IntDomain small = toSmallDense(randomDomain(random, lo + 10, lo + 70));
           for (IntDomain plainArgument : new IntDomain[] {same, small}) {
             String with = context + " plain argument " + plainArgument;
@@ -232,31 +294,30 @@ class LazyBitSetDomainTest {
           }
         }
         int shift = random.nextInt(5) - 2;
-        for (int kind = 0; kind < 2; kind++) {
+        for (int operation = 0; operation < 2; operation++) {
+          boolean in = operation == 0;
           Side withArgument =
               new Side(
                   receiver instanceof LazyBitSetDomain l
-                      ? lazyOf(l.toIntervalDomain())
+                      ? (l.rangeHoles ? Kind.INTERVALS : Kind.BITS).of(l.toIntervalDomain())
                       : receiver.cloneLight());
           Side withSame = new Side(reference.cloneLight());
           withArgument.store.setLevel(1);
           withSame.store.setLevel(1);
           Step a =
-              kind == 0
+              in
                   ? s -> s.x.domain.in(1, s.x, argument)
                   : s -> s.x.domain.inShift(1, s.x, argument, shift);
           Step b =
-              kind == 0
-                  ? s -> s.x.domain.in(1, s.x, same)
-                  : s -> s.x.domain.inShift(1, s.x, same, shift);
+              in ? s -> s.x.domain.in(1, s.x, same) : s -> s.x.domain.inShift(1, s.x, same, shift);
           assertThat(apply(withArgument, a))
-              .as(context + " in " + kind)
+              .as(context + " in " + operation)
               .isEqualTo(apply(withSame, b));
           assertThat(withArgument.x.domain.toString())
-              .as(context + " in " + kind)
+              .as(context + " in " + operation)
               .isEqualTo(withSame.x.domain.toString());
           assertThat(withArgument.x.events)
-              .as(context + " in events " + kind)
+              .as(context + " in events " + operation)
               .isEqualTo(withSame.x.events);
         }
       }
@@ -285,7 +346,7 @@ class LazyBitSetDomainTest {
     }
   }
 
-  private static Step randomStep(Random random, IntDomain current) {
+  private static Step randomStep(Random random, IntDomain current, Kind lazyKind) {
     int min = current.min();
     int max = current.max();
     int width = max - min + 1;
@@ -321,7 +382,7 @@ class LazyBitSetDomainTest {
         yield named("inShift 5 " + d, s -> s.x.domain.inShift(s.store.level, s.x, d, 5));
       }
       case 13 -> {
-        LazyBitSetDomain d = lazyOf(randomDomain(random, min - 9, max + 2));
+        IntDomain d = lazyKind.of(randomDomain(random, min - 9, max + 2));
         int shift = random.nextInt(9) - 4;
         yield named(
             "inShift " + shift + " lazy " + d,
@@ -330,11 +391,14 @@ class LazyBitSetDomainTest {
       case 12 -> {
         int c = random.nextInt(6);
         int event = random.nextInt(3);
-        yield named("put " + c + " " + event, s -> s.x.putModelConstraint(s.constraints[c], event));
+        yield named(
+            "put " + c + " " + event,
+            s -> s.x.putModelConstraint(s.constraints[s.current()][c], event));
       }
       case 14 -> {
         int c = random.nextInt(6);
-        yield named("put search " + c, s -> s.x.putSearchConstraint(s.searchConstraints[c]));
+        yield named(
+            "put search " + c, s -> s.x.putSearchConstraint(s.searchConstraints[s.current()][c]));
       }
       case 15 -> {
         // through the domain: Var.removeConstraint drops a search constraint removal made at a
@@ -344,13 +408,14 @@ class LazyBitSetDomainTest {
         yield named(
             "remove search " + c,
             s -> {
-              s.x.domain.removeSearchConstraint(s.store.level, s.x, s.searchConstraints[c]);
+              s.x.domain.removeSearchConstraint(
+                  s.store.level, s.x, s.searchConstraints[s.current()][c]);
               s.store.recordChange(s.x);
             });
       }
       default -> {
         int c = random.nextInt(6);
-        yield named("remove " + c, s -> s.x.removeConstraint(s.constraints[c]));
+        yield named("remove " + c, s -> s.x.removeConstraint(s.constraints[s.current()][c]));
       }
     };
   }
@@ -390,10 +455,22 @@ class LazyBitSetDomainTest {
     };
   }
 
-  private static void compare(Side reference, Side lazy, int level, String context) {
+  private static void compareAll(Side reference, Side lazy, int level, Kind kind, String context) {
+    RecordingVar referenceX = reference.x;
+    RecordingVar lazyX = lazy.x;
+    for (int k = 0; k < reference.xs.length; k++) {
+      reference.x = reference.xs[k];
+      lazy.x = lazy.xs[k];
+      compare(reference, lazy, level, kind, context + " x" + k);
+    }
+    reference.x = referenceX;
+    lazy.x = lazyX;
+  }
+
+  private static void compare(Side reference, Side lazy, int level, Kind kind, String context) {
     IntDomain r = reference.x.domain;
     IntDomain l = lazy.x.domain;
-    assertThat(l.domainId()).as(context).isEqualTo(IntDomain.LAZY_BIT_SET_DOMAIN_ID);
+    assertThat(l.domainId()).as(context).isEqualTo(kind.id);
     assertThat(l.toString()).as(context + " values").isEqualTo(r.toString());
     assertThat(l.checkInvariants()).as(context + " invariants").isNull();
     assertThat(l.getSize()).as(context + " size").isEqualTo(r.getSize());
@@ -458,11 +535,12 @@ class LazyBitSetDomainTest {
   }
 
   private static int indexOf(Side side, Constraint c) {
-    for (int i = 0; i < side.constraints.length; i++) {
-      if (side.constraints[i] == c) {
+    int k = side.current();
+    for (int i = 0; i < 6; i++) {
+      if (side.constraints[k][i] == c) {
         return i;
       }
-      if (side.searchConstraints[i] == c) {
+      if (side.searchConstraints[k][i] == c) {
         return 100 + i;
       }
     }

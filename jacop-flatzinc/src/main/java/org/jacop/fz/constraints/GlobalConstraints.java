@@ -105,7 +105,6 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYlteqZ;
-import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
@@ -934,6 +933,8 @@ class GlobalConstraints implements ParserTreeConstants {
       }
     }
 
+    support.binPackingCardinality.addCounters(x, counterOf);
+
     // a counter of a value no variable can take is zero; it may also be one of the variables, so
     // the union is recomputed until no counter is fixed any more
     IntDomain union;
@@ -1203,6 +1204,7 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
+    support.binPackingCardinality.addBounds(x, bounds);
     if (domainConsistent()) {
       poseGlobalCardinality(x, values, lb, ub);
     } else {
@@ -2207,9 +2209,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // are duplicated.
     IntVar[] cc = removeDuplicates(capacity);
 
-    Constraint binPack =
-        Binpacking.builder().bin(bin).load(cc).w(w).minBin(minBin).lbPruning(true).build();
-    support.delayedConstraints.add(binPack);
+    support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -2223,9 +2223,7 @@ class GlobalConstraints implements ParserTreeConstants {
       load[i] = new IntVar(store, 0, capacity[i]);
     }
 
-    Constraint binPack =
-        Binpacking.builder().bin(bin).load(load).w(w).minBin(minBin).lbPruning(true).build();
-    support.delayedConstraints.add(binPack);
+    support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, load, w, minBin));
   }
 
   void gen_jacop_float_maximum(SimpleNode node) {

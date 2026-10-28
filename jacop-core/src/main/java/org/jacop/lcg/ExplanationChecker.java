@@ -57,8 +57,8 @@ import org.jacop.search.SimpleSolutionListener;
  * A search that reaches its node limit leaves the explanation undecided. It is a debugging aid: it
  * costs a store and a search per explanation.
  *
- * <p>Constraints that cannot be copied, or that have variables other than {@link IntVar} and {@link
- * BooleanVar}, are skipped.
+ * <p>Constraints that cannot be copied, or that have variables other than {@link IntVar}, {@link
+ * BooleanVar} and {@link Mirrored} ones, are skipped.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -115,14 +115,12 @@ public final class ExplanationChecker {
       return null;
     }
     Store scratch = new Store();
-    Map<Var, IntVar> copies = new IdentityHashMap<>();
+    Map<Var, Var> copies = new IdentityHashMap<>();
     for (Var v : c.arguments()) {
-      IntVar copy = copy(scratch, v);
-      if (copy == null) {
+      if (!copy(scratch, v, copies)) {
         skipped++;
         return null;
       }
-      copies.put(v, copy);
     }
     VarMap map =
         new VarMap() {
@@ -134,7 +132,7 @@ public final class ExplanationChecker {
           @Override
           @SuppressWarnings("unchecked")
           public <V extends Var> V get(V v) {
-            IntVar copy = copies.get(v);
+            Var copy = copies.get(v);
             if (copy == null) {
               throw new IllegalArgumentException(v + " is not a variable of the constraint");
             }
@@ -145,7 +143,7 @@ public final class ExplanationChecker {
     try {
       for (int k = 0; k < reason.size(); k++) {
         int f = reason.get(k);
-        IntVar y = copies.get(trail.variable(f));
+        IntVar y = (IntVar) copies.get(trail.variable(f));
         if (y == null) {
           return describe(c, entry, reason, "has an atom on a variable outside the constraint");
         }
@@ -161,7 +159,7 @@ public final class ExplanationChecker {
     if (entry < 0) {
       return counterexample(scratch, copies, c, entry, reason);
     }
-    IntVar y = copies.get(trail.variable(entry));
+    IntVar y = (IntVar) copies.get(trail.variable(entry));
     if (y == null) {
       return describe(c, entry, reason, "explains an atom on a variable outside the constraint");
     }
@@ -187,8 +185,12 @@ public final class ExplanationChecker {
    * its node limit counts as undecided.
    */
   private String counterexample(
-      Store scratch, Map<Var, IntVar> copies, Constraint c, int entry, EntryList reason) {
-    IntVar[] scope = copies.values().toArray(new IntVar[0]);
+      Store scratch, Map<Var, Var> copies, Constraint c, int entry, EntryList reason) {
+    IntVar[] scope =
+        copies.values().stream()
+            .filter(IntVar.class::isInstance)
+            .map(IntVar.class::cast)
+            .toArray(IntVar[]::new);
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
     search.setAssignSolution(false);
@@ -214,10 +216,38 @@ public final class ExplanationChecker {
     return null;
   }
 
-  private IntVar copy(Store scratch, Var v) {
-    if (!(v instanceof IntVar x)) {
-      return null;
+  /**
+   * Copies a variable of the constraint into the scratch store: an integer variable with its
+   * initial domain, or a {@link Mirrored} one tied to copies of its mirror, which then hold its
+   * atoms.
+   *
+   * @return false when the variable cannot be copied
+   */
+  private boolean copy(Store scratch, Var v, Map<Var, Var> copies) {
+    if (copies.containsKey(v)) {
+      return true;
     }
+    if (v instanceof IntVar x) {
+      IntVar copy = copy(scratch, x);
+      copies.put(v, copy);
+      return copy != null;
+    }
+    if (!(v instanceof Mirrored m) || m.mirror() == null) {
+      return false;
+    }
+    IntVar[] mirror = m.mirror();
+    IntVar[] mirrorCopies = new IntVar[mirror.length];
+    for (int i = 0; i < mirror.length; i++) {
+      if (!copy(scratch, mirror[i], copies)) {
+        return false;
+      }
+      mirrorCopies[i] = (IntVar) copies.get(mirror[i]);
+    }
+    copies.put(v, m.copyMirrored(scratch, mirrorCopies));
+    return true;
+  }
+
+  private IntVar copy(Store scratch, IntVar x) {
     IntDomain root = trail.rootDomain(x);
     if (x.getClass() == IntVar.class) {
       return new IntVar(scratch, x.id(), root.cloneLight());
