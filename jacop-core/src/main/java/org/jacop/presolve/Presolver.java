@@ -69,8 +69,12 @@ public final class Presolver {
    */
   static final List<Supplier<Rule>> STANDARD =
       Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"))
-          ? List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE, () -> OrderLiterals.RULE)
-          : List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
+          ? List.of(
+              GlobalPresolveRule::new,
+              AtMostOneRule::new,
+              () -> RedundantConstraints.RULE,
+              () -> OrderLiterals.RULE)
+          : List.of(GlobalPresolveRule::new, AtMostOneRule::new, () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;
@@ -122,6 +126,21 @@ public final class Presolver {
    */
   public Presolver rule(Rule rule) {
     builder.rule(rule);
+    return this;
+  }
+
+  /**
+   * Probes the store in the rounds of rules, after the standard rules; see {@link ProbingRule}. Off
+   * by default.
+   *
+   * @param mode what probing tries; {@link Probing.Mode#OFF} adds nothing.
+   * @param budgetMillis the time probing may take over all rounds, in milliseconds.
+   * @return this presolver.
+   */
+  public Presolver probing(Probing.Mode mode, long budgetMillis) {
+    if (mode != Probing.Mode.OFF) {
+      builder.rule(new ProbingRule(mode, budgetMillis));
+    }
     return this;
   }
 

@@ -130,6 +130,16 @@ public class Or extends PrimitiveConstraint implements UsesQueueVariable, Copyab
   }
 
   @Override
+  public int getConsistencyPruningEvent(Var v) {
+    return getPruningEventForConstraints(v, consistencyPruningEvents, listOfC);
+  }
+
+  @Override
+  public int getNotConsistencyPruningEvent(Var v) {
+    return getPruningEventForConstraints(v, notConsistencyPruningEvents, listOfC);
+  }
+
+  @Override
   protected int getDefaultNotConsistencyPruningEvent() {
     throw new IllegalStateException("Not implemented as more precise variant exists.");
   }

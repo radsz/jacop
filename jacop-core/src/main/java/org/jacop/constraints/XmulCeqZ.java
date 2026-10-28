@@ -141,7 +141,8 @@ public class XmulCeqZ extends AbstractConstraintXandCandZ
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.GROUND;
+    // notSatisfied() looks for a value of z between the bounds of c * x, so a hole in z decides it
+    return IntDomain.ANY;
   }
 
   @Override
