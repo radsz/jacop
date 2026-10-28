@@ -163,7 +163,7 @@ class PropagationStrengthTest {
     assertThat(store.consistency()).isTrue();
 
     assertThat(removeValues(store, y, 1)).isTrue();
-    assertThat(x.dom().toString()).isEqualTo("{0, 2..3}");
+    assertThat(x.dom()).hasToString("{0, 2..3}");
   }
 
   // Or(x + y = 4, w <= -2) woke on the event that decides x + y = 4 is satisfied, GROUND, so the
@@ -181,7 +181,7 @@ class PropagationStrengthTest {
     store.setLevel(store.level + 1);
     y.domain.in(store.level, y, 1, 2);
     assertThat(store.consistency()).isTrue();
-    assertThat(x.dom().toString()).isEqualTo("{2..3}");
+    assertThat(x.dom()).hasToString("{2..3}");
   }
 
   // notSatisfied() of 2 * x = z and of y = |x| looks at the holes of a domain, but a reification
@@ -196,7 +196,7 @@ class PropagationStrengthTest {
     store.impose(new Reified(new XmulCeqZ(x, 2, z), b));
     assertThat(store.consistency()).isTrue();
     assertThat(removeValues(store, z, 2, 3, 4)).isTrue();
-    assertThat(b.dom().toString()).isEqualTo("0");
+    assertThat(b.dom()).hasToString("0");
 
     store = new Store();
     x = new IntVar(store, "x", -3, 3);
@@ -205,7 +205,7 @@ class PropagationStrengthTest {
     store.impose(new Reified(new AbsXeqY(x, y), b));
     assertThat(store.consistency()).isTrue();
     assertThat(removeValues(store, x, -2, -1, 0, 1, 2)).isTrue();
-    assertThat(b.dom().toString()).isEqualTo("0");
+    assertThat(b.dom()).hasToString("0");
   }
 
   // once only one variable can reach the maximum (minimum) it takes the target's domain, but the
@@ -250,7 +250,7 @@ class PropagationStrengthTest {
     assertThat(count.min()).isOne();
 
     assertThat(removeValues(store, x[0], 0)).isTrue();
-    assertThat(count.dom().toString()).isEqualTo("{2..3}");
+    assertThat(count.dom()).hasToString("{2..3}");
   }
 
   // ElementVariable kept the supports of values at positions the index could not select, so a
@@ -301,8 +301,8 @@ class PropagationStrengthTest {
     assertThat(store.consistency()).isTrue();
 
     assertThat(removeValues(store, z, 0)).isTrue();
-    assertThat(x.dom().toString()).isEqualTo("1");
-    assertThat(y.dom().toString()).isEqualTo("{1, 3..4}");
+    assertThat(x.dom()).hasToString("1");
+    assertThat(y.dom()).hasToString("{1, 3..4}");
   }
 
   // a pass of AmongVar pruned n to 0 after it had looked at Y, and it is not woken by its own
@@ -325,8 +325,8 @@ class PropagationStrengthTest {
     x1.domain.in(store.level, x1, 4, 4);
     assertThat(store.consistency()).isTrue();
 
-    assertThat(n.dom().toString()).isEqualTo("0");
-    assertThat(y.dom().toString()).isEqualTo("{-2, 1..3}");
+    assertThat(n.dom()).hasToString("0");
+    assertThat(y.dom()).hasToString("{-2, 1..3}");
   }
 
   // Distance cleared the propagation flag after pruning x, so a pass that fixed x was not followed
@@ -345,8 +345,8 @@ class PropagationStrengthTest {
     y.domain.inMin(store.level, y, 2);
     assertThat(store.consistency()).isTrue();
 
-    assertThat(x.dom().toString()).isEqualTo("3");
-    assertThat(z.dom().toString()).isEqualTo("1");
+    assertThat(x.dom()).hasToString("3");
+    assertThat(z.dom()).hasToString("1");
   }
 
   /**

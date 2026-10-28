@@ -198,7 +198,7 @@ class WakeUpFixpointTest {
       try {
         c = builder.build(v[0], v[1], v[2]);
         store.impose(c);
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         continue; // arguments the constraint rejects
       }
       List<IntVar> all = new ArrayList<>();
@@ -229,7 +229,7 @@ class WakeUpFixpointTest {
             default -> x.domain.inMin(store.level, x, value);
           }
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           consistent = false;
         }
       }
@@ -239,7 +239,7 @@ class WakeUpFixpointTest {
   private static boolean consistency(Store store) {
     try {
       return store.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
   }
@@ -289,7 +289,7 @@ class WakeUpFixpointTest {
     try {
       fresh.impose(builder.build(w[0], w[1], w[2]));
       consistent = fresh.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       consistent = false;
     }
     if (!consistent) {
