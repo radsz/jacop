@@ -51,6 +51,7 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -114,6 +115,7 @@ public class Support implements ParserTreeConstants {
   // the variables of every all_different of the model, for OverlappingAlldiff
   final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+  final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   // unary resources found by the disjunctive clique detection: starts and durations
   final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
@@ -738,9 +740,27 @@ public class Support implements ParserTreeConstants {
 
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
+    binPackingCardinality.attach();
+
     // generate channeling constraints for aliases
     // variables that are output variables
     aliasConstraints();
+
+    // cost_regular constraints over the same word and automaton are filtered together;
+    // org.jacop.fz.multiCostRegular=false keeps them apart, =lagrangian adds the relaxation
+    String multiCost = System.getProperty("org.jacop.fz.multiCostRegular", "true");
+    if (!"false".equalsIgnoreCase(multiCost)) {
+      List<Constraint> merged = MultiCostRegular.merge(delayedConstraints);
+      if (merged != delayedConstraints) {
+        delayedConstraints.clear();
+        for (Constraint c : merged) {
+          if (c instanceof MultiCostRegular m && "lagrangian".equalsIgnoreCase(multiCost)) {
+            m.setLagrangian(true);
+          }
+          delayedConstraints.add(c);
+        }
+      }
+    }
 
     for (Constraint c : delayedConstraints) {
       store.impose(c);
@@ -1047,9 +1067,9 @@ public class Support implements ParserTreeConstants {
 
   private void propagateFzXeqYwhenBone(Store store, IntVar x, IntVar y) {
     do {
-      x.domain.in(store.level, x, y.domain);
+      AtomicTrail.in(store, x, y.domain);
       store.propagationHasOccurred = false;
-      y.domain.in(store.level, y, x.domain);
+      AtomicTrail.in(store, y, x.domain);
     } while (store.propagationHasOccurred);
   }
 

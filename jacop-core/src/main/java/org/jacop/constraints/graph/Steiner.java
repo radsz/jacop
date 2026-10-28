@@ -31,6 +31,7 @@
 package org.jacop.constraints.graph;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.jacop.constraints.Constraint;
@@ -46,7 +47,8 @@ import org.jacop.core.Var;
  * tree is rooted at {@code root} with every edge pointing away from it. The terminals are the nodes
  * whose Booleans are fixed to 1.
  *
- * <p>It is decomposed into {@link Tree} and the cost sum.
+ * <p>It is decomposed into {@link Tree}, the cost sum and, when no weight is negative, the dual
+ * ascent bound {@link SteinerBound} with node and edge filtering.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -116,6 +118,9 @@ public class Steiner extends DecomposedConstraint<Constraint> {
     List<Constraint> result = new ArrayList<>(tree.decompose(store));
     auxiliary.addAll(tree.auxiliaryVariables());
     result.add(new LinearInt(es, weights, "==", cost));
+    if (Arrays.stream(weights).allMatch(w -> w >= 0)) {
+      result.add(new SteinerBound(from, to, weights, root, ns, es, cost, base, directed));
+    }
     return result;
   }
 

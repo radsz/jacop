@@ -22,6 +22,8 @@
         ["-sat", "use SAT solver for boolean constraints.", "bool", "false"],
         ["--lcg", "solve with lazy clause generation (integer and Boolean models).", "bool", "false"],
         ["--presolve", "presolve the model before search; check also checks every solution against the loaded model", "opt:off:on:check", "off"],
+        ["--presolve-tabling", "with --presolve, replace small groups of constraints by the tables of their solutions", "bool", "false"],
+        ["--presolve-implied", "with presolve, post sum bounds implied by all-different constraints", "opt:off:on", "off"],
         ["--presolve-probe", "with --presolve, probe the root before search: shave bounds and probe 0-1 variables, or also try every value of small domains (sac)", "opt:off:shave:sac", "off"],
         ["--presolve-probe-budget", "time root probing may take, in milliseconds", "int", "1000"],
         ["--presolve-dual", "dual reductions in presolve, only when one solution or an optimum is searched for", "opt:on:off", "on"],

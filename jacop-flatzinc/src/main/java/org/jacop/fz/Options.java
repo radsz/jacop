@@ -79,9 +79,11 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean presolveImplied;
   boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
+  boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
           probeMode(System.getProperty("jacop.presolve.probe", "off")), Probing.Mode.OFF);
@@ -149,7 +151,11 @@ public class Options {
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
-                conflict of branch and bound, default 0.5; 0 = off)
+                conflict of branch and bound, default 0.5; 0 = off),
+                lcg-core=<share> (with --lcg and a linear objective: share of the time for
+                core-guided search before branch and bound, default 0.5; 0 = off),
+                lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
+                more, default 5000)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
@@ -160,6 +166,8 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --presolve-implied <value> with presolve, post the constraints implied by
+                all-different constraints (sum bounds); "off" (default) or "on"
             --symmetry <value> with presolve, break the variable symmetries of the model with
                 lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
                 problem asks for more than one solution (-a, -n).
@@ -167,6 +175,8 @@ public class Options {
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
+            --presolve-tabling replace small groups of constraints by the tables of their
+                solutions when presolving (default false)
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
                 of "off" (default), "shave" (bound shaving and failed-literal probing of 0-1
                 variables), "sac" (as "shave", and every value of small domains)
@@ -211,9 +221,11 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
+      case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
@@ -316,6 +328,15 @@ public class Options {
     return i + 1;
   }
 
+  private int handlePresolveImplied(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> presolveImplied = true;
+      case "off" -> presolveImplied = false;
+      default -> System.err.println("%% Presolve-implied mode " + args[i] + " not known; ignored");
+    }
+    return i + 1;
+  }
+
   private int handleSymmetry(String[] args, int i) {
     String mode = args[++i];
     switch (mode) {
@@ -342,6 +363,11 @@ public class Options {
     } else {
       System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
     }
+    return i + 1;
+  }
+
+  private int handlePresolveTabling(int i) {
+    presolveTabling = true;
     return i + 1;
   }
 
@@ -687,6 +713,15 @@ public class Options {
   }
 
   /**
+   * It defines whether presolve posts implied constraints (--presolve-implied).
+   *
+   * @return false by default
+   */
+  public boolean presolveImplied() {
+    return presolveImplied;
+  }
+
+  /**
    * It defines whether presolve breaks the symmetries of the model (--symmetry).
    *
    * @return true by default
@@ -712,6 +747,16 @@ public class Options {
    */
   public int presolveRounds() {
     return presolveRounds;
+  }
+
+  /**
+   * It defines whether presolve replaces small groups of constraints by tables
+   * (--presolve-tabling).
+   *
+   * @return true if presolve tabulates, false by default
+   */
+  public boolean presolveTabling() {
+    return presolveTabling;
   }
 
   /**

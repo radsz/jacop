@@ -352,11 +352,10 @@ public class CumulativeBasic extends Constraint
     int room = limitMax - r;
     int v = trail.value(entry);
     if (kind == AtomicTrail.NE) {
-      for (int t = v; t < v + d; t++) {
-        if (overloaded(trail, entry, j, t, room, null)) {
-          overloaded(trail, entry, j, t, room, out);
-          return true;
-        }
+      int t = firstOverloaded(trail, entry, j, v, v + d - 1, room);
+      if (t != NONE) {
+        overloaded(trail, entry, j, t, room, out);
+        return true;
       }
       int[] window = overloadedWindow(trail, entry, j, v);
       if (window == null) {
@@ -366,31 +365,7 @@ public class CumulativeBasic extends Constraint
       return true;
     } else if (kind == AtomicTrail.GE) {
       trail.addLowerBound(y, entry, out);
-      int u = trail.minBefore(y, entry);
-      while (u < v) {
-        if (trail.excludedBefore(y, u, entry, out)) {
-          u++;
-          continue;
-        }
-        int t = u + d - 1;
-        while (t >= u && !overloaded(trail, entry, j, t, room, null)) {
-          t--;
-        }
-        if (t >= u) {
-          overloaded(trail, entry, j, t, room, out);
-          u = t + 1;
-          continue;
-        }
-        int[] window = overloadedWindow(trail, entry, j, u);
-        if (window == null) {
-          return false;
-        }
-        addWindowReason(trail, entry, j, window, out);
-        u++;
-        while (u < v && windowExcess(trail, entry, j, u, window[0], window[1]) > 0) {
-          u++;
-        }
-      }
+      return explainStartsBelow(trail, entry, j, trail.minBefore(y, entry), v, d, room, out);
     } else {
       trail.addUpperBound(y, entry, out);
       int u = trail.maxBefore(y, entry);
@@ -399,11 +374,8 @@ public class CumulativeBasic extends Constraint
           u--;
           continue;
         }
-        int t = u;
-        while (t < u + d && !overloaded(trail, entry, j, t, room, null)) {
-          t++;
-        }
-        if (t < u + d) {
+        int t = firstOverloaded(trail, entry, j, u, u + d - 1, room);
+        if (t != NONE) {
           overloaded(trail, entry, j, t, room, out);
           u = t - d;
           continue;
@@ -413,10 +385,7 @@ public class CumulativeBasic extends Constraint
           return false;
         }
         addWindowReason(trail, entry, j, window, out);
-        u--;
-        while (u > v && windowExcess(trail, entry, j, u, window[0], window[1]) > 0) {
-          u--;
-        }
+        u = windowRight(trail, entry, j, u, v, window);
       }
     }
     return true;
@@ -434,15 +403,16 @@ public class CumulativeBasic extends Constraint
     int position = trail.size();
     snapshot(trail, position);
     int room = limitMax;
+    // the load rises only where a compulsory part begins, so an overload shows at such a point
     for (TaskView task : taskNormal) {
-      int from = lst(task);
-      int to = est(task) + dmin(position, task);
-      for (int t = from; t < to; t++) {
-        if (overloaded(trail, position, -1, t, room, null)) {
-          overloaded(trail, position, -1, t, room, out);
-          return true;
-        }
+      int t = lst(task);
+      if (t < est(task) + dmin(position, task) && overloaded(trail, position, -1, t, room, null)) {
+        overloaded(trail, position, -1, t, room, out);
+        return true;
       }
+    }
+    if (explainNoStartLeft(trail, position, out)) {
+      return true;
     }
     int[] window = overloadedWindow(trail, position, -1, 0);
     if (window != null) {
@@ -452,8 +422,11 @@ public class CumulativeBasic extends Constraint
     return false;
   }
 
-  /** The most windows one explanation weighs before it leaves the atom to the generic reason. */
-  private static final int WINDOW_BUDGET = 1 << 16;
+  /**
+   * The most task overlaps one explanation weighs in windows before it leaves the atom to the
+   * generic reason.
+   */
+  private static final int WINDOW_BUDGET = 1 << 22;
 
   // the bounds of the tasks and the limit's maximum just before the position being explained
   private TaskView[] snapshotTasks;
@@ -516,47 +489,229 @@ public class CumulativeBasic extends Constraint
   }
 
   /**
+   * Explains a failure of the time table on a task whose start lost all its values: none of its
+   * starts from the earliest to the latest is possible.
+   */
+  private boolean explainNoStartLeft(AtomicTrail trail, int position, EntryList out) {
+    // the sweep that ran is that of the constraint over constant tasks when there is one
+    IntVar failed =
+        cumulativeForConstants == null ? sweep.noStartLeft : cumulativeForConstants.noStartLeft;
+    if (failed == null) {
+      return false;
+    }
+    int j = -1;
+    for (int i = 0; i < taskNormal.length; i++) {
+      if (taskNormal[i].start == failed) {
+        if (j >= 0) {
+          return false;
+        }
+        j = i;
+      }
+    }
+    if (j < 0) {
+      return false;
+    }
+    TaskView own = taskNormal[j];
+    int d = dmin(position, own);
+    int r = rmin(position, own);
+    if (d <= 0 || r <= 0) {
+      return false;
+    }
+    int mark = out.size();
+    trail.addLowerBound(own.dur, position, out);
+    trail.addLowerBound(own.res, position, out);
+    trail.addLowerBound(own.start, position, out);
+    trail.addUpperBound(own.start, position, out);
+    if (explainStartsBelow(trail, position, j, est(own), lst(own) + 1, d, limitMax - r, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  /**
+   * Explains why task j, just before a trail position, starts at none of [u, v): each such start is
+   * out of its domain already, or the task started there overlaps a time point where the others'
+   * compulsory parts leave less than its resource use (room is the limit less that use), or a
+   * window that then needs more energy than the limit gives.
+   */
+  private boolean explainStartsBelow(
+      AtomicTrail trail, int entry, int j, int u, int v, int d, int room, EntryList out) {
+    IntVar y = taskNormal[j].start;
+    while (u < v) {
+      if (trail.excludedBefore(y, u, entry, out)) {
+        u++;
+        continue;
+      }
+      int t = lastOverloaded(trail, entry, j, u, u + d - 1, room);
+      if (t != NONE) {
+        overloaded(trail, entry, j, t, room, out);
+        u = t + 1;
+        continue;
+      }
+      int[] window = overloadedWindow(trail, entry, j, u);
+      if (window == null) {
+        return false;
+      }
+      addWindowReason(trail, entry, j, window, out);
+      u = windowLeft(trail, entry, j, u, v, window);
+    }
+    return true;
+  }
+
+  /** No such time point. */
+  private static final int NONE = Integer.MIN_VALUE;
+
+  /**
+   * The first time point in [a, b] where the compulsory parts of the tasks other than skip use more
+   * than room, or {@link #NONE}. The load rises only where a compulsory part begins, so the point
+   * is a or the latest start of a task.
+   */
+  private int firstOverloaded(AtomicTrail trail, int position, int skip, int a, int b, int room) {
+    int best = NONE;
+    if (a > b || overloaded(trail, position, skip, a, room, null)) {
+      return a > b ? NONE : a;
+    }
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      int t = lst(task);
+      if (i != skip
+          && a < t
+          && t <= b
+          && (best == NONE || t < best)
+          && t < est(task) + dmin(position, task)
+          && overloaded(trail, position, skip, t, room, null)) {
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * The last time point in [a, b] where the compulsory parts of the tasks other than skip use more
+   * than room, or {@link #NONE}. The load falls only after a compulsory part ends, so the point is
+   * b or the last time point of the compulsory part of a task.
+   */
+  private int lastOverloaded(AtomicTrail trail, int position, int skip, int a, int b, int room) {
+    int best = NONE;
+    if (a > b || overloaded(trail, position, skip, b, room, null)) {
+      return a > b ? NONE : b;
+    }
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      int t = est(task) + dmin(position, task) - 1;
+      if (i != skip
+          && a <= t
+          && t < b
+          && t > best
+          && lst(task) <= t
+          && overloaded(trail, position, skip, t, room, null)) {
+        best = t;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * The first start in (u, v] of task j at which the window no longer needs more energy than the
+   * limit gives, or v. Only task j's overlap with the window depends on its start, and that overlap
+   * rises, stays and falls as the start grows, so the starts with an excess form an interval: those
+   * after u are found by bisection.
+   */
+  private int windowLeft(AtomicTrail trail, int position, int j, int u, int v, int[] window) {
+    int lo = u; // has an excess
+    int hi = v; // the answer when every start up to v has one
+    while (hi - lo > 1) {
+      int mid = (int) (((long) lo + hi) >>> 1);
+      if (windowExcess(trail, position, j, mid, window[0], window[1]) > 0) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    return hi;
+  }
+
+  /** As {@link #windowLeft}, downwards: the last start in [v, u) without an excess, or v. */
+  private int windowRight(AtomicTrail trail, int position, int j, int u, int v, int[] window) {
+    int hi = u;
+    int lo = v;
+    while (hi - lo > 1) {
+      int mid = (int) (((long) lo + hi) >>> 1);
+      if (windowExcess(trail, position, j, mid, window[0], window[1]) > 0) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+    return lo;
+  }
+
+  /**
    * Finds a time window [a, b) where the tasks other than j, with task j started at u (when j is
    * not -1), need more energy than the limit gives over the window, just before a trail position:
    * each task needs at least its smallest overlap with the window over its start range. Returns the
    * window of the largest excess, or null.
+   *
+   * <p>For a window start a, the smallest overlap of a task with [a, b) is 0 up to b = max(lst, a),
+   * then grows by one per time unit up to min(d, ect - a), so the need of all tasks is piecewise
+   * linear in b and one sweep over these breakpoints weighs every window end. Window starts are the
+   * earliest starts of the tasks.
    */
   private int[] overloadedWindow(AtomicTrail trail, int position, int j, int u) {
     int n = taskNormal.length;
     int[] from = new int[n + 1];
-    int[] to = new int[2 * n + 1];
     int nf = 0;
-    int nt = 0;
     for (int i = 0; i < n; i++) {
-      if (i == j) {
-        continue;
+      if (i != j) {
+        from[nf++] = est(taskNormal[i]);
       }
-      TaskView task = taskNormal[i];
-      int est = est(task);
-      int lst = lst(task);
-      from[nf++] = est;
-      int d = dmin(position, task);
-      to[nt++] = est + d;
-      to[nt++] = lst + d;
     }
     if (j >= 0) {
       from[nf++] = u;
-      to[nt++] = u + dmin(position, taskNormal[j]);
     }
+    Arrays.sort(from, 0, nf);
+    long[] events = new long[2 * n];
     int[] best = null;
     long bestExcess = 0;
     for (int f = 0; f < nf; f++) {
-      for (int t = 0; t < nt; t++) {
-        if (to[t] > from[f]) {
-          if (--windowBudget < 0) {
-            return null;
-          }
-          long excess = windowExcess(trail, position, j, u, from[f], to[t]);
-          if (excess > bestExcess) {
-            bestExcess = excess;
-            best = new int[] {from[f], to[t]};
-          }
+      int a = from[f];
+      if (f > 0 && a == from[f - 1]) {
+        continue;
+      }
+      windowBudget -= n;
+      if (windowBudget < 0) {
+        return null;
+      }
+      int ne = 0;
+      for (int i = 0; i < n; i++) {
+        TaskView task = taskNormal[i];
+        long r = rmin(position, task);
+        int d = dmin(position, task);
+        int est = i == j ? u : est(task);
+        int lst = i == j ? u : lst(task);
+        long rise = Math.max((long) lst, a);
+        long length = Math.min(d, (long) est + d - a);
+        if (r > 0 && length > 0) {
+          events[ne++] = rise << 32 | i;
+          events[ne++] = (rise + length) << 32 | i | 1L << 31;
         }
+      }
+      Arrays.sort(events, 0, ne);
+      long need = 0;
+      long slope = 0;
+      long at = a;
+      for (int k = 0; k < ne; k++) {
+        long b = events[k] >> 32;
+        need += slope * (b - at);
+        at = b;
+        long excess = need - (long) limitMax * (b - a);
+        if (b > a && excess > bestExcess && b <= Integer.MAX_VALUE) {
+          bestExcess = excess;
+          best = new int[] {a, (int) b};
+        }
+        long r = rmin(position, taskNormal[(int) (events[k] & 0x7fffffffL)]);
+        slope += (events[k] & 1L << 31) == 0 ? r : -r;
       }
     }
     return best;

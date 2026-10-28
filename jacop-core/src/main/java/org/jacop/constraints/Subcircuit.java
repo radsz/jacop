@@ -41,9 +41,12 @@ import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.util.DominatorTree;
 
 /**
@@ -97,6 +100,10 @@ public class Subcircuit extends Alldiff {
   // calls left before dominator pruning runs again, and the length of the current pause
   private int dominanceWait;
   private int dominanceSkip;
+
+  // the roots the dominator pruning used last, tried first by the explanations
+  private final int[] recentRoots = {-1, -1, -1, -1};
+  private int nextRoot;
 
   /**
    * It constructs a circuit constraint.
@@ -392,9 +399,25 @@ public class Subcircuit extends Alldiff {
       }
     }
 
-    if (pr > 0 && !graphDominance(possibleRoots[random.nextInt(pr)])) {
-      reversedGraphDominance(possibleRoots[random.nextInt(pr)]);
+    if (pr > 0) {
+      int root = possibleRoots[random.nextInt(pr)];
+      recordRoot(root);
+      if (!graphDominance(root)) {
+        root = possibleRoots[random.nextInt(pr)];
+        recordRoot(root);
+        reversedGraphDominance(root);
+      }
     }
+  }
+
+  private void recordRoot(int root) {
+    for (int r : recentRoots) {
+      if (r == root) {
+        return;
+      }
+    }
+    recentRoots[nextRoot] = root;
+    nextRoot = (nextRoot + 1) % recentRoots.length;
   }
 
   // Graph from a source n that replaces the root's outgoing arcs and reaches every node that may
@@ -463,6 +486,21 @@ public class Subcircuit extends Alldiff {
       }
     }
     return pruning;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    int mark = out.size();
+    if (SubcircuitExplanation.explain(trail, entry, list, 1, false, recentRoots, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return AlldiffExplanation.explain(trail, entry, list, new IntervalDomain(), out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return SubcircuitExplanation.explainFailure(trail, list, 1, false, recentRoots, out);
   }
 
   @Override

@@ -66,6 +66,7 @@ import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Deviation;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
@@ -104,7 +105,6 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYlteqZ;
-import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
@@ -831,6 +831,9 @@ class GlobalConstraints implements ParserTreeConstants {
       cover[i] = indexMin + i;
     }
     poseClosedGcc(x, cover, c);
+    if (domainConsistent()) {
+      poseCountValues(x, cover, c, true);
+    }
   }
 
   void gen_jacop_global_cardinality_closed(SimpleNode node) {
@@ -839,6 +842,9 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] counter = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
     poseClosedGcc(x, cover, counter);
+    if (domainConsistent()) {
+      poseCountValues(x, cover, counter, true);
+    }
   }
 
   void gen_jacop_global_cardinality_low_up_closed(SimpleNode node) {
@@ -857,12 +863,39 @@ class GlobalConstraints implements ParserTreeConstants {
 
     poseClosedGcc(x, cover, counter);
 
-    if (support.domainConsistency && !support.options.getBoundConsistency()) {
-      // we add additional CountBounds constraint if domain consistency is required
-      for (int i = 0; i < low.length; i++) {
-        support.pose(new CountBounds(x, cover[i], low[i], up[i]));
+    if (domainConsistent()) {
+      poseGlobalCardinality(x, cover, low, up);
+    }
+  }
+
+  /** Whether the constraint asks for domain consistency, with ::domain. */
+  private boolean domainConsistent() {
+    return support.domainConsistency && !support.options.getBoundConsistency();
+  }
+
+  /**
+   * Poses the domain consistent GlobalCardinality with fixed bounds; a repeated value is counted
+   * once within the intersection of its bounds.
+   */
+  private void poseGlobalCardinality(IntVar[] x, int[] values, int[] lb, int[] ub) {
+    if (lb.length != values.length || ub.length != values.length) {
+      throw new IllegalArgumentException(
+          "global cardinality needs one lower and one upper bound for each value");
+    }
+    Map<Integer, int[]> bounds = new LinkedHashMap<>();
+    for (int i = 0; i < values.length; i++) {
+      int[] b = bounds.putIfAbsent(values[i], new int[] {lb[i], ub[i]});
+      if (b != null) {
+        b[0] = Math.max(b[0], lb[i]);
+        b[1] = Math.min(b[1], ub[i]);
       }
     }
+    support.pose(
+        new GlobalCardinality(
+            x,
+            bounds.keySet().stream().mapToInt(Integer::intValue).toArray(),
+            bounds.values().stream().mapToInt(b -> b[0]).toArray(),
+            bounds.values().stream().mapToInt(b -> b[1]).toArray()));
   }
 
   /**
@@ -899,6 +932,8 @@ class GlobalConstraints implements ParserTreeConstants {
         support.pose(new XeqY(first, counter[i]));
       }
     }
+
+    support.binPackingCardinality.addCounters(x, counterOf);
 
     // a counter of a value no variable can take is zero; it may also be one of the variables, so
     // the union is recomputed until no counter is fixed any more
@@ -1047,7 +1082,7 @@ class GlobalConstraints implements ParserTreeConstants {
           values[i] = group.get(i).value();
           counters[i] = group.get(i).counter();
         }
-        poseCountValues(e.getKey().toArray(new IntVar[0]), values, counters);
+        poseCountValues(e.getKey().toArray(new IntVar[0]), values, counters, false);
       }
     }
     support.constraintPriority = priority;
@@ -1090,14 +1125,15 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] counters = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
-    poseCountValues(x, values, counters);
+    poseCountValues(x, values, counters, domainConsistent());
   }
 
   /**
-   * Poses CountValues, or CountValuesBounds when every counter is fixed. A repeated value is
-   * counted once and its counters are made equal.
+   * Poses CountValues, or CountValuesBounds when every counter is fixed, or the domain consistent
+   * GlobalCardinality when domain is true. A repeated value is counted once and its counters are
+   * made equal.
    */
-  private void poseCountValues(IntVar[] x, int[] values, IntVar[] counters) {
+  private void poseCountValues(IntVar[] x, int[] values, IntVar[] counters, boolean domain) {
     Map<Integer, Integer> firstPosition = new LinkedHashMap<>();
     for (int i = 0; i < values.length; i++) {
       Integer first = firstPosition.putIfAbsent(values[i], i);
@@ -1117,7 +1153,9 @@ class GlobalConstraints implements ParserTreeConstants {
       counters = uniqueCounters;
     }
 
-    if (allVarGround(counters)) {
+    if (domain) {
+      support.pose(new GlobalCardinality(x, values, counters));
+    } else if (allVarGround(counters)) {
       int[] lb = new int[counters.length];
       int[] ub = new int[counters.length];
       for (int i = 0; i < counters.length; i++) {
@@ -1166,7 +1204,12 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
-    support.pose(new CountValuesBounds(x, lb, ub, values));
+    support.binPackingCardinality.addBounds(x, bounds);
+    if (domainConsistent()) {
+      poseGlobalCardinality(x, values, lb, ub);
+    } else {
+      support.pose(new CountValuesBounds(x, lb, ub, values));
+    }
   }
 
   void gen_jacop_count_var(SimpleNode node) {
@@ -2166,9 +2209,7 @@ class GlobalConstraints implements ParserTreeConstants {
     // are duplicated.
     IntVar[] cc = removeDuplicates(capacity);
 
-    Constraint binPack =
-        Binpacking.builder().bin(bin).load(cc).w(w).minBin(minBin).lbPruning(true).build();
-    support.delayedConstraints.add(binPack);
+    support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -2182,9 +2223,7 @@ class GlobalConstraints implements ParserTreeConstants {
       load[i] = new IntVar(store, 0, capacity[i]);
     }
 
-    Constraint binPack =
-        Binpacking.builder().bin(bin).load(load).w(w).minBin(minBin).lbPruning(true).build();
-    support.delayedConstraints.add(binPack);
+    support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, load, w, minBin));
   }
 
   void gen_jacop_float_maximum(SimpleNode node) {

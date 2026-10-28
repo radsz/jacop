@@ -44,8 +44,12 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
+import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.floats.core.FloatDomain;
 import org.junit.jupiter.api.Test;
@@ -1474,6 +1478,75 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgImpliedEqualityKeepsTheBoundsOfALargeDomain() throws IOException {
+    // liner-sf-repositioning fm3_5: int_eq_imp between a variable of a million values and one of
+    // four copied the holes of the small domain into the large one once b held, a != atom with its
+    // own literals for each of a million values, until the heap ran out
+    String model =
+        """
+        var 1..1000000: x :: output_var;
+        var {250000, 500000, 750000, 1000000}: y;
+        var bool: b;
+        var 0..3000000: cost :: output_var;
+        constraint int_eq_imp(x, y, b);
+        constraint int_lin_eq([1, -1000000, -1], [x, b, cost], -1000000);
+        solve minimize cost;
+        """;
+    String out = run(model, "--lcg", "-s")[0];
+    String last = out.substring(out.lastIndexOf("x = "));
+    assertTrue(last.startsWith("x = 250000;"), out);
+    String literals = out.substring(out.indexOf("lcgAtomLiterals=") + 16);
+    assertTrue(Long.parseLong(literals.substring(0, literals.indexOf('\n')).strip()) < 1000, out);
+  }
+
+  @Test
+  void lcgFreeSearchWithoutAnnotationAlternatesWithDomWdeg() throws IOException {
+    // cutstock without a search annotation: --lcg -f branched on activity alone and found no
+    // solution in 60 s on type04_TEST9, where dom/wdeg finds one; its runs now alternate with
+    // dom/wdeg on the default search variables, as they alternate with an annotation
+    int[] length = {45, 36, 31, 14};
+    int[] demand = {3, 4, 5, 6};
+    int pieces = 12;
+    StringBuilder model = new StringBuilder();
+    StringBuilder used = new StringBuilder();
+    for (int k = 1; k <= pieces; k++) {
+      model.append("var 0..1: p%d;\n".formatted(k));
+      used.append("p%d, ".formatted(k));
+      for (int i = 1; i <= length.length; i++) {
+        model.append("var 0..6: q%d_%d;\n".formatted(k, i));
+      }
+    }
+    model.append("var 0..%d: used :: output_var;\n".formatted(pieces));
+    for (int k = 1; k <= pieces; k++) {
+      StringBuilder vars = new StringBuilder();
+      StringBuilder weights = new StringBuilder();
+      for (int i = 1; i <= length.length; i++) {
+        vars.append("q%d_%d, ".formatted(k, i));
+        weights.append(length[i - 1]).append(", ");
+      }
+      model.append("constraint int_lin_le([%s-100], [%sp%d], 0);\n".formatted(weights, vars, k));
+    }
+    for (int i = 1; i <= length.length; i++) {
+      StringBuilder vars = new StringBuilder();
+      for (int k = 1; k <= pieces; k++) {
+        vars.append(k == 1 ? "" : ", ").append("q%d_%d".formatted(k, i));
+      }
+      model.append(
+          "constraint int_lin_le([%s], [%s], %d);\n"
+              .formatted("-1, ".repeat(pieces - 1) + "-1", vars, -demand[i - 1]));
+    }
+    model.append(
+        "constraint int_lin_eq([%s-1], [%sused], 0);\n".formatted("1, ".repeat(pieces), used));
+    model.append("solve minimize used;\n");
+    // proving that six pieces are optimal takes long among the symmetric pieces
+    String out = run(model.toString(), "--lcg", "-f", "-s", "-t", "1000")[0];
+    Matcher u = Pattern.compile("used = (\\d+);").matcher(out);
+    assertTrue(u.find() && Integer.parseInt(u.group(1)) >= 6, out);
+    Matcher m = Pattern.compile("lcgAnnotationDecisions=(\\d+)").matcher(out);
+    assertTrue(m.find() && Long.parseLong(m.group(1)) > 0, out);
+  }
+
+  @Test
   void lcgReportsUnsatisfiable() throws IOException {
     String model =
         """
@@ -1540,6 +1613,125 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg")[0];
     assertTrue(out.contains("--lcg ignored"), out);
     assertTrue(out.contains("x = 2;"), out);
+  }
+
+  @Test
+  void lcgSolvesSetModels() throws IOException {
+    String model =
+        """
+        var set of 1..4: s :: output_var;
+        var 0..4: k;
+        var bool: b2;
+        var bool: b3;
+        constraint set_card(s, k);
+        constraint int_le(2, k);
+        constraint set_in_reif(2, s, b2);
+        constraint set_in_reif(3, s, b3);
+        constraint bool_clause([], [b2, b3]);
+        solve :: set_search([s], input_order, indomain_min, complete) satisfy;
+        """;
+    String out = run(model, "--lcg", "-s")[0];
+    assertTrue(!out.contains("--lcg ignored"), out);
+    assertTrue(out.contains("----------"), out);
+    // the annotation's decisions on the set are followed, as without --lcg: 1 and 2 are put in s,
+    // which leaves 3 out, then 4
+    assertTrue(out.contains("s = {1, 2, 4};"), out);
+    assertTrue(!out.contains("lcgAnnotationDecisions=0"), out);
+  }
+
+  /**
+   * Random models over set variables (union, intersection, difference, subset, cardinality, element
+   * and membership) with a weighted objective over the membership of their elements: the optimum
+   * under --lcg, with every explanation checked, is the one of the search without it. The mirror of
+   * a set variable once skipped a membership already fixed the other way, which lost solutions.
+   */
+  @Test
+  void lcgOnSetModelsFindsTheOptimum() throws IOException {
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      for (int seed = 1; seed <= 60; seed++) {
+        String model = randomSetModel(new Random(seed));
+        String expected = objective(run(model)[0]);
+        String lcg = objective(run(model, "--lcg", "-f")[0]);
+        assertEquals(expected, lcg, "seed " + seed + "\n" + model);
+      }
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+    }
+  }
+
+  private static String objective(String out) {
+    return out.lines()
+        .filter(l -> l.startsWith("obj = ") || l.contains("UNSATISFIABLE"))
+        .reduce((a, b) -> b)
+        .orElse(out);
+  }
+
+  private static String randomSetModel(Random r) {
+    int sets = 3 + r.nextInt(4);
+    StringBuilder vars = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < sets; i++) {
+      vars.append("var set of 1..5: s%d;\n".formatted(i));
+    }
+    int extra = 0;
+    for (int n = 2 + r.nextInt(5); n > 0; n--) {
+      int a = r.nextInt(sets);
+      int b = (a + 1 + r.nextInt(sets - 1)) % sets;
+      int c = r.nextInt(sets);
+      while (c == a || c == b) {
+        c = r.nextInt(sets);
+      }
+      switch (r.nextInt(9)) {
+        case 0 -> constraints.append("constraint set_union(s%d, s%d, s%d);\n".formatted(a, b, c));
+        case 1 ->
+            constraints.append("constraint set_intersect(s%d, s%d, s%d);\n".formatted(a, b, c));
+        case 2 -> constraints.append("constraint set_diff(s%d, s%d, s%d);\n".formatted(a, b, c));
+        case 3 -> constraints.append("constraint set_subset(s%d, s%d);\n".formatted(a, b));
+        case 7 -> constraints.append("constraint set_le(s%d, s%d);\n".formatted(a, b));
+        case 8 -> constraints.append("constraint set_lt(s%d, s%d);\n".formatted(a, b));
+        case 4 -> {
+          vars.append("var 0..5: k%d;\n".formatted(extra));
+          constraints.append("constraint set_card(s%d, k%d);\n".formatted(a, extra));
+          constraints.append("constraint int_le(%d, k%d);\n".formatted(r.nextInt(4), extra++));
+        }
+        case 5 -> {
+          StringBuilder values = new StringBuilder();
+          for (int j = 0; j < 3; j++) {
+            Set<Integer> value = new TreeSet<>();
+            for (int e = 1; e <= 5; e++) {
+              if (r.nextInt(3) == 0) {
+                value.add(e);
+              }
+            }
+            values.append(j == 0 ? "{" : ", {");
+            values.append(value.stream().map(String::valueOf).collect(Collectors.joining(",")));
+            values.append('}');
+          }
+          vars.append("var 1..3: x%d;\n".formatted(extra));
+          constraints.append(
+              "constraint array_set_element(x%d, [%s], s%d);\n".formatted(extra++, values, a));
+        }
+        default -> {
+          vars.append("var 1..5: x%d;\n".formatted(extra));
+          constraints.append("constraint set_in(x%d, s%d);\n".formatted(extra++, a));
+        }
+      }
+    }
+    StringJoiner weights = new StringJoiner(",");
+    StringJoiner terms = new StringJoiner(",");
+    for (int i = 0; i < sets; i++) {
+      for (int e = 1; e <= 5; e++) {
+        vars.append("var bool: b%d_%d;\nvar 0..1: i%d_%d;\n".formatted(i, e, i, e));
+        constraints.append("constraint set_in_reif(%d, s%d, b%d_%d);\n".formatted(e, i, i, e));
+        constraints.append("constraint bool2int(b%d_%d, i%d_%d);\n".formatted(i, e, i, e));
+        weights.add(String.valueOf(r.nextInt(11) - 5));
+        terms.add("i%d_%d".formatted(i, e));
+      }
+    }
+    vars.append("var -1000..1000: obj :: output_var;\n");
+    constraints.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(weights, terms));
+    return vars + constraints.toString() + "solve minimize obj;\n";
   }
 
   private String[] run(String model, String... options) throws IOException {

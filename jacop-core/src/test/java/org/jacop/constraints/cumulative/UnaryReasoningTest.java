@@ -39,9 +39,11 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestMin;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -93,12 +95,16 @@ class UnaryReasoningTest {
   }
 
   private static Instance instance(Random random, int maxTasks) {
+    return instance(random, maxTasks, false);
+  }
+
+  private static Instance instance(Random random, int maxTasks, boolean constantDurations) {
     int n = 1 + random.nextInt(maxTasks);
     int[][] durations = new int[n][];
     int total = 0;
     for (int i = 0; i < n; i++) {
       int lo = 1 + random.nextInt(random.nextBoolean() ? 3 : 12);
-      int hi = random.nextInt(3) == 0 ? lo + random.nextInt(4) : lo;
+      int hi = !constantDurations && random.nextInt(3) == 0 ? lo + random.nextInt(4) : lo;
       durations[i] = new int[] {lo, hi};
       total += lo;
     }
@@ -272,7 +278,7 @@ class UnaryReasoningTest {
     assertThat(referenceDetectableFixpoint(inst, false)[1][0]).isEqualTo(16);
   }
 
-  /** CumulativeUnary with the Theta-tree rules of the reference. */
+  /** CumulativeUnary with the Theta-tree rules of the reference and the general profile. */
   private static final class ReferenceUnary extends CumulativeUnary {
 
     private final UnaryReasoningReference normal = new UnaryReasoningReference();
@@ -280,6 +286,12 @@ class UnaryReasoningTest {
 
     ReferenceUnary(IntVar[] s, IntVar[] d, IntVar[] r, IntVar limit, boolean profile) {
       super(s, d, r, limit, profile, true);
+    }
+
+    // the general profile, as CumulativeUnary ran it before the unary time-table
+    @Override
+    void unaryProfile(Store store) {
+      profileProp(store);
     }
 
     // the rules as CumulativeUnary ran them before the time line: a fresh load before each
@@ -336,8 +348,32 @@ class UnaryReasoningTest {
     }
   }
 
+  @Test
+  void rulesRunAgainAfterTheTimeTableChangesBounds() {
+    // found by random testing: a rule that pruned nothing in one pass prunes after the time-table
+    // changed bounds in a later pass, so the time-table must reset the skipped rules
+    Instance inst =
+        new Instance(
+            new int[][] {
+              {24, 25},
+              {6, 7, 8, 9, 10, 11, 13, 15, 17, 18, 19, 21, 22, 23},
+              {3, 4, 5, 7},
+              {22},
+              {15, 16, 17, 18, 19, 20, 21, 23, 24, 25, 26, 27, 28, 29, 30, 31},
+              {2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15, 17, 18, 20},
+              {22, 23, 24, 25, 26, 29}
+            },
+            new int[][] {{1, 1}, {1, 4}, {7, 9}, {1, 1}, {6, 8}, {2, 5}, {7, 7}});
+    assertThat(rootFixpoint(inst, true, false)).isDeepEqualTo(rootFixpoint(inst, true, true));
+  }
+
   /** Solutions and nodes of a random-order search over all solutions, or the first if many. */
   private static long[] search(Instance inst, boolean profile, boolean reference, long seed) {
+    return search(inst, profile, reference, seed, false);
+  }
+
+  private static long[] search(
+      Instance inst, boolean profile, boolean reference, long seed, boolean leftToRight) {
     Store store = new Store();
     IntVar[][] v = inst.post(store);
     IntVar limit = new IntVar(store, 1, 1);
@@ -349,8 +385,15 @@ class UnaryReasoningTest {
     System.arraycopy(v[0], 0, vars, 0, inst.n());
     System.arraycopy(v[1], 0, vars, inst.n(), inst.n());
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    // left to right: the earliest start first, as job shop searches do, so the tasks fixed first
+    // end before the others
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<>(vars, null, new IndomainRandom<>((int) seed));
+        leftToRight
+            ? new SimpleSelect<>(
+                vars,
+                new SmallestMin<>(),
+                seed % 2 == 0 ? new IndomainMin<>() : new IndomainRandom<>((int) seed))
+            : new SimpleSelect<>(vars, null, new IndomainRandom<>((int) seed));
     search.setPrintInfo(false);
     search.getSolutionListener().searchAll(true);
     search.getSolutionListener().recordSolutions(false);
@@ -363,6 +406,71 @@ class UnaryReasoningTest {
       search.getDecisions(),
       search.getWrongDecisions()
     };
+  }
+
+  @Test
+  void leftToRightSearchExploresTheSameTree() {
+    // the fixed tasks that end before the others are left out of the rules and the time-table
+    Random random = new Random(15);
+    for (int trial = 0; trial < TRIALS / 5; trial++) {
+      Instance inst = instance(random, 14, trial % 3 != 0);
+      long seed = random.nextLong();
+      assertThat(search(inst, true, false, seed, true))
+          .as("seed=%d on %s", seed, inst)
+          .containsExactly(search(inst, true, true, seed, true));
+    }
+  }
+
+  /**
+   * An instance whose first tasks are fixed one after another, and the others start after them, or
+   * sometimes earlier so that they overlap the fixed tasks.
+   */
+  private static Instance fixedPrefixInstance(Random random) {
+    Instance rest = instance(random, 12, random.nextBoolean());
+    int fixed = 1 + random.nextInt(6);
+    int n = fixed + rest.n();
+    int[][] starts = new int[n][];
+    int[][] durations = new int[n][];
+    int time = 0;
+    for (int i = 0; i < fixed; i++) {
+      int d = 1 + random.nextInt(5);
+      time += random.nextInt(3) == 0 ? random.nextInt(3) : 0;
+      starts[i] = new int[] {time};
+      durations[i] = new int[] {d, d};
+      // sometimes two fixed tasks overlap
+      time += random.nextInt(8) == 0 ? d - 1 : d;
+    }
+    int shift = random.nextInt(4) == 0 ? time - 1 - random.nextInt(3) : time;
+    for (int i = 0; i < rest.n(); i++) {
+      int[] values = rest.starts()[i].clone();
+      for (int k = 0; k < values.length; k++) {
+        values[k] += shift;
+      }
+      starts[fixed + i] = values;
+      durations[fixed + i] = rest.durations()[i];
+    }
+    return new Instance(starts, durations);
+  }
+
+  @Test
+  void fixedTasksBeforeTheOthersChangeNothing() {
+    Random random = new Random(16);
+    int failures = 0;
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance inst = fixedPrefixInstance(random);
+      int[][] reference = rootFixpoint(inst, true, true);
+      assertThat(rootFixpoint(inst, true, false)).as("%s", inst).isDeepEqualTo(reference);
+      if (reference == null) {
+        failures++;
+      }
+      if (trial % 10 == 0) {
+        long seed = random.nextLong();
+        assertThat(search(inst, true, false, seed, true))
+            .as("seed=%d on %s", seed, inst)
+            .containsExactly(search(inst, true, true, seed, true));
+      }
+    }
+    assertThat(failures).isPositive();
   }
 
   @Test

@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.cumulative;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
@@ -37,6 +38,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.TimeStamp;
 
 /**
  * CumulativeUnary implements the scheduling constraint for unary resources using the overload
@@ -64,6 +66,40 @@ public class CumulativeUnary extends Cumulative {
   private final UnaryReasoning unaryReversed = new UnaryReasoning();
   boolean doProfile;
   boolean doUnaryEdgeFind;
+  // the time-table rule for constant durations and resource uses, created on first use
+  private UnaryTimetable timetable;
+
+  // the rules in the order unaryRules runs them
+  private static final int OVERLOAD = 0;
+  private static final int DETECTABLE_NORMAL = 1;
+  private static final int DETECTABLE_REVERSED = 2;
+  private static final int NOT_LAST_NORMAL = 3;
+  private static final int NOT_LAST_REVERSED = 4;
+  private static final int EDGE_FIND_NORMAL = 5;
+  private static final int EDGE_FIND_REVERSED = 6;
+  // counts the changes of the bounds seen by the rules; a rule that pruned nothing at the current
+  // count would prune nothing again
+  private int boundsVersion;
+  private final int[] quietAt = new int[EDGE_FIND_REVERSED + 1];
+  // the tasks loaded into the rules: all of them, or those left after the fixed tasks that end
+  // before all others, which only the time-table of CumulativeUnary must still check
+  private boolean leaveOutFixedPrefix;
+  private TaskView[] keptNormal = new TaskView[0];
+  private TaskView[] keptReversed = new TaskView[0];
+  private TaskView[] loadedNormal;
+  private TaskView[] loadedReversed;
+  private int loadedCount;
+  private int[] leftOutTasks = new int[0];
+  // with all tasks under the rules (no task can have a zero duration or resource use), the tasks
+  // left out stay out in the subtree: leftOutStack[0, leftOut) holds them
+  private int[] leftOutStack;
+  private int[] stackPosition;
+  private TimeStamp<Integer> leftOut;
+  // the tasks not left out, in the order of their index, which breaks ties in the rules
+  private int[] activeTasks;
+  private int activeCount;
+  private boolean trailLeftOut;
+  private boolean firstLoad;
 
   /**
    * It creates a cumulative constraint.
@@ -226,12 +262,25 @@ public class CumulativeUnary extends Cumulative {
     }
     TaskView[] tr = filterZeroTasks(tvr);
 
+    boundsChanged();
+    // the rules run only after a time-table call that pruned nothing, so the compulsory parts do
+    // not overlap when the rules first load the tasks; a rule that fixes overlapping tasks makes
+    // the time-table fail in the next pass
+    leaveOutFixedPrefix = doProfile;
+    trailLeftOut = doProfile && !possibleZeroTasks;
+    if (leftOut == null) {
+      initTasks(store);
+    }
+    collectActiveTasks();
     do {
 
       store.propagationHasOccurred = false;
 
       if (doProfile) {
-        profileProp(store);
+        unaryProfile(store);
+        if (store.propagationHasOccurred) {
+          boundsChanged();
+        }
       }
 
       if (doUnaryEdgeFind && !store.propagationHasOccurred) {
@@ -239,6 +288,41 @@ public class CumulativeUnary extends Cumulative {
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * The time-table rule: the unary time-table for constant durations and resource uses, the general
+   * profile otherwise. Both prune the same values.
+   *
+   * @param store the constraint store.
+   */
+  void unaryProfile(Store store) {
+    if (cumulativeForConstants != null) {
+      if (timetable == null) {
+        timetable = newTimetable();
+      }
+      if (leftOut == null) {
+        initTasks(store);
+        collectActiveTasks();
+      }
+      if (timetable.prune(store, activeTasks, activeCount)) {
+        return;
+      }
+    }
+    profileProp(store);
+  }
+
+  private UnaryTimetable newTimetable() {
+    int n = taskNormal.length;
+    IntVar[] starts = new IntVar[n];
+    int[] durs = new int[n];
+    int[] ress = new int[n];
+    for (int i = 0; i < n; i++) {
+      starts[i] = taskNormal[i].start;
+      durs[i] = taskNormal[i].dur.value();
+      ress[i] = taskNormal[i].res.value();
+    }
+    return new UnaryTimetable(starts, durs, ress, limit);
   }
 
   /**
@@ -261,7 +345,8 @@ public class CumulativeUnary extends Cumulative {
   /**
    * The overload check (optional), detectable precedences, not-last and edge finding on the normal
    * and the reversed view. Each rule sees the current bounds: the bounds are read once and again
-   * only after a rule changed some of them.
+   * only after a rule changed some of them. A rule that pruned nothing is skipped until some bound
+   * changes, which saves most of the last pass that only confirms the fixpoint.
    *
    * @param store the constraint store.
    * @param tn the tasks in the normal view.
@@ -269,40 +354,137 @@ public class CumulativeUnary extends Cumulative {
    * @param overload true to run the overload check first.
    */
   void unaryRules(Store store, TaskView[] tn, TaskView[] tr, boolean overload) {
-    int n = tn.length;
     boolean changed = store.propagationHasOccurred;
     store.propagationHasOccurred = false;
-    loadViews(tn, n);
-    if (overload) {
-      unaryNormal.overload(n);
+    boolean loaded = false;
+    // the time-table has just pruned nothing, so tasks left out now may stay out
+    firstLoad = true;
+    for (int rule = overload ? OVERLOAD : DETECTABLE_NORMAL; rule <= EDGE_FIND_REVERSED; rule++) {
+      if (quietAt[rule] == boundsVersion) {
+        continue;
+      }
+      if (!loaded) {
+        loadViews(tn, tr);
+        loaded = true;
+      }
+      if (loadedCount > 0) {
+        runRule(rule, store, loadedNormal, loadedReversed, loadedCount);
+      }
+      if (store.propagationHasOccurred) {
+        store.propagationHasOccurred = false;
+        changed = true;
+        loaded = false;
+        boundsChanged();
+      } else {
+        quietAt[rule] = boundsVersion;
+      }
     }
-    unaryNormal.detectable(tn, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryReversed.detectable(tr, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryNormal.notLast(tn, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryReversed.notLast(tr, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryNormal.edgeFind(tn, n, store);
-    changed |= reloadIfChanged(store, tn, n);
-    unaryReversed.edgeFind(tr, n, store);
     store.propagationHasOccurred |= changed;
   }
 
-  private void loadViews(TaskView[] tn, int n) {
-    unaryNormal.loadNormal(tn, n);
-    unaryReversed.loadReversed(unaryNormal, n);
+  /**
+   * Tells the rules that the bounds of the tasks may have changed since they last ran, so each of
+   * them runs again. A rule is skipped only while no bound changed since it last pruned nothing.
+   */
+  void boundsChanged() {
+    boundsVersion++;
   }
 
-  // reloads the bounds if the previous rule changed some, and tells whether it did
-  private boolean reloadIfChanged(Store store, TaskView[] tn, int n) {
-    if (!store.propagationHasOccurred) {
-      return false;
+  private void runRule(int rule, Store store, TaskView[] tn, TaskView[] tr, int n) {
+    switch (rule) {
+      case OVERLOAD -> unaryNormal.overload(n);
+      case DETECTABLE_NORMAL -> unaryNormal.detectable(tn, n, store);
+      case DETECTABLE_REVERSED -> unaryReversed.detectable(tr, n, store);
+      case NOT_LAST_NORMAL -> unaryNormal.notLast(tn, n, store);
+      case NOT_LAST_REVERSED -> unaryReversed.notLast(tr, n, store);
+      case EDGE_FIND_NORMAL -> unaryNormal.edgeFind(tn, n, store);
+      default -> unaryReversed.edgeFind(tr, n, store);
     }
-    store.propagationHasOccurred = false;
-    loadViews(tn, n);
-    return true;
+  }
+
+  private void initTasks(Store store) {
+    int n = tvn.length;
+    leftOutStack = new int[n];
+    stackPosition = new int[n];
+    Arrays.fill(stackPosition, -1);
+    activeTasks = new int[n];
+    leftOut = new TimeStamp<>(store, 0);
+  }
+
+  private boolean isLeftOut(int i) {
+    int p = stackPosition[i];
+    return p >= 0 && p < leftOut.value() && leftOutStack[p] == i;
+  }
+
+  private void collectActiveTasks() {
+    int n = tvn.length;
+    activeCount = 0;
+    for (int i = 0; i < n; i++) {
+      if (!trailLeftOut || !isLeftOut(i)) {
+        activeTasks[activeCount++] = i;
+      }
+    }
+  }
+
+  // loads the bounds of the tasks into both views, leaving out the fixed tasks that end before the
+  // other tasks when the time-table has checked that the compulsory parts do not overlap
+  private void loadViews(TaskView[] tn, TaskView[] tr) {
+    int n = tn.length;
+    if (leaveOutFixedPrefix) {
+      if (keptNormal.length < n) {
+        keptNormal = new TaskView[n];
+        keptReversed = new TaskView[n];
+        leftOutTasks = new int[n];
+      }
+      // without trailing, tn holds the tasks that may use the resource now, in positions 0..n-1
+      int[] order = trailLeftOut ? activeTasks : identity(n);
+      int count = trailLeftOut ? activeCount : n;
+      loadedCount =
+          unaryNormal.loadNormalActive(
+              tn, tr, order, count, keptNormal, keptReversed, leftOutTasks);
+      loadedNormal = keptNormal;
+      loadedReversed = keptReversed;
+      if (trailLeftOut && firstLoad) {
+        leaveOut(unaryNormal.leftOutCount());
+      }
+    } else {
+      unaryNormal.loadNormal(tn, n);
+      loadedCount = n;
+      loadedNormal = tn;
+      loadedReversed = tr;
+    }
+    firstLoad = false;
+    if (loadedCount > 0) {
+      unaryReversed.loadReversed(unaryNormal, loadedCount);
+    }
+  }
+
+  // leaves the tasks just left out by the rules out in the subtree, and of the time-table
+  private void leaveOut(int count) {
+    if (count == 0) {
+      return;
+    }
+    int top = leftOut.value();
+    for (int k = 0; k < count; k++) {
+      int i = leftOutTasks[k];
+      leftOutStack[top] = i;
+      stackPosition[i] = top;
+      top++;
+    }
+    leftOut.update(top);
+    collectActiveTasks();
+  }
+
+  private int[] identityOrder = new int[0];
+
+  private int[] identity(int n) {
+    if (identityOrder.length != n) {
+      identityOrder = new int[n];
+      for (int i = 0; i < n; i++) {
+        identityOrder[i] = i;
+      }
+    }
+    return identityOrder;
   }
 
   @Override
