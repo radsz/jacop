@@ -157,6 +157,34 @@ Version 5.0 (unreleased)
     the optima proved from 0-5 to 8-12, depending on the model and the
     search; before, the generic reason explained 83 to 86 % of the reasons.
 
+16. The FlatZinc front end posts a redundant Knapsack on multi-dimensional
+    knapsacks: a profit (a sum of 0/1 variables with positive, not all
+    equal coefficients that is bounded from below, or that defines a
+    variable) and capacity rows over the same variables (sums with
+    positive coefficients bounded from above). The Knapsack is posted on
+    one surrogate row, the capacity rows weighted by the dual values of
+    their linear relaxation (a small bounded simplex), so it prunes with
+    the bound of the relaxation of all rows together; each linear
+    constraint alone sees only its own row. It is posted only when that
+    bound fixes a variable at the root by its reduced cost.
+    -Dorg.jacop.fz.knapsack=false turns this off. On the 7 multi-knapsack
+    instances of the MiniZinc benchmarks JaCoP now finds the solution in
+    under 0.3 s in every mode (default, -f, --lcg); before, it found none
+    in 30 s on 5 of them.
+
+17. New constraints InterDistance(x, p), |x[i] - x[j]| >= p for all pairs,
+    bounds consistent in O(n^2) (Quimper, Lopez-Ortiz and Pesant, AAAI
+    2006), and MultiInterDistance(x, m, p), at most m values in every
+    window of p, bounds consistent (Ouellet and Quimper, IJCAI 2011). The
+    mznlib has inter_distance and multi_inter_distance for them. The
+    FlatZinc front end posts a cumulative with fixed equal durations p >= 2
+    and fixed equal resource use as MultiInterDistance with m = limit div
+    use (InterDistance for m = 1), and adds InterDistance to a disjunctive
+    clique of equal fixed lengths; -Dorg.jacop.fz.interDistance=add keeps
+    the cumulative too and =false turns this off. On 90 runway instances
+    with time windows (one to three runways, 30 to 90 aircraft, 60 s) it
+    answers 79 instead of 63; Gecode answers 59 and Chuffed 60.
+
 Version 4.11
 =============
 

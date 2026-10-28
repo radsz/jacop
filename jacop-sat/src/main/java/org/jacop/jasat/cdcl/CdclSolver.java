@@ -95,8 +95,8 @@ public final class CdclSolver {
   private static final int TIER_CORE = 0;
   private static final int TIER_MID = 1;
   private static final int TIER_LOCAL = 2;
-  private static final int CORE_LBD = 2;
-  private static final int MID_LBD = 6;
+  private int coreLbd = 2;
+  private int midLbd = 6;
 
   // --- variables and assignment
   private int numVars;
@@ -150,6 +150,12 @@ public final class CdclSolver {
   private int conflictLit0;
   private int conflictLit1;
   private int[] learnt = new int[16];
+  private int[] dimacsLearnt = new int[16];
+  // semantic UIP: open conflict-level literals per integer variable of the external propagator
+  private int[] groupOpen = new int[16];
+  private int groupsOpen;
+  private int ungroupedOpen;
+  private int[] frontier = new int[16];
   private int learntSize;
   private int[] stack = new int[16];
   private int[] toClear = new int[16];
@@ -270,6 +276,12 @@ public final class CdclSolver {
 
   /** Statistics: literals of the learnt clauses, after minimisation. */
   public long learntLiterals;
+
+  /** Statistics: learnt literals the external propagator removed as implied by others. */
+  public long semanticallyRemoved;
+
+  /** Statistics: conflicts whose analysis stopped at a semantic UIP before the first UIP. */
+  public long semanticUips;
 
   /** Creates an empty solver. */
   public CdclSolver() {
@@ -619,7 +631,7 @@ public final class CdclSolver {
     }
     int ref = memSize;
     mem[ref + SIZE] = size;
-    int tier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : TIER_LOCAL;
+    int tier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : TIER_LOCAL;
     mem[ref + META] =
         (isLearnt ? LEARNT_FLAG : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
     mem[ref + ACT] = Float.floatToRawIntBits(0f);
@@ -927,7 +939,7 @@ public final class CdclSolver {
     if (tier != TIER_CORE) {
       int lbd = computeLbd(mem, ref + HEADER, mem[ref + SIZE]);
       if (lbd < lbdOf(meta)) {
-        int newTier = lbd <= CORE_LBD ? TIER_CORE : lbd <= MID_LBD ? TIER_MID : tier;
+        int newTier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : tier;
         meta = (meta & ((1 << LBD_SHIFT) - 1) & ~TIER_MASK) | (newTier << TIER_SHIFT);
         meta |= lbd << LBD_SHIFT;
       }
@@ -1083,10 +1095,20 @@ public final class CdclSolver {
       while (seen[trail[index] >> 1] == 0 || level[trail[index] >> 1] != decisionLevel) {
         index--;
       }
+      if (notifying && pathCount >= 2 && groupsOpen == 1 && ungroupedOpen == 0) {
+        int uip = semanticUip(index, pathCount);
+        if (uip >= 0) {
+          p = uip;
+          break;
+        }
+      }
       p = trail[index--];
       ref = reasonRef(p >> 1);
       seen[p >> 1] = 0;
       pathCount--;
+      if (notifying) {
+        closeFrontier(p >> 1);
+      }
     } while (pathCount > 0);
     learnt[0] = p ^ 1;
 
@@ -1105,6 +1127,9 @@ public final class CdclSolver {
     learntSize = j;
     if (shrink && learntSize > 2) {
       shrinkLearnt();
+    }
+    if (notifying && learntSize > 1) {
+      minimizeExternally();
     }
 
     for (int i = 0; i < toClearSize; i++) {
@@ -1131,6 +1156,83 @@ public final class CdclSolver {
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
     return level[learnt[1] >> 1];
+  }
+
+  /** Counts a conflict-level literal of the analysis under its integer variable. */
+  private void openFrontier(int v) {
+    int g = external.integerVariable(v + 1);
+    if (g < 0) {
+      ungroupedOpen++;
+      return;
+    }
+    if (g >= groupOpen.length) {
+      groupOpen = Arrays.copyOf(groupOpen, Math.max(2 * groupOpen.length, g + 1));
+    }
+    if (groupOpen[g]++ == 0) {
+      groupsOpen++;
+    }
+  }
+
+  /** Uncounts a conflict-level literal resolved away by the analysis. */
+  private void closeFrontier(int v) {
+    int g = external.integerVariable(v + 1);
+    if (g < 0) {
+      ungroupedOpen--;
+    } else if (--groupOpen[g] == 0) {
+      groupsOpen--;
+    }
+  }
+
+  /**
+   * A semantic UIP: when the open conflict-level literals are all atoms of one integer variable,
+   * the external propagator may name a true conflict-level literal equivalent to their conjunction,
+   * which then cuts the conflict like a UIP (the 1UIP over integer variables of Pumpkin's CPIP).
+   * Returns that literal, with the analysis state cleared, or -1.
+   */
+  private int semanticUip(int index, int open) {
+    if (frontier.length < open) {
+      frontier = new int[2 * open];
+    }
+    int n = 0;
+    for (int t = index; n < open; t--) {
+      int v = trail[t] >> 1;
+      if (seen[v] != 0 && level[v] == decisionLevel) {
+        frontier[n++] = toDimacs(trail[t]);
+      }
+    }
+    int d = external.semanticUip(frontier, n);
+    if (d == 0) {
+      return -1;
+    }
+    int lit = toLit(d);
+    if (vals[lit] <= 0 || level[lit >> 1] != decisionLevel) {
+      return -1;
+    }
+    for (int k = 0; k < n; k++) {
+      int v = Math.abs(frontier[k]) - 1;
+      seen[v] = 0;
+      closeFrontier(v);
+    }
+    semanticUips++;
+    return lit;
+  }
+
+  /** Lets the external propagator remove learnt literals that imply others it knows about. */
+  private void minimizeExternally() {
+    if (dimacsLearnt.length < learntSize) {
+      dimacsLearnt = new int[learnt.length];
+    }
+    for (int i = 0; i < learntSize; i++) {
+      dimacsLearnt[i] = toDimacs(learnt[i]);
+    }
+    int kept = external.minimizeLearnt(dimacsLearnt, learntSize);
+    if (kept < learntSize) {
+      semanticallyRemoved += learntSize - kept;
+      for (int i = 0; i < kept; i++) {
+        learnt[i] = toLit(dimacsLearnt[i]);
+      }
+      learntSize = kept;
+    }
   }
 
   /**
@@ -1237,6 +1339,9 @@ public final class CdclSolver {
     markClear(v);
     bumpVar(v);
     if (level[v] >= decisionLevel) {
+      if (notifying) {
+        openFrontier(v);
+      }
       return 1;
     }
     addLearnt(q);
@@ -2731,6 +2836,18 @@ public final class CdclSolver {
     learnts = push(learnts, numLearnts++, copy);
     attach(copy);
     return true;
+  }
+
+  /**
+   * Sets the LBD limits of the learnt clause tiers: clauses up to {@code core} are kept for good,
+   * those up to {@code mid} survive a reduction while they are used (2 and 6 by default).
+   *
+   * @param core the largest LBD of the core tier
+   * @param mid the largest LBD of the middle tier, at least {@code core}
+   */
+  public void setTierLimits(int core, int mid) {
+    coreLbd = core;
+    midLbd = Math.max(core, mid);
   }
 
   /** Reduces the learnt clauses after this many conflicts and then more often, for tests. */

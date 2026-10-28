@@ -88,8 +88,10 @@ fixed (in JaCoP or in the decomposition), with a regression test.
 library (`jacop-flatzinc/src/main/minizinc`) rewrites into it, and posts that global's standard
 decomposition. Globals that a standard decomposition calls (such as `count` inside `at_least`,
 `all_different` inside `circuit`, or `minimum` inside `subcircuit`) are decomposed as well, so a
-decomposed model uses built-ins only. `StdDecompositionsTest` (in the build) checks every
-decomposition against JaCoP's constraint on a small model.
+decomposed model uses built-ins only. `StdDecompositionsTest` checks every
+decomposition against JaCoP's constraint on a small model. It takes about two hours and is not
+in any Maven profile; run it on demand with
+`mvn -Pmin -pl jacop-benchmarks test -Dtest=StdDecompositionsTest -Dsurefire.rerunFailingTestsCount=0`.
 
 Globals without a decomposition yet (reported as `NO_DECOMPOSITION`): `jacop_geost`,
 `jacop_geost_bb` and the graph constraints (`jacop_wst`, `jacop_tree`, `jacop_steiner`,
