@@ -1043,6 +1043,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_disjunctive_strict_optional(n);
   }
 
+  /** Handles the jacop_alternative FlatZinc constraint. */
+  public void jacop_alternative(SimpleNode n) {
+    gc.gen_jacop_alternative(n);
+  }
+
+  /** Handles the jacop_span FlatZinc constraint. */
+  public void jacop_span(SimpleNode n) {
+    gc.gen_jacop_span(n);
+  }
+
   // Set constrints
   /** Handles the set_card FlatZinc constraint. */
   public void set_card(SimpleNode n) {
