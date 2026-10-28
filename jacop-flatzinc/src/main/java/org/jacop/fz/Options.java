@@ -74,6 +74,7 @@ public class Options {
   boolean runSearch = true;
   boolean useSat;
   boolean lcg;
+  boolean lp = true;
   // the default can be changed by the system property jacop.presolve, for example to run the
   // FlatZinc test suites with presolve
   Presolve presolve =
@@ -165,6 +166,9 @@ public class Options {
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
                 the SAT core); the search annotation is followed without restarts, or with -f
                 alternated per restart with branching on the most active variables.
+            --lp <value> the linear relaxation of the linear constraints as a propagator, solved
+                by a dual simplex during search; its deductions are integer combinations of the
+                rows, explained under --lcg; one of "on" (default), "off".
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
@@ -221,6 +225,7 @@ public class Options {
       case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
+      case "--lp" -> i = handleLp(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
@@ -318,6 +323,15 @@ public class Options {
 
   private int handleLcg(int i) {
     lcg = true;
+    return i + 1;
+  }
+
+  private int handleLp(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> lp = true;
+      case "off" -> lp = false;
+      default -> System.err.println("%% Linear relaxation mode " + args[i] + " not known; ignored");
+    }
     return i + 1;
   }
 
@@ -692,6 +706,15 @@ public class Options {
    */
   public boolean lcg() {
     return lcg;
+  }
+
+  /**
+   * It defines whether the linear relaxation is added as a propagator (--lp).
+   *
+   * @return false when --lp off was given
+   */
+  public boolean lp() {
+    return lp;
   }
 
   /** Whether the model is presolved before search, and how. */

@@ -31,6 +31,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -519,89 +520,13 @@ public class KnapsackDetector implements ParserTreeConstants {
     }
     double[] d = new double[cols];
     System.arraycopy(p, 0, d, 0, n);
-    boolean[] upper = new boolean[cols];
-    boolean[] basic = new boolean[cols];
-    for (int i = 0; i < m; i++) {
-      basic[n + i] = true;
-    }
-
+    double[] upperBound = new double[cols];
+    Arrays.fill(upperBound, 0, n, 1);
+    Arrays.fill(upperBound, n, cols, Double.POSITIVE_INFINITY);
     int limit = 50 * cols + 1000;
-    for (int iter = 0; iter < limit; iter++) {
-      // entering: the largest improvement per unit, Bland's rule after a while against cycling
-      boolean bland = iter > 10 * cols;
-      int q = -1;
-      double best = EPS;
-      for (int j = 0; j < cols; j++) {
-        if (basic[j]) {
-          continue;
-        }
-        double gain = upper[j] ? -d[j] : d[j];
-        if (gain > best) {
-          q = j;
-          best = gain;
-          if (bland) {
-            break;
-          }
-        }
-      }
-      if (q < 0) {
-        break;
-      }
-      double dir = upper[q] ? -1 : 1;
-      double step = q < n ? 1 : Double.POSITIVE_INFINITY;
-      int r = -1;
-      for (int i = 0; i < m; i++) {
-        double alpha = dir * t[i][q];
-        double ratio;
-        if (alpha > EPS) {
-          ratio = beta[i] / alpha;
-        } else if (alpha < -EPS && basis[i] < n) {
-          ratio = (1 - beta[i]) / -alpha;
-        } else {
-          continue;
-        }
-        if (ratio < step - EPS || (r >= 0 && ratio <= step + EPS && basis[i] < basis[r])) {
-          step = ratio;
-          r = i;
-        }
-      }
-      if (Double.isInfinite(step)) {
-        return null;
-      }
-      step = Math.max(step, 0);
-      for (int i = 0; i < m; i++) {
-        beta[i] -= dir * step * t[i][q];
-      }
-      if (r < 0) {
-        // the entering variable reaches its other bound
-        upper[q] = !upper[q];
-        continue;
-      }
-      int leaving = basis[r];
-      upper[leaving] = dir * t[r][q] < 0;
-      beta[r] = (upper[q] ? 1 : 0) + dir * step;
-      basic[leaving] = false;
-      basic[q] = true;
-      upper[q] = false;
-      basis[r] = q;
-      double pivot = t[r][q];
-      double[] row = t[r];
-      for (int j = 0; j < cols; j++) {
-        row[j] /= pivot;
-      }
-      for (int i = 0; i < m; i++) {
-        double f = t[i][q];
-        if (i != r) {
-          double[] ti = t[i];
-          for (int j = 0; j < cols; j++) {
-            ti[j] -= f * row[j];
-          }
-        }
-      }
-      double f = d[q];
-      for (int j = 0; j < cols; j++) {
-        d[j] -= f * row[j];
-      }
+    if (new BoundedSimplex(t, beta, basis, d, upperBound).run(limit, false)
+        == BoundedSimplex.Outcome.UNBOUNDED) {
+      return null;
     }
 
     double[] y = new double[m];
