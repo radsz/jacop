@@ -819,4 +819,62 @@ class FreeSearchTest {
       }
     }
   }
+
+  @Test
+  void restartLimitsStartAgainAfterReset() {
+    GeometricCalculator geometric = new GeometricCalculator(2, 10);
+    geometric.newLimit();
+    geometric.newLimit();
+    assertEquals(40, geometric.getFailLimit());
+    geometric.reset();
+    assertEquals(10, geometric.getFailLimit());
+    geometric.newLimit();
+    assertEquals(20, geometric.getFailLimit());
+    LubyCalculator luby = new LubyCalculator(5);
+    luby.newLimit();
+    luby.newLimit();
+    assertEquals(10, luby.getFailLimit());
+    luby.reset();
+    assertEquals(5, luby.getFailLimit());
+  }
+
+  @Test
+  void chocoLikeSettingsKeepTheOptimum() {
+    // short restarts started again after each solution, weights forgotten every other restart and
+    // bound-impact values in every other run
+    Random rnd = new Random(11);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (boolean maximize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        IndomainBoundImpact impact =
+            new IndomainBoundImpact(model.store, model.cost, maximize, 5, new IndomainMin<>())
+                .everyRestarts(2);
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), impact);
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase).flushEvery(2);
+        LastConflict lastConflict = new LastConflict(domWdeg, phase, 1);
+        FreeSearch.Builder builder =
+            FreeSearch.builder(model.store, lastConflict)
+                .monitor(impact)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .monitor(lastConflict)
+                .restarts(new GeometricCalculator(1.05, 1))
+                .restartOnSolution(true)
+                .resetRestartsOnSolution(true)
+                .nogoodsFromRestarts(true)
+                .onSolution(s -> model.checkSolution());
+        FreeSearch search =
+            (maximize ? builder.maximize(model.cost) : builder.minimize(model.cost)).build();
+        Status status = search.solve();
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status, instance.toString());
+        } else {
+          assertEquals(Status.OPTIMAL, status, instance.toString());
+          assertEquals(reference[maximize ? 2 : 1], search.getCostValue(), instance.toString());
+        }
+      }
+    }
+  }
 }

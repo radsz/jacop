@@ -84,6 +84,7 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -94,6 +95,7 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -174,7 +176,19 @@ class GlobalConstraintBruteForceTest {
       Predicate<int[]> semantics,
       String description) {}
 
+  /** Comma-separated parts of case names to run, from -Dglobals.bruteforce.cases; all if unset. */
+  private static final String CASES = System.getProperty("globals.bruteforce.cases", "");
+
   static Stream<Arguments> cases() {
+    if (CASES.isBlank()) {
+      return allCases();
+    }
+    List<String> parts = Arrays.asList(CASES.split(","));
+    return allCases()
+        .filter(a -> parts.stream().anyMatch(part -> ((String) a.get()[0]).contains(part.strip())));
+  }
+
+  static Stream<Arguments> allCases() {
     return Stream.of(
         Arguments.of("Alldiff", alldiff("Alldiff")),
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
@@ -270,6 +284,10 @@ class GlobalConstraintBruteForceTest {
             "AmongVar", (Function<Random, Instance>) GlobalConstraintBruteForceTest::amongVar),
         Arguments.of(
             "Distance", (Function<Random, Instance>) GlobalConstraintBruteForceTest::distance),
+        Arguments.of("InterDistance", interDistance(false)),
+        Arguments.of("InterDistanceRepeated", interDistance(true)),
+        Arguments.of("MultiInterDistance", multiInterDistance(false)),
+        Arguments.of("MultiInterDistanceRepeated", multiInterDistance(true)),
         Arguments.of("XmulYeqZ", arithmetic("XmulYeqZ")),
         Arguments.of("XdivYeqZ", arithmetic("XdivYeqZ")),
         Arguments.of("XmodYeqZ", arithmetic("XmodYeqZ")),
@@ -2074,6 +2092,87 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> store.impose(new Distance(x[0], x[1], x[2])),
         x -> Math.abs(x[0] - x[1]) == x[2],
         "");
+  }
+
+  /** InterDistance(x, p): every variable on its own window of 0..11, so the tasks are tight. */
+  private static Function<Random, Instance> interDistance(boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int p = random.nextInt(5);
+      int pool = repeated ? 1 + random.nextInt(n) : n;
+      int[] pick = new int[n];
+      for (int k = 0; k < n; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        int lo = random.nextInt(10);
+        domains[v] = domain(random, lo, Math.min(11, lo + random.nextInt(8)));
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+            }
+            store.impose(new InterDistance(xs, p));
+          },
+          t -> {
+            for (int i = 0; i < n; i++) {
+              for (int j = i + 1; j < n; j++) {
+                if (Math.abs(t[pick[i]] - t[pick[j]]) < p) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          },
+          "n=" + n + " p=" + p + " pick=" + Arrays.toString(pick));
+    };
+  }
+
+  /** MultiInterDistance(x, m, p): every variable on its own window of 0..9. */
+  private static Function<Random, Instance> multiInterDistance(boolean repeated) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int m = 1 + random.nextInt(3);
+      int p = random.nextInt(5);
+      int pool = repeated ? 1 + random.nextInt(n) : n;
+      int[] pick = new int[n];
+      for (int k = 0; k < n; k++) {
+        pick[k] = repeated ? random.nextInt(pool) : k;
+      }
+      int[][] domains = new int[pool][];
+      for (int v = 0; v < pool; v++) {
+        int lo = random.nextInt(8);
+        domains[v] = domain(random, lo, Math.min(9, lo + random.nextInt(7)));
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] xs = new IntVar[n];
+            for (int i = 0; i < n; i++) {
+              xs[i] = v[pick[i]];
+            }
+            store.impose(new MultiInterDistance(xs, m, p));
+          },
+          t -> {
+            for (int i = 0; i < n; i++) {
+              int count = 0;
+              for (int j = 0; j < n; j++) {
+                if (t[pick[i]] <= t[pick[j]] && t[pick[j]] < t[pick[i]] + p) {
+                  count++;
+                }
+              }
+              if (count > m) {
+                return false;
+              }
+            }
+            return true;
+          },
+          "n=" + n + " m=" + m + " p=" + p + " pick=" + Arrays.toString(pick));
+    };
   }
 
   private static Function<Random, Instance> arithmetic(String kind) {

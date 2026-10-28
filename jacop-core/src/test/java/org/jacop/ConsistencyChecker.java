@@ -65,6 +65,7 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -74,6 +75,7 @@ import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.Reified;
@@ -93,6 +95,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -771,6 +774,61 @@ class ConsistencyChecker {
         concat(s, d, r, new IntVar[] {limit}));
   }
 
+  /** inter_distance(x, p) with every variable on its own window of 0..11. */
+  private static Model interDistance(Store store, Random random, boolean unary) {
+    int n = 2 + random.nextInt(4);
+    int p = 1 + random.nextInt(4);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      int lo = random.nextInt(9);
+      x[i] = var(store, "x" + i, lo, Math.min(11, lo + 1 + random.nextInt(7)), random);
+    }
+    IntVar[] d = new IntVar[n];
+    IntVar[] one = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      d[i] = new IntVar(store, p, p);
+      one[i] = new IntVar(store, 1, 1);
+    }
+    return new Model(
+        unary
+            ? new CumulativeUnary(x, d, one, new IntVar(store, 1, 1), true)
+            : new InterDistance(x, p),
+        t -> {
+          for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+              if (Math.abs(t[i] - t[j]) < p) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** multi_inter_distance(x, m, p) with every variable on its own window of 0..9. */
+  private static Model multiInterDistance(Store store, Random random) {
+    int n = 2 + random.nextInt(4);
+    int m = 1 + random.nextInt(3);
+    int p = 1 + random.nextInt(4);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      int lo = random.nextInt(7);
+      x[i] = var(store, "x" + i, lo, Math.min(9, lo + 1 + random.nextInt(6)), random);
+    }
+    return new Model(
+        new MultiInterDistance(x, m, p),
+        t -> {
+          for (int v : t) {
+            if (Arrays.stream(t).filter(w -> v <= w && w < v + p).count() > m) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
   /** sort(x, y) or sort(x, y, z) with z numbering the positions from an offset. */
   private static Model sort(Store store, Random random, boolean permutation) {
     int n = 2 + random.nextInt(permutation ? 2 : 3);
@@ -1223,6 +1281,10 @@ class ConsistencyChecker {
                   concat(x, new IntVar[] {count}));
             }),
         new Case("Sort", Level.BOUNDS_Z, (s, r) -> sort(s, r, false)),
+        new Case("InterDistance", Level.BOUNDS_Z, (s, r) -> interDistance(s, r, false)),
+        // the same relation as one machine of equal-length tasks, for comparison
+        new Case("InterDistanceUnary", Level.NONE, (s, r) -> interDistance(s, r, true)),
+        new Case("MultiInterDistance", Level.BOUNDS_Z, ConsistencyChecker::multiInterDistance),
         new Case("SortPermutation", Level.BOUNDS_Z, (s, r) -> sort(s, r, true)),
         new Case(
             "Lex",

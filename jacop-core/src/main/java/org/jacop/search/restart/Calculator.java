@@ -55,6 +55,14 @@ public abstract class Calculator implements ConsistencyListener {
   public abstract void newLimit();
 
   /**
+   * Starts the sequence of fail limits again from its first value, for example after a solution.
+   * The default keeps the current limit.
+   */
+  public void reset() {
+    startRun(failLimit);
+  }
+
+  /**
    * Starts a new run with the given fail limit.
    *
    * @param limit the number of failures the run may have.
