@@ -52,7 +52,9 @@ import org.jacop.core.Var;
  * the atoms at a new level that is removed afterwards. A constraint whose copy does not fail with
  * the whole generic reason (a propagator that depends on state the copy lacks) gets the generic
  * reason. Constraints with more than {@link #MAX_GROUPS} groups in a reason are not minimized:
- * QuickXplain needs about k log(n / k) tests for a reason of k groups out of n.
+ * QuickXplain needs about k log(n / k) tests for a reason of k groups out of n. Replaying is also
+ * bounded in time: over all constraints to {@link #SHARE} of the time since the first replay, and
+ * for one constraint to half of that.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -67,6 +69,20 @@ final class ReplayExplanation {
   /** Whether replayed explanations are used ({@code -Djacop.lcg.replay}, true by default). */
   static final boolean ENABLED =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.replay", "true"));
+
+  /**
+   * The largest share of the time since the first replay that replaying may take, over all
+   * constraints and for each one ({@code -Djacop.lcg.replayShare}, 0.25 by default); beyond it the
+   * generic reason is given. A propagator as costly as edge finding could otherwise spend most of
+   * the search in its own replays.
+   */
+  static final double SHARE =
+      Double.parseDouble(System.getProperty("jacop.lcg.replayShare", "0.25"));
+
+  // replaying one constraint may take this long before its share of the time applies
+  private static final long GRACE = 50_000_000L;
+
+  private long nanos;
 
   // a constraint whose copy failed to reproduce this many reasons in a row stops being replayed
   private static final int MAX_MISSES = 32;
@@ -123,12 +139,22 @@ final class ReplayExplanation {
    *
    * @param entry the entry, or -1 for a failure now
    * @param out where the entries are added
+   * @param elapsed the time since the first replay of any constraint, in nanoseconds
    * @return false when no reason was found this way
    */
-  boolean explain(int entry, EntryList out) {
-    if (disabled) {
+  boolean explain(int entry, EntryList out, long elapsed) {
+    if (disabled || nanos > SHARE * elapsed / 2 + GRACE) {
       return false;
     }
+    long start = System.nanoTime();
+    try {
+      return replay(entry, out);
+    } finally {
+      nanos += System.nanoTime() - start;
+    }
+  }
+
+  private boolean replay(int entry, EntryList out) {
     target = entry;
     int position = entry < 0 ? trail.size() : entry;
     collectGroups(position);

@@ -854,10 +854,25 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (!ReplayExplanation.ENABLED || c == null) {
       return false;
     }
+    long now = System.nanoTime();
+    if (replayStart == 0) {
+      replayStart = now;
+    }
+    if (replayNanos > ReplayExplanation.SHARE * (now - replayStart) + REPLAY_GRACE) {
+      return false;
+    }
     ReplayExplanation r = replays.computeIfAbsent(c, k -> ReplayExplanation.of(this, k));
-    replayed = r != null && r.explain(entry, out);
+    replayed = r != null && r.explain(entry, out, now - replayStart);
+    replayNanos += System.nanoTime() - now;
     return replayed;
   }
+
+  // the time spent replaying, and when the first replay started
+  private long replayNanos;
+  private long replayStart;
+
+  // replaying may take this long before its share of the time applies
+  private static final long REPLAY_GRACE = 200_000_000L;
 
   /**
    * Adds to {@code out} the reason of a failure of a constraint now: its own explanation when it is
