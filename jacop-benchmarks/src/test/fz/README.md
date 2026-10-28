@@ -138,6 +138,12 @@ model gives the same optima. upTo5sec and upTo30sec hold random 6-team and 8-tea
 rand8_*) whose optima were checked by enumerating all schedules of the original model with Chuffed
 (6 teams) or by Chuffed's optimum (8 teams); rand8_0_unsat has no schedule.
 
+Directories cost_mdd_roster and cost_mdd_random (upTo5sec) hold small instances of the cost_mdd
+benchmarks in osolpro `benchmarks/cost-mdd` (generator `scripts/gen.py`): rosters with one cost MDD
+per employee and coverage counts, and random cost MDDs over shared variables built from random
+tuples. They run JaCoP's CostMdd; the optima (16, 15, 143, 196) agree with Chuffed on the MiniZinc
+standard decomposition.
+
 ## Extensional constraint benchmarks
 
 The problem directories `table_*` and `mdd_random` hold generated instances for table, negative

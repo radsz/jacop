@@ -2746,3 +2746,7 @@ lex_chain_bibd/lex_chain_bibd
 lex_chain_golfers/lex_chain_golfers
 lex_chain_codes/lex_chain_codes
 lex_chain_orbitope/lex_chain_orbitope
+cost_mdd_random/random_12_5_4_8_100_1
+cost_mdd_random/random_15_6_5_8_200_1
+cost_mdd_roster/roster_4_7_4_1
+cost_mdd_roster/roster_5_7_4_1
