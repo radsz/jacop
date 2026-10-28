@@ -33,7 +33,6 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
-import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -48,7 +47,7 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Implies extends AbstractReifiedConstraint implements Copyable<Implies>, Monotone {
+public class Implies extends AbstractReifiedConstraint implements Copyable<Implies> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -159,16 +158,6 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
   @Override
   public void queueVariable(int level, Var variable) {
     queueForward.queueForward(level, variable);
-  }
-
-  @Override
-  public Direction monotonicity(Var v) {
-    // b -> c: b is wanted false; the variables of c move as c allows
-    boolean inC = c.arguments().contains(v);
-    if (v == b) {
-      return inC ? Direction.NONE : Direction.DOWN;
-    }
-    return c instanceof Monotone m ? m.monotonicity(v) : Direction.NONE;
   }
 
   @Override

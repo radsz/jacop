@@ -32,11 +32,9 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
-import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 
@@ -46,7 +44,7 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XltY extends AbstractXcompY implements Copyable<XltY>, Monotone, LinearExplainable {
+public class XltY extends AbstractXcompY implements Copyable<XltY>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -96,14 +94,6 @@ public class XltY extends AbstractXcompY implements Copyable<XltY>, Monotone, Li
   @Override
   public String toString() {
     return id() + " : XltY(" + x + ", " + y + " )";
-  }
-
-  @Override
-  public Direction monotonicity(Var v) {
-    if (x == y) {
-      return Direction.NONE;
-    }
-    return v == x ? Direction.DOWN : Direction.UP;
   }
 
   @Override

@@ -40,11 +40,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
-import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 
@@ -59,7 +57,7 @@ import org.jacop.lcg.LinearForm;
  * @version 5.0
  */
 @Slf4j
-public class SumBool extends AbstractSum implements Copyable<SumBool>, Monotone, LinearExplainable {
+public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -303,20 +301,6 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, Monotone,
   @Override
   public String toString() {
     return toStringHelper("SumBool");
-  }
-
-  @Override
-  public Direction monotonicity(Var v) {
-    Direction summand =
-        switch (relationType) {
-          case GE, GT -> Direction.UP;
-          case LE, LT -> Direction.DOWN;
-          default -> Direction.NONE;
-        };
-    if (v == sum) {
-      return Monotone.contains(x, v) ? Direction.NONE : summand.negate();
-    }
-    return summand;
   }
 
   @Override

@@ -33,67 +33,30 @@ package org.jacop.api;
 import org.jacop.core.Var;
 
 /**
- * A constraint that can say in which direction a variable may move without breaking it. Presolve
- * uses it to find reifications whose Boolean is only ever wanted true (or only false) by the rest
- * of the model, and to weaken such a reification to an implication.
+ * A constraint that tells in which directions each of its variables can move without making the
+ * constraint false. Presolve's dual reductions read it; a constraint that does not implement it is
+ * taken to forbid both directions for every variable.
+ *
+ * <p>Linear constraints need not implement it: presolve reads their linear form.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
 public interface Monotone {
 
-  /** How the satisfaction of a constraint depends on one of its variables. */
-  enum Direction {
-    /** Raising the variable, the other variables unchanged, never breaks a satisfied constraint. */
-    UP,
-    /** Lowering the variable never breaks a satisfied constraint. */
-    DOWN,
-    /** Neither is known. */
-    NONE;
+  /** The variable can take any smaller value of its domain. */
+  int DECREASE = 1;
 
-    /**
-     * Returns the opposite direction.
-     *
-     * @return UP for DOWN, DOWN for UP, NONE for NONE.
-     */
-    public Direction negate() {
-      return this == UP ? DOWN : this == DOWN ? UP : NONE;
-    }
-
-    /**
-     * Combines the directions of two occurrences of one variable.
-     *
-     * @param other the direction of the other occurrence.
-     * @return the direction both occurrences agree on, or NONE.
-     */
-    public Direction and(Direction other) {
-      return this == other ? this : NONE;
-    }
-  }
+  /** The variable can take any larger value of its domain. */
+  int INCREASE = 2;
 
   /**
-   * Returns the direction in which a variable may move without breaking this constraint, for the
-   * domains of the moment: a direction that depends on a variable being fixed holds as long as it
-   * stays fixed, so presolve asks only at its root.
+   * Returns the directions in which a variable can move: {@link #DECREASE} if every assignment of
+   * the current domains that satisfies the constraint still satisfies it when only {@code v} takes
+   * a smaller value of its domain, {@link #INCREASE} likewise for a larger value, both, or 0.
    *
    * @param v a variable of the constraint.
-   * @return the direction, NONE when unknown.
+   * @return the directions, a combination of {@link #DECREASE} and {@link #INCREASE}.
    */
-  Direction monotonicity(Var v);
-
-  /**
-   * Tells whether a variable occurs in an array.
-   *
-   * @param vars the array.
-   * @param v the variable.
-   * @return true if some element is v.
-   */
-  static boolean contains(Var[] vars, Var v) {
-    for (Var x : vars) {
-      if (x == v) {
-        return true;
-      }
-    }
-    return false;
-  }
+  int freeDirections(Var v);
 }

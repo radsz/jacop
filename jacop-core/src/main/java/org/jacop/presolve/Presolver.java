@@ -32,6 +32,7 @@ package org.jacop.presolve;
 
 import java.util.List;
 import java.util.function.Supplier;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 
@@ -63,9 +64,13 @@ public final class Presolver {
 
   /**
    * The rules every presolve applies, in this order, before those added with {@link #rule(Rule)}. A
-   * new presolve rule is added here.
+   * new presolve rule is added here. The system property jacop.presolve.orderLiterals=false leaves
+   * out {@link OrderLiterals}, for example to measure it.
    */
-  static final List<Supplier<Rule>> STANDARD = List.of(AtMostOneRule::new);
+  static final List<Supplier<Rule>> STANDARD =
+      Boolean.parseBoolean(System.getProperty("jacop.presolve.orderLiterals", "true"))
+          ? List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE, () -> OrderLiterals.RULE)
+          : List.of(AtMostOneRule::new, () -> RedundantConstraints.RULE);
 
   private final Derivation.Builder builder;
   private boolean checking;
@@ -134,6 +139,20 @@ public final class Presolver {
   }
 
   /**
+   * Switches the dual reductions on; see {@link Derivation.Builder#dualReductions(boolean)}. They
+   * keep one solution and every optimum but not every solution, so they are only for a search that
+   * wants one solution or an optimum.
+   *
+   * @param objective the objective variable, or null for a satisfaction problem.
+   * @param minimize true if the objective is minimised.
+   * @return this presolver.
+   */
+  public Presolver dualReductions(IntVar objective, boolean minimize) {
+    builder.dualReductions(true).objective(objective, minimize);
+    return this;
+  }
+
+  /**
    * Sets the most rounds of rules; see {@link Derivation.Builder#rounds(int)}.
    *
    * @param max the most rounds, at least 1.
@@ -141,6 +160,17 @@ public final class Presolver {
    */
   public Presolver rounds(int max) {
     builder.rounds(max);
+    return this;
+  }
+
+  /**
+   * Sets variables the dual reductions leave alone; see {@link Derivation.Builder#exempt(Var...)}.
+   *
+   * @param vars the variables.
+   * @return this presolver.
+   */
+  public Presolver exempt(Var... vars) {
+    builder.exempt(vars);
     return this;
   }
 

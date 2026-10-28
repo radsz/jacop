@@ -32,12 +32,10 @@ package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
-import org.jacop.api.Monotone;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 
@@ -48,7 +46,7 @@ import org.jacop.lcg.LinearForm;
  * @version 5.0
  */
 public class XplusYgtC extends AbstractConstraintXandY
-    implements Copyable<XplusYgtC>, Monotone, LinearExplainable {
+    implements Copyable<XplusYgtC>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -123,11 +121,6 @@ public class XplusYgtC extends AbstractConstraintXandY
   public String toString() {
 
     return id() + " : XplusYgtC(" + x + ", " + y + ", " + c + " )";
-  }
-
-  @Override
-  public Direction monotonicity(Var v) {
-    return Direction.UP;
   }
 
   @Override

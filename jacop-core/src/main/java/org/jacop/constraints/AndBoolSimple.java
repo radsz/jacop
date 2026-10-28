@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Monotone;
+import org.jacop.api.MonotoneDefinition;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,7 +46,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AndBoolSimple extends AbstractBoolSimple implements Copyable<AndBoolSimple>, Monotone {
+public class AndBoolSimple extends AbstractBoolSimple
+    implements Copyable<AndBoolSimple>, Monotone, MonotoneDefinition {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -126,16 +128,23 @@ public class AndBoolSimple extends AbstractBoolSimple implements Copyable<AndBoo
   }
 
   @Override
-  public Direction monotonicity(Var v) {
-    // result <-> a /\ b; with the result fixed, both one or a clause on the negations
-    if (v == result || !result.singleton()) {
-      return Direction.NONE;
-    }
-    return result.value() == 1 ? Direction.UP : Direction.DOWN;
+  public AndBoolSimple copy(VarMap map) {
+    return new AndBoolSimple(map.get(a), map.get(b), map.get(result));
   }
 
   @Override
-  public AndBoolSimple copy(VarMap map) {
-    return new AndBoolSimple(map.get(a), map.get(b), map.get(result));
+  public int freeDirections(Var v) {
+    // with the result false not both variables may be true; otherwise both are tied to it
+    return v != result && result.max() == 0 ? DECREASE : 0;
+  }
+
+  @Override
+  public Var defined() {
+    return result.singleton() || a == result || b == result ? null : result;
+  }
+
+  @Override
+  public int monotonicity(Var v) {
+    return 1;
   }
 }

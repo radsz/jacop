@@ -37,6 +37,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -45,6 +46,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.StoreState;
 import org.jacop.core.Var;
@@ -102,6 +104,8 @@ public final class Derivation implements VarMap {
    * @param fixed parent variables fixed at the level of the derivation and absent from the child.
    * @param dropped constraints not copied because the presolve rules found them entailed or a rule
    *     removed them.
+   * @param simplified constraints rewritten by {@link GlobalPresolve} for the domains at the level
+   *     of the derivation; those rewritten to nothing are counted here too.
    */
   public record Statistics(
       int parentVariables,
@@ -109,7 +113,17 @@ public final class Derivation implements VarMap {
       int childVariables,
       int childConstraints,
       int fixed,
-      int dropped) {}
+      int dropped,
+      int simplified) {}
+
+  /**
+   * What the dual reductions did.
+   *
+   * @param rounds rounds run.
+   * @param fixed variables fixed.
+   * @param tightened domains narrowed without fixing the variable.
+   */
+  public record DualStatistics(int rounds, int fixed, int tightened) {}
 
   private final Store parent;
   private final Retention retention;
@@ -118,6 +132,7 @@ public final class Derivation implements VarMap {
   private final boolean solutionPreserving;
   private final List<Rule> ruleList;
   private final int maxRounds;
+  private final DualReductions dual;
 
   private Outcome outcome;
   private int level;
@@ -129,6 +144,7 @@ public final class Derivation implements VarMap {
   private Statistics statistics;
   private final Map<String, Integer> reductions = new LinkedHashMap<>();
   private Map<Var, Integer> relaxed = Map.of();
+  private DualStatistics dualStatistics;
   private boolean solutionWritten;
   private int rounds;
   private final Set<Constraint> removed = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -139,7 +155,19 @@ public final class Derivation implements VarMap {
     this.frozen = builder.frozen;
     this.rules = builder.rules;
     this.solutionPreserving = builder.solutionPreserving;
-    this.ruleList = List.copyOf(builder.ruleList);
+    this.dual =
+        builder.dual
+            ? new DualReductions(
+                builder.objective,
+                builder.minimize,
+                builder.exempt == null ? Set.of() : builder.exempt)
+            : null;
+    List<Rule> list = new ArrayList<>(builder.ruleList);
+    if (dual != null) {
+      // after the rules that keep every solution, which may expose more one-sided variables
+      list.add(dual);
+    }
+    this.ruleList = List.copyOf(list);
     this.maxRounds = builder.maxRounds;
   }
 
@@ -161,6 +189,10 @@ public final class Derivation implements VarMap {
     private Set<Var> frozen;
     private boolean rules = true;
     private boolean solutionPreserving = true;
+    private boolean dual;
+    private IntVar objective;
+    private boolean minimize;
+    private Set<Var> exempt;
     private final List<Rule> ruleList = new ArrayList<>();
     private int maxRounds = DEFAULT_ROUNDS;
 
@@ -235,6 +267,50 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Switches the dual reductions on or off; off by default. They narrow domains in the parent at
+     * the level of the derivation so that at least one solution, and every optimum of the
+     * objective, is left, but not every solution: switch them on only for a search that wants one
+     * solution or an optimum. The parent's constraints must be the whole problem, apart from those
+     * on {@link #exempt(Var...)} variables.
+     *
+     * @param on true to apply them.
+     * @return this builder.
+     */
+    public Builder dualReductions(boolean on) {
+      this.dual = on;
+      return this;
+    }
+
+    /**
+     * Sets the objective, for the dual reductions; without one the problem is a satisfaction
+     * problem and the reductions keep one of its solutions.
+     *
+     * @param objective the objective variable, or null.
+     * @param minimize true if it is minimised, false if maximised.
+     * @return this builder.
+     */
+    public Builder objective(IntVar objective, boolean minimize) {
+      this.objective = objective;
+      this.minimize = minimize;
+      return this;
+    }
+
+    /**
+     * Sets variables the dual reductions must leave alone, for example those of constraints that
+     * are posted after the derivation or that live outside the store.
+     *
+     * @param vars the variables.
+     * @return this builder.
+     */
+    public Builder exempt(Var... vars) {
+      if (exempt == null) {
+        exempt = Collections.newSetFromMap(new IdentityHashMap<>());
+      }
+      Collections.addAll(exempt, vars);
+      return this;
+    }
+
+    /**
      * Sets the most rounds of rules; the default is {@value Derivation#DEFAULT_ROUNDS}. The rounds
      * stop earlier at a fixpoint, when a round of rules and propagation changes nothing.
      *
@@ -281,9 +357,13 @@ public final class Derivation implements VarMap {
     } catch (FailException e) {
       outcome = Outcome.INFEASIBLE;
       return;
+    } finally {
+      if (dual != null) {
+        dualStatistics = new DualStatistics(dual.rounds(), dual.fixed(), dual.tightened());
+      }
     }
-    variables = allVariables();
-    collected = collectConstraints();
+    variables = variables(parent);
+    collected = constraints(parent, variables);
 
     if (!copyable()) {
       live();
@@ -298,6 +378,20 @@ public final class Derivation implements VarMap {
       } else {
         carried.add(c);
       }
+    }
+    int simplified = 0;
+    if (rules) {
+      List<Constraint> rewritten = new ArrayList<>(carried.size());
+      for (Constraint c : carried) {
+        Optional<List<Constraint>> r = GlobalPresolve.rewrite(c);
+        if (r.isPresent()) {
+          rewritten.addAll(r.get());
+          simplified++;
+        } else {
+          rewritten.add(c);
+        }
+      }
+      carried = rewritten;
     }
 
     ReificationCleanup reifications = new ReificationCleanup(carried, frozen, !solutionPreserving);
@@ -358,7 +452,13 @@ public final class Derivation implements VarMap {
     relaxed = reifications.relaxed();
     statistics =
         new Statistics(
-            variables.size(), collected.size(), copies.size(), carried.size(), fixed, dropped);
+            variables.size(),
+            collected.size(),
+            copies.size(),
+            carried.size(),
+            fixed,
+            dropped,
+            simplified);
 
     if (!child.consistency()) {
       // the child holds the same problem, so the parent is infeasible at this level
@@ -386,7 +486,7 @@ public final class Derivation implements VarMap {
     Context context = new Context();
     while (rounds < maxRounds) {
       rounds++;
-      List<Var> before = allVariables();
+      List<Var> before = variables(parent);
       double[] sizes = sizes(before);
       int edits = context.edits;
       for (Rule rule : ruleList) {
@@ -399,7 +499,7 @@ public final class Derivation implements VarMap {
       // propagating may raise the level, as before the rules
       level = parent.level;
       if (context.edits == edits
-          && allVariables().size() == before.size()
+          && variables(parent).size() == before.size()
           && Arrays.equals(sizes, sizes(before))) {
         break;
       }
@@ -440,9 +540,9 @@ public final class Derivation implements VarMap {
     @Override
     public List<Constraint> constraints() {
       if (snapshot == null) {
-        variables = allVariables();
+        variables = variables(parent);
         List<Constraint> live = new ArrayList<>();
-        for (Constraint c : collectConstraints()) {
+        for (Constraint c : Derivation.constraints(parent, variables)) {
           if (!removed.contains(c)) {
             live.add(c);
           }
@@ -480,15 +580,15 @@ public final class Derivation implements VarMap {
   }
 
   /**
-   * The variables of the parent: those of the store array in store order, then the Boolean
-   * variables, which the store keeps only by id.
+   * The variables of a store: those of the store array in store order, then the Boolean variables,
+   * which the store keeps only by id.
    */
-  private List<Var> allVariables() {
+  static List<Var> variables(Store store) {
     List<Var> result = new ArrayList<>();
-    for (int i = 0; i < parent.size(); i++) {
-      result.add(parent.vars[i]);
+    for (int i = 0; i < store.size(); i++) {
+      result.add(store.vars[i]);
     }
-    for (Var v : parent.variablesHashMap.values()) {
+    for (Var v : store.variablesHashMap.values()) {
       if (v.index() < 0) {
         result.add(v);
       }
@@ -497,20 +597,20 @@ public final class Derivation implements VarMap {
   }
 
   /**
-   * The constraints attached in the parent, walking the variables in store order and each
-   * variable's constraints in attachment order, so a derivation is deterministic. Besides the
-   * constraints of a variable's domain, this takes the constraints that only watch the variable:
-   * for a value ({@link Store#watchValue}, for example a long 0-1 linear constraint) or as a
-   * watched literal ({@link Store#registerWatchedLiteralConstraint}).
+   * The constraints attached in a store, walking the variables in store order and each variable's
+   * constraints in attachment order, so a derivation is deterministic. Besides the constraints of a
+   * variable's domain, this takes the constraints that only watch the variable: for a value ({@link
+   * Store#watchValue}, for example a long 0-1 linear constraint) or as a watched literal ({@link
+   * Store#registerWatchedLiteralConstraint}).
    */
-  private List<Constraint> collectConstraints() {
+  static List<Constraint> constraints(Store store, List<Var> variables) {
     Map<Constraint, Boolean> seen = new IdentityHashMap<>();
     List<Constraint> result = new ArrayList<>();
     for (Var v : variables) {
       List<Constraint> attached = new ArrayList<>(v.dom().constraints());
-      attached.addAll(parent.valueWatchers(v));
-      if (parent.watchedConstraints != null) {
-        attached.addAll(parent.watchedConstraints.getOrDefault(v, Set.of()));
+      attached.addAll(store.valueWatchers(v));
+      if (store.watchedConstraints != null) {
+        attached.addAll(store.watchedConstraints.getOrDefault(v, Set.of()));
       }
       for (Constraint c : attached) {
         if (c != null && !c.isEntailed() && seen.put(c, Boolean.TRUE) == null) {
@@ -537,7 +637,7 @@ public final class Derivation implements VarMap {
     copies.clear();
     statistics =
         new Statistics(
-            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0);
+            variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0);
   }
 
   /**
@@ -667,6 +767,15 @@ public final class Derivation implements VarMap {
    */
   public Set<Var> relaxed() {
     return Collections.unmodifiableSet(relaxed.keySet());
+  }
+
+  /**
+   * Returns what the dual reductions did.
+   *
+   * @return the statistics, or null if they were not run.
+   */
+  public DualStatistics dualStatistics() {
+    return dualStatistics;
   }
 
   /**

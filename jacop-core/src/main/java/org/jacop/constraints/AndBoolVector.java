@@ -30,10 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Monotone;
+import org.jacop.api.MonotoneDefinition;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -46,7 +48,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AndBoolVector extends AbstractBoolVector implements Copyable<AndBoolVector>, Monotone {
+public class AndBoolVector extends AbstractBoolVector
+    implements Copyable<AndBoolVector>, Monotone, MonotoneDefinition {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -222,16 +225,23 @@ public class AndBoolVector extends AbstractBoolVector implements Copyable<AndBoo
   }
 
   @Override
-  public Direction monotonicity(Var v) {
-    // result <-> and(list); with the result fixed, all ones or a clause on the negations
-    if (v == result || !result.singleton()) {
-      return Direction.NONE;
-    }
-    return result.value() == 1 ? Direction.UP : Direction.DOWN;
+  public AndBoolVector copy(VarMap map) {
+    return new AndBoolVector(map.get(list), map.get(result));
   }
 
   @Override
-  public AndBoolVector copy(VarMap map) {
-    return new AndBoolVector(map.get(list), map.get(result));
+  public int freeDirections(Var v) {
+    // with the result false not all variables may be true; otherwise every variable is tied to it
+    return v != result && result.max() == 0 ? DECREASE : 0;
+  }
+
+  @Override
+  public Var defined() {
+    return result.singleton() || Arrays.asList(list).contains(result) ? null : result;
+  }
+
+  @Override
+  public int monotonicity(Var v) {
+    return 1;
   }
 }

@@ -40,7 +40,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
-import org.jacop.api.Monotone;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
@@ -68,7 +67,7 @@ import org.jacop.lcg.LinearForm;
  */
 @Slf4j
 public class LinearInt extends PrimitiveConstraint
-    implements Stateful, Copyable<LinearInt>, Monotone, Explainable {
+    implements Stateful, Copyable<LinearInt>, Explainable {
 
   /*
    * Defines relations
@@ -968,22 +967,6 @@ public class LinearInt extends PrimitiveConstraint
   }
 
   @Override
-  public Direction monotonicity(Var v) {
-    Direction positive =
-        switch (relationType) {
-          case GE, GT -> Direction.UP;
-          case LE, LT -> Direction.DOWN;
-          default -> Direction.NONE;
-        };
-    for (int i = 0; i < x.length; i++) {
-      if (x[i] == v) {
-        return a[i] > 0 ? positive : positive.negate();
-      }
-    }
-    return Direction.NONE;
-  }
-
-  @Override
   public LinearInt copy(VarMap map) {
     LinearInt copy = new LinearInt();
     copy.copyFrom(this, map);
@@ -1021,6 +1004,15 @@ public class LinearInt extends PrimitiveConstraint
     return explained;
   }
 
+  /**
+   * Returns the linear relation this constraint states, for presolve.
+   *
+   * @return the linear form.
+   */
+  public LinearForm linearForm() {
+    return lcgForm();
+  }
+
   // the relation over the variables left after folding, for entailment and negation
   private LinearForm form() {
     return getClass() == LinearInt.class ? lcgForm() : null;
@@ -1042,6 +1034,16 @@ public class LinearInt extends PrimitiveConstraint
       case GT -> new LinearForm(vars, weights, b + 1, LinearForm.GE);
       default -> new LinearForm(vars, weights, b, LinearForm.NE);
     };
+  }
+
+  /**
+   * Returns the relation this constraint enforces, over its variables with repeated ones merged,
+   * for presolve; unlike the explanations it holds for subclasses as well.
+   *
+   * @return the linear form
+   */
+  public LinearForm linearRelation() {
+    return lcgForm();
   }
 
   @Override

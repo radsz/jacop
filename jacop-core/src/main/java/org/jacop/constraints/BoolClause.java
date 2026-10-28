@@ -327,17 +327,17 @@ public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClau
   }
 
   @Override
-  public Direction monotonicity(Var v) {
-    boolean positive = Monotone.contains(x, v);
-    boolean negative = Monotone.contains(y, v);
-    if (positive == negative) {
-      return Direction.NONE;
-    }
-    return positive ? Direction.UP : Direction.DOWN;
+  public BoolClause copy(VarMap map) {
+    return new BoolClause(map.get(x), map.get(y));
   }
 
   @Override
-  public BoolClause copy(VarMap map) {
-    return new BoolClause(map.get(x), map.get(y));
+  public int freeDirections(Var v) {
+    boolean positive = Arrays.asList(x).contains(v);
+    boolean negative = Arrays.asList(y).contains(v);
+    if (positive == negative) {
+      return 0;
+    }
+    return positive ? INCREASE : DECREASE;
   }
 }

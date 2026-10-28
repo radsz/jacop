@@ -37,7 +37,6 @@ import java.util.Map;
 import java.util.Set;
 import org.jacop.api.Copyable;
 import org.jacop.api.Monotone;
-import org.jacop.api.Monotone.Direction;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Constraint;
@@ -58,7 +57,7 @@ import org.jacop.core.Var;
  *   <li>with its Boolean fixed, {@code b <-> c} becomes {@code c} or {@code not c}, and {@code b ->
  *       c} becomes {@code c} or disappears. This keeps every solution.
  *   <li>{@code b <-> c} where every other constraint on {@code b} is satisfied at least as well
- *       with {@code b} true (each is {@link Monotone} upwards in {@code b}) becomes the
+ *       with {@code b} true (each lets {@code b} increase, as its {@link Locks} tell) becomes the
  *       half-reification {@code b -> c}; when they all prefer {@code b} false, it becomes {@code c
  *       -> b}; when no other constraint uses {@code b}, it disappears, and so does {@code b -> c}.
  *       This is the enforcement-literal cleanup of CP-SAT and MiniZinc's half-reification (Feydy,
@@ -101,6 +100,9 @@ final class ReificationCleanup {
 
   /** At most this many passes; each pass can expose new half-reifications to the next. */
   private static final int PASSES = 4;
+
+  /** Both directions: the variable may move either way. */
+  private static final int BOTH = Monotone.DECREASE | Monotone.INCREASE;
 
   private final List<Constraint> constraints;
   private final Set<Var> frozen;
@@ -184,26 +186,23 @@ final class ReificationCleanup {
     if (!candidate(b) || r.c.arguments().contains(b) || !overIntegers(r.c)) {
       return false;
     }
-    Direction wanted = null;
+    int wanted = BOTH;
     for (Constraint o : occurrences.get(b)) {
       if (o == r) {
         continue;
       }
-      Direction d = direction(o, b);
-      if (d != null) {
-        wanted = wanted == null ? d : wanted.and(d);
-        if (wanted == Direction.NONE) {
-          return false;
-        }
+      wanted &= freeDirections(o, b);
+      if (wanted == 0) {
+        return false;
       }
     }
     Form form;
-    if (wanted == null) {
+    if (wanted == BOTH) {
       form = Form.DROP;
       dropped++;
     } else if (r instanceof Implies) {
       return false;
-    } else if (wanted == Direction.UP) {
+    } else if (wanted == Monotone.INCREASE) {
       form = Form.IMPLIES;
       relaxed.put(b, 1);
       halfReified++;
@@ -230,27 +229,44 @@ final class ReificationCleanup {
   }
 
   /**
-   * The direction in which {@code v} may move without breaking a constraint in its current form, or
-   * null if the form no longer uses {@code v}.
+   * The directions in which {@code v} may move without breaking a constraint in its current form,
+   * as in {@link Monotone}; both if the form no longer uses {@code v}.
    */
-  private Direction direction(Constraint c, Var v) {
+  private int freeDirections(Constraint c, Var v) {
     Form form = form(c);
     if (form == Form.COPY) {
-      return c instanceof Monotone m ? m.monotonicity(v) : Direction.NONE;
+      return locks(c, v);
     }
     if (form == Form.DROP) {
-      return null;
+      return BOTH;
     }
     AbstractReifiedConstraint r = (AbstractReifiedConstraint) c;
     if (v == r.b) {
       return switch (form) {
-        case IMPLIES -> Direction.DOWN;
-        case CONVERSE -> Direction.UP;
-        default -> null;
+        case IMPLIES -> Monotone.DECREASE;
+        case CONVERSE -> Monotone.INCREASE;
+        default -> BOTH;
       };
     }
-    Direction inner = r.c instanceof Monotone m ? m.monotonicity(v) : Direction.NONE;
-    return form == Form.NOT || form == Form.CONVERSE ? inner.negate() : inner;
+    int inner = locks(r.c, v);
+    return form == Form.NOT || form == Form.CONVERSE ? opposite(inner) : inner;
+  }
+
+  private static int locks(Constraint c, Var v) {
+    int[] free = {BOTH};
+    Locks.collect(
+        c,
+        (x, f, above, below) -> {
+          if (x == v) {
+            free[0] &= f;
+          }
+        });
+    return free[0];
+  }
+
+  private static int opposite(int free) {
+    return ((free & Monotone.INCREASE) != 0 ? Monotone.DECREASE : 0)
+        | ((free & Monotone.DECREASE) != 0 ? Monotone.INCREASE : 0);
   }
 
   private Form form(Constraint c) {

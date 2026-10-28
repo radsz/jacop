@@ -257,8 +257,106 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
 
       if (node.getId() == JJTMODELEND) {
-        search((ASTSolveItem) node.jjtGetChild(0), table, opt);
+        ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
+        if (opt.presolve() != Options.Presolve.OFF && opt.symmetry()) {
+          breakSymmetries(astTree, solveItem, opt);
+        }
+        search(solveItem, table, opt);
       }
+    }
+  }
+
+  /**
+   * Breaks the variable symmetries of the model with lex-leader constraints in the loaded store,
+   * before presolve derives the store to search. Symmetry breaking loses solutions, so it is not
+   * done when a satisfaction problem asks for more than one solution; it keeps the optimum, since
+   * the objective variable is kept by every symmetry.
+   */
+  private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
+    ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
+    boolean satisfy = getKind(kind.getKind()) == 0;
+    if (satisfy && (opt.getAll() || opt.getNumberSolutions() > 1)) {
+      return;
+    }
+    if (dictionary.onRestart != null) {
+      // the restart constraints refer to earlier solutions
+      return;
+    }
+    IntVar objective = null;
+    if (!satisfy) {
+      ASTSolveExpr e = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (e.getType() == 0) {
+        if (dictionary.getFloatVariable(e.getIdent()) != null) {
+          return;
+        }
+        objective = dictionary.getVariable(e.getIdent());
+      } else if (e.getType() == 1) {
+        IntVar[] a = dictionary.getVariableArray(e.getIdent());
+        if (a == null) {
+          if (dictionary.variableFloatArrayTable.containsKey(e.getIdent())) {
+            return;
+          }
+        } else {
+          objective = a[e.getIndex()];
+        }
+      } else {
+        return;
+      }
+    }
+    List<Var> order = new ArrayList<>();
+    for (int i = 0; i < item.jjtGetNumChildren() - 1; i++) {
+      annotationVariables((SimpleNode) item.jjtGetChild(i), order);
+    }
+
+    // the automorphism search takes at most a second (org.jacop.fz.symmetryTime, in milliseconds),
+    // and at most a twentieth of the time left
+    long budget = Long.getLong("org.jacop.fz.symmetryTime", 1000);
+    if (opt.getRemainingTimeOut() > 0) {
+      budget = Math.min(budget, opt.getRemainingTimeOut() / 20);
+    }
+    long start = timer.getCpuTime();
+    SymmetryBreaking.Outcome o =
+        new SymmetryBreaking(store, dictionary).run(astTree, objective, order, budget * 1_000_000L);
+    long time = timer.getCpuTime() - start;
+    if (!store.consistency()) {
+      throw Store.failException;
+    }
+    if (opt.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: symmetryTime="
+              + time / 1_000_000_000.0
+              + "\n%%%mzn-stat: symmetryGraphVertices="
+              + o.vertices()
+              + "\n%%%mzn-stat: symmetryGenerators="
+              + o.generators()
+              + "\n%%%mzn-stat: symmetryConstraints="
+              + o.constraints()
+              + "\n%%%mzn-stat: symmetrySearchComplete="
+              + o.complete()
+              + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
+              + "\n%%%mzn-stat-end");
+    }
+  }
+
+  /** The variables named in an annotation, in order. */
+  private void annotationVariables(SimpleNode node, List<Var> order) {
+    if (node instanceof ASTScalarFlatExpr e) {
+      if (e.getType() == 2) {
+        IntVar[] a = dictionary.getVariableArray(e.getIdent());
+        if (a != null) {
+          order.addAll(Arrays.asList(a));
+        } else if (dictionary.getVariable(e.getIdent()) != null) {
+          order.add(dictionary.getVariable(e.getIdent()));
+        }
+      } else if (e.getType() == 3) {
+        IntVar[] a = dictionary.getVariableArray(e.getIdent());
+        if (a != null && e.getInt() >= 0 && e.getInt() < a.length) {
+          order.add(a[e.getInt()]);
+        }
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      annotationVariables((SimpleNode) node.jjtGetChild(i), order);
     }
   }
 
@@ -375,6 +473,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (frozen != null) {
       presolver.keep(frozen).solutionPreserving(false);
     }
+    dualReductions(presolver, node);
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
     if (options.getStatistics()) {
@@ -473,6 +572,52 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Switches presolve's dual reductions on when the search wants one solution or an optimum: they
+   * keep both but not every solution, so they stay off for all solutions of a satisfaction problem
+   * (-a, -n), and with a float or constant objective. With -a an optimisation prints improving
+   * solutions only, which they keep. They stay off with on_restart too, whose built-ins fix
+   * variables from outside the store, and leave alone the variables of the clauses kept for the SAT
+   * solver, which are posted after presolve.
+   */
+  private void dualReductions(Presolver presolver, ASTSolveItem node) {
+    if (!options.presolveDual() || dictionary.onRestart != null) {
+      return;
+    }
+    ASTSolveKind kind = null;
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (node.jjtGetChild(i) instanceof ASTSolveKind k) {
+        kind = k;
+      }
+    }
+    if (kind == null) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    IntVar objective = null;
+    if (k == 0) {
+      if (options.getAll()) {
+        return;
+      }
+    } else {
+      ASTSolveExpr expr = (ASTSolveExpr) kind.jjtGetChild(0);
+      if (expr.getType() == 0) {
+        objective = dictionary.getVariable(expr.getIdent());
+      } else if (expr.getType() == 1) {
+        IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+        objective = a != null ? a[expr.getIndex()] : null;
+      }
+      if (objective == null) {
+        return;
+      }
+    }
+    presolver.dualReductions(objective, k != 2);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      presolver.exempt(clause[0]);
+      presolver.exempt(clause[1]);
+    }
+  }
+
+  /**
    * The derivation's map, completed with a constant in the derived store for every variable fixed
    * by presolve, so annotations and output arrays that name such a variable stay valid.
    */
@@ -511,6 +656,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(st.parentConstraints())
           .append('\n');
       s.append("%%%mzn-stat: presolveConstraintsAfter=").append(st.childConstraints()).append('\n');
+      s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
+    }
+    Derivation.DualStatistics dual = d.dualStatistics();
+    if (dual != null) {
+      s.append("%%%mzn-stat: presolveDualRounds=").append(dual.rounds()).append('\n');
+      s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
+      s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
     }
     d.reductions()
         .forEach(

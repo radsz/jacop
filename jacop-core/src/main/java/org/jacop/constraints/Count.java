@@ -32,9 +32,11 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
+import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -49,7 +51,7 @@ import org.jacop.lcg.Explainable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Count extends AbstractCount implements Copyable<Count>, Explainable {
+public class Count extends AbstractCount implements Simplifiable, Copyable<Count>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -197,6 +199,14 @@ public class Count extends AbstractCount implements Copyable<Count>, Explainable
     return getClass() == Count.class
         && new CountExplanation(trail, list, value, counter, 0, 0, trail.size())
             .explainFailure(out);
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != Count.class) {
+      return Optional.empty();
+    }
+    return GlobalSimplification.count(list, counter, value, l -> new Count(l, counter, value));
   }
 
   @Override

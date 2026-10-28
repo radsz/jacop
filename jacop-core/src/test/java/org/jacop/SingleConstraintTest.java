@@ -118,6 +118,7 @@ import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBoolVector;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sequence;
@@ -257,6 +258,54 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x);
 
     assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  @Test
+  void testOverlappingAlldiffFailsWhenTheOwnVariablesCannotShare() {
+
+    // x in 1..2 and z in 3..4 cannot share a value, so x, w1, w2, w3 and z need five of four
+    // values;
+    // each alldifferent apart is domain consistent
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar w1 = new IntVar(store, "w1", 1, 4);
+    IntVar w2 = new IntVar(store, "w2", 1, 4);
+    IntVar w3 = new IntVar(store, "w3", 1, 4);
+    IntVar z = new IntVar(store, "z", 3, 4);
+    IntVar[] s = {x, w1, w2, w3};
+    IntVar[] t = {w1, w2, w3, z};
+
+    store.impose(new Alldistinct(s));
+    store.impose(new Alldistinct(t));
+    assertThat(store.consistency()).isTrue();
+
+    store.impose(new OverlappingAlldiff(s, t));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testOverlappingAlldiffPrunesWhatTwoAlldistinctsMiss() {
+
+    // w1 and w2 take two of 1..3 and x and z both take the third, which must be 2
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 3);
+    IntVar w1 = new IntVar(store, "w1", 1, 3);
+    IntVar w2 = new IntVar(store, "w2", 1, 3);
+    IntVar z = new IntVar(store, "z", 1, 2);
+    IntVar[] s = {x, w1, w2};
+    IntVar[] t = {w1, w2, z};
+
+    store.impose(new Alldistinct(s));
+    store.impose(new Alldistinct(t));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.getSize()).isEqualTo(2);
+
+    store.impose(new OverlappingAlldiff(s, t));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.value()).isEqualTo(2);
+    assertThat(z.value()).isEqualTo(2);
+    assertThat(w1.dom().contains(2)).isFalse();
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, w1, w2, z})).isEqualTo(2);
   }
 
   @Test
@@ -6311,6 +6360,23 @@ class SingleConstraintTest extends TestHelper {
         .isEqualTo(cumulativeBruteForce(2, 2, 3, new int[] {2, 1}, 3, false));
     assertThat(cumulativeSolutions(false, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, false))
         .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, false));
+  }
+
+  @Test
+  void testCumulativeResourceOfTaskOutsideProfile() {
+
+    // The third task must run at time 25, where the first two use the whole capacity, so it
+    // cannot use the resource. With a resource use of 0 or 6 it is not in the profile, and the
+    // sweep only checked its resource use at the dates where the profile changes (24 and 26).
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 24, 24), new IntVar(store, 20, 20), new IntVar(store, 22, 25)};
+    IntVar[] d = {new IntVar(store, 2, 2), new IntVar(store, 6, 6), new IntVar(store, 4, 4)};
+    IntVar r3 = new IntVar(store, 0, 0);
+    r3.addDom(6, 6);
+    IntVar[] r = {new IntVar(store, 6, 6), new IntVar(store, 9, 9), r3};
+    store.impose(new Cumulative(s, d, r, new IntVar(store, 15, 15)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(r3.singleton(0)).isTrue();
   }
 
   @Test
