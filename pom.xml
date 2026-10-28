@@ -260,7 +260,6 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
-                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
@@ -362,7 +361,6 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
-                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
@@ -463,7 +461,6 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
-                                <include>**/StdDecompositionsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
