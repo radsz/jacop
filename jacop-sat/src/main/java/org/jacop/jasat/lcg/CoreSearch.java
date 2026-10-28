@@ -143,6 +143,7 @@ public final class CoreSearch {
 
   private long checkTime; // when the rate of the lower bound was last measured, and the bound then
   private long checkBound;
+  private long startTime; // when the rate was first measured
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
 
@@ -345,12 +346,15 @@ public final class CoreSearch {
   /**
    * Whether the lower bound rises too slowly to meet the best solution before the deadline, at
    * three times its rate of the last two seconds; for example when each core of two terms with
-   * large domains raises it by 1. Branch and bound then gets the time.
+   * large domains raises it by 1. Branch and bound then gets the time. Without a deadline the time
+   * left is taken as the time the phase has run: cores that cost no conflicts never reach its
+   * budget of conflicts, and one per level of a term of a million values would run for hours.
    */
   private boolean tooSlow() {
     long now = System.nanoTime();
     if (checkTime == 0) {
       checkTime = now;
+      startTime = now;
       checkBound = lowerBound;
       return false;
     }
@@ -362,9 +366,8 @@ public final class CoreSearch {
     double rate = (double) (lowerBound - checkBound) / (now - checkTime);
     checkTime = now;
     checkBound = lowerBound;
-    return deadline != Long.MAX_VALUE
-        && best != Long.MAX_VALUE
-        && RATE_SLACK * rate * (deadline - now) < best - lowerBound;
+    long left = deadline != Long.MAX_VALUE ? deadline - now : now - startTime;
+    return best != Long.MAX_VALUE && RATE_SLACK * rate * left < best - lowerBound;
   }
 
   /**
