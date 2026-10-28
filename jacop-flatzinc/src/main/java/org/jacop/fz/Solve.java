@@ -95,6 +95,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
@@ -1140,6 +1141,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         free && "none".equals(options.freeConfig("interleave", "restart"))
             ? null
             : annotationSelect(annotatedSearch);
+    if (free && annotated == null && !"none".equals(options.freeConfig("interleave", "restart"))) {
+      annotated = lcgDefaultSelect(costVar);
+    }
     lcg.setAnnotation(annotated, free);
     if (free) {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
@@ -1154,6 +1158,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     return numberSolutions > 0;
+  }
+
+  /**
+   * The branching that the runs of LCG free search alternate with when the model has no search
+   * annotation: dom/wdeg on the default search variables, smallest value first. The store's
+   * constraints fail under LCG too, so their weights grow as without learning. Activity alone
+   * misses first solutions this finds, for example on cutstock, where each item's demand is a sum
+   * over hundreds of variables.
+   */
+  private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar[] group : List.of(searchVars.getIntVars(), searchVars.getBoolVars())) {
+      for (IntVar x : group) {
+        if (x != costVar) {
+          vars.add(x);
+        }
+      }
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    SimpleSelect<IntVar> select =
+        new SimpleSelect<>(
+            vars.toArray(new IntVar[0]), new WeightedDegree<>(store), new IndomainMin<>());
+    // ties go to the first variable met, without the input-order lookups per tie
+    select.inputOrderTieBreaking = false;
+    return select;
   }
 
   private void printLcgStatistics(boolean interrupted) {
