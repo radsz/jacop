@@ -509,29 +509,8 @@ public final class Derivation implements VarMap {
       reductions.put("reificationsDropped", reifications.dropped());
     }
 
-    // rule 8 needs to know which variables must be kept; it leaves alone the merged variables,
-    // which the constraints still name, the variables of the clauses and the constraints the
-    // reification cleanup rewrites
     if (rules && frozen != null) {
-      Set<Var> kept = Collections.newSetFromMap(new IdentityHashMap<>());
-      kept.addAll(frozen);
-      kept.addAll(aliases.keySet());
-      kept.addAll(aliases.values());
-      kept.addAll(clauseVariables);
-      Map<Var, Integer> half = reifications.relaxed();
-      for (Constraint c : carried) {
-        if (reifications.rewritten(c) || c.arguments().stream().anyMatch(half::containsKey)) {
-          kept.addAll(c.arguments());
-        }
-      }
-      VariableElimination elimination = new VariableElimination(kept, solutionPreserving);
-      carried = elimination.apply(carried);
-      for (Var v : elimination.eliminated()) {
-        entries.put(v, new Entry.Eliminated());
-      }
-      eliminated = elimination.eliminated().size();
-      substitutions = elimination.substitutions();
-      eliminationReconstruction = elimination.reconstruction();
+      carried = eliminate(carried, aliases, reifications, clauseVariables);
     }
 
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -648,6 +627,38 @@ public final class Derivation implements VarMap {
   }
 
   /** Returns the frozen variables and the given ones, or null if every variable is frozen. */
+  /**
+   * Rule 8: eliminates variables with the constraints that define them, once the kept variables are
+   * known. It leaves alone the merged variables, which the constraints still name, the variables of
+   * the clauses and the constraints the reification cleanup rewrites.
+   */
+  private List<Constraint> eliminate(
+      List<Constraint> carried,
+      Map<Var, Var> aliases,
+      ReificationCleanup reifications,
+      Set<Var> clauseVariables) {
+    Set<Var> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+    kept.addAll(frozen);
+    kept.addAll(aliases.keySet());
+    kept.addAll(aliases.values());
+    kept.addAll(clauseVariables);
+    Map<Var, Integer> half = reifications.relaxed();
+    for (Constraint c : carried) {
+      if (reifications.rewritten(c) || c.arguments().stream().anyMatch(half::containsKey)) {
+        kept.addAll(c.arguments());
+      }
+    }
+    VariableElimination elimination = new VariableElimination(kept, solutionPreserving);
+    List<Constraint> result = elimination.apply(carried);
+    for (Var v : elimination.eliminated()) {
+      entries.put(v, new Entry.Eliminated());
+    }
+    eliminated = elimination.eliminated().size();
+    substitutions = elimination.substitutions();
+    eliminationReconstruction = elimination.reconstruction();
+    return result;
+  }
+
   private Set<Var> frozenWith(Set<Var> vars) {
     if (frozen == null || vars.isEmpty()) {
       return frozen;
