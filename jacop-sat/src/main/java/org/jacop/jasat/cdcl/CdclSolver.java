@@ -157,7 +157,6 @@ public final class CdclSolver {
   private int ungroupedOpen;
   private int[] frontier = new int[16];
   private int learntSize;
-  private int[] stack = new int[16];
   private int[] toClear = new int[16];
   private int toClearSize;
   private int[] levelStamp = new int[16];
@@ -166,6 +165,11 @@ public final class CdclSolver {
   private boolean shrink = true;
   private int[] shrinkMark = new int[0];
   private int shrinkStamp;
+  // the depth of the minimisation's search, as CaDiCaL's minimizedepth
+  private static final int MINIMIZE_DEPTH = 1000;
+  // variables found not redundant during this conflict's minimisation (poisoned), by stamp
+  private int[] poisonMark = new int[0];
+  private int poisonStamp;
   private long[] shrinkKeys = new long[16];
 
   // --- heuristics
@@ -313,6 +317,7 @@ public final class CdclSolver {
       trail = Arrays.copyOf(trail, c);
       trailPos = Arrays.copyOf(trailPos, c);
       shrinkMark = Arrays.copyOf(shrinkMark, c);
+      poisonMark = Arrays.copyOf(poisonMark, c);
       eliminatedVar = Arrays.copyOf(eliminatedVar, c);
       observed = Arrays.copyOf(observed, c);
       watches = Arrays.copyOf(watches, 2 * c);
@@ -1113,6 +1118,10 @@ public final class CdclSolver {
     learnt[0] = p ^ 1;
 
     // recursive minimisation
+    if (++poisonStamp == Integer.MAX_VALUE) {
+      Arrays.fill(poisonMark, 0);
+      poisonStamp = 1;
+    }
     int abstractLevels = 0;
     for (int i = 1; i < learntSize; i++) {
       abstractLevels |= 1 << (level[learnt[i] >> 1] & 31);
@@ -1348,61 +1357,53 @@ public final class CdclSolver {
     return 0;
   }
 
-  /** Whether literal p of the learnt clause is implied by the other literals (MiniSat's test). */
+  /**
+   * Whether literal p of the learnt clause is implied by the other literals (MiniSat's test). The
+   * search is depth first and remembers both outcomes for the rest of the conflict, as CaDiCaL
+   * does: a literal shown removable is marked seen, and one that is not is poisoned. MiniSat
+   * forgets the failures, so every learnt literal could walk the same implication graph again;
+   * under LCG each step asks for a lazy explanation, and city-position spent over 30 s in one
+   * minimisation.
+   */
   private boolean redundant(int p, int abstractLevels) {
-    int top = toClearSize;
-    int sp = 0;
-    stack = push(stack, sp++, p);
-    while (sp > 0) {
-      int v = stack[--sp] >> 1;
-      int r = reasonRef(v);
-      if (r == UNIT_REASON) {
-        continue;
-      }
-      if (r < NO_REASON) {
-        int q = -2 - r;
-        if (!redundantStep(q, abstractLevels)) {
-          return undo(top);
-        }
-        if (seen[q >> 1] == 0 && level[q >> 1] > 0 && reason[q >> 1] != UNIT_REASON) {
-          seen[q >> 1] = 1;
-          markClear(q >> 1);
-          stack = push(stack, sp++, q);
-        }
-        continue;
-      }
-      int lits = r + HEADER;
-      int size = mem[r + SIZE];
-      for (int k = 1; k < size; k++) {
-        int q = mem[lits + k];
-        int qv = q >> 1;
-        if (seen[qv] != 0 || level[qv] == 0 || reason[qv] == UNIT_REASON) {
-          continue;
-        }
-        if (!redundantStep(q, abstractLevels)) {
-          return undo(top);
-        }
-        seen[qv] = 1;
-        markClear(qv);
-        stack = push(stack, sp++, q);
+    return antecedentsRemovable(p >> 1, abstractLevels, 0);
+  }
+
+  private boolean antecedentsRemovable(int v, int abstractLevels, int depth) {
+    int r = reasonRef(v);
+    if (r == UNIT_REASON) {
+      return true;
+    }
+    if (r < NO_REASON) {
+      return removable(-2 - r, abstractLevels, depth + 1);
+    }
+    int size = mem[r + SIZE];
+    for (int k = 1; k < size; k++) {
+      // mem is read again each time: explaining an antecedent may reallocate it
+      if (!removable(mem[r + HEADER + k], abstractLevels, depth + 1)) {
+        return false;
       }
     }
     return true;
   }
 
-  private boolean redundantStep(int q, int abstractLevels) {
+  private boolean removable(int q, int abstractLevels, int depth) {
     int v = q >> 1;
     if (seen[v] != 0 || level[v] == 0 || reason[v] == UNIT_REASON) {
       return true;
     }
-    return reason[v] != NO_REASON && ((1 << (level[v] & 31)) & abstractLevels) != 0;
-  }
-
-  private boolean undo(int top) {
-    for (int i = top; i < toClearSize; i++) {
-      seen[toClear[i]] = 0;
+    if (poisonMark[v] == poisonStamp
+        || reason[v] == NO_REASON
+        || ((1 << (level[v] & 31)) & abstractLevels) == 0
+        || depth > MINIMIZE_DEPTH) {
+      return false;
     }
-    toClearSize = top;
+    if (antecedentsRemovable(v, abstractLevels, depth)) {
+      seen[v] = 1;
+      markClear(v);
+      return true;
+    }
+    poisonMark[v] = poisonStamp;
     return false;
   }
 
