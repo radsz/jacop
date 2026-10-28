@@ -238,6 +238,16 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. Steiner (MiniZinc steiner and dsteiner) has a cost bound: the new
+    SteinerBound runs Wong's dual ascent on the directed cut relaxation
+    (no LP solver) and, with the reduced costs, removes nodes and edges
+    that no tree within max(cost) can use. Selected edges cost 0 and add
+    their weight; a dsteiner root that is not fixed is replaced by a
+    virtual root. It is posted only when no weight is negative. On
+    geometric Steiner trees with 20 to 120 nodes and Steiner arborescences
+    with 20 to 80 nodes (60 s) JaCoP proves all 28 optima in under 2 s,
+    against 3 before.
+
 Version 4.11
 =============
 
