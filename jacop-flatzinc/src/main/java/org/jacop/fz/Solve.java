@@ -50,7 +50,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -372,8 +371,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     options = opt;
     dictionary = table;
     output = table;
+    presolveObjective(node);
     if (opt.presolve() != Options.Presolve.OFF) {
-      presolveObjective(node);
       presolve(node);
     }
 
@@ -411,7 +410,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Objective presolve: imposes the objective, expanded through its defining equations and shifted
    * by the exactly-one sets of the model, as a redundant equation in the loaded store, so presolve
-   * copies it into the derived store. See {@link ObjectivePresolve}.
+   * copies it into the derived store. It runs with and without --presolve, since it only adds
+   * redundant constraints; their degree weight is 0, so static variable orders do not change. See
+   * {@link ObjectivePresolve}.
    *
    * @param node the solve item.
    */
@@ -443,18 +444,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     ObjectivePresolve presolve =
         new ObjectiveDetector(new Support(store, dictionary, sat)).collect(root, objective, k == 1);
-    LinearInt equation = presolve.reformulate();
-    if (equation != null) {
-      store.impose(equation);
+    List<Constraint> reformulation = presolve.reformulate(store);
+    for (Constraint c : reformulation) {
+      store.impose(c.setDegreeWeight(0));
     }
     if (options.getStatistics()) {
       IO.println(
           "%%%mzn-stat: presolveObjectiveTime="
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: presolveObjectiveExpanded="
-              + (equation == null ? 0 : presolve.expanded())
+              + (reformulation.isEmpty() ? 0 : presolve.expanded())
               + "\n%%%mzn-stat: presolveObjectiveShifted="
-              + (equation == null ? 0 : presolve.shifted()));
+              + (reformulation.isEmpty() ? 0 : presolve.shifted()));
     }
   }
 

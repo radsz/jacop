@@ -44,8 +44,9 @@ import org.jacop.presolve.ObjectivePresolve;
 /**
  * It reads the facts objective presolve needs from the constraint items of a model: the linear
  * equations ({@code int_lin_eq}, {@code bool_lin_eq}) with their {@code defines_var} annotations,
- * and the value literals ({@code int_eq_reif} of a variable and a constant). Variables are those of
- * the loaded store; see {@link ObjectivePresolve}.
+ * the value literals ({@code int_eq_reif} of a variable and a constant) and the counts of a
+ * constant ({@code jacop_count}). Variables are those of the loaded store; see {@link
+ * ObjectivePresolve}.
  *
  * <p>Setting the system property {@code org.jacop.fz.objectivePresolve} to false turns objective
  * presolve off.
@@ -118,6 +119,12 @@ public class ObjectiveDetector implements ParserTreeConstants {
           coefs[a.length] = -1;
           presolve.addEquation(vars, coefs, 0, definedVar(item));
         }
+      }
+      case "jacop_count" -> {
+        IntVar[] x = support.getVarArray(child(node, 0));
+        int value = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+        IntVar n = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+        presolve.addCount(x, value, n);
       }
       case "int_eq_reif" -> {
         IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
