@@ -218,6 +218,22 @@ class PropagationStrengthTest {
     assertThat(reifiedSumIsFalse((x, y, z) -> new XplusYeqZ(x, y, z))).isTrue();
   }
 
+  // neither variable fixed: x + 1 = z with x in {7, 10} and z without 8 and 11 cannot hold (photo)
+  @Test
+  void testReifiedSumNoticesShiftedDomainsAreDisjoint() {
+
+    Store store = new Store();
+    IntVar x = variable(store, "x", 7, 10);
+    IntVar z = variable(store, "z", 0, 1, 2, 3, 5, 7, 10);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    store.impose(new Reified(new XplusCeqZ(x, 1, z), b));
+    store.impose(new Reified(new XplusYeqC(x, z, 16), d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("0");
+    assertThat(d.dom()).hasToString("0");
+  }
+
   /**
    * x = 5, y = 1, z in {2..3, 8..10}, then 6 also leaves z: the reified sum must be false at once.
    */

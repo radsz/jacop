@@ -73,7 +73,7 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
 
   @Override
   protected int getDefaultNestedNotConsistencyPruningEvent() {
-    // notSatisfied() also notices the removal of the one value a fixed variable needs
+    // notSatisfied() looks at the holes of the domains
     return IntDomain.ANY;
   }
 
@@ -132,13 +132,18 @@ public class XplusCeqZ extends AbstractConstraintXandCandZ
     if (x == z) {
       return c != 0;
     }
-    if (x.singleton()) {
-      return !z.domain.contains(x.value() + c);
+    if (x.max() + c < z.min() || x.min() + c > z.max()) {
+      return true;
     }
-    if (z.singleton()) {
-      return !x.domain.contains(z.value() - c);
+    // no value of x shifted by c is a value of z
+    IntDomain xDom = x.dom();
+    IntDomain zDom = z.dom();
+    for (int i = 0, n = xDom.noIntervals(); i < n; i++) {
+      if (zDom.isIntersecting(xDom.leftElement(i) + c, xDom.rightElement(i) + c)) {
+        return false;
+      }
     }
-    return x.max() + c < z.min() || x.min() + c > z.max();
+    return true;
   }
 
   @Override
