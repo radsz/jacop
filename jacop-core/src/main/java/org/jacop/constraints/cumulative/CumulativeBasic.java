@@ -266,6 +266,69 @@ public class CumulativeBasic extends Constraint
   }
 
   /**
+   * Returns the variables of the tasks in the order the tasks were given.
+   *
+   * @return the starts, the durations and the resources, one array each.
+   */
+  public IntVar[][] tasks() {
+    int n = taskNormal.length;
+    IntVar[][] vars = new IntVar[3][n];
+    for (int i = 0; i < n; i++) {
+      vars[0][i] = taskNormal[i].start;
+      vars[1][i] = taskNormal[i].dur;
+      vars[2][i] = taskNormal[i].res;
+    }
+    return vars;
+  }
+
+  /**
+   * Returns the limit of the resource.
+   *
+   * @return the limit.
+   */
+  public IntVar limit() {
+    return limit;
+  }
+
+  /**
+   * Returns a constraint of the same class, with the same options and limit, over the tasks kept.
+   *
+   * @param kept for each task, in the order the tasks were given, whether it is kept.
+   * @return the constraint, or null for a subclass that cannot drop tasks.
+   */
+  public CumulativeBasic restrict(boolean[] kept) {
+    IntVar[][] t = tasks();
+    int n = 0;
+    for (boolean k : kept) {
+      if (k) {
+        n++;
+      }
+    }
+    IntVar[][] r = new IntVar[3][n];
+    for (int i = 0, j = 0; i < kept.length; i++) {
+      if (kept[i]) {
+        r[0][j] = t[0][i];
+        r[1][j] = t[1][i];
+        r[2][j] = t[2][i];
+        j++;
+      }
+    }
+    return withTasks(r[0], r[1], r[2]);
+  }
+
+  /**
+   * Returns a constraint of the same class and options as this one over other tasks.
+   *
+   * @param s the starts.
+   * @param d the durations.
+   * @param r the resources.
+   * @return the constraint, or null for a subclass that does not override this method.
+   */
+  CumulativeBasic withTasks(IntVar[] s, IntVar[] d, IntVar[] r) {
+    return getClass() == CumulativeBasic.class ? new CumulativeBasic(s, d, r, limit) : null;
+  }
+
+  /**
    * Leaves out the tasks that never use the resource: those with no resource use, and those with no
    * duration whose use fits under the limit. If the uses of all tasks fit under the limit together,
    * the constraint holds.
