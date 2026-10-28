@@ -251,6 +251,7 @@ setup to run configuration. -->
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -261,6 +262,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -347,6 +349,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -356,6 +359,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -366,6 +370,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -451,6 +456,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -460,6 +466,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -470,6 +477,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
@@ -554,6 +562,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
+                                <include>**/GlobalPresolveTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -563,6 +572,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -573,6 +583,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
+                                <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>

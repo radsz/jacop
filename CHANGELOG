@@ -185,7 +185,22 @@ Version 5.0 (unreleased)
     with time windows (one to three runways, 30 to 90 aircraft, 60 s) it
     answers 79 instead of 63; Gecode answers 59 and Chuffed 60.
 
-18. New set constraint AllDisjoint(s): the sets s are pairwise disjoint.
+18. New constraint OverlappingAlldiff(s, t): alldifferent(s) and
+    alldifferent(t) on lists that share variables, propagated together on
+    the bounds (Bessiere, Katsirelos, Narodytska, Quimper and Walsh,
+    AAAI 2010). It bounds how many shared and how many own variables of
+    each list can take values in each interval, closes the bounds under
+    additivity of the counts, and couples them through the two
+    alldifferents, which detects every failure of the bound relaxation and
+    applies the paper's rules 2a-2d. The FlatZinc front end posts it next
+    to the two all_different constraints when they share at least half of
+    the unfixed variables of each; -Dorg.jacop.fz.overlappingAlldiff=false
+    turns this off. On the paper's random instances (three alldifferents
+    sharing 10 to 12 variables, 90 instances, 60 s) JaCoP solves 80
+    instead of 65; on the paper's pathological family it proves
+    unsatisfiability at the root where it timed out from n = 4.
+
+19. New set constraint AllDisjoint(s): the sets s are pairwise disjoint.
     Besides the pairwise rule of AdisjointB it uses the cardinalities of
     the sets (Bessiere, Hebrard, Hnich and Walsh, CP 2004): elements are
     assigned to sets, or to no set, by a flow that meets the minimal
@@ -196,6 +211,32 @@ Version 5.0 (unreleased)
     students with cardinality bounds, 8 to 32 projects, 60 s) it finds
     a first solution on 3 of 18 instances where the pairwise version finds
     none and a better objective on 8 more.
+
+19. New constraint ChannelOrder(x, b, t, atMost): b[i] <=> x <= t[i] (or
+    x > t[i]), the order counterpart of ChannelReif, with one propagator
+    for all thresholds of x and explanations for lazy clause generation.
+    Presolve (--presolve on|check) replaces the reified comparisons of one
+    variable with constants (int_le_reif, int_lt_reif, int_ge_reif,
+    int_gt_reif) by one ChannelOrder, a presolve rule;
+    -Djacop.presolve.orderLiterals=false turns it off. On the 42 presolve
+    dev-tier instances with such reifications (60 s) search is the same and
+    solve time is 14 % lower (9 % with --lcg).
+
+20. Presolve breaks variable symmetries (--presolve on|check, unless
+    --symmetry off). The FlatZinc model becomes a coloured graph (Puget,
+    CP 2005): variables coloured by domain, constraints by name and
+    constants, argument positions by place, with the arguments whose order
+    does not matter (linear terms, all_different, bool_clause, cumulative
+    tasks, bin packing items, the two sides of int_eq, ...) given one
+    colour. New org.jacop.presolve.GraphAutomorphisms finds generators of
+    its automorphism group by individualization and refinement (as nauty,
+    saucy and bliss), with the variables as the base in lex-leader order,
+    within at most 1 s (-Dorg.jacop.fz.symmetryTime, in ms) and a
+    twentieth of the time left. Each generator g posts X <=lex g(X).
+    The objective variable is fixed by every symmetry, so optima are kept;
+    solutions are lost, so it is off when a satisfaction problem asks for
+    more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
+    holes needs 2,392 failures instead of 764,943.
 
 Version 4.11
 =============

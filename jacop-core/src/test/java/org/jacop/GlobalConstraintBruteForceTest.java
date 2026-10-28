@@ -61,6 +61,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -99,6 +100,7 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -198,6 +200,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
         Arguments.of("Alldistinct", alldiff("Alldistinct")),
         Arguments.of(
+            "OverlappingAlldiff",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::overlappingAlldiff),
+        Arguments.of(
             "AlldifferentExceptZero",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::alldifferentExceptZero),
         Arguments.of(
@@ -207,6 +212,9 @@ class GlobalConstraintBruteForceTest {
             "AllEqual", (Function<Random, Instance>) GlobalConstraintBruteForceTest::allEqual),
         Arguments.of("GCC", (Function<Random, Instance>) GlobalConstraintBruteForceTest::gcc),
         Arguments.of("Among", (Function<Random, Instance>) GlobalConstraintBruteForceTest::among),
+        Arguments.of(
+            "ChannelOrder",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::channelOrder),
         Arguments.of("Count", (Function<Random, Instance>) GlobalConstraintBruteForceTest::count),
         Arguments.of(
             "CountBounds",
@@ -1167,6 +1175,29 @@ class GlobalConstraintBruteForceTest {
             "");
   }
 
+  /** alldifferent on s and on t; the variables of both are shared, each variable in s or t. */
+  private static Instance overlappingAlldiff(Random random) {
+    int n = 2 + random.nextInt(6);
+    // 0: only s, 1: only t, 2: both
+    int[] side = new int[n];
+    for (int i = 0; i < n; i++) {
+      side[i] = random.nextInt(3);
+    }
+    int[] s = IntStream.range(0, n).filter(i -> side[i] != 1).toArray();
+    int[] t = IntStream.range(0, n).filter(i -> side[i] != 0).toArray();
+    return new Instance(
+        domains(random, n, 0, 2 + random.nextInt(3)),
+        (store, x) ->
+            store.impose(
+                new OverlappingAlldiff(
+                    Arrays.stream(s).mapToObj(i -> x[i]).toArray(IntVar[]::new),
+                    Arrays.stream(t).mapToObj(i -> x[i]).toArray(IntVar[]::new))),
+        x ->
+            distinct(Arrays.stream(s).map(i -> x[i]).toArray())
+                && distinct(Arrays.stream(t).map(i -> x[i]).toArray()),
+        "s=" + Arrays.toString(s) + " t=" + Arrays.toString(t));
+  }
+
   private static Instance alldifferentExceptZero(Random random) {
     return new Instance(
         domains(random, 2 + random.nextInt(4), 0, 4),
@@ -1230,6 +1261,46 @@ class GlobalConstraintBruteForceTest {
             store.impose(new Among(Arrays.copyOfRange(x, 0, n), new IntervalDomain(lo, hi), x[n])),
         x -> IntStream.range(0, n).filter(i -> x[i] >= lo && x[i] <= hi).count() == x[n],
         "set=" + lo + ".." + hi);
+  }
+
+  /**
+   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold, and
+   * thresholds may lie outside the domain of x.
+   */
+  private static Instance channelOrder(Random random) {
+    int m = 1 + random.nextInt(4);
+    int n = 1 + random.nextInt(6);
+    int[] which = new int[n];
+    int[] t = new int[n];
+    boolean[] atMost = new boolean[n];
+    for (int i = 0; i < n; i++) {
+      which[i] = 1 + random.nextInt(m);
+      t[i] = random.nextInt(8) - 1;
+      atMost[i] = random.nextBoolean();
+    }
+    return new Instance(
+        append(new int[][] {domain(random, 0, 5)}, domains(random, m, 0, 1)),
+        (store, x) -> {
+          IntVar[] b = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            b[i] = x[which[i]];
+          }
+          store.impose(new ChannelOrder(x[0], b, t, atMost));
+        },
+        x -> {
+          for (int i = 0; i < n; i++) {
+            if ((x[which[i]] == 1) != ((x[0] <= t[i]) == atMost[i])) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "b="
+            + Arrays.toString(which)
+            + " t="
+            + Arrays.toString(t)
+            + " atMost="
+            + Arrays.toString(atMost));
   }
 
   private static Instance count(Random random) {

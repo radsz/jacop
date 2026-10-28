@@ -78,6 +78,7 @@ public class Options {
   Presolve presolve =
       Objects.requireNonNullElse(
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+  boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
   boolean complementarySearch;
@@ -154,6 +155,9 @@ public class Options {
                 alternated per restart with branching on the most active variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
+            --symmetry <value> with presolve, break the variable symmetries of the model with
+                lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
+                problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
@@ -198,6 +202,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--presolve" -> i = handlePresolve(args, i);
+      case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
@@ -296,6 +301,16 @@ public class Options {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
       presolve = mode;
+    }
+    return i + 1;
+  }
+
+  private int handleSymmetry(String[] args, int i) {
+    String mode = args[++i];
+    switch (mode) {
+      case "on" -> symmetry = true;
+      case "off" -> symmetry = false;
+      default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
     }
     return i + 1;
   }
@@ -633,6 +648,15 @@ public class Options {
    */
   public Presolve presolve() {
     return presolve;
+  }
+
+  /**
+   * It defines whether presolve breaks the symmetries of the model (--symmetry).
+   *
+   * @return true by default
+   */
+  public boolean symmetry() {
+    return symmetry;
   }
 
   /**
