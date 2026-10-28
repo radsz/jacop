@@ -1578,7 +1578,7 @@ class FlatzincFrontEndTest {
   void lcgOnSetModelsFindsTheOptimum() throws IOException {
     System.setProperty("jacop.lcg.check", "true");
     try {
-      for (int seed = 1; seed <= 40; seed++) {
+      for (int seed = 1; seed <= 60; seed++) {
         String model = randomSetModel(new Random(seed));
         String expected = objective(run(model)[0]);
         String lcg = objective(run(model, "--lcg", "-f")[0]);
@@ -1611,12 +1611,14 @@ class FlatzincFrontEndTest {
       while (c == a || c == b) {
         c = r.nextInt(sets);
       }
-      switch (r.nextInt(7)) {
+      switch (r.nextInt(9)) {
         case 0 -> constraints.append("constraint set_union(s%d, s%d, s%d);\n".formatted(a, b, c));
         case 1 ->
             constraints.append("constraint set_intersect(s%d, s%d, s%d);\n".formatted(a, b, c));
         case 2 -> constraints.append("constraint set_diff(s%d, s%d, s%d);\n".formatted(a, b, c));
         case 3 -> constraints.append("constraint set_subset(s%d, s%d);\n".formatted(a, b));
+        case 7 -> constraints.append("constraint set_le(s%d, s%d);\n".formatted(a, b));
+        case 8 -> constraints.append("constraint set_lt(s%d, s%d);\n".formatted(a, b));
         case 4 -> {
           vars.append("var 0..5: k%d;\n".formatted(extra));
           constraints.append("constraint set_card(s%d, k%d);\n".formatted(a, extra));

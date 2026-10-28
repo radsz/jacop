@@ -170,6 +170,24 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
   }
 
   /**
+   * Returns the cardinality variable of the mirror.
+   *
+   * @return the variable
+   */
+  public IntVar cardinality() {
+    return cardinality;
+  }
+
+  /**
+   * Returns the set's least upper bound when the mirror was made.
+   *
+   * @return the domain, which must not be changed
+   */
+  public IntDomain rootLub() {
+    return lub;
+  }
+
+  /**
    * Tells whether an element was in the set's greatest lower bound when the mirror was made.
    *
    * @param element the element

@@ -254,8 +254,11 @@ Version 5.0 (unreleased)
     element by element (AintersectBeqC, AunionBeqC, AdiffBeqC, AinB, AeqB,
     AdisjointB, EinA) explain a membership by the memberships of the same
     element in their other sets, and SetMirror explains what the
-    cardinality gives, instead of the generic reason over every element
-    (steiner-triples 09: 2.6 s instead of 10.9 s). Float variables still
+    cardinality gives, instead of the generic reason over every element.
+    AleB and AltB (set_le, set_lt) explain a membership by the memberships
+    and cardinalities that leave their order automaton no solution with
+    the other membership, found by relaxing them one at a time
+    (steiner-triples 09: 1.1 s instead of 10.9 s). Float variables still
     turn --lcg off.
 
 Version 4.11
