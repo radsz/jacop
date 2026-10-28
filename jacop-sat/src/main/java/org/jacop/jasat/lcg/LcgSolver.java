@@ -171,8 +171,14 @@ public final class LcgSolver implements ExternalPropagator {
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
   private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
   private double[] activity;
+  // the 0/1 variables by activity, and the others in wide; with Booleans first a variable of wide
+  // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search, else the
+  // more active top of the two goes first
   private final VarHeap heap = new VarHeap();
-  // variables branched on only when every variable of the heap is fixed (defined variables)
+  private final boolean booleansFirst =
+      !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
+  private final VarHeap wide = new VarHeap();
+  // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private boolean[] late;
   private double activityInc = 1;
@@ -246,6 +252,7 @@ public final class LcgSolver implements ExternalPropagator {
     eq = new LiteralMap[n];
     activity = new double[n];
     heap.grow(n, activity);
+    wide.grow(n, activity);
     lateHeap.grow(n, activity);
     late = new boolean[n];
     for (IntVar x : all) {
@@ -255,7 +262,7 @@ public final class LcgSolver implements ExternalPropagator {
       ge[i] = new LiteralMap();
       eq[i] = new LiteralMap();
       if (!root[i].singleton()) {
-        heap.insert(i);
+        heapOf(i).insert(i);
       }
     }
     sat.connect(this);
@@ -720,8 +727,8 @@ public final class LcgSolver implements ExternalPropagator {
     }
     // a variable fixed at the decision level it was taken off at, or below, may be free again
     while (numPopped > 0 && poppedLevel[numPopped - 1] > level) {
-      int p = popped[--numPopped];
-      (late[p] ? lateHeap : heap).insert(p);
+      int v = popped[--numPopped];
+      heapOf(v).insert(v);
     }
     numPending = 0;
     failed = false;
@@ -1111,11 +1118,12 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Decides on the model's annotation in its runs while it has unfixed variables; otherwise, with
-   * activity branching, on the most active unfixed variable: its value in the last solution when
-   * still possible, else the lower half of its domain (the system property {@code jacop.lcg.value}
-   * = {@code min} or {@code max} picks its smallest or largest value instead). Without activity
-   * branching, leaves the decision to the solver's VSIDS until every literal is assigned, then
-   * branches on {@code [x <= min]} of the unfixed variable with the smallest domain.
+   * activity branching, on the most active unfixed variable, a 0/1 one while any is unfixed (unless
+   * the system property {@code jacop.lcg.booleansFirst} is false): its value in the last solution
+   * when still possible, else the lower half of its domain (the system property {@code
+   * jacop.lcg.value} = {@code min} or {@code max} picks its smallest or largest value instead).
+   * Without activity branching, leaves the decision to the solver's VSIDS until every literal is
+   * assigned, then branches on {@code [x <= min]} of the unfixed variable with the smallest domain.
    */
   @Override
   public int decide() {
@@ -1147,10 +1155,37 @@ public final class LcgSolver implements ExternalPropagator {
     return -geLit(best, vars[best].min() + 1);
   }
 
+  // the heap of a variable: lateHeap for a late variable, else wide for one that is not 0/1
+  private VarHeap heapOf(int i) {
+    if (late[i]) {
+      return lateHeap;
+    }
+    return root[i].min() < 0 || root[i].max() > 1 ? wide : heap;
+  }
+
+  // takes the fixed variables off the top of a heap, to be put back on backtracking
+  private void popFixed(VarHeap h) {
+    while (!h.isEmpty() && vars[h.max()].singleton()) {
+      if (numPopped == popped.length) {
+        popped = Arrays.copyOf(popped, 2 * numPopped);
+        poppedLevel = Arrays.copyOf(poppedLevel, 2 * numPopped);
+      }
+      popped[numPopped] = h.removeMax();
+      poppedLevel[numPopped++] = sat.decisionLevel();
+    }
+  }
+
   private int activityDecision() {
-    VarHeap h = popFixed(heap);
+    popFixed(heap);
+    popFixed(wide);
+    VarHeap h = heap;
+    if (h.isEmpty()
+        || !booleansFirst && !wide.isEmpty() && activity[wide.max()] >= activity[heap.max()]) {
+      h = wide;
+    }
     if (h.isEmpty()) {
-      h = popFixed(lateHeap);
+      popFixed(lateHeap);
+      h = lateHeap;
       if (h.isEmpty()) {
         return 0;
       }
@@ -1159,7 +1194,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (lastConflict
         && conflictVar >= 0
         && !vars[conflictVar].singleton()
-        && (h == lateHeap || !late[conflictVar])) {
+        && (heapOf(conflictVar) == h || !booleansFirst && h != lateHeap && !late[conflictVar])) {
       i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
     }
     conflictVar = -1;
@@ -1179,19 +1214,6 @@ public final class LcgSolver implements ExternalPropagator {
     };
   }
 
-  /** Takes the fixed variables off the top of a heap and returns the heap. */
-  private VarHeap popFixed(VarHeap h) {
-    while (!h.isEmpty() && vars[h.max()].singleton()) {
-      if (numPopped == popped.length) {
-        popped = Arrays.copyOf(popped, 2 * numPopped);
-        poppedLevel = Arrays.copyOf(poppedLevel, 2 * numPopped);
-      }
-      popped[numPopped] = h.removeMax();
-      poppedLevel[numPopped++] = sat.decisionLevel();
-    }
-    return h;
-  }
-
   /**
    * Sets the variables branched on by activity only after every other variable is fixed, such as
    * variables defined by a constraint from the others. Set them before solving.
@@ -1202,9 +1224,10 @@ public final class LcgSolver implements ExternalPropagator {
     for (Var v : defined) {
       int i = idOf(v);
       if (i >= 0 && !late[i]) {
+        VarHeap h = heapOf(i);
         late[i] = true;
-        if (heap.contains(i)) {
-          heap.remove(i);
+        if (h.contains(i)) {
+          h.remove(i);
           lateHeap.insert(i);
         }
       }
@@ -1222,7 +1245,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       activityInc *= 1e-100;
     }
-    (late[i] ? lateHeap : heap).increased(i);
+    heapOf(i).increased(i);
   }
 
   /**
