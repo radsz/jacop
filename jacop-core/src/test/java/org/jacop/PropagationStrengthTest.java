@@ -46,6 +46,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
@@ -404,6 +405,27 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, list[0], 1, 2)).isTrue();
     return value.dom().toString();
+  }
+
+  // the bounds version of element kept only the hull of the selectable positions for the value, so
+  // a second element on the same index and value could not drop a position (quasigroup7, cvrp)
+  @Test
+  void testElementVariableFastKeepsHolesOfTheValue() {
+
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 3);
+    IntVar value = new IntVar(store, "v", 0, 12);
+    IntVar[] row = {
+      variable(store, "r1", 7, 9, 10), variable(store, "r2", 1, 5), variable(store, "r3", 2)
+    };
+    IntVar[] column = {
+      variable(store, "c1", 2, 7, 12), variable(store, "c2", 5), variable(store, "c3", 3)
+    };
+    store.impose(new ElementVariableFast(index, row, value, 0));
+    store.impose(new ElementVariableFast(index, column, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom()).hasToString("{5, 7}");
+    assertThat(index.dom()).hasToString("{1..2}");
   }
 
   // the bounds of x * y = z fixed x to 1 after the check for a factor 1, and the constraint is not
