@@ -238,6 +238,19 @@ Version 5.0 (unreleased)
     more than one solution (-a, -n). Pigeonhole with 10 pigeons and 9
     holes needs 2,392 failures instead of 764,943.
 
+21. --lcg -f finds solutions on cutstock and largescheduling, where it
+    found none in 60 s. Under lazy clause generation the time table of
+    Cumulative keeps to the bounds of the starts: a hole of thousands of
+    start values was thousands of atoms, each with its own literals. Its
+    explanations look for overloads only where the compulsory-part load
+    changes, weigh energy windows in one sweep per window start, and explain
+    a task left with no start instead of giving the generic reason. Without
+    a search annotation, the runs of LCG free search alternate with dom/wdeg
+    on the default search variables, as they alternate with an annotation.
+    On the 66 MiniZinc benchmark instances with cumulative or without an
+    annotation (60 s), 3 go from no solution to a solution, 3 more are
+    proved optimal, and none lose a solution or a proof.
+
 Version 4.11
 =============
 
