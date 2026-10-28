@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -51,7 +50,6 @@ import org.jacop.floats.core.FloatVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 public class Derivative {
 
   public static final double MIN_FLOAT = -1e+150;
@@ -155,15 +153,13 @@ public class Derivative {
       }
       throw new UnsupportedOperationException("Constraint " + c + " does not support derivatives");
     }
-    log.info(
-        "!!! "
-            + constraints.size()
+    // this used to end the whole JVM with exit code 0
+    throw new IllegalArgumentException(
+        constraints.size()
             + " constraints define a function for variable "
             + f
-            + "\n"
+            + ", so its derivative is ambiguous: "
             + constraints);
-    System.exit(0);
-    return null;
   }
 
   static void poseDerivativeConstraint(Constraint c) {

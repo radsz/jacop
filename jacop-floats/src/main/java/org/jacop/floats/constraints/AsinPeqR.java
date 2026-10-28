@@ -76,7 +76,14 @@ public class AsinPeqR extends SinPeqR {
           FloatDomain.up(Math.asin(Math.min(q.max(), 1.0))));
       q.domain.in(
           store.level, q, FloatDomain.down(Math.sin(p.min())), FloatDomain.up(Math.sin(p.max())));
-    } while (store.propagationHasOccurred);
+      // with p and q the same variable, asin(x) = x shrinks the bounds towards 0 by about x^3 per
+      // pass, so the loop would not reach a fixpoint in any reasonable time; search splits instead
+    } while (store.propagationHasOccurred && p != q);
+
+    // the store does not run the constraint again for its own pruning, so check a value it left
+    if (p == q && p.singleton() && !satisfied()) {
+      throw Store.failException;
+    }
   }
 
   @Override

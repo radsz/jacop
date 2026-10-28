@@ -124,6 +124,10 @@ public class Spread extends AbstractBalance implements Copyable<Spread> {
     }
     long min = -Math.floorDiv(-(b - root), (long) a);
     long max = Math.floorDiv(b + root, (long) a);
+    if (min > max) {
+      // no integer v has |a * v - b| <= root
+      throw Store.failException;
+    }
     for (int i = 0; i < n; i++) {
       if (x[i].min() < min || x[i].max() > max) {
         if (min > x[i].max() || max < x[i].min()) {
