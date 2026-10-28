@@ -272,7 +272,7 @@ class UnaryReasoningTest {
     assertThat(referenceDetectableFixpoint(inst, false)[1][0]).isEqualTo(16);
   }
 
-  /** CumulativeUnary with the Theta-tree rules of the reference. */
+  /** CumulativeUnary with the Theta-tree rules of the reference and the general profile. */
   private static final class ReferenceUnary extends CumulativeUnary {
 
     private final UnaryReasoningReference normal = new UnaryReasoningReference();
@@ -280,6 +280,12 @@ class UnaryReasoningTest {
 
     ReferenceUnary(IntVar[] s, IntVar[] d, IntVar[] r, IntVar limit, boolean profile) {
       super(s, d, r, limit, profile, true);
+    }
+
+    // the general profile, as CumulativeUnary ran it before the unary time-table
+    @Override
+    void unaryProfile(Store store) {
+      profileProp(store);
     }
 
     // the rules as CumulativeUnary ran them before the time line: a fresh load before each

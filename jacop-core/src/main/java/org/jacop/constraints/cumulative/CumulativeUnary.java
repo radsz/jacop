@@ -64,6 +64,8 @@ public class CumulativeUnary extends Cumulative {
   private final UnaryReasoning unaryReversed = new UnaryReasoning();
   boolean doProfile;
   boolean doUnaryEdgeFind;
+  // the time-table rule for constant durations and resource uses, created on first use
+  private UnaryTimetable timetable;
 
   /**
    * It creates a cumulative constraint.
@@ -231,7 +233,7 @@ public class CumulativeUnary extends Cumulative {
       store.propagationHasOccurred = false;
 
       if (doProfile) {
-        profileProp(store);
+        unaryProfile(store);
       }
 
       if (doUnaryEdgeFind && !store.propagationHasOccurred) {
@@ -239,6 +241,37 @@ public class CumulativeUnary extends Cumulative {
       }
 
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * The time-table rule: the unary time-table for constant durations and resource uses, the general
+   * profile otherwise. Both prune the same values.
+   *
+   * @param store the constraint store.
+   */
+  void unaryProfile(Store store) {
+    if (cumulativeForConstants != null) {
+      if (timetable == null) {
+        timetable = newTimetable();
+      }
+      if (timetable.prune(store)) {
+        return;
+      }
+    }
+    profileProp(store);
+  }
+
+  private UnaryTimetable newTimetable() {
+    int n = taskNormal.length;
+    IntVar[] starts = new IntVar[n];
+    int[] durs = new int[n];
+    int[] ress = new int[n];
+    for (int i = 0; i < n; i++) {
+      starts[i] = taskNormal[i].start;
+      durs[i] = taskNormal[i].dur.value();
+      ress[i] = taskNormal[i].res.value();
+    }
+    return new UnaryTimetable(starts, durs, ress, limit);
   }
 
   /**
