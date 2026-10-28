@@ -1571,6 +1571,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotated = withObjectiveCosts(annotated);
     }
     lcg.setAnnotation(annotated, free);
+    if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
+      // defined variables follow from the others: activity branches on them last
+      List<Var> late = new ArrayList<>();
+      for (Var v : dictionary.definedVariables) {
+        if (v != null) {
+          late.add(v);
+        }
+      }
+      if (costVar != null) {
+        late.add(costVar);
+      }
+      lcg.setLateVariables(late);
+    }
     if (free) {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
@@ -1690,6 +1703,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
+            + "\n%%%mzn-stat: lcgLateDecisions="
+            + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="

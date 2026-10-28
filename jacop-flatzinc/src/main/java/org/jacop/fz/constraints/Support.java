@@ -696,6 +696,7 @@ public class Support implements ParserTreeConstants {
         Var v = getAnnVar(expr);
 
         definedVar = (IntVar) v;
+        dictionary.addDefinedVar(v);
       } else if ("priority".equals(ann.getAnnId())) {
         SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
         ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);

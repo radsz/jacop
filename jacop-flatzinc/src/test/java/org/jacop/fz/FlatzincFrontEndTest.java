@@ -1502,6 +1502,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgFreeSearchBranchesOnDefinedVariablesLast() throws IOException {
+    // with -f, the activity of the variables chose the defined sum s and the objective as often as
+    // the others; they follow from x, so the search now branches on x first and never needs them
+    StringBuilder model =
+        new StringBuilder("array [1..8] of var 0..3: x :: output_array([1..8]);\n");
+    model.append("var 0..24: s :: output_var;\nvar 0..24: obj;\n");
+    for (int i = 1; i < 8; i++) {
+      model.append("constraint int_lin_le([-1, -1], [x[%d], x[%d]], -3);\n".formatted(i, i + 1));
+      model.append("constraint int_ne(x[%d], x[%d]);\n".formatted(i, i + 1));
+    }
+    model.append(
+        """
+        constraint int_lin_eq([1, 1, 1, 1, 1, 1, 1, 1, -1], [x[1], x[2], x[3], x[4], x[5], x[6], \
+        x[7], x[8], s], 0) :: defines_var(s);
+        constraint int_lin_eq([2, -1, 1], [s, obj, x[1]], 0) :: defines_var(obj);
+        solve minimize obj;
+        """);
+    String out = run(model.toString(), "--lcg", "-f", "-s")[0];
+    assertTrue(out.strip().contains("=========="), out);
+    assertTrue(out.contains("%%%mzn-stat: lcgLateDecisions=0\n"), out);
+    assertTrue(out.contains("%%%mzn-stat: objective="), out);
+  }
+
+  @Test
   void lcgImpliedEqualityKeepsTheBoundsOfALargeDomain() throws IOException {
     // liner-sf-repositioning fm3_5: int_eq_imp between a variable of a million values and one of
     // four copied the holes of the small domain into the large one once b held, a != atom with its
