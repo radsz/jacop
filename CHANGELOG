@@ -462,6 +462,23 @@ Version 5.0 (unreleased)
     spot5, gbac and cutstock (60 s, --lcg -f) more instances end better
     than worse.
 
+35. Free search (-f) for optimisation spends about one failure in twenty on
+    objective probes, after OR-Tools CP-SAT's objective_lb_search and
+    objective_shaving workers: runs with the objective bounded by its lower
+    bound plus an offset (0 at first, doubled after each refuted probe,
+    halved after a probe that reached its fail limit). A probe that
+    explores its whole tree raises the lower bound at the root for good;
+    probes do not teach dom/wdeg, give no restart nogoods and do not count
+    as restarts. FreeSearch.Builder.probeObjective(share, failLimit) in the
+    Java API (off by default), --free-config probe=<share> (0 = off),
+    probe-fails=<n> in FlatZinc, and the statistics objectiveProbes,
+    objectiveProbesRefuted and objectiveProbeFailures with -s. On 375
+    optimisation instances of the free-search benchmark sets (60 s) it
+    proves 6 more optima and loses 2, is 5 to 11 % faster on the
+    instances both prove in three of the four sets (linear-to-program
+    60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
+    on 24 of the others and a worse one on 21.
+
 Version 4.11
 =============
 

@@ -162,7 +162,7 @@ public class Options {
                 blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
                 at its lower bound or a growing offset above it, per failure of the other runs;
-                0 = off), probe-fails=<n> (fail limit of the first probe, default 100)
+                default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
