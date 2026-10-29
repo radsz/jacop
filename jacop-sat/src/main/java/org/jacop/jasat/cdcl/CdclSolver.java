@@ -85,8 +85,6 @@ public final class CdclSolver {
   private static final int DELETED = 2;
   private static final int USED = 4;
   private static final int VIVIFIED = 32;
-  private static final int TEMPORARY =
-      64; // an external reason, deleted when its variable is unassigned
   private static final int TIER_SHIFT = 3;
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
@@ -136,6 +134,19 @@ public final class CdclSolver {
   private int[] mem = new int[1 << 16];
   private int memSize;
   private int wasted;
+
+  // --- temporary external reasons: a stack beside the arena, with the arena's clause layout and
+  // the variable explained in META. A reason refers to one as STACK_REF + its offset. It is dead
+  // once its variable has another reason; dead ones are popped off the top, or compacted away.
+  private static final int STACK_REF = 1 << 30;
+  private int[] rstack = new int[1 << 12];
+  private int rtop;
+  private int rwasted;
+  // start offset of each reason on the stack, bottom first
+  private int[] rstarts = new int[64];
+  private int numRstarts;
+  // the literals of the reason being taken from the external propagator
+  private int[] reasonBuf = new int[16];
   private int[] originals = new int[64];
   private int numOriginals;
   private int[] learnts = new int[64];
@@ -822,9 +833,8 @@ public final class CdclSolver {
       vals[lit] = 0;
       vals[lit ^ 1] = 0;
       int r = reason[v];
-      if (r >= 0 && (mem[r + META] & TEMPORARY) != 0) {
-        mem[r + META] |= DELETED;
-        wasted += HEADER + mem[r + SIZE];
+      if (r >= STACK_REF) {
+        rwasted += HEADER + rstack[r - STACK_REF + SIZE];
         reason[v] = NO_REASON;
       }
       savedSign[v] = (byte) (lit & 1);
@@ -833,6 +843,9 @@ public final class CdclSolver {
     trailSize = kept;
     qhead = start;
     decisionLevel = target;
+    if (rwasted > 0) {
+      releaseReasons();
+    }
     notified = Math.min(notified, kept);
     if (notifying) {
       external.notifyBacktrack(target);
@@ -1101,7 +1114,10 @@ public final class CdclSolver {
     }
     int lit = vals[2 * v] > 0 ? 2 * v : 2 * v + 1;
     int[] dimacs = external.reason(toDimacs(lit));
-    int[] c = new int[dimacs.length];
+    if (dimacs.length > reasonBuf.length) {
+      reasonBuf = new int[Math.max(dimacs.length, 2 * reasonBuf.length)];
+    }
+    int[] c = reasonBuf;
     int size = 0;
     boolean found = false;
     for (int d : dimacs) {
@@ -1124,11 +1140,10 @@ public final class CdclSolver {
         c[n++] = c[i];
       }
     }
-    c = Arrays.copyOf(c, n);
     if (n == 1) {
       r = UNIT_REASON;
     } else {
-      orderForWatches(c);
+      orderForWatches(c, n);
       if (n == 2) {
         addLearntBinary(c[0], c[1]);
         notifyKept(c, n);
@@ -1139,8 +1154,7 @@ public final class CdclSolver {
         attach(r);
         notifyKept(c, n);
       } else {
-        r = allocate(c, n, false, n);
-        mem[r + META] |= TEMPORARY;
+        r = pushReason(v, c, n);
       }
     }
     reason[v] = r;
@@ -1153,6 +1167,67 @@ public final class CdclSolver {
         external.notifyKeptLiteral(toDimacs(c[i]));
       }
     }
+  }
+
+  /** Pushes the temporary reason of variable v on the reason stack; returns its reference. */
+  private int pushReason(int v, int[] lits, int size) {
+    int need = HEADER + size;
+    if (rtop + need > rstack.length) {
+      rstack = Arrays.copyOf(rstack, Math.max(rtop + need, 2 * rstack.length));
+    }
+    int off = rtop;
+    rstack[off + SIZE] = size;
+    rstack[off + META] = v;
+    System.arraycopy(lits, 0, rstack, off + HEADER, size);
+    rtop += need;
+    rstarts = push(rstarts, numRstarts++, off);
+    return STACK_REF + off;
+  }
+
+  private boolean reasonLive(int off) {
+    return reason[rstack[off + META]] == STACK_REF + off;
+  }
+
+  /**
+   * Frees the reasons of unassigned variables: pops the dead ones off the top of the stack, and
+   * compacts the stack once most of it is dead.
+   */
+  private void releaseReasons() {
+    while (numRstarts > 0 && !reasonLive(rstarts[numRstarts - 1])) {
+      int off = rstarts[--numRstarts];
+      rwasted -= rtop - off;
+      rtop = off;
+    }
+    if (numRstarts == 0) {
+      rtop = 0;
+      rwasted = 0;
+    } else if (rwasted > rtop / 2) {
+      int top = 0;
+      int j = 0;
+      for (int i = 0; i < numRstarts; i++) {
+        int off = rstarts[i];
+        if (reasonLive(off)) {
+          int len = HEADER + rstack[off + SIZE];
+          System.arraycopy(rstack, off, rstack, top, len);
+          reason[rstack[top + META]] = STACK_REF + top;
+          rstarts[j++] = top;
+          top += len;
+        }
+      }
+      numRstarts = j;
+      rtop = top;
+      rwasted = 0;
+    }
+  }
+
+  /** The array holding reason clause r: the arena, or the reason stack. */
+  private int[] reasonArena(int r) {
+    return r >= STACK_REF ? rstack : mem;
+  }
+
+  /** The offset of reason clause r in {@link #reasonArena}. */
+  private static int reasonOffset(int r) {
+    return r >= STACK_REF ? r - STACK_REF : r;
   }
 
   /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
@@ -1171,6 +1246,12 @@ public final class CdclSolver {
         pathCount += analyzeLit(conflictLit0) + analyzeLit(conflictLit1);
       } else if (ref < NO_REASON) {
         pathCount += analyzeLit(-2 - ref);
+      } else if (ref >= STACK_REF) {
+        int lits = ref - STACK_REF + HEADER;
+        int size = rstack[lits - HEADER + SIZE];
+        for (int k = p == -1 ? 0 : 1; k < size; k++) {
+          pathCount += analyzeLit(rstack[lits + k]);
+        }
       } else {
         if ((mem[ref + META] & LEARNT_FLAG) != 0) {
           touchLearnt(ref);
@@ -1393,10 +1474,11 @@ public final class CdclSolver {
       if (r < NO_REASON) {
         open += shrinkStep(-2 - r, lvl);
       } else {
-        int lits = r + HEADER;
-        int size = mem[r + SIZE];
+        int[] m = reasonArena(r);
+        int lits = reasonOffset(r) + HEADER;
+        int size = m[lits - HEADER + SIZE];
         for (int k = 1; k < size && open >= 0; k++) {
-          open += shrinkStep(mem[lits + k], lvl);
+          open += shrinkStep(m[lits + k], lvl);
         }
       }
       if (open < 0) {
@@ -1461,10 +1543,11 @@ public final class CdclSolver {
     if (r < NO_REASON) {
       return removable(-2 - r, abstractLevels, depth + 1);
     }
-    int size = mem[r + SIZE];
+    int off = reasonOffset(r);
+    int size = reasonArena(r)[off + SIZE];
     for (int k = 1; k < size; k++) {
-      // mem is read again each time: explaining an antecedent may reallocate it
-      if (!removable(mem[r + HEADER + k], abstractLevels, depth + 1)) {
+      // the array is read again each time: explaining an antecedent may reallocate it
+      if (!removable(reasonArena(r)[off + HEADER + k], abstractLevels, depth + 1)) {
         return false;
       }
     }
@@ -1519,8 +1602,10 @@ public final class CdclSolver {
           seen[q >> 1] = 1;
         }
       } else {
-        for (int k = 1; k < mem[r + SIZE]; k++) {
-          int q = mem[r + HEADER + k];
+        int[] m = reasonArena(r);
+        int off = reasonOffset(r);
+        for (int k = 1; k < m[off + SIZE]; k++) {
+          int q = m[off + HEADER + k];
           if (level[q >> 1] > 0) {
             seen[q >> 1] = 1;
           }
@@ -1972,9 +2057,14 @@ public final class CdclSolver {
    * level.
    */
   private void orderForWatches(int[] c) {
-    for (int pos = 0; pos < 2 && pos < c.length; pos++) {
+    orderForWatches(c, c.length);
+  }
+
+  /** {@link #orderForWatches(int[])} on the first size literals of c. */
+  private void orderForWatches(int[] c, int size) {
+    for (int pos = 0; pos < 2 && pos < size; pos++) {
       int best = pos;
-      for (int i = pos + 1; i < c.length; i++) {
+      for (int i = pos + 1; i < size; i++) {
         if (watchScore(c[i]) > watchScore(c[best])) {
           best = i;
         }
@@ -3072,7 +3162,7 @@ public final class CdclSolver {
     }
     purge();
     simplifyAssigns = trailSize;
-    simplifyProps = propagations + memSize + 2L * numVars;
+    simplifyProps = propagations + memSize - wasted + 2L * numVars;
   }
 
   /**
@@ -3134,7 +3224,7 @@ public final class CdclSolver {
     for (int i = 0; i < trailSize; i++) {
       int v = trail[i] >> 1;
       int r = reason[v];
-      if (r >= 0) {
+      if (r >= 0 && r < STACK_REF) {
         reason[v] = (mem[r + META] & DELETED) == 0 ? mem[r + ACT] : NO_REASON;
       }
     }
