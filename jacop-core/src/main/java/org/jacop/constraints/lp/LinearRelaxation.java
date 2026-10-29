@@ -94,7 +94,7 @@ public class LinearRelaxation extends Constraint
   private boolean[] hasLo;
   private boolean[] hasHi;
   private final IntVar objective;
-  private final DualSimplex lp;
+  private DualSimplex lp;
 
   // the rows as given, and the sense of the objective, for copies
   private final List<LinearForm> forms = new ArrayList<>();
@@ -646,12 +646,23 @@ public class LinearRelaxation extends Constraint
       if (chosen.isEmpty()) {
         break;
       }
-      addCuts(chosen);
+      DualSimplex kept = lp.copy();
+      long pivots = lp.totalPivots;
       double before = lp.value(0);
+      addCuts(chosen);
       long size = (long) rows() * (rows() + n);
       status = lp.solve((int) Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
-      if (status != DualSimplex.OPTIMAL
-          || Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
+      if (status == DualSimplex.OPTIMAL
+          && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
+        // cuts that do not move the bound only make each solve dearer: back to the LP before them
+        dropCuts(chosen.size(), kept, lp.totalPivots - pivots);
+        break;
+      }
+      if (status != DualSimplex.OPTIMAL) {
+        if (status == DualSimplex.LIMIT) {
+          dropCuts(chosen.size(), kept, lp.totalPivots - pivots);
+          status = DualSimplex.OPTIMAL;
+        }
         break;
       }
     }
@@ -704,6 +715,20 @@ public class LinearRelaxation extends Constraint
         found.add(c);
       }
     }
+  }
+
+  // removes the last k rows, the cuts of the last round, and goes back to the simplex before them
+  private void dropCuts(int k, DualSimplex kept, long pivots) {
+    int m = rows() - k;
+    rowColumns = Arrays.copyOf(rowColumns, m);
+    rowWeights = Arrays.copyOf(rowWeights, m);
+    rowLo = Arrays.copyOf(rowLo, m);
+    rowHi = Arrays.copyOf(rowHi, m);
+    hasLo = Arrays.copyOf(hasLo, m);
+    hasHi = Arrays.copyOf(hasHi, m);
+    kept.totalPivots += pivots;
+    lp = kept;
+    cuts -= k;
   }
 
   // appends the cuts as rows sum w x <= rhs, to the rows and to the simplex

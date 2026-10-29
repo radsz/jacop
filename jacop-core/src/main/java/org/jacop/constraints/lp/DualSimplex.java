@@ -149,6 +149,48 @@ final class DualSimplex {
     slackBasis();
   }
 
+  // a deep copy of the state of another simplex
+  private DualSimplex(DualSimplex o) {
+    m = o.m;
+    n = o.n;
+    cols = o.cols;
+    a = o.a.clone(); // the rows themselves are never changed
+    cost = o.cost.clone();
+    lo = o.lo.clone();
+    hi = o.hi.clone();
+    t = new double[m][];
+    for (int i = 0; i < m; i++) {
+      t[i] = o.t[i].clone();
+    }
+    basis = o.basis.clone();
+    row = o.row.clone();
+    upper = o.upper.clone();
+    d = o.d.clone();
+    beta = o.beta.clone();
+    at = o.at.clone();
+    betaValid = o.betaValid;
+    moved = new int[cols];
+    movedBy = new double[cols];
+    norm = o.norm.clone();
+    normValid = o.normValid.clone();
+    candidate = new int[cols];
+    pivotSize = new double[cols];
+    ratio = new double[cols];
+    flipped = new int[cols];
+    pivots = o.pivots;
+    infeasibleRow = o.infeasibleRow;
+    totalPivots = o.totalPivots;
+  }
+
+  /**
+   * Returns a copy of this simplex with its basis, which goes on independently.
+   *
+   * @return the copy
+   */
+  DualSimplex copy() {
+    return new DualSimplex(this);
+  }
+
   /**
    * Sets the bounds of a column.
    *
