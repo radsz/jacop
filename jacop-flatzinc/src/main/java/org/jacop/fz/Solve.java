@@ -1808,6 +1808,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.cores
         + "\n%%%mzn-stat: lcgCoreLiterals="
         + core.coreLiterals
+        + "\n%%%mzn-stat: lcgCoreHardened="
+        + core.hardened
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }

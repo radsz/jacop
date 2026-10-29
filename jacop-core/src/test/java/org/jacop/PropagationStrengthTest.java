@@ -46,6 +46,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Eq;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.IfThenElse;
@@ -404,6 +405,27 @@ class PropagationStrengthTest {
 
     assertThat(removeValues(store, list[0], 1, 2)).isTrue();
     return value.dom().toString();
+  }
+
+  // the bounds version of element kept only the hull of the selectable positions for the value, so
+  // a second element on the same index and value could not drop a position (quasigroup7, cvrp)
+  @Test
+  void testElementVariableFastKeepsHolesOfTheValue() {
+
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 3);
+    IntVar value = new IntVar(store, "v", 0, 12);
+    IntVar[] row = {
+      variable(store, "r1", 7, 9, 10), variable(store, "r2", 1, 5), variable(store, "r3", 2)
+    };
+    IntVar[] column = {
+      variable(store, "c1", 2, 7, 12), variable(store, "c2", 5), variable(store, "c3", 3)
+    };
+    store.impose(new ElementVariableFast(index, row, value, 0));
+    store.impose(new ElementVariableFast(index, column, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom()).hasToString("{5, 7}");
+    assertThat(index.dom()).hasToString("{1..2}");
   }
 
   // the bounds of x * y = z fixed x to 1 after the check for a factor 1, and the constraint is not
@@ -886,18 +908,19 @@ class PropagationStrengthTest {
   @Test
   void testInterDistanceIsBoundsConsistentWhereTheUnaryResourceIsNot() {
 
-    // x3 = 9 or 10 leaves x0 in 8..12 and x2 in 9..14 both at 12 or later, 3 apart: impossible
-    int[] lo = {6, 0, 9, 9, 5};
-    int[] hi = {12, 3, 14, 16, 6};
+    // x3 = 8 or 9 puts x0 before it, so x1 cannot be before it too (both in 4..6); x1 and x2 then
+    // both follow it in 11..13, 3 apart: impossible
+    int[] lo = {4, 4, 8, 8};
+    int[] hi = {7, 11, 13, 15};
     Store store = new Store();
     IntVar[] x = equalLengthTasks(store, lo, hi, 3, 1, true);
     assertThat(store.consistency()).isTrue();
-    assertThat(x[3].min()).isEqualTo(11);
+    assertThat(x[3].min()).isEqualTo(10);
 
     Store unaryStore = new Store();
     IntVar[] y = equalLengthTasks(unaryStore, lo, hi, 3, 1, false);
     assertThat(unaryStore.consistency()).isTrue();
-    assertThat(y[3].min()).isEqualTo(9);
+    assertThat(y[3].min()).isEqualTo(8);
   }
 
   @Test

@@ -52,8 +52,14 @@ class MinizincBasedUpTo30SecondsTest extends MinizincBasedTestsHelper {
     super(TIME_CATEGORY);
   }
 
+  /**
+   * The list of instances: list.txt has all of them, list-commit.txt (the {@code commit} profile)
+   * the fastest instance of each model.
+   */
+  private static final String LIST = System.getProperty("upTo30sec.list", LIST_FILE_NAME);
+
   static Stream<String> parametricTest() throws IOException {
-    return fileReader(TIME_CATEGORY).stream();
+    return fileReader(TIME_CATEGORY, LIST).stream();
   }
 
   @ParameterizedTest
