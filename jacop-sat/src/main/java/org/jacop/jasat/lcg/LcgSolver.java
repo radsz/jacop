@@ -56,6 +56,7 @@ import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.lns.AdaptiveLns;
 
 /**
  * Lazy clause generation with JaSAT: the constraints of a store propagate as an external propagator
@@ -256,6 +257,17 @@ public final class LcgSolver implements ExternalPropagator {
   private int importedBound = Integer.MAX_VALUE;
   // a shared bound at or below the objective's smallest value: no better solution exists
   private boolean sharedBoundUnreachable;
+
+  private AdaptiveLns lns;
+  private double lnsShare;
+  private long lnsConflicts;
+  private int[] lnsIds;
+
+  /** Runs in large neighbourhoods. */
+  public long lnsRuns;
+
+  /** Runs in large neighbourhoods that improved the best solution. */
+  public long lnsImproved;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -467,7 +479,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (coreSearch != null) {
         result = minimizeWithCores();
       } else {
-        result = lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+        result = interleaved() ? minimizeWithLowerBoundSearch() : solve();
       }
     } finally {
       this.objective = -1;
@@ -554,7 +566,12 @@ public final class LcgSolver implements ExternalPropagator {
     if (!requireBetter()) {
       return CdclSolver.SAT;
     }
-    return lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+    return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+  }
+
+  /** Whether runs of branch and bound alternate with lower-bound or neighbourhood runs. */
+  private boolean interleaved() {
+    return lowerBoundShare > 0 || lns != null;
   }
 
   /**
@@ -674,12 +691,19 @@ public final class LcgSolver implements ExternalPropagator {
     while (true) {
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
+      long start = System.nanoTime();
       int result = solve();
       if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
         return result; // done, or stopped by the deadline
       }
+      if (lns != null && best != null) {
+        result = neighbourhoodRuns((long) (lnsShare * (System.nanoTime() - start)));
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
+      }
       int lb = vars[objective].min(); // after solve the domains are those of level 0
-      if (best != null && lb < best[objective]) {
+      if (lowerBoundShare > 0 && best != null && lb < best[objective]) {
         int lit = -geLit(objective, lb + 1); // objective <= lb
         limit = sat.conflicts + (long) (budget * lowerBoundShare);
         sat.setConflictLimit(limit);
@@ -700,6 +724,85 @@ public final class LcgSolver implements ExternalPropagator {
       }
       budget += budget / 2;
     }
+  }
+
+  /**
+   * Runs in large neighbourhoods of the best solution for the given time: each run assumes that the
+   * variables outside the neighbourhood keep their values in the best solution and stops after its
+   * conflicts. The assumptions are decisions, so what the runs learn holds for every later search.
+   *
+   * @return {@link CdclSolver#UNKNOWN} to go on, or the result of the search when a run proved that
+   *     no better solution exists (UNSAT without failed assumptions, or SAT at the objective's
+   *     smallest value)
+   */
+  private int neighbourhoodRuns(long nanos) {
+    long end = Math.min(System.nanoTime() + nanos, sat.deadline());
+    while (System.nanoTime() < end) {
+      int[] fixed = lns.neighbourhood();
+      int[] assumed = new int[fixed.length];
+      int n = 0;
+      for (int k : fixed) {
+        int i = lnsIds[k];
+        int v = lns.value(k);
+        if (i >= 0 && !vars[i].singleton() && vars[i].domain.contains(v)) {
+          assumed[n++] = eqVar(i, v);
+        }
+      }
+      long before = best[objective];
+      sat.setConflictLimit(sat.conflicts + lnsConflicts);
+      lnsRuns++;
+      int result = solve(Arrays.copyOf(assumed, n));
+      boolean improved = best[objective] < before;
+      if (improved) {
+        lnsImproved++;
+      }
+      if (result == CdclSolver.SAT
+          || (result == CdclSolver.UNSAT && sat.failedAssumptions().length == 0)) {
+        return result;
+      }
+      AdaptiveLns.Outcome outcome;
+      if (improved) {
+        outcome = AdaptiveLns.Outcome.IMPROVED;
+      } else if (result == CdclSolver.UNSAT) {
+        outcome = AdaptiveLns.Outcome.EXHAUSTED;
+      } else {
+        outcome = AdaptiveLns.Outcome.LIMIT;
+      }
+      lns.outcome(outcome);
+    }
+    sat.setConflictLimit(Long.MAX_VALUE);
+    return CdclSolver.UNKNOWN;
+  }
+
+  /**
+   * Turns on large neighbourhood search in {@link #minimize}: after each run of branch and bound
+   * from the first solution on, runs in neighbourhoods of the best solution take the given share of
+   * the time that run took. The neighbourhoods fix their variables by assumptions.
+   *
+   * @param neighbourhoods the neighbourhoods, over variables of the store; null turns it off
+   * @param share the time of neighbourhood runs per unit of time of branch and bound
+   * @param conflicts the conflicts of one neighbourhood run
+   */
+  public void setLns(AdaptiveLns neighbourhoods, double share, long conflicts) {
+    lns = neighbourhoods;
+    lnsShare = share;
+    lnsConflicts = Math.max(1, conflicts);
+    if (lns != null) {
+      IntVar[] xs = lns.variables();
+      lnsIds = new int[xs.length];
+      for (int k = 0; k < xs.length; k++) {
+        lnsIds[k] = index(xs[k]);
+      }
+    }
+  }
+
+  /**
+   * Returns the neighbourhoods of large neighbourhood search, for their statistics.
+   *
+   * @return the neighbourhoods, or null when it is off
+   */
+  public AdaptiveLns lns() {
+    return lns;
   }
 
   /**
@@ -1616,6 +1719,9 @@ public final class LcgSolver implements ExternalPropagator {
         activityBranching = false; // the solver's saved phases now hold this solution
       }
       solutions++;
+      if (lns != null) {
+        lns.solution();
+      }
     }
     if (coreMode) {
       return true;
