@@ -240,6 +240,13 @@ public final class CdclSolver {
   // learnt binary clauses, which live only in the watch lists, kept for inprocessing
   private int[] learntBinaries = new int[16];
   private int numLearntBinaries;
+  // clauses added or asserted above the level where they became unit: a watch is true (or
+  // asserted) at a higher level than the other, false, watch, so a backtrack between the two
+  // levels leaves them unit without a watch to visit; triples (reference, literal, literal), the
+  // literals only for a binary clause (reference BINARY), checked again after each backtrack
+  private int[] lowWatched = new int[24];
+  private int numLowWatched;
+  private boolean lowWatchedDue;
 
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
@@ -854,11 +861,19 @@ public final class CdclSolver {
     }
     lastAssumedLevel = Math.min(lastAssumedLevel, target);
     reassertUnits();
+    lowWatchedDue = numLowWatched > 0;
   }
 
   // ----------------------------------------------------------------------------- propagation
 
   private int propagate() {
+    if (lowWatchedDue) {
+      lowWatchedDue = false;
+      int c = propagateLowWatched();
+      if (c != NO_CONFLICT) {
+        return c;
+      }
+    }
     int conflict = NO_CONFLICT;
     final byte[] vals = this.vals;
     final int[] mem = this.mem;
@@ -964,6 +979,130 @@ public final class CdclSolver {
       }
       watchSize[falseLit] = j;
     }
+    return NO_CONFLICT;
+  }
+
+  /**
+   * Remembers a clause whose two watched literals a and b are one true and one false at a lower
+   * level: after a backtrack between the two levels it is unit, and no watch would visit it.
+   */
+  private void noteLowWatched(int ref, int a, int b) {
+    int t = vals[a] > 0 ? a : b;
+    int f = t == a ? b : a;
+    if (vals[t] <= 0 || vals[f] >= 0 || level[t >> 1] <= level[f >> 1]) {
+      return;
+    }
+    if (numLowWatched + 3 > lowWatched.length) {
+      lowWatched = Arrays.copyOf(lowWatched, 2 * lowWatched.length);
+    }
+    lowWatched[numLowWatched++] = ref;
+    lowWatched[numLowWatched++] = ref == BINARY ? a : -1;
+    lowWatched[numLowWatched++] = ref == BINARY ? b : -1;
+  }
+
+  /** As noteLowWatched for a clause of the arena, or a binary one given by its two literals. */
+  private void noteLowWatched(int ref, int[] c) {
+    if (ref >= 0) {
+      noteLowWatched(ref, mem[ref + HEADER], mem[ref + HEADER + 1]);
+    } else if (c.length == 2) {
+      noteLowWatched(BINARY, c[0], c[1]);
+    }
+  }
+
+  /**
+   * After a backtrack, visits the clauses of noteLowWatched: one that became unit asserts its
+   * literal, one whose false watch has a replacement is watched again, and one still at risk is
+   * kept.
+   *
+   * @return a conflict, or NO_CONFLICT
+   */
+  private int propagateLowWatched() {
+    int j = 0;
+    int conflict = NO_CONFLICT;
+    for (int i = 0; i < numLowWatched; i += 3) {
+      int ref = lowWatched[i];
+      int a = lowWatched[i + 1];
+      int b = lowWatched[i + 2];
+      if (conflict == NO_CONFLICT) {
+        if (ref >= 0) {
+          if ((mem[ref + META] & DELETED) != 0) {
+            continue;
+          }
+          conflict = visitLowWatched(ref);
+          a = mem[ref + HEADER];
+          b = mem[ref + HEADER + 1];
+        } else {
+          conflict = visitLowWatched(a, b);
+        }
+        if (conflict == NO_CONFLICT && !atRisk(a, b)) {
+          continue;
+        }
+      }
+      lowWatched[j++] = ref;
+      lowWatched[j++] = ref >= 0 ? -1 : a;
+      lowWatched[j++] = ref >= 0 ? -1 : b;
+    }
+    numLowWatched = j;
+    if (conflict != NO_CONFLICT) {
+      qhead = trailSize;
+    }
+    return conflict;
+  }
+
+  private boolean atRisk(int a, int b) {
+    int t = vals[a] > 0 ? a : b;
+    int f = t == a ? b : a;
+    return vals[t] > 0 && vals[f] < 0 && level[t >> 1] > level[f >> 1];
+  }
+
+  private int visitLowWatched(int a, int b) {
+    if (vals[a] < 0 && vals[b] < 0) {
+      conflictRef = BINARY_CONFLICT;
+      conflictLit0 = a;
+      conflictLit1 = b;
+      return BINARY_CONFLICT;
+    }
+    if (vals[a] < 0 && vals[b] == 0) {
+      assign(b, -2 - a);
+    } else if (vals[b] < 0 && vals[a] == 0) {
+      assign(a, -2 - b);
+    }
+    return NO_CONFLICT;
+  }
+
+  private int visitLowWatched(int ref) {
+    int lits = ref + HEADER;
+    int w0 = mem[lits];
+    int w1 = mem[lits + 1];
+    if (vals[w0] >= 0 && vals[w1] >= 0) {
+      return NO_CONFLICT;
+    }
+    if (vals[w0] < 0 && vals[w1] < 0) {
+      conflictRef = ref;
+      return ref;
+    }
+    if (vals[w0] < 0) {
+      // the false watch second, as propagate keeps it
+      mem[lits] = w1;
+      mem[lits + 1] = w0;
+    }
+    int other = mem[lits];
+    int falseLit = mem[lits + 1];
+    if (vals[other] > 0) {
+      return NO_CONFLICT;
+    }
+    int size = mem[ref + SIZE];
+    for (int k = 2; k < size; k++) {
+      int l = mem[lits + k];
+      if (vals[l] >= 0) {
+        mem[lits + 1] = l;
+        mem[lits + k] = falseLit;
+        removeWatch(falseLit, ref);
+        addWatch(l, other, ref);
+        return NO_CONFLICT;
+      }
+    }
+    assign(other, ref);
     return NO_CONFLICT;
   }
 
@@ -1149,12 +1288,14 @@ public final class CdclSolver {
       if (n == 2) {
         addLearntBinary(c[0], c[1]);
         notifyKept(c, n);
+        noteLowWatched(BINARY, c[0], c[1]);
         r = -2 - c[1];
       } else if (n <= externalReasonKeep) {
         r = allocate(c, n, true, n);
         learnts = push(learnts, numLearnts++, r);
         attach(r);
         notifyKept(c, n);
+        noteLowWatched(r, c[0], c[1]);
       } else {
         r = pushReason(v, c, n);
       }
@@ -1837,6 +1978,7 @@ public final class CdclSolver {
         bumpClause(ref);
       }
       assertIfUnit(c, ref);
+      noteLowWatched(ref, c);
     }
     if (conflicts >= nextReduce) {
       nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
@@ -1918,6 +2060,7 @@ public final class CdclSolver {
       return false;
     }
     assertIfUnit(c, ref);
+    noteLowWatched(ref, c);
     return true;
   }
 
@@ -2401,10 +2544,12 @@ public final class CdclSolver {
     }
     int top = level[c[0] >> 1];
     if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
+      noteLowWatched(ref, c);
       return NO_CONFLICT;
     }
     if (vals[c[0]] == 0) {
       assign(c[0], ref == BINARY ? -2 - c[1] : ref);
+      noteLowWatched(ref, c);
       return NO_CONFLICT;
     }
     if (top == 0) {
@@ -2415,6 +2560,7 @@ public final class CdclSolver {
       // only c[0] is false at its level: it is implied one level lower
       backtrack(top - 1);
       assign(c[0], ref == BINARY ? -2 - c[1] : ref);
+      noteLowWatched(ref, c);
       return NO_CONFLICT;
     }
     backtrack(top);
@@ -3249,6 +3395,16 @@ public final class CdclSolver {
       }
       watchSize[lit] = j;
     }
+    int j = 0;
+    for (int i = 0; i < numLowWatched; i += 3) {
+      int ref = lowWatched[i];
+      if (ref < 0 || (mem[ref + META] & DELETED) == 0) {
+        lowWatched[j++] = ref < 0 ? ref : mem[ref + ACT];
+        lowWatched[j++] = lowWatched[i + 1];
+        lowWatched[j++] = lowWatched[i + 2];
+      }
+    }
+    numLowWatched = j;
     mem = to;
     memSize = top;
     wasted = 0;
