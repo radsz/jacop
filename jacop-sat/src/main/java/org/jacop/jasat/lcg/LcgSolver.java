@@ -176,13 +176,12 @@ public final class LcgSolver implements ExternalPropagator {
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
   private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
   private double[] activity;
-  // the 0/1 variables by activity, and the others in wide; with Booleans first a variable of wide
-  // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search, else the
-  // more active top of the two goes first
+  // the variables by activity; with Booleans first only the 0/1 ones, the others in wide, which
+  // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search
   private final VarHeap heap = new VarHeap();
-  private final boolean booleansFirst =
-      !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
   private final VarHeap wide = new VarHeap();
+  // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
+  private final boolean split = !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private boolean[] late;
@@ -1205,11 +1204,12 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Decides on the model's annotation in its runs while it has unfixed variables; otherwise, with
    * activity branching, on the most active unfixed variable, a 0/1 one while any is unfixed (unless
-   * the system property {@code jacop.lcg.booleansFirst} is false): its value in the last solution
-   * when still possible, else the lower half of its domain (the system property {@code
-   * jacop.lcg.value} = {@code min} or {@code max} picks its smallest or largest value instead).
-   * Without activity branching, leaves the decision to the solver's VSIDS until every literal is
-   * assigned, then branches on {@code [x <= min]} of the unfixed variable with the smallest domain.
+   * the system property {@code jacop.lcg.booleansFirst} is false, which branches on all variables
+   * in one order of activity): its value in the last solution when still possible, else the lower
+   * half of its domain (the system property {@code jacop.lcg.value} = {@code min} or {@code max}
+   * picks its smallest or largest value instead). Without activity branching, leaves the decision
+   * to the solver's VSIDS until every literal is assigned, then branches on {@code [x <= min]} of
+   * the unfixed variable with the smallest domain.
    */
   @Override
   public int decide() {
@@ -1257,7 +1257,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (late[i]) {
       return lateHeap;
     }
-    return root[i].min() < 0 || root[i].max() > 1 ? wide : heap;
+    return split && (root[i].min() < 0 || root[i].max() > 1) ? wide : heap;
   }
 
   // takes the fixed variables off the top of a heap, to be put back on backtracking
@@ -1275,11 +1275,7 @@ public final class LcgSolver implements ExternalPropagator {
   private int activityDecision() {
     popFixed(heap);
     popFixed(wide);
-    VarHeap h = heap;
-    if (h.isEmpty()
-        || !booleansFirst && !wide.isEmpty() && activity[wide.max()] >= activity[heap.max()]) {
-      h = wide;
-    }
+    VarHeap h = heap.isEmpty() ? wide : heap;
     if (h.isEmpty()) {
       popFixed(lateHeap);
       h = lateHeap;
@@ -1291,7 +1287,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (lastConflict
         && conflictVar >= 0
         && !vars[conflictVar].singleton()
-        && (heapOf(conflictVar) == h || !booleansFirst && h != lateHeap && !late[conflictVar])) {
+        && heapOf(conflictVar) == h) {
       i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
     }
     conflictVar = -1;
