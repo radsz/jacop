@@ -181,14 +181,13 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
         return true;
       }
       if (comp == 0 && inputOrderTieBreaking) {
-        return position.get(searchVariables[currentPosition])
-            < position.get(searchVariables[optimalPosition]);
+        return inputPosition[currentPosition] < inputPosition[optimalPosition];
       }
       return false;
     }
     if (inputOrderTieBreaking) {
-      return position.get(searchVariables[currentPosition])
-          < position.get(searchVariables[optimalPosition]);
+      // an array instead of the position map: ties are frequent, and each lookup hashed
+      return inputPosition[currentPosition] < inputPosition[optimalPosition];
     }
     return false;
   }

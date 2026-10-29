@@ -61,6 +61,9 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
   /** Index of the currently selected variable. */
   int currentIndex;
 
+  /** The input position of the variable at each index of searchVariables, kept in step with it. */
+  final int[] inputPosition;
+
   /**
    * Initializes common fields: deduplicates variables, builds searchVariables array and position
    * mapping.
@@ -83,6 +86,10 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
 
     for (Map.Entry<T, Integer> e : position.entrySet()) {
       searchVariables[e.getValue()] = e.getKey();
+    }
+    inputPosition = new int[searchVariables.length];
+    for (int i = 0; i < inputPosition.length; i++) {
+      inputPosition[i] = i;
     }
 
     valueOrdering = indomain;
@@ -146,6 +153,10 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
       searchVariables[searchPosition] = searchVariables[variablePosition];
 
       searchVariables[variablePosition] = temp;
+
+      int p = inputPosition[searchPosition];
+      inputPosition[searchPosition] = inputPosition[variablePosition];
+      inputPosition[variablePosition] = p;
     }
 
     return searchVariables[searchPosition];
