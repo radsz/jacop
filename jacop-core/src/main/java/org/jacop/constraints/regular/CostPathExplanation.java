@@ -317,7 +317,17 @@ final class CostPathExplanation {
   /**
    * The edges of one level a group of the explanation keeps, and whether it handles the dead ones.
    */
-  private record LevelRestriction(int level, boolean[] keep, boolean dead) {}
+  private static final class LevelRestriction {
+    private final int level;
+    private final boolean[] keep;
+    private final boolean dead;
+
+    LevelRestriction(int level, boolean[] keep, boolean dead) {
+      this.level = level;
+      this.keep = keep;
+      this.dead = dead;
+    }
+  }
 
   /**
    * Explains that every path (through the kept edges of the restricted level) costs more than k
@@ -409,7 +419,7 @@ final class CostPathExplanation {
     for (int l = 0; l < levels; l++) {
       for (int e = edgeStart[l]; e < edgeStart[l + 1]; e++) {
         if (!aliveEdge[e]
-            || l == restricted && !only.keep[e - edgeStart[l]]
+            || l == restricted && only != null && !only.keep[e - edgeStart[l]]
             || f[source[e]] == unreached) {
           continue;
         }

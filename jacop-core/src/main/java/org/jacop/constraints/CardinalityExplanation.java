@@ -149,14 +149,31 @@ final class CardinalityExplanation {
    * @param open whether the variables may take values that are not counted
    * @param rest the number of variables taking an uncounted value, or null when it is free
    */
-  record Network(
-      IntVar[] list,
-      int[] values,
-      IntVar[] counters,
-      int[] fixedLow,
-      int[] fixedUp,
-      boolean open,
-      IntVar rest) {
+  static final class Network {
+    private final IntVar[] list;
+    private final int[] values;
+    private final IntVar[] counters;
+    private final int[] fixedLow;
+    private final int[] fixedUp;
+    private final boolean open;
+    private final IntVar rest;
+
+    Network(
+        IntVar[] list,
+        int[] values,
+        IntVar[] counters,
+        int[] fixedLow,
+        int[] fixedUp,
+        boolean open,
+        IntVar rest) {
+      this.list = list;
+      this.values = values;
+      this.counters = counters;
+      this.fixedLow = fixedLow;
+      this.fixedUp = fixedUp;
+      this.open = open;
+      this.rest = rest;
+    }
 
     /**
      * Adds to {@code out} the reason of an entry of one of the variables or counters.
