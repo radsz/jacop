@@ -586,6 +586,16 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
+44. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
+    The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
+    the FlatZinc models in jacop-all/target/aot-training/ through the new
+    org.jacop.fz.AotTraining and writes jacop.aot; fzn-jacop uses it when
+    it is newer than the jar. It saves about 0.2 s of JVM start-up and
+    class loading per run: on 54 small mznbench instances the median run
+    with --lcg -f is 30 % shorter with the same search. Without the cache
+    nothing changes. fzn-jacop now sends JVM warnings to stderr, so they
+    cannot mix with the FlatZinc output.
+
 Version 4.11
 =============
 
