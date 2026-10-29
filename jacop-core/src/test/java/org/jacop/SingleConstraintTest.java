@@ -8630,4 +8630,24 @@ class SingleConstraintTest extends TestHelper {
       assertThat(s.indexOf(list[i - 1].id() + ":")).isLessThan(s.indexOf(list[i].id() + ":"));
     }
   }
+
+  @Test
+  public void constraintCountsItsConsistencyCalls() {
+    // the replays of LCG explanations are budgeted by these counts, not by time, so that a run
+    // repeats its search
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    XltY c = new XltY(x, y);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    long calls = c.consistencyCalls();
+    assertThat(calls).isPositive();
+
+    store.setLevel(1);
+    store.impose(new XeqC(y, 5));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.consistencyCalls()).isGreaterThan(calls);
+    assertThat(store.numberConsistencyCalls).isGreaterThanOrEqualTo(c.consistencyCalls());
+  }
 }
