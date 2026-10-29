@@ -265,6 +265,8 @@ public final class CdclSolver {
   private volatile boolean interrupted;
   // set by cancel(): every later solve() stops at once as well
   private volatile boolean cancelled;
+  // set when propagateAll stopped at the deadline before reaching a fixpoint
+  private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
   private DratWriter proof;
@@ -478,6 +480,7 @@ public final class CdclSolver {
       }
     }
     interrupted = cancelled;
+    outOfTime = false;
     backtrack(0);
     if (elimination && !eliminationTried && conflicts == 0 && !externalUsed && numUnits == 0) {
       eliminationTried = true;
@@ -1976,6 +1979,10 @@ public final class CdclSolver {
       if (!ok) {
         return UNSAT;
       }
+      if (outOfTime) {
+        outOfTime = false;
+        return UNKNOWN;
+      }
       if (confl != NO_CONFLICT) {
         conflicts++;
         if (decisionLevel == 0) {
@@ -2111,10 +2118,16 @@ public final class CdclSolver {
    *     found unsatisfiable
    */
   private int propagateAll() {
-    while (true) {
+    for (int rounds = 1; ; rounds++) {
       int confl = propagate();
       if (confl != NO_CONFLICT || external == null) {
         return confl;
+      }
+      // an external propagator can take many rounds to reach a fixpoint (bounds that creep by one
+      // value at a time between constraints), so the clock is read here too, not only per decision
+      if ((rounds & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+        outOfTime = true;
+        return NO_CONFLICT;
       }
       for (int i = 0; i < numLateObserved; i++) {
         int v = lateObserved[i];
