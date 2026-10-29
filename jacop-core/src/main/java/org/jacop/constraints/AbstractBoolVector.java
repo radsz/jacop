@@ -32,7 +32,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -81,7 +81,7 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
 
     this.numberId = idNum.incrementAndGet();
 
-    Set<IntVar> varSet = new HashSet<>(Arrays.asList(list));
+    Set<IntVar> varSet = new LinkedHashSet<>(Arrays.asList(list));
     this.l = varSet.size();
     this.list = varSet.toArray(IntVar[]::new);
     this.result = result;

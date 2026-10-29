@@ -8603,4 +8603,31 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
     assertThat(new int[] {x.weight, y.weight, s.weight, t.weight}).containsExactly(2, 2, 1, 1);
   }
+
+  @Test
+  public void scopeAndBoolVectorKeepInputOrder() {
+    // both were HashSets, so their order followed identity hash codes: constraints attached to
+    // variables in another order, and -f searched another tree, under other JVM flags
+    Store store = new Store();
+    IntVar[] x = new IntVar[40];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar[] list = new IntVar[x.length + 1];
+    for (int i = 0; i < x.length; i++) {
+      list[i] = x[x.length - 1 - i];
+    }
+    list[x.length] = x[7];
+
+    OrBoolVector c = new OrBoolVector(list, y);
+
+    List<Var> expected = new ArrayList<>(Arrays.asList(list).subList(0, x.length));
+    expected.add(y);
+    assertThat(c.arguments()).containsExactlyElementsOf(expected);
+    String s = c.toString();
+    for (int i = 1; i < x.length; i++) {
+      assertThat(s.indexOf(list[i - 1].id() + ":")).isLessThan(s.indexOf(list[i].id() + ":"));
+    }
+  }
 }

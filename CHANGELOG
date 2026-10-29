@@ -919,6 +919,18 @@ Version 5.0 (unreleased)
     throwFailException(Var), clearWatchedConstraint(),
     countConstraint(int) and the field auxilaryVariables.
 
+68. Free search (-f) no longer depends on identity hash codes, so runs
+    of the same model under other JVM flags (-Xshare:off, CDS or AOT
+    caches, -XX:hashCode) or after unrelated class changes search the
+    same tree. Besides the constraint scopes (item 52), the variables of
+    the Boolean vector constraints (and_bool, or_bool, ...), the
+    channeling constraints the FlatZinc front end collects from
+    int_eq_reif and its alias equalities were hash sets or maps keyed by
+    variables, so constraints were attached and posted in a different
+    order: zephyrus 12_6_8_3 took 107777, 106436 or 113314 nodes to prove
+    its optimum. Adaptive LNS under -f still shares its time by the wall
+    clock; --free-config lns=0 makes -f repeatable.
+
 Version 4.11
 =============
 
