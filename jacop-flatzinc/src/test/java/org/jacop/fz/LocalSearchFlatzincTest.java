@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -82,7 +83,10 @@ class LocalSearchFlatzincTest {
 
   @Test
   void optimumUnderLcg() throws IOException {
-    checkOptimum(run(COVER + "solve minimize cost;\n", "--lcg", "-f", "-a", "-s", "-t", "5000"));
+    // -a as MiniZinc passes it for optimisation: local search runs and its solutions are printed
+    String out = run(COVER + "solve minimize cost;\n", "--lcg", "-f", "-a", "-s", "-t", "5000");
+    assertFalse(out.contains("lsSolutions=0") || !out.contains("lsSolutions="), out);
+    checkOptimum(out);
   }
 
   @Test

@@ -1652,7 +1652,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     // local search runs on the store before the solver takes it over
     LocalSearch ls = null;
-    if (options.freeSearch() && !options.getAll()) {
+    // -a on an optimisation problem prints every better solution, local search included
+    if (options.freeSearch() && !(options.getAll() && costVar == null)) {
       DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
       searchVars.defaultVars();
       ls = runLocalSearch(costVar, searchVars, worker, true);
@@ -1680,7 +1681,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    lcg.onSolution(this::printSolution);
+    if (ls != null && costVar instanceof IntVar cost) {
+      // the solution of local search was printed already; the core-guided phase, which ignores
+      // the bound, or the first descent, before the bound is taken, can find one no better
+      lcg.onSolution(
+          () -> {
+            if (cost.value() < lcgLastCost) {
+              printSolution();
+            }
+          });
+    } else {
+      lcg.onSolution(this::printSolution);
+    }
     boolean free = options.freeSearch();
     // under free search, runs that take turns at restarts: the annotation (or dom/wdeg without
     // one), the SAT solver's own decisions on literals with phase false, as in CP-SAT's default
