@@ -95,6 +95,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // the bound before a position is found by binary search instead of a walk along the chain
   private int[][] bounds = new int[0][];
   private int[] numBounds = new int[0];
+  // the NE entry of each removed value, so that whether a value was removed before a position is
+  // found without a walk along the variable's chain
+  private final EntryIndex removals = new EntryIndex();
 
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
@@ -166,7 +169,14 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (i >= 0) {
       return 2 * i;
     }
-    return 2 * booleanIds.computeIfAbsent(x, b -> booleanIds.size()) + 1;
+    if (x instanceof BooleanVar b) {
+      if (b.trailOwner != this) {
+        b.trailId = 2 * booleanIds.computeIfAbsent(x, v -> booleanIds.size()) + 1;
+        b.trailOwner = this;
+      }
+      return b.trailId;
+    }
+    return 2 * booleanIds.computeIfAbsent(x, v -> booleanIds.size()) + 1;
   }
 
   private int slot(IntVar x) {
@@ -363,7 +373,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     reason[size] = store.currentConstraint;
     previous[size] = last[i];
     last[i] = size;
-    if (k != NE) {
+    if (k == NE) {
+      removals.put(i, v, size);
+    } else {
       int b = 2 * i + k;
       if (bounds[b] == null) {
         bounds[b] = new int[8];
@@ -384,6 +396,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       last[i] = previous[size];
       if (kind[size] != NE) {
         numBounds[2 * i + kind[size]]--;
+      } else {
+        removals.remove(i, value[size]);
       }
       if (last[i] < 0 || level[last[i]] < removedLevel) {
         setShadow(i, x.dom()); // the variable's last removed entry: its domain is restored
@@ -740,25 +754,27 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return true when v was not in the domain
    */
   public boolean excludedBefore(IntVar x, int v, int position, EntryList out) {
-    if (!root[slot(x)].contains(v)) {
+    int i = slot(x);
+    if (!root[i].contains(v)) {
       return true;
     }
-    for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
-      if (removes(f, v)) {
-        out.add(f);
-        return true;
-      }
+    // the latest entry before the position that removes v: the value's NE entry, or the last bound
+    // of either kind, which removes v when any bound of its kind before it does
+    int f = removals.get(i, v);
+    int found = f < position ? f : -1;
+    int g = latest(x, position, GE);
+    if (g > found && value[g] > v) {
+      found = g;
     }
-    return false;
-  }
-
-  // whether entry f removes value v from its variable's domain
-  private boolean removes(int f, int v) {
-    return switch (kind[f]) {
-      case NE -> value[f] == v;
-      case GE -> value[f] > v;
-      default -> value[f] < v;
-    };
+    int l = latest(x, position, LE);
+    if (l > found && value[l] < v) {
+      found = l;
+    }
+    if (found < 0) {
+      return false;
+    }
+    out.add(found);
+    return true;
   }
 
   /**
@@ -821,13 +837,58 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public boolean explain(int entry, EntryList out) {
     int mark = out.size();
+    replayed = false;
     if (reason[entry] instanceof Explainable c && c.explain(this, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (replay(reason[entry], entry, out)) {
       return true;
     }
     out.truncate(mark);
     genericReason(entry, out);
     return false;
   }
+
+  /**
+   * Whether the last {@link #explain} or {@link #explainFailure} that gave an explanation of the
+   * constraint's own found it by replaying the constraint ({@link ReplayExplanation}) rather than
+   * by the constraint's explanation.
+   *
+   * @return true for a replayed explanation
+   */
+  public boolean replayed() {
+    return replayed;
+  }
+
+  private boolean replayed;
+
+  // the replay of each constraint asked for one, or null when it cannot be replayed
+  private final Map<Constraint, ReplayExplanation> replays = new IdentityHashMap<>();
+
+  private boolean replay(Constraint c, int entry, EntryList out) {
+    if (!ReplayExplanation.ENABLED || c == null) {
+      return false;
+    }
+    long now = System.nanoTime();
+    if (replayStart == 0) {
+      replayStart = now;
+    }
+    if (replayNanos > ReplayExplanation.SHARE * (now - replayStart) + REPLAY_GRACE) {
+      return false;
+    }
+    ReplayExplanation r = replays.computeIfAbsent(c, k -> ReplayExplanation.of(this, k));
+    replayed = r != null && r.explain(entry, out, now - replayStart);
+    replayNanos += System.nanoTime() - now;
+    return replayed;
+  }
+
+  // the time spent replaying, and when the first replay started
+  private long replayNanos;
+  private long replayStart;
+
+  // replaying may take this long before its share of the time applies
+  private static final long REPLAY_GRACE = 200_000_000L;
 
   /**
    * Adds to {@code out} the reason of a failure of a constraint now: its own explanation when it is
@@ -839,7 +900,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public boolean explainFailure(Constraint failed, EntryList out) {
     int mark = out.size();
+    replayed = false;
     if (failed instanceof Explainable c && c.explainFailure(this, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (replay(failed, -1, out)) {
       return true;
     }
     out.truncate(mark);

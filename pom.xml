@@ -233,6 +233,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
+                                <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -359,6 +360,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
+                                <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -486,6 +488,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
+                                <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -613,6 +616,7 @@ setup to run configuration. -->
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
+                                <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -1102,6 +1106,7 @@ setup to run configuration. -->
                         <include>**/AccumulatedFailureCountTest.java</include>
                         <include>**/SimpleSelectTieBreakTest.java</include>
                         <include>**/FreeSearchTest.java</include>
+                        <include>**/AdaptiveLnsTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>
                         <include>**/TrailedTupleSetTest.java</include>

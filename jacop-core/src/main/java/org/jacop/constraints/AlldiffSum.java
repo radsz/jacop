@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -38,7 +39,11 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * The conjunction of alldifferent(x) and sum(x) rel sum, where rel is ==, &lt;= or &gt;=. It
@@ -61,7 +66,8 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AlldiffSum extends Constraint implements SatisfiedPresent, Copyable<AlldiffSum> {
+public class AlldiffSum extends Constraint
+    implements SatisfiedPresent, Copyable<AlldiffSum>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -317,6 +323,151 @@ public class AlldiffSum extends Constraint implements SatisfiedPresent, Copyable
       heap[c] = last;
     }
     return size;
+  }
+
+  /**
+   * Explains a bound by the bounds of the variables, as the propagation reads only them, and the
+   * holes the bound skipped. A bound of the sum cites only the side of the variables' bounds it
+   * needs when the smallest (largest) sum of distinct values from that side alone reaches it. A
+   * bound of a variable takes the Hall set reason of the alldifferent instead when that is shorter.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != AlldiffSum.class || trail.kind(entry) == AtomicTrail.NE) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    boolean lower = trail.kind(entry) == AtomicTrail.GE;
+    int mark = out.size();
+    if (y == sum && !inList(y)) {
+      if (lower ? relation == GE : relation == LE) {
+        return false;
+      }
+      // sum >= smallest sum of distinct values, or sum <= the largest one
+      long a = trail.value(entry);
+      if (!sumReaches(trail, entry, lower, a, true)) {
+        return false;
+      }
+      boolean oneSide = sumReaches(trail, entry, lower, a, false);
+      for (IntVar x : list) {
+        if (lower || !oneSide) {
+          trail.addLowerBound(x, entry, out);
+        }
+        if (!lower || !oneSide) {
+          trail.addUpperBound(x, entry, out);
+        }
+      }
+      trail.addSkippedHoles(entry, lower ? Integer.MIN_VALUE : Integer.MAX_VALUE, out);
+      out.sortUnique(mark);
+      return true;
+    }
+    for (IntVar x : list) {
+      trail.addLowerBound(x, entry, out);
+      trail.addUpperBound(x, entry, out);
+    }
+    // a maximum is lowered by the smallest sum against the maximum of sum, a minimum raised by the
+    // largest sum against the minimum of sum
+    if (lower) {
+      trail.addLowerBound(sum, entry, out);
+    } else {
+      trail.addUpperBound(sum, entry, out);
+    }
+    trail.addSkippedHoles(entry, lower ? Integer.MIN_VALUE : Integer.MAX_VALUE, out);
+    out.sortUnique(mark);
+    EntryList hallReason = new EntryList();
+    if (AlldiffExplanation.explain(trail, entry, list, new IntervalDomain(), hallReason)
+        && hallReason.size() < out.size() - mark) {
+      out.truncate(mark);
+      for (int k = 0; k < hallReason.size(); k++) {
+        out.add(hallReason.get(k));
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Explains a failure by the bounds of the variables and of sum, or by a Hall set of the
+   * alldifferent when it fails alone.
+   */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != AlldiffSum.class) {
+      return false;
+    }
+    if (AlldiffExplanation.explainFailure(trail, list, new IntervalDomain(), out)) {
+      return true;
+    }
+    int now = trail.size();
+    for (IntVar x : list) {
+      trail.addLowerBound(x, now, out);
+      trail.addUpperBound(x, now, out);
+    }
+    trail.addLowerBound(sum, now, out);
+    trail.addUpperBound(sum, now, out);
+    return true;
+  }
+
+  private boolean inList(IntVar y) {
+    for (IntVar x : list) {
+      if (x == y) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Whether the smallest sum of distinct values (lower) or the largest one reaches a, with the
+   * bounds of the variables just before the entry; with both false, the bounds of the other side
+   * are left at their initial values.
+   */
+  private boolean sumReaches(AtomicTrail trail, int entry, boolean lower, long a, boolean both) {
+    int n = list.length;
+    long[] from = new long[n];
+    long[] to = new long[n];
+    for (int i = 0; i < n; i++) {
+      IntVar x = list[i];
+      long min = trail.minBefore(x, entry);
+      long max = trail.maxBefore(x, entry);
+      if (!both) {
+        IntDomain root = trail.rootDomain(x);
+        if (lower) {
+          max = root.max();
+        } else {
+          min = root.min();
+        }
+      }
+      from[i] = lower ? min : -max;
+      to[i] = lower ? max : -min;
+    }
+    long smallest = smallestSum(from, to);
+    return smallest != Long.MAX_VALUE && (lower ? smallest >= a : -smallest <= a);
+  }
+
+  // the smallest sum of distinct values in [from[i], to[i]], Long.MAX_VALUE when there is none
+  static long smallestSum(long[] from, long[] to) {
+    int n = from.length;
+    Integer[] order = new Integer[n];
+    for (int i = 0; i < n; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(order, (i, j) -> Long.compare(from[i], from[j]));
+    PriorityQueue<Integer> waiting = new PriorityQueue<>((i, j) -> Long.compare(to[i], to[j]));
+    long total = 0;
+    long current = Long.MIN_VALUE / 2;
+    int next = 0;
+    for (int k = 0; k < n; k++) {
+      current = Math.max(current + 1, from[order[k]]);
+      while (next < n && from[order[next]] <= current) {
+        waiting.add(order[next++]);
+      }
+      int i = waiting.poll();
+      if (to[i] < current) {
+        return Long.MAX_VALUE;
+      }
+      total += current;
+    }
+    return total;
   }
 
   @Override

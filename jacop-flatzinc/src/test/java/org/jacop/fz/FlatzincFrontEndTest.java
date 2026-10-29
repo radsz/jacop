@@ -1689,8 +1689,13 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "-s")[0];
     String last = out.substring(out.lastIndexOf("x = "));
     assertTrue(last.startsWith("x = 250000;"), out);
-    String literals = out.substring(out.indexOf("lcgAtomLiterals=") + 16);
-    assertTrue(Long.parseLong(literals.substring(0, literals.indexOf('\n')).strip()) < 1000, out);
+    // literals created only to push a bound are released on backtrack: count the live ones
+    assertTrue(stat(out, "lcgAtomLiterals") - stat(out, "lcgLiteralsReleased") < 1000, out);
+  }
+
+  private static long stat(String out, String name) {
+    String from = out.substring(out.indexOf("%%%mzn-stat: " + name + "=") + name.length() + 14);
+    return Long.parseLong(from.substring(0, from.indexOf('\n')).strip());
   }
 
   @Test

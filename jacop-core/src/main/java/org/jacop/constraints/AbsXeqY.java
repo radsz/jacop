@@ -141,6 +141,9 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
         log.debug("new Xdom {}", xDomFromY);
       }
 
+      if (keepsGap(store)) {
+        xDomFromY.unionAdapt(1 - y.min(), y.min() - 1);
+      }
       x.domain.in(store.level, x, xDomFromY);
 
     } while (store.propagationHasOccurred);
@@ -226,6 +229,17 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
     }
     xDom.addDom(ydomain);
     return xDom;
+  }
+
+  /**
+   * Whether the gap {@code (-min y, min y)} stays in x while x has values on both sides of it.
+   * Under lazy clause generation every removed inner value is an atom of its own, so the gap would
+   * cost one atom per value, and the propagators that skip it cite each one; kept, it costs one
+   * bound atom when a bound of x enters it, as in Chuffed.
+   */
+  private boolean keepsGap(Store store) {
+    int yMin = y.min();
+    return store.domainChangeRecorder != null && yMin > 1 && x.min() <= -yMin && x.max() >= yMin;
   }
 
   void boundConsistency(final Store store) {

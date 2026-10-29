@@ -56,6 +56,7 @@ import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.lns.AdaptiveLns;
 
 /**
  * Lazy clause generation with JaSAT: the constraints of a store propagate as an external propagator
@@ -97,6 +98,34 @@ public final class LcgSolver implements ExternalPropagator {
   private IntDomain[] root = new IntDomain[0];
   private final LiteralMap[] ge;
   private final LiteralMap[] eq;
+  // the literals of ge linked to their neighbours by binary clauses; the others are transient
+  private final LiteralMap[] linked;
+
+  /**
+   * Releases the literals created only to push a bound, as in Chuffed's lazy literals with the
+   * unused ones collected: such a literal is in no clause, and when the level it was created at is
+   * backtracked, its variable is given to the next new literal. The literals of a variable then
+   * stay few, so a bound change no longer runs down a long chain of binary clauses.
+   */
+  private static final boolean RELEASE =
+      !"false".equals(System.getProperty("jacop.lcg.releaseLiterals"));
+
+  // per DIMACS variable: true while a transient literal, in no clause and not linked
+  private boolean[] transientLit = new boolean[16];
+  // the transient literals by the decision level they were created at
+  private int[] transients = new int[64];
+  private int[] transientLevel = new int[64];
+  private int numTransients;
+  // released DIMACS variables, given to the next new literals
+  private int[] free = new int[16];
+  private int numFree;
+  // linked literals the domains imply, with the entries that imply them, pushed first
+  private int[] impliedLits = new int[16];
+  private int[] impliedEntries = new int[16];
+  private int numImplied;
+
+  /** Statistics: transient literals released. */
+  public long literalsReleased;
 
   // per DIMACS variable: its variable's trail id, kind and value
   private int[] litVar = new int[16];
@@ -257,6 +286,9 @@ public final class LcgSolver implements ExternalPropagator {
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
+  private double coreDelayShare;
+  private long coreDelayBudget;
+  private double coreProbeShare;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   private CoreSearch coreSearch;
   // the objective value of the best solution found outside this solver, and the last one imported
@@ -264,6 +296,17 @@ public final class LcgSolver implements ExternalPropagator {
   private int importedBound = Integer.MAX_VALUE;
   // a shared bound at or below the objective's smallest value: no better solution exists
   private boolean sharedBoundUnreachable;
+
+  private AdaptiveLns lns;
+  private double lnsShare;
+  private long lnsConflicts;
+  private int[] lnsIds;
+
+  /** Runs in large neighbourhoods. */
+  public long lnsRuns;
+
+  /** Runs in large neighbourhoods that improved the best solution. */
+  public long lnsImproved;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -305,6 +348,7 @@ public final class LcgSolver implements ExternalPropagator {
     root = new IntDomain[n];
     ge = new LiteralMap[n];
     eq = new LiteralMap[n];
+    linked = new LiteralMap[n];
     activity = new double[n];
     heap.grow(n, activity);
     wide.grow(n, activity);
@@ -316,6 +360,7 @@ public final class LcgSolver implements ExternalPropagator {
       root[i] = x.dom().cloneLight();
       ge[i] = new LiteralMap();
       eq[i] = new LiteralMap();
+      linked[i] = new LiteralMap();
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
         if (root[i].min() < 0 || root[i].max() > 1) {
@@ -331,13 +376,25 @@ public final class LcgSolver implements ExternalPropagator {
   // ------------------------------------------------------------------------------- literals
 
   private int newLiteral(int i, int kind, int value) {
-    int d = sat.newVariables(1);
-    sat.observe(d);
+    int d;
+    if (numFree > 0) {
+      d = free[--numFree];
+      sat.reuse(d);
+    } else {
+      d = sat.newVariables(1);
+      sat.observe(d);
+    }
     if (d >= litVar.length) {
       int n = 2 * d;
       litVar = Arrays.copyOf(litVar, n);
       litKind = Arrays.copyOf(litKind, n);
       litValue = Arrays.copyOf(litValue, n);
+    }
+    if (d >= transientLit.length) {
+      transientLit = Arrays.copyOf(transientLit, 2 * d);
+    }
+    if (d < atomUse.length) {
+      atomUse[d] = 0;
     }
     litVar[d] = i;
     litKind[d] = (byte) kind;
@@ -358,23 +415,121 @@ public final class LcgSolver implements ExternalPropagator {
     return d;
   }
 
-  /** The variable of [x >= v] for v in (root min, root max], created when missing. */
+  /** The variable of [x >= v] for v in (root min, root max], created when missing, linked. */
   private int geVar(int i, int v) {
     int d = ge[i].get(v);
     if (d != LiteralMap.NONE) {
+      if (transientLit[d]) {
+        link(i, v, d);
+      }
       return d;
     }
     int lit = newLiteral(i, GE_KIND, v);
-    int below = ge[i].lower(v);
-    int above = ge[i].higher(v);
+    ge[i].put(v, lit);
+    link(i, v, lit);
+    return lit;
+  }
+
+  /**
+   * Links [x >= v] to its linked neighbours by binary clauses, and pushes it when the domain
+   * already decides it, since no clause may imply it yet.
+   */
+  private void link(int i, int v, int lit) {
+    transientLit[lit] = false;
+    int below = linked[i].lower(v);
+    int above = linked[i].higher(v);
     if (below != LiteralMap.NONE) {
       structural.add(new int[] {-lit, below}); // [x >= v] -> [x >= below]
     }
     if (above != LiteralMap.NONE) {
       structural.add(new int[] {-above, lit}); // [x >= above] -> [x >= v]
     }
+    linked[i].put(v, lit);
+    if (!RELEASE || sat.value(lit) != 0) {
+      return;
+    }
+    int e = trail.earliestLowerBound(vars[i], v, pushed);
+    int implied = lit;
+    if (e < 0 || e >= pushed) {
+      e = trail.earliestUpperBound(vars[i], v - 1L, pushed);
+      implied = -lit;
+    }
+    if (e >= 0 && e < pushed) {
+      if (numImplied == impliedLits.length) {
+        impliedLits = Arrays.copyOf(impliedLits, 2 * numImplied);
+        impliedEntries = Arrays.copyOf(impliedEntries, 2 * numImplied);
+      }
+      impliedLits[numImplied] = implied;
+      impliedEntries[numImplied++] = e;
+    }
+  }
+
+  /**
+   * The variable of [x >= v] for a trail entry: an existing one, or a transient one, which is not
+   * linked; the caller pushes the nearest linked literal it implies.
+   */
+  private int geEntryVar(int i, int v) {
+    int d = ge[i].get(v);
+    if (d != LiteralMap.NONE) {
+      return d;
+    }
+    if (!RELEASE || sat.hasProof()) {
+      return geVar(i, v);
+    }
+    int lit = newLiteral(i, GE_KIND, v);
     ge[i].put(v, lit);
+    transientLit[lit] = true;
+    if (numTransients == transients.length) {
+      transients = Arrays.copyOf(transients, 2 * numTransients);
+      transientLevel = Arrays.copyOf(transientLevel, 2 * numTransients);
+    }
+    transients[numTransients] = lit;
+    transientLevel[numTransients++] = sat.decisionLevel();
     return lit;
+  }
+
+  /** Links a transient literal that now occurs in a clause. */
+  private void keep(int lit) {
+    int d = Math.abs(lit);
+    if (d < transientLit.length && transientLit[d]) {
+      link(litVar[d], litValue[d], d);
+    }
+  }
+
+  /** Releases the transient literals created above a level, now unassigned. */
+  private void release(int level) {
+    while (numTransients > 0 && transientLevel[numTransients - 1] > level) {
+      int d = transients[--numTransients];
+      if (!transientLit[d]) {
+        continue;
+      }
+      transientLit[d] = false;
+      ge[litVar[d]].remove(litValue[d]);
+      sat.retire(d);
+      if (numFree == free.length) {
+        free = Arrays.copyOf(free, 2 * numFree);
+      }
+      free[numFree++] = d;
+      literalsReleased++;
+    }
+  }
+
+  /**
+   * The nearest linked literal the atom of an entry implies when the entry's own literal is
+   * transient, or 0.
+   */
+  private int linkedNeighbour(int entry, int lit) {
+    if (!transientLit[Math.abs(lit)]) {
+      return 0;
+    }
+    int i = trail.id(trail.variable(entry));
+    int v = trail.value(entry);
+    if (trail.kind(entry) == AtomicTrail.GE) {
+      int below = linked[i].lower(v);
+      return below == LiteralMap.NONE ? 0 : below;
+    }
+    int above = linked[i].higher(v + 1);
+    return above == LiteralMap.NONE ? 0 : -above;
   }
 
   /** The literal [x >= v]; 0 stands for a constant, which callers rule out. */
@@ -420,10 +575,17 @@ public final class LcgSolver implements ExternalPropagator {
     int i = trail.id(trail.variable(entry));
     int v = trail.value(entry);
     return switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> geLit(i, v);
-      case AtomicTrail.LE -> -geLit(i, v + 1);
+      case AtomicTrail.GE -> geEntryLit(i, v);
+      case AtomicTrail.LE -> -geEntryLit(i, v + 1);
       default -> -eqVar(i, v);
     };
+  }
+
+  private int geEntryLit(int i, int v) {
+    if (v <= root[i].min() || v > root[i].max()) {
+      throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
+    }
+    return geEntryVar(i, v);
   }
 
   /**
@@ -480,7 +642,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (coreSearch != null) {
         result = minimizeWithCores();
       } else {
-        result = lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+        result = interleaved() ? minimizeWithLowerBoundSearch() : solve();
       }
     } finally {
       this.objective = -1;
@@ -503,38 +665,26 @@ public final class LcgSolver implements ExternalPropagator {
    * search finds would have to improve, which makes its strata hard, so the bound comes only after
    * it. Branch and bound then starts from the variables' activity before the core-guided search.
    */
+  // the most times the core-guided phase gets another share of the time
+  private static final int MAX_CORE_EXTENSIONS = 8;
+
   private int minimizeWithCores() {
-    long deadline = sat.deadline();
-    long now = System.nanoTime();
-    long phaseLimit = Long.MAX_VALUE;
-    if (deadline != Long.MAX_VALUE) {
-      sat.setDeadline(now + (long) (coreShare * Math.max(0, deadline - now)));
-    } else {
-      phaseLimit = sat.conflicts + coreBudget;
+    int result;
+    if (coreDelayShare > 0) {
+      if (coreProbeShare > 0) {
+        result = runCores(coreProbeShare, coreDelayBudget, false);
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
+      }
+      result = minimizeBeforeCores();
+      if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+        return result;
+      }
     }
     double[] saved = CORE_RESTORE ? activity.clone() : null;
     double savedInc = activityInc;
-    coreMode = true;
-    int result;
-    try {
-      long full = sat.deadline();
-      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
-        // without a solution by this share of the phase, branch and bound gets the time
-        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
-        sat.setDeadline(first);
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
-          sat.setDeadline(full);
-          result = coreSearch.run(phaseLimit, coreCallLimit);
-        }
-      } else {
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-      }
-    } finally {
-      coreMode = false;
-      sat.setDeadline(deadline);
-      sat.setConflictLimit(Long.MAX_VALUE);
-    }
+    result = runCores(coreShare, coreBudget, true);
     if (result != CdclSolver.UNKNOWN) {
       return result;
     }
@@ -551,7 +701,101 @@ public final class LcgSolver implements ExternalPropagator {
     if (!requireBetter()) {
       return CdclSolver.SAT;
     }
-    return lowerBoundShare > 0 ? minimizeWithLowerBoundSearch() : solve();
+    return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+  }
+
+  /** Whether runs of branch and bound alternate with lower-bound or neighbourhood runs. */
+  private boolean interleaved() {
+    return lowerBoundShare > 0 || lns != null;
+  }
+
+  /**
+   * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
+   * deadline. A later run picks up where this one stopped. When extend is set, a run that ran out
+   * of its time while its lower bound, at its rate so far, would meet the best solution before the
+   * deadline gets another share of the time left.
+   */
+  private int runCores(double share, long conflicts, boolean extend) {
+    long deadline = sat.deadline();
+    long now = System.nanoTime();
+    long phaseLimit = Long.MAX_VALUE;
+    if (deadline != Long.MAX_VALUE) {
+      sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
+    } else {
+      phaseLimit = sat.conflicts + conflicts;
+    }
+    coreMode = true;
+    int result;
+    try {
+      long full = sat.deadline();
+      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+        // without a solution by this share of the phase, branch and bound gets the time
+        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        sat.setDeadline(first);
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
+          sat.setDeadline(full);
+          result = coreSearch.run(phaseLimit, coreCallLimit);
+        }
+      } else {
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
+      for (int extension = 0;
+          extend
+              && extension < MAX_CORE_EXTENSIONS
+              && result == CdclSolver.UNKNOWN
+              && deadline != Long.MAX_VALUE
+              && System.nanoTime() >= sat.deadline()
+              && coreSearch.closing(deadline);
+          extension++) {
+        now = System.nanoTime();
+        sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
+      return result;
+    } finally {
+      coreMode = false;
+      sat.setDeadline(deadline);
+      sat.setConflictLimit(Long.MAX_VALUE);
+    }
+  }
+
+  /**
+   * Runs branch and bound for the share of the time left that {@link #setCoreDelay} gives it (its
+   * budget of conflicts when there is no deadline), before core-guided search. Easy models, which
+   * branch and bound proves in a few conflicts, are then done before the core-guided phase spends
+   * its share on cores that raise the lower bound slowly. The bound that each solution must improve
+   * is an assumption, not a clause: under a bound every stratum of the core-guided phase would have
+   * to improve, which makes its strata hard. Clauses learnt under an assumption hold without it.
+   */
+  private int minimizeBeforeCores() {
+    long deadline = sat.deadline();
+    long now = System.nanoTime();
+    if (deadline != Long.MAX_VALUE) {
+      sat.setDeadline(now + (long) (coreDelayShare * Math.max(0, deadline - now)));
+    } else {
+      sat.setConflictLimit(sat.conflicts + coreDelayBudget);
+    }
+    coreMode = true; // a solution ends the call of the solver without a clause
+    try {
+      while (true) {
+        if (best != null && best[objective] <= root[objective].min()) {
+          return CdclSolver.SAT;
+        }
+        int result = best == null ? solve() : solve(-geLit(objective, best[objective]));
+        if (result == CdclSolver.UNSAT) {
+          // with a best solution: none is better, whether or not the bound took part
+          return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+        }
+        if (result == CdclSolver.UNKNOWN) {
+          return result;
+        }
+      }
+    } finally {
+      coreMode = false;
+      sat.setDeadline(deadline);
+      sat.setConflictLimit(Long.MAX_VALUE);
+    }
   }
 
   /**
@@ -584,6 +828,23 @@ public final class LcgSolver implements ExternalPropagator {
     coreShare = share;
     coreBudget = Math.max(1, conflicts);
     coreCallLimit = Math.max(1, callLimit);
+  }
+
+  /**
+   * Lets branch and bound run first when {@link #minimize} uses core-guided search: for a share of
+   * the time left, or for a number of conflicts when there is no deadline. The core-guided phase
+   * starts only when this run neither proves the optimum nor shows there is no solution, and keeps
+   * its best solution.
+   *
+   * @param share the share of the time left for branch and bound first; 0 for none
+   * @param conflicts the conflicts of that run, and of the probe, when there is no deadline
+   * @param probe the share of the time left for core-guided search before that run, which proves
+   *     the models where cores close the gap at once; 0 for none
+   */
+  public void setCoreDelay(double share, long conflicts, double probe) {
+    coreDelayShare = share;
+    coreDelayBudget = Math.max(1, conflicts);
+    coreProbeShare = probe;
   }
 
   /**
@@ -631,6 +892,25 @@ public final class LcgSolver implements ExternalPropagator {
     return atom == lit > 0;
   }
 
+  /** The domain of variable i when the solver was made. */
+  IntDomain rootDomain(int i) {
+    return root[i];
+  }
+
+  /** Probes a literal at the root, see {@link CdclSolver#probe(int)}. */
+  int[] probe(int lit) {
+    if (rootFailed) {
+      return null;
+    }
+    store.setReturnAfterPruning(!FULL_FIXPOINT);
+    try {
+      return sat.probe(lit);
+    } finally {
+      store.setReturnAfterPruning(false);
+      notifyBacktrack(0);
+    }
+  }
+
   int solveUnder(int... assumed) {
     return solve(assumed);
   }
@@ -652,12 +932,19 @@ public final class LcgSolver implements ExternalPropagator {
     while (true) {
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
+      long start = System.nanoTime();
       int result = solve();
       if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
         return result; // done, or stopped by the deadline
       }
+      if (lns != null && best != null) {
+        result = neighbourhoodRuns((long) (lnsShare * (System.nanoTime() - start)));
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
+      }
       int lb = vars[objective].min(); // after solve the domains are those of level 0
-      if (best != null && lb < best[objective]) {
+      if (lowerBoundShare > 0 && best != null && lb < best[objective]) {
         int lit = -geLit(objective, lb + 1); // objective <= lb
         limit = sat.conflicts + (long) (budget * lowerBoundShare);
         sat.setConflictLimit(limit);
@@ -678,6 +965,85 @@ public final class LcgSolver implements ExternalPropagator {
       }
       budget += budget / 2;
     }
+  }
+
+  /**
+   * Runs in large neighbourhoods of the best solution for the given time: each run assumes that the
+   * variables outside the neighbourhood keep their values in the best solution and stops after its
+   * conflicts. The assumptions are decisions, so what the runs learn holds for every later search.
+   *
+   * @return {@link CdclSolver#UNKNOWN} to go on, or the result of the search when a run proved that
+   *     no better solution exists (UNSAT without failed assumptions, or SAT at the objective's
+   *     smallest value)
+   */
+  private int neighbourhoodRuns(long nanos) {
+    long end = Math.min(System.nanoTime() + nanos, sat.deadline());
+    while (System.nanoTime() < end) {
+      int[] fixed = lns.neighbourhood();
+      int[] assumed = new int[fixed.length];
+      int n = 0;
+      for (int k : fixed) {
+        int i = lnsIds[k];
+        int v = lns.value(k);
+        if (i >= 0 && !vars[i].singleton() && vars[i].domain.contains(v)) {
+          assumed[n++] = eqVar(i, v);
+        }
+      }
+      long before = best[objective];
+      sat.setConflictLimit(sat.conflicts + lnsConflicts);
+      lnsRuns++;
+      int result = solve(Arrays.copyOf(assumed, n));
+      boolean improved = best[objective] < before;
+      if (improved) {
+        lnsImproved++;
+      }
+      if (result == CdclSolver.SAT
+          || (result == CdclSolver.UNSAT && sat.failedAssumptions().length == 0)) {
+        return result;
+      }
+      AdaptiveLns.Outcome outcome;
+      if (improved) {
+        outcome = AdaptiveLns.Outcome.IMPROVED;
+      } else if (result == CdclSolver.UNSAT) {
+        outcome = AdaptiveLns.Outcome.EXHAUSTED;
+      } else {
+        outcome = AdaptiveLns.Outcome.LIMIT;
+      }
+      lns.outcome(outcome);
+    }
+    sat.setConflictLimit(Long.MAX_VALUE);
+    return CdclSolver.UNKNOWN;
+  }
+
+  /**
+   * Turns on large neighbourhood search in {@link #minimize}: after each run of branch and bound
+   * from the first solution on, runs in neighbourhoods of the best solution take the given share of
+   * the time that run took. The neighbourhoods fix their variables by assumptions.
+   *
+   * @param neighbourhoods the neighbourhoods, over variables of the store; null turns it off
+   * @param share the time of neighbourhood runs per unit of time of branch and bound
+   * @param conflicts the conflicts of one neighbourhood run
+   */
+  public void setLns(AdaptiveLns neighbourhoods, double share, long conflicts) {
+    lns = neighbourhoods;
+    lnsShare = share;
+    lnsConflicts = Math.max(1, conflicts);
+    if (lns != null) {
+      IntVar[] xs = lns.variables();
+      lnsIds = new int[xs.length];
+      for (int k = 0; k < xs.length; k++) {
+        lnsIds[k] = index(xs[k]);
+      }
+    }
+  }
+
+  /**
+   * Returns the neighbourhoods of large neighbourhood search, for their statistics.
+   *
+   * @return the neighbourhoods, or null when it is off
+   */
+  public AdaptiveLns lns() {
+    return lns;
   }
 
   /**
@@ -854,6 +1220,12 @@ public final class LcgSolver implements ExternalPropagator {
       atomUse[dimacsVar] = 2;
       atomLiteralsLearnt++;
     }
+    keep(lit);
+  }
+
+  @Override
+  public void notifyKeptLiteral(int lit) {
+    keep(lit);
   }
 
   @Override
@@ -888,6 +1260,8 @@ public final class LcgSolver implements ExternalPropagator {
     numPending = 0;
     failed = false;
     pushed = Math.min(pushed, trail.size());
+    numImplied = 0;
+    release(level);
   }
 
   @Override
@@ -1119,6 +1493,13 @@ public final class LcgSolver implements ExternalPropagator {
     return d == LiteralMap.NONE ? 0 : sign * d;
   }
 
+  private void setPropagated(int dimacsVar, int e) {
+    if (dimacsVar >= propagated.length) {
+      propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
+    }
+    propagated[dimacsVar] = e;
+  }
+
   /**
    * Makes {@link #minimize} look only for solutions better than the best one found outside this
    * solver, for example by another search of the same model in a parallel portfolio. The supplier
@@ -1174,17 +1555,28 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     while (true) {
+      while (numImplied > 0) {
+        int lit = impliedLits[--numImplied];
+        if (sat.value(lit) <= 0) {
+          setPropagated(Math.abs(lit), impliedEntries[numImplied]);
+          return lit;
+        }
+      }
       while (pushed < trail.size()) {
-        int e = pushed++;
+        int e = pushed;
         int lit = atomLit(e);
         if (sat.value(lit) > 0) {
+          // a transient literal implies no linked one by a clause: the nearest is pushed too
+          int next = linkedNeighbour(e, lit);
+          if (next != 0 && sat.value(next) <= 0) {
+            setPropagated(Math.abs(next), e);
+            return next;
+          }
+          pushed++;
           continue;
         }
         int dimacsVar = Math.abs(lit);
-        if (dimacsVar >= propagated.length) {
-          propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
-        }
-        propagated[dimacsVar] = e;
+        setPropagated(dimacsVar, e);
         if (dimacsVar >= atomUse.length) {
           atomUse = Arrays.copyOf(atomUse, propagated.length);
         }
@@ -1258,10 +1650,12 @@ public final class LcgSolver implements ExternalPropagator {
   private void count(Constraint c, boolean own, int atoms, int at) {
     long[] counts =
         explanationCounts.computeIfAbsent(
-            c == null ? "none" : c.getClass().getSimpleName(), k -> new long[6]);
+            c == null ? "none" : c.getClass().getSimpleName(), k -> new long[8]);
     counts[at]++;
     if (!own) {
       counts[at + 1]++;
+    } else if (trail.replayed()) {
+      counts[6 + at / 3]++;
     }
     counts[at + 2] += atoms;
   }
@@ -1269,9 +1663,10 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Returns the explanation statistics per constraint class (simple name): reasons asked, those
    * given by the generic reason, and the atoms in them; then failures explained, those explained
-   * generically, and their atoms.
+   * generically, and their atoms; then the reasons and the failures explained by replaying the
+   * constraint (counted as its own).
    *
-   * @return six counts per class, in the order above
+   * @return eight counts per class, in the order above
    */
   public Map<String, long[]> explanationStatistics() {
     return explanationCounts;
@@ -1636,6 +2031,9 @@ public final class LcgSolver implements ExternalPropagator {
         activityBranching = false; // the solver's saved phases now hold this solution
       }
       solutions++;
+      if (lns != null) {
+        lns.solution();
+      }
     }
     if (coreMode) {
       return true;
