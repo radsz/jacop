@@ -117,6 +117,10 @@ public class LinearRelaxation extends Constraint
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
+  // the most pivots of the first solve, which has the root budget instead of the pivot limit: a
+  // root LP that stops at the limit gives neither a bound nor cuts
+  private static final int ROOT_PIVOTS = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
+
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
   // its pivots update, a solve that only tightens bounds a PRUNE_DISCOUNT-th of them, and a solve
   // that fails the node fills the credit; while the credit is negative the relaxation is not
@@ -361,10 +365,15 @@ public class LinearRelaxation extends Constraint
     long failed = failures;
     long pruned = prunings;
     long pivots = lp.totalPivots;
+    boolean first = calls == 0;
     try {
       solveAndPropagate(store);
     } finally {
       long cost = (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + x.length));
+      if (first) {
+        // the root solve and its cuts may take up to their own budget; they spend the credit only
+        cost = Math.min(cost, WORK);
+      }
       // back off while the relaxation finds nothing, come back as soon as it does
       if (failures > failed) {
         idle = 0;
@@ -427,7 +436,11 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = (long) rows() * (rows() + x.length);
-    int status = lp.solve((int) Math.clamp((calls == 1 ? ROOT_WORK : WORK) / size, 5, pivotLimit));
+    int status =
+        lp.solve(
+            calls == 1
+                ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
+                : (int) Math.clamp(WORK / size, 5, pivotLimit));
     if (status == DualSimplex.OPTIMAL
         && objective != null
         && CUTS
@@ -636,7 +649,7 @@ public class LinearRelaxation extends Constraint
       addCuts(chosen);
       double before = lp.value(0);
       long size = (long) rows() * (rows() + n);
-      status = lp.solve((int) Math.clamp(ROOT_WORK / size, 5, pivotLimit));
+      status = lp.solve((int) Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
       if (status != DualSimplex.OPTIMAL
           || Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         break;
