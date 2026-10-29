@@ -813,6 +813,33 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns the weakest bound a bound entry implies together with the holes of its variable
+   * recorded before it: the entry's value moved back over the removed values next to it, down to
+   * (not onto) the bound before it. A propagator that computed a bound and moved the domain past
+   * the holes beyond it can explain this bound and add {@link #addSkippedHoles} with it.
+   *
+   * @param entry a {@link #GE} or {@link #LE} entry
+   * @return the bound
+   */
+  public int skippedBound(int entry) {
+    IntVar x = entryVar[entry];
+    int v = value[entry];
+    EntryList scratch = new EntryList();
+    if (kind[entry] == GE) {
+      int previous = minBefore(x, entry);
+      while (v - 1 > previous && excludedBefore(x, v - 1, entry, scratch)) {
+        v--;
+      }
+    } else {
+      int previous = maxBefore(x, entry);
+      while (v + 1 < previous && excludedBefore(x, v + 1, entry, scratch)) {
+        v++;
+      }
+    }
+    return v;
+  }
+
+  /**
    * Adds to {@code out} the {@code !=} atoms that a bound entry skipped: the holes of its variable,
    * recorded before it, between the bound a propagator computed and the bound the domain moved to.
    * A propagator that prunes a bound by {@code inMin} or {@code inMax} implies only the computed
