@@ -111,9 +111,8 @@ final class Portfolio {
   private String[] bestNames;
   private int[] bestValues;
   private Worker bestWorker;
-  // solutions replayed by threads, and replays that gave the thread the solution
+  // the times a thread replayed the best solution
   private int imports;
-  private int replayed;
   private boolean optimisation;
   private boolean maximisation;
   private int solutions;
@@ -288,7 +287,6 @@ final class Portfolio {
         }
         if (imports > 0) {
           s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
-          s.append("%%%mzn-stat: portfolioReplayed=").append(replayed).append('\n');
         }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {
@@ -373,10 +371,6 @@ final class Portfolio {
         lock.notifyAll();
       } else {
         if (cost >= bestCost) {
-          if (cost == bestCost && w != bestWorker) {
-            // under the shared bound, a thread finds a solution as good as the best one by replay
-            replayed++;
-          }
           return;
         }
         optimisation = true;
