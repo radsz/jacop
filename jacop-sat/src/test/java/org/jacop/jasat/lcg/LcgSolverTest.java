@@ -101,6 +101,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
+import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -2238,6 +2239,68 @@ class LcgSolverTest {
     assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
     assertThat(solver.value(cost)).isEqualTo(250_000);
     assertThat(solver.atomLiterals).isLessThan(1_000);
+  }
+
+  /**
+   * Runs in large neighbourhoods between the runs of branch and bound assume the values of the best
+   * solution outside each neighbourhood; the optimum and its proof must not change.
+   */
+  @Test
+  void largeNeighbourhoodRunsKeepTheOptimum() {
+    Random rnd = new Random(23);
+    long runs = 0;
+    for (int k = 0; k < 60; k++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      List<int[]> neq = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            neq.add(new int[] {i, j});
+            store.impose(new XneqY(x[i], x[j]));
+          }
+        }
+      }
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 3;
+      }
+      w[n] = -1;
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      store.impose(new LinearInt(terms, w, "==", 0));
+      int best = Integer.MAX_VALUE;
+      int[] v = new int[n];
+      for (int code = 0; code < 46656; code++) {
+        int c = code;
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+          v[i] = c % 6;
+          c /= 6;
+          sum += w[i] * v[i];
+        }
+        boolean ok = true;
+        for (int[] e : neq) {
+          ok &= v[e[0]] != v[e[1]];
+        }
+        if (ok) {
+          best = Math.min(best, sum);
+        }
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setLowerBoundSearch(0.5, 2);
+      solver.setLns(new AdaptiveLns(store, x, cost, new Random(k)), 4.0, 2);
+      assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).isEqualTo(best);
+      runs += solver.lnsRuns;
+    }
+    assertThat(runs).isPositive();
   }
 
   @Test

@@ -44,6 +44,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -112,6 +113,7 @@ import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
+import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -1531,8 +1533,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     try {
       if (dictionary.onRestart != null) {
-        if (!startOnRestart()) {
+        // free search runs the built-ins at the root of its own runs, which the annotation's
+        // restarts limit
+        boolean freeRuns = restartCalculator != null && useFreeSearchEngine(costVar);
+        if (!startOnRestart(freeRuns)) {
           return false;
+        }
+        if (freeRuns) {
+          return executeFreeSearch(costVar);
         }
         if (restartCalculator != null) {
           // the runs of the restart search are where on_restart fixes its variables
@@ -1558,12 +1566,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Prepares MiniZinc's on_restart built-ins before the search. Without restarts there is a single
    * run, so their variables are fixed for good, as in the first run of a restart search.
    *
+   * @param runs true when the search runs the built-ins at the root of each of its runs.
    * @return false if fixing them fails.
    */
-  private boolean startOnRestart() {
+  private boolean startOnRestart(boolean runs) {
     OnRestart onRestart = dictionary.onRestart;
     onRestart.impose(store);
-    if (restartCalculator != null) {
+    if (runs || restartCalculator != null) {
       return true;
     }
     try {
@@ -1703,6 +1712,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
     }
+    AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
+    if (lns != null) {
+      // propagating the store between solver calls would pass the solver's view of the root
+      lns.disable(AdaptiveLns.Kind.PROPAGATION);
+      lcg.setLns(
+          lns,
+          Double.parseDouble(options.freeConfig("lns-share", "3")),
+          Long.parseLong(options.freeConfig("lns-conflicts", "200")));
+    }
     if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
       // the annotation is followed down each branch, as without learning
       lcg.sat().setRestarts(false);
@@ -1820,6 +1838,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: lcgSemanticUips="
             + lcg.sat().semanticUips
             + coreStatistics()
+            + lnsStatistics(lcg.lns())
             + "\n%%%mzn-stat-end\n"
             + perClass);
   }
@@ -1837,6 +1856,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.hardened
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
+  }
+
+  /**
+   * The neighbourhoods of large neighbourhood search over the decision variables of the model, or
+   * null when there is no integer objective or --free-config lns=0 turns it off.
+   */
+  private AdaptiveLns lnsNeighbourhoods(Var costVar) {
+    if (!(costVar instanceof IntVar cost) || !"1".equals(options.freeConfig("lns", "1"))) {
+      return null;
+    }
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    LinkedHashSet<IntVar> vars = new LinkedHashSet<>(Arrays.asList(searchVars.getIntVars()));
+    vars.addAll(Arrays.asList(searchVars.getBoolVars()));
+    vars.remove(cost);
+    if (objectiveVariable instanceof IntVar o) {
+      vars.remove(o);
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    return new AdaptiveLns(
+        store, vars.toArray(new IntVar[0]), cost, new Random(Store.getRandom().nextLong()));
+  }
+
+  private static String lnsStatistics(AdaptiveLns lns) {
+    if (lns == null) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lnsRuns="
+        + lns.runs()
+        + "\n%%%mzn-stat: lnsImproved="
+        + lns.improved()
+        + "\n%%%mzn-stat: lnsNeighbourhoods=\""
+        + lns.statistics()
+        + "\"";
   }
 
   private boolean useFreeSearchEngine(Var costVar) {
@@ -1872,6 +1927,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
   private int flushEvery;
 
+  // the neighbourhoods of large neighbourhood search in the FreeSearch engine, or null
+  private AdaptiveLns freeLns;
+
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
@@ -1892,7 +1950,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // restarts. Satisfaction keeps long runs, which puzzles and proofs of unsatisfiability need.
     boolean optimisation = costVar != null;
     Calculator restarts = restartCalculator;
-    if (!options.restartGiven()) {
+    // on_restart keeps the restarts of the model, whose runs its built-ins restrict
+    boolean onRestart = dictionary.onRestart != null && restartCalculator != null;
+    if (!options.restartGiven() && !onRestart) {
       int scale = Integer.parseInt(options.freeConfig("scale", optimisation ? "10" : "100"));
       restarts =
           switch (options.freeConfig("restarts", "geometric")) {
@@ -1997,6 +2057,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
+    }
+    if (onRestart) {
+      builder.restartHook(dictionary.onRestart);
+    } else if (restarts != null && !allSolutions) {
+      freeLns = lnsNeighbourhoods(costVar);
+      if (freeLns != null) {
+        builder.lns(
+            freeLns,
+            Double.parseDouble(options.freeConfig("lns-share", "3")),
+            Long.parseLong(options.freeConfig("lns-fails", "100")));
+      }
     }
     freeSearch = builder.build();
     if (worker != null) {
@@ -2958,6 +3029,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     + "\n%%%mzn-stat: objectiveProbeFailures="
                     + nf.format(freeSearch.getProbeFailures())
                 : "")
+            + lnsStatistics(freeLns)
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {

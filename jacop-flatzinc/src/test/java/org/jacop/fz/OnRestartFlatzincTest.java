@@ -111,8 +111,80 @@ class OnRestartFlatzincTest {
     // basic_lns(forall(i in 1..6)(uniform_on_restart(1, 100) <= 60 -> x[i] = sol(x[i]))) on
     // minimize sum(i * x[i]) over a permutation x, int_search(x, input_order, indomain_min) and
     // restart_constant(3); st is status()
+    String fzn = PERMUTATION_LNS;
+    String out = run(fzn, "-a", "--restart-limit", "200", "-r", "1");
+    checkLnsSolutions(out);
+    // a neighbourhood explored to the end proves nothing, and the bound 55 does not fail at the
+    // root, so the search ends only at the restart limit
+    assertFalse(out.contains("=========="), out);
+  }
+
+  @Test
+  void lnsUnderFreeSearchRunsTheBuiltInsInEachRun() throws IOException {
+    // free search runs the built-ins at the root of its own runs, limited by the model's restarts
+    String out = run(PERMUTATION_LNS, "-f", "-a", "-t", "1500", "-r", "1");
+    checkLnsSolutions(out);
+    assertFalse(out.contains("=========="), out);
+  }
+
+  @Test
+  void completeMarkerEndsFreeSearch() throws IOException {
     String fzn =
         """
+        var 1..3: x:: output_var;
+        constraint jacop_on_restart_complete(true);
+        solve :: restart_luby(10) satisfy;
+        """;
+    assertTrue(run(fzn, "-f").contains("=====UNSATISFIABLE====="));
+  }
+
+  @Test
+  void adaptiveLnsKeepsTheOptimum() throws IOException {
+    // minimize sum(i * x[i]) over a permutation, without on_restart: large neighbourhood search of
+    // free search and of LCG free search finds and proves the optimum 56
+    String fzn =
+        """
+        array [1..6] of int: w = [1,2,3,4,5,6];
+        var 1..6: x1:: output_var;
+        var 1..6: x2:: output_var;
+        var 1..6: x3:: output_var;
+        var 1..6: x4:: output_var;
+        var 1..6: x5:: output_var;
+        var 1..6: x6:: output_var;
+        var 21..126: cost:: output_var:: is_defined_var;
+        constraint jacop_alldiff([x1,x2,x3,x4,x5,x6]);
+        constraint int_lin_eq([1,2,3,4,5,6,-1],[x1,x2,x3,x4,x5,x6,cost],0):: defines_var(cost);
+        solve minimize cost;
+        """;
+    for (String[] options :
+        new String[][] {
+          {"-f", "--free-config", "lns=1,lns-fails=2"},
+          {"--lcg", "-f", "--free-config", "lns=1,lns-conflicts=2"}
+        }) {
+      String out = run(fzn, options);
+      assertTrue(out.contains("cost = 56;"), out);
+      assertTrue(out.contains("=========="), out);
+    }
+  }
+
+  private static void checkLnsSolutions(String out) {
+    List<int[]> solutions = new ArrayList<>();
+    Matcher m = Pattern.compile("cost = (\\d+);\\nst = (\\d);").matcher(out);
+    while (m.find()) {
+      solutions.add(new int[] {Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))});
+    }
+    assertEquals(1, solutions.getFirst()[1], out);
+    // the runs after the first solution have a status of SAT, UNSAT or UNKNOWN
+    assertTrue(solutions.stream().anyMatch(sol -> sol[1] != 1), out);
+    for (int i = 1; i < solutions.size(); i++) {
+      assertTrue(solutions.get(i)[0] < solutions.get(i - 1)[0], out);
+    }
+    // 6 * 1 + 5 * 2 + ... + 1 * 6
+    assertEquals(56, solutions.getLast()[0], out);
+  }
+
+  private static final String PERMUTATION_LNS =
+      """
 
         var 1..6: X_INTRODUCED_16_;
         var 1..6: X_INTRODUCED_17_;
@@ -193,24 +265,6 @@ class OnRestartFlatzincTest {
         constraint int_eq_imp(st,1,X_INTRODUCED_65_):: defines_var(X_INTRODUCED_65_);
         solve :: restart_constant(3):: int_search(x,input_order,indomain_min,complete) minimize cost;
         """;
-    String out = run(fzn, "-a", "--restart-limit", "200", "-r", "1");
-    List<int[]> solutions = new ArrayList<>();
-    Matcher m = Pattern.compile("cost = (\\d+);\\nst = (\\d);").matcher(out);
-    while (m.find()) {
-      solutions.add(new int[] {Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2))});
-    }
-    assertEquals(1, solutions.getFirst()[1], out);
-    // the runs after the first solution have a status of SAT, UNSAT or UNKNOWN
-    assertTrue(solutions.stream().anyMatch(sol -> sol[1] != 1), out);
-    for (int i = 1; i < solutions.size(); i++) {
-      assertTrue(solutions.get(i)[0] < solutions.get(i - 1)[0], out);
-    }
-    // 6 * 1 + 5 * 2 + ... + 1 * 6
-    assertEquals(56, solutions.getLast()[0], out);
-    // a neighbourhood explored to the end proves nothing, and the bound 55 does not fail at the
-    // root, so the search ends only at the restart limit
-    assertFalse(out.contains("=========="), out);
-  }
 
   private String run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");

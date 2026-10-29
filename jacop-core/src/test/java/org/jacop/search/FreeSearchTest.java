@@ -52,6 +52,7 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -64,9 +65,11 @@ import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.RestartNoGoods;
 import org.jacop.search.free.SearchMonitor;
+import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.RestartHook;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -1010,5 +1013,204 @@ class FreeSearchTest {
     }
     assertEquals(-1000, model.cost.min(), context);
     assertEquals(1000, model.cost.max(), context);
+  }
+
+  @Test
+  void largeNeighbourhoodRunsKeepTheOptimum() {
+    // runs in neighbourhoods of the best solution take as much time as the other runs and fail
+    // after three failures; they must neither lose the optimum nor claim a proof, also when
+    // objective probes share the runs with them
+    Random rnd = new Random(13);
+    long lnsRuns = 0;
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (boolean nogoods : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase);
+        AdaptiveLns lns = new AdaptiveLns(model.store, concat(model), model.cost, new Random(k));
+        List<Integer> costs = new ArrayList<>();
+        FreeSearch search =
+            FreeSearch.builder(model.store, domWdeg)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .restarts(new GeometricCalculator(1.05, 1))
+                .restartOnSolution(true)
+                .nogoodsFromRestarts(nogoods)
+                .lns(lns, 1.0, 3)
+                .probeObjective(nogoods ? 0.5 : 0, 2)
+                .minimize(model.cost)
+                .onSolution(
+                    s -> {
+                      model.checkSolution();
+                      costs.add(model.cost.value());
+                    })
+                .build();
+        Status status = search.solve();
+        lnsRuns += search.getLnsRuns();
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status, instance.toString());
+          continue;
+        }
+        assertEquals(Status.OPTIMAL, status, instance.toString());
+        assertEquals(reference[1], search.getCostValue(), instance.toString());
+        for (int i = 1; i < costs.size(); i++) {
+          assertTrue(costs.get(i) < costs.get(i - 1), costs + " " + instance);
+        }
+        assertEquals(lns.runs(), search.getLnsRuns());
+      }
+    }
+    assertTrue(lnsRuns > 0);
+  }
+
+  @Test
+  void restartHookFixesVariablesInEveryRun() {
+    // the hook fixes x0 to its value in the last solution in every other run: those runs prove
+    // nothing, so the optimum is proved by a run without it, by the bound failing at the root, or
+    // when the hook marks the search complete
+    Random rnd = new Random(17);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      Model model = new Model(instance);
+      int[] calls = new int[1];
+      int[] last = {-1};
+      List<Integer> statuses = new ArrayList<>();
+      RestartHook hook =
+          new RestartHook() {
+            @Override
+            public void restart(Store store, int status) {
+              statuses.add(status);
+              if (calls[0]++ % 2 == 0 && last[0] >= 0) {
+                model.x[0].domain.inValue(store.level, model.x[0], last[0]);
+              }
+            }
+
+            @Override
+            public void solution() {
+              last[0] = model.x[0].value();
+            }
+
+            @Override
+            public boolean completeMarked() {
+              return calls[0] > 400;
+            }
+          };
+      FreeSearch search =
+          FreeSearch.builder(
+                  model.store, new SimpleSelect<>(concat(model), null, new IndomainMin<>()))
+              .restarts(new GeometricCalculator(1.1, 2))
+              .restartOnSolution(true)
+              .nogoodsFromRestarts(true)
+              .restartHook(hook)
+              .minimize(model.cost)
+              .onSolution(s -> model.checkSolution())
+              .build();
+      Status status = search.solve();
+      if (!statuses.isEmpty()) {
+        assertEquals(RestartHook.START, (int) statuses.getFirst());
+      }
+      if (reference[0] == 0) {
+        assertEquals(Status.UNSATISFIABLE, status, instance.toString());
+        continue;
+      }
+      assertEquals(Status.OPTIMAL, status, instance.toString());
+      assertEquals(reference[1], search.getCostValue(), instance.toString());
+    }
+  }
+
+  @Test
+  void largeNeighbourhoodRunsKeepTablesInStepWithRootPrunings() {
+    // nogoods learned at a restart prune at the root; a table that first sees those prunings at
+    // the level of the next run in a neighbourhood forgets them when that level is removed, and
+    // then accepts tuples with removed values
+    Random rnd = new Random(29);
+    for (int k = 0; k < INSTANCES; k++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[N];
+      for (int i = 0; i < N; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, MAX_VALUE);
+      }
+      int[][] scopes = {{0, 1, 2}, {2, 3, 4}, {4, 5, 0}};
+      List<Set<List<Integer>>> allowed = new ArrayList<>();
+      for (int[] scope : scopes) {
+        List<int[]> tuples = new ArrayList<>();
+        Set<List<Integer>> set = new HashSet<>();
+        for (int a = 0; a <= MAX_VALUE; a++) {
+          for (int b = 0; b <= MAX_VALUE; b++) {
+            for (int c = 0; c <= MAX_VALUE; c++) {
+              if (rnd.nextInt(10) < 4) {
+                tuples.add(new int[] {a, b, c});
+                set.add(List.of(a, b, c));
+              }
+            }
+          }
+        }
+        allowed.add(set);
+        store.impose(
+            new HybridTable(
+                new IntVar[] {x[scope[0]], x[scope[1]], x[scope[2]]},
+                tuples.toArray(new int[0][])));
+      }
+      int[] w = new int[N + 1];
+      for (int i = 0; i < N; i++) {
+        w[i] = rnd.nextInt(9) - 3;
+      }
+      w[N] = -1;
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, N + 1);
+      terms[N] = cost;
+      store.impose(new LinearInt(terms, w, "==", 0));
+      Function<int[], Boolean> satisfied =
+          v -> {
+            for (int t = 0; t < scopes.length; t++) {
+              int[] sc = scopes[t];
+              if (!allowed.get(t).contains(List.of(v[sc[0]], v[sc[1]], v[sc[2]]))) {
+                return false;
+              }
+            }
+            return true;
+          };
+      int best = Integer.MAX_VALUE;
+      int[] v = new int[N];
+      for (int code = 0; code < Math.pow(MAX_VALUE + 1, N); code++) {
+        int c = code;
+        int sum = 0;
+        for (int i = 0; i < N; i++) {
+          v[i] = c % (MAX_VALUE + 1);
+          c /= MAX_VALUE + 1;
+          sum += w[i] * v[i];
+        }
+        if (satisfied.apply(v)) {
+          best = Math.min(best, sum);
+        }
+      }
+      DomWdeg domWdeg = new DomWdeg(x, new IndomainRandom<>(k));
+      FreeSearch search =
+          FreeSearch.builder(store, domWdeg)
+              .monitor(domWdeg)
+              .restarts(new GeometricCalculator(1.05, 1))
+              .restartOnSolution(true)
+              .nogoodsFromRestarts(true)
+              .lns(new AdaptiveLns(store, x, cost, new Random(k)), 1.0, 2)
+              .minimize(cost)
+              .onSolution(
+                  s -> {
+                    int[] sol = new int[N];
+                    for (int i = 0; i < N; i++) {
+                      sol[i] = x[i].value();
+                    }
+                    assertTrue(satisfied.apply(sol), "wrong solution " + Arrays.toString(sol));
+                  })
+              .build();
+      Status status = search.solve();
+      if (best == Integer.MAX_VALUE) {
+        assertEquals(Status.UNSATISFIABLE, status);
+      } else {
+        assertEquals(Status.OPTIMAL, status);
+        assertEquals(best, search.getCostValue());
+      }
+    }
   }
 }
