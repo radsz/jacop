@@ -3561,19 +3561,21 @@ public final class CdclSolver {
       checkAntecedent(lit, other, pos);
       return;
     }
-    if ((mem[r + META] & DELETED) != 0) {
+    int[] a = reasonArena(r);
+    int off = reasonOffset(r);
+    if (r >= STACK_REF ? a[off + META] != v : (a[off + META] & DELETED) != 0) {
       throw new IllegalStateException("reason of " + toDimacs(lit) + " deleted");
     }
-    if (mem[r + HEADER] != lit) {
+    if (a[off + HEADER] != lit) {
       throw new IllegalStateException(
           "reason "
-              + clauseText(mem, r + HEADER, mem[r + SIZE])
+              + clauseText(a, off + HEADER, a[off + SIZE])
               + " of "
               + toDimacs(lit)
               + " does not hold it first");
     }
-    for (int k = 1; k < mem[r + SIZE]; k++) {
-      checkAntecedent(lit, mem[r + HEADER + k], pos);
+    for (int k = 1; k < a[off + SIZE]; k++) {
+      checkAntecedent(lit, a[off + HEADER + k], pos);
     }
   }
 
