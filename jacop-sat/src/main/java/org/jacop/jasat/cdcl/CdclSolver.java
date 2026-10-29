@@ -192,6 +192,7 @@ public final class CdclSolver {
   private boolean stable;
   private long modeSwitchAt = 1000;
   private int modePhases;
+  private boolean stableForGood;
   private long conflictsAtRestart;
   private int lubyIndex;
   private long lubyLimit;
@@ -2738,6 +2739,9 @@ public final class CdclSolver {
       stable = !stable;
       modePhases++;
       modeSwitchAt = conflicts + 1000L * (modePhases / 2 + 1) * (modePhases / 2 + 1);
+      if (stableForGood && stable) {
+        modeSwitchAt = Long.MAX_VALUE;
+      }
       lubyIndex = 0;
     }
     if (stable) {
@@ -3125,6 +3129,17 @@ public final class CdclSolver {
    */
   public void setEmaRestarts(boolean on) {
     emaRestarts = on;
+  }
+
+  /**
+   * Keeps the search in stable mode once it gets there (off by default): the first focused phase
+   * runs as usual, and from the first switch on, restarts follow only the Luby sequence. An
+   * external propagator pays for every restart with its own propagation from level 0.
+   *
+   * @param on whether to stay in stable mode after the first switch
+   */
+  public void setStableForGood(boolean on) {
+    stableForGood = on;
   }
 
   /**

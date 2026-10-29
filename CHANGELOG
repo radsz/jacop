@@ -665,6 +665,15 @@ Version 5.0 (unreleased)
     overall; --lcg -f 3% faster on the mznbench kit (also with
     --free-config lcg-split=0).
 
+51. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
+    first focused phase of 1,000 conflicts is over, instead of
+    alternating the two modes. Restarts become far rarer, and each one
+    costs the CP propagation back down from level 0. Paired runs, 60 s,
+    --lcg -f on the 123 mznbench instances with at least 2,000 conflicts:
+    23 better and 13 worse, 59 complete instead of 54; --lcg: 4 better,
+    1 worse. The other 126 instances barely reach stable mode.
+    -Djacop.lcg.stableForGood=false restores the alternation.
+
 Version 4.11
 =============
 
