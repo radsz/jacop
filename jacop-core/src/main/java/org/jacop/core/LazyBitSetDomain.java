@@ -425,6 +425,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     ownedModelConstraints = null;
     ownedModelConstraintTables = null;
     ownedModelConstraintTableSizes = null;
+    ownedModelConstraintsToEvaluate = null;
     // a domain object created for a new level does not own the search constraint list
     searchConstraintsCloned = false;
   }
