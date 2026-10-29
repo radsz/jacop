@@ -167,7 +167,8 @@ public class LinearRelaxation extends Constraint
   public long cuts;
 
   // MIR cuts at the root: rounds, cuts per round, and the share of the rows they may add
-  private static final boolean CUTS = !"false".equals(System.getProperty("org.jacop.lp.cuts"));
+  private static final boolean CUTS_ENABLED =
+      !"false".equals(System.getProperty("org.jacop.lp.cuts"));
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
@@ -436,7 +437,11 @@ public class LinearRelaxation extends Constraint
                 : (int) Math.clamp(WORK / size, 5, pivotLimit));
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
-    if (status == DualSimplex.OPTIMAL && objective != null && CUTS && !cutsTried && calls == 1) {
+    if (status == DualSimplex.OPTIMAL
+        && objective != null
+        && CUTS_ENABLED
+        && !cutsTried
+        && calls == 1) {
       cutsTried = true;
       status = cutRounds();
     }

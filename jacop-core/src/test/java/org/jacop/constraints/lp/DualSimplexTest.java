@@ -119,21 +119,21 @@ class DualSimplexTest {
       double[] rowHi = new double[m + extra];
       for (int i = 0; i < m + extra; i++) {
         for (int j = 0; j < n; j++) {
-          a[i][j] = rnd.nextInt(3) == 0 ? 0 : rnd.nextInt(11) - 5;
+          a[i][j] = rnd.nextInt(3) == 0 ? 0 : rnd.nextInt(11) - 5.0;
         }
         int kind = rnd.nextInt(3);
-        int c = rnd.nextInt(21) - 10;
+        double c = rnd.nextInt(21) - 10.0;
         rowLo[i] = kind == 0 ? Double.NEGATIVE_INFINITY : c;
         rowHi[i] = kind == 1 ? Double.POSITIVE_INFINITY : c + (kind == 2 ? rnd.nextInt(3) : 0);
       }
       double[] cost = new double[n];
       for (int j = 0; j < n; j++) {
-        cost[j] = rnd.nextInt(5) - 2;
+        cost[j] = rnd.nextInt(5) - 2.0;
       }
       double[] lo = new double[n];
       double[] hi = new double[n];
       for (int j = 0; j < n; j++) {
-        lo[j] = rnd.nextInt(5) - 3;
+        lo[j] = rnd.nextInt(5) - 3.0;
         hi[j] = lo[j] + rnd.nextInt(5);
       }
       DualSimplex lp =

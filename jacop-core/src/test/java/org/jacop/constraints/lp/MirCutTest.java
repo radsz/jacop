@@ -52,12 +52,12 @@ class MirCutTest {
       long[] hi = new long[n];
       double[] value = new double[n];
       for (int j = 0; j < n; j++) {
-        c[j] = rnd.nextInt(4) == 0 ? 0 : rnd.nextInt(41) - 20;
-        lo[j] = rnd.nextInt(7) - 3;
+        c[j] = rnd.nextInt(4) == 0 ? 0 : rnd.nextInt(41) - 20L;
+        lo[j] = rnd.nextInt(7) - 3L;
         hi[j] = lo[j] + rnd.nextInt(5);
-        value[j] = lo[j] + rnd.nextDouble() * (hi[j] - lo[j]);
+        value[j] = lo[j] + rnd.nextDouble() * ((double) hi[j] - lo[j]);
       }
-      long b = rnd.nextInt(61) - 30;
+      long b = rnd.nextInt(61) - 30L;
       MirCut cut = MirCut.of(c, b, value, lo, hi);
       if (cut == null) {
         continue;
@@ -66,7 +66,7 @@ class MirCutTest {
       double activity = 0;
       double norm = 0;
       for (int k = 0; k < cut.columns.length; k++) {
-        activity += cut.weights[k] * value[cut.columns[k]];
+        activity += (double) cut.weights[k] * value[cut.columns[k]];
         norm += (double) cut.weights[k] * cut.weights[k];
       }
       assertThat((activity - cut.rhs) / Math.sqrt(norm))
