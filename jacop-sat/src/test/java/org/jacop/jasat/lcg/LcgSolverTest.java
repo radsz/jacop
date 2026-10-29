@@ -2909,6 +2909,10 @@ class LcgSolverTest {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
       solver.setCoreDelay(1, 1 + rnd.nextInt(5), rnd.nextInt(2));
+      if (rnd.nextBoolean()) {
+        // with a deadline the conflicts still bound the probe and branch and bound
+        solver.sat().setDeadline(System.nanoTime() + 3_600_000_000_000L);
+      }
     }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);

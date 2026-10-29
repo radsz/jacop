@@ -183,7 +183,9 @@ public class Options {
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
-                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)
+                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02),
+                lcg-core-delay-conflicts=<conflicts> (most conflicts of the probe and of that branch
+                and bound each, at any time limit, default 10000)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

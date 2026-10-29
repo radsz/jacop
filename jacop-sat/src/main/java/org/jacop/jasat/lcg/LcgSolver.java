@@ -677,23 +677,50 @@ public final class LcgSolver implements ExternalPropagator {
   // the most times the core-guided phase gets another share of the time
   private static final int MAX_CORE_EXTENSIONS = 8;
 
+  static final boolean PHASE_LOG = Boolean.getBoolean("jacop.lcg.phaseLog");
+
+  private void phaseLog(String phase, long c0, long t0, int result) {
+    if (PHASE_LOG) {
+      System.out.println(
+          "%%phase "
+              + phase
+              + " conflicts="
+              + (sat.conflicts - c0)
+              + " ms="
+              + (System.nanoTime() - t0) / 1_000_000
+              + " result="
+              + result
+              + " best="
+              + (best == null ? "-" : best[objective]));
+    }
+  }
+
   private int minimizeWithCores() {
     int result;
+    long c0 = sat.conflicts;
+    long t0 = System.nanoTime();
     if (coreDelayShare > 0) {
       if (coreProbeShare > 0) {
-        result = runCores(coreProbeShare, coreDelayBudget, false);
+        result = runCores(coreProbeShare, coreDelayBudget, true, false);
+        phaseLog("probe", c0, t0, result);
+        c0 = sat.conflicts;
+        t0 = System.nanoTime();
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
           return result;
         }
       }
       result = minimizeBeforeCores();
+      phaseLog("slice", c0, t0, result);
+      c0 = sat.conflicts;
+      t0 = System.nanoTime();
       if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
         return result;
       }
     }
     double[] saved = CORE_RESTORE ? activity.clone() : null;
     double savedInc = activityInc;
-    result = runCores(coreShare, coreBudget, true);
+    result = runCores(coreShare, coreBudget, false, true);
+    phaseLog("cores", c0, t0, result);
     if (result != CdclSolver.UNKNOWN) {
       return result;
     }
@@ -720,17 +747,19 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
-   * deadline. A later run picks up where this one stopped. When extend is set, a run that ran out
-   * of its time while its lower bound, at its rate so far, would meet the best solution before the
-   * deadline gets another share of the time left.
+   * deadline. When capped is set, the number of conflicts also bounds a run with a deadline, so the
+   * run does not grow with the time limit. A later run picks up where this one stopped. When extend
+   * is set, a run that ran out of its time while its lower bound, at its rate so far, would meet
+   * the best solution before the deadline gets another share of the time left.
    */
-  private int runCores(double share, long conflicts, boolean extend) {
+  private int runCores(double share, long conflicts, boolean capped, boolean extend) {
     long deadline = sat.deadline();
     long now = System.nanoTime();
     long phaseLimit = Long.MAX_VALUE;
     if (deadline != Long.MAX_VALUE) {
       sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
-    } else {
+    }
+    if (deadline == Long.MAX_VALUE || capped) {
       phaseLimit = sat.conflicts + conflicts;
     }
     coreMode = true;
@@ -740,9 +769,13 @@ public final class LcgSolver implements ExternalPropagator {
       if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
         // without a solution by this share of the phase, branch and bound gets the time
         long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        long firstLimit =
+            capped ? sat.conflicts + (long) (CORE_NO_SOLUTION * conflicts) : phaseLimit;
         sat.setDeadline(first);
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
+        result = coreSearch.run(firstLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN
+            && best != null
+            && (System.nanoTime() >= first || sat.conflicts >= firstLimit)) {
           sat.setDeadline(full);
           result = coreSearch.run(phaseLimit, coreCallLimit);
         }
@@ -770,21 +803,20 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Runs branch and bound for the share of the time left that {@link #setCoreDelay} gives it (its
-   * budget of conflicts when there is no deadline), before core-guided search. Easy models, which
-   * branch and bound proves in a few conflicts, are then done before the core-guided phase spends
-   * its share on cores that raise the lower bound slowly. The bound that each solution must improve
-   * is an assumption, not a clause: under a bound every stratum of the core-guided phase would have
-   * to improve, which makes its strata hard. Clauses learnt under an assumption hold without it.
+   * Runs branch and bound for the share of the time left that {@link #setCoreDelay} gives it, and
+   * at most its budget of conflicts, before core-guided search. Easy models, which branch and bound
+   * proves in a few conflicts, are then done before the core-guided phase spends its share on cores
+   * that raise the lower bound slowly. The bound that each solution must improve is an assumption,
+   * not a clause: under a bound every stratum of the core-guided phase would have to improve, which
+   * makes its strata hard. Clauses learnt under an assumption hold without it.
    */
   private int minimizeBeforeCores() {
     long deadline = sat.deadline();
     long now = System.nanoTime();
     if (deadline != Long.MAX_VALUE) {
       sat.setDeadline(now + (long) (coreDelayShare * Math.max(0, deadline - now)));
-    } else {
-      sat.setConflictLimit(sat.conflicts + coreDelayBudget);
     }
+    sat.setConflictLimit(sat.conflicts + coreDelayBudget);
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
       while (true) {
@@ -841,12 +873,12 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Lets branch and bound run first when {@link #minimize} uses core-guided search: for a share of
-   * the time left, or for a number of conflicts when there is no deadline. The core-guided phase
-   * starts only when this run neither proves the optimum nor shows there is no solution, and keeps
-   * its best solution.
+   * the time left and at most a number of conflicts, so that it takes about the same work at any
+   * time limit. The core-guided phase starts only when this run neither proves the optimum nor
+   * shows there is no solution, and keeps its best solution.
    *
    * @param share the share of the time left for branch and bound first; 0 for none
-   * @param conflicts the conflicts of that run, and of the probe, when there is no deadline
+   * @param conflicts the most conflicts of that run, and of the probe
    * @param probe the share of the time left for core-guided search before that run, which proves
    *     the models where cores close the gap at once; 0 for none
    */
