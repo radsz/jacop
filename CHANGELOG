@@ -667,6 +667,22 @@ Version 5.0 (unreleased)
     overall; --lcg -f 3% faster on the mznbench kit (also with
     --free-config lcg-split=0).
 
+51. Steadier --lcg -f measurements. The seed of -r now reaches LCG search
+    (LcgSolver.setSeed): it changes the initial activity order of the
+    variables and of the literals, so a configuration can be measured with
+    several seeds. Constraint scopes are LinkedHashSets, so the order in
+    which constraints are attached to their variables no longer follows
+    identity hash codes: --lcg -f gave different searches with and without
+    -Xshare:off (gfd-schedule n50f7d40m10k4: 53,045 and 24,313 nodes) and
+    now gives one. --free-config lcg-keep=1 (LcgSolver.setKeepImprovingRun)
+    lets a run that improved the best solution keep its way of branching at
+    the next restart, as on city-position, where the large improvements
+    come from one run descending from a solution and the restart rotated
+    away from it. On 92 mznbench instances (60 s, seeds 0 to 2) it halved
+    the spread of the final objectives between seeds, on develop-5.0 and
+    with the Booleans-first turns, but Borda moved +2.2 and -3.0, so it
+    is off by default. Scripts and runs: osolpro benchmarks/lcg-variance.
+
 Version 4.11
 =============
 
