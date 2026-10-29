@@ -169,6 +169,9 @@ public class Options {
                 objective cost variables; 0 = off),
                 lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
                 more, default 5000),
+                lcg-booleans-first=on|off|turns (with --lcg: activity branching decides the 0/1
+                variables before the others (on, default), or all variables in one order of
+                activity (off); turns changes between the two at each restart),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
                 blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
@@ -177,7 +180,10 @@ public class Options {
                 lns=0|1 (adaptive large neighbourhood search for optimisation, default 1),
                 lns-share=<share> (time of neighbourhood runs per unit of time of the other runs,
                 default 1, 3 with --lcg), lns-fails=<failures> (one neighbourhood run, default 100),
-                lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200)
+                lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
+                lcg-core-delay=<share> (share of the time for branch and bound between a short
+                core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
+                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

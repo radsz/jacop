@@ -595,6 +595,67 @@ Version 5.0 (unreleased)
     cite only the holes next to the bound, not every hole of the
     variable.
 
+45. IntVar keeps the bounds of its domain in two int fields, as Gecode's
+    IntVarImp does, so min(), max(), singleton() and value() no longer
+    test the domain class and load from the domain. The fields are updated
+    on every domain event other than ANY and on backtracking; search is
+    unchanged (same node counts). Paired runs, 10 s: on the 100-instance
+    dev tier (8 reps) the default search is 8.7% faster (geometric mean),
+    -f 17.6% and --lcg 3.3%; on mznbench (249 instances, 3 reps) 8.5%,
+    13.6% and 1.5%. Code that changes a variable's domain in place other
+    than through the domain's in methods, addDom or setDomain (for example
+    x.domain.subtractAdapt(v) before search) must call x.refreshBounds().
+
+46. LCG free search (--lcg -f) can take turns between deciding the 0/1
+    variables first and one order of activity for all variables: with
+    --free-config lcg-booleans-first=turns its runs change between the two
+    orders at each restart (on, the default, and off fix one order, as
+    does -Djacop.lcg.booleansFirst). Each order wins clearly on some
+    models (without: smelt, java-routing, jobshop swv07, on-call-rostering;
+    with: community-detection, mario), and no static feature of the model
+    predicted which. On the 249 mznbench instances of the free-search kit
+    (60 s, lcg-split=0, two runs each), turns solved 161 and 159 against
+    156 and 159 with Booleans first, and was better on 23 instances and
+    worse on 10 in both runs. With lcg-split=40 it loses celar graph05,
+    whose core-guided phase stalls without Booleans first, so it is not
+    the default yet. New: LcgSolver.setBooleansFirst,
+    setBooleansFirstTurns and the statistics lcgBooleanVariables,
+    lcgWideVariables and lcgBooleansFirst.
+
+47. --lcg -f no longer spends half of the time on core-guided search when
+    branch and bound would prove the optimum at once. The core-guided
+    phase now runs for 2% of the time, then branch and bound for 5%, then
+    the rest of the core-guided phase, picking up where it stopped. The
+    branch and bound in between bounds the objective by an assumption, not
+    a clause, so the core-guided strata stay easy. nfc 18_3_10 takes 1.2 s
+    instead of 25 s, fast-food ff36 1.5 s instead of 16 s, amaze 1 to 3 s
+    instead of 15 to 31 s. On 97 instances (60 s, the OR-Tools set, a
+    Challenge sample and the slow easy ones) the score is 53.0 against
+    40.0, with 60 proofs against 58 and none lost (--free-config
+    lcg-core-probe=<share>, lcg-core-delay=<share>, 0 = core-guided search
+    first). The core-guided phase also reads the objective through partial
+    sums again: with lcg-split it took the block sums for its terms, and
+    trucking lost its proofs in 0.2 s.
+
+48. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
+    The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
+    the FlatZinc models in jacop-all/target/aot-training/ through the new
+    org.jacop.fz.AotTraining and writes jacop.aot; fzn-jacop uses it when
+    it is newer than the jar. It saves about 0.2 s of JVM start-up and
+    class loading per run: on 54 small mznbench instances the median run
+    with --lcg -f is 30 % shorter with the same search. Without the cache
+    nothing changes. fzn-jacop now sends JVM warnings to stderr, so they
+    cannot mix with the FlatZinc output.
+
+49. --lcg -f on a model without a search annotation that has cumulative or
+    disjunctive resources (also those found from disjunctions, as in job
+    shop) branches on the start times of their tasks by set times in the
+    runs that used dom/wdeg: the task that can start first starts as early
+    as it can. dom/wdeg found a first makespan of 3803 on jobshop la17
+    (optimum 784) and branch and bound needed 273 solutions. On 36 job shop
+    instances (60 s) 29 are proved instead of 17. The statistic
+    lcgSetTimesStarts gives the number of start variables.
+
 Version 4.11
 =============
 

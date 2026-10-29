@@ -33,6 +33,7 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -46,7 +47,10 @@ import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -68,6 +72,11 @@ class LinearRelaxationTest {
     boolean maximize;
 
     Model(long seed) {
+      this(seed, true);
+    }
+
+    // with linear false the rows are left to the relaxation alone
+    Model(long seed, boolean linear) {
       Random rnd = new Random(seed);
       int n = 4 + rnd.nextInt(3);
       x = new IntVar[n];
@@ -75,6 +84,7 @@ class LinearRelaxationTest {
         x[i] = new IntVar(store, "x" + i, -2 - rnd.nextInt(2), 2 + rnd.nextInt(3));
         if (rnd.nextInt(3) == 0) {
           x[i].domain.subtractAdapt(x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1));
+          x[i].refreshBounds();
         }
       }
       String[] relations = {"==", "<=", ">=", "<", ">", "!="};
@@ -95,7 +105,9 @@ class LinearRelaxationTest {
         }
         String rel = relations[rnd.nextInt(relations.length)];
         int c = rnd.nextInt(9) - 4;
-        store.impose(new LinearInt(vars, w, rel, c));
+        if (linear) {
+          store.impose(new LinearInt(vars, w, rel, c));
+        }
         int form =
             switch (rel) {
               case "==" -> LinearForm.EQ;
@@ -122,7 +134,9 @@ class LinearRelaxationTest {
         vars[n] = objective;
         w[n] = -1;
         lw[n] = -1;
-        store.impose(new LinearInt(vars, w, "==", 0));
+        if (linear) {
+          store.impose(new LinearInt(vars, w, "==", 0));
+        }
         rows.add(new LinearForm(vars, lw, 0, LinearForm.EQ));
         maximize = rnd.nextBoolean();
       }
@@ -184,10 +198,80 @@ class LinearRelaxationTest {
   }
 
   @Test
+  void aloneAcceptsOnlyAssignmentsThatKeepTheRows() {
+    for (int run = 0; run < RUNS / 5; run++) {
+      Model model = new Model(run, false);
+      model.relaxation();
+      IntVar[] vars = model.x;
+      if (model.objective != null) {
+        vars = Arrays.copyOf(model.x, model.x.length + 1);
+        vars[model.x.length] = model.objective;
+      }
+      List<String> broken = new ArrayList<>();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(
+                Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+              for (LinearForm f : model.rows) {
+                // rows with != are left out of the relaxation
+                if (f.relation() != LinearForm.NE && !holds(f)) {
+                  broken.add(f.toString());
+                }
+              }
+              return super.executeAfterSolution(s, select);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      if (model.store.consistency()) {
+        search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+      }
+      assertThat(broken).as("seed %d", run).isEmpty();
+    }
+  }
+
+  private static boolean holds(LinearForm f) {
+    long sum = 0;
+    for (int k = 0; k < f.vars().length; k++) {
+      sum += f.weights()[k] * f.vars()[k].value();
+    }
+    return switch (f.relation()) {
+      case LinearForm.LE -> sum <= f.c();
+      case LinearForm.GE -> sum >= f.c();
+      default -> sum == f.c();
+    };
+  }
+
+  /**
+   * The relaxation's own pruning fixes every variable to an assignment that breaks a row; the
+   * explanation checker, which copies the relaxation alone, found that assignment.
+   */
+  @Test
+  void rejectsAnAssignmentItsOwnPruningFixed() {
+    lazyClauseGeneration(5_901_220L, new TreeMap<>());
+  }
+
+  @Test
   void agreesWithSearchUnderLazyClauseGeneration() {
     Map<String, long[]> statistics = new TreeMap<>();
     long checked = 0;
     for (int run = 0; run < RUNS; run++) {
+      checked += lazyClauseGeneration(run, statistics);
+    }
+    long[] lp = statistics.get("LinearRelaxation");
+    assertThat(lp).isNotNull();
+    // reasons and failures explained by the relaxation's own inequalities
+    assertThat(lp[0] - lp[1] + lp[3] - lp[4]).isPositive();
+    assertThat(checked).isPositive();
+  }
+
+  // solves a model under lazy clause generation with the explanation checker on and compares with
+  // depth-first search; returns the explanations checked
+  private static long lazyClauseGeneration(long run, Map<String, long[]> statistics) {
+    {
       long[] expected = search(new Model(run));
       Model model = new Model(run);
       model.relaxation();
@@ -195,7 +279,7 @@ class LinearRelaxationTest {
       LcgSolver solver = new LcgSolver(model.store);
       solver.setChecking(true);
       int status = cost == null ? solver.solve() : solver.minimize(cost);
-      checked += solver.checker().checked;
+      long checked = solver.checker().checked;
       assertThat(status).as("seed %d", run).isNotEqualTo(CdclSolver.UNKNOWN);
       assertThat(status == CdclSolver.SAT).as("seed %d", run).isEqualTo(expected[0] > 0);
       if (cost != null && status == CdclSolver.SAT) {
@@ -214,11 +298,7 @@ class LinearRelaxationTest {
                         }
                         return a;
                       }));
+      return checked;
     }
-    long[] lp = statistics.get("LinearRelaxation");
-    assertThat(lp).isNotNull();
-    // reasons and failures explained by the relaxation's own inequalities
-    assertThat(lp[0] - lp[1] + lp[3] - lp[4]).isPositive();
-    assertThat(checked).isPositive();
   }
 }

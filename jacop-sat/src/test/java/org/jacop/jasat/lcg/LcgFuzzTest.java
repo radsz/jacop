@@ -209,6 +209,7 @@ class LcgFuzzTest {
         x[i] = intVar("x" + i, rnd.nextInt(3) - 1, 2 + rnd.nextInt(3));
         if (rnd.nextInt(3) == 0 && x[i].max() - x[i].min() >= 2) {
           x[i].domain.subtractAdapt(x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1));
+          x[i].refreshBounds();
         }
       }
       b = new IntVar[3 + rnd.nextInt(2)];
@@ -915,6 +916,10 @@ class LcgFuzzTest {
     Random core = new Random(seed * 17 + 3);
     if (core.nextInt(3) == 0) {
       solver.setCoreSearch(1, 1 + core.nextInt(50), 1 + core.nextInt(20));
+      if (core.nextBoolean()) {
+        // half of them after a few conflicts of branch and bound, with or without a core probe
+        solver.setCoreDelay(1, 1 + core.nextInt(20), core.nextInt(2));
+      }
     }
     int kind = (int) (seed / 3 % 4);
     if (kind == 0) {

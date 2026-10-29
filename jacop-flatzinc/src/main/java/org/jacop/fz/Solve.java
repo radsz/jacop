@@ -53,6 +53,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -105,6 +106,8 @@ import org.jacop.search.SequenceSelect;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
+import org.jacop.search.SmallestMax;
+import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
@@ -1700,6 +1703,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setLateVariables(late);
     }
     if (free) {
+      // turns: activity branching changes between the two orders at each restart. Each order wins
+      // clearly on some models (smelt, java-routing and jobshop swv07 without, community-detection
+      // dolphin and mario with), and no feature of the model tells which, neither the kinds of its
+      // output and annotation variables nor the share of 0/1 variables. On mznbench (60 s,
+      // lcg-split=0, two runs each) turns did better than Booleans first on 23 instances and worse
+      // on 10 in both runs. Not the default yet: with lcg-split=40, the core-guided phase stalls on
+      // celar graph05 without Booleans first (proved in 13 s with them, not in 60 s in turns)
+      String booleansFirst = options.freeConfig("lcg-booleans-first", "");
+      switch (booleansFirst) {
+        case "on" -> lcg.setBooleansFirst(true);
+        case "off" -> lcg.setBooleansFirst(false);
+        case "turns" -> lcg.setBooleansFirstTurns(true);
+        case "" -> {}
+        default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
+      }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
       // core-guided search for a sum objective before branch and bound: its share of the time,
@@ -1711,6 +1729,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
+      // a short core-guided probe, then branch and bound for a share of the time, then the rest
+      // of the core-guided phase: easy models need no core-guided phase
+      lcg.setCoreDelay(
+          Double.parseDouble(options.freeConfig("lcg-core-delay", "0.05")),
+          10_000,
+          Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
     if (lns != null) {
@@ -1732,14 +1756,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return numberSolutions > 0;
   }
 
+  // the start variables lcgDefaultSelect gave to set times, for the statistics
+  private int setTimesStarts;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
-   * annotation: dom/wdeg on the default search variables, smallest value first. The store's
-   * constraints fail under LCG too, so their weights grow as without learning. Activity alone
-   * misses first solutions this finds, for example on cutstock, where each item's demand is a sum
-   * over hundreds of variables.
+   * annotation. A model with cumulative or unary resources gets set times on the start variables of
+   * its tasks: the task that can start first is started as early as it can. Any other model gets
+   * dom/wdeg on the default search variables, smallest value first. The store's constraints fail
+   * under LCG too, so their weights grow as without learning. Activity alone misses first solutions
+   * this finds, for example on cutstock, where each item's demand is a sum over hundreds of
+   * variables.
    */
   private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+    IntVar[] starts = resourceStarts();
+    setTimesStarts = starts.length;
+    if (starts.length > 0) {
+      // a scheduling model: the task that can start first starts as early as it can (the ties go
+      // to the one that must start first), the schedule generation of set times; the activity
+      // completes the assignment. dom/wdeg on jobshop la17 reaches a first makespan of 3803 against
+      // the optimum 784, and branch and bound then needs 273 solutions to prove it
+      SimpleSelect<IntVar> select =
+          new SimpleSelect<>(starts, new SmallestMin<>(), new SmallestMax<>(), new IndomainMin<>());
+      select.inputOrderTieBreaking = false;
+      return select;
+    }
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     List<IntVar> vars = new ArrayList<>();
@@ -1759,6 +1800,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // ties go to the first variable met, without the input-order lookups per tie
     select.inputOrderTieBreaking = false;
     return select;
+  }
+
+  /**
+   * Returns the start variables, not yet fixed, of the cumulative and unary resource constraints of
+   * the store, each once, in the order the store meets them.
+   */
+  private IntVar[] resourceStarts() {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> starts = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> ordered = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof CumulativeBasic resource && seen.add(c)) {
+          for (IntVar x : resource.tasks()[0]) {
+            if (!x.singleton() && starts.add(x)) {
+              ordered.add(x);
+            }
+          }
+        }
+      }
+    }
+    return ordered.toArray(new IntVar[0]);
   }
 
   private void printLcgStatistics(boolean interrupted) {
@@ -1832,8 +1895,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
+            + "\n%%%mzn-stat: lcgBooleanVariables="
+            + lcg.booleanVariables
+            + "\n%%%mzn-stat: lcgWideVariables="
+            + lcg.wideVariables
+            + "\n%%%mzn-stat: lcgBooleansFirst="
+            + lcg.booleansFirst()
             + "\n%%%mzn-stat: lcgLateVariables="
             + lcg.lateVariables
+            + "\n%%%mzn-stat: lcgSetTimesStarts="
+            + setTimesStarts
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="

@@ -125,6 +125,7 @@ class LcgSolverTest {
     IntVar x = new IntVar(store, name, rnd.nextInt(2) - 1, 3 + rnd.nextInt(3));
     if (rnd.nextInt(3) == 0) {
       x.domain.subtractAdapt(x.min() + 1 + rnd.nextInt(x.max() - x.min() - 1));
+      x.refreshBounds();
     }
     return x;
   }
@@ -316,6 +317,7 @@ class LcgSolverTest {
         solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
       }
       solver.sat().setInitialPhase(false);
+      solver.setBooleansFirstTurns(instance % 8 >= 4);
       int status = solver.minimize(cost);
       if (best == Long.MAX_VALUE) {
         assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
@@ -502,6 +504,7 @@ class LcgSolverTest {
       for (int v = 0; v < 150; v++) {
         if (rnd.nextInt(5) == 0) {
           x[0].domain.subtractAdapt(v);
+          x[0].refreshBounds();
         }
       }
       for (int i = 1; i < x.length; i++) {
@@ -565,6 +568,7 @@ class LcgSolverTest {
         x[i] = new IntVar(store, "o" + i, 0, side);
         if (rnd.nextInt(4) == 0) {
           x[i].domain.subtractAdapt(rnd.nextInt(side + 1));
+          x[i].refreshBounds();
         }
       }
       for (int i = 2 * n; i < 4 * n; i++) {
@@ -669,6 +673,7 @@ class LcgSolverTest {
                   store, "b" + k, minBin - rnd.nextInt(2), minBin + bins - 1 + rnd.nextInt(2));
           if (rnd.nextInt(3) == 0) {
             b.domain.subtractAdapt(b.min() + rnd.nextInt(b.max() - b.min() + 1));
+            b.refreshBounds();
           }
           at[k] = distinct.size();
           distinct.add(b);
@@ -686,6 +691,7 @@ class LcgSolverTest {
         load[i] = new IntVar(store, "l" + i, lo, lo + 2 + rnd.nextInt(12));
         for (int h = rnd.nextInt(3); h > 0 && load[i].getSize() > 2; h--) {
           load[i].domain.subtractAdapt(load[i].min() + 1 + rnd.nextInt(load[i].getSize() - 2));
+          load[i].refreshBounds();
         }
       }
       List<Relation> relations = new ArrayList<>();
@@ -779,6 +785,7 @@ class LcgSolverTest {
         s[i] = new IntVar(store, "s" + i, rnd.nextInt(2), horizon);
         if (rnd.nextInt(4) == 0) {
           s[i].domain.subtractAdapt(s[i].min() + 1 + rnd.nextInt(s[i].max() - s[i].min() - 1));
+          s[i].refreshBounds();
         }
         all.add(s[i]);
       }
@@ -1270,6 +1277,7 @@ class LcgSolverTest {
           for (int w = 1; w <= n; w++) {
             if (w != i + 1 && rnd.nextInt(3) == 0) {
               x[i].domain.subtractAdapt(w);
+              x[i].refreshBounds();
             }
           }
         }
@@ -1374,6 +1382,7 @@ class LcgSolverTest {
         for (int w = 0; w < n; w++) {
           if (w != i && rnd.nextInt(4) == 0) {
             x[i].domain.subtractAdapt(offset + w);
+            x[i].refreshBounds();
           }
         }
       }
@@ -1489,6 +1498,7 @@ class LcgSolverTest {
           int v = x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1);
           if (x[i].getSize() > 2) {
             x[i].domain.subtractAdapt(v);
+            x[i].refreshBounds();
           }
         }
       }
@@ -2180,6 +2190,7 @@ class LcgSolverTest {
         x[i] = new IntVar(store, "x" + i, -1, 3);
       }
       x[2].domain.unionAdapt(4, 4);
+      x[2].refreshBounds();
       x[4] = new IntVar(store, "x4", 1, 3);
       x[5] = new IntVar(store, "x5", 1, 3);
       IntVar objective = new IntVar(store, "obj", -30, 30);
@@ -2218,12 +2229,15 @@ class LcgSolverTest {
     Store store = new Store();
     IntVar x0 = new IntVar(store, "x0", 1, 1);
     x0.domain.unionAdapt(3, 4);
+    x0.refreshBounds();
     IntVar x1 = new IntVar(store, "x1", -1, 4);
     IntVar x2 = new IntVar(store, "x2", -1, 0);
     x2.domain.unionAdapt(2, 2);
+    x2.refreshBounds();
     IntVar x3 = new IntVar(store, "x3", -1, 3);
     IntVar x4 = new IntVar(store, "x4", 1, 1);
     x4.domain.unionAdapt(3, 3);
+    x4.refreshBounds();
     IntVar x5 = new IntVar(store, "x5", 1, 2);
     BooleanVar b0 = new BooleanVar(store, "b0");
     BooleanVar b1 = new BooleanVar(store, "b1");
@@ -2302,6 +2316,51 @@ class LcgSolverTest {
     solver.setChecking(true);
     assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
     assertThat(new int[] {solver.value(b), solver.value(y)}).containsExactly(0, 51);
+  }
+
+  /**
+   * Booleans first set after the solver is made moves the variables between the two orders: off
+   * gives y first, as with the property off; on again gives b first.
+   */
+  @Test
+  void booleansFirstSetAfterConstructionMovesTheVariables() {
+    for (boolean[] settings : new boolean[][] {{false}, {false, true}}) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", 0, 100);
+      BooleanVar b = new BooleanVar(store, "b");
+      store.impose(new Reified(new XlteqC(y, 50), b));
+      LcgSolver solver = new LcgSolver(store);
+      for (boolean first : settings) {
+        solver.setBooleansFirst(first);
+      }
+      solver.setChecking(true);
+      boolean first = settings[settings.length - 1];
+      assertThat(solver.booleansFirst()).isEqualTo(first);
+      assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(new int[] {solver.value(b), solver.value(y)})
+          .as("Booleans first: %s", first)
+          .containsExactly(first ? new int[] {0, 51} : new int[] {1, 0});
+    }
+  }
+
+  /** With turns, each restart into activity branching switches Booleans first. */
+  @Test
+  void booleansFirstTurnsSwitchAtRestarts() {
+    Store store = new Store();
+    IntVar y = new IntVar(store, "y", 0, 100);
+    BooleanVar b = new BooleanVar(store, "b");
+    store.impose(new Reified(new XlteqC(y, 50), b));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setBranching(LcgSolver.Branching.ACTIVITY);
+    solver.setBooleansFirstTurns(true);
+    solver.notifyRestart();
+    assertThat(solver.booleansFirst()).isFalse();
+    solver.notifyRestart();
+    assertThat(solver.booleansFirst()).isTrue();
+    solver.notifyRestart();
+    solver.setChecking(true);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(new int[] {solver.value(b), solver.value(y)}).containsExactly(1, 0);
   }
 
   /** The literal map against a TreeMap, under random insertions and lookups. */
@@ -2522,6 +2581,7 @@ class LcgSolverTest {
     IntVar y = new IntVar(store, "y", new IntervalDomain(0, 0));
     for (int v = 250_000; v <= 1_000_000; v += 250_000) {
       y.domain.unionAdapt(v, v);
+      y.refreshBounds();
     }
     BooleanVar b = new BooleanVar(store, "b");
     IntVar cost = new IntVar(store, "cost", 0, 3_000_000);
@@ -2607,9 +2667,9 @@ class LcgSolverTest {
     for (int instance = 0; instance < 300; instance++) {
       long seed = rnd.nextLong();
       Integer expected = coreModelOptimum(seed, -1, new long[3]);
-      for (int mode = 0; mode < 3; mode++) {
+      for (int mode = 0; mode < 4; mode++) {
         // mode 0: core-guided search alone; 1: a few conflicts, then branch and bound; 2: the
-        // objective maximised through its negation
+        // objective maximised through its negation; 3: a few conflicts of branch and bound first
         long[] stats = new long[3];
         Integer found = coreModelOptimum(seed, mode, stats);
         assertThat(found)
@@ -2744,9 +2804,36 @@ class LcgSolverTest {
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 
+  @Test
+  void coreGuidedSearchReadsThroughPartialSums() {
+    // obj = s1 + s2 with s1 = 2 * x0 + x1 and s2 = x2 + 3 * x3, as --lcg splits a long sum into
+    // blocks; the terms of the core-guided phase are the x's, not the block sums
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar s1 = new IntVar(store, "s1", 0, 9);
+    IntVar s2 = new IntVar(store, "s2", 0, 12);
+    IntVar obj = new IntVar(store, "obj", 0, 21);
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1], s1}, new int[] {2, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], s2}, new int[] {1, 3, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[2]}, new int[] {1, 1}, ">=", 3));
+    store.impose(new LinearInt(new IntVar[] {x[1], x[3]}, new int[] {1, 1}, ">=", 2));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // x2 = 3 and x1 = 2: 3 + 2
+    assertThat(solver.value(obj)).isEqualTo(5);
+    assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+    assertThat(solver.coreSearch().proved).isTrue();
+  }
+
   /**
    * Builds a random model with a weighted sum objective and minimises it: by depth-first search
-   * (mode -1) or by LCG with core-guided search (modes 0 to 2). Returns the optimum, or null when
+   * (mode -1) or by LCG with core-guided search (modes 0 to 3). Returns the optimum, or null when
    * there is no solution; stats gets the cores, whether core-guided search proved the optimum and
    * the soft literals it made hard.
    */
@@ -2819,6 +2906,11 @@ class LcgSolverTest {
     solver.setChecking(true);
     solver.setCoreSearch(
         1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    if (mode == 3) {
+      // a few conflicts of branch and bound, after a few of core-guided search or none, then the
+      // core-guided phase picks up where it stopped
+      solver.setCoreDelay(1, 1 + rnd.nextInt(5), rnd.nextInt(2));
+    }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {

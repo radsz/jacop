@@ -77,6 +77,7 @@ class AtomicTrailTest {
       int v = x.min() + 1 + rnd.nextInt(Math.max(1, x.max() - x.min() - 1));
       if (v < x.max()) {
         x.domain.subtractAdapt(v);
+        x.refreshBounds();
       }
     }
     return x;

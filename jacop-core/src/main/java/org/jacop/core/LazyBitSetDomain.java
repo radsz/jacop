@@ -400,6 +400,8 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     ints[i + 6] = levelEntry;
     trail.longs[entry] = bits == null ? 1L : 0L;
     trail.objects[entry * DomainTrail.OBJECTS + 1] = ranges;
+    // the variable is not visited on backtracking, so undo restores the bounds it keeps
+    trail.objects[entry * DomainTrail.OBJECTS + 2] = v;
     levelEntry = entry;
     stamp = storeLevel;
   }
@@ -423,6 +425,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     ownedModelConstraints = null;
     ownedModelConstraintTables = null;
     ownedModelConstraintTableSizes = null;
+    ownedModelConstraintsToEvaluate = null;
     // a domain object created for a new level does not own the search constraint list
     searchConstraintsCloned = false;
   }
@@ -445,6 +448,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
         bits = null;
         wordStamp = null;
       }
+      ((IntVar) from.objects[entry * DomainTrail.OBJECTS + 2]).setBounds(minBound, maxBound);
     } else if (kind == CONSTRAINTS_ENTRY) {
       constraintsStamp = ints[i + 2];
       long flags = from.longs[entry];
