@@ -191,6 +191,30 @@ class GlobalConstraintBruteForceTest {
   /** Comma-separated parts of case names to run, from -Dglobals.bruteforce.cases; all if unset. */
   private static final String CASES = System.getProperty("globals.bruteforce.cases", "");
 
+  /**
+   * Largest number of assignments an instance may have: larger ones get random variables fixed, as
+   * {@link #boxes} does, since the brute force over them took most of the time and found nothing
+   * smaller instances do not.
+   */
+  private static final long MAX_ASSIGNMENTS = 50_000;
+
+  static Instance generate(Function<Random, Instance> generator, Random random) {
+    Instance instance = generator.apply(random);
+    int[][] domains = instance.domains();
+    long size = 1;
+    for (int[] domain : domains) {
+      size *= domain.length;
+    }
+    while (size > MAX_ASSIGNMENTS) {
+      int v = random.nextInt(domains.length);
+      if (domains[v].length > 1) {
+        size /= domains[v].length;
+        domains[v] = new int[] {domains[v][random.nextInt(domains[v].length)]};
+      }
+    }
+    return instance;
+  }
+
   static Stream<Arguments> cases() {
     if (CASES.isBlank()) {
       return allCases();
@@ -343,6 +367,9 @@ class GlobalConstraintBruteForceTest {
             "BinpackingCardinality",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingCardinality),
         Arguments.of(
+            "BinpackingGroups",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingGroups),
+        Arguments.of(
             "Knapsack", (Function<Random, Instance>) GlobalConstraintBruteForceTest::knapsack),
         Arguments.of("Alternative", optionalIntervals(false)),
         Arguments.of("Span", optionalIntervals(true)),
@@ -391,7 +418,7 @@ class GlobalConstraintBruteForceTest {
   void solutionsMatchBruteForce(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode());
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       Set<List<Integer>> expected = new HashSet<>();
       bruteForce(instance, new int[instance.domains().length], 0, expected);
 
@@ -415,7 +442,7 @@ class GlobalConstraintBruteForceTest {
       String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 1);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       Set<List<Integer>> expected = new HashSet<>();
       bruteForce(instance, new int[instance.domains().length], 0, expected);
 
@@ -446,7 +473,7 @@ class GlobalConstraintBruteForceTest {
   void satisfiedMeansEntailed(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 3);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       Set<List<Integer>> solutions = new HashSet<>();
       bruteForce(instance, new int[instance.domains().length], 0, solutions);
 
@@ -528,7 +555,7 @@ class GlobalConstraintBruteForceTest {
       String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 4);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       int n = instance.domains().length;
       if (n < 2) {
         continue;
@@ -630,7 +657,7 @@ class GlobalConstraintBruteForceTest {
   void negationAndReificationMatchBruteForce(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 5);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       int n = instance.domains().length;
       if (Arrays.stream(instance.domains()).mapToDouble(d -> d.length).reduce(1, (p, q) -> p * q)
           > 50_000) {
@@ -727,7 +754,7 @@ class GlobalConstraintBruteForceTest {
   void solutionsMatchBruteForceThroughPresolve(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 2);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       int restricted = trial % 4 < 2 ? -1 : random.nextInt(instance.domains().length);
       int kept =
           restricted < 0
@@ -2840,6 +2867,68 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "items=" + Arrays.toString(var) + " weights=" + Arrays.toString(weights));
+  }
+
+  /**
+   * Four bins with tight loads and counts around a random packing, and items restricted to ranges
+   * of bins, so that the rules on groups of consecutive bins prune; half of the instances have card
+   * variables, the others use the cardinality rules without them.
+   */
+  private static Instance binpackingGroups(Random random) {
+    int bins = 4;
+    int items = 5;
+    int[] weights = randomInts(random, items, 1, 4);
+    boolean withCard = random.nextBoolean();
+    int[] packing = new int[items];
+    int[] loads = new int[bins];
+    int[] counts = new int[bins];
+    int[][] domains = new int[items + bins + (withCard ? bins : 0)][];
+    for (int i = 0; i < items; i++) {
+      packing[i] = random.nextInt(bins);
+      loads[packing[i]] += weights[i];
+      counts[packing[i]]++;
+      int lo = Math.max(0, packing[i] - random.nextInt(3));
+      int hi = Math.min(bins - 1, packing[i] + random.nextInt(3));
+      domains[i] = random.nextInt(3) == 0 ? domain(random, 0, bins - 1) : range(lo, hi);
+    }
+    for (int b = 0; b < bins; b++) {
+      int lo = Math.max(0, loads[b] - random.nextInt(3));
+      domains[items + b] = domain(random, lo, lo + 2);
+      if (withCard) {
+        int c = Math.max(0, counts[b] - random.nextInt(2));
+        domains[items + bins + b] = domain(random, c, c + 1);
+      }
+    }
+    return new Instance(
+        domains,
+        (store, x) -> {
+          IntVar[] item = Arrays.copyOfRange(x, 0, items);
+          IntVar[] load = Arrays.copyOfRange(x, items, items + bins);
+          store.impose(
+              withCard
+                  ? new Binpacking(
+                      item, load, weights.clone(), 0, Arrays.copyOfRange(x, items + bins, x.length))
+                  : new Binpacking(item, load, weights.clone(), 0).cardinalityReasoning(true));
+        },
+        x -> {
+          int[] load = new int[bins];
+          int[] count = new int[bins];
+          for (int i = 0; i < items; i++) {
+            load[x[i]] += weights[i];
+            count[x[i]]++;
+          }
+          for (int b = 0; b < bins; b++) {
+            if (load[b] != x[items + b] || withCard && count[b] != x[items + bins + b]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        "weights=" + Arrays.toString(weights) + " card=" + withCard);
+  }
+
+  private static int[] range(int lo, int hi) {
+    return java.util.stream.IntStream.rangeClosed(lo, hi).toArray();
   }
 
   private static Instance knapsack(Random random) {

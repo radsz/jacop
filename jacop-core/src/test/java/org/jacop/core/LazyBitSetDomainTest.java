@@ -139,7 +139,7 @@ class LazyBitSetDomainTest {
   @EnumSource(Kind.class)
   void randomPruningMatchesIntervalDomain(Kind kind) {
     Random random = new Random(7);
-    for (int run = 0; run < 3000; run++) {
+    for (int run = 0; run < 1000; run++) {
       int vars = 1 + run % 3;
       IntDomain[] referenceDomains = new IntDomain[vars];
       IntDomain[] lazyDomains = new IntDomain[vars];

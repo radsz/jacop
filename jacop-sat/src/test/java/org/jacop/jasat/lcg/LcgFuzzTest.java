@@ -101,6 +101,7 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
@@ -110,6 +111,7 @@ import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
@@ -431,7 +433,14 @@ class LcgFuzzTest {
           yield rnd.nextInt(3) == 0 ? new Reified(abs, bool()) : abs;
         }
         case 7 -> new Distance(p[0], p[1], p[2]);
-        case 8 -> new XexpYeqZ(p[0], intVar("e", 0, 2), p[1]);
+        case 8 ->
+            switch (rnd.nextInt(4)) {
+              case 0 -> new XexpYeqZ(p[0], intVar("e", 0, 2), p[1]);
+              // a variable exponent, negative ones included
+              case 1 -> new XexpYeqZ(p[0], intVar("e", -2, 3), p[1]);
+              case 2 -> new XdivYeqZ(p[0], p[1], p[2]);
+              default -> new XmodYeqZ(p[0], p[1], p[2]);
+            };
         case 9 -> new Alldistinct(q);
         case 10 -> new Alldifferent(q);
         case 11 -> new Alldiff(q);

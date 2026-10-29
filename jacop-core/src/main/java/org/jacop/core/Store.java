@@ -1318,6 +1318,18 @@ public class Store {
     timeStampTrailSize++;
   }
 
+  /**
+   * Records that a stateful object changed at the current level. The store calls its removeLevel
+   * only when a level at which it changed is removed, as for a timestamp, instead of at every level
+   * as for a listener registered with {@link #registerRemoveLevelListener(Stateful)}. The object
+   * records itself once per level, at its first change there.
+   *
+   * @param stateful the object that changed.
+   */
+  public void recordChange(Stateful stateful) {
+    recordTimeStampLevel(stateful, level);
+  }
+
   private void growTimeStampTrail() {
     // An explicit bound instead of Math.max, so the new capacity is provably above
     // timeStampTrailSize.

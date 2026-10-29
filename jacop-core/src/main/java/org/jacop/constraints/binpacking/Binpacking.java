@@ -51,6 +51,7 @@ import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.core.FailException;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -276,6 +277,9 @@ public class Binpacking extends Constraint
     this.zeroCandidates = new int[m];
     this.cardMin = new long[m];
     this.cardMax = new long[m];
+    this.binCandidates = new BinItem[item.length];
+    this.binCandidateWeights = new int[item.length];
+    this.binOtherWeights = new int[item.length];
 
     // with card variables the items of weight 0 are counted, so their bins are in the scope
     Stream<Var> scope =
@@ -389,6 +393,13 @@ public class Binpacking extends Constraint
     return d;
   }
 
+  /** Scratch space of processBin: the candidate items of a bin and their weights. */
+  private final BinItem[] binCandidates;
+
+  private final int[] binCandidateWeights;
+
+  private final int[] binOtherWeights;
+
   /** Bins to be (re)processed in the current consistency call, indexed from 0. */
   private BitSet todo = new BitSet();
 
@@ -409,8 +420,9 @@ public class Binpacking extends Constraint
   /** Puts an item into bin binIdx and schedules every bin it could be in before. */
   private void assignBin(Store store, IntVar b, int binIdx) {
     if (!b.singleton()) {
-      for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
-        int k = e.nextElement() - minBinNumber;
+      int last = b.max();
+      for (int val = b.min(); val <= last; val = val < last ? b.domain.nextValue(val) : last + 1) {
+        int k = val - minBinNumber;
         if (k >= 0 && k < load.length) {
           todo.set(k);
         }
@@ -426,17 +438,20 @@ public class Binpacking extends Constraint
     }
     int loadMin = load[i].min();
     int loadMax = load[i].max();
-    BinItem[] candidates = new BinItem[item.length];
+    BinItem[] candidates = binCandidates;
+    int[] weights = binCandidateWeights;
     int candidatesLength = 0;
     long required = 0;
     long possible = 0;
     int binIdx = i + minBinNumber;
     for (BinItem itemEl : item) {
-      if (itemEl.bin().dom().contains(binIdx)) {
+      IntVar b = itemEl.bin();
+      if (b.min() <= binIdx && b.max() >= binIdx && b.dom().contains(binIdx)) {
         possible += itemEl.weight();
-        if (itemEl.bin().singleton()) {
+        if (b.singleton()) {
           required += itemEl.weight();
         } else {
+          weights[candidatesLength] = itemEl.weight();
           candidates[candidatesLength++] = itemEl;
         }
       }
@@ -444,12 +459,9 @@ public class Binpacking extends Constraint
     load[i].domain.in(store.level, load[i], clamp(required), clamp(possible));
     applyLoadMaintenanceToCandidates(
         store, i, binIdx, required, possible, candidates, candidatesLength);
-    int[] Cj = new int[candidatesLength];
-    for (int l = 0; l < candidatesLength; l++) {
-      Cj[l] = candidates[l].weight();
-    }
-    applyTighteningBounds(store, i, required, Cj);
-    applyEliminationAndCommitment(store, i, binIdx, required, candidates, Cj, candidatesLength);
+    applyTighteningBounds(store, i, required, weights, candidatesLength);
+    applyEliminationAndCommitment(
+        store, i, binIdx, required, candidates, weights, candidatesLength);
     if (load[i].min() != loadMin || load[i].max() != loadMax) {
       todo.set(i);
     }
@@ -475,9 +487,9 @@ public class Binpacking extends Constraint
     }
   }
 
-  private void applyTighteningBounds(Store store, int i, long required, int[] candidateWeights) {
-    long sumCandidates = sum(candidateWeights);
-    int len = candidateWeights.length;
+  private void applyTighteningBounds(
+      Store store, int i, long required, int[] candidateWeights, int len) {
+    long sumCandidates = sum(candidateWeights, len);
     if (noSum(
         candidateWeights, len, sumCandidates, load[i].min() - required, load[i].min() - required)) {
       load[i].domain.inMin(store.level, load[i], clamp(required + noSumBounds[1]));
@@ -501,10 +513,11 @@ public class Binpacking extends Constraint
     }
     long loadMin = load[i].min();
     long loadMax = load[i].max();
-    long sumCandidates = sum(candidateWeights);
+    long sumCandidates = sum(candidateWeights, candidatesLength);
     // candidate weights without candidate j, kept in descending order; moving from j to j + 1 only
     // puts weight j back at position j
-    int[] others = Arrays.copyOfRange(candidateWeights, 1, candidatesLength);
+    int[] others = binOtherWeights;
+    System.arraycopy(candidateWeights, 1, others, 0, candidatesLength - 1);
     for (int j = 0; j < candidatesLength; j++) {
       if (j > 0) {
         others[j - 1] = candidateWeights[j - 1];
@@ -565,6 +578,9 @@ public class Binpacking extends Constraint
       applyLoadAndSizeCoherence(store);
       if (todo.isEmpty() && (cardinalityReasoning || card != null)) {
         applyCardinality(store);
+        if (todo.isEmpty()) {
+          applyBinGroupsSometimes(store);
+        }
       }
     } while (!todo.isEmpty());
     if (lbPruning) {
@@ -626,8 +642,11 @@ public class Binpacking extends Constraint
         packedCount[j] += c;
         required[j] += item[k].weight();
       } else {
-        for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
-          candidateCount[e.nextElement() - minBinNumber]++;
+        int last = b.max();
+        for (int val = b.min();
+            val <= last;
+            val = val < last ? b.domain.nextValue(val) : last + 1) {
+          candidateCount[val - minBinNumber]++;
           entries++;
         }
       }
@@ -638,8 +657,11 @@ public class Binpacking extends Constraint
         if (b.singleton()) {
           packedCount[b.value() - minBinNumber] += zeroWeightCount[z];
         } else {
-          for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
-            zeroCandidates[e.nextElement() - minBinNumber] += zeroWeightCount[z];
+          int last = b.max();
+          for (int val = b.min();
+              val <= last;
+              val = val < last ? b.domain.nextValue(val) : last + 1) {
+            zeroCandidates[val - minBinNumber] += zeroWeightCount[z];
           }
         }
       }
@@ -656,8 +678,11 @@ public class Binpacking extends Constraint
     for (int k = 0; k < item.length; k++) {
       IntVar b = item[k].bin();
       if (!b.singleton()) {
-        for (ValueEnumeration e = b.dom().valueEnumeration(); e.hasMoreElements(); ) {
-          int j = e.nextElement() - minBinNumber;
+        int last = b.max();
+        for (int val = b.min();
+            val <= last;
+            val = val < last ? b.domain.nextValue(val) : last + 1) {
+          int j = val - minBinNumber;
           candidates[candidateStart[j] + candidateCount[j]++] = k;
         }
       }
@@ -833,6 +858,240 @@ public class Binpacking extends Constraint
         removeBin(store, item[k].bin(), binIdx);
       }
     }
+  }
+
+  /** The most items times bin groups that the group rules look at in one call. */
+  private static final int GROUP_WORK_LIMIT = 1 << 16;
+
+  /** Indices into item of the candidates of the current bin group, by increasing weight. */
+  private int[] groupCandidates = new int[0];
+
+  /** The smallest and the largest bin of each item when the group rules start. */
+  private int[] groupMin = new int[0];
+
+  private int[] groupMax = new int[0];
+
+  /** The most calls the group rules skip after calls that pruned nothing. */
+  private static final int GROUP_MAX_SKIP = 63;
+
+  /** Calls of the group rules still to skip, and how many to skip after the next idle call. */
+  private int groupPending;
+
+  private int groupSkip;
+
+  /**
+   * Runs the group rules, but after calls that pruned nothing it skips the next calls, twice as
+   * many each time up to GROUP_MAX_SKIP, until a call prunes again. On models where they hardly
+   * ever prune (gbac) they cost a quarter of the time; where they prune they run at every call.
+   */
+  private void applyBinGroupsSometimes(Store store) {
+    if (groupPending > 0) {
+      groupPending--;
+      return;
+    }
+    boolean pruned;
+    try {
+      applyBinGroups(store);
+      pruned = !todo.isEmpty();
+    } catch (FailException e) {
+      groupSkip = 0;
+      throw e;
+    }
+    groupSkip = pruned ? 0 : Math.min(2 * groupSkip + 1, GROUP_MAX_SKIP);
+    groupPending = groupSkip;
+  }
+
+  /**
+   * The cardinality rules on groups of consecutive bins: the items whose bins all lie in the group
+   * are packed in it, the others that can use it are its candidates, and its count and load bounds
+   * are the sums of those of its bins. So a group that needs more items than its packed ones fails
+   * when even its lightest candidates overload it, as for one bin, although each bin on its own can
+   * still be filled. Groups of consecutive bins suit models whose bins are ordered, such as periods
+   * with precedences. The rules need one count per item, as the weight-based rules of one bin.
+   */
+  private void applyBinGroups(Store store) {
+    int m = load.length;
+    boolean counted = card != null;
+    if (m < 3 || counted && (!unitItems || zeroWeightBins.length > 0)) {
+      return;
+    }
+    int n = item.length;
+    // longest group within the work limit; whole groups of m bins are the global count
+    int longest = (int) Math.min(m - 1L, Math.max(1L, (long) GROUP_WORK_LIMIT / ((long) n * m)));
+    if (longest < 2) {
+      return;
+    }
+    if (groupCandidates.length < n) {
+      groupCandidates = new int[n];
+      groupMin = new int[n];
+      groupMax = new int[n];
+    }
+    // the bounds of the items when the call starts; the domains pruned since are subsets of them,
+    // so the rules stay sound on these, only weaker
+    for (int k = 0; k < n; k++) {
+      IntVar v = item[k].bin();
+      groupMin[k] = v.min();
+      groupMax[k] = v.max();
+    }
+    long total = counted ? totalCount : n;
+    long allMin = 0;
+    long allMax = 0;
+    for (int j = 0; j < m; j++) {
+      allMin += cardMin[j];
+      allMax += cardMax[j];
+    }
+    for (int a = 0; a < m; a++) {
+      long loadMin = load[a].min();
+      long loadMax = load[a].max();
+      long countMin = cardMin[a];
+      long countMax = cardMax[a];
+      for (int b = a + 1; b < m && b - a < longest; b++) {
+        loadMin += load[b].min();
+        loadMax += load[b].max();
+        countMin += cardMin[b];
+        countMax += cardMax[b];
+        long lo = Math.max(countMin, total - (allMax - countMax));
+        long hi = Math.min(countMax, total - (allMin - countMin));
+        applyBinGroup(store, a, b, lo, hi, loadMin, loadMax);
+      }
+    }
+  }
+
+  /** The cardinality rules on the group of bins a..b, with its count and load bounds. */
+  private void applyBinGroup(
+      Store store, int a, int b, long countMin, long countMax, long loadMin, long loadMax) {
+    int first = a + minBinNumber;
+    int last = b + minBinNumber;
+    long packed = 0;
+    long weight = 0;
+    int c = 0;
+    long candidateWeight = 0;
+    int[] lo = groupMin;
+    int[] hi = groupMax;
+    for (int k = item.length - 1; k >= 0; k--) {
+      if (hi[k] < first || lo[k] > last) {
+        continue;
+      }
+      if (lo[k] >= first && hi[k] <= last) {
+        packed++;
+        weight += item[k].weight();
+      } else if (item[k].bin().domain.isIntersecting(first, last)) {
+        groupCandidates[c++] = k;
+        candidateWeight += item[k].weight();
+      }
+    }
+    if (packed > countMax || packed + c < countMin || weight > loadMax) {
+      throw Store.failException;
+    }
+    if (weight + candidateWeight < loadMin) {
+      throw Store.failException;
+    }
+    if (c == 0) {
+      return;
+    }
+    // too small: the group needs at least need more items, the lightest candidates first
+    long need = countMin - packed;
+    long light = 0;
+    for (int t = 0; t < need; t++) {
+      light += item[groupCandidates[t]].weight();
+    }
+    if (weight + light > loadMax) {
+      throw Store.failException;
+    }
+    // too big: the group takes at most most more items, the heaviest candidates first
+    int most = (int) Math.min(c, countMax - packed);
+    long heavy = 0;
+    for (int t = c - most; t < c; t++) {
+      heavy += item[groupCandidates[t]].weight();
+    }
+    if (weight + heavy < loadMin) {
+      throw Store.failException;
+    }
+    if (packed == countMax || packed + c == countMin) {
+      // counts alone: the group takes no more items, or needs all its candidates
+      boolean in = packed < countMax;
+      for (int t = 0; t < c; t++) {
+        if (in) {
+          assignGroup(store, groupCandidates[t], first, last);
+        } else {
+          removeGroup(store, groupCandidates[t], first, last);
+        }
+      }
+      return;
+    }
+    if (need > 0) {
+      // a candidate heavier than the lightest need ones replaces the heaviest of them
+      long base = weight + light - item[groupCandidates[(int) need - 1]].weight();
+      for (int t = c - 1; t >= need; t--) {
+        int k = groupCandidates[t];
+        if (base + item[k].weight() <= loadMax) {
+          break;
+        }
+        removeGroup(store, k, first, last);
+      }
+    }
+    if (most < c) {
+      // a candidate left out of the heaviest most ones is replaced by the next heaviest
+      long base = weight + heavy + item[groupCandidates[c - most - 1]].weight();
+      for (int t = c - 1; t >= c - most; t--) {
+        int k = groupCandidates[t];
+        if (base - item[k].weight() >= loadMin) {
+          break;
+        }
+        assignGroup(store, k, first, last);
+      }
+    }
+    // the loads of the group sum to at least weight + light and at most weight + heavy
+    for (int j = a; j <= b; j++) {
+      IntVar l = load[j];
+      long othersMax = loadMax - l.max();
+      long othersMin = loadMin - l.min();
+      int min = l.min();
+      int max = l.max();
+      l.domain.in(
+          store.level, l, clamp(weight + light - othersMax), clamp(weight + heavy - othersMin));
+      if (l.min() != min || l.max() != max) {
+        todo.set(j);
+      }
+    }
+  }
+
+  /** Removes the bins first..last from item k and schedules them and its remaining bin. */
+  private void removeGroup(Store store, int k, int first, int last) {
+    IntVar v = item[k].bin();
+    if (!v.domain.isIntersecting(first, last)) {
+      return;
+    }
+    for (int i = Math.max(first, v.min()); i <= Math.min(last, v.max()); i++) {
+      todo.set(i - minBinNumber);
+    }
+    v.domain.inComplement(store.level, v, first, last);
+    groupMin[k] = v.min();
+    groupMax[k] = v.max();
+    if (v.singleton()) {
+      int j = v.value() - minBinNumber;
+      if (j >= 0 && j < load.length) {
+        todo.set(j);
+      }
+    }
+  }
+
+  /** Restricts item k to the bins first..last and schedules every bin it could be in before. */
+  private void assignGroup(Store store, int k, int first, int last) {
+    IntVar v = item[k].bin();
+    if (v.min() >= first && v.max() <= last) {
+      return;
+    }
+    int max = v.max();
+    for (int val = v.min(); val <= max; val = val < max ? v.domain.nextValue(val) : max + 1) {
+      int j = val - minBinNumber;
+      if (j >= 0 && j < load.length) {
+        todo.set(j);
+      }
+    }
+    v.domain.in(store.level, v, first, last);
+    groupMin[k] = v.min();
+    groupMax[k] = v.max();
   }
 
   /** Computes and applies the lower bound on the number of bins required. */
@@ -1190,9 +1449,13 @@ public class Binpacking extends Constraint
   }
 
   private static long sum(int[] x) {
+    return sum(x, x.length);
+  }
+
+  private static long sum(int[] x, int len) {
     long summa = 0;
-    for (int v : x) {
-      summa += v;
+    for (int i = 0; i < len; i++) {
+      summa += x[i];
     }
     return summa;
   }

@@ -30,25 +30,30 @@
 
 package org.jacop.constraints;
 
-import static org.jacop.core.Store.ASSERTS_ENABLED;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
- * Constraint X mod Y = Z.
+ * Constraint X mod Y = Z, with the remainder of the division rounding towards zero (it has the sign
+ * of X).
+ *
+ * <p>Bounds consistency: every bound has a support with the other variables in their intervals (see
+ * {@link DivModPowBounds#mod}). With Y fixed, X also loses the values whose remainder is not in the
+ * domain of Z.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ> {
+public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -66,80 +71,35 @@ public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ> {
   @Override
   public void consistency(final Store store) {
 
-    int resultMin = IntDomain.MIN_INT;
-    int resultMax = IntDomain.MAX_INT;
-
     y.domain.inComplement(store.level, y, 0);
 
     do {
       store.propagationHasOccurred = false;
-      int[] result = propagateOneRound(store, resultMin, resultMax);
-      resultMin = result[0];
-      resultMax = result[1];
+      long[] b = {x.min(), x.max(), y.min(), y.max(), z.min(), z.max()};
+      if (!DivModPowBounds.mod(b)) {
+        throw Store.failException;
+      }
+      x.domain.in(store.level, x, (int) b[0], (int) b[1]);
+      y.domain.in(store.level, y, (int) b[2], (int) b[3]);
+      z.domain.in(store.level, z, (int) b[4], (int) b[5]);
+
+      if (y.singleton()) {
+        propagateWhenYsingleton(store);
+      }
     } while (store.propagationHasOccurred);
-
-    if (ASSERTS_ENABLED && checkSolution(resultMin, resultMax) != null) {
-      throw new IllegalStateException(String.valueOf(checkSolution(resultMin, resultMax)));
-    }
   }
 
-  private int[] propagateOneRound(Store store, int resultMin, int resultMax) {
-    int[] reminderBounds = computeReminderBounds();
-    int reminderMin = reminderBounds[0];
-    int reminderMax = reminderBounds[1];
-
-    z.domain.in(store.level, z, reminderMin, reminderMax);
-
-    if (y.singleton()) {
-      propagateWhenYsingleton(store);
-    }
-
-    if (x.singleton()) {
-      propagateWhenXsingleton(store);
-    }
-
-    reminderMin = z.min();
-    reminderMax = z.max();
-
-    if (y.min() > 0 || y.max() < 0) {
-      resultMin = propagateNonZeroY(store, resultMin, resultMax, reminderMin, reminderMax);
-      resultMax = resultMaxFromLastPropagate;
-    }
-    return new int[] {resultMin, resultMax};
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return BoxExplanation.explain(trail, entry, new IntVar[] {x, y, z}, DivModPowBounds::mod, out);
   }
 
-  private int resultMaxFromLastPropagate;
-
-  private int[] computeReminderBounds() {
-    if (x.min() >= 0) {
-      return computeReminderBoundsXnonNegative();
-    }
-    if (x.max() < 0) {
-      return computeReminderBoundsXnegative();
-    }
-    return computeReminderBoundsXmixed();
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return BoxExplanation.explainFailure(trail, new IntVar[] {x, y, z}, DivModPowBounds::mod, out);
   }
 
-  private int[] computeReminderBoundsXnonNegative() {
-    int reminderMax = Math.max(Math.abs(y.min()), Math.abs(y.max())) - 1;
-    reminderMax = Math.min(reminderMax, x.max());
-    return new int[] {0, reminderMax};
-  }
-
-  private int[] computeReminderBoundsXnegative() {
-    int reminderMin = -Math.max(Math.abs(y.min()), Math.abs(y.max())) + 1;
-    reminderMin = Math.max(reminderMin, x.min());
-    return new int[] {reminderMin, 0};
-  }
-
-  private int[] computeReminderBoundsXmixed() {
-    int reminderMin = Math.min(Math.min(y.min(), -y.min()), Math.min(y.max(), -y.max())) + 1;
-    int reminderMax = Math.max(Math.max(y.min(), -y.min()), Math.max(y.max(), -y.max())) - 1;
-    reminderMin = Math.max(reminderMin, x.min());
-    reminderMax = Math.min(reminderMax, x.max());
-    return new int[] {reminderMin, reminderMax};
-  }
-
+  // x keeps the values whose remainder is in the domain of z
   private void propagateWhenYsingleton(Store store) {
     if (x.domain.getSize() < 100) {
       int absY = Math.abs(y.value());
@@ -173,39 +133,6 @@ public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ> {
         throw Store.failException;
       }
     }
-  }
-
-  private void propagateWhenXsingleton(Store store) {
-    if (!z.domain.contains(x.value() % Math.abs(y.min()))) {
-      y.domain.inMin(store.level, y, y.min() + 1);
-    } else if (!z.domain.contains(x.value() % Math.abs(y.max()))) {
-      y.domain.inMax(store.level, y, y.max() - 1);
-    }
-  }
-
-  private int propagateNonZeroY(
-      Store store, int resultMin, int resultMax, int reminderMin, int reminderMax) {
-    int oldResultMin = resultMin;
-    int oldResultMax = resultMax;
-    Interval result = IntDomain.divBounds(x.min(), x.max(), y.min(), y.max());
-    resultMin = result.min();
-    resultMaxFromLastPropagate = result.max();
-    if (oldResultMin != resultMin || oldResultMax != resultMaxFromLastPropagate) {
-      store.propagationHasOccurred = true;
-    }
-    Interval yBounds =
-        IntDomain.divBounds(
-            x.min() - reminderMax, x.max() - reminderMin, resultMin, resultMaxFromLastPropagate);
-    y.domain.in(store.level, y, yBounds.min(), yBounds.max());
-    Interval reminder =
-        IntDomain.mulBounds(resultMin, resultMaxFromLastPropagate, y.min(), y.max());
-    int zMin = reminder.min();
-    int zMax = reminder.max();
-    int newReminderMin = x.min() - zMax;
-    int newReminderMax = x.max() - zMin;
-    z.domain.in(store.level, z, newReminderMin, newReminderMax);
-    x.domain.in(store.level, x, zMin + z.min(), zMax + z.max());
-    return resultMin;
   }
 
   IntDomain makeDomain(IntVar x, int y, IntVar z) {
@@ -245,32 +172,6 @@ public class XmodYeqZ extends AbstractXopYeqZ implements Copyable<XmodYeqZ> {
   public String toString() {
 
     return id() + " : XmodYeqZ(" + x + ", " + y + ", " + z + " )";
-  }
-
-  private String checkSolution(int resultMin, int resultMax) {
-    String result;
-
-    if (z.singleton() && y.singleton() && x.singleton()) {
-      result =
-          "Operation mod does not hold "
-              + x
-              + " mod "
-              + y
-              + " = "
-              + z
-              + "(result "
-              + resultMin
-              + ".."
-              + resultMax;
-      for (int i = resultMin; i <= resultMax; i++) {
-        if (i * y.value() + z.value() == x.value()) {
-          result = null;
-        }
-      }
-    } else {
-      result = null;
-    }
-    return result;
   }
 
   @Override

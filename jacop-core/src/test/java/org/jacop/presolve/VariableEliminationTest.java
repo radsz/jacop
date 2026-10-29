@@ -180,11 +180,36 @@ class VariableEliminationTest {
     store.impose(new Reified(new XltY(x, y), b));
     store.impose(new Implies(c, new XeqC(x, 2)));
 
+    Derivation d = Presolver.of(store).keep(x, y).solutionPreserving(false).presolve();
+
+    // the reification cleanup may take them first and leave them free
+    assertThat(d.entry(b)).isNotInstanceOf(Entry.Kept.class);
+    assertThat(d.entry(c)).isNotInstanceOf(Entry.Kept.class);
+    assertThat(d.statistics().childConstraints()).isZero();
+  }
+
+  /**
+   * Keeping every solution, only variables the others determine are eliminated: the Boolean of a
+   * reification, but not that of an implication, which can be 0 or 1 when the inner constraint
+   * holds, nor a variable bounded by an inequality.
+   */
+  @Test
+  void keepingEverySolutionEliminatesOnlyDefinedVariables() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 10);
+    store.impose(new Reified(new XltY(x, y), b));
+    store.impose(new Implies(c, new XeqC(x, 2)));
+    store.impose(new LinearInt(new IntVar[] {x, z}, new int[] {1, -1}, "<=", 0));
+
     Derivation d = Presolver.of(store).keep(x, y).presolve();
 
     assertThat(d.entry(b)).isInstanceOf(Entry.Eliminated.class);
-    assertThat(d.entry(c)).isInstanceOf(Entry.Eliminated.class);
-    assertThat(d.statistics().childConstraints()).isZero();
+    assertThat(d.entry(c)).isInstanceOf(Entry.Kept.class);
+    assertThat(d.entry(z)).isInstanceOf(Entry.Kept.class);
   }
 
   /** A channel forces its integer variable to the value whose Boolean is set. */
@@ -202,6 +227,29 @@ class VariableEliminationTest {
     assertThat(d.entry(x)).isInstanceOf(Entry.Kept.class);
   }
 
+  /**
+   * A variable merged with another by aliasing is still named by its constraints, where it stands
+   * for the whole class: its only other constraint does not define it. Which variable of the class
+   * stays depends on the order of the equation's arguments, so the model is built several times.
+   */
+  @Test
+  void anAliasedVariableIsNotEliminated() {
+    for (int i = 0; i < 20; i++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 1);
+      IntVar y = new IntVar(store, "y", 0, 1);
+      IntVar z = new IntVar(store, "z", 0, 1);
+      store.impose(new OrBoolVector(new IntVar[] {x, y}, x));
+      store.impose(new XeqY(z, y));
+
+      Derivation d = Presolver.of(store).keep(x, z).presolve();
+
+      assertThat(d.eliminated()).isZero();
+      assertThat(d.entry(y)).isNotInstanceOf(Entry.Eliminated.class);
+      d.discard();
+    }
+  }
+
   @Test
   void randomModelsHaveTheSameProjectedSolutionsWithElimination() {
     Random random = new Random(20261027);
@@ -210,6 +258,7 @@ class VariableEliminationTest {
     for (int trial = 0; trial < TRIALS; trial++) {
       Model model = randomModel(random);
       boolean checking = trial % 2 == 0;
+      boolean preserving = trial % 4 < 2;
       Store store = new Store();
       IntVar[] vars = model.build(store);
       IntVar[] kept = model.kept(vars);
@@ -221,7 +270,12 @@ class VariableEliminationTest {
       Store parent = new Store();
       IntVar[] pvars = model.build(parent);
       IntVar[] pkept = model.kept(pvars);
-      Derivation d = Presolver.of(parent).keep(pkept).checking(checking).presolve();
+      Derivation d =
+          Presolver.of(parent)
+              .keep(pkept)
+              .solutionPreserving(preserving)
+              .checking(checking)
+              .presolve();
       Set<List<Integer>> found = new HashSet<>();
       if (d.outcome() != Derivation.Outcome.INFEASIBLE) {
         eliminated += d.eliminated();
@@ -233,7 +287,7 @@ class VariableEliminationTest {
             random.nextInt(),
             () -> {
               assertThat(d.returnSolution()).as("trial %d", t).isTrue();
-              assertThat(isSolution(model, pvars, d))
+              assertThat(isSolution(model, pvars))
                   .as("trial %d: %s %s", t, model, Arrays.toString(pvars))
                   .isTrue();
               found.add(values(pkept));
@@ -248,24 +302,28 @@ class VariableEliminationTest {
   }
 
   /**
-   * Whether the values of the variables satisfy the model in a fresh store. Every variable must be
-   * fixed except those presolve found free, which take any value.
+   * Whether the values of the variables satisfy the model in a fresh store. A variable postsolve
+   * leaves open (free, or half-reified) must have a value that completes them.
    */
-  private static boolean isSolution(Model model, IntVar[] assigned, Derivation d) {
+  private static boolean isSolution(Model model, IntVar[] assigned) {
     Store store = new Store();
     IntVar[] vars = model.build(store);
     try {
       for (int i = 0; i < vars.length; i++) {
-        boolean free = d.entry(assigned[i]) instanceof Entry.Free;
-        if (!assigned[i].singleton() && !free) {
-          return false;
+        if (assigned[i].singleton()) {
+          vars[i].domain.in(0, vars[i], assigned[i].value(), assigned[i].value());
         }
-        vars[i].domain.in(0, vars[i], assigned[i].min(), assigned[i].min());
       }
-      return store.consistency();
+      if (!store.consistency()) {
+        return false;
+      }
     } catch (FailException e) {
       return false;
     }
+    // a variable postsolve leaves open must have a value that completes the solution
+    boolean[] found = {false};
+    search(store, vars, 0, () -> found[0] = true);
+    return found[0];
   }
 
   /** A random model: domains, which variables are kept, and the constraints from a seed. */

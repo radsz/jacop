@@ -38,9 +38,9 @@ import org.jacop.core.Store;
  * The part of a sum's state that drops fixed variables from propagation: how many variables of each
  * of (at most) two groups are still free, and the sum of the terms of the dropped ones. The owner
  * keeps the free variables of a group first in its array and moves a variable behind them when it
- * becomes fixed; only the counts and the sum have to be restored when the store backtracks. It
- * records the levels at which it changed on the store's trail, so the store restores it only when
- * one of those levels is removed.
+ * becomes fixed; only the counts and the sum have to be restored when the store backtracks. Like a
+ * timestamp, the state is restored only when a level at which it changed is removed, so a sum that
+ * drops nothing costs nothing on backtracking.
  */
 final class DroppedTerms implements Stateful {
 
@@ -87,7 +87,7 @@ final class DroppedTerms implements Stateful {
       seconds[size] = freeSecond;
       sums[size] = fixedSum;
       size++;
-      store.recordTimeStampLevel(this, level);
+      store.recordChange(this);
     }
     fixedSum += term;
   }

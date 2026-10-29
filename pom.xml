@@ -201,6 +201,7 @@ setup to run configuration. -->
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
+                                <lcg.scheduling.instances>100</lcg.scheduling.instances>
                                 <lp.test.runs>300</lp.test.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
@@ -220,6 +221,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -229,6 +231,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -243,6 +246,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -326,6 +330,9 @@ setup to run configuration. -->
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>${maven.surefire.version}</version>
                         <configuration>
+                            <systemPropertyVariables>
+                                <upTo30sec.list>list-commit.txt</upTo30sec.list>
+                            </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
@@ -339,6 +346,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -348,6 +356,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -362,6 +371,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -462,6 +472,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -471,6 +482,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -485,6 +497,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -585,6 +598,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -594,6 +608,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -608,6 +623,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeBruteForceTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
+                                <include>**/UnaryTimetableTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -1080,6 +1096,7 @@ setup to run configuration. -->
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
                         <include>**/AccumulatedFailureCountTest.java</include>
+                        <include>**/SimpleSelectTieBreakTest.java</include>
                         <include>**/FreeSearchTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>

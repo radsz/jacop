@@ -264,7 +264,7 @@ public class Tables {
 
   /** Removes aliased variables from the search variable collection. */
   void removeAliasFromSearch() {
-    // one pass: removing each alias by itself took seconds on models with many aliases
+
     defaultSearchVariables.removeIf(aliasTable::containsKey);
   }
 

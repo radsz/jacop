@@ -48,9 +48,16 @@ class ExampleBasedTest {
   private static final int TIMEOUT_MS = 15_000;
   private static final int TIMEOUT_LONG_MS = 60_000;
 
+  /** Search on these models only needs to start without an error, not to finish. */
+  private static final int SHORT_SEARCH_MS = 1_000;
+
   private static void runFzn(String relativePathFromModuleRoot) {
+    runFzn(relativePathFromModuleRoot, TIMEOUT_MS);
+  }
+
+  private static void runFzn(String relativePathFromModuleRoot, int timeOutMs) {
     String fzn = Path.of(relativePathFromModuleRoot).toString();
-    new Fz2jacop().callMain(new String[] {"-n", "1", "-t", String.valueOf(TIMEOUT_MS), fzn});
+    new Fz2jacop().callMain(new String[] {"-n", "1", "-t", String.valueOf(timeOutMs), fzn});
   }
 
   @Test
@@ -74,7 +81,8 @@ class ExampleBasedTest {
   @Test
   @Timeout(TIMEOUT_MS)
   void testGardnerDinner() {
-    assertDoesNotThrow(() -> runFzn("src/main/java/org/jacop/fz/examples/gardner_dinner.fzn"));
+    assertDoesNotThrow(
+        () -> runFzn("src/main/java/org/jacop/fz/examples/gardner_dinner.fzn", SHORT_SEARCH_MS));
   }
 
   @Test
@@ -159,7 +167,10 @@ class ExampleBasedTest {
   @Timeout(TIMEOUT_LONG_MS)
   void testMinizincPerfectSquare() {
     assertDoesNotThrow(
-        () -> runFzn("src/main/java/org/jacop/fz/examples/minizinc/perfect_square.fzn"));
+        () ->
+            runFzn(
+                "src/main/java/org/jacop/fz/examples/minizinc/perfect_square.fzn",
+                SHORT_SEARCH_MS));
   }
 
   @Test

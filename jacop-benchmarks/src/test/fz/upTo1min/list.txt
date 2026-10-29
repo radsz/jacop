@@ -40,3 +40,5 @@ pentominoes-zayenz/size_10_tiles_10_seed_17_strategy_target
 table_crossword/cw_13x13
 golfers/golfers_5_5_6
 pentominoes/04_int
+dudeney_bishop_placement2/dudeney_bishop_placement2
+radiation/i7-9

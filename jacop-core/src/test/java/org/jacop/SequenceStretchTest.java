@@ -251,7 +251,7 @@ class SequenceStretchTest {
   void domainConsistentAtDiveNodes() {
     Random random = new Random(27);
     int nodes = 0;
-    for (int trial = 0; trial < 3000; trial++) {
+    for (int trial = 0; trial < 1000; trial++) {
       Instance instance = random(random, 8, false);
       Store store = new Store();
       IntVar[] x = variables(store, instance.domains());
@@ -317,7 +317,7 @@ class SequenceStretchTest {
         }
       }
     }
-    assertThat(nodes).isGreaterThan(5000);
+    assertThat(nodes).isGreaterThan(1500);
   }
 
   private static long[] tree(

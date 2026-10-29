@@ -186,7 +186,6 @@ public class SimpleSelect<T extends Var> extends AbstractSelect<T> {
       return false;
     }
     if (inputOrderTieBreaking) {
-      // an array instead of the position map: ties are frequent, and each lookup hashed
       return inputPosition[currentPosition] < inputPosition[optimalPosition];
     }
     return false;

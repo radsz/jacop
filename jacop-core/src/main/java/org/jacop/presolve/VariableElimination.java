@@ -101,6 +101,7 @@ final class VariableElimination {
   static final int SUBSTITUTION_TERMS = 10;
 
   private final Set<Var> frozen;
+  private final boolean defined;
   private final Map<Var, List<Constraint>> occurrences = new IdentityHashMap<>();
   private final Map<Constraint, List<Var>> scope = new IdentityHashMap<>();
   private final Map<Constraint, Boolean> live = new IdentityHashMap<>();
@@ -116,9 +117,13 @@ final class VariableElimination {
    * Creates the rule.
    *
    * @param frozen the variables that must keep a counterpart in the child.
+   * @param defined true to eliminate only variables whose value the others determine, so every
+   *     solution of the parent keeps one solution of the child; false to eliminate also those that
+   *     some value completes, which keeps the solutions projected on the frozen variables only.
    */
-  VariableElimination(Set<Var> frozen) {
+  VariableElimination(Set<Var> frozen, boolean defined) {
     this.frozen = frozen;
+    this.defined = defined;
   }
 
   /**
@@ -244,16 +249,18 @@ final class VariableElimination {
     if (f != null) {
       int at = position(f, v);
       if (at >= 0) {
-        return projectable(v, f, at);
+        return defined
+            ? f.relation() == LinearForm.EQ && implied(v, f, at) != null
+            : projectable(v, f, at);
       }
     }
-    if ((c.getClass() == Reified.class || c.getClass() == Implies.class)
+    if ((c.getClass() == Reified.class || c.getClass() == Implies.class && !defined)
         && v.min() >= 0
         && v.max() <= 1
         && ((AbstractReifiedConstraint) c).b == v
         && !((AbstractReifiedConstraint) c).c.arguments().contains(v)) {
-      // v is 0..1 and not fixed: it can take the truth value of the inner constraint, and an
-      // implication holds with 0
+      // v is 0..1 and not fixed: it can take the truth value of the inner constraint, which the
+      // others determine, and an implication holds with 0
       return true;
     }
     return enumerated(v, c);
@@ -316,7 +323,8 @@ final class VariableElimination {
 
   /**
    * Checks by enumeration that every assignment of the other variables of a small constraint leaves
-   * a value of v that satisfies it, on a copy of the constraint in a store of its own.
+   * a value of v that satisfies it (exactly one with {@code defined}), on a copy of the constraint
+   * in a store of its own.
    */
   private boolean enumerated(IntVar v, Constraint c) {
     if (probes >= PROBE_BUDGET || v.getSize() > VALUE_LIMIT || !Copyable.canCopy(c)) {
@@ -348,14 +356,19 @@ final class VariableElimination {
       return false;
     }
     if (i == others.size()) {
+      int supports = 0;
       for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
         int value = e.nextElement();
         if (probe.tryValue(v, value)) {
           probe.pop();
-          return true;
+          supports++;
+          if (!defined) {
+            break;
+          }
         }
       }
-      return false;
+      // with defined, the others must leave v exactly one value
+      return defined ? supports == 1 : supports > 0;
     }
     // every value of the parent's domain, including those the values of the earlier variables
     // removed here: such a value has no value of v either

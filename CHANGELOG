@@ -462,6 +462,61 @@ Version 5.0 (unreleased)
     spot5, gbac and cutstock (60 s, --lcg -f) more instances end better
     than worse.
 
+35. Binpacking with cardinality also reasons on groups of consecutive
+    bins: the items whose bins all lie in the group are packed in it, its
+    count and load bounds are the sums over its bins, and the rules of one
+    bin (counts, "too small", "too big", load bounds) are applied to the
+    group. Each bin of a group can be fillable on its own while the group
+    is not, as in curriculum models where precedences confine courses to
+    ranges of periods. When the group rules keep pruning nothing they are
+    run at fewer and fewer calls until they prune again. On 40 generated
+    balanced academic curriculum instances (60 s) JaCoP proves all 40
+    optima, against 37 before, and bacp_p10_n71_s0_1_6 needs 42 failures
+    instead of 251,141; the minizinc-benchmarks bacp, curriculum and gbac
+    instances end as before.
+
+36. Free search (-f) for optimisation spends about one failure in twenty on
+    objective probes, after OR-Tools CP-SAT's objective_lb_search and
+    objective_shaving workers: runs with the objective bounded by its lower
+    bound plus an offset (0 at first, doubled after each refuted probe,
+    halved after a probe that reached its fail limit). A probe that
+    explores its whole tree raises the lower bound at the root for good;
+    probes do not teach dom/wdeg, give no restart nogoods and do not count
+    as restarts. FreeSearch.Builder.probeObjective(share, failLimit) in the
+    Java API (off by default), --free-config probe=<share> (0 = off),
+    probe-fails=<n> in FlatZinc, and the statistics objectiveProbes,
+    objectiveProbesRefuted and objectiveProbeFailures with -s. On 375
+    optimisation instances of the free-search benchmark sets (60 s) it
+    proves 6 more optima and loses 2, is 5 to 11 % faster on the
+    instances both prove in three of the four sets (linear-to-program
+    60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
+    on 24 of the others and a worse one on 21.
+
+37. A LinearInt that drops its fixed variables restores that state on
+    backtracking only at the levels where it changed, instead of being
+    called at every removed level. Many short sums, such as the blocks of
+    a long sum split under --lcg, no longer slow down backtracking:
+    skill_allocation_mzn_1m_2 (-f --lcg) solves in 11.9 s instead of
+    17.2 s with the same search. Store.recordChange(Stateful) is the new
+    hook for such state.
+
+38. Not-last in CumulativeUnary (MiniZinc disjunctive) now tests every
+    task, as Vilim's algorithm does. A task whose latest completion lets
+    no new task into Theta was skipped, and a task bounded by its own
+    latest start now gets the largest latest start of the other tasks.
+    Pruning is stronger, so search trees can change: the job shop and
+    open shop instances solved to optimality keep their node counts, and
+    a 150x15 job shop reaches makespan 8992 in 30 s instead of 9003.
+
+39. Faster FlatZinc front end and input order tie-breaking. SimpleSelect
+    breaks ties in input order from an int array kept in step with its
+    search array instead of two map lookups per comparison; removing
+    aliased variables from the default search is linear instead of
+    quadratic; table rows are sorted and deduplicated as int[] without
+    boxing; and each FlatZinc constraint name is resolved to its
+    generator method once. oocsp_racks_100_r1 runs in 18 s instead of
+    29 s (search 5.5 s instead of 15 s), with the same search tree.
+
 Version 4.11
 =============
 

@@ -43,7 +43,6 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
-import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -69,8 +68,7 @@ import org.jacop.lcg.LinearForm;
  * @version 5.0
  */
 @Slf4j
-public class LinearInt extends PrimitiveConstraint
-    implements Stateful, Copyable<LinearInt>, Explainable {
+public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt>, Explainable {
 
   /*
    * Defines relations
@@ -599,19 +597,6 @@ public class LinearInt extends PrimitiveConstraint
     long w = a[i];
     a[i] = a[j];
     a[j] = w;
-  }
-
-  @Override
-  public void removeLevel(int level) {
-    if (dropped != null) {
-      dropped.removeLevel(level);
-    }
-  }
-
-  @Override
-  public boolean isStateful() {
-    // the dropped terms restore themselves from the store's trail, at the levels where they changed
-    return false;
   }
 
   void pruneLtEq(long b) {
