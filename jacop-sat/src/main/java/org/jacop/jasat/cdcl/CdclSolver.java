@@ -1078,11 +1078,26 @@ public final class CdclSolver {
 
   private int visitLowWatched(int ref) {
     int lits = ref + HEADER;
+    int size = mem[ref + SIZE];
+    // both watches may be false: literals can be assigned between the backtrack and this visit
+    for (int w = 0; w < 2; w++) {
+      int falseLit = mem[lits + w];
+      if (vals[falseLit] >= 0) {
+        continue;
+      }
+      for (int k = 2; k < size; k++) {
+        int l = mem[lits + k];
+        if (vals[l] >= 0) {
+          mem[lits + w] = l;
+          mem[lits + k] = falseLit;
+          removeWatch(falseLit, ref);
+          addWatch(l, mem[lits + 1 - w], ref);
+          break;
+        }
+      }
+    }
     int w0 = mem[lits];
     int w1 = mem[lits + 1];
-    if (vals[w0] >= 0 && vals[w1] >= 0) {
-      return NO_CONFLICT;
-    }
     if (vals[w0] < 0 && vals[w1] < 0) {
       conflictRef = ref;
       return ref;
@@ -1092,23 +1107,9 @@ public final class CdclSolver {
       mem[lits] = w1;
       mem[lits + 1] = w0;
     }
-    int other = mem[lits];
-    int falseLit = mem[lits + 1];
-    if (vals[other] > 0) {
-      return NO_CONFLICT;
+    if (vals[mem[lits]] == 0 && vals[mem[lits + 1]] < 0) {
+      assign(mem[lits], ref);
     }
-    int size = mem[ref + SIZE];
-    for (int k = 2; k < size; k++) {
-      int l = mem[lits + k];
-      if (vals[l] >= 0) {
-        mem[lits + 1] = l;
-        mem[lits + k] = falseLit;
-        removeWatch(falseLit, ref);
-        addWatch(l, other, ref);
-        return NO_CONFLICT;
-      }
-    }
-    assign(other, ref);
     return NO_CONFLICT;
   }
 

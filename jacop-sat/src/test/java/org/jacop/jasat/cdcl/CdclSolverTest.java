@@ -659,6 +659,19 @@ class CdclSolverTest {
   }
 
   @Test
+  void clauseRevisitedAfterBacktrackWithBothWatchesFalseIsNotAConflict() {
+    CdclSolver s = decidedInOrder(6);
+    // watched by 6 (true at level 6) and -4 (false at level 4); -2 false at level 2
+    assertTrue(s.addClauseLive(new int[] {-4, -2, 6}, 3));
+    s.backtrackTo(1);
+    // both watches false before the next propagation; -2 is free, so the clause is unit
+    assertTrue(s.addClauseLive(new int[] {-6}, 1));
+    assertTrue(s.addClauseLive(new int[] {4}, 1));
+    assertTrue(s.propagateUnits());
+    assertEquals(-1, s.value(2));
+  }
+
+  @Test
   void unitAssertedAgainByBacktrackPropagatesAtLevelZero() {
     CdclSolver s = new CdclSolver();
     s.setChecking(true);
