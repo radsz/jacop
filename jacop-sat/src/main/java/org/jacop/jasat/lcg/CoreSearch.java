@@ -76,6 +76,7 @@ public final class CoreSearch {
     final Totalizer totalizer; // for a totalizer output: the totalizer and the count; else null
     final int count;
     boolean expanded; // its successor is soft already
+    boolean hard; // true in every solution better than the best one
 
     Soft(int lit, long weight, int term, int level, Totalizer totalizer, int count) {
       this.lit = lit;
@@ -131,6 +132,9 @@ public final class CoreSearch {
 
   /** Statistics: literals in the cores found. */
   public long coreLiterals;
+
+  /** Statistics: soft literals made hard because violating one costs more than the gap. */
+  public long hardened;
 
   /** Statistics: solutions found under the assumptions. */
   public long stratumSolutions;
@@ -302,6 +306,9 @@ public final class CoreSearch {
       if (lcg.bestObjective() <= lowerBound) {
         return CdclSolver.SAT;
       }
+      if (!harden()) {
+        return CdclSolver.SAT; // no solution better than the best one
+      }
       List<Integer> assumed = new ArrayList<>();
       for (Soft s : softs) {
         if (s.weight >= threshold && s.weight > 0) {
@@ -341,6 +348,30 @@ public final class CoreSearch {
         return CdclSolver.UNKNOWN;
       }
     }
+  }
+
+  /**
+   * Makes hard each soft literal whose weight exceeds the gap between the best solution and the
+   * lower bound: any assignment that violates it costs at least the lower bound plus its weight, so
+   * no better solution violates it (hardening, as in RC2 and Geas). Returns false when the solver
+   * becomes unsatisfiable.
+   */
+  private boolean harden() {
+    long best = lcg.bestObjective();
+    if (best == Long.MAX_VALUE) {
+      return true;
+    }
+    long gap = best - lowerBound;
+    for (Soft s : softs) {
+      if (!s.hard && s.weight > gap) {
+        s.hard = true;
+        hardened++;
+        if (!sat.addClause(-s.lit)) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /**

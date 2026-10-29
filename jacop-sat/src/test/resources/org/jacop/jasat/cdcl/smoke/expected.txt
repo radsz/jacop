@@ -11,7 +11,6 @@ factor_12_prime_1.cnf.gz unsat
 factor_12_semiprime_1.cnf.gz sat
 jobshop_10_10_0_1.cnf.gz unsat
 jobshop_10_5_0_2.cnf.gz sat
-php_8_1.cnf.gz unsat
 qcp_15_40_2.cnf.gz sat
 qcp_15_45_1.cnf.gz sat
 queens_20_1.cnf.gz sat

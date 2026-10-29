@@ -88,7 +88,10 @@ public final class ElementVariableExplanation {
       trail.addUpperBound(index, entry, out);
       return true;
     }
-    if (y != value || kind == AtomicTrail.NE) {
+    if (y == value && kind == AtomicTrail.NE) {
+      return missingValue(trail, entry, index, list, value, offset, out);
+    }
+    if (y != value) {
       return false;
     }
     boolean ge = kind == AtomicTrail.GE;
@@ -126,6 +129,39 @@ public final class ElementVariableExplanation {
     }
     for (long u = bound; ge ? u < a : u > a; u += ge ? 1 : -1) {
       if (!trail.excludedBefore(value, (int) u, entry, out)) {
+        return false;
+      }
+    }
+    trail.addLowerBound(index, entry, out);
+    trail.addUpperBound(index, entry, out);
+    return true;
+  }
+
+  // a value removed from the value variable is missing from every list variable the index can
+  // select
+  private static boolean missingValue(
+      AtomicTrail trail,
+      int entry,
+      IntVar index,
+      IntVar[] list,
+      IntVar value,
+      int offset,
+      EntryList out) {
+    int a = trail.value(entry);
+    int lo = trail.minBefore(index, entry);
+    int hi = trail.maxBefore(index, entry);
+    if (index == value || (long) hi - lo >= MAX_POSITIONS) {
+      return false;
+    }
+    for (int v = lo; v <= hi; v++) {
+      if (trail.excludedBefore(index, v, entry, out)) {
+        continue;
+      }
+      int j = v - 1 - offset;
+      if (j < 0 || j >= list.length || list[j] == value) {
+        return false;
+      }
+      if (!trail.excludedBefore(list[j], a, entry, out)) {
         return false;
       }
     }

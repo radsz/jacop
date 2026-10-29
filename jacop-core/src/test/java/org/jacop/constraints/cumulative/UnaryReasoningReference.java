@@ -40,7 +40,8 @@ import org.jacop.core.Store;
  * Theta and Theta-Lambda trees.
  *
  * <p>This is {@link UnaryReasoning} as it was before the time line, kept as the reference for
- * {@link UnaryReasoningTest}.
+ * {@link UnaryReasoningTest}, with not-last testing every task and bounding it by the largest lst
+ * of the other tasks in Theta.
  *
  * <p>It works on primitive arrays reused between calls, and keeps the task orders of the previous
  * call, which it re-sorts by insertion since bounds change little between calls. One instance
@@ -323,6 +324,12 @@ class UnaryReasoningReference {
     }
   }
 
+  // the largest lst in Theta without task i: Theta holds the first indexQ tasks in lst order
+  private int lastLstWithout(int i, int indexQ) {
+    int j = lstOrder[indexQ - 1];
+    return j != i ? lst[j] : lst[lstOrder[indexQ - 2]];
+  }
+
   /**
    * Not-last: a task that cannot be last among a set of tasks ends before the latest start of one
    * of them.
@@ -337,17 +344,15 @@ class UnaryReasoningReference {
     int indexQ = 0;
     for (int p = 0; p < n; p++) {
       int i = lctOrder[p];
-      boolean entered = false;
       while (indexQ < n && lct[i] > lst[lstOrder[indexQ]]) {
         if (ectWithout(i) > lst[i]) {
-          update[i] = Math.min(lst[lstOrder[indexQ - 1]], update[i]);
+          update[i] = Math.min(lastLstWithout(i, indexQ), update[i]);
         }
         insertTheta(lstOrder[indexQ]);
         indexQ++;
-        entered = true;
       }
-      if (entered && ectWithout(i) > lst[i]) {
-        update[i] = Math.min(lst[lstOrder[indexQ - 1]], update[i]);
+      if (indexQ > 0 && ectWithout(i) > lst[i]) {
+        update[i] = Math.min(lastLstWithout(i, indexQ), update[i]);
       }
     }
     for (int i = 0; i < n; i++) {

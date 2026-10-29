@@ -85,6 +85,7 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
@@ -676,6 +677,22 @@ class ConsistencyChecker {
     return new Model(constraint.apply(x, y, z), relation, new IntVar[] {x, y, z});
   }
 
+  /**
+   * z = x^y as MiniZinc's int_pow defines it: 1 div x^-y for y &lt; 0, with no solution at x = 0.
+   */
+  private static boolean pow(int[] t) {
+    int x = t[0];
+    int y = t[1];
+    if (y < 0) {
+      return x != 0 && t[2] == (x == 1 ? 1 : x == -1 ? ((y & 1) == 0 ? 1 : -1) : 0);
+    }
+    long p = 1;
+    for (int i = 0; i < y; i++) {
+      p *= x;
+    }
+    return p == t[2];
+  }
+
   /** Support of x * y = z over the reals. */
   private static boolean productOverReals(int i, int value, int[] lo, int[] hi) {
     if (i == 2) {
@@ -1032,10 +1049,10 @@ class ConsistencyChecker {
               IntVar z = var(s, "z", -12, 12, r);
               return new Model(new XmulCeqZ(x, c, z), t -> t[0] * c == t[1], new IntVar[] {x, z});
             }),
-        // no pruning of y while the interval of z contains 0
+        // bounds(D) would need the holes of y, e.g. y = 2 is a hole between the supported 1 and 3
         new Case(
             "XdivYeqZ",
-            Level.NONE,
+            Level.BOUNDS_Z,
             (s, r) ->
                 xyz(
                     s,
@@ -1043,10 +1060,10 @@ class ConsistencyChecker {
                     new int[] {-9, 9, -3, 3, -9, 9},
                     XdivYeqZ::new,
                     t -> t[1] != 0 && t[0] / t[1] == t[2])),
-        // e.g. x keeps its positive values when z < 0
+        // bounds(D) would need the holes of z, e.g. z.max() = 2 with remainder 2 only from x = 5
         new Case(
             "XmodYeqZ",
-            Level.NONE,
+            Level.BOUNDS_Z,
             (s, r) ->
                 xyz(
                     s,
@@ -1054,6 +1071,37 @@ class ConsistencyChecker {
                     new int[] {-9, 9, -4, 4, -4, 4},
                     XmodYeqZ::new,
                     t -> t[1] != 0 && t[0] % t[1] == t[2])),
+        // bounds(Z) above XexpYeqZ.SUPPORT_LIMIT pairs of x and y values, domain consistency below
+        new Case(
+            "XexpYeqZ",
+            Level.BOUNDS_Z,
+            (s, r) ->
+                xyz(
+                    s,
+                    r,
+                    new int[] {-4, 4, -3, 4, -30, 30},
+                    XexpYeqZ::new,
+                    ConsistencyChecker::pow)),
+        new Case(
+            "XexpYeqZ (even exponent)",
+            Level.DOMAIN,
+            (s, r) ->
+                xyz(s, r, new int[] {-6, 6, 2, 2, -5, 40}, XexpYeqZ::new, ConsistencyChecker::pow)),
+        new Case(
+            "XexpYeqZ (odd exponent)",
+            Level.DOMAIN,
+            (s, r) ->
+                xyz(
+                    s,
+                    r,
+                    new int[] {-4, 4, 3, 3, -70, 70},
+                    XexpYeqZ::new,
+                    ConsistencyChecker::pow)),
+        new Case(
+            "XexpYeqZ (non-positive exponent)",
+            Level.DOMAIN,
+            (s, r) ->
+                xyz(s, r, new int[] {-4, 4, -3, 0, -2, 2}, XexpYeqZ::new, ConsistencyChecker::pow)),
         new Case(
             "AbsXeqY (bounds)",
             Level.BOUNDS_Z,
