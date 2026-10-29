@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
@@ -5346,6 +5347,57 @@ class SingleConstraintTest extends TestHelper {
       // x1 = x0 - 3, x0 - 1, x0 + 1, x0 + 3 interleave or touch; x0 +- 2 and x0 overlap
       assertThat(noOfAllSolutions(store, x)).as("x0 = %d", x0).isEqualTo(4);
     }
+  }
+
+  @Test
+  void geostCopyMadeDuringSearchKeepsTheInitialDomains() {
+    // Lazy clause generation replays the explanations of Geost on a copy over the initial domains,
+    // made the first time an explanation is needed. The copy turned the variables fixed at that
+    // time
+    // into constants, so it failed where Geost does not and gave wrong reasons (a wrong optimum on
+    // hakank_geost_test).
+    Store store = new Store();
+    List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {2}));
+    IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 0, 3)};
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i]},
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes);
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0].domain.in(store.level, x[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+
+    Store target = new Store();
+    IntVar[] y = {new IntVar(target, "y0", 0, 3), new IntVar(target, "y1", 0, 3)};
+    Map<Var, Var> copies = Map.of(x[0], y[0], x[1], y[1]);
+    target.impose(
+        geost.copy(
+            new VarMap() {
+              @Override
+              public Store target() {
+                return target;
+              }
+
+              @Override
+              @SuppressWarnings("unchecked")
+              public <V extends Var> V get(V v) {
+                return (V) copies.get(v);
+              }
+            }));
+
+    // the pairs at distance 2 or more
+    assertThat(noOfAllSolutions(target, y)).isEqualTo(6);
   }
 
   @Test
