@@ -427,7 +427,7 @@ final class CardinalityExplanation {
       }
     }
     sortHoles(hv, he, holes);
-    int[] values = Arrays.copyOf(hv, holes);
+    int[] holeValues = Arrays.copyOf(hv, holes);
     IntDomain root = trail.rootDomain(c);
     if (a > b) {
       return false;
@@ -436,10 +436,10 @@ final class CardinalityExplanation {
     upBound[j] = (int) b;
     lowHoles[j] = new EntryList();
     upHoles[j] = new EntryList();
-    while (a <= b && !inDomain(root, values, he, (int) a, lowHoles[j])) {
+    while (a <= b && !inDomain(root, holeValues, he, (int) a, lowHoles[j])) {
       a++;
     }
-    while (a <= b && !inDomain(root, values, he, (int) b, upHoles[j])) {
+    while (a <= b && !inDomain(root, holeValues, he, (int) b, upHoles[j])) {
       b--;
     }
     if (a > b) {
@@ -527,14 +527,17 @@ final class CardinalityExplanation {
       head = Arrays.copyOf(head, size);
       cap = Arrays.copyOf(cap, size);
     }
-    head[arcs] = v;
-    cap[arcs] = c;
-    next[arcs] = first[u];
-    first[u] = arcs++;
-    head[arcs] = u;
-    cap[arcs] = 0;
-    next[arcs] = first[v];
-    first[v] = arcs++;
+    int forward = arcs;
+    int backward = arcs + 1;
+    head[forward] = v;
+    cap[forward] = c;
+    next[forward] = first[u];
+    first[u] = forward;
+    head[backward] = u;
+    cap[backward] = 0;
+    next[backward] = first[v];
+    first[v] = backward;
+    arcs += 2;
   }
 
   // Dinic's maximum flow from node 2 to node 3
@@ -673,7 +676,10 @@ final class CardinalityExplanation {
       }
     }
     for (int j = 0; j < m + (open ? 1 : 0); j++) {
-      IntVar c = j < m ? (counters == null ? null : counters[j]) : rest;
+      IntVar c = rest;
+      if (j < m) {
+        c = counters == null ? null : counters[j];
+      }
       if (inCut[valueNode(j)] && !inCut[1]) {
         leaving += up[j];
         if (c != null && !(c == negated && negatedBoundsUp())) {

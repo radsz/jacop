@@ -141,7 +141,7 @@ final class KnapsackExplanation {
   private List<long[]> ratios() {
     List<long[]> all = new ArrayList<>();
     for (int i = 0; i < quantity.length; i++) {
-      long g = gcd(profit[i], weight[i]);
+      long g = Math.max(1, gcd(profit[i], weight[i]));
       all.add(new long[] {profit[i] / g, weight[i] / g});
     }
     all.sort((x, y) -> Long.compare(x[0] * y[1], y[0] * x[1]));

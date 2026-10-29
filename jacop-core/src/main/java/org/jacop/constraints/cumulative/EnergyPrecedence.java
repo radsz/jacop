@@ -622,7 +622,7 @@ public class EnergyPrecedence extends Constraint
       time[count++] =
           lower
               ? trail.minBefore(starts[i], position)
-              : -((long) trail.maxBefore(starts[i], position) + dMax);
+              : -(trail.maxBefore(starts[i], position) + dMax);
     }
     Integer[] order = new Integer[count];
     for (int k = 0; k < count; k++) {
