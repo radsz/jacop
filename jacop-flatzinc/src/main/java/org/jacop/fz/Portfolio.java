@@ -69,7 +69,9 @@ final class Portfolio {
     {"free-cacd", "-f", "--free-config", "heuristic=cacd"},
     {"free-afc", "-f", "--free-config", "heuristic=afc,phase=0"},
     {"lcg-fixed", "--lcg"},
-    {"free-luby-keep", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
+    {"free-luby-keep", "-f", "--free-config", "restarts=luby,scale=50,flush=0"},
+    // local search for half the time, as long as it progresses, then free search from its solution
+    {"ls", "-f", "--free-config", "ls=0.5,ls-patience=5000"}
   };
 
   /** The most threads the portfolio uses: the options given and each setting above. */

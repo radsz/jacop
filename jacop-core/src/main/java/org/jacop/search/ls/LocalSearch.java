@@ -1667,28 +1667,6 @@ public final class LocalSearch {
    * @return false when the store rejected it.
    */
   private boolean feasible() {
-    if (DEBUG_REJECT) {
-      for (int c = 0; c < m; c++) {
-        if (coef[c] != null) {
-          long l = 0;
-          for (int k = 0; k < scope[c].length; k++) {
-            l += coef[c][k] * val[scope[c][k]];
-          }
-          if (l != lhs[c]) {
-            System.out.println("% lhs drift row " + c + " " + l + " vs " + lhs[c]);
-          }
-        }
-        long v = currentViolation(c);
-        if (v != viol[c]) {
-          System.out.println("% violation drift " + c + " " + v + " vs " + viol[c]);
-        }
-      }
-      for (int d : topological) {
-        if (defined(d) != val[defOut[d]]) {
-          System.out.println("% definition drift " + d + " kind " + defKind[d]);
-        }
-      }
-    }
     int base = store.level;
     boolean ok;
     try {
@@ -1717,33 +1695,6 @@ public final class LocalSearch {
     }
     if (!ok) {
       rejected++;
-      if (DEBUG_REJECT) {
-        store.setLevel(base + 1);
-        try {
-          for (int i = 0; i < vars.length; i++) {
-            if (!vars[i].domain.contains(val[i])) {
-              System.out.println("% all: not in domain " + vars[i] + " " + val[i]);
-            } else if (!vars[i].singleton()) {
-              vars[i].domain.in(store.level, vars[i], val[i], val[i]);
-            }
-          }
-          if (!store.consistency()) {
-            Constraint f = store.recentlyFailedConstraint;
-            System.out.println(
-                "% all: rejected by "
-                    + f
-                    + " cost "
-                    + (cost == null
-                        ? "-"
-                        : cost + " ls " + val[costIndex] + " bound " + rhs[boundRow]));
-          }
-        } catch (FailException e) {
-          System.out.println("% all: fail " + store.recentlyFailedConstraint);
-        } finally {
-          store.removeLevel(base + 1);
-          store.setLevel(base);
-        }
-      }
       return false;
     }
     if (cost != null) {
