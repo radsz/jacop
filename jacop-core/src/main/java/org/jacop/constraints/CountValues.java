@@ -33,9 +33,11 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
@@ -49,7 +51,8 @@ import org.jacop.lcg.Explainable;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountValues extends AbstractCountValues implements Copyable<CountValues>, Explainable {
+public class CountValues extends AbstractCountValues
+    implements Violation, Copyable<CountValues>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -57,6 +60,8 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
   private final IntVar[] counter;
 
   private final IntVar counterRest;
+  // whether counterRest was given, rather than made by the constraint
+  private final boolean restGiven;
   private final IntVar[] extendedCounter;
 
   /**
@@ -95,6 +100,7 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
     this.counter = Arrays.copyOf(counter, counter.length);
     Store store = counter.length > 0 ? counter[0].getStore() : list[0].getStore();
     this.counterRest = rest != null ? rest : new IntVar(store, 0, n);
+    this.restGiven = rest != null;
 
     extendedCounter = new IntVar[counter.length + 1];
     System.arraycopy(counter, 0, extendedCounter, 0, counter.length);
@@ -232,5 +238,20 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
   @Override
   public CountValues copy(VarMap map) {
     return new CountValues(map.get(list), map.get(counter), values, map.get(counterRest));
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    long violated = 0;
+    int counted = 0;
+    for (int i = 0; i < values.length; i++) {
+      int c = Violations.count(list, values[i], value);
+      counted += c;
+      violated += Math.abs(c - value.applyAsInt(counter[i]));
+    }
+    // a counter of the other values made by the constraint follows from the others
+    return restGiven
+        ? violated + Math.abs(list.length - counted - value.applyAsInt(counterRest))
+        : violated;
   }
 }

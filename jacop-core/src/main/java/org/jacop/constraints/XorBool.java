@@ -33,9 +33,11 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,7 +49,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XorBool extends PrimitiveConstraint implements Copyable<XorBool> {
+public class XorBool extends PrimitiveConstraint implements Violation, Copyable<XorBool> {
 
   /*
    * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
@@ -237,5 +239,14 @@ public class XorBool extends PrimitiveConstraint implements Copyable<XorBool> {
   @Override
   public XorBool copy(VarMap map) {
     return new XorBool(map.get(x), map.get(y));
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int xor = 0;
+    for (IntVar v : x) {
+      xor ^= value.applyAsInt(v);
+    }
+    return value.applyAsInt(y) == xor ? 0 : 1;
   }
 }

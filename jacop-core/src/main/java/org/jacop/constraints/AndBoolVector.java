@@ -33,10 +33,12 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.Monotone;
 import org.jacop.api.MonotoneDefinition;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -49,7 +51,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class AndBoolVector extends AbstractBoolVector
-    implements Copyable<AndBoolVector>, Monotone, MonotoneDefinition {
+    implements Violation, Copyable<AndBoolVector>, Monotone, MonotoneDefinition {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -243,5 +245,14 @@ public class AndBoolVector extends AbstractBoolVector
   @Override
   public int monotonicity(Var v) {
     return 1;
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int and = 1;
+    for (IntVar v : list) {
+      and &= value.applyAsInt(v);
+    }
+    return value.applyAsInt(result) == and ? 0 : 1;
   }
 }

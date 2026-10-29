@@ -34,11 +34,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -64,7 +66,11 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementVariableFast extends AbstractElement
-    implements Simplifiable, SatisfiedPresent, Copyable<ElementVariableFast>, Explainable {
+    implements Violation,
+        Simplifiable,
+        SatisfiedPresent,
+        Copyable<ElementVariableFast>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -253,5 +259,14 @@ public class ElementVariableFast extends AbstractElement
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == ElementVariableFast.class
         && ElementVariableExplanation.explainFailure(trail, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int i = value.applyAsInt(index) - indexOffset - 1;
+    if (i < 0 || i >= list.length) {
+      return 1;
+    }
+    return value.applyAsInt(list[i]) == value.applyAsInt(this.value) ? 0 : 1;
   }
 }

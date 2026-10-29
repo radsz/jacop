@@ -31,10 +31,12 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.Monotone;
 import org.jacop.api.MonotoneDefinition;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -47,7 +49,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class AndBoolSimple extends AbstractBoolSimple
-    implements Copyable<AndBoolSimple>, Monotone, MonotoneDefinition {
+    implements Violation, Copyable<AndBoolSimple>, Monotone, MonotoneDefinition {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -146,5 +148,10 @@ public class AndBoolSimple extends AbstractBoolSimple
   @Override
   public int monotonicity(Var v) {
     return 1;
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    return value.applyAsInt(result) == (value.applyAsInt(a) & value.applyAsInt(b)) ? 0 : 1;
   }
 }

@@ -31,8 +31,10 @@
 package org.jacop.constraints;
 
 import java.util.List;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -43,7 +45,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AtLeast extends AbstractAtLeastMost implements Copyable<AtLeast> {
+public class AtLeast extends AbstractAtLeastMost implements Violation, Copyable<AtLeast> {
 
   /**
    * It constructs a AtLeast constraint.
@@ -168,5 +170,10 @@ public class AtLeast extends AbstractAtLeastMost implements Copyable<AtLeast> {
   @Override
   public AtLeast copy(VarMap map) {
     return new AtLeast(map.get(list), counter, value);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    return Math.max(0, counter - Violations.count(list, this.value, value));
   }
 }

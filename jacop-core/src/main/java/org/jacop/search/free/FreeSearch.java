@@ -140,6 +140,7 @@ public final class FreeSearch {
   private final SelectChoicePoint<? extends Var> mainSelect;
   private final SelectChoicePoint<? extends Var> alternative;
   private final Alternation alternation;
+  private final boolean mainFirst;
   private SelectChoicePoint<? extends Var> select;
   private final IntVar cost;
   private final boolean maximize;
@@ -215,6 +216,7 @@ public final class FreeSearch {
     mainSelect = builder.select;
     alternative = builder.alternative;
     alternation = builder.alternation;
+    mainFirst = builder.mainFirst;
     select = mainSelect;
     cost = builder.cost;
     maximize = builder.maximize;
@@ -575,7 +577,9 @@ public final class FreeSearch {
       return mainSelect;
     }
     boolean useAlternative =
-        alternation == Alternation.EVERY_RESTART ? regularRuns % 2 == 0 : solutions == 0;
+        alternation == Alternation.EVERY_RESTART
+            ? (regularRuns + (mainFirst ? 1 : 0)) % 2 == 0
+            : solutions == 0 && !mainFirst;
     return useAlternative ? alternative : mainSelect;
   }
 
@@ -1060,6 +1064,7 @@ public final class FreeSearch {
     private final Store store;
     private final SelectChoicePoint<? extends Var> select;
     private SelectChoicePoint<? extends Var> alternative;
+    private boolean mainFirst;
     private Alternation alternation;
     private IntVar cost;
     private boolean maximize;
@@ -1127,6 +1132,18 @@ public final class FreeSearch {
     public Builder alternateWith(SelectChoicePoint<? extends Var> select, Alternation when) {
       this.alternative = select;
       this.alternation = when;
+      return this;
+    }
+
+    /**
+     * Makes the first run use the main branching even when there is an alternative one, for example
+     * when its value heuristic has been given a solution as a hint.
+     *
+     * @param main true to start with the main branching.
+     * @return this builder.
+     */
+    public Builder mainBranchingFirst(boolean main) {
+      this.mainFirst = main;
       return this;
     }
 

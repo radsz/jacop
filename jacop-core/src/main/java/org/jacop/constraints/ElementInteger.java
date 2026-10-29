@@ -36,11 +36,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -65,7 +67,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementInteger extends AbstractElement
-    implements Simplifiable,
+    implements Violation,
+        Simplifiable,
         UsesQueueVariable,
         SatisfiedPresent,
         Copyable<ElementInteger>,
@@ -539,5 +542,14 @@ public class ElementInteger extends AbstractElement
     return getClass() == ElementInteger.class
         && index != value
         && ElementExplanation.explainFailure(trail, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int i = value.applyAsInt(index) - indexOffset - 1;
+    if (i < 0 || i >= list.length) {
+      return 1;
+    }
+    return list[i] == value.applyAsInt(this.value) ? 0 : 1;
   }
 }

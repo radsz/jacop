@@ -33,9 +33,11 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -48,7 +50,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountVar extends AbstractCount implements Copyable<CountVar> {
+public class CountVar extends AbstractCount implements Violation, Copyable<CountVar> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -364,5 +366,11 @@ public class CountVar extends AbstractCount implements Copyable<CountVar> {
   @Override
   public CountVar copy(VarMap map) {
     return new CountVar(map.get(list), map.get(counter), map.get(value));
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    return Math.abs(
+        Violations.count(list, value.applyAsInt(this.value), value) - value.applyAsInt(counter));
   }
 }
