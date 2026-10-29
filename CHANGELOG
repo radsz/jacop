@@ -890,6 +890,23 @@ Version 5.0 (unreleased)
     throwFailException(Var), clearWatchedConstraint(),
     countConstraint(int) and the field auxilaryVariables.
 
+66. SeqPrecedeChain (seq_precede_chain and value_precede_chain, the value
+    precedence that presolve posts) and LexChain (the orbitope chains)
+    explain their own pruning under --lcg instead of the generic or
+    replayed reason. SeqPrecedeChain cites, for a value of rank above s,
+    the removals of the value of rank s before its position (no earlier
+    position can reach rank s), and for a forced position the domain that
+    forces a rank and the removals of each rank's value between its latest
+    position and its deadline. LexChain cites the vectors of one side of
+    the chain: the smallest tuples from the first vector, or the largest
+    from the last, bound the vector they reach. Failures are explained the
+    same way. On a P||Cmax instance value precedence reasons fall from 22
+    to 8 atoms, and none is generic or replayed (before: 38% generic, the
+    rest replayed). On 25 jacop-benchmarks
+    instances with value precedence or orbitopes, --lcg -f at 30 s solves
+    22 instead of 20, and the 130 generated colouring, bin packing and
+    identical-machine instances are level (83 to 82 solved).
+
 Version 4.11
 =============
 

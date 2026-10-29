@@ -41,6 +41,10 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PrecedeChainExplanation;
 
 /**
  * It defines Sequence Precedence Chain constraint for integers.
@@ -58,7 +62,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SeqPrecedeChain extends Constraint implements Copyable<SeqPrecedeChain> {
+public class SeqPrecedeChain extends Constraint implements Copyable<SeqPrecedeChain>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -292,6 +296,16 @@ public class SeqPrecedeChain extends Constraint implements Copyable<SeqPrecedeCh
       }
     }
     return 0; // not reached: a non-empty domain inside the chain has a rank
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return PrecedeChainExplanation.explain(trail, entry, x, chain, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return PrecedeChainExplanation.explainFailure(trail, x, chain, out);
   }
 
   @Override

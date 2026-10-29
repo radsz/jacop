@@ -105,6 +105,7 @@ import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Span;
@@ -599,7 +600,15 @@ class LcgFuzzTest {
         case 26 -> new Values(q, one());
         case 27 -> new Increasing(q, rnd.nextBoolean());
         case 28 -> new AllEqual(pick(x, 2));
-        case 29 -> new ValuePrecede(0, 1, q);
+        case 29 ->
+            switch (rnd.nextInt(3)) {
+              case 0 -> new ValuePrecede(0, 1, q);
+              case 1 -> new SeqPrecedeChain(q);
+              default -> {
+                int a = value();
+                yield new SeqPrecedeChain(q, new int[] {a, a + 1 + rnd.nextInt(2), a - 1});
+              }
+            };
         case 30 -> new Member(q, one());
         case 31 -> new In(one(), new IntervalDomain(-1, 1));
         case 32 -> new SumWeight(q, new int[] {1, 2, -1, 1}, one());
