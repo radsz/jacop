@@ -104,6 +104,7 @@ public final class CdclSolver {
   private int[] level = new int[0];
   private int[] reason = new int[0];
   private byte[] savedSign = new byte[0];
+  private byte originalSign; // the initial phase: 0 for true, 1 for false
   private byte[] targetSign = new byte[0];
   private byte[] bestSign = new byte[0];
   private int bestAssigned;
@@ -329,10 +330,10 @@ public final class CdclSolver {
     }
     order.grow(n, activity);
     Arrays.fill(reason, numVars, n, NO_REASON);
-    // initial phase true (sign 0), as in CaDiCaL
-    Arrays.fill(savedSign, numVars, n, (byte) 0);
+    // the initial phase, true (sign 0) by default as in CaDiCaL
+    Arrays.fill(savedSign, numVars, n, originalSign);
     Arrays.fill(targetSign, numVars, n, (byte) -1);
-    Arrays.fill(bestSign, numVars, n, (byte) 0);
+    Arrays.fill(bestSign, numVars, n, originalSign);
     if (seed != 0) {
       // a different initial decision order for each seed
       SplittableRandom random = new SplittableRandom(seed + numVars);
@@ -2059,6 +2060,13 @@ public final class CdclSolver {
       }
       if (next == -1) {
         next = pickBranch();
+        if (next == -1 && external != null) {
+          int d = external.decideLast();
+          if (d != 0 && Math.abs(d) <= numVars) {
+            int l = toLit(d);
+            next = vals[l] == 0 && !eliminatedVar[l >> 1] ? l : -1;
+          }
+        }
         if (next == -1) {
           if (external != null && !modelAccepted()) {
             continue;
@@ -2274,6 +2282,18 @@ public final class CdclSolver {
     observed[v] = true;
   }
 
+  /**
+   * Sets the initial phase of the variables, which rephasing also returns to: true as in CaDiCaL
+   * (the default), or false as in MiniSat and CP-SAT.
+   *
+   * @param positive true for the positive literal
+   */
+  public void setInitialPhase(boolean positive) {
+    originalSign = (byte) (positive ? 0 : 1);
+    Arrays.fill(savedSign, 0, numVars, originalSign);
+    Arrays.fill(bestSign, 0, numVars, originalSign);
+  }
+
   private int pickBranch() {
     while (!order.isEmpty()) {
       int v = order.removeMax();
@@ -2316,8 +2336,8 @@ public final class CdclSolver {
     char kind =
         rephases <= 2 ? "OI".charAt(rephases - 1) : cycle.charAt((rephases - 3) % cycle.length());
     switch (kind) {
-      case 'O' -> Arrays.fill(savedSign, 0, numVars, (byte) 0);
-      case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) 1);
+      case 'O' -> Arrays.fill(savedSign, 0, numVars, originalSign);
+      case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) (1 - originalSign));
       case 'W' -> {
         System.arraycopy(bestSign, 0, savedSign, 0, numVars);
         walk();
