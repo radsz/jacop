@@ -730,6 +730,15 @@ Version 5.0 (unreleased)
     constraint class how many atoms propagation needs and how many could
     be weaker.
 
+45. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
+    bound weaker than any trail atom when the solver already has a true
+    literal for it, set before the explained one. On mznbench (249,
+    60 s, paired) --lcg is better on 15 instances and worse on 6
+    (evilshop js-brs2-7 proved optimal, mrcpsp j30_1_10 proved UNSAT,
+    rcpsp-max j30_169 26 s to 4 s); --lcg -f is level (32 to 32).
+    -Djacop.lcg.liftLiterals=false turns it off; %%%mzn-stat
+    lcgLiftedLiterals counts the literals cited.
+
 Version 4.11
 =============
 

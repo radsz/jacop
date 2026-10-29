@@ -666,8 +666,43 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         e = f;
       }
     }
-    out.add(e);
-    return value[e];
+    if (weakerBounds == null) {
+      out.add(e);
+      return value[e];
+    }
+    int w = weakerBounds.weakest(x, lower, value[e], limit);
+    out.addLifted(e, Math.abs(value[e] - w));
+    return w;
+  }
+
+  /** Bounds weaker than a trail atom that the solver can cite (see {@link #setWeakerBounds}). */
+  @FunctionalInterface
+  public interface WeakerBounds {
+
+    /**
+     * Returns the weakest bound of a variable between a limit and an atom's bound that the solver
+     * can cite in the reason it is building, or the atom's bound.
+     *
+     * @param x the variable
+     * @param lower whether it is a lower bound, else an upper bound
+     * @param value the atom's bound
+     * @param limit the weakest bound that serves
+     * @return a bound from the limit to the value, the value when there is none weaker
+     */
+    int weakest(IntVar x, boolean lower, int value, long limit);
+  }
+
+  private WeakerBounds weakerBounds;
+
+  /**
+   * Lets lifted explanations cite bounds that are not on the trail: a reason built with {@link
+   * #addBoundReaching} or {@link #addBoundWithin} then holds with the weaker bound, which the entry
+   * list gives as the entry's slack.
+   *
+   * @param bounds the bounds the solver can cite, or null for trail atoms only
+   */
+  public void setWeakerBounds(WeakerBounds bounds) {
+    weakerBounds = bounds;
   }
 
   /**

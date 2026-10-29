@@ -1906,6 +1906,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.atomLiteralsLearnt
             + "\n%%%mzn-stat: lcgLiteralsReleased="
             + lcg.literalsReleased
+            + "\n%%%mzn-stat: lcgLiftedLiterals="
+            + lcg.liftedLiterals
             + "\n%%%mzn-stat: lcgExplanations="
             + reasons
             + "\n%%%mzn-stat: lcgGenericShare="

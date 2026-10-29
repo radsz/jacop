@@ -157,6 +157,8 @@ public final class LcgSolver implements ExternalPropagator {
   private final EntryList conflictLits = new EntryList();
   private final EntryList reasonEntries = new EntryList();
   private int[] entryStamp = new int[64];
+  // the slack of each entry in the current conflict, valid where entryStamp has its stamp
+  private int[] entrySlack = new int[64];
   private int[] litStamp = new int[64];
   private int stamp;
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
@@ -182,6 +184,13 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
+
+  /** Statistics: reason literals replaced by a weaker literal the solver already has. */
+  public long liftedLiterals;
+
+  // cite a weaker existing literal for a lifted bound, unless -Djacop.lcg.liftLiterals=false
+  private final boolean liftLiterals =
+      !"false".equals(System.getProperty("jacop.lcg.liftLiterals"));
 
   /** Statistics: distinct literals pushed as atoms. */
   public long atomLiterals;
@@ -339,6 +348,9 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
+    if (liftLiterals) {
+      trail.setWeakerBounds(this::weakest);
+    }
     // reasons of up to three literals stay as clauses; with the full fixpoint this scored 22.8
     // against 20.2 on the OR-Tools set and 18.9 against 19.1 on the Challenge sample, and proved
     // one more instance in each
@@ -609,6 +621,56 @@ public final class LcgSolver implements ExternalPropagator {
       throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
     }
     return geEntryVar(i, v);
+  }
+
+  /**
+   * The literal of an atom weakened by {@code slack} (see {@link EntryList#addLifted}), which
+   * {@link #weakest} found; the entry's own literal when slack is 0.
+   */
+  private int atomLit(int entry, int slack) {
+    if (slack == 0) {
+      return atomLit(entry);
+    }
+    int i = trail.id(trail.variable(entry));
+    int v = trail.value(entry);
+    liftedLiterals++;
+    return trail.kind(entry) == AtomicTrail.GE ? geLit(i, v - slack) : -geLit(i, v + slack + 1);
+  }
+
+  // reasons may cite literals true before this solver trail position (see weakest)
+  private int liftBefore = Integer.MAX_VALUE;
+
+  /**
+   * The weakest bound from the limit to an atom's value whose literal exists and is true before
+   * {@link #liftBefore}, so a reason may cite it.
+   */
+  private int weakest(IntVar x, boolean lower, int value, long limit) {
+    LiteralMap m = ge[trail.id(x)];
+    if (lower) {
+      // [x >= u] for u in [limit, value), weakest first
+      for (long u = m.ceilingValue(limit); u < value; u = m.ceilingValue(u + 1)) {
+        if (holdsBefore(m.get((int) u))) {
+          return (int) u;
+        }
+      }
+    } else {
+      // [x <= u - 1] = -[x >= u] for u in (value + 1, limit + 1], weakest (largest u) first
+      for (long u = m.floorValue(limit + 1); u > value + 1L; u = m.floorValue(u - 1)) {
+        if (holdsBefore(-m.get((int) u))) {
+          return (int) u - 1;
+        }
+      }
+    }
+    return value;
+  }
+
+  // whether the solver has a literal true before liftBefore
+  private boolean holdsBefore(int lit) {
+    if (sat.value(lit) <= 0) {
+      return false;
+    }
+    int position = sat.trailPosition(lit);
+    return position >= 0 && position < liftBefore;
   }
 
   /**
@@ -1701,7 +1763,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (checker != null) {
       EntryList reason = new EntryList();
       for (int k = mark; k < out.size(); k++) {
-        reason.add(out.get(k));
+        reason.addFrom(out, k);
       }
       verify(checker.checkReason(e, reason));
     }
@@ -1798,6 +1860,11 @@ public final class LcgSolver implements ExternalPropagator {
     if (entryStamp.length < trail.size()) {
       entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
     }
+    if (entrySlack.length < trail.size()) {
+      entrySlack = Arrays.copyOf(entrySlack, Math.max(trail.size(), 2 * entrySlack.length));
+    }
+    // the smallest slack each entry is cited with
+    int[] slack = entrySlack;
     EntryList inSolver = conflictInSolver;
     inSolver.clear();
     EntryList lits = conflictLits;
@@ -1808,11 +1875,14 @@ public final class LcgSolver implements ExternalPropagator {
     EntryList stack = atoms;
     while (stack.size() > 0) {
       int e = stack.get(stack.size() - 1);
+      int eSlack = stack.slack(stack.size() - 1);
       stack.truncate(stack.size() - 1);
       if (entryStamp[e] == seen) {
+        slack[e] = Math.min(slack[e], eSlack);
         continue;
       }
       entryStamp[e] = seen;
+      slack[e] = eSlack;
       int lit = atomLit(e);
       if (sat.value(lit) > 0) {
         inSolver.add(e);
@@ -1827,7 +1897,13 @@ public final class LcgSolver implements ExternalPropagator {
     int size = 0;
     int distinct = nextStamp();
     for (int k = 0; k < clause.length; k++) {
-      int lit = k < inSolver.size() ? -atomLit(inSolver.get(k)) : lits.get(k - inSolver.size());
+      int lit;
+      if (k < inSolver.size()) {
+        int e = inSolver.get(k);
+        lit = -atomLit(e, slack[e]);
+      } else {
+        lit = lits.get(k - inSolver.size());
+      }
       int key = 2 * Math.abs(lit) + (lit < 0 ? 1 : 0);
       if (key >= litStamp.length) {
         litStamp = Arrays.copyOf(litStamp, Math.max(key + 1, 2 * litStamp.length));
@@ -1904,11 +1980,17 @@ public final class LcgSolver implements ExternalPropagator {
     int e = propagated[Math.abs(lit)];
     EntryList reason = reasonEntries;
     reason.clear();
-    int extra = explainEntry(e, reason);
+    liftBefore = sat.trailPosition(lit);
+    int extra;
+    try {
+      extra = explainEntry(e, reason);
+    } finally {
+      liftBefore = Integer.MAX_VALUE;
+    }
     int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
     clause[0] = lit;
     for (int k = 0; k < reason.size(); k++) {
-      clause[k + 1] = -atomLit(reason.get(k));
+      clause[k + 1] = -atomLit(reason.get(k), reason.slack(k));
     }
     if (extra != 0) {
       clause[clause.length - 1] = -extra;

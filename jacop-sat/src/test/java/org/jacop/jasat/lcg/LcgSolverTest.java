@@ -231,6 +231,7 @@ class LcgSolverTest {
     Random rnd = new Random(11);
     int sat = 0;
     int unsat = 0;
+    long lifted = 0;
     for (int instance = 0; instance < 3000; instance++) {
       Store store = new Store();
       int n = 4 + rnd.nextInt(3);
@@ -250,6 +251,7 @@ class LcgSolverTest {
       solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
+      lifted += solver.liftedLiterals;
       assertThat(status)
           .as("instance %d", instance)
           .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
@@ -268,6 +270,8 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+    // lifted bounds cite weaker literals the solver has, which the checker verifies
+    assertThat(lifted).isGreaterThan(0);
   }
 
   /**
