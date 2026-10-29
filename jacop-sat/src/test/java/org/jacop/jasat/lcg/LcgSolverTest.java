@@ -2053,20 +2053,22 @@ class LcgSolverTest {
     Random rnd = new Random(17);
     long cores = 0;
     long proved = 0;
+    long hardened = 0;
     int unsat = 0;
     for (int instance = 0; instance < 300; instance++) {
       long seed = rnd.nextLong();
-      Integer expected = coreModelOptimum(seed, -1, new long[2]);
+      Integer expected = coreModelOptimum(seed, -1, new long[3]);
       for (int mode = 0; mode < 3; mode++) {
         // mode 0: core-guided search alone; 1: a few conflicts, then branch and bound; 2: the
         // objective maximised through its negation
-        long[] stats = new long[2];
+        long[] stats = new long[3];
         Integer found = coreModelOptimum(seed, mode, stats);
         assertThat(found)
             .as("instance %d (seed %d), mode %d", instance, seed, mode)
             .isEqualTo(expected);
         cores += stats[0];
         proved += stats[1];
+        hardened += stats[2];
       }
       if (expected == null) {
         unsat++;
@@ -2075,13 +2077,16 @@ class LcgSolverTest {
     assertThat(cores).isPositive();
     // core-guided search alone proves some optima
     assertThat(proved).isPositive();
+    // soft literals heavier than the gap to the best solution are made hard
+    assertThat(hardened).isPositive();
     assertThat(unsat).isPositive();
   }
 
   /**
    * Builds a random model with a weighted sum objective and minimises it: by depth-first search
    * (mode -1) or by LCG with core-guided search (modes 0 to 2). Returns the optimum, or null when
-   * there is no solution; stats gets the cores and whether core-guided search proved the optimum.
+   * there is no solution; stats gets the cores, whether core-guided search proved the optimum and
+   * the soft literals it made hard.
    */
   private static Integer coreModelOptimum(long seed, int mode, long[] stats) {
     Random rnd = new Random(seed);
@@ -2157,6 +2162,7 @@ class LcgSolverTest {
     if (solver.coreSearch() != null) {
       stats[0] += solver.coreSearch().cores;
       stats[1] += solver.coreSearch().proved ? 1 : 0;
+      stats[2] += solver.coreSearch().hardened;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
