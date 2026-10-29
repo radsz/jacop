@@ -380,6 +380,31 @@ class AtomicTrailTest {
   }
 
   /**
+   * y = |x| with x in -1,000,000..1,000,000: y >= 500,000 leaves x its bounds while a trail
+   * records, instead of a gap of 999,999 values that would each be a {@code !=} atom (city-position
+   * learnt clauses of thousands of literals). x moves past the gap once a bound falls in it.
+   */
+  @Test
+  void absoluteValueGapIsNotRecordedValueByValue() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1_000_000, 1_000_000);
+    IntVar y = new IntVar(store, "y", 0, 1_000_000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new AbsXeqY(x, y));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 500_000);
+    assertThat(store.consistency()).isTrue();
+    assertThat(trail.size()).isLessThan(10);
+    assertThat(x.getSize()).isEqualTo(2_000_001);
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, -10);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(500_000);
+    trail.detach();
+  }
+
+  /**
    * x * b = z with x in 1..1000 and b in 0..1: z >= 500 propagates x >= 500, which removes more
    * values than supports are enumerated for. Its reason is z >= 500, not the generic one.
    */

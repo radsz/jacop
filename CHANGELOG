@@ -533,7 +533,32 @@ Version 5.0 (unreleased)
     generator method once. oocsp_racks_100_r1 runs in 18 s instead of
     29 s (search 5.5 s instead of 15 s), with the same search tree.
 
-40. Parallel portfolio for FlatZinc: fzn-jacop -p <n> (minizinc -p) solves
+41. --lcg -f takes turns at restarts between three kinds of runs: the
+    search annotation (dom/wdeg without one), the SAT solver's own decisions
+    on literals with phase false and phase saving, as in CP-SAT's default
+    search, and activity branching. Before, it alternated the annotation
+    with activity branching only. On the 258 vs-ortools instances (20 s) it
+    proves 105 instead of 100 and answers 212 instead of 207, with the
+    objective better on 28 and worse on 29. Among the instances where CP-SAT
+    was far ahead (60 s): gbac UD8 4,793 -> 102, UD4 5,664 -> 1,557,
+    reduced_UD3 10,790 -> 2,489; city-position 5-06 772,299 -> 36,376, 5-08
+    420,538 -> 6,147, 8-06 605,806 -> 117,741; celar is 10 to 45 % worse.
+    --free-config lcg-branching= selects literals (decisions on literals
+    only), auto (literals, with activity branching from 1000 conflicts to a
+    first solution: city-position 5-05 2,850 and road_17 12 million instead
+    of 99 million, but it loses first solutions on cargo, linear-to-program
+    and p1f) or activity (the previous search). With them, the sums of
+    lcg-split are branched on last, as defined variables, and defined 0/1
+    variables (reifications) are no longer branched on last: on
+    skill-allocation 5d_1, where all but 126 of 12,851 variables are defined
+    reifications, activity branching proves the optimum in 5 s instead of
+    no proof in 30 s. Under --lcg, abs(x) = y with y >= k prunes the bounds
+    of x instead of each value of -k+1..k-1, which made one atom per value,
+    and the semantic minimisation of learnt clauses takes linear time on a
+    long group of literals on one variable (city-position 7-04 learnt
+    clauses of 7,527 literals).
+
+42. Parallel portfolio for FlatZinc: fzn-jacop -p <n> (minizinc -p) solves
     the model in n threads, each with a store of its own: the options
     given, then free search and lazy clause generation with other settings
     (up to 9 threads). The threads share the objective value of the best
@@ -545,7 +570,7 @@ Version 5.0 (unreleased)
     on one thread. New: FreeSearch.Builder.sharedBound, LcgSolver
     .setSharedBound and stop, CdclSolver.cancel, Store.interrupt.
 
-41. FlatZinc objective presolve expands the objective through more of the
+43. FlatZinc objective presolve expands the objective through more of the
     model: equalities (bool2int, bool_eq, a 0/1 variable and its literal
     of 1) lead a term to an equal variable that has a definition; a
     disjunction r <-> or(b) (array_bool_or, bool_clause_reif) is

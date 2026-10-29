@@ -970,7 +970,12 @@ public class Support implements ParserTreeConstants {
 
     if (options.lcg()) {
       Constraint split =
-          LinearSplit.split(store, c, Integer.parseInt(options.freeConfig("lcg-split", "40")));
+          LinearSplit.split(
+              store,
+              c,
+              Integer.parseInt(options.freeConfig("lcg-split", "40")),
+              // free LCG search branches on the block sums last, as on other defined variables
+              dictionary::addDefinedVar);
       if (split != null) {
         c = split;
       }

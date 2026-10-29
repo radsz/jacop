@@ -154,6 +154,14 @@ public class Options {
                 impact-until=first|always, impact-every=<k> (probe in the first run and every k-th),
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
+                lcg-branching=alternate|auto|literals|activity (with --lcg: alternate (default)
+                takes turns at restarts with the annotation, or dom/wdeg without one, the SAT
+                solver's decisions on literals with phase false, and activity branching on the
+                most active variable; literals only those decisions; auto as literals, with
+                activity branching from 1000 conflicts to a first solution; activity the activity
+                branching, in runs alternated with the annotation),
+                interleave=restart|solution|none (with --lcg: default restart; none with literals
+                and auto),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
@@ -173,7 +181,8 @@ public class Options {
             -sat use SAT solver for boolean constraints.
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
                 the SAT core); the search annotation is followed without restarts, or with -f
-                alternated per restart with branching on the most active variables.
+                the SAT core's decisions on literals take turns with activity branching and
+                the annotation (see lcg-branching of --free-config).
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default), "off".

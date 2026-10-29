@@ -148,6 +148,16 @@ public interface ExternalPropagator {
   }
 
   /**
+   * Suggests a decision once the solver has assigned all its variables, before the assignment is
+   * offered as a model, for example on a variable that has no literal yet.
+   *
+   * @return an unassigned literal, or 0 to offer the assignment as a model
+   */
+  default int decideLast() {
+    return 0;
+  }
+
+  /**
    * Returns a literal implied by the current assignment.
    *
    * @return the literal, or 0 when there is none

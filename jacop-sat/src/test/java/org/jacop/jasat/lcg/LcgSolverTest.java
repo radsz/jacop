@@ -32,10 +32,14 @@
 package org.jacop.jasat.lcg;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -256,6 +260,98 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+  }
+
+  /**
+   * The SAT solver's own decisions on literals with phase false (LITERALS; AUTO, which falls back
+   * to activity until a first solution; and ALTERNATE, which takes turns with activity and with an
+   * annotation) find the brute-force optimum of a weighted sum. A variable that no constraint
+   * mentions has no literal, so the last decisions are on it.
+   */
+  @Test
+  void literalBranchingAgreesWithBruteForce() {
+    Random rnd = new Random(23);
+    int proved = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      LcgSolver.Branching branching =
+          switch (instance % 4) {
+            case 0 -> LcgSolver.Branching.LITERALS;
+            case 1 -> LcgSolver.Branching.AUTO;
+            default -> LcgSolver.Branching.ALTERNATE;
+          };
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(Arrays.copyOf(x, n - 1), rnd));
+      }
+      int[] w = new int[n];
+      for (int i = 0; i < n - 1; i++) {
+        w[i] = rnd.nextInt(7) - 3;
+      }
+      long best = minimum(x, relations, w, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n);
+      terms[n - 1] = cost; // x[n - 1] is in no constraint
+      int[] weights = Arrays.copyOf(w, n);
+      weights[n - 1] = -1;
+      store.impose(new LinearInt(terms, weights, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setBranching(branching);
+      if (instance % 4 == 3) {
+        solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+      }
+      solver.sat().setInitialPhase(false);
+      int status = solver.minimize(cost);
+      if (best == Long.MAX_VALUE) {
+        assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
+        continue;
+      }
+      assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(cost)).as("instance %d", instance).isEqualTo(best);
+      int[] t = new int[n];
+      long sum = 0;
+      for (int i = 0; i < n; i++) {
+        t[i] = solver.value(x[i]);
+        sum += (long) w[i] * t[i];
+      }
+      for (Relation r : relations) {
+        assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+      }
+      assertThat(sum).as("instance %d", instance).isEqualTo(best);
+      proved++;
+    }
+    assertThat(proved).isGreaterThan(300);
+  }
+
+  // the smallest weighted sum over the assignments of x that satisfy the relations
+  private static long minimum(IntVar[] x, List<Relation> relations, int[] w, int[] t, int i) {
+    if (i == x.length) {
+      if (!relations.stream().allMatch(r -> r.test.test(t))) {
+        return Long.MAX_VALUE;
+      }
+      long sum = 0;
+      for (int k = 0; k < x.length; k++) {
+        sum += (long) w[k] * t[k];
+      }
+      return sum;
+    }
+    long best = Long.MAX_VALUE;
+    for (int v = x[i].min(); v <= x[i].max(); v++) {
+      if (x[i].domain.contains(v)) {
+        t[i] = v;
+        best = Math.min(best, minimum(x, relations, w, t, i + 1));
+      }
+    }
+    return best;
   }
 
   /**
@@ -1899,7 +1995,103 @@ class LcgSolverTest {
     }
   }
 
+  @Test
+  void freeSearchWithoutBooleansFirstKeepsOneActivityOrder() {
+    // with Booleans first off, every variable is in one order of activity again, as before the two
+    // heaps: at equal activity the first variable goes first, here the 0/1 variable b, not the
+    // wider y (skill-allocation 1m_2 took twice the nodes when y won such ties)
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    store.impose(new Reified(new XlteqC(y, 50), b));
+    System.setProperty("jacop.lcg.booleansFirst", "false");
+    LcgSolver solver;
+    try {
+      solver = new LcgSolver(store);
+    } finally {
+      System.clearProperty("jacop.lcg.booleansFirst");
+    }
+    solver.setChecking(true);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(new int[] {solver.value(b), solver.value(y)}).containsExactly(0, 51);
+  }
+
   /** The literal map against a TreeMap, under random insertions and lookups. */
+  /**
+   * Semantic minimisation of a long group of literals on one variable (city-position learnt clauses
+   * of thousands, which the pairwise check took quadratic time on) keeps the clause's set of values
+   * and the asserting literal, and leaves no literal implied by another.
+   */
+  @Test
+  void semanticMinimisationOfLongGroupsKeepsTheClause() {
+    Random rnd = new Random(11);
+    for (int instance = 0; instance < 500; instance++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 60);
+      LcgSolver solver = new LcgSolver(store);
+      int i = solver.index(x);
+      int n = 17 + rnd.nextInt(30);
+      Set<Integer> lits = new LinkedHashSet<>();
+      while (lits.size() < n) {
+        int v = 1 + rnd.nextInt(59);
+        int lit = rnd.nextInt(3) == 0 ? solver.eqLiteral(i, v) : solver.geLiteral(i, v);
+        lits.add(rnd.nextBoolean() ? lit : -lit);
+      }
+      int[] clause = lits.stream().mapToInt(Integer::intValue).toArray();
+      int[] original = clause.clone();
+      int size = solver.minimizeLearnt(clause, clause.length);
+      assertThat(clause[0]).as("instance %d", instance).isEqualTo(original[0]);
+      assertThat(covered(solver, i, clause, size))
+          .as("instance %d", instance)
+          .isEqualTo(covered(solver, i, original, original.length));
+      for (int a = 1; a < size; a++) {
+        for (int b = 0; b < size; b++) {
+          if (a != b) {
+            BitSet va = covered(solver, i, new int[] {clause[a]}, 1);
+            BitSet vb = covered(solver, i, new int[] {clause[b]}, 1);
+            va.andNot(vb);
+            assertThat(va.isEmpty()).as("instance %d: %d implies %d", instance, a, b).isFalse();
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Forty thousand {@code !=} literals of one variable, none implied by another, in linear time.
+   */
+  @Test
+  void semanticMinimisationOfManyHolesIsFast() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100_000);
+    LcgSolver solver = new LcgSolver(store);
+    int i = solver.index(x);
+    int n = 40_000;
+    int[] clause = new int[n + 1];
+    clause[0] = solver.geLiteral(i, 99_000);
+    for (int k = 1; k <= n; k++) {
+      clause[k] = -solver.eqLiteral(i, 2 * k);
+    }
+    int size =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(2), () -> solver.minimizeLearnt(clause, clause.length));
+    // [x >= 99,000] implies x != v for the holes below it, and stays as the asserting literal
+    assertThat(size).isEqualTo(n + 1);
+  }
+
+  // the values of x in 0..60 that satisfy some literal of the clause
+  private static BitSet covered(LcgSolver solver, int i, int[] clause, int size) {
+    BitSet values = new BitSet();
+    for (int k = 0; k < size; k++) {
+      for (int v = 0; v <= 60; v++) {
+        if (solver.holds(clause[k], i, v)) {
+          values.set(v);
+        }
+      }
+    }
+    return values;
+  }
+
   @Test
   void literalMapAgreesWithTreeMap() {
     Random rnd = new Random(3);

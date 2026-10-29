@@ -1602,10 +1602,73 @@ class FlatzincFrontEndTest {
         constraint int_lin_eq([2, -1, 1], [s, obj, x[1]], 0) :: defines_var(obj);
         solve minimize obj;
         """);
-    String out = run(model.toString(), "--lcg", "-f", "-s")[0];
+    String out =
+        run(model.toString(), "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
     assertTrue(out.strip().contains("=========="), out);
     assertTrue(out.contains("%%%mzn-stat: lcgLateDecisions=0\n"), out);
     assertTrue(out.contains("%%%mzn-stat: objective="), out);
+  }
+
+  @Test
+  void lcgFreeSearchBranchesOnBlockSumsLast() throws IOException {
+    // --lcg splits a sum of 60 terms into block sums of about 8 terms: they follow from the terms,
+    // as defined variables do, so free search branches on them last (develop-5.0 branched on them
+    // like on the terms, celar SUB2 6x worse)
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 60; i++) {
+      model.append("var 0..1: x%d;\n".formatted(i));
+    }
+    model.append("var 0..200: obj :: output_var;\n");
+    String xs =
+        java.util.stream.IntStream.range(0, 60)
+            .mapToObj(i -> "x" + i)
+            .collect(Collectors.joining(","));
+    String ws =
+        java.util.stream.IntStream.range(0, 60)
+            .mapToObj(i -> Integer.toString(1 + i % 5))
+            .collect(Collectors.joining(","));
+    model.append(
+        "constraint int_lin_eq([%s,-1], [%s,obj], 0) :: defines_var(obj);\n".formatted(ws, xs));
+    model.append(
+        "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
+    model.append("solve minimize obj;\n");
+    String out =
+        run(model.toString(), "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
+    assertTrue(out.strip().contains("=========="), out);
+    String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
+    // obj, the objective, and the block sums of the two long constraints
+    assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 10, out);
+  }
+
+  @Test
+  void lcgFreeSearchKeepsDefinedBooleansOutOfTheLateTier() throws IOException {
+    // a defined 0/1 variable is the truth of a reified constraint, a literal to branch on: on
+    // skill-allocation 5d_1, where all but 126 of 12,851 variables are such reifications, the late
+    // tier left activity the 126 alone and found no proof in 30 s instead of 5 s. Here b1, b2, c
+    // and y are defined 0/1 variables; obj alone is late
+    String model =
+        """
+        array [1..4] of var 1..4: x :: output_array([1..4]);
+        var bool: b1;
+        var bool: b2;
+        var bool: b3;
+        var bool: c;
+        var 0..1: y;
+        var 0..4: obj :: output_var;
+        constraint int_eq_reif(x[1], 1, b1) :: defines_var(b1);
+        constraint int_le_reif(x[2], 2, b2) :: defines_var(b2);
+        constraint int_eq_reif(x[3], 3, b3) :: defines_var(b3);
+        constraint array_bool_and([b1, b2], c) :: defines_var(c);
+        constraint bool2int(b3, y) :: defines_var(y);
+        constraint jacop_alldiff(x);
+        constraint int_lin_eq([1, 1, 1, -1], [x[1], x[2], y, obj], 0) :: defines_var(obj);
+        constraint bool_clause([c], []);
+        solve minimize obj;
+        """;
+    String out = run(model, "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
+    assertTrue(out.strip().contains("=========="), out);
+    assertTrue(out.contains("%%%mzn-stat: objective=3\n"), out);
+    assertTrue(out.contains("%%%mzn-stat: lcgLateVariables=1\n"), out);
   }
 
   @Test
@@ -1639,7 +1702,8 @@ class FlatzincFrontEndTest {
   void lcgFreeSearchWithoutAnnotationAlternatesWithDomWdeg() throws IOException {
     // cutstock without a search annotation: --lcg -f branched on activity alone and found no
     // solution in 60 s on type04_TEST9, where dom/wdeg finds one; its runs now alternate with
-    // dom/wdeg on the default search variables, as they alternate with an annotation
+    // dom/wdeg on the default search variables, as they alternate with an annotation (under
+    // lcg-branching=activity, the branching this test is about)
     int[] length = {45, 36, 31, 14};
     int[] demand = {3, 4, 5, 6};
     int pieces = 12;
@@ -1675,7 +1739,16 @@ class FlatzincFrontEndTest {
         "constraint int_lin_eq([%s-1], [%sused], 0);\n".formatted("1, ".repeat(pieces), used));
     model.append("solve minimize used;\n");
     // proving that six pieces are optimal takes long among the symmetric pieces
-    String out = run(model.toString(), "--lcg", "-f", "-s", "-t", "1000")[0];
+    String out =
+        run(
+            model.toString(),
+            "--lcg",
+            "-f",
+            "-s",
+            "-t",
+            "1000",
+            "--free-config",
+            "lcg-branching=activity")[0];
     Matcher u = Pattern.compile("used = (\\d+);").matcher(out);
     assertTrue(u.find() && Integer.parseInt(u.group(1)) >= 6, out);
     Matcher m = Pattern.compile("lcgAnnotationDecisions=(\\d+)").matcher(out);

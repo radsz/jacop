@@ -104,6 +104,7 @@ public final class CdclSolver {
   private int[] level = new int[0];
   private int[] reason = new int[0];
   private byte[] savedSign = new byte[0];
+  private byte originalSign; // the initial phase: 0 for true, 1 for false
   private byte[] targetSign = new byte[0];
   private byte[] bestSign = new byte[0];
   private int bestAssigned;
@@ -209,6 +210,9 @@ public final class CdclSolver {
   private int[] vivifyLits = new int[16];
   private static final long REPHASE_INTERVAL = 1000;
   private int simplifyAssigns = -1;
+  // propagations before the next simplification, as MiniSat's simpDB_props: a pass costs about the
+  // size of the arena and the watch lists, so it waits for as much propagation work
+  private long simplifyProps;
 
   // --- driven by an external search (the CP solver): see "External search" below
   private int[] units = new int[16];
@@ -329,10 +333,10 @@ public final class CdclSolver {
     }
     order.grow(n, activity);
     Arrays.fill(reason, numVars, n, NO_REASON);
-    // initial phase true (sign 0), as in CaDiCaL
-    Arrays.fill(savedSign, numVars, n, (byte) 0);
+    // the initial phase, true (sign 0) by default as in CaDiCaL
+    Arrays.fill(savedSign, numVars, n, originalSign);
     Arrays.fill(targetSign, numVars, n, (byte) -1);
-    Arrays.fill(bestSign, numVars, n, (byte) 0);
+    Arrays.fill(bestSign, numVars, n, originalSign);
     if (seed != 0) {
       // a different initial decision order for each seed
       SplittableRandom random = new SplittableRandom(seed + numVars);
@@ -2044,7 +2048,7 @@ public final class CdclSolver {
         reduceDb();
         vivifyDue = vivification;
       }
-      if (decisionLevel == 0 && trailSize != simplifyAssigns) {
+      if (decisionLevel == 0 && trailSize != simplifyAssigns && propagations >= simplifyProps) {
         simplifyDb();
       }
       int next = -1;
@@ -2069,6 +2073,13 @@ public final class CdclSolver {
       }
       if (next == -1) {
         next = pickBranch();
+        if (next == -1 && external != null) {
+          int d = external.decideLast();
+          if (d != 0 && Math.abs(d) <= numVars) {
+            int l = toLit(d);
+            next = vals[l] == 0 && !eliminatedVar[l >> 1] ? l : -1;
+          }
+        }
         if (next == -1) {
           if (external != null && !modelAccepted()) {
             continue;
@@ -2312,9 +2323,9 @@ public final class CdclSolver {
     int v = variable - 1;
     reason[v] = NO_REASON;
     activity[v] = 0;
-    savedSign[v] = 0;
+    savedSign[v] = originalSign;
     targetSign[v] = -1;
-    bestSign[v] = 0;
+    bestSign[v] = originalSign;
     order.insert(v);
   }
 
@@ -2325,6 +2336,18 @@ public final class CdclSolver {
    */
   public boolean hasProof() {
     return proof != null;
+  }
+
+  /**
+   * Sets the initial phase of the variables, which rephasing also returns to: true as in CaDiCaL
+   * (the default), or false as in MiniSat and CP-SAT.
+   *
+   * @param positive true for the positive literal
+   */
+  public void setInitialPhase(boolean positive) {
+    originalSign = (byte) (positive ? 0 : 1);
+    Arrays.fill(savedSign, 0, numVars, originalSign);
+    Arrays.fill(bestSign, 0, numVars, originalSign);
   }
 
   private int pickBranch() {
@@ -2369,8 +2392,8 @@ public final class CdclSolver {
     char kind =
         rephases <= 2 ? "OI".charAt(rephases - 1) : cycle.charAt((rephases - 3) % cycle.length());
     switch (kind) {
-      case 'O' -> Arrays.fill(savedSign, 0, numVars, (byte) 0);
-      case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) 1);
+      case 'O' -> Arrays.fill(savedSign, 0, numVars, originalSign);
+      case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) (1 - originalSign));
       case 'W' -> {
         System.arraycopy(bestSign, 0, savedSign, 0, numVars);
         walk();
@@ -2989,6 +3012,7 @@ public final class CdclSolver {
     }
     purge();
     simplifyAssigns = trailSize;
+    simplifyProps = propagations + memSize + 2L * numVars;
   }
 
   /**
