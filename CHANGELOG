@@ -665,6 +665,27 @@ Version 5.0 (unreleased)
     overall; --lcg -f 3% faster on the mznbench kit (also with
     --free-config lcg-split=0).
 
+51. The linear relaxation (--lp) adds cutting planes at its first solve,
+    in the root propagation: up to 5 rounds of mixed-integer rounding
+    (MIR) cuts, from the rows of the basis inverse of the basic columns
+    with fractional values (Gomory mixed-integer cuts) and from the rows
+    themselves. Each cut is the MIR of an integer combination of the
+    rows, computed exactly in long arithmetic with the bounds of that
+    moment, so it holds for the whole search and is explained under
+    --lcg like the other rows; the floating-point simplex only proposes
+    it. DualSimplex adds the rows and keeps its basis. A round that does
+    not move the bound is dropped again; -Dorg.jacop.lp.cuts=false turns
+    cuts off. The first solve may take 20,000 pivots
+    (-Dorg.jacop.lp.rootPivots) instead of 500, within the root work
+    budget. Fixes an overflow in the propagation of a combination of rows
+    whose slack exceeded a long, which pruned values of solutions. On 46
+    of the 422 vs-ortools instances that the change touches (20 s), proofs
+    go from 24 to 29 (default), 23 to 28 (--lcg) and 25 to 30 (-f), with
+    no proof lost: trucking 06, 07, 09 and 11 are proved in 1-5 s (06,
+    07 and 11 also under --lcg), and the cuts lift the root bound of
+    trucking 09 from 596 to the optimum 871.
+    New statistics lpRootBound, lpCuts, lpCutBound.
+
 Version 4.11
 =============
 
