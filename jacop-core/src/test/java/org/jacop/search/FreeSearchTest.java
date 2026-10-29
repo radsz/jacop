@@ -51,6 +51,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -876,5 +877,138 @@ class FreeSearchTest {
         }
       }
     }
+  }
+
+  @Test
+  void objectiveProbesKeepTheOptimum() {
+    // probes with the objective at its lower bound and a growing offset, from one failure each,
+    // under every branching and restart policy, with and without nogoods and restart on solution
+    Random rnd = new Random(13);
+    long refuted = 0;
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (boolean maximize : new boolean[] {false, true}) {
+        for (var branching : branchings()) {
+          for (Supplier<Calculator> restarts : restartPolicies()) {
+            if (restarts.get() == null) {
+              continue;
+            }
+            for (int option = 0; option < 8; option++) {
+              boolean restartOnSolution = (option & 1) != 0;
+              boolean nogoods = (option & 2) != 0;
+              double share = (option & 4) != 0 ? 3.0 : 0.5;
+              Model model = new Model(instance);
+              List<Integer> costs = new ArrayList<>();
+              FreeSearch.Builder builder =
+                  branching
+                      .apply(model)
+                      .builder(model.store)
+                      .restarts(restarts.get())
+                      .restartOnSolution(restartOnSolution)
+                      .nogoodsFromRestarts(nogoods)
+                      .probeObjective(share, 1 + option % 3)
+                      .record(model.x)
+                      .onSolution(
+                          s -> {
+                            model.checkSolution();
+                            costs.add(model.cost.value());
+                          });
+              FreeSearch search =
+                  (maximize ? builder.maximize(model.cost) : builder.minimize(model.cost)).build();
+              Status status = search.solve();
+              String context = instance + (maximize ? " max " : " min ") + option;
+              refuted += search.getProbesRefuted();
+              assertStoreIsBack(model, context);
+              if (reference[0] == 0) {
+                assertEquals(Status.UNSATISFIABLE, status, context);
+                continue;
+              }
+              assertEquals(Status.OPTIMAL, status, context);
+              int optimum = maximize ? reference[2] : reference[1];
+              assertEquals(optimum, search.getCostValue(), context);
+              for (int i = 1; i < costs.size(); i++) {
+                assertTrue(
+                    maximize ? costs.get(i) > costs.get(i - 1) : costs.get(i) < costs.get(i - 1),
+                    "objective does not improve: " + costs + " " + context);
+              }
+            }
+          }
+        }
+      }
+    }
+    assertTrue(refuted > 0);
+  }
+
+  @Test
+  void objectiveProbesStoppedByALimitLeaveTheStore() {
+    Random rnd = new Random(17);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      for (int limit = 1; limit <= 6; limit++) {
+        Model model = new Model(instance);
+        FreeSearch search =
+            FreeSearch.builder(
+                    model.store, new SimpleSelect<>(concat(model), null, new IndomainMin<>()))
+                .restarts(new LubyCalculator(1))
+                .probeObjective(10, 2)
+                .minimize(model.cost)
+                .failLimit(limit)
+                .onSolution(s -> model.checkSolution())
+                .build();
+        Status status = search.solve();
+        assertStoreIsBack(model, instance + " limit " + limit);
+        if (search.limitReached()) {
+          assertEquals(search.getSolutions() > 0 ? Status.SATISFIED : Status.UNKNOWN, status);
+        }
+      }
+    }
+  }
+
+  @Test
+  void refutedProbesRaiseTheLowerBound() {
+    // seven pairwise different variables over 0..9 minimising their sum: the sum propagates a lower
+    // bound of 0 while the optimum is 21, so the probes below 21 must be refuted by search
+    for (boolean maximize : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[7];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 9);
+      }
+      for (int i = 0; i < x.length; i++) {
+        for (int j = i + 1; j < x.length; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 63);
+      store.impose(new LinearInt(x, new int[] {1, 1, 1, 1, 1, 1, 1}, "==", cost));
+      IntVar objective = cost;
+      if (maximize) {
+        objective = new IntVar(store, "negated", -63, 0);
+        store.impose(new XplusYeqC(cost, objective, 0));
+      }
+      FreeSearch.Builder builder =
+          FreeSearch.builder(store, new SimpleSelect<>(x, null, new IndomainMax<>()))
+              .restarts(new LubyCalculator(10))
+              .restartOnSolution(true)
+              .probeObjective(1, 10);
+      FreeSearch search = (maximize ? builder.maximize(objective) : builder.minimize(cost)).build();
+      assertEquals(Status.OPTIMAL, search.solve());
+      assertEquals(maximize ? -21 : 21, search.getCostValue());
+      assertTrue(search.getProbesRefuted() > 0);
+      assertEquals(0, cost.min());
+      assertEquals(63, cost.max());
+    }
+  }
+
+  /** Checks that the domains of the model are those it had before the search. */
+  private static void assertStoreIsBack(Model model, String context) {
+    for (int i = 0; i < N; i++) {
+      assertEquals(0, model.x[i].min(), context);
+      assertEquals(MAX_VALUE, model.x[i].max(), context);
+      assertEquals(MAX_VALUE + 1, model.x[i].getSize(), context);
+    }
+    assertEquals(-1000, model.cost.min(), context);
+    assertEquals(1000, model.cost.max(), context);
   }
 }
