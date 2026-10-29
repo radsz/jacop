@@ -47,8 +47,10 @@ import org.jacop.core.Var;
  * <p>Nogoods are kept in flat arrays and propagated with two watched literals per nogood. A literal
  * {@code x = a} becomes true only when {@code x} is fixed to {@code a}, so the constraint is woken
  * only when a watched variable is fixed. A watch does not move back on backtracking. When all
- * literals but one are true, the value of the last one is removed. Nogoods are added at the root,
- * simplified with the root domains, and the oldest are deleted when there are too many.
+ * literals but one are true, the value of the last one is removed. Watch lists are kept per literal
+ * {@code x = a}, so fixing {@code x} to {@code a} visits only the nogoods watching that literal.
+ * Nogoods are added at the root, simplified with the root domains, and the oldest are deleted when
+ * there are too many.
  *
  * <p>The constraint is not attached to the variables as a model constraint; it is woken through the
  * store's watched constraints. {@link #detach()} removes it from the store.
@@ -83,11 +85,19 @@ public final class RestartNoGoods extends Constraint {
 
   private int[] litVar = new int[256];
   private int[] litValue = new int[256];
+  // watch list of each literal position
+  private int[] litWatch = new int[256];
   private int litCount;
 
-  // watch lists: for each variable, entries 2 * nogood + slot
+  // the watch lists of each variable: values in increasing order and their watch lists
+  private int[][] varValues = new int[16][];
+  private int[][] varWatch = new int[16][];
+  private int[] varWatchCount = new int[16];
+
+  // watch lists, one per distinct literal x = a: entries 2 * nogood + slot
   private int[][] watches = new int[16][];
   private int[] watchSize = new int[16];
+  private int watchCount;
 
   // variables fixed since the last propagation
   private int[] pending = new int[16];
@@ -177,6 +187,7 @@ public final class RestartNoGoods extends Constraint {
       if (!duplicate) {
         litVar[first + size] = xi;
         litValue[first + size] = a;
+        litWatch[first + size] = watchOf(xi, a);
         size++;
       }
     }
@@ -203,8 +214,8 @@ public final class RestartNoGoods extends Constraint {
     length[k] = size;
     watch0[k] = first;
     watch1[k] = first + 1;
-    addWatch(litVar[first], 2 * k);
-    addWatch(litVar[first + 1], 2 * k + 1);
+    addWatch(litWatch[first], 2 * k);
+    addWatch(litWatch[first + 1], 2 * k + 1);
   }
 
   /**
@@ -268,10 +279,14 @@ public final class RestartNoGoods extends Constraint {
     pendingSize = 0;
   }
 
-  /** Visits the nogoods watching a literal of variable xi, which is fixed to value a. */
+  /** Visits the nogoods watching the literal xi = a, which has become true. */
   private void propagateFixed(int xi, int a) {
-    int[] list = watches[xi];
-    int size = watchSize[xi];
+    int w = findWatch(xi, a);
+    if (w < 0) {
+      return;
+    }
+    int[] list = watches[w];
+    int size = watchSize[w];
     int kept = 0;
     int i = 0;
     try {
@@ -280,11 +295,6 @@ public final class RestartNoGoods extends Constraint {
         int k = entry >> 1;
         boolean first = (entry & 1) == 0;
         int own = first ? watch0[k] : watch1[k];
-        if (litValue[own] != a) {
-          // the watched literal is false: the nogood holds
-          list[kept++] = entry;
-          continue;
-        }
         int other = first ? watch1[k] : watch0[k];
         int replacement = findReplacement(k, own, other);
         if (replacement >= 0) {
@@ -293,7 +303,7 @@ public final class RestartNoGoods extends Constraint {
           } else {
             watch1[k] = replacement;
           }
-          addWatch(litVar[replacement], entry);
+          addWatch(litWatch[replacement], entry);
           continue;
         }
         list[kept++] = entry;
@@ -309,7 +319,7 @@ public final class RestartNoGoods extends Constraint {
       while (i < size) {
         list[kept++] = list[i++];
       }
-      watchSize[xi] = kept;
+      watchSize[w] = kept;
     }
   }
 
@@ -335,6 +345,7 @@ public final class RestartNoGoods extends Constraint {
     int shift = newestFirst;
     System.arraycopy(litVar, newestFirst, litVar, 0, litCount - newestFirst);
     System.arraycopy(litValue, newestFirst, litValue, 0, litCount - newestFirst);
+    System.arraycopy(litWatch, newestFirst, litWatch, 0, litCount - newestFirst);
     litCount -= shift;
     int kept = nogoodCount - drop;
     for (int k = 0; k < kept; k++) {
@@ -345,10 +356,10 @@ public final class RestartNoGoods extends Constraint {
     }
     nogoodCount = kept;
     deleted += drop;
-    Arrays.fill(watchSize, 0, varCount, 0);
+    Arrays.fill(watchSize, 0, watchCount, 0);
     for (int k = 0; k < nogoodCount; k++) {
-      addWatch(litVar[watch0[k]], 2 * k);
-      addWatch(litVar[watch1[k]], 2 * k + 1);
+      addWatch(litWatch[watch0[k]], 2 * k);
+      addWatch(litWatch[watch1[k]], 2 * k + 1);
     }
   }
 
@@ -360,23 +371,60 @@ public final class RestartNoGoods extends Constraint {
     if (varCount == vars.length) {
       int n = 2 * varCount + 16;
       vars = Arrays.copyOf(vars, n);
-      watches = Arrays.copyOf(watches, n);
-      watchSize = Arrays.copyOf(watchSize, n);
+      varValues = Arrays.copyOf(varValues, n);
+      varWatch = Arrays.copyOf(varWatch, n);
+      varWatchCount = Arrays.copyOf(varWatchCount, n);
     }
     vars[varCount] = x;
-    watches[varCount] = new int[4];
+    varValues[varCount] = new int[2];
+    varWatch[varCount] = new int[2];
     varIndex.put(x, varCount);
     store.registerWatchedLiteralConstraint(x, this);
     return varCount++;
   }
 
-  private void addWatch(int xi, int entry) {
-    int[] list = watches[xi];
-    if (watchSize[xi] == list.length) {
-      list = Arrays.copyOf(list, 2 * list.length + 4);
-      watches[xi] = list;
+  /** Returns the watch list of the literal xi = a, or -1 if no nogood has this literal. */
+  private int findWatch(int xi, int a) {
+    int p = Arrays.binarySearch(varValues[xi], 0, varWatchCount[xi], a);
+    return p >= 0 ? varWatch[xi][p] : -1;
+  }
+
+  /** Returns the watch list of the literal xi = a, creating it if needed. */
+  private int watchOf(int xi, int a) {
+    int n = varWatchCount[xi];
+    int[] values = varValues[xi];
+    int p = Arrays.binarySearch(values, 0, n, a);
+    if (p >= 0) {
+      return varWatch[xi][p];
     }
-    list[watchSize[xi]++] = entry;
+    p = -p - 1;
+    if (n == values.length) {
+      values = Arrays.copyOf(values, 2 * n);
+      varValues[xi] = values;
+      varWatch[xi] = Arrays.copyOf(varWatch[xi], 2 * n);
+    }
+    int[] lists = varWatch[xi];
+    System.arraycopy(values, p, values, p + 1, n - p);
+    System.arraycopy(lists, p, lists, p + 1, n - p);
+    if (watchCount == watches.length) {
+      watches = Arrays.copyOf(watches, 2 * watchCount);
+      watchSize = Arrays.copyOf(watchSize, 2 * watchCount);
+    }
+    int w = watchCount++;
+    watches[w] = new int[4];
+    values[p] = a;
+    lists[p] = w;
+    varWatchCount[xi] = n + 1;
+    return w;
+  }
+
+  private void addWatch(int w, int entry) {
+    int[] list = watches[w];
+    if (watchSize[w] == list.length) {
+      list = Arrays.copyOf(list, 2 * list.length + 4);
+      watches[w] = list;
+    }
+    list[watchSize[w]++] = entry;
   }
 
   private void ensureLiterals(int n) {
@@ -384,6 +432,7 @@ public final class RestartNoGoods extends Constraint {
       int size = Math.max(n, 2 * litVar.length);
       litVar = Arrays.copyOf(litVar, size);
       litValue = Arrays.copyOf(litValue, size);
+      litWatch = Arrays.copyOf(litWatch, size);
     }
   }
 
