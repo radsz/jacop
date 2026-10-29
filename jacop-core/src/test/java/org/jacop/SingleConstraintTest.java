@@ -130,6 +130,7 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
+import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
@@ -8318,5 +8319,37 @@ class SingleConstraintTest extends TestHelper {
 
     assertThat(store.consistency()).isTrue();
     assertThat(y0.dom().toString()).isEqualTo("{0, 3}");
+  }
+
+  @Test
+  void sumWeightPrunesOnceATermExceedsTheSlack() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    // x + y + 2z = 2: both sides have a slack of 2, as large as the term of z, so nothing prunes
+    store.impose(new SumWeight(new IntVar[] {x, y, z}, new int[] {1, 1, 2}, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{0..1}");
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 1, 1);
+    // now the slack below the sum is 1 and z must be 0
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.value()).isZero();
+    assertThat(y.value()).isEqualTo(1);
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    assertThat(z.dom().toString()).isEqualTo("{0..1}");
+
+    Store other = new Store();
+    IntVar a = new IntVar(other, "a", 0, 1);
+    IntVar b = new IntVar(other, "b", 0, 1);
+    IntVar c = new IntVar(other, "c", 0, 1);
+    // a + b + 3c = 3: the slack above the sum is 2, less than the term of c, so c = 1
+    other.impose(new SumWeight(new IntVar[] {a, b, c}, new int[] {1, 1, 3}, 3));
+    assertThat(other.consistency()).isTrue();
+    assertThat(c.value()).isEqualTo(1);
+    assertThat(a.value()).isZero();
+    assertThat(b.value()).isZero();
   }
 }

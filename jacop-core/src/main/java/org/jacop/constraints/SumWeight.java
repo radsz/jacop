@@ -92,6 +92,9 @@ public class SumWeight extends Constraint
   private long lMax;
   private long[] lMinArray;
   private long[] lMaxArray;
+  // the largest weight times domain width of a variable when imposed: no variable can be pruned
+  // while both sides of the sum have at least this much slack
+  private long maxVariability;
   private Map<Var, Integer> positionMaping;
   private boolean backtrackHasOccured;
 
@@ -221,6 +224,10 @@ public class SumWeight extends Constraint
 
       store.propagationHasOccurred = false;
 
+      if (equalTo - lMin >= maxVariability && lMax - equalTo >= maxVariability) {
+        return;
+      }
+
       propagateBoundsToVariables(
           store, equalTo - lMax, equalTo - lMin, nextGroundedPosition.value());
 
@@ -304,6 +311,17 @@ public class SumWeight extends Constraint
     lMaxArray = new long[list.length];
     lMin = 0L;
     lMax = 0L;
+    maxVariability = 0L;
+    for (int i = 0; i < list.length; i++) {
+      long width = (long) list[i].max() - list[i].min();
+      long variability;
+      try {
+        variability = Math.multiplyExact(width, Math.abs(weights[i]));
+      } catch (ArithmeticException e) {
+        variability = Long.MAX_VALUE; // never skip the pass
+      }
+      maxVariability = Math.max(maxVariability, variability);
+    }
 
     super.impose(store);
   }
