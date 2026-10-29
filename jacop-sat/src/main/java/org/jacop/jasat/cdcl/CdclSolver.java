@@ -281,6 +281,8 @@ public final class CdclSolver {
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
   private DratWriter proof;
+  // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
+  private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
   /** Number of conflicts so far. */
   public long conflicts;
@@ -1714,6 +1716,9 @@ public final class CdclSolver {
       return false;
     }
     if (propagate() == NO_CONFLICT) {
+      if (checking) {
+        checkFixpoint();
+      }
       return true;
     }
     conflicts++;
@@ -2194,6 +2199,9 @@ public final class CdclSolver {
       }
       if (decisionLevel == 0 && trailSize != simplifyAssigns && propagations >= simplifyProps) {
         simplifyDb();
+      }
+      if (checking) {
+        checkFixpoint();
       }
       int next = -1;
       while (decisionLevel < assumptions.length) {
@@ -3244,5 +3252,181 @@ public final class CdclSolver {
     mem = to;
     memSize = top;
     wasted = 0;
+  }
+
+  // ---------------------------------------------------------------------------- self-check
+
+  /** Tests: checks the propagation invariants at every fixpoint (before a decision). */
+  void setChecking(boolean on) {
+    checking = on;
+  }
+
+  /**
+   * Checks, at a unit propagation fixpoint, that no clause is false or unit, that every attached
+   * clause is watched by its first two literals, and that every reason clause holds its literal
+   * first with the other literals false earlier on the trail and at no higher level.
+   *
+   * @throws IllegalStateException with the first violation found
+   */
+  void checkFixpoint() {
+    if (!ok || hasPending) {
+      return;
+    }
+    if (qhead != trailSize) {
+      throw new IllegalStateException("fixpoint with " + (trailSize - qhead) + " literals queued");
+    }
+    for (int i = 0; i < trailSize; i++) {
+      int lit = trail[i];
+      int v = lit >> 1;
+      if (vals[lit] <= 0 || vals[lit ^ 1] >= 0 || trailPos[v] != i) {
+        throw new IllegalStateException("trail entry " + i + " inconsistent: " + toDimacs(lit));
+      }
+      if (level[v] > decisionLevel) {
+        throw new IllegalStateException(toDimacs(lit) + " above the decision level");
+      }
+      int at = 0;
+      while (at < decisionLevel && trailLim[at] <= i) {
+        at++;
+      }
+      if (level[v] > at || (!chrono && level[v] != at)) {
+        throw new IllegalStateException(
+            toDimacs(lit) + " at level " + level[v] + " but in the trail of level " + at);
+      }
+      checkReason(lit, i);
+    }
+    int assigned = 0;
+    for (int v = 0; v < numVars; v++) {
+      if (vals[2 * v] != 0) {
+        assigned++;
+      }
+      if (vals[2 * v] != -vals[2 * v + 1]) {
+        throw new IllegalStateException("values of variable " + (v + 1) + " inconsistent");
+      }
+    }
+    if (assigned != trailSize) {
+      throw new IllegalStateException(assigned + " variables assigned, trail " + trailSize);
+    }
+    for (int pass = 0; pass < 2; pass++) {
+      int[] list = pass == 0 ? originals : learnts;
+      int n = pass == 0 ? numOriginals : numLearnts;
+      for (int i = 0; i < n; i++) {
+        int ref = list[i];
+        if ((mem[ref + META] & DELETED) != 0) {
+          continue;
+        }
+        checkWatched(ref);
+        checkClause(mem, ref + HEADER, mem[ref + SIZE], pass == 0 ? "original" : "learnt");
+      }
+    }
+    int[] pair = new int[2];
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int b = 0; b < binSize[l]; b++) {
+        pair[0] = l;
+        pair[1] = binWatches[l][b];
+        checkClause(pair, 0, 2, "binary");
+      }
+    }
+  }
+
+  private void checkWatched(int ref) {
+    for (int k = 0; k < 2; k++) {
+      int w = mem[ref + HEADER + k];
+      boolean found = false;
+      for (int i = 0; i < watchSize[w] && !found; i += 2) {
+        found = watches[w][i + 1] == ref;
+      }
+      if (!found) {
+        throw new IllegalStateException(
+            "clause "
+                + clauseText(mem, ref + HEADER, mem[ref + SIZE])
+                + " not watched by "
+                + toDimacs(w));
+      }
+    }
+  }
+
+  private void checkClause(int[] lits, int from, int size, String kind) {
+    int open = 0;
+    int unassigned = -1;
+    for (int k = from; k < from + size; k++) {
+      int l = lits[k];
+      if (eliminatedVar[l >> 1]) {
+        throw new IllegalStateException(
+            kind + " clause " + clauseText(lits, from, size) + " on an eliminated variable");
+      }
+      if (vals[l] > 0) {
+        return;
+      }
+      if (vals[l] == 0) {
+        open++;
+        unassigned = l;
+      }
+    }
+    if (open == 0) {
+      throw new IllegalStateException(
+          kind + " clause " + clauseText(lits, from, size) + " false at the fixpoint");
+    }
+    if (open == 1) {
+      throw new IllegalStateException(
+          kind
+              + " clause "
+              + clauseText(lits, from, size)
+              + " unit at the fixpoint (implies "
+              + toDimacs(unassigned)
+              + ", decision level "
+              + decisionLevel
+              + ")");
+    }
+  }
+
+  private void checkReason(int lit, int pos) {
+    int v = lit >> 1;
+    int r = reason[v];
+    if (r == NO_REASON || r == UNIT_REASON || r == EXTERNAL_REASON) {
+      return;
+    }
+    if (r < NO_REASON) {
+      int other = -2 - r;
+      boolean found = false;
+      for (int b = 0; b < binSize[lit] && !found; b++) {
+        found = binWatches[lit][b] == other;
+      }
+      if (!found) {
+        throw new IllegalStateException(
+            "binary reason " + toDimacs(lit) + " " + toDimacs(other) + " is not a clause");
+      }
+      checkAntecedent(lit, other, pos);
+      return;
+    }
+    if ((mem[r + META] & DELETED) != 0) {
+      throw new IllegalStateException("reason of " + toDimacs(lit) + " deleted");
+    }
+    if (mem[r + HEADER] != lit) {
+      throw new IllegalStateException(
+          "reason "
+              + clauseText(mem, r + HEADER, mem[r + SIZE])
+              + " of "
+              + toDimacs(lit)
+              + " does not hold it first");
+    }
+    for (int k = 1; k < mem[r + SIZE]; k++) {
+      checkAntecedent(lit, mem[r + HEADER + k], pos);
+    }
+  }
+
+  private void checkAntecedent(int lit, int q, int pos) {
+    int u = q >> 1;
+    if (vals[q] >= 0 || trailPos[u] >= pos || level[u] > level[lit >> 1]) {
+      throw new IllegalStateException(
+          "reason of " + toDimacs(lit) + " has " + toDimacs(q) + " not false before it");
+    }
+  }
+
+  private static String clauseText(int[] lits, int from, int size) {
+    StringBuilder b = new StringBuilder("(");
+    for (int k = from; k < from + size; k++) {
+      b.append(k > from ? " " : "").append(toDimacs(lits[k]));
+    }
+    return b.append(')').toString();
   }
 }
