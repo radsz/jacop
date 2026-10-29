@@ -37,6 +37,7 @@ import java.util.Set;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -105,14 +106,22 @@ public class Constraints implements ParserTreeConstants {
   void setOptions(Options options) {
     support.options = options;
     debug = options.debug();
+  }
+
+  void generateAllConstraints(SimpleNode astTree) throws Throwable {
+
+    Options options = support.options;
+    boolean manySolutions =
+        (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
+    if (manySolutions || hasFloatVariables()) {
+      // LCG on by default is left out where it would be ignored; the model is solved as before
+      options.dropDefaultLcg();
+    }
     if (options.lcg() || options.useSat() && options.presolve() != Options.Presolve.OFF) {
       // Boolean constraints become clauses of the LCG solver, or of the SAT solver of -sat once
       // presolve has preprocessed them; Solve posts them
       sat.collectClauses();
     }
-  }
-
-  void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
     if (support.options.debug()) {
       FzConsole.println(
@@ -389,4 +398,28 @@ public class Constraints implements ParserTreeConstants {
 
   /** Helper record for IntVar and integer value pair. */
   private record IntVarAndValue(IntVar x, int v) {}
+
+  private boolean hasFloatVariables() {
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Whether the solve item, a child of the model's end, is "solve satisfy". */
+  private static boolean satisfaction(Node node) {
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetChild(item.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind
+            && "satisfy".equals(kind.getKind());
+      }
+      if (child instanceof ASTModelEnd && satisfaction(child)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }

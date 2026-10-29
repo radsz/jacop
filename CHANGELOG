@@ -1057,6 +1057,20 @@ Version 5.0 (unreleased)
     objectives, 1 faster proof, none worse) and +6.4% with -f (results
     within run-to-run noise).
 
+70. fzn-jacop (and minizinc --solver org.jacop) solves with lazy clause
+    generation by default, with the model's search and with -f. --lcg now
+    takes on|off ("--lcg off" gives the previous default; --lcg alone still
+    turns it on), and -Djacop.lcg=off changes the default. Default LCG is
+    left out where LCG is not used anyway: models with float variables,
+    satisfaction problems asking for more than one solution (-a, -n), -sat,
+    and models loaded through FlatzincLoader for the API. Presolve stays off
+    by default. On 249 MiniZinc Challenge instances (60 s) LCG proves 32
+    more instances with the model's search (143 against 111, Borda 128
+    against 90) and 19 more with -f, where Borda is even with plain free
+    search; with -f it also proves 8 more of the 63 instances free search
+    used to lose. Presolve on, also without probing and symmetry breaking,
+    lost Borda in every configuration measured.
+
 Version 4.11
 =============
 
