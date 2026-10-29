@@ -32,10 +32,10 @@ package org.jacop.util;
 import org.jacop.core.Var;
 
 /**
- * A map from variables, compared by identity, to non-negative ints, such as the position of a
- * variable in a constraint. It is meant for lookups on the hot path of a constraint, such as {@code
- * queueVariable}: keys and values are kept in flat arrays with open addressing, so a lookup neither
- * boxes nor follows a chain of map nodes.
+ * A map from variables, compared by identity and hashed by their store index, to non-negative ints,
+ * such as the position of a variable in a constraint. It is meant for lookups on the hot path of a
+ * constraint, such as {@code queueVariable}: keys and values are kept in flat arrays with open
+ * addressing, so a lookup neither boxes nor follows a chain of map nodes.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -67,8 +67,11 @@ public final class VarIntMap {
     values = new int[capacity];
   }
 
+  // the store index, unlike the identity hash, costs no header access and leaves the identity
+  // hashes
+  // of other objects, and so the iteration order of identity-based collections, unchanged
   private static int slot(Var v, int mask) {
-    int h = System.identityHashCode(v) * 0x9E3779B9;
+    int h = v.index() * 0x9E3779B9;
     return (h ^ (h >>> 16)) & mask;
   }
 
