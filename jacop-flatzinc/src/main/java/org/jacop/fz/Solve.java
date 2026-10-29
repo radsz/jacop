@@ -2065,7 +2065,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (freeLns != null) {
         builder.lns(
             freeLns,
-            Double.parseDouble(options.freeConfig("lns-share", "3")),
+            Double.parseDouble(options.freeConfig("lns-share", "1")),
             Long.parseLong(options.freeConfig("lns-fails", "100")));
       }
     }

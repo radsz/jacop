@@ -176,7 +176,7 @@ public class Options {
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),
                 lns=0|1 (adaptive large neighbourhood search for optimisation, default 1),
                 lns-share=<share> (time of neighbourhood runs per unit of time of the other runs,
-                default 3), lns-fails=<failures> (one neighbourhood run, default 100),
+                default 1, 3 with --lcg), lns-fails=<failures> (one neighbourhood run, default 100),
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
