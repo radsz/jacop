@@ -1843,6 +1843,24 @@ public class Store {
     variablesPrunned = new LinkedHashSet<>();
   }
 
+  /**
+   * Tells whether failures update the accumulated failure counts (AFC) of constraints.
+   *
+   * @return true when AFC management is enabled.
+   */
+  public boolean afcManagement() {
+    return constraintAfcManagement;
+  }
+
+  /**
+   * Tells whether propagation updates the activities of variables.
+   *
+   * @return true when activity management is enabled.
+   */
+  public boolean activityManagement() {
+    return variableActivityManagement;
+  }
+
   void updateActivities(Constraint constraint) {
     for (Var v : variablesPrunned) {
       v.updateActivity();

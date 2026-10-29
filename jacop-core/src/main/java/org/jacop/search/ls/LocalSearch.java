@@ -269,8 +269,27 @@ public final class LocalSearch {
     if (timeUp()) {
       return Status.UNKNOWN;
     }
-    initialAssignment();
-    search();
+    // the failures of local search's propagation must not train the heuristics of a later search
+    boolean weights = store.variableWeightManagement;
+    boolean afc = store.afcManagement();
+    boolean activity = store.activityManagement();
+    store.variableWeightManagement = false;
+    store.afcManagement(false);
+    if (activity) {
+      store.activityManagement(false);
+    }
+    relaxations.forEach(r -> r.suspend(true));
+    try {
+      initialAssignment();
+      search();
+    } finally {
+      relaxations.forEach(r -> r.suspend(false));
+      store.variableWeightManagement = weights;
+      store.afcManagement(afc);
+      if (activity) {
+        store.activityManagement(true);
+      }
+    }
     return solution != null ? Status.SATISFIED : Status.UNKNOWN;
   }
 
@@ -399,6 +418,9 @@ public final class LocalSearch {
 
   private List<Var> allVars;
 
+  // suspended while local search propagates in the store
+  private final List<LinearRelaxation> relaxations = new ArrayList<>();
+
   private void build() {
     Set<Constraint> constraints = new java.util.LinkedHashSet<>();
     for (Var v : storeVariables()) {
@@ -429,8 +451,13 @@ public final class LocalSearch {
     List<Constraint> checked = new ArrayList<>();
     List<Violation> measured = new ArrayList<>();
     for (Constraint c : constraints) {
-      if (c instanceof LinearRelaxation || c instanceof EnergyPrecedence) {
-        // only add pruning to the other constraints
+      if (c instanceof LinearRelaxation r) {
+        // only adds pruning to the other constraints; its budget is the search's
+        relaxations.add(r);
+        continue;
+      }
+      if (c instanceof EnergyPrecedence) {
+        // only adds pruning to the other constraints
         continue;
       }
       int before = rows.size();
