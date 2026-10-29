@@ -651,7 +651,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // the values of each group of joined variables
     Map<IntVar, IntDomain> rootValues = new IdentityHashMap<>();
     for (IntVar x : ranked) {
-      if (parent.containsKey(x) && !rootNumeric.get(root(parent, x))) {
+      if (parent.containsKey(x) && Boolean.FALSE.equals(rootNumeric.get(root(parent, x)))) {
         rootValues.merge(root(parent, x), x.dom(), IntDomain::union);
       }
     }
