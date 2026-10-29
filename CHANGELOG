@@ -586,17 +586,19 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
-44. LCG free search (--lcg -f) chooses whether activity branching decides
-    the 0/1 variables first by taking turns: its runs change between the
-    two orders at each restart. Each order wins clearly on some models
-    (without: smelt, java-routing, jobshop swv07, on-call-rostering; with:
-    community-detection, mario), and no static feature of the model
-    predicted which. On
-    the 249 mznbench instances of the free-search kit (60 s, lcg-split=0,
-    two runs each), turns solved 159 and 161 against 156 and 159 with
-    Booleans first, and was better on 23 instances and worse on 10 in both
-    runs. --free-config lcg-booleans-first=on|off fixes one order, as does
-    -Djacop.lcg.booleansFirst. New: LcgSolver.setBooleansFirst,
+44. LCG free search (--lcg -f) can take turns between deciding the 0/1
+    variables first and one order of activity for all variables: with
+    --free-config lcg-booleans-first=turns its runs change between the two
+    orders at each restart (on, the default, and off fix one order, as
+    does -Djacop.lcg.booleansFirst). Each order wins clearly on some
+    models (without: smelt, java-routing, jobshop swv07, on-call-rostering;
+    with: community-detection, mario), and no static feature of the model
+    predicted which. On the 249 mznbench instances of the free-search kit
+    (60 s, lcg-split=0, two runs each), turns solved 161 and 159 against
+    156 and 159 with Booleans first, and was better on 23 instances and
+    worse on 10 in both runs. With lcg-split=40 it loses celar graph05,
+    whose core-guided phase stalls without Booleans first, so it is not
+    the default yet. New: LcgSolver.setBooleansFirst,
     setBooleansFirstTurns and the statistics lcgBooleanVariables,
     lcgWideVariables and lcgBooleansFirst.
 

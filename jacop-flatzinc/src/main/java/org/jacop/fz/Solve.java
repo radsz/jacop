@@ -1691,17 +1691,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setLateVariables(late);
     }
     if (free) {
-      // activity branching takes turns with and without the 0/1 variables first: each order wins
+      // turns: activity branching changes between the two orders at each restart. Each order wins
       // clearly on some models (smelt, java-routing and jobshop swv07 without, community-detection
       // dolphin and mario with), and no feature of the model tells which, neither the kinds of its
       // output and annotation variables nor the share of 0/1 variables. On mznbench (60 s,
       // lcg-split=0, two runs each) turns did better than Booleans first on 23 instances and worse
-      // on 10 in both runs, and better than without on 12 and worse on 8. The system property
-      // jacop.lcg.booleansFirst, when set, fixes one order
-      String booleansFirst =
-          options.freeConfig(
-              "lcg-booleans-first",
-              System.getProperty("jacop.lcg.booleansFirst") == null ? "turns" : "");
+      // on 10 in both runs. Not the default yet: with lcg-split=40, the core-guided phase stalls on
+      // celar graph05 without Booleans first (proved in 13 s with them, not in 60 s in turns)
+      String booleansFirst = options.freeConfig("lcg-booleans-first", "");
       switch (booleansFirst) {
         case "on" -> lcg.setBooleansFirst(true);
         case "off" -> lcg.setBooleansFirst(false);
