@@ -264,13 +264,8 @@ public class Tables {
 
   /** Removes aliased variables from the search variable collection. */
   void removeAliasFromSearch() {
-
-    Set<Map.Entry<IntVar, IntVar>> entries = aliasTable.entrySet();
-
-    for (Map.Entry<IntVar, IntVar> e : entries) {
-      IntVar b = e.getKey();
-      defaultSearchVariables.remove(b);
-    }
+    // one pass: removing each alias by itself took seconds on models with many aliases
+    defaultSearchVariables.removeIf(aliasTable::containsKey);
   }
 
   /**
