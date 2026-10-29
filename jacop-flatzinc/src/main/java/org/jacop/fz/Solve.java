@@ -1660,6 +1660,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     IntVar[] hinted = ls == null ? null : hintedVariables();
     int[] hintValues = ls == null ? null : ls.getSolution(hinted);
     lcg = new LcgSolver(store);
+    lcg.setSeed(options.getRandomSeed());
     if (ls != null) {
       lcg.setPhase(hinted, hintValues);
       if (costVar == null) {
@@ -1696,6 +1697,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (branching != LcgSolver.Branching.ACTIVITY) {
         lcg.sat().setInitialPhase(false);
       }
+      lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
     }
     SelectChoicePoint<? extends Var> annotated =
         free && "none".equals(interleave) ? null : annotationSelect(annotatedSearch);
