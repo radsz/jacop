@@ -222,8 +222,8 @@ public final class CoreSearch {
     if (terms.containsKey(objective) || terms.isEmpty()) {
       return null;
     }
-    Map<Integer, Long> sums = new HashMap<>(terms);
-    long sumsConstant = constant[0];
+    Map<Integer, Long> blocks = new HashMap<>(terms);
+    long blocksConstant = constant[0];
     // a term that is only a sum defined for the objective, such as a block of a long sum split for
     // shorter explanations, is replaced by its own terms
     for (int round = 0; round < 4; round++) {
@@ -246,17 +246,30 @@ public final class CoreSearch {
         break;
       }
     }
-    if (terms.equals(sums)) {
-      return new CoreSearch(lcg, objective, terms, constant[0]);
+    // the terms of the sums replace the sums when they have fewer levels for the cores to relax:
+    // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
+    // terms, 151 cores on its 3 sums against 2,285 on the terms)
+    if (span(lcg, terms) > span(lcg, blocks)) {
+      return new CoreSearch(lcg, objective, blocks, blocksConstant);
     }
-    // the terms of the sums are kept only when they form at-most-one groups: the cores of the sums
-    // themselves are found faster otherwise (celar graph05: 9 cores against one)
-    CoreSearch flat = new CoreSearch(lcg, objective, terms, constant[0]);
-    flat.addTermSofts();
-    if (!flat.relaxAtMostOnes() || flat.amoGroups > 0) {
-      return flat;
+    CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    if (!terms.equals(blocks)) {
+      // grouped now, as before #313's rework: the probes then have the time of the whole run, not
+      // the share of the phase (spot5 28: 58 groups and a proof in 7 s, against 6 groups)
+      search.addTermSofts();
+      search.relaxAtMostOnes();
     }
-    return new CoreSearch(lcg, objective, sums, sumsConstant);
+    return search;
+  }
+
+  /** The number of levels of the terms' variables, summed. */
+  private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
+    long span = 0;
+    for (int t : terms.keySet()) {
+      IntVar x = lcg.variable(t);
+      span += (long) x.max() - x.min();
+    }
+    return span;
   }
 
   /**
@@ -611,6 +624,12 @@ public final class CoreSearch {
       for (int j = 0; j < clique.size(); j++) {
         Soft s = byLiteral.get(lits.get(clique.get(j)));
         s.weight -= m;
+        if (!s.expanded) {
+          // as in a core: the term's next level costs its weight once this one is relaxed, or
+          // every soft literal could be false in a solution above the lower bound
+          s.expanded = true;
+          addTermSoft(s.term, s.level + 1, termWeight[s.term]);
+        }
         all[j + 1] = -s.lit;
         if (!sat.addClause(-z, s.lit)) {
           return false;
