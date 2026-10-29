@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -68,9 +69,10 @@ final class LinearSplit {
    * @param store the store the blocks are imposed in
    * @param c the constraint
    * @param limit the most terms a constraint keeps
+   * @param defined receives the variable of each block sum, which its block defines
    * @return the sum of the blocks with c's relation and right-hand side, or null
    */
-  static Constraint split(Store store, Constraint c, int limit) {
+  static Constraint split(Store store, Constraint c, int limit, Consumer<IntVar> defined) {
     LinearForm f = form(c);
     if (limit <= 0 || f == null || f.relation() == LinearForm.NE || f.vars().length <= limit) {
       return null;
@@ -89,6 +91,7 @@ final class LinearSplit {
     int size = (int) Math.ceil(Math.sqrt(n));
     List<IntVar> sums = new ArrayList<>();
     List<Constraint> blocks = new ArrayList<>();
+    List<IntVar> blockSums = new ArrayList<>();
     for (int from = 0; from < n; from += size) {
       int to = Math.min(n, from + size);
       if (to - from == 1 && w[from] == 1) {
@@ -114,11 +117,13 @@ final class LinearSplit {
       bv[to - from] = s;
       bw[to - from] = -1;
       sums.add(s);
+      blockSums.add(s);
       blocks.add(new LinearInt(bv, bw, "==", 0));
     }
     for (Constraint b : blocks) {
       store.impose(b);
     }
+    blockSums.forEach(defined);
     IntVar[] top = sums.toArray(new IntVar[0]);
     int[] ones = new int[top.length];
     Arrays.fill(ones, 1);

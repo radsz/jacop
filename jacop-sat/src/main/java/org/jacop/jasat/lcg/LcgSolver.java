@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.IntSupplier;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.BooleanVar;
@@ -84,8 +85,12 @@ public final class LcgSolver implements ExternalPropagator {
   private final int baseLevel;
   private boolean rootFailed;
 
-  /** Runs the store to its fixpoint before clauses propagate again (the earlier behaviour). */
-  private static final boolean FULL_FIXPOINT = Boolean.getBoolean("jacop.lcg.fullFixpoint");
+  /**
+   * Runs the store to its fixpoint before clauses propagate again; false returns to the clauses
+   * after each pruning.
+   */
+  private static final boolean FULL_FIXPOINT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.fullFixpoint", "true"));
 
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
@@ -153,12 +158,37 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: activity decisions on late variables (see {@link #setLateVariables}). */
   public long lateDecisions;
 
+  /** Statistics: the late variables (see {@link #setLateVariables}). */
+  public long lateVariables;
+
   /** Statistics: decisions taken from the model's search annotation. */
   public long annotationDecisions;
 
-  // branching on integer variables by activity: bumped for the literals of learnt clauses
-  private final boolean activityBranching =
-      !"literals".equals(System.getProperty("jacop.lcg.branching", "activity"));
+  /** How decisions are made outside the runs of the search annotation. */
+  public enum Branching {
+    /** On the most active integer variable, by the activity of its literals in learnt clauses. */
+    ACTIVITY,
+    /** The SAT solver's own decisions on literals, by their activity and saved phases. */
+    LITERALS,
+    /**
+     * As LITERALS, but as ACTIVITY from {@link #AUTO_CONFLICTS} conflicts to the first solution.
+     */
+    AUTO,
+    /**
+     * Runs take turns at each restart: with an annotation under free search, the annotation
+     * (completed by ACTIVITY), then LITERALS, then ACTIVITY; without one, LITERALS and ACTIVITY.
+     */
+    ALTERNATE
+  }
+
+  /** Conflicts without a solution after which {@link Branching#AUTO} uses activity branching. */
+  public static final long AUTO_CONFLICTS = 1000;
+
+  private Branching branching =
+      Branching.valueOf(System.getProperty("jacop.lcg.branching", "activity").toUpperCase());
+  // whether decisions are on the most active variable, now
+  private boolean activityBranching = branching == Branching.ACTIVITY;
+  private long runs; // restarts so far, for the turns of Branching.ALTERNATE
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
   // last-conflict branching, on unless -Djacop.lcg.lastConflict=false
   private final boolean lastConflict =
@@ -171,13 +201,12 @@ public final class LcgSolver implements ExternalPropagator {
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
   private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
   private double[] activity;
-  // the 0/1 variables by activity, and the others in wide; with Booleans first a variable of wide
-  // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search, else the
-  // more active top of the two goes first
+  // the variables by activity; with Booleans first only the 0/1 ones, the others in wide, which
+  // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search
   private final VarHeap heap = new VarHeap();
-  private final boolean booleansFirst =
-      !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
   private final VarHeap wide = new VarHeap();
+  // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
+  private final boolean split = !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private boolean[] late;
@@ -207,11 +236,26 @@ public final class LcgSolver implements ExternalPropagator {
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
+  // after the core phase, branch and bound starts from the activity before it, unless
+  // -Djacop.lcg.coreRestore=false
+  private static final boolean CORE_RESTORE =
+      !"false".equals(System.getProperty("jacop.lcg.coreRestore"));
+  // the core phase gives its time to branch and bound when it has no solution by this share of
+  // its time; 0 turns it off. With the restore it scored 21.3 against 14.7 and 24.3 against 12.7 on
+  // the Challenge sample in two pairings, and 21.8 against 22.2 and 22.9 against 21.1 on the
+  // OR-Tools set; either alone lost.
+  private static final double CORE_NO_SOLUTION =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreNoSolution", "0.33"));
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   private CoreSearch coreSearch;
+  // the objective value of the best solution found outside this solver, and the last one imported
+  private IntSupplier sharedBound;
+  private int importedBound = Integer.MAX_VALUE;
+  // a shared bound at or below the objective's smallest value: no better solution exists
+  private boolean sharedBoundUnreachable;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -224,7 +268,10 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
-    sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 2));
+    // reasons of up to three literals stay as clauses; with the full fixpoint this scored 22.8
+    // against 20.2 on the OR-Tools set and 18.9 against 19.1 on the Challenge sample, and proved
+    // one more instance in each
+    sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -427,7 +474,7 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setConflictLimit(Long.MAX_VALUE);
     }
     solution = best;
-    if (result == CdclSolver.UNKNOWN) {
+    if (result == CdclSolver.UNKNOWN && !sharedBoundUnreachable) {
       return CdclSolver.UNKNOWN;
     }
     // SAT when the solution has the smallest value of the objective, UNSAT when none is better
@@ -438,9 +485,10 @@ public final class LcgSolver implements ExternalPropagator {
    * Runs core-guided search, then branch and bound from its best solution and lower bound. The
    * core-guided search takes at most its share of the time left (its budget of conflicts when there
    * is no deadline), and stops early when one call of the solver needs more than its limit of
-   * conflicts: a sign that it no longer finds cores or solutions quickly. Under a solution bound,
-   * every solution the core-guided search finds would have to improve, which makes its strata hard,
-   * so the bound comes only after it.
+   * conflicts: a sign that it no longer finds cores or solutions quickly. It also stops when it has
+   * no solution after a third of its time. Under a solution bound, every solution the core-guided
+   * search finds would have to improve, which makes its strata hard, so the bound comes only after
+   * it. Branch and bound then starts from the variables' activity before the core-guided search.
    */
   private int minimizeWithCores() {
     long deadline = sat.deadline();
@@ -451,10 +499,24 @@ public final class LcgSolver implements ExternalPropagator {
     } else {
       phaseLimit = sat.conflicts + coreBudget;
     }
+    double[] saved = CORE_RESTORE ? activity.clone() : null;
+    double savedInc = activityInc;
     coreMode = true;
     int result;
     try {
-      result = coreSearch.run(phaseLimit, coreCallLimit);
+      long full = sat.deadline();
+      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+        // without a solution by this share of the phase, branch and bound gets the time
+        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        sat.setDeadline(first);
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
+          sat.setDeadline(full);
+          result = coreSearch.run(phaseLimit, coreCallLimit);
+        }
+      } else {
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
     } finally {
       coreMode = false;
       sat.setDeadline(deadline);
@@ -462,6 +524,16 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (result != CdclSolver.UNKNOWN) {
       return result;
+    }
+    if (saved != null) {
+      // the core phase bumped the variables of conflicts under its assumptions, which mislead
+      // branch and bound: harmony-brother reached the optimum's bound in 8 s and then did not find
+      // the optimum, which branch and bound alone proves in 35 s
+      System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
+      activityInc = savedInc;
+      rebuildHeap(heap);
+      rebuildHeap(wide);
+      rebuildHeap(lateHeap);
     }
     if (!requireBetter()) {
       return CdclSolver.SAT;
@@ -531,6 +603,21 @@ public final class LcgSolver implements ExternalPropagator {
     return geLit(i, v);
   }
 
+  /** The literal {@code [x = v]} of variable i, for v in its root domain. */
+  int eqLiteral(int i, int v) {
+    return eqVar(i, v);
+  }
+
+  /** Whether literal lit of variable i's atoms holds when the variable takes value v. */
+  boolean holds(int lit, int i, int v) {
+    int d = Math.abs(lit);
+    if (litVar[d] != i) {
+      throw new IllegalArgumentException(lit + " is not an atom of variable " + i);
+    }
+    boolean atom = litKind[d] == GE_KIND ? v >= litValue[d] : v == litValue[d];
+    return atom == lit > 0;
+  }
+
   int solveUnder(int... assumed) {
     return solve(assumed);
   }
@@ -594,6 +681,16 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets how decisions are made outside the runs of the annotation. Set it before solving.
+   *
+   * @param branching the branching
+   */
+  public void setBranching(Branching branching) {
+    this.branching = branching;
+    activityBranching = branching == Branching.ACTIVITY;
+  }
+
+  /**
    * Sets the model's search annotation as the branching. Under fixed search every run follows it;
    * under free search the runs alternate between it and the activity of the variables, starting
    * with it. When it has fixed all its variables, the activity completes the assignment.
@@ -605,6 +702,9 @@ public final class LcgSolver implements ExternalPropagator {
     annotation = select;
     freeSearch = free;
     annotationRun = select != null;
+    if (annotationRun && branching == Branching.ALTERNATE) {
+      activityBranching = true;
+    }
   }
 
   /**
@@ -692,7 +792,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (litVar[dimacsVar] < 0) {
       return; // not an atom
     }
-    if (activityBranching) {
+    if (branching != Branching.LITERALS) {
       bump(litVar[dimacsVar]);
     }
     if (dimacsVar < atomUse.length && atomUse[dimacsVar] == 1) {
@@ -737,7 +837,15 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
-    if (annotation != null && freeSearch) {
+    if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
+      // the annotation, the literals and the activity in turn, with the activity completing the
+      // annotation's runs
+      runs++;
+      annotationRun = runs % 3 == 0;
+      activityBranching = runs % 3 != 1;
+    } else if (branching == Branching.ALTERNATE) {
+      activityBranching = !activityBranching;
+    } else if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
     }
   }
@@ -769,6 +877,10 @@ public final class LcgSolver implements ExternalPropagator {
       while (to < size && minimizeKeys[to] >>> 32 == var) {
         to++;
       }
+      if (to - from > 16 && var <= Integer.MAX_VALUE) {
+        removed += minimizeGroup(clause, from, to);
+        continue;
+      }
       for (int a = from; a < to; a++) {
         int i = (int) minimizeKeys[a];
         if (i == 0 || litVar[Math.abs(clause[i])] < 0) {
@@ -794,6 +906,72 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     return kept;
+  }
+
+  /**
+   * Semantic minimisation of the literals of one variable, keys {@code from} to {@code to}, in
+   * linear time for long groups: of the {@code [x >= v]} literals only the weakest can stay, and so
+   * of the {@code [x < v]} ones, while an {@code [x = v]} literal goes when it implies another
+   * literal of the group. Returns the number of literals removed.
+   */
+  private int minimizeGroup(int[] clause, int from, int to) {
+    int lo = -1; // the [x >= v] literal with the smallest v
+    int hi = -1; // the [x < v] literal with the largest v
+    int holeMin = Integer.MAX_VALUE;
+    int holeMax = Integer.MIN_VALUE;
+    int holes = 0;
+    for (int a = from; a < to; a++) {
+      int i = (int) minimizeKeys[a];
+      int l = clause[i];
+      int d = Math.abs(l);
+      if (litKind[d] == GE_KIND) {
+        if (l > 0 && (lo < 0 || litValue[d] < litValue[Math.abs(clause[lo])])) {
+          lo = i;
+        } else if (l < 0 && (hi < 0 || litValue[d] > litValue[Math.abs(clause[hi])])) {
+          hi = i;
+        }
+      } else if (l < 0) {
+        holes++;
+        holeMin = Math.min(holeMin, litValue[d]);
+        holeMax = Math.max(holeMax, litValue[d]);
+      }
+    }
+    // the weakest bounds go when they imply a hole: [x >= v] that x != w for w < v
+    if (lo > 0 && holeMin < litValue[Math.abs(clause[lo])]) {
+      minimizeRemoved[lo] = true;
+    }
+    if (hi > 0 && holeMax >= litValue[Math.abs(clause[hi])]) {
+      minimizeRemoved[hi] = true;
+    }
+    int removed = (lo > 0 && minimizeRemoved[lo] ? 1 : 0) + (hi > 0 && minimizeRemoved[hi] ? 1 : 0);
+    for (int a = from; a < to; a++) {
+      int i = (int) minimizeKeys[a];
+      if (i == 0 || i == lo || i == hi) {
+        continue;
+      }
+      int l = clause[i];
+      int d = Math.abs(l);
+      boolean drop;
+      if (litKind[d] == GE_KIND) {
+        // implies the weakest bound of its side, or the hole the weakest one implies
+        drop = true;
+      } else if (l > 0) {
+        long v = litValue[d];
+        // x = v implies the weakest bound of a side it is on, or a hole at another value
+        drop =
+            lo >= 0 && v >= litValue[Math.abs(clause[lo])]
+                || hi >= 0 && v < litValue[Math.abs(clause[hi])]
+                || holes > 1
+                || holes == 1 && holeMin != v;
+      } else {
+        drop = false; // x != v implies nothing else
+      }
+      if (drop) {
+        minimizeRemoved[i] = true;
+        removed++;
+      }
+    }
+    return removed;
   }
 
   // whether literal a implies literal b, both on the same variable, by their sets of values
@@ -883,9 +1061,47 @@ public final class LcgSolver implements ExternalPropagator {
     return d == LiteralMap.NONE ? 0 : sign * d;
   }
 
+  /**
+   * Makes {@link #minimize} look only for solutions better than the best one found outside this
+   * solver, for example by another search of the same model in a parallel portfolio. The supplier
+   * is read from the solver's thread whenever it takes clauses, and gives {@link Integer#MAX_VALUE}
+   * as long as there is no such solution. When {@link #minimize} then ends without a better
+   * solution, the best solution found outside is optimal.
+   *
+   * @param bound the objective value of the best solution found elsewhere
+   */
+  public void setSharedBound(IntSupplier bound) {
+    sharedBound = bound;
+  }
+
+  /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
+  public void stop() {
+    sat.cancel();
+  }
+
   @Override
   public int[] externalClause() {
+    if (structural.isEmpty() && sharedBound != null && objective >= 0 && !coreMode) {
+      importBound();
+    }
     return structural.poll();
+  }
+
+  /** Adds the clause that the objective is below a better bound found elsewhere. */
+  private void importBound() {
+    int shared = sharedBound.getAsInt();
+    if (shared >= importedBound || (best != null && shared >= best[objective])) {
+      return;
+    }
+    importedBound = shared;
+    if (shared <= root[objective].min()) {
+      sharedBoundUnreachable = true;
+      sat.cancel();
+    } else if (shared <= root[objective].max()) {
+      // the literal first, so that its linking clauses come before the bound
+      int lit = geLit(objective, shared);
+      structural.add(new int[] {-lit}); // objective <= shared - 1
+    }
   }
 
   /**
@@ -1119,14 +1335,21 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Decides on the model's annotation in its runs while it has unfixed variables; otherwise, with
    * activity branching, on the most active unfixed variable, a 0/1 one while any is unfixed (unless
-   * the system property {@code jacop.lcg.booleansFirst} is false): its value in the last solution
-   * when still possible, else the lower half of its domain (the system property {@code
-   * jacop.lcg.value} = {@code min} or {@code max} picks its smallest or largest value instead).
-   * Without activity branching, leaves the decision to the solver's VSIDS until every literal is
-   * assigned, then branches on {@code [x <= min]} of the unfixed variable with the smallest domain.
+   * the system property {@code jacop.lcg.booleansFirst} is false, which branches on all variables
+   * in one order of activity): its value in the last solution when still possible, else the lower
+   * half of its domain (the system property {@code jacop.lcg.value} = {@code min} or {@code max}
+   * picks its smallest or largest value instead). Without activity branching, leaves the decision
+   * to the solver's VSIDS until every literal is assigned, then branches on {@code [x <= min]} of
+   * the unfixed variable with the smallest domain.
    */
   @Override
   public int decide() {
+    if (branching == Branching.AUTO
+        && best == null
+        && !activityBranching
+        && sat.conflicts >= AUTO_CONFLICTS) {
+      activityBranching = true; // no solution yet from the literals: activity until the first one
+    }
     if (annotationRun) {
       int lit = annotationDecision();
       if (lit != 0) {
@@ -1137,7 +1360,16 @@ public final class LcgSolver implements ExternalPropagator {
     if (activityBranching) {
       return activityDecision();
     }
-    if (sat.trailSize() < sat.numVars() || !structural.isEmpty()) {
+    return 0;
+  }
+
+  /**
+   * Without activity branching, once the solver has assigned every literal, branches on {@code [x
+   * <= min]} of the unfixed variable with the smallest domain.
+   */
+  @Override
+  public int decideLast() {
+    if (activityBranching || !structural.isEmpty()) {
       return 0;
     }
     int best = -1;
@@ -1156,11 +1388,22 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   // the heap of a variable: lateHeap for a late variable, else wide for one that is not 0/1
+  private void rebuildHeap(VarHeap h) {
+    int[] members = new int[activity.length];
+    int n = 0;
+    for (int i = 0; i < activity.length; i++) {
+      if (h.contains(i)) {
+        members[n++] = i;
+      }
+    }
+    h.rebuild(members, n);
+  }
+
   private VarHeap heapOf(int i) {
     if (late[i]) {
       return lateHeap;
     }
-    return root[i].min() < 0 || root[i].max() > 1 ? wide : heap;
+    return split && (root[i].min() < 0 || root[i].max() > 1) ? wide : heap;
   }
 
   // takes the fixed variables off the top of a heap, to be put back on backtracking
@@ -1178,11 +1421,7 @@ public final class LcgSolver implements ExternalPropagator {
   private int activityDecision() {
     popFixed(heap);
     popFixed(wide);
-    VarHeap h = heap;
-    if (h.isEmpty()
-        || !booleansFirst && !wide.isEmpty() && activity[wide.max()] >= activity[heap.max()]) {
-      h = wide;
-    }
+    VarHeap h = heap.isEmpty() ? wide : heap;
     if (h.isEmpty()) {
       popFixed(lateHeap);
       h = lateHeap;
@@ -1194,7 +1433,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (lastConflict
         && conflictVar >= 0
         && !vars[conflictVar].singleton()
-        && (heapOf(conflictVar) == h || !booleansFirst && h != lateHeap && !late[conflictVar])) {
+        && heapOf(conflictVar) == h) {
       i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
     }
     conflictVar = -1;
@@ -1226,6 +1465,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (i >= 0 && !late[i]) {
         VarHeap h = heapOf(i);
         late[i] = true;
+        lateVariables++;
         if (h.contains(i)) {
           h.remove(i);
           lateHeap.insert(i);
@@ -1334,6 +1574,9 @@ public final class LcgSolver implements ExternalPropagator {
     if (improving) {
       best = solution;
       phase = solution;
+      if (branching == Branching.AUTO) {
+        activityBranching = false; // the solver's saved phases now hold this solution
+      }
       solutions++;
     }
     if (coreMode) {

@@ -75,6 +75,9 @@ public class Options {
   boolean useSat;
   boolean lcg;
   boolean lp = true;
+  int threads = 1;
+  // the portfolio thread this model is solved in, or null
+  Portfolio.Worker portfolioWorker;
   // the default can be changed by the system property jacop.presolve, for example to run the
   // FlatZinc test suites with presolve
   Presolve presolve =
@@ -151,6 +154,14 @@ public class Options {
                 impact-until=first|always, impact-every=<k> (probe in the first run and every k-th),
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
+                lcg-branching=alternate|auto|literals|activity (with --lcg: alternate (default)
+                takes turns at restarts with the annotation, or dom/wdeg without one, the SAT
+                solver's decisions on literals with phase false, and activity branching on the
+                most active variable; literals only those decisions; auto as literals, with
+                activity branching from 1000 conflicts to a first solution; activity the activity
+                branching, in runs alternated with the annotation),
+                interleave=restart|solution|none (with --lcg: default restart; none with literals
+                and auto),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
@@ -170,10 +181,16 @@ public class Options {
             -sat use SAT solver for boolean constraints.
             --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
                 the SAT core); the search annotation is followed without restarts, or with -f
-                alternated per restart with branching on the most active variables.
+                the SAT core's decisions on literals take turns with activity branching and
+                the annotation (see lcg-branching of --free-config).
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default), "off".
+            -p <value>, --parallel <value> solve with a portfolio of <value> threads: the
+                options given, then free search and lazy clause generation with other
+                settings; they share the objective value of the best solution. One thread
+                (default 1) for all solutions of satisfaction problems (-a, -n) and for
+                models with float variables.
             --presolve <value> presolve the model before search; one of "off" (default), "on",
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
@@ -232,6 +249,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(i);
       case "--lp" -> i = handleLp(args, i);
+      case "-p", "--parallel" -> i = handleParallel(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
@@ -338,6 +356,11 @@ public class Options {
       case "off" -> lp = false;
       default -> System.err.println("%% Linear relaxation mode " + args[i] + " not known; ignored");
     }
+    return i + 1;
+  }
+
+  private int handleParallel(String[] args, int i) {
+    threads = Math.max(1, Integer.parseInt(args[++i]));
     return i + 1;
   }
 
@@ -721,6 +744,20 @@ public class Options {
    */
   public boolean lp() {
     return lp;
+  }
+
+  /**
+   * The number of threads of the parallel portfolio (-p); 1 solves the model in the calling thread.
+   *
+   * @return the number of threads
+   */
+  public int threads() {
+    return threads;
+  }
+
+  /** The portfolio thread this model is solved in, or null outside a portfolio. */
+  Portfolio.Worker portfolioWorker() {
+    return portfolioWorker;
   }
 
   /** Whether the model is presolved before search, and how. */

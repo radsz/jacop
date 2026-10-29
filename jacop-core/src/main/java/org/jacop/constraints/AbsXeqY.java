@@ -257,8 +257,16 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
 
         // x in -yMax..-yMin \/ yMin..yMax, as the bounds and the gap, without building the domain
         x.domain.in(store.level, x, -yMax, yMax);
-        if (yMin > 0) {
+        if (yMin > 0 && store.domainChangeRecorder == null) {
           x.domain.inComplement(store.level, x, 1 - yMin, yMin - 1);
+        } else if (yMin > 0) {
+          // under lazy clause generation every value of the gap would be a != atom: only the
+          // bounds of x leave it, as in bounds consistency
+          if (x.min() > -yMin) {
+            x.domain.inMin(store.level, x, yMin);
+          } else if (x.max() < yMin) {
+            x.domain.inMax(store.level, x, -yMin);
+          }
         }
 
         y.domain.inMax(store.level, y, Math.max(-x.min(), x.max()));

@@ -300,6 +300,9 @@ public class Store {
   /** It specifies that consistencyDeadline has passed. */
   private boolean consistencyDeadlinePassed;
 
+  /** Set by {@link #interrupt()}: the deadline stays passed. */
+  private volatile boolean interrupted;
+
   /** This flag is set to true when consistency function of the store encounters failure. */
   public boolean isLastConsistencyFailure;
 
@@ -771,8 +774,19 @@ public class Store {
    * @param deadline the deadline as given by {@link System#currentTimeMillis()}, or 0 for none.
    */
   public void setConsistencyDeadline(long deadline) {
-    consistencyDeadline = deadline;
+    consistencyDeadline = interrupted ? 1 : deadline;
     consistencyDeadlinePassed = false;
+  }
+
+  /**
+   * It stops a search of this store running in another thread, for example one of a parallel
+   * portfolio whose result is no longer needed: consistency() fails from now on as if the deadline
+   * had passed, which a search with a time-out takes as its time-out. It is a request on a best
+   * effort basis; the search notices it within a few hundred propagator calls.
+   */
+  public void interrupt() {
+    interrupted = true;
+    consistencyDeadline = 1;
   }
 
   /**
@@ -1301,33 +1315,33 @@ public class Store {
   }
 
   /**
-   * Records that a stateful object changed at a level, so that its removeLevel is called when the
-   * level is removed. Unlike a listener registered with {@link
-   * #registerRemoveLevelListener(Stateful)}, which is called at every backtrack, the object is
-   * called only for the levels at which it changed; it records each level once, at its first change
-   * there.
-   *
-   * @param stateful the object that changed.
-   * @param level the level of the change.
-   */
-  public void recordChangeAt(Stateful stateful, int level) {
-    recordTimeStampLevel(stateful, level);
-  }
-
-  /**
    * Records that a timestamp got a value at a new level, so the value is removed with the level. A
    * {@link TrailedInts} records itself the same way; its removeLevel restores every level at once.
+   * Any other state that changes at few levels can record itself too, instead of listening to the
+   * removal of every level.
    *
-   * @param timeStamp the timestamp.
+   * @param timeStamp the timestamp, or other state with a removeLevel.
    * @param stampLevel the level of the new value.
    */
-  void recordTimeStampLevel(Stateful timeStamp, int stampLevel) {
+  public void recordTimeStampLevel(Stateful timeStamp, int stampLevel) {
     if (timeStampTrailSize >= timeStampTrail.length) {
       growTimeStampTrail();
     }
     timeStampTrail[timeStampTrailSize] = timeStamp;
     timeStampTrailLevel[timeStampTrailSize] = stampLevel;
     timeStampTrailSize++;
+  }
+
+  /**
+   * Records that a stateful object changed at the current level. The store calls its removeLevel
+   * only when a level at which it changed is removed, as for a timestamp, instead of at every level
+   * as for a listener registered with {@link #registerRemoveLevelListener(Stateful)}. The object
+   * records itself once per level, at its first change there.
+   *
+   * @param stateful the object that changed.
+   */
+  public void recordChange(Stateful stateful) {
+    recordTimeStampLevel(stateful, level);
   }
 
   private void growTimeStampTrail() {

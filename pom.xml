@@ -298,6 +298,7 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincPortfolioTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
                                 <include>**/MinizincBasedUpTo30SecondsSampleTest.java</include>
                             </includes>
@@ -429,6 +430,7 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                             </includes>
                             <excludes>
@@ -555,6 +557,7 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
@@ -669,6 +672,7 @@ setup to run configuration. -->
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
+                                <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
@@ -1106,6 +1110,7 @@ setup to run configuration. -->
                     <excludes>
                         <exclude>**/MinizincBasedUpTo5SecondsTest.java</exclude>
                         <exclude>**/MinizincFreeSearchTest.java</exclude>
+                        <exclude>**/MinizincPortfolioTest.java</exclude>
                         <exclude>**/MinizincBasedUpTo30SecondsTest.java</exclude>
                         <exclude>**/MinizincBasedUpTo1MinutesTest.java</exclude>
                         <exclude>**/MinizincBasedUpTo5MinutesTest.java</exclude>

@@ -1637,17 +1637,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     lcg = new LcgSolver(store);
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      if (costVar != null) {
+        lcg.setSharedBound(worker::sharedBound);
+      }
+      worker.onStop(lcg::stop);
+    }
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
     lcg.onSolution(this::printSolution);
-    // under free search the runs alternate with the annotation, as in executeFreeSearch
     boolean free = options.freeSearch();
+    // under free search, runs that take turns at restarts: the annotation (or dom/wdeg without
+    // one), the SAT solver's own decisions on literals with phase false, as in CP-SAT's default
+    // search, and activity branching. The literals alone close the gap to CP-SAT on city-position
+    // and gbac, but lose first solutions on scheduling models (cargo, linear-to-program, p1f) that
+    // the other two find
+    LcgSolver.Branching branching =
+        LcgSolver.Branching.valueOf(options.freeConfig("lcg-branching", "alternate").toUpperCase());
+    boolean literalsOnly =
+        branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
+    String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
+    if (free) {
+      lcg.setBranching(branching);
+      if (branching != LcgSolver.Branching.ACTIVITY) {
+        lcg.sat().setInitialPhase(false);
+      }
+    }
     SelectChoicePoint<? extends Var> annotated =
-        free && "none".equals(options.freeConfig("interleave", "restart"))
-            ? null
-            : annotationSelect(annotatedSearch);
-    if (free && annotated == null && !"none".equals(options.freeConfig("interleave", "restart"))) {
+        free && "none".equals(interleave) ? null : annotationSelect(annotatedSearch);
+    if (free && annotated == null && !"none".equals(interleave)) {
       annotated = lcgDefaultSelect(costVar);
     }
     if (free && annotated != null) {
@@ -1655,10 +1675,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
-      // defined variables follow from the others: activity branches on them last
+      // defined variables follow from the others: activity branches on them last. A defined 0/1
+      // variable is the truth of a reified constraint, a literal CP-SAT's search branches on as on
+      // any other: late, skill-allocation 5d_1, where all but 126 of 12,851 variables are defined
+      // reifications, took no proof in 30 s instead of 5 s
       List<Var> late = new ArrayList<>();
       for (Var v : dictionary.definedVariables) {
-        if (v != null) {
+        if (v instanceof IntVar x && (x.min() < 0 || x.max() > 1)) {
           late.add(v);
         }
       }
@@ -1786,6 +1809,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
+            + "\n%%%mzn-stat: lcgLateVariables="
+            + lcg.lateVariables
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
@@ -1808,6 +1833,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.cores
         + "\n%%%mzn-stat: lcgCoreLiterals="
         + core.coreLiterals
+        + "\n%%%mzn-stat: lcgCoreHardened="
+        + core.hardened
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
@@ -1967,7 +1994,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("probe", "0.05")),
           Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null && costVar != null) {
+      builder.sharedBound(worker::sharedBound);
+    }
     freeSearch = builder.build();
+    if (worker != null) {
+      worker.onStop(freeSearch::stop);
+    }
     if (options.debug()) {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
@@ -2124,6 +2158,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
       printSearch(label);
     }
+    stopInPortfolio();
     rs =
         new RestartSearch<>(
             store, label, select, restartCalculator, costVar != null ? (T) costVar : null);
@@ -2138,6 +2173,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return rs.labeling();
   }
 
+  /**
+   * In a portfolio thread, a depth-first search is stopped through its store: propagation fails
+   * from then on, as at a time-out, and what the search then reports is ignored.
+   */
+  private void stopInPortfolio() {
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      worker.onStop(store::interrupt);
+    }
+  }
+
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
@@ -2145,6 +2191,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.print("% " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
       printSearch(label);
     }
+    stopInPortfolio();
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
@@ -3252,6 +3299,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     printBuffer.append("----------\n");
+
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      Integer cost = costVariable instanceof IntVar c ? c.min() : null;
+      worker.solution(printBuffer.toString(), cost, !minimize);
+    }
 
     if (options.getAll()) {
       IO.print(printBuffer.toString());
