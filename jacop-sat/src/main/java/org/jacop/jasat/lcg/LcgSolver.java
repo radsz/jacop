@@ -85,8 +85,12 @@ public final class LcgSolver implements ExternalPropagator {
   private final int baseLevel;
   private boolean rootFailed;
 
-  /** Runs the store to its fixpoint before clauses propagate again (the earlier behaviour). */
-  private static final boolean FULL_FIXPOINT = Boolean.getBoolean("jacop.lcg.fullFixpoint");
+  /**
+   * Runs the store to its fixpoint before clauses propagate again; false returns to the clauses
+   * after each pruning.
+   */
+  private static final boolean FULL_FIXPOINT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.fullFixpoint", "true"));
 
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
   private IntVar[] vars = new IntVar[0];
@@ -208,6 +212,16 @@ public final class LcgSolver implements ExternalPropagator {
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
+  // after the core phase, branch and bound starts from the activity before it, unless
+  // -Djacop.lcg.coreRestore=false
+  private static final boolean CORE_RESTORE =
+      !"false".equals(System.getProperty("jacop.lcg.coreRestore"));
+  // the core phase gives its time to branch and bound when it has no solution by this share of
+  // its time; 0 turns it off. With the restore it scored 21.3 against 14.7 and 24.3 against 12.7 on
+  // the Challenge sample in two pairings, and 21.8 against 22.2 and 22.9 against 21.1 on the
+  // OR-Tools set; either alone lost.
+  private static final double CORE_NO_SOLUTION =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreNoSolution", "0.33"));
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
@@ -230,7 +244,10 @@ public final class LcgSolver implements ExternalPropagator {
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
-    sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 2));
+    // reasons of up to three literals stay as clauses; with the full fixpoint this scored 22.8
+    // against 20.2 on the OR-Tools set and 18.9 against 19.1 on the Challenge sample, and proved
+    // one more instance in each
+    sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -444,9 +461,10 @@ public final class LcgSolver implements ExternalPropagator {
    * Runs core-guided search, then branch and bound from its best solution and lower bound. The
    * core-guided search takes at most its share of the time left (its budget of conflicts when there
    * is no deadline), and stops early when one call of the solver needs more than its limit of
-   * conflicts: a sign that it no longer finds cores or solutions quickly. Under a solution bound,
-   * every solution the core-guided search finds would have to improve, which makes its strata hard,
-   * so the bound comes only after it.
+   * conflicts: a sign that it no longer finds cores or solutions quickly. It also stops when it has
+   * no solution after a third of its time. Under a solution bound, every solution the core-guided
+   * search finds would have to improve, which makes its strata hard, so the bound comes only after
+   * it. Branch and bound then starts from the variables' activity before the core-guided search.
    */
   private int minimizeWithCores() {
     long deadline = sat.deadline();
@@ -457,10 +475,24 @@ public final class LcgSolver implements ExternalPropagator {
     } else {
       phaseLimit = sat.conflicts + coreBudget;
     }
+    double[] saved = CORE_RESTORE ? activity.clone() : null;
+    double savedInc = activityInc;
     coreMode = true;
     int result;
     try {
-      result = coreSearch.run(phaseLimit, coreCallLimit);
+      long full = sat.deadline();
+      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+        // without a solution by this share of the phase, branch and bound gets the time
+        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        sat.setDeadline(first);
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
+          sat.setDeadline(full);
+          result = coreSearch.run(phaseLimit, coreCallLimit);
+        }
+      } else {
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
     } finally {
       coreMode = false;
       sat.setDeadline(deadline);
@@ -468,6 +500,16 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (result != CdclSolver.UNKNOWN) {
       return result;
+    }
+    if (saved != null) {
+      // the core phase bumped the variables of conflicts under its assumptions, which mislead
+      // branch and bound: harmony-brother reached the optimum's bound in 8 s and then did not find
+      // the optimum, which branch and bound alone proves in 35 s
+      System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
+      activityInc = savedInc;
+      rebuildHeap(heap);
+      rebuildHeap(wide);
+      rebuildHeap(lateHeap);
     }
     if (!requireBetter()) {
       return CdclSolver.SAT;
@@ -1200,6 +1242,17 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   // the heap of a variable: lateHeap for a late variable, else wide for one that is not 0/1
+  private void rebuildHeap(VarHeap h) {
+    int[] members = new int[activity.length];
+    int n = 0;
+    for (int i = 0; i < activity.length; i++) {
+      if (h.contains(i)) {
+        members[n++] = i;
+      }
+    }
+    h.rebuild(members, n);
+  }
+
   private VarHeap heapOf(int i) {
     if (late[i]) {
       return lateHeap;

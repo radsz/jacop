@@ -69,8 +69,13 @@ class SubcircuitCostFlatzincTest {
    * with coefficients a[i], and reified tests t[i] (x[i] = v or x[i] != v) with coefficients p[i]:
    * either an equation with the cost variable (either sign, first or last) or an inequality with a
    * bound, as a length budget. Some fixed successors are written as constants, as MiniZinc does.
+   * With prize, a second linear constraint asks for a prize g[i] * (x[i] != i) of at least a quota.
    */
   private static Model randomModel(Random random) {
+    return randomModel(random, false);
+  }
+
+  private static Model randomModel(Random random, boolean prize) {
     int n = 1 + random.nextInt(6);
     int style = random.nextInt(2);
     int[][] d = new int[n][n];
@@ -129,6 +134,18 @@ class SubcircuitCostFlatzincTest {
       }
       s[n] = sum;
       sums.add(sum);
+    }
+    int[] gold = new int[n];
+    int quota = Integer.MIN_VALUE;
+    if (prize) {
+      TreeSet<Integer> prizes = new TreeSet<>();
+      for (int i = 0; i < n; i++) {
+        gold[i] = random.nextInt(10);
+      }
+      for (int[] s : subcircuits) {
+        prizes.add(prizeOf(s, gold));
+      }
+      quota = prizes.isEmpty() ? 1 : prizes.last() - random.nextInt(prizes.last() + 2);
     }
     boolean budget = random.nextInt(3) == 0;
     int lo = sums.isEmpty() ? 0 : sums.first() - random.nextInt(3);
@@ -189,6 +206,31 @@ class SubcircuitCostFlatzincTest {
       }
     }
     fzn.append("constraint jacop_subcircuit(x);\n");
+    if (prize) {
+      List<String> golds = new ArrayList<>();
+      List<String> visits = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        if (!literal[i]) {
+          fzn.insert(0, "var bool: v" + i + ";\nvar 0..1: g" + i + ";\n");
+          fzn.append("constraint int_ne_reif(x").append(i).append(',').append(i + 1);
+          fzn.append(",v").append(i).append(");\n");
+          fzn.append("constraint bool2int(v").append(i).append(",g").append(i).append(");\n");
+          golds.add(String.valueOf(-gold[i]));
+          visits.add("g" + i);
+        }
+      }
+      int fixedPrize = 0;
+      for (int i = 0; i < n; i++) {
+        if (literal[i] && domains[i][0] != i + 1) {
+          fixedPrize += gold[i];
+        }
+      }
+      if (!visits.isEmpty()) {
+        fzn.append("constraint int_lin_le([").append(String.join(",", golds)).append("],[");
+        fzn.append(String.join(",", visits)).append("],").append(fixedPrize - quota);
+        fzn.append(");\n");
+      }
+    }
 
     List<String> coefs = new ArrayList<>();
     List<String> vars = new ArrayList<>();
@@ -215,7 +257,7 @@ class SubcircuitCostFlatzincTest {
 
     Set<String> expected = new TreeSet<>();
     for (int[] s : subcircuits) {
-      if ((budget || s[n] >= lo) && s[n] <= hi) {
+      if ((budget || s[n] >= lo) && s[n] <= hi && (!prize || prizeOf(s, gold) >= quota)) {
         int[] values = new int[n];
         for (int i = 0; i < n; i++) {
           values[i] = s[i] + 1;
@@ -225,6 +267,16 @@ class SubcircuitCostFlatzincTest {
       }
     }
     return new Model(fzn.toString(), expected);
+  }
+
+  private static int prizeOf(int[] next, int[] gold) {
+    int sum = 0;
+    for (int i = 0; i < gold.length; i++) {
+      if (next[i] != i) {
+        sum += gold[i];
+      }
+    }
+    return sum;
   }
 
   private static String set(int[] values) {
@@ -286,6 +338,21 @@ class SubcircuitCostFlatzincTest {
     }
     // a fixed successor whose arc cost is still a variable keeps a model from being detected
     assertTrue(detected > 100, "detected " + detected);
+  }
+
+  @Test
+  void pairedSumsKeepAllSolutions() throws IOException {
+    Random random = new Random(6);
+    int paired = 0;
+    for (int trial = 0; trial < 500; trial++) {
+      Model model = randomModel(random, true);
+      String out = run(model.fzn(), "-a", "-debug");
+      if (out.contains("% redundant SubcircuitCostPair")) {
+        paired++;
+      }
+      assertEquals(model.bruteForce(), solutions(out), "trial " + trial + "\n" + model.fzn());
+    }
+    assertTrue(paired > 60, "paired " + paired);
   }
 
   @Test

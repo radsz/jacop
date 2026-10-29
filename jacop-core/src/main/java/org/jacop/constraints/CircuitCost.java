@@ -409,6 +409,25 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
       reset();
     }
 
+    /**
+     * The weights, which may be changed between two calls of solve: it then repairs the duals.
+     *
+     * @return the weight matrix, weight[i][j] for successor i pointing to j.
+     */
+    long[][] weights() {
+      return weight;
+    }
+
+    /**
+     * The value of successor i in the last minimum assignment, less the offset.
+     *
+     * @param i the successor.
+     * @return the column matched to row i.
+     */
+    int rowMate(int i) {
+      return rowMate[i];
+    }
+
     private void reset() {
       Arrays.fill(u, INF);
       Arrays.fill(v, 0);
@@ -454,10 +473,11 @@ public class CircuitCost extends Constraint implements SatisfiedPresent {
         }
         if (u[i] > min) {
           u[i] = min;
-          if (m >= 0 && w[m] - u[i] - v[m] != 0) {
-            colMate[m] = -1;
-            rowMate[i] = -1;
-          }
+        }
+        // a matched arc stays only while tight (the duals or the weights may have changed)
+        if (m >= 0 && w[m] - u[i] - v[m] != 0) {
+          colMate[m] = -1;
+          rowMate[i] = -1;
         }
       }
 
