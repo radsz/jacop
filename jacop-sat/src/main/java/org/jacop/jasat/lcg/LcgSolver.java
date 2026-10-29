@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.IntSupplier;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.BooleanVar;
@@ -226,6 +227,11 @@ public final class LcgSolver implements ExternalPropagator {
   private long coreCallLimit;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   private CoreSearch coreSearch;
+  // the objective value of the best solution found outside this solver, and the last one imported
+  private IntSupplier sharedBound;
+  private int importedBound = Integer.MAX_VALUE;
+  // a shared bound at or below the objective's smallest value: no better solution exists
+  private boolean sharedBoundUnreachable;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -444,7 +450,7 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setConflictLimit(Long.MAX_VALUE);
     }
     solution = best;
-    if (result == CdclSolver.UNKNOWN) {
+    if (result == CdclSolver.UNKNOWN && !sharedBoundUnreachable) {
       return CdclSolver.UNKNOWN;
     }
     // SAT when the solution has the smallest value of the objective, UNSAT when none is better
@@ -925,9 +931,47 @@ public final class LcgSolver implements ExternalPropagator {
     return d == LiteralMap.NONE ? 0 : sign * d;
   }
 
+  /**
+   * Makes {@link #minimize} look only for solutions better than the best one found outside this
+   * solver, for example by another search of the same model in a parallel portfolio. The supplier
+   * is read from the solver's thread whenever it takes clauses, and gives {@link Integer#MAX_VALUE}
+   * as long as there is no such solution. When {@link #minimize} then ends without a better
+   * solution, the best solution found outside is optimal.
+   *
+   * @param bound the objective value of the best solution found elsewhere
+   */
+  public void setSharedBound(IntSupplier bound) {
+    sharedBound = bound;
+  }
+
+  /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
+  public void stop() {
+    sat.cancel();
+  }
+
   @Override
   public int[] externalClause() {
+    if (structural.isEmpty() && sharedBound != null && objective >= 0 && !coreMode) {
+      importBound();
+    }
     return structural.poll();
+  }
+
+  /** Adds the clause that the objective is below a better bound found elsewhere. */
+  private void importBound() {
+    int shared = sharedBound.getAsInt();
+    if (shared >= importedBound || (best != null && shared >= best[objective])) {
+      return;
+    }
+    importedBound = shared;
+    if (shared <= root[objective].min()) {
+      sharedBoundUnreachable = true;
+      sat.cancel();
+    } else if (shared <= root[objective].max()) {
+      // the literal first, so that its linking clauses come before the bound
+      int lit = geLit(objective, shared);
+      structural.add(new int[] {-lit}); // objective <= shared - 1
+    }
   }
 
   /**

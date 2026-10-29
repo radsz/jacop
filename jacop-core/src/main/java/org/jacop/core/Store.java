@@ -300,6 +300,9 @@ public class Store {
   /** It specifies that consistencyDeadline has passed. */
   private boolean consistencyDeadlinePassed;
 
+  /** Set by {@link #interrupt()}: the deadline stays passed. */
+  private volatile boolean interrupted;
+
   /** This flag is set to true when consistency function of the store encounters failure. */
   public boolean isLastConsistencyFailure;
 
@@ -771,8 +774,19 @@ public class Store {
    * @param deadline the deadline as given by {@link System#currentTimeMillis()}, or 0 for none.
    */
   public void setConsistencyDeadline(long deadline) {
-    consistencyDeadline = deadline;
+    consistencyDeadline = interrupted ? 1 : deadline;
     consistencyDeadlinePassed = false;
+  }
+
+  /**
+   * It stops a search of this store running in another thread, for example one of a parallel
+   * portfolio whose result is no longer needed: consistency() fails from now on as if the deadline
+   * had passed, which a search with a time-out takes as its time-out. It is a request on a best
+   * effort basis; the search notices it within a few hundred propagator calls.
+   */
+  public void interrupt() {
+    interrupted = true;
+    consistencyDeadline = 1;
   }
 
   /**

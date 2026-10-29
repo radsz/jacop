@@ -533,7 +533,19 @@ Version 5.0 (unreleased)
     generator method once. oocsp_racks_100_r1 runs in 18 s instead of
     29 s (search 5.5 s instead of 15 s), with the same search tree.
 
-40. FlatZinc objective presolve expands the objective through more of the
+40. Parallel portfolio for FlatZinc: fzn-jacop -p <n> (minizinc -p) solves
+    the model in n threads, each with a store of its own: the options
+    given, then free search and lazy clause generation with other settings
+    (up to 9 threads). The threads share the objective value of the best
+    solution, which FreeSearch reads at every node and LcgSolver adds as a
+    clause, and the first thread that completes decides the answer. With
+    -f -p 4 on 4 cores, 60 s: 52 of the 63 lost-free instances solved
+    instead of 39 and 156 of 160 regression instances instead of 144. All
+    solutions of satisfaction problems (-a, -n), -o and float models stay
+    on one thread. New: FreeSearch.Builder.sharedBound, LcgSolver
+    .setSharedBound and stop, CdclSolver.cancel, Store.interrupt.
+
+41. FlatZinc objective presolve expands the objective through more of the
     model: equalities (bool2int, bool_eq, a 0/1 variable and its literal
     of 1) lead a term to an equal variable that has a definition; a
     disjunction r <-> or(b) (array_bool_or, bool_clause_reif) is
