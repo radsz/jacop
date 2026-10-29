@@ -32,13 +32,16 @@ package org.jacop.core;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
+import org.jacop.util.VarIntMap;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -173,5 +176,69 @@ class ConstraintQueueTest {
       domains[i] = new int[] {x[i].min(), x[i].max()};
     }
     return domains;
+  }
+
+  /**
+   * Random watches and unwatches of watched-literal constraints keep, per variable, the order and
+   * the set of a LinkedHashSet, which the store used before.
+   */
+  @Test
+  void watchedLiteralConstraintsKeepLinkedHashSetOrder() {
+    Store store = new Store();
+    List<IntVar> vars = new ArrayList<>();
+    List<Constraint> constraints = new ArrayList<>();
+    for (int i = 0; i < 12; i++) {
+      vars.add(new IntVar(store, "w" + i, 0, 5));
+    }
+    for (int i = 0; i < 30; i++) {
+      constraints.add(new XneqY(vars.get(i % 12), vars.get((i + 1) % 12)));
+    }
+    Map<Var, LinkedHashSet<Constraint>> reference = new IdentityHashMap<>();
+    Random random = new Random(2);
+    for (int step = 0; step < 20_000; step++) {
+      IntVar v = vars.get(random.nextInt(vars.size()));
+      Constraint c = constraints.get(random.nextInt(constraints.size()));
+      if (random.nextInt(100) < 60) {
+        store.registerWatchedLiteralConstraint(v, c);
+        reference.computeIfAbsent(v, k -> new LinkedHashSet<>()).add(c);
+      } else if (reference.containsKey(v)) {
+        store.deregisterWatchedLiteralConstraint(v, c);
+        reference.get(v).remove(c);
+      }
+      assertThat(store.watchedLiteralConstraints(v))
+          .containsExactlyElementsOf(reference.getOrDefault(v, new LinkedHashSet<>()));
+    }
+    assertThat(store.countWatches())
+        .isEqualTo(reference.values().stream().mapToInt(LinkedHashSet::size).sum());
+    store.clearWatchedConstraint();
+    assertThat(store.countWatches()).isZero();
+    assertThat(store.watchedLiteralConstraints(vars.get(0))).isEmpty();
+  }
+
+  /** A VarIntMap answers like an IdentityHashMap, also for variables sharing a store index. */
+  @Test
+  void varIntMapAnswersLikeIdentityHashMap() {
+    Store store = new Store();
+    List<Var> vars = new ArrayList<>();
+    for (int i = 0; i < 300; i++) {
+      IntVar v = new IntVar(store, "m" + i, 0, 1);
+      if (i % 7 == 0) {
+        v.storeIndex = -1;
+      }
+      vars.add(v);
+    }
+    VarIntMap map = new VarIntMap(2);
+    Map<Var, Integer> reference = new IdentityHashMap<>();
+    Random random = new Random(3);
+    for (int step = 0; step < 5_000; step++) {
+      Var v = vars.get(random.nextInt(vars.size()));
+      if (random.nextBoolean()) {
+        int value = random.nextInt(1000);
+        map.put(v, value);
+        reference.put(v, value);
+      }
+      assertThat(map.get(v)).isEqualTo(reference.getOrDefault(v, VarIntMap.ABSENT));
+      assertThat(map.size()).isEqualTo(reference.size());
+    }
   }
 }

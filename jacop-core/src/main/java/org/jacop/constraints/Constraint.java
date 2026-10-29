@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -259,7 +259,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   protected void setScope(Var... variables) {
-    this.scope = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(variables)));
+    this.scope = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(variables)));
   }
 
   /**
@@ -300,7 +300,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
   protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
     this.constraintScope =
-        Collections.unmodifiableSet(new HashSet<>(Arrays.asList(primitiveConstraints)));
+        Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(primitiveConstraints)));
   }
 
   /**
@@ -534,7 +534,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     }
 
     if (constraintScope != null) {
-      Set<RemoveLevelLate> fixpoint = computeFixpoint(this, new HashSet<>());
+      Set<RemoveLevelLate> fixpoint = computeFixpoint(this, new LinkedHashSet<>());
       fixpoint.forEach(store::registerRemoveLevelLateListener);
     }
 

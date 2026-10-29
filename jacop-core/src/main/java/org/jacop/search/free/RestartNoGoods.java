@@ -31,13 +31,12 @@
 package org.jacop.search.free;
 
 import java.util.Arrays;
-import java.util.IdentityHashMap;
-import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.VarIntMap;
 
 /**
  * The store of the nogoods that {@link FreeSearch} learns at restarts: one constraint holding all
@@ -71,7 +70,7 @@ public final class RestartNoGoods extends Constraint {
   private final int maxLength;
 
   // variables of the nogoods
-  private final Map<IntVar, Integer> varIndex = new IdentityHashMap<>();
+  private final VarIntMap varIndex = new VarIntMap();
   private IntVar[] vars = new IntVar[16];
   private int varCount;
 
@@ -128,9 +127,6 @@ public final class RestartNoGoods extends Constraint {
 
   @Override
   public void impose(Store store) {
-    if (store.watchedConstraints == null) {
-      store.watchedConstraints = Var.createEmptyPositioning();
-    }
     store.countConstraint();
   }
 
@@ -247,8 +243,8 @@ public final class RestartNoGoods extends Constraint {
 
   @Override
   public void queueVariable(int level, Var v) {
-    Integer i = varIndex.get(v);
-    if (i == null) {
+    int i = varIndex.get(v);
+    if (i == VarIntMap.ABSENT) {
       return;
     }
     if (pendingSize == pending.length) {
@@ -364,8 +360,8 @@ public final class RestartNoGoods extends Constraint {
   }
 
   private int indexOf(IntVar x) {
-    Integer i = varIndex.get(x);
-    if (i != null) {
+    int i = varIndex.get(x);
+    if (i != VarIntMap.ABSENT) {
       return i;
     }
     if (varCount == vars.length) {

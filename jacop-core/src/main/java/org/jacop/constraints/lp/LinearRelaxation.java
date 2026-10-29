@@ -292,9 +292,7 @@ public class LinearRelaxation extends Constraint
       // constraints that watch values, such as long pseudo-Boolean sums, are not in the domains
       constraints.addAll(store.valueWatchers(v));
     }
-    if (store.watchedConstraints != null) {
-      store.watchedConstraints.values().forEach(constraints::addAll);
-    }
+    constraints.addAll(store.watchedLiteralConstraints());
     List<LinearForm> forms = new ArrayList<>();
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
     long rows = 0;

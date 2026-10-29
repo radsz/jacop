@@ -38,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * NoGood constraints implements a constraint which disallows given combination of values for given
@@ -241,10 +240,6 @@ public class NoGood extends Constraint {
   // using watched literals functionality.
   @Override
   public void impose(Store store) {
-
-    if (store.watchedConstraints == null) {
-      store.watchedConstraints = Var.createEmptyPositioning();
-    }
 
     if (alwaysSatisfied) {
       return;

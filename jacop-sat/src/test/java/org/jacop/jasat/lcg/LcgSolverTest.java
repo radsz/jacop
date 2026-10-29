@@ -86,6 +86,7 @@ import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -318,6 +319,8 @@ class LcgSolverTest {
       }
       solver.sat().setInitialPhase(false);
       solver.setBooleansFirstTurns(instance % 8 >= 4);
+      solver.setKeepImprovingRun(instance / 8 % 2 == 1);
+      solver.setSeed(instance % 3);
       int status = solver.minimize(cost);
       if (best == Long.MAX_VALUE) {
         assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
@@ -2116,6 +2119,71 @@ class LcgSolverTest {
   }
 
   /**
+   * Random unary resources with release times, deadlines and precedences, minimising the makespan:
+   * the optimum agrees with depth-first search, and every explanation of the unary rules
+   * (precedences found by detectable precedences, edge finding and not-first) is checked.
+   */
+  @Test
+  void unaryMakespanAgreesWithSearch() {
+    Random rnd = new Random(17);
+    long unaryReasons = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 8; instance++) {
+      int n = 6 + rnd.nextInt(4);
+      int[] d = new int[n];
+      int[] release = new int[n];
+      int horizon = 0;
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(9);
+        horizon += d[i];
+      }
+      for (int i = 0; i < n; i++) {
+        release[i] = rnd.nextInt(horizon / 2);
+      }
+      horizon += horizon / 4;
+      int[][] prec = new int[rnd.nextInt(3)][];
+      for (int p = 0; p < prec.length; p++) {
+        int a = rnd.nextInt(n - 1);
+        prec[p] = new int[] {a, a + 1 + rnd.nextInt(n - a - 1)};
+      }
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, release[i], horizon - d[i]);
+          durations[i] = new IntVar(store, d[i], d[i]);
+          resources[i] = new IntVar(store, 1, 1);
+          store.impose(new XplusClteqZ(s[i], d[i], makespan));
+        }
+        for (int[] p : prec) {
+          store.impose(new XplusClteqZ(s[p[0]], d[p[0]], s[p[1]]));
+        }
+        store.impose(new CumulativeUnary(s, durations, resources, new IntVar(store, 1, 1)));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          optimum[0] =
+              search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()), makespan)
+                  ? search.getCostValue()
+                  : -1;
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          int status = solver.minimize(makespan);
+          optimum[1] = status == CdclSolver.SAT ? solver.value(makespan) : -1;
+          long[] counts = solver.explanationStatistics().get("CumulativeUnary");
+          unaryReasons += counts == null ? 0 : counts[0];
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(unaryReasons).isPositive();
+  }
+
+  /**
    * Long tasks, as in the largescheduling benchmark: the time table made holes of thousands of
    * start values in one go, each an atom with a literal of its own, and the solver ran out of
    * memory before a first solution; a start with no value left was explained by every atom of the
@@ -2442,12 +2510,14 @@ class LcgSolverTest {
   @Test
   void literalMapAgreesWithTreeMap() {
     Random rnd = new Random(3);
-    for (int instance = 0; instance < 200; instance++) {
-      LiteralMap map = new LiteralMap();
+    for (int instance = 0; instance < 400; instance++) {
+      // a narrow root domain becomes indexed by value as it fills; a wide one stays sorted
+      int span = instance % 2 == 0 ? 60 : 2 * LiteralMap.DENSE_SPAN;
+      LiteralMap map = new LiteralMap(-30, span - 31);
       TreeMap<Integer, Integer> reference = new TreeMap<>();
       for (int step = 0; step < 100; step++) {
-        int v = rnd.nextInt(60) - 30;
-        if (rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
+        int v = rnd.nextInt(70) - 35;
+        if (v >= -30 && v < 30 && rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
           map.put(v, step + 1);
           reference.put(v, step + 1);
         } else if (rnd.nextInt(4) == 0 && reference.containsKey(v)) {
@@ -2805,6 +2875,51 @@ class LcgSolverTest {
   }
 
   @Test
+  void atMostOneGroupKeepsTheNextLevelsOfIntegerTerms() {
+    // x0 = 0 forces x1 >= 4 and x1 = 0 forces x0 >= 4, so [x0 >= 1] and [x1 >= 1] form a group;
+    // the levels above 1 must still cost their weight, or a solution with every soft literal false
+    // (x0 = 4, x1 = 0, cost 8) ends the core-guided phase above its lower bound without a proof
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 5);
+    IntVar x1 = new IntVar(store, "x1", 0, 5);
+    IntVar obj = new IntVar(store, "obj", 0, 25);
+    store.impose(new LinearInt(new IntVar[] {x0, x1}, new int[] {1, 1}, ">=", 4));
+    store.impose(new LinearInt(new IntVar[] {x0, x1, obj}, new int[] {2, 3, -1}, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(8);
+    assertThat(solver.coreSearch().amoGroups).isEqualTo(1);
+    assertThat(solver.coreSearch().proved).isTrue();
+  }
+
+  @Test
+  void coreGuidedSearchReadsThroughPartialSumsWithoutGroups() {
+    // obj = s1 + s2 with s1 = x0 + x1 and s2 = x2 + x3, and no two terms exclude each other: the
+    // terms are still the x's (trucking lost its proofs when the block sums were kept)
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar s1 = new IntVar(store, "s1", 0, 6);
+    IntVar s2 = new IntVar(store, "s2", 0, 6);
+    IntVar obj = new IntVar(store, "obj", 0, 12);
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1], s1}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], s2}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, ">=", 2));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(2);
+    assertThat(solver.coreSearch().amoGroups).isZero();
+    assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+  }
+
+  @Test
   void coreGuidedSearchReadsThroughPartialSums() {
     // obj = s1 + s2 with s1 = 2 * x0 + x1 and s2 = x2 + 3 * x3, as --lcg splits a long sum into
     // blocks; the terms of the core-guided phase are the x's, not the block sums
@@ -2828,6 +2943,7 @@ class LcgSolverTest {
     // x2 = 3 and x1 = 2: 3 + 2
     assertThat(solver.value(obj)).isEqualTo(5);
     assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+    assertThat(solver.coreSearch().proved).isTrue();
   }
 
   /**

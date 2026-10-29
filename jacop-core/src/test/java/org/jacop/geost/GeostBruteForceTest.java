@@ -215,6 +215,47 @@ class GeostBruteForceTest {
     assertThat(failures).as(family).isEmpty();
   }
 
+  /**
+   * After a backtrack, Geost's own pruning grounds object 8 of mixed-70 during consistency; the
+   * object was swept as grounded in the branch before, and was not swept again in its new place, so
+   * a solution with two overlapping objects was accepted.
+   */
+  @Test
+  void objectGroundedByItsOwnPruningAfterABacktrackIsSweptAgain() throws IOException {
+    GeostInstance g =
+        corpusInstances().stream().filter(i -> i.name.equals("mixed-70")).findFirst().orElseThrow();
+    long seed = g.name.hashCode();
+    Store store = new Store();
+    IntVar[] model = g.postGeost(store, false).vars();
+    List<String> wrong = new ArrayList<>();
+    Solutions found = new Solutions(false);
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            int[] v = Arrays.stream(model).mapToInt(IntVar::value).toArray();
+            if (!g.check(v)) {
+              wrong.add(Arrays.toString(v));
+            }
+            found.add(v);
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    List<IntVar> order = new ArrayList<>(Arrays.asList(model));
+    Collections.shuffle(order, new Random(seed + 200_038L));
+    assertThat(store.consistency()).isTrue();
+    search.labeling(
+        store,
+        new SimpleSelect<>(order.toArray(new IntVar[0]), null, new IndomainRandom<>((int) seed)));
+    assertThat(wrong).isEmpty();
+    assertThat(found.count).isEqualTo(g.expectedCount);
+  }
+
   /** The corpus has instances of every family, and its counts still match the brute force. */
   @Test
   void corpusMatchesBruteForce() throws IOException {
