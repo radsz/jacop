@@ -209,6 +209,9 @@ public final class CdclSolver {
   private int[] vivifyLits = new int[16];
   private static final long REPHASE_INTERVAL = 1000;
   private int simplifyAssigns = -1;
+  // propagations before the next simplification, as MiniSat's simpDB_props: a pass costs about the
+  // size of the arena and the watch lists, so it waits for as much propagation work
+  private long simplifyProps;
 
   // --- driven by an external search (the CP solver): see "External search" below
   private int[] units = new int[16];
@@ -2023,7 +2026,7 @@ public final class CdclSolver {
         reduceDb();
         vivifyDue = vivification;
       }
-      if (decisionLevel == 0 && trailSize != simplifyAssigns) {
+      if (decisionLevel == 0 && trailSize != simplifyAssigns && propagations >= simplifyProps) {
         simplifyDb();
       }
       int next = -1;
@@ -2925,6 +2928,7 @@ public final class CdclSolver {
     }
     purge();
     simplifyAssigns = trailSize;
+    simplifyProps = propagations + memSize + 2L * numVars;
   }
 
   /**
