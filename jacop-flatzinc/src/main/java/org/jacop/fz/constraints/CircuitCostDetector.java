@@ -37,6 +37,7 @@ import java.util.Map;
 import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.SubcircuitCost;
+import org.jacop.constraints.SubcircuitCostPair;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
@@ -59,12 +60,21 @@ import org.jacop.fz.SimpleNode;
  * an equation with one more variable, which is then the cost, or an inequality {@code sum <= c},
  * whose sum gets a new cost variable with that upper bound (a length budget).
  *
+ * <p>On a subcircuit, a sum with an element value for each x[i] is also weighed against each other
+ * sum, which may consist of tests only (a prize {@code sum(i)(gold[i] * (x[i] != i))} collected
+ * within a length budget), by a {@link SubcircuitCostPair}. The pairs are off under lazy clause
+ * generation; the system property {@code org.jacop.fz.circuitCostPair} set to true or false
+ * overrides that.
+ *
  * <p>Setting the system property {@code org.jacop.fz.circuitCost} to false turns the detection off.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
 public class CircuitCostDetector implements ParserTreeConstants {
+
+  // the most pairs of sums weighed against each other on one subcircuit
+  private static final int MAX_PAIRS = 2;
 
   private final Support support;
 
@@ -124,6 +134,16 @@ public class CircuitCostDetector implements ParserTreeConstants {
    */
   public static boolean enabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.circuitCost"));
+  }
+
+  // the pairs are on by default except under lazy clause generation, where their generic
+  // explanations cost more than they prune; org.jacop.fz.circuitCostPair=true or false decides
+  private boolean pairsEnabled() {
+    String property = System.getProperty("org.jacop.fz.circuitCostPair");
+    if (property == null) {
+      return !support.options.lcg();
+    }
+    return "true".equalsIgnoreCase(property);
   }
 
   /**
@@ -238,9 +258,14 @@ public class CircuitCostDetector implements ParserTreeConstants {
         arcCosts[i][j] = k >= 0 && k < e.array.length ? e.array[k] : 0;
       }
     }
+    List<Sum> sums = new ArrayList<>();
     for (SimpleNode node : linears) {
       Sum sum = sumOf(node, c, arcCosts, fixed, rowOfValue, rowOfSuccessor);
       if (sum == null) {
+        continue;
+      }
+      sums.add(sum);
+      if (!sum.full) {
         continue;
       }
       Constraint cc;
@@ -256,16 +281,50 @@ public class CircuitCostDetector implements ParserTreeConstants {
       }
       support.delayedConstraints.add(cc);
     }
+    if (c.sub && pairsEnabled()) {
+      postPairs(c, sums);
+    }
+  }
+
+  // a sum of arc costs, such as a length, weighed against each other sum, such as a prize
+  private void postPairs(Circuit c, List<Sum> sums) {
+    Sum first = null;
+    for (Sum s : sums) {
+      if (s.full) {
+        first = s;
+        break;
+      }
+    }
+    if (first == null || c.x.length > SubcircuitCostPair.NODE_LIMIT) {
+      return;
+    }
+    int pairs = 0;
+    for (Sum s : sums) {
+      if (s == first || s.cost == first.cost || pairs == MAX_PAIRS) {
+        continue;
+      }
+      SubcircuitCostPair cc =
+          new SubcircuitCostPair(c.x, first.costs, first.cost, s.costs, s.cost, c.offset);
+      cc.setDegreeWeight(0);
+      if (support.options.debug()) {
+        FzConsole.println("% redundant " + cc);
+      }
+      support.delayedConstraints.add(cc);
+      pairs++;
+    }
   }
 
   // the arc costs of a linear constraint and the variable equal to their sum
   private static final class Sum {
     final int[][] costs;
     final IntVar cost;
+    // every successor has its arc cost in the sum, not only tests
+    final boolean full;
 
-    Sum(int[][] costs, IntVar cost) {
+    Sum(int[][] costs, IntVar cost, boolean full) {
       this.costs = costs;
       this.cost = cost;
+      this.full = full;
     }
   }
 
@@ -292,6 +351,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
     long[][] costs = new long[n][n];
     boolean[] seen = new boolean[n];
     int found = 0;
+    int tested = 0;
     IntVar rest = null;
     int restCoefficient = 0;
     for (int k = 0; k < vars.length; k++) {
@@ -306,6 +366,7 @@ public class CircuitCostDetector implements ParserTreeConstants {
           costs[row][j] += (long) a[k] * arcCosts[row][j];
         }
       } else if (testRow != null) {
+        tested++;
         for (int j = 0; j < n; j++) {
           if ((c.offset + j == t.value) == t.equal) {
             costs[testRow][j] += a[k];
@@ -320,7 +381,8 @@ public class CircuitCostDetector implements ParserTreeConstants {
         return null;
       }
     }
-    if (found + fixed != n) {
+    boolean full = found + fixed == n;
+    if (!full && found + tested == 0) {
       return null;
     }
 
@@ -381,6 +443,6 @@ public class CircuitCostDetector implements ParserTreeConstants {
         result[i][j] = (int) w;
       }
     }
-    return new Sum(result, cost);
+    return new Sum(result, cost, full);
   }
 }

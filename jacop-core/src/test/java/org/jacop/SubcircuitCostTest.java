@@ -44,6 +44,7 @@ import java.util.TreeSet;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
+import org.jacop.constraints.SubcircuitCostPair;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.XneqC;
 import org.jacop.core.Domain;
@@ -54,8 +55,10 @@ import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
+import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.junit.jupiter.api.Test;
 
@@ -345,6 +348,124 @@ class SubcircuitCostTest {
               + ": "
               + describe(in));
     }
+  }
+
+  // two sums near their extremes, so that each cuts off the plain optimum of the other
+  @Test
+  void pairMatchesBruteForce() {
+    Random random = new Random(54);
+    for (int t = 0; t < INSTANCES / 2; t++) {
+      int n = 2 + random.nextInt(6);
+      Instance in = randomInstance(random, n, true);
+      int range = 1 + random.nextInt(50);
+      int[][] costs2 = randomCosts(random, n, range, random.nextInt(4) == 0 ? -range / 2 : 0);
+      List<int[]> all = new Instance(n, 1, in.domains, in.costs, null).subcircuits();
+      int[] sums2 = new int[all.size()];
+      for (int s = 0; s < sums2.length; s++) {
+        int[] next = all.get(s);
+        for (int k = 0; k < n; k++) {
+          sums2[s] += costs2[k][next[k]];
+        }
+      }
+      int[] d1 = costDomain(random, all, range, 0, n);
+      int[] d2 = pairDomain(random, sums2);
+      TreeSet<String> expected = new TreeSet<>();
+      for (int s = 0; s < sums2.length; s++) {
+        int[] c = all.get(s);
+        if (contains(d1, c[n]) && contains(d2, sums2[s])) {
+          int[] tuple = Arrays.copyOf(c, n + 2);
+          for (int k = 0; k < n; k++) {
+            tuple[k]++;
+          }
+          tuple[n + 1] = sums2[s];
+          expected.add(Arrays.toString(tuple));
+        }
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, domainOf(in.domains[i]));
+      }
+      IntVar cost1 = new IntVar(store, "cost1", domainOf(d1));
+      IntVar cost2 = new IntVar(store, "cost2", domainOf(d2));
+      store.impose(new Subcircuit(x));
+      store.impose(new SubcircuitCostPair(x, in.costs, cost1, costs2, cost2, 1));
+      imposeSum(store, x, in.costs, cost1);
+      imposeSum(store, x, costs2, cost2);
+      TreeSet<String> found = new TreeSet<>();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(
+                Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+              int[] tuple = new int[n + 2];
+              for (int k = 0; k < n; k++) {
+                tuple[k] = x[k].value();
+              }
+              tuple[n] = cost1.value();
+              tuple[n + 1] = cost2.value();
+              found.add(Arrays.toString(tuple));
+              return super.executeAfterSolution(s, select);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      if (store.consistency()) {
+        search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(random.nextInt())));
+      }
+      assertEquals(
+          expected,
+          found,
+          "instance "
+              + t
+              + ": "
+              + describe(in)
+              + " costs2="
+              + Arrays.deepToString(costs2)
+              + " cost1="
+              + Arrays.toString(d1)
+              + " cost2="
+              + Arrays.toString(d2));
+    }
+  }
+
+  // a domain near the smallest or the largest of the values, often with holes
+  private static int[] pairDomain(Random random, int[] values) {
+    if (values.length == 0) {
+      return new int[] {0, 1, 2};
+    }
+    int min = Arrays.stream(values).min().getAsInt();
+    int max = Arrays.stream(values).max().getAsInt();
+    int spread = max - min;
+    int lo = random.nextBoolean() ? min - 2 : min + random.nextInt(spread / 3 + 1);
+    int hi = random.nextBoolean() ? max + 2 : max - random.nextInt(spread / 3 + 1);
+    List<Integer> result = new ArrayList<>();
+    boolean holes = random.nextInt(3) == 0;
+    for (int v = lo; v <= hi; v++) {
+      if (!holes || v == lo || v == hi || random.nextInt(3) != 0) {
+        result.add(v);
+      }
+    }
+    if (result.isEmpty()) {
+      result.add(lo);
+    }
+    return result.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  // cost = sum of costs[i][x[i] - 1]
+  private static void imposeSum(Store store, IntVar[] x, int[][] costs, IntVar cost) {
+    int n = x.length;
+    IntVar[] all = new IntVar[n + 1];
+    for (int i = 0; i < n; i++) {
+      all[i] = new IntVar(store, -10000, 10000);
+      store.impose(new ElementInteger(x[i], costs[i], all[i], 0));
+    }
+    all[n] = cost;
+    int[] weights = new int[n + 1];
+    Arrays.fill(weights, 1);
+    weights[n] = -1;
+    store.impose(new SumWeight(all, weights, 0));
   }
 
   private static int[] wide() {
