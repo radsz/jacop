@@ -266,6 +266,8 @@ public class WeightedSubcircuits extends Constraint
         costBounds(store);
       } while (store.propagationHasOccurred);
 
+      // the structure and the cost bounds are revised again after any pruning of the bounds below
+      boolean pruned = false;
       if (useAssignment) {
         do {
           store.propagationHasOccurred = false;
@@ -280,6 +282,7 @@ public class WeightedSubcircuits extends Constraint
                   rows,
                   assignmentBound,
                   Long.MIN_VALUE);
+          pruned |= store.propagationHasOccurred;
         } while (store.propagationHasOccurred);
       }
 
@@ -294,7 +297,7 @@ public class WeightedSubcircuits extends Constraint
           }
         }
       }
-      again = store.propagationHasOccurred;
+      again = pruned || store.propagationHasOccurred;
     } while (again);
 
     if (allGround() && !check()) {
