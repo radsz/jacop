@@ -41,6 +41,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.Restriction.Relation;
@@ -51,6 +53,13 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMiddle;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -676,5 +685,47 @@ class HybridTableTest {
     assertThatThrownBy(() -> new HybridTable(x, tooShort))
         .isInstanceOf(IllegalArgumentException.class);
     assertThat(IntDomain.MAX_INT).isPositive();
+  }
+
+  /**
+   * Revising the tuples with restrictions between columns can remove the only support of a value of
+   * the one column that lost a live class, which the propagation then skipped: x[2] = 4 and 5 had
+   * only the second tuple, removed with x[1] = 3 since x[1] != x[0] = 3, and were accepted.
+   */
+  @Test
+  void revisedColumnTuplesRecheckTheChangedColumn() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 3), new IntVar(store, "x1", 0, 3), new IntVar(store, "x2", 1, 5)
+    };
+    Restriction[][] tuples = {
+      {Restriction.eq(3), Restriction.column(Relation.NE, 0), Restriction.ne(2)},
+      {Restriction.any(), Restriction.ge(0), Restriction.le(3)}
+    };
+    store.impose(new XneqC(x[2], 0));
+    store.impose(new XneqY(x[2], x[1]));
+    store.impose(new HybridTable(x, tuples, false));
+    List<int[]> found = new ArrayList<>();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> select) {
+            boolean result = super.executeAfterSolution(s, select);
+            found.add(Arrays.stream(x).mapToInt(IntVar::value).toArray());
+            return result;
+          }
+        });
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SplitSelect<>(x, new SmallestDomain<>(), new IndomainMiddle<>()));
+
+    for (int[] s : found) {
+      assertThat(Arrays.stream(tuples).anyMatch(t -> HybridTable.accepts(t, s)))
+          .as(Arrays.toString(s))
+          .isTrue();
+    }
+    assertThat(found).hasSize(33);
   }
 }
