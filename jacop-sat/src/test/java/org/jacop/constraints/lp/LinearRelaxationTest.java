@@ -52,6 +52,8 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 /**
  * Tests the linear relaxation propagator against search without it on random small models of linear
@@ -70,6 +72,7 @@ class LinearRelaxationTest {
     final List<LinearForm> rows = new ArrayList<>();
     IntVar objective;
     boolean maximize;
+    LinearRelaxation.Simplex simplex = LinearRelaxation.Simplex.DENSE;
 
     Model(long seed) {
       this(seed, true);
@@ -143,7 +146,7 @@ class LinearRelaxationTest {
     }
 
     LinearRelaxation relaxation() {
-      LinearRelaxation r = new LinearRelaxation(rows, objective, maximize);
+      LinearRelaxation r = new LinearRelaxation(rows, objective, maximize, simplex);
       store.impose(r);
       return r;
     }
@@ -180,14 +183,16 @@ class LinearRelaxationTest {
     return new long[] {found ? 1 : 0, found ? search.getCostValue() : Long.MIN_VALUE};
   }
 
-  @Test
-  void keepsSolutionsAndOptima() {
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsSolutionsAndOptima(LinearRelaxation.Simplex simplex) {
     long pruned = 0;
     long failures = 0;
     long cuts = 0;
     for (int run = 0; run < RUNS; run++) {
       long[] expected = search(new Model(run));
       Model model = new Model(run);
+      model.simplex = simplex;
       LinearRelaxation r = model.relaxation();
       long[] actual = search(model);
       assertThat(actual).as("seed %d", run).isEqualTo(expected);
@@ -293,15 +298,16 @@ class LinearRelaxationTest {
 
   @Test
   void rejectsAnAssignmentItsOwnPruningFixed() {
-    lazyClauseGeneration(5_901_220L, new TreeMap<>());
+    lazyClauseGeneration(5_901_220L, new TreeMap<>(), LinearRelaxation.Simplex.DENSE);
   }
 
-  @Test
-  void agreesWithSearchUnderLazyClauseGeneration() {
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void agreesWithSearchUnderLazyClauseGeneration(LinearRelaxation.Simplex simplex) {
     Map<String, long[]> statistics = new TreeMap<>();
     long checked = 0;
     for (int run = 0; run < RUNS; run++) {
-      checked += lazyClauseGeneration(run, statistics);
+      checked += lazyClauseGeneration(run, statistics, simplex);
     }
     long[] lp = statistics.get("LinearRelaxation");
     assertThat(lp).isNotNull();
@@ -312,10 +318,12 @@ class LinearRelaxationTest {
 
   // solves a model under lazy clause generation with the explanation checker on and compares with
   // depth-first search; returns the explanations checked
-  private static long lazyClauseGeneration(long run, Map<String, long[]> statistics) {
+  private static long lazyClauseGeneration(
+      long run, Map<String, long[]> statistics, LinearRelaxation.Simplex simplex) {
     {
       long[] expected = search(new Model(run));
       Model model = new Model(run);
+      model.simplex = simplex;
       model.relaxation();
       IntVar cost = model.objective == null ? null : model.cost();
       LcgSolver solver = new LcgSolver(model.store);
