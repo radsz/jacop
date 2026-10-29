@@ -492,6 +492,22 @@ Version 5.0 (unreleased)
     60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
     on 24 of the others and a worse one on 21.
 
+37. New constraint SubcircuitCostPair(x, c1, s1, c2, s2): two sums of arc
+    costs on one subcircuit, such as a prize collected within a length
+    budget, bounded together by Lagrangian relaxation: for lambda >= 0,
+    s1 >= min assignment of (c1 + lambda * c2) - lambda * max(s2), and the
+    same for the other sides. It searches lambda on the concave piecewise
+    linear bound, prunes arcs by reduced costs, and backs off a direction
+    that prunes nothing. The FlatZinc front end weighs the sum of a
+    redundant SubcircuitCost against each other sum on the subcircuit
+    (also a prize made of tests only), except under --lcg;
+    -Dorg.jacop.fz.circuitCostPair=true or false decides. On mario
+    (MiniZinc challenge) the default search proves the optimum 3x faster
+    (geometric mean of 5 instances, medium_4 32 s to 3 s) and -f stays
+    within 0.5 s; on the 6 hardest orienteering instances proved in 30 s
+    it is 1.4x faster (1.3x with -f), with an extra proof on
+    orienteering_40_1.
+
 Version 4.11
 =============
 
