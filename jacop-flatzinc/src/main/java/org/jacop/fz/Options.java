@@ -147,7 +147,12 @@ public class Options {
             --default-search <value> search for a model without search annotation; one of
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
-                heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                heuristic=domwdeg|cacd|chs|afc|pscost, lc=<k>, phase=0|1,
+                restarts=geometric|luby|none,
+                (pscost: reliability pseudo-cost branching on the objective bound for optimisation,
+                dom/wdeg otherwise; pscost-rel=<n> observations per branch before a variable is not
+                probed any more (default 4, 0 = never probe), pscost-cands=<k> variables probed at
+                a node (default 8), pscost-wdeg=<w> weight of dom/wdeg in the score (default 0.01)),
                 scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),

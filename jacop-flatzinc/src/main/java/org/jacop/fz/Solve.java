@@ -115,6 +115,7 @@ import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.ReliabilityPseudoCost;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.restart.Calculator;
@@ -1963,6 +1964,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         store, vars.toArray(new IntVar[0]), cost, new Random(Store.getRandom().nextLong()));
   }
 
+  private static String pscostStatistics(ReliabilityPseudoCost pscost) {
+    if (pscost == null) {
+      return "";
+    }
+    return "\n%%%mzn-stat: pscostProbes="
+        + pscost.getProbes()
+        + "\n%%%mzn-stat: pscostObservations="
+        + pscost.getObservations()
+        + "\n%%%mzn-stat: pscostGaining="
+        + pscost.getGainingObservations();
+  }
+
   private static String lnsStatistics(AdaptiveLns lns) {
     if (lns == null) {
       return "";
@@ -2011,6 +2024,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the neighbourhoods of large neighbourhood search in the FreeSearch engine, or null
   private AdaptiveLns freeLns;
+
+  // reliability pseudo-cost branching of free search, for its statistics
+  private ReliabilityPseudoCost freePscost;
 
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
@@ -2225,8 +2241,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       DomWdeg domWdeg = new DomWdeg(vars, values, weighting).flushEvery(flushEvery);
       monitors.add(domWdeg);
       SelectChoicePoint<IntVar> select = domWdeg;
+      if ("pscost".equals(heuristic) && costVariable instanceof IntVar cost) {
+        // costVariable is minimised; for maximisation it is the negated objective
+        ReliabilityPseudoCost pscost =
+            new ReliabilityPseudoCost(
+                store,
+                domWdeg,
+                values,
+                cost,
+                Integer.parseInt(
+                    options.freeConfig(
+                        "pscost-rel", String.valueOf(ReliabilityPseudoCost.DEFAULT_RELIABILITY))),
+                Integer.parseInt(
+                    options.freeConfig(
+                        "pscost-cands", String.valueOf(ReliabilityPseudoCost.DEFAULT_CANDIDATES))),
+                Double.parseDouble(
+                    options.freeConfig(
+                        "pscost-wdeg", String.valueOf(ReliabilityPseudoCost.DEFAULT_WDEG_WEIGHT))));
+        monitors.add(pscost);
+        freePscost = pscost;
+        select = pscost;
+      }
       if (lastConflict > 0) {
-        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        LastConflict lc = new LastConflict(select, values, lastConflict);
         monitors.add(lc);
         select = lc;
       }
@@ -3112,6 +3149,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     + nf.format(freeSearch.getProbeFailures())
                 : "")
             + lnsStatistics(freeLns)
+            + pscostStatistics(freePscost)
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {

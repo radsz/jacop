@@ -48,6 +48,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.IfThen;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -66,6 +67,7 @@ import org.jacop.search.free.FreeSearch.Status;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.ReliabilityPseudoCost;
 import org.jacop.search.free.RestartNoGoods;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
@@ -321,6 +323,14 @@ class FreeSearchTest {
           DomWdeg chs = new DomWdeg(concat(m), phase, DomWdeg.Weighting.CHS);
           LastConflict lc = new LastConflict(chs, phase, 1);
           return new Branching(lc, phase, chs, lc);
+        },
+        m -> {
+          IndomainLastSolution phase = new IndomainLastSolution(concat(m), new IndomainMin<>());
+          DomWdeg domWdeg = new DomWdeg(concat(m), phase);
+          ReliabilityPseudoCost pscost =
+              new ReliabilityPseudoCost(m.store, domWdeg, phase, m.cost, 2, 3, 0.01d);
+          LastConflict lc = new LastConflict(pscost, phase, 1);
+          return new Branching(lc, phase, domWdeg, pscost, lc);
         });
   }
 
@@ -792,6 +802,96 @@ class FreeSearchTest {
     // larger domains than the limit use the wrapped heuristic
     assertEquals(
         0, new IndomainBoundImpact(store, cost, false, 2, new IndomainMin<>()).indomain(y));
+  }
+
+  @Test
+  void pseudoCostsSelectTheLargestGainAndLeaveTheStore() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar cost = new IntVar(store, "cost", -100, 100);
+    // cost = a + 5b: b = 1 raises the bound most
+    store.impose(new LinearInt(new IntVar[] {a, b, cost}, new int[] {1, 5, -1}, "==", 0));
+    assertTrue(store.consistency());
+    IntVar[] vars = {a, b};
+    DomWdeg domWdeg = new DomWdeg(vars, new IndomainMin<>());
+    ReliabilityPseudoCost pscost =
+        new ReliabilityPseudoCost(store, domWdeg, new IndomainMin<>(), cost, 1, 8, 0.01d);
+    assertEquals(b, pscost.getChoiceVariable(0));
+    assertEquals(0, pscost.getChoiceValue());
+    assertEquals(4, pscost.getProbes());
+    assertEquals(2, a.getSize());
+    assertEquals(2, b.getSize());
+    assertEquals(0, cost.min());
+    // both are reliable now: no more probes, the pseudo-costs decide
+    assertEquals(b, pscost.getChoiceVariable(0));
+    assertEquals(4, pscost.getProbes());
+    // without probes dom/wdeg breaks the tie of unknown pseudo-costs
+    ReliabilityPseudoCost unprobed =
+        new ReliabilityPseudoCost(store, domWdeg, new IndomainMin<>(), cost, 0, 8, 0.01d);
+    assertEquals(a, unprobed.getChoiceVariable(0));
+    assertEquals(0, unprobed.getProbes());
+  }
+
+  @Test
+  void pseudoCostsSelectAVariableWithAFailedBranch() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    IntVar d = new IntVar(store, "d", 0, 1);
+    IntVar cost = new IntVar(store, "cost", -100, 100);
+    store.impose(new LinearInt(new IntVar[] {a, c, cost}, new int[] {5, 1, -1}, "==", 0));
+    // c = 0 leaves no value for d, which only probing finds
+    store.impose(new IfThen(new XeqC(c, 0), new XeqC(d, 0)));
+    store.impose(new IfThen(new XeqC(c, 0), new XeqC(d, 1)));
+    assertTrue(store.consistency());
+    assertEquals(2, c.getSize());
+    DomWdeg domWdeg = new DomWdeg(new IntVar[] {a, c, d}, new IndomainMin<>());
+    ReliabilityPseudoCost pscost =
+        new ReliabilityPseudoCost(store, domWdeg, new IndomainMin<>(), cost, 1, 8, 0.01d);
+    assertEquals(c, pscost.getChoiceVariable(0));
+    assertEquals(2, c.getSize());
+  }
+
+  @Test
+  void pseudoCostsKeepTheOptimum() {
+    Random rnd = new Random(13);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (boolean maximize : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase);
+        IntVar minimised = model.cost;
+        if (maximize) {
+          minimised = new IntVar(model.store, "negated", -1000, 1000);
+          model.store.impose(new XplusYeqC(model.cost, minimised, 0));
+        }
+        ReliabilityPseudoCost pscost =
+            new ReliabilityPseudoCost(model.store, domWdeg, phase, minimised);
+        LastConflict lc = new LastConflict(pscost, phase, 1);
+        FreeSearch.Builder builder =
+            FreeSearch.builder(model.store, lc)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .monitor(pscost)
+                .monitor(lc)
+                .restarts(new LubyCalculator(2))
+                .restartOnSolution(true)
+                .nogoodsFromRestarts(true)
+                .onSolution(s -> model.checkSolution());
+        FreeSearch search =
+            (maximize ? builder.maximize(model.cost) : builder.minimize(model.cost)).build();
+        Status status = search.solve();
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status);
+        } else {
+          assertEquals(Status.OPTIMAL, status, instance.toString());
+          assertEquals(reference[maximize ? 2 : 1], search.getCostValue());
+        }
+      }
+    }
   }
 
   @Test

@@ -384,9 +384,7 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
         continue;
       }
       p++;
-      double w = degrees != null ? degrees[i] : weightedDegree(i);
-      // a variable without constraints left comes last, smaller domains first
-      double score = w > 0.0d ? v.getSize() / w : Double.MAX_VALUE / 2 + v.getSize();
+      double score = score(i);
       // the set is not in the order of the variables, so ties go to the smaller position
       if (selected == null || score < best || (score == best && i < bestIndex)) {
         best = score;
@@ -396,6 +394,28 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     }
     removed.set(0, vars.length - size);
     return selected;
+  }
+
+  /**
+   * Returns the dom/wdeg score of a search variable as of the last selection: the smaller, the
+   * sooner it is selected.
+   *
+   * @param i the position of the variable.
+   * @return the score.
+   */
+  double score(int i) {
+    double w = degrees != null ? degrees[i] : weightedDegree(i);
+    // a variable without constraints left comes last, smaller domains first
+    return w > 0.0d ? vars[i].getSize() / w : Double.MAX_VALUE / 2 + vars[i].getSize();
+  }
+
+  /**
+   * Returns the variables to branch on, in the positions the scores are given for.
+   *
+   * @return a copy of the variables.
+   */
+  IntVar[] variables() {
+    return vars.clone();
   }
 
   @Override
