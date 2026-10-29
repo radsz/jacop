@@ -76,6 +76,10 @@ final class Portfolio {
   static final int MAX_THREADS = CONFIGS.length + 1;
 
   private static final String COMPLETE = "==========";
+
+  /** How long the portfolio waits for its stopped threads to end after printing the answer. */
+  private static final long JOIN_MILLIS = 10_000;
+
   private static final String UNSATISFIABLE = "=====UNSATISFIABLE=====";
 
   // floats are solved in one thread: their precision and derivatives are kept in static fields
@@ -88,6 +92,9 @@ final class Portfolio {
   private final Object lock = new Object();
   // where the portfolio prints: stdout as it was when the portfolio started
   private PrintStream stdout;
+  // stdout while the portfolio runs, given back by the last thread to end if it outlives run()
+  private PrintStream dispatch;
+  private boolean restorePending;
 
   // the objective value (of the minimised cost variable) of the best solution, read by all threads
   private volatile int bestCost = Integer.MAX_VALUE;
@@ -150,10 +157,23 @@ final class Portfolio {
 
   private int run(String[] args) {
     stdout = System.out;
-    System.setOut(new PrintStream(new Dispatch(stdout), true, stdout.charset()));
+    dispatch = new PrintStream(new Dispatch(stdout), true, stdout.charset());
+    System.setOut(dispatch);
     try {
       return run(args, stdout);
     } finally {
+      synchronized (lock) {
+        // a thread still running would print its own status lines into stdout
+        restorePending = running > 0;
+        if (!restorePending) {
+          restoreStdout();
+        }
+      }
+    }
+  }
+
+  private void restoreStdout() {
+    if (System.out == dispatch) {
       System.setOut(stdout);
     }
   }
@@ -186,14 +206,17 @@ final class Portfolio {
     for (Worker w : workers) {
       w.stop();
     }
+    printResult(out, timedOut, start);
+    // the threads stop within milliseconds in search, later when stopped while reading the model
+    long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
     for (Worker w : workers) {
       try {
-        w.thread.join(1000);
+        w.thread.join(Math.max(1, joinDeadline - System.currentTimeMillis()));
       } catch (InterruptedException _) {
         Thread.currentThread().interrupt();
+        break;
       }
     }
-    printResult(out, timedOut, start);
     return 0;
   }
 
@@ -353,6 +376,9 @@ final class Portfolio {
       if (searchComplete && !finished) {
         complete = true;
         finished = true;
+      }
+      if (restorePending && running == 0) {
+        restoreStdout();
       }
       lock.notifyAll();
     }
