@@ -711,18 +711,19 @@ Version 5.0 (unreleased)
     instead of with the generic reason. Time-table disjunctive reasoning
     (on by default in the FlatZinc front end) pushes a task j past a task
     i that every placement of j would overlap where the compulsory parts
-    of the other tasks leave less than r_i + r_j; the reason is the bounds
-    that keep i on two points (or an interval), j's bounds and the
-    compulsory parts there. Upper bounds of variable durations and
-    resource uses are explained by the time table, looking past values
-    already out of the domain (a resource use in {0, 9} capped at 2 is
-    recorded as <= 0). Edge finding and time-table edge finding were
-    already explained by the energy windows. On the 76 instances with a
-    cumulative in the free-search sets, generic Cumulative reasons were
-    0.75% (--lcg) and 4.3% (--lcg -f) and are now close to 0; paired runs:
-    --lcg 60 s 5 better and 3 worse, --lcg -f 30 s with seeds 1 to 3
-    20 better and 12 worse. -Djacop.lcg.cumulativePairs=false turns the
-    pair reasons off. Scripts and runs: osolpro
+    of the other tasks leave less than r_i + r_j; when no energy window
+    explains a start, the reason is the bounds that keep i on two points
+    (or an interval), j's bounds and the compulsory parts there. Upper
+    bounds of variable durations and resource uses are explained by the
+    time table, looking past values already out of the domain (a resource
+    use in {0, 9} capped at 2 is recorded as <= 0). Edge finding and
+    time-table edge finding were already explained by the energy windows.
+    On the 76 instances with a cumulative in the free-search sets, generic
+    Cumulative reasons fall from 0.79% (--lcg) and 5.05% (--lcg -f) to 0,
+    and those of CumulativeUnary from 4.53% to 0.78% and 0.82% to 0.03%.
+    Paired runs: --lcg 60 s 8 better and 3 worse, --lcg -f 30 s with
+    seeds 1 to 3 16 better and 10 worse. -Djacop.lcg.cumulativePairs=false
+    turns the pair reasons off. Scripts and runs: osolpro
     benchmarks/cumulative-explanations.
 
 Version 4.11
