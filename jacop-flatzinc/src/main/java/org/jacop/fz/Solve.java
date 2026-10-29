@@ -2518,6 +2518,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       monitors.add(saving);
       values = saving;
     }
+    int valueImpact = Integer.parseInt(options.freeConfig("value-impact", "64"));
+    if (valueImpact > 0 && costVariable instanceof IntVar cost) {
+      // values are chosen by what they cost, as the moves of local search are, and ties keep the
+      // value of the last solution; probing takes at most a share of the time, so that proofs of
+      // optimality are not slowed much
+      IndomainBoundImpact byCost =
+          new IndomainBoundImpact(store, cost, false, valueImpact, values)
+              .tiesToFallback()
+              .timeShare(Double.parseDouble(options.freeConfig("value-impact-time", "0.25")));
+      monitors.add(byCost);
+      values = byCost;
+    }
     if ("afc".equals(heuristic)) {
       if (ints.length > 0) {
         selects.add(new SimpleSelect<>(ints, new AfcMaxDeg<>(store), values));
