@@ -1301,6 +1301,20 @@ public class Store {
   }
 
   /**
+   * Records that a stateful object changed at a level, so that its removeLevel is called when the
+   * level is removed. Unlike a listener registered with {@link
+   * #registerRemoveLevelListener(Stateful)}, which is called at every backtrack, the object is
+   * called only for the levels at which it changed; it records each level once, at its first change
+   * there.
+   *
+   * @param stateful the object that changed.
+   * @param level the level of the change.
+   */
+  public void recordChangeAt(Stateful stateful, int level) {
+    recordTimeStampLevel(stateful, level);
+  }
+
+  /**
    * Records that a timestamp got a value at a new level, so the value is removed with the level. A
    * {@link TrailedInts} records itself the same way; its removeLevel restores every level at once.
    *

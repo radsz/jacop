@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import org.jacop.api.Stateful;
 import org.jacop.core.Store;
 
 /**
@@ -39,7 +40,7 @@ import org.jacop.core.Store;
  * keeps the free variables of a group first in its array and moves a variable behind them when it
  * becomes fixed; only the counts and the sum have to be restored when the store backtracks.
  */
-final class DroppedTerms {
+final class DroppedTerms implements Stateful {
 
   /** The number of free variables in the first group. */
   int freeFirst;
@@ -84,6 +85,8 @@ final class DroppedTerms {
       seconds[size] = freeSecond;
       sums[size] = fixedSum;
       size++;
+      // restored only when this level is removed, not at every backtrack
+      store.recordChangeAt(this, level);
     }
     fixedSum += term;
   }
@@ -93,7 +96,8 @@ final class DroppedTerms {
    *
    * @param level the level being removed.
    */
-  void removeLevel(int level) {
+  @Override
+  public void removeLevel(int level) {
     while (size > 0 && levels[size - 1] >= level) {
       size--;
       freeFirst = firsts[size];
