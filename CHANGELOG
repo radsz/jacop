@@ -718,6 +718,18 @@ Version 5.0 (unreleased)
     org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
     2.5% faster on mznbench.
 
+54. JaSAT misses no unit propagation when CP drives it. Under --lcg and
+    -sat, a clause added during search, a learnt clause asserted by the
+    external search, or a propagator's reason kept as a clause could have
+    its true watch above its false watch's level; after a backtrack between
+    the two levels it was unit and never visited (under --lcg even at level
+    0). Under -sat, units asserted again by a backtrack lost their
+    implications once the next level was opened. CdclSolver.setChecking
+    (-Djacop.jasat.check=true) now checks at every fixpoint that no clause
+    is false or unit and that every reason is valid. On 125 mznbench
+    instances (60 s) --lcg solves 68 instead of 67 and --lcg -f 77 as
+    before, with no measurable cost.
+
 Version 4.11
 =============
 
