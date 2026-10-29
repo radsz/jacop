@@ -254,6 +254,24 @@ final class SymmetryBreaking implements ParserTreeConstants {
     static ValueSpec of(int... shared) {
       return new ValueSpec(shared, -1, -1);
     }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof ValueSpec v
+          && Arrays.equals(shared, v.shared)
+          && indexed == v.indexed
+          && offsetArg == v.offsetArg;
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * (31 * Arrays.hashCode(shared) + indexed) + offsetArg;
+    }
+
+    @Override
+    public String toString() {
+      return "ValueSpec" + Arrays.toString(shared) + "/" + indexed + "/" + offsetArg;
+    }
   }
 
   private static final Map<String, ValueSpec> VALUE_SPECS = new HashMap<>();
@@ -310,7 +328,25 @@ final class SymmetryBreaking implements ParserTreeConstants {
   static final int MAX_SCHREIER_SIMS = 40;
 
   /** A constraint of the model with its arguments. */
-  private record Item(String name, Atom[][] args, boolean[] array) {}
+  private record Item(String name, Atom[][] args, boolean[] array) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Item i
+          && name.equals(i.name)
+          && Arrays.deepEquals(args, i.args)
+          && Arrays.equals(array, i.array);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * (31 * name.hashCode() + Arrays.deepHashCode(args)) + Arrays.hashCode(array);
+    }
+
+    @Override
+    public String toString() {
+      return name + Arrays.deepToString(args);
+    }
+  }
 
   private final Store store;
   private final Tables dictionary;
