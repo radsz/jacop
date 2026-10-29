@@ -53,6 +53,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -105,6 +106,8 @@ import org.jacop.search.SequenceSelect;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
+import org.jacop.search.SmallestMax;
+import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
@@ -1753,14 +1756,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return numberSolutions > 0;
   }
 
+  // the start variables lcgDefaultSelect gave to set times, for the statistics
+  private int setTimesStarts;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
-   * annotation: dom/wdeg on the default search variables, smallest value first. The store's
-   * constraints fail under LCG too, so their weights grow as without learning. Activity alone
-   * misses first solutions this finds, for example on cutstock, where each item's demand is a sum
-   * over hundreds of variables.
+   * annotation. A model with cumulative or unary resources gets set times on the start variables of
+   * its tasks: the task that can start first is started as early as it can. Any other model gets
+   * dom/wdeg on the default search variables, smallest value first. The store's constraints fail
+   * under LCG too, so their weights grow as without learning. Activity alone misses first solutions
+   * this finds, for example on cutstock, where each item's demand is a sum over hundreds of
+   * variables.
    */
   private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+    IntVar[] starts = resourceStarts();
+    setTimesStarts = starts.length;
+    if (starts.length > 0) {
+      // a scheduling model: the task that can start first starts as early as it can (the ties go
+      // to the one that must start first), the schedule generation of set times; the activity
+      // completes the assignment. dom/wdeg on jobshop la17 reaches a first makespan of 3803 against
+      // the optimum 784, and branch and bound then needs 273 solutions to prove it
+      SimpleSelect<IntVar> select =
+          new SimpleSelect<>(starts, new SmallestMin<>(), new SmallestMax<>(), new IndomainMin<>());
+      select.inputOrderTieBreaking = false;
+      return select;
+    }
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     List<IntVar> vars = new ArrayList<>();
@@ -1780,6 +1800,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // ties go to the first variable met, without the input-order lookups per tie
     select.inputOrderTieBreaking = false;
     return select;
+  }
+
+  /**
+   * Returns the start variables, not yet fixed, of the cumulative and unary resource constraints of
+   * the store, each once, in the order the store meets them.
+   */
+  private IntVar[] resourceStarts() {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> starts = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> ordered = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof CumulativeBasic resource && seen.add(c)) {
+          for (IntVar x : resource.tasks()[0]) {
+            if (!x.singleton() && starts.add(x)) {
+              ordered.add(x);
+            }
+          }
+        }
+      }
+    }
+    return ordered.toArray(new IntVar[0]);
   }
 
   private void printLcgStatistics(boolean interrupted) {
@@ -1861,6 +1903,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.booleansFirst()
             + "\n%%%mzn-stat: lcgLateVariables="
             + lcg.lateVariables
+            + "\n%%%mzn-stat: lcgSetTimesStarts="
+            + setTimesStarts
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
