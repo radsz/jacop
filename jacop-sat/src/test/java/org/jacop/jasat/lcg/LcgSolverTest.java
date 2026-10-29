@@ -2640,6 +2640,70 @@ class LcgSolverTest {
   }
 
   /**
+   * Makespan problems whose tasks trade duration for resource use (d + r fixed per task), so that
+   * the cumulative prunes upper bounds of durations and resource uses. The optimum agrees with
+   * depth-first search, every explanation is checked, and the cumulative explains every bound it
+   * prunes itself.
+   */
+  @Test
+  void variableTasksAgreeWithSearch() {
+    Random rnd = new Random(13);
+    long reasons = 0;
+    long generic = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 8; instance++) {
+      int n = 5 + rnd.nextInt(3);
+      int horizon = 20;
+      int limit = 4 + rnd.nextInt(2);
+      int[] c = new int[n];
+      for (int i = 0; i < n; i++) {
+        c[i] = 3 + rnd.nextInt(4);
+      }
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] ends = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, 0, horizon);
+          durations[i] = new IntVar(store, "d" + i, 1, c[i] - 1);
+          resources[i] = new IntVar(store, "r" + i, 1, Math.min(limit, c[i] - 1));
+          ends[i] = new IntVar(store, "e" + i, 0, horizon);
+          store.impose(new XplusYeqC(durations[i], resources[i], c[i]));
+          store.impose(new XplusYeqZ(s[i], durations[i], ends[i]));
+        }
+        IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+        store.impose(new Max(ends, makespan));
+        store.impose(new Cumulative(s, durations, resources, new IntVar(store, limit, limit)));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          IntVar[] vars = new IntVar[2 * n];
+          System.arraycopy(durations, 0, vars, 0, n);
+          System.arraycopy(s, 0, vars, n, n);
+          assertThat(
+                  search.labeling(
+                      store, new SimpleSelect<>(vars, null, new IndomainMin<>()), makespan))
+              .isTrue();
+          optimum[0] = search.getCostValue();
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
+          optimum[1] = solver.value(makespan);
+          long[] counts = solver.explanationStatistics().get("Cumulative");
+          reasons += counts[0];
+          generic += counts[1];
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(reasons).isPositive();
+    assertThat(generic).as("generic reasons of %d", reasons).isZero();
+  }
+
+  /**
    * An equality, decided during search, between a variable of a million values and one of five
    * (liner-sf-repositioning fm3_5): the large variable takes only the bounds of the small one, not
    * a million holes, each a {@code !=} atom with its own literals.

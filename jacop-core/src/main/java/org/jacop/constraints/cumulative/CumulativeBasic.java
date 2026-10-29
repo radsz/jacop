@@ -402,7 +402,10 @@ public class CumulativeBasic extends Constraint
       }
     }
     if (j < 0) {
-      return y == limit && kind == AtomicTrail.GE && explainLimit(trail, entry, out);
+      if (y == limit) {
+        return kind == AtomicTrail.GE && explainLimit(trail, entry, out);
+      }
+      return kind == AtomicTrail.LE && explainUseBound(trail, entry, y, out);
     }
     TaskView own = taskNormal[j];
     int d = dmin(entry, own);
@@ -418,6 +421,11 @@ public class CumulativeBasic extends Constraint
       int t = firstOverloaded(trail, entry, j, v, v + d - 1, room);
       if (t != NONE) {
         overloaded(trail, entry, j, t, room, out);
+        return true;
+      }
+      int[] pair = pairConflict(entry, j, v, d, room);
+      if (pair != null) {
+        addPairReason(trail, entry, j, pair, room, out);
         return true;
       }
       int[] window = overloadedWindow(trail, entry, j, v);
@@ -441,6 +449,13 @@ public class CumulativeBasic extends Constraint
         if (t != NONE) {
           overloaded(trail, entry, j, t, room, out);
           u = t - d;
+          continue;
+        }
+        int[] pair = pairConflict(entry, j, u, d, room);
+        if (pair != null) {
+          addPairReason(trail, entry, j, pair, room, out);
+          // every start from p2 - d + 1 up to u covers both points
+          u = pair[2] - d;
           continue;
         }
         int[] window = overloadedWindow(trail, entry, j, u);
@@ -519,10 +534,16 @@ public class CumulativeBasic extends Constraint
    */
   private boolean overloaded(
       AtomicTrail trail, int position, int skip, int t, int room, EntryList out) {
+    return overloaded(trail, position, skip, -1, t, room, out);
+  }
+
+  // as above, leaving out the tasks skip and skip2
+  private boolean overloaded(
+      AtomicTrail trail, int position, int skip, int skip2, int t, long room, EntryList out) {
     long load = 0;
     for (int i = 0; i < taskNormal.length; i++) {
       TaskView task = taskNormal[i];
-      if (i != skip && covers(trail, position, task, t)) {
+      if (i != skip && i != skip2 && covers(trail, position, task, t)) {
         load += rmin(position, task);
       }
     }
@@ -539,13 +560,13 @@ public class CumulativeBasic extends Constraint
     trail.addUpperBound(limit, position, out);
     long sum = 0;
     for (int i : order) {
+      if (sum > room) {
+        break;
+      }
       TaskView task = taskNormal[i];
-      if (i != skip && covers(trail, position, task, t)) {
+      if (i != skip && i != skip2 && covers(trail, position, task, t)) {
         addTaskReasonAt(trail, position, task, t, out);
         sum += rmin(position, task);
-        if (sum > room) {
-          break;
-        }
       }
     }
     return true;
@@ -612,6 +633,13 @@ public class CumulativeBasic extends Constraint
         u = t + 1;
         continue;
       }
+      int[] pair = pairConflict(entry, j, u, d, room);
+      if (pair != null) {
+        addPairReason(trail, entry, j, pair, room, out);
+        // every start from u up to p1 covers both points
+        u = pair[1] + 1;
+        continue;
+      }
       int[] window = overloadedWindow(trail, entry, j, u);
       if (window == null) {
         return false;
@@ -620,6 +648,160 @@ public class CumulativeBasic extends Constraint
       u = windowLeft(trail, entry, j, u, v, window);
     }
     return true;
+  }
+
+  // explains starts by pairs of tasks that cannot overlap where the time table leaves too little
+  // room, unless -Djacop.lcg.cumulativePairs=false
+  private static final boolean PAIRS =
+      !"false".equals(System.getProperty("jacop.lcg.cumulativePairs"));
+
+  /**
+   * Finds a task i that task j, started at u, cannot leave room for, as time-table disjunctive
+   * reasoning does (Gay, Hartert and Schaus, CPAIOR 2015): every start of i in [p1 - d_i + 1, p2]
+   * overlaps [p1, p2], task j started at u covers [p1, p2], and the compulsory parts of the tasks
+   * other than i and j leave less than r_i + r_j at p1 and p2 when p2 - p1 is at most d_i (i then
+   * covers one of them), at every point of [p1, p2] otherwise. Returns {i, p1, p2}, or null. Room
+   * is the limit less j's resource use.
+   */
+  private int[] pairConflict(int position, int j, int u, int d, int room) {
+    if (!PAIRS) {
+      return null;
+    }
+    int[] best = null;
+    int bestReach = 0;
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      int di = dmin(position, task);
+      int ri = rmin(position, task);
+      int est = est(task);
+      int lst = lst(task);
+      if (i == j || di <= 0 || ri <= 0 || est == lst) {
+        continue;
+      }
+      int ect = est + di;
+      // the points every start of i in [est, lst] covers one of: around its compulsory part, or
+      // its earliest end and its latest start
+      int p1 = lst < ect ? lst - 1 : ect - 1;
+      int p2 = lst < ect ? ect : lst;
+      if (u > p1 || (long) u + d <= p2) {
+        continue;
+      }
+      long left = (long) room - ri;
+      if (p2 - p1 <= di
+          ? !overloaded(null, position, j, i, p1, left, null)
+              || !overloaded(null, position, j, i, p2, left, null)
+          : !overloadedThrough(position, j, i, p1, p2, left)) {
+        continue;
+      }
+      // prefer the pair that rules out the most starts of j next to u
+      int reach = Math.min(p1 - u, u + d - 1 - p2);
+      if (best == null || reach > bestReach) {
+        best = new int[] {i, p1, p2};
+        bestReach = reach;
+      }
+    }
+    return best;
+  }
+
+  /**
+   * Adds the reason of a pair found by {@link #pairConflict}: the bounds that keep every start of i
+   * on p1 or p2, its smallest duration and resource use, and the compulsory parts at both points.
+   */
+  private void addPairReason(
+      AtomicTrail trail, int position, int j, int[] pair, int room, EntryList out) {
+    TaskView task = taskNormal[pair[0]];
+    int di = dmin(position, task);
+    trail.addBoundReaching(task.start, position, true, (long) pair[1] - di + 1, out);
+    trail.addBoundReaching(task.start, position, false, pair[2], out);
+    trail.addLowerBound(task.dur, position, out);
+    trail.addLowerBound(task.res, position, out);
+    long left = (long) room - rmin(position, task);
+    if (pair[2] - pair[1] <= di) {
+      overloaded(trail, position, j, pair[0], pair[1], left, out);
+      overloaded(trail, position, j, pair[0], pair[2], left, out);
+    } else {
+      addLoadThrough(trail, position, j, pair[0], pair[1], pair[2], left, out);
+    }
+  }
+
+  /**
+   * Tells whether the compulsory parts of the tasks other than skip and skip2 use more than room at
+   * every point of [a, b]. The load falls only where a compulsory part ends, so it is lowest at a
+   * or at such an end.
+   */
+  private boolean overloadedThrough(int position, int skip, int skip2, int a, int b, long room) {
+    if (!overloaded(null, position, skip, skip2, a, room, null)) {
+      return false;
+    }
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      int end = est(task) + dmin(position, task);
+      if (i != skip
+          && i != skip2
+          && a < end
+          && end <= b
+          && lst(task) < end
+          && !overloaded(null, position, skip, skip2, end, room, null)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Adds what makes the compulsory parts of the tasks other than skip and skip2 use more than room
+   * at every point of [a, b] (see {@link #overloadedThrough}), segment by segment: at the first
+   * point of a segment the largest tasks covering it until they exceed room, each with the bounds
+   * that keep its compulsory part over the segment, which ends where the first of them ends.
+   */
+  private void addLoadThrough(
+      AtomicTrail trail,
+      int position,
+      int skip,
+      int skip2,
+      int a,
+      int b,
+      long room,
+      EntryList out) {
+    trail.addUpperBound(limit, position, out);
+    Integer[] order = new Integer[taskNormal.length];
+    for (int i = 0; i < order.length; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(
+        order,
+        (x, y) -> Integer.compare(rmin(position, taskNormal[y]), rmin(position, taskNormal[x])));
+    int t = a;
+    while (t <= b && room >= 0) {
+      long sum = 0;
+      int end = b;
+      int first = -1;
+      int count = 0;
+      for (int k = 0; k < order.length && sum <= room; k++) {
+        int i = order[k];
+        TaskView task = taskNormal[i];
+        if (i != skip && i != skip2 && covers(trail, position, task, t)) {
+          sum += rmin(position, task);
+          end = Math.min(end, est(task) + dmin(position, task) - 1);
+          if (first < 0) {
+            first = k;
+          }
+          count = k + 1;
+        }
+      }
+      for (int k = first; k >= 0 && k < count; k++) {
+        int i = order[k];
+        TaskView task = taskNormal[i];
+        if (i != skip && i != skip2 && covers(trail, position, task, t)) {
+          trail.addBoundReaching(task.start, position, false, t, out);
+          trail.addBoundReaching(
+              task.start, position, true, (long) end - dmin(position, task) + 1, out);
+          trail.addLowerBound(task.dur, position, out);
+          trail.addLowerBound(task.res, position, out);
+        }
+      }
+      t = end + 1;
+    }
   }
 
   /** No such time point. */
@@ -844,6 +1026,91 @@ public class CumulativeBasic extends Constraint
       trail.addLowerBound(limit, entry, out);
     }
     return true;
+  }
+
+  /**
+   * Explains an upper bound w of a task's duration or resource use. A duration of w + 1 would make
+   * the task, from its latest start up to its earliest start plus w, cover a time point where the
+   * compulsory parts of the other tasks leave too little; or, failing one such point, every start
+   * of the task would then be ruled out as {@link #explainStartsBelow} rules out starts. One more
+   * unit of resource would exceed the limit at a point of the task's compulsory part, or the limit
+   * itself. Values just above the bound already out of the domain widen it: the propagator bounds
+   * the variable by the largest value it allows, which the domain may round down.
+   */
+  private boolean explainUseBound(AtomicTrail trail, int entry, IntVar y, EntryList out) {
+    int mark = out.size();
+    int w = trail.value(entry);
+    for (int v = w; v - w <= USE_BOUND_HOLES; v++) {
+      int before = out.size();
+      if (explainUseBoundAt(trail, entry, y, v, out)) {
+        return true;
+      }
+      out.truncate(before);
+      if (v == Integer.MAX_VALUE || !trail.excludedBefore(y, v + 1, entry, out)) {
+        break;
+      }
+      if (v + 1 > trail.maxBefore(y, entry)) {
+        // every value above w was out already
+        return true;
+      }
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  /** The most values out of the domain above a bound that {@link #explainUseBound} looks past. */
+  private static final int USE_BOUND_HOLES = 64;
+
+  private boolean explainUseBoundAt(AtomicTrail trail, int entry, IntVar y, int w, EntryList out) {
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      if (task.dur == y && task.res != y) {
+        int r = rmin(entry, task);
+        if (r > 0 && explainDurationBound(trail, entry, i, w, limitMax - r, out)) {
+          return true;
+        }
+      } else if (task.res == y && task.dur != y) {
+        int d = dmin(entry, task);
+        if (d <= 0) {
+          continue;
+        }
+        if (w >= limitMax) {
+          trail.addLowerBound(task.dur, entry, out);
+          trail.addBoundReaching(limit, entry, false, w, out);
+          return true;
+        }
+        int t = firstOverloaded(trail, entry, i, lst(task), est(task) + d - 1, limitMax - w - 1);
+        if (t != NONE) {
+          addTaskReasonAt(trail, entry, task, t, out);
+          overloaded(trail, entry, i, t, limitMax - w - 1, out);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // explains that task i, with a duration above w, has no start left (see explainUseBound)
+  private boolean explainDurationBound(
+      AtomicTrail trail, int entry, int i, int w, int room, EntryList out) {
+    TaskView task = taskNormal[i];
+    int mark = out.size();
+    trail.addLowerBound(task.res, entry, out);
+    int t = firstOverloaded(trail, entry, i, lst(task), est(task) + w, room);
+    if (t != NONE) {
+      trail.addBoundReaching(task.start, entry, true, (long) t - w, out);
+      trail.addBoundReaching(task.start, entry, false, t, out);
+      overloaded(trail, entry, i, t, room, out);
+      return true;
+    }
+    trail.addLowerBound(task.start, entry, out);
+    trail.addUpperBound(task.start, entry, out);
+    if (w < Integer.MAX_VALUE - 1
+        && explainStartsBelow(trail, entry, i, est(task), lst(task) + 1, w + 1, room, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
   }
 
   /** Adds the bounds of the tasks other than j that need energy in the window. */
