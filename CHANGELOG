@@ -633,9 +633,7 @@ Version 5.0 (unreleased)
     Challenge sample and the slow easy ones) the score is 53.0 against
     40.0, with 60 proofs against 58 and none lost (--free-config
     lcg-core-probe=<share>, lcg-core-delay=<share>, 0 = core-guided search
-    first). The core-guided phase also reads the objective through partial
-    sums again: with lcg-split it took the block sums for its terms, and
-    trucking lost its proofs in 0.2 s.
+    first).
 
 48. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
     The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
@@ -682,6 +680,19 @@ Version 5.0 (unreleased)
     the spread of the final objectives between seeds, on develop-5.0 and
     with the Booleans-first turns, but Borda moved +2.2 and -3.0, so it
     is off by default. Scripts and runs: osolpro benchmarks/lcg-variance.
+
+52. The dom/wdeg variable selection of free search (-f) is incremental.
+    The unfixed search variables and the unfixed variables of the
+    constraints are kept in reversible sparse sets, each constraint
+    counts its unfixed variables, and for the default weighting the
+    weighted degree of each variable is kept up to date, so a node no
+    longer rescans every variable and the scopes of its constraints. The
+    search is the same: same scores and the same ties (the variable
+    given first). On the 652 instances of the dev tier and the
+    free-search kit under -f (10 s, paired runs) the nodes per second
+    rise by 15% in geometric mean over the 358 instances with at least
+    1 s of search; on the dev tier with 8 repetitions by 7%, with no
+    instance slower by more than 5%.
 
 Version 4.11
 =============
