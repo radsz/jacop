@@ -533,6 +533,22 @@ Version 5.0 (unreleased)
     generator method once. oocsp_racks_100_r1 runs in 18 s instead of
     29 s (search 5.5 s instead of 15 s), with the same search tree.
 
+40. FlatZinc objective presolve expands the objective through more of the
+    model: equalities (bool2int, bool_eq, a 0/1 variable and its literal
+    of 1) lead a term to an equal variable that has a definition; a
+    disjunction r <-> or(b) (array_bool_or, bool_clause_reif) is
+    r = sum(b) when at most one b can be 1 (literals of one variable, or
+    of one value for variables of one jacop_alldiff/jacop_alldistinct);
+    an element y = c[x] of constants is y = sum(c_v * (x = v)) when every
+    value of x has a literal. On rel2onto each matched attribute now pays
+    for its leaf edge at the root (5_5: bound 153,163 instead of 33,163,
+    optimum 161,783). All six instances are proved in every mode (60 s):
+    by default in 0.4 to 5.7 s instead of 1.9 to 26 s, with --lcg in 0.5
+    to 1.4 s (2 of 6 proved before), with --lcg -f in 0.1 to 5.3 s (1 of
+    6) and with -f in 0.1 to 6.9 s (3 of 6). On the 552 instances of the
+    free-search kit only rel2onto and one prize-collecting instance
+    change, with the same result.
+
 Version 4.11
 =============
 
