@@ -30,17 +30,11 @@
 
 package org.jacop.lcg;
 
-import java.util.IdentityHashMap;
-import java.util.Map;
-import org.jacop.api.Copyable;
-import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
-import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.Var;
 
 /**
  * Measures how far explanations are from minimal, as a tool to find weak ones: in a scratch store
@@ -88,40 +82,24 @@ public final class ExplanationMinimality {
    */
   public int[] minimise(Constraint c, int entry, EntryList reason) {
     int n = reason.size();
-    if (n > MINIMISE_LIMIT || !Copyable.canCopy(c)) {
+    if (n > MINIMISE_LIMIT) {
       return null;
     }
-    Store scratch = new Store();
-    Map<Var, Var> copies = new IdentityHashMap<>();
-    for (Var v : c.arguments()) {
-      if (!copy(scratch, v, copies)) {
-        return null;
-      }
+    ScratchCopy copy = ScratchCopy.of(trail, c);
+    if (copy == null) {
+      return null;
     }
     for (int k = 0; k < n; k++) {
-      if (copies.get(trail.variable(reason.get(k))) == null) {
+      if (copy.get(trail.variable(reason.get(k))) == null) {
         return null;
       }
     }
-    if (entry >= 0 && copies.get(trail.variable(entry)) == null) {
+    if (entry >= 0 && copy.get(trail.variable(entry)) == null) {
       return null;
     }
-    VarMap map =
-        new VarMap() {
-          @Override
-          public Store target() {
-            return scratch;
-          }
-
-          @Override
-          @SuppressWarnings("unchecked")
-          public <V extends Var> V get(V v) {
-            return (V) copies.get(v);
-          }
-        };
     try {
-      scratch.impose(((Copyable<?>) c).copy(map));
-      if (!scratch.consistency()) {
+      copy.imposeCopy(c);
+      if (!copy.store.consistency()) {
         return new int[] {n, 0, 0};
       }
     } catch (FailException _) {
@@ -131,14 +109,14 @@ public final class ExplanationMinimality {
     for (int k = 0; k < n; k++) {
       atoms[k] = reason.get(k);
     }
-    if (!derives(scratch, copies, atoms, n, entry)) {
+    if (!derives(copy, atoms, n, entry)) {
       return new int[] {n, -1, 0};
     }
     int kept = n;
     for (int k = kept - 1; k >= 0; k--) {
       int dropped = atoms[k];
       atoms[k] = atoms[kept - 1];
-      if (derives(scratch, copies, atoms, kept - 1, entry)) {
+      if (derives(copy, atoms, kept - 1, entry)) {
         kept--;
       } else {
         atoms[kept - 1] = atoms[k];
@@ -163,13 +141,13 @@ public final class ExplanationMinimality {
       }
       for (int w = numWeaker - 1; w >= 0; w--) {
         atoms[k] = weaker[w];
-        if (derives(scratch, copies, atoms, kept, entry)) {
+        if (derives(copy, atoms, kept, entry)) {
           lifted++;
           break;
         }
         atoms[k] = f;
       }
-      if (weakerValue(scratch, copies, atoms, kept, entry, k)) {
+      if (weakerValue(copy, atoms, kept, entry, k)) {
         liftedOff++;
       }
     }
@@ -179,8 +157,7 @@ public final class ExplanationMinimality {
   // whether propagation in the scratch store derives the entry (or a failure) from the atoms
   // whether a bound weaker than atoms[k]'s, which no trail atom gives, still derives the entry: the
   // weakest such bound is found by bisection between the root bound and the atom's
-  private boolean weakerValue(
-      Store scratch, Map<Var, Var> copies, int[] atoms, int n, int entry, int k) {
+  private boolean weakerValue(ScratchCopy copy, int[] atoms, int n, int entry, int k) {
     int f = atoms[k];
     boolean ge = trail.kind(f) == AtomicTrail.GE;
     IntDomain root = trail.rootDomain(trail.variable(f));
@@ -196,7 +173,7 @@ public final class ExplanationMinimality {
       while (Math.abs(strong - weak) > 1) {
         long mid = (strong + weak) / 2;
         overrideValue = (int) mid;
-        if (derives(scratch, copies, atoms, n, entry)) {
+        if (derives(copy, atoms, n, entry)) {
           strong = mid;
         } else {
           weak = mid;
@@ -211,26 +188,26 @@ public final class ExplanationMinimality {
   private int overrideAt = -1;
   private int overrideValue;
 
-  private boolean derives(Store scratch, Map<Var, Var> copies, int[] atoms, int n, int entry) {
+  private boolean derives(ScratchCopy copy, int[] atoms, int n, int entry) {
+    Store scratch = copy.store;
     int base = scratch.level;
     scratch.setLevel(base + 1);
     try {
       for (int k = 0; k < n; k++) {
-        int f = atoms[k];
-        impose(
-            scratch,
-            (IntVar) copies.get(trail.variable(f)),
-            trail.kind(f),
-            k == overrideAt ? overrideValue : trail.value(f));
+        if (k != overrideAt) {
+          copy.impose(atoms[k]);
+        } else {
+          // a bound between the root's and the atom's, which no trail atom gives
+          IntVar y = copy.get(trail.variable(atoms[k]));
+          if (trail.kind(atoms[k]) == AtomicTrail.GE) {
+            y.domain.inMin(scratch.level, y, overrideValue);
+          } else {
+            y.domain.inMax(scratch.level, y, overrideValue);
+          }
+        }
       }
       if (entry >= 0) {
-        IntVar y = (IntVar) copies.get(trail.variable(entry));
-        int v = trail.value(entry);
-        switch (trail.kind(entry)) {
-          case AtomicTrail.GE -> y.domain.inMax(scratch.level, y, v - 1);
-          case AtomicTrail.LE -> y.domain.inMin(scratch.level, y, v + 1);
-          default -> y.domain.in(scratch.level, y, v, v);
-        }
+        copy.imposeNegation(entry);
       }
       return !scratch.consistency();
     } catch (FailException _) {
@@ -238,54 +215,6 @@ public final class ExplanationMinimality {
     } finally {
       scratch.removeLevel(base + 1);
       scratch.setLevel(base);
-    }
-  }
-
-  // copies a variable of the constraint, as the explanation checker does
-  private boolean copy(Store scratch, Var v, Map<Var, Var> copies) {
-    if (copies.containsKey(v)) {
-      return true;
-    }
-    if (v instanceof IntVar x) {
-      IntVar copy = copy(scratch, x);
-      copies.put(v, copy);
-      return copy != null;
-    }
-    if (!(v instanceof Mirrored m) || m.mirror() == null) {
-      return false;
-    }
-    IntVar[] mirror = m.mirror();
-    IntVar[] mirrorCopies = new IntVar[mirror.length];
-    for (int i = 0; i < mirror.length; i++) {
-      if (!copy(scratch, mirror[i], copies)) {
-        return false;
-      }
-      mirrorCopies[i] = (IntVar) copies.get(mirror[i]);
-    }
-    copies.put(v, m.copyMirrored(scratch, mirrorCopies));
-    return true;
-  }
-
-  private IntVar copy(Store scratch, IntVar x) {
-    IntDomain root = trail.rootDomain(x);
-    if (x.getClass() == IntVar.class) {
-      return new IntVar(scratch, x.id(), root.cloneLight());
-    }
-    if (x.getClass() == BooleanVar.class) {
-      return new BooleanVar(scratch, x.id(), root.min(), root.max());
-    }
-    return null;
-  }
-
-  private static void impose(Store scratch, IntVar y, int kind, int v) {
-    switch (kind) {
-      case AtomicTrail.GE -> y.domain.inMin(scratch.level, y, v);
-      case AtomicTrail.LE -> y.domain.inMax(scratch.level, y, v);
-      default -> {
-        if (y.domain.contains(v)) {
-          y.domain.inComplement(scratch.level, y, v);
-        }
-      }
     }
   }
 }
