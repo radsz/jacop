@@ -633,9 +633,7 @@ Version 5.0 (unreleased)
     Challenge sample and the slow easy ones) the score is 53.0 against
     40.0, with 60 proofs against 58 and none lost (--free-config
     lcg-core-probe=<share>, lcg-core-delay=<share>, 0 = core-guided search
-    first). The core-guided phase also reads the objective through partial
-    sums again: with lcg-split it took the block sums for its terms, and
-    trucking lost its proofs in 0.2 s.
+    first).
 
 48. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
     The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
