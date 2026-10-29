@@ -665,6 +665,19 @@ Version 5.0 (unreleased)
     overall; --lcg -f 3% faster on the mznbench kit (also with
     --free-config lcg-split=0).
 
+51. The dom/wdeg variable selection of free search (-f) is incremental.
+    The unfixed search variables and the unfixed variables of the
+    constraints are kept in reversible sparse sets, each constraint
+    counts its unfixed variables, and for the default weighting the
+    weighted degree of each variable is kept up to date, so a node no
+    longer rescans every variable and the scopes of its constraints. The
+    search is the same: same scores and the same ties (the variable
+    given first). On the 652 instances of the dev tier and the
+    free-search kit under -f (10 s, paired runs) the nodes per second
+    rise by 15% in geometric mean over the 358 instances with at least
+    1 s of search; on the dev tier with 8 repetitions by 7%, with no
+    instance slower by more than 5%.
+
 Version 4.11
 =============
 
