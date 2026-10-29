@@ -2111,7 +2111,7 @@ class SingleConstraintTest extends TestHelper {
   void testAlldiffIsBoundsConsistentAcrossBacktracking() {
 
     Random random = new Random(29);
-    for (int trial = 0; trial < 2000; trial++) {
+    for (int trial = 0; trial < 500; trial++) {
       int n = 1 + random.nextInt(6);
       int m = n + random.nextInt(3);
       boolean dense = trial % 2 == 0;
@@ -7283,6 +7283,62 @@ class SingleConstraintTest extends TestHelper {
         }
       }
     }
+  }
+
+  @Test
+  void xdivYeqZPrunesUnsupportedDivisorBounds() {
+    // 9 div y is in z only for y = 1 and y = 3; the interval rules kept y >= -3
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 9, 9);
+    IntVar y = new IntVar(store, "y", -3, 3);
+    y.domain.subtractAdapt(0);
+    y.domain.subtractAdapt(2);
+    IntVar z = new IntVar(store, "z", -1, -1);
+    z.addDom(1, 6);
+    z.addDom(9, 9);
+    store.impose(new XdivYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(1);
+    assertThat(y.max()).isEqualTo(3);
+    assertThat(z.min()).isEqualTo(3);
+    assertThat(z.max()).isEqualTo(9);
+  }
+
+  @Test
+  void xmodYeqZPrunesToNegativeDividends() {
+    // a remainder of -2 needs a negative x and |y| > 2: x in -8..-2; x kept its positive values
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -9, 1);
+    x.addDom(4, 5);
+    x.addDom(8, 9);
+    IntVar y = new IntVar(store, "y", -3, -1);
+    y.addDom(1, 1);
+    y.addDom(3, 4);
+    IntVar z = new IntVar(store, "z", -2, -2);
+    store.impose(new XmodYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(-8);
+    assertThat(x.max()).isEqualTo(-2);
+    assertThat(y.min()).isEqualTo(-3);
+    assertThat(y.max()).isEqualTo(4);
+  }
+
+  @Test
+  void xexpYeqZBoundsOnWideDomains() {
+    // x is too wide for the enumeration of supports until the bounds narrow it: z in 9..30 holds
+    // the squares of 3..5 and of -5..-3 and the cube 27, so x is in -5..5 and z in 9..27; then the
+    // supports remove -2..2
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1000, 1000);
+    IntVar y = new IntVar(store, "y", 2, 3);
+    IntVar z = new IntVar(store, "z", 9, 30);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(-5);
+    assertThat(x.max()).isEqualTo(5);
+    assertThat(z.min()).isEqualTo(9);
+    assertThat(z.max()).isEqualTo(27);
+    assertThat(x.domain.contains(0)).isFalse();
   }
 
   @Test

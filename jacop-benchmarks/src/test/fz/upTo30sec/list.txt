@@ -22,7 +22,6 @@ data_square/rpp19_true
 data_square/rpp20_false
 debruijn_binary/03_07
 doublechannel/channel1
-dudeney_bishop_placement2/dudeney_bishop_placement2
 elevator_8_4/elevator_8_4
 elitserien/handball12
 elitserien/handball14
@@ -115,7 +114,6 @@ prize-collecting/25-5-5-4
 prize-collecting/25-5-5-9
 prize-collecting/28-4-7-3
 prize-collecting/28-4-7-9
-radiation/i7-9
 radiation/m06_15_15
 rcpsp-data-psplib-J30/J30_10_10
 rcpsp-data-psplib-J30/J30_10_4

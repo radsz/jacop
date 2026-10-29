@@ -42,6 +42,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
@@ -169,6 +170,10 @@ public class ElementVariableFast extends AbstractElement
 
     int min = IntDomain.MAX_INT;
     int max = IntDomain.MIN_INT;
+    int valueMin = value.min();
+    // the values of the selectable positions, as bits from valueMin, when the value spans 64 values
+    boolean smallValue = !value.singleton() && (long) value.max() - valueMin < 64;
+    long supportBits = 0;
     IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
     boolean indexDomNonEmpty = false;
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
@@ -184,6 +189,9 @@ public class ElementVariableFast extends AbstractElement
       } else {
         min = Math.min(min, list[position].min());
         max = Math.max(max, list[position].max());
+        if (smallValue) {
+          supportBits |= list[position].domain.bitsFrom(valueMin);
+        }
       }
     }
 
@@ -191,6 +199,12 @@ public class ElementVariableFast extends AbstractElement
       index.domain.in(store.level, index, indexDom.complement());
     }
     value.domain.in(store.level, value, min, max);
+    if (smallValue && (value.domain.bitsFrom(valueMin) & ~supportBits) != 0) {
+      // a value inside the bounds that no selectable position can take; kept to small value
+      // domains, where the union is a few word operations
+      value.domain.in(
+          store.level, value, new SmallDenseDomain(valueMin, Long.reverse(supportBits)));
+    }
 
     if (index.singleton()) {
       // index is singleton; value == list[index - 1 - offset]

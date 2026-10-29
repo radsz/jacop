@@ -796,9 +796,19 @@ class UnaryReasoning {
     }
   }
 
+  // the largest lst in Theta without task i: Theta holds the first indexQ tasks in lst order
+  private int lastLstWithout(int i, int indexQ) {
+    int j = lstOrder[indexQ - 1];
+    return j != i ? lst[j] : lst[lstOrder[indexQ - 2]];
+  }
+
   /**
    * Not-last: a task that cannot be last among a set of tasks ends before the latest start of one
    * of them.
+   *
+   * <p>Every task i is tested with Theta holding the tasks whose lst is below lct(i), also when it
+   * holds the same tasks as for the task before i in lct order, and gets the largest lst in Theta
+   * without i itself.
    *
    * @param ts the tasks of the view, as loaded.
    * @param n the number of loaded tasks.
@@ -810,17 +820,16 @@ class UnaryReasoning {
     int indexQ = 0;
     for (int p = 0; p < n; p++) {
       int i = lctOrder[p];
-      boolean entered = false;
       while (indexQ < n && lct[i] > lst[lstOrder[indexQ]]) {
         if (treeEct[1] > lst[i] && ectWithout(i) > lst[i]) {
-          update[i] = Math.min(lst[lstOrder[indexQ - 1]], update[i]);
+          update[i] = Math.min(lastLstWithout(i, indexQ), update[i]);
         }
         insertTheta(lstOrder[indexQ]);
         indexQ++;
-        entered = true;
       }
-      if (entered && treeEct[1] > lst[i] && ectWithout(i) > lst[i]) {
-        update[i] = Math.min(lst[lstOrder[indexQ - 1]], update[i]);
+      // also when nothing entered: Theta is the same as for the task before, but i is not
+      if (treeEct[1] > lst[i] && ectWithout(i) > lst[i]) {
+        update[i] = Math.min(lastLstWithout(i, indexQ), update[i]);
       }
     }
     for (int i = 0; i < n; i++) {

@@ -66,8 +66,9 @@ public class CumulativeUnary extends Cumulative {
   private final UnaryReasoning unaryReversed = new UnaryReasoning();
   boolean doProfile;
   boolean doUnaryEdgeFind;
-  // the time-table rule for constant durations and resource uses, created on first use
+  // the time-table rule for constant durations, created on first use
   private UnaryTimetable timetable;
+  private final boolean constantDurations;
 
   // the rules in the order unaryRules runs them
   private static final int OVERLOAD = 0;
@@ -124,6 +125,7 @@ public class CumulativeUnary extends Cumulative {
     checkInput(resources, i -> i.min() >= 0, "resource does not allow negative values");
     checkUnary(resources, limit);
     queueIndex = 2;
+    constantDurations = grounded(durations);
 
     tvn = new TaskNormalView[starts.length];
     tvr = super.taskReversed;
@@ -291,13 +293,13 @@ public class CumulativeUnary extends Cumulative {
   }
 
   /**
-   * The time-table rule: the unary time-table for constant durations and resource uses, the general
-   * profile otherwise. Both prune the same values.
+   * The time-table rule: the unary time-table for constant durations, the general profile
+   * otherwise. Both prune the same values.
    *
    * @param store the constraint store.
    */
   void unaryProfile(Store store) {
-    if (cumulativeForConstants != null) {
+    if (constantDurations) {
       if (timetable == null) {
         timetable = newTimetable();
       }
@@ -316,11 +318,18 @@ public class CumulativeUnary extends Cumulative {
     int n = taskNormal.length;
     IntVar[] starts = new IntVar[n];
     int[] durs = new int[n];
-    int[] ress = new int[n];
+    IntVar[] uses = new IntVar[n];
     for (int i = 0; i < n; i++) {
       starts[i] = taskNormal[i].start;
       durs[i] = taskNormal[i].dur.value();
-      ress[i] = taskNormal[i].res.value();
+      uses[i] = taskNormal[i].res;
+    }
+    if (cumulativeForConstants == null) {
+      return new UnaryTimetable(starts, durs, uses, limit);
+    }
+    int[] ress = new int[n];
+    for (int i = 0; i < n; i++) {
+      ress[i] = uses[i].value();
     }
     return new UnaryTimetable(starts, durs, ress, limit);
   }
