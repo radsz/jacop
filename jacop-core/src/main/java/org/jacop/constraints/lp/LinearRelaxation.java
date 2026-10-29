@@ -173,9 +173,8 @@ public class LinearRelaxation extends Constraint
   private static final int MAX_SOURCES = 100;
   private static final double MAX_PARALLELISM = 0.9;
 
-  // the store level the relaxation was imposed at; cuts use the bounds of this level only, so that
-  // they hold for the whole search
-  private int rootLevel = -1;
+  // the cuts are made at the first solve only, before any search decision: they use the bounds of
+  // that moment, which hold for the whole search
   private boolean cutsTried;
 
   /**
@@ -342,12 +341,6 @@ public class LinearRelaxation extends Constraint
   }
 
   @Override
-  public void impose(Store store) {
-    rootLevel = store.level;
-    super.impose(store);
-  }
-
-  @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
   }
@@ -441,11 +434,9 @@ public class LinearRelaxation extends Constraint
             calls == 1
                 ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
                 : (int) Math.clamp(WORK / size, 5, pivotLimit));
-    if (status == DualSimplex.OPTIMAL
-        && objective != null
-        && CUTS
-        && !cutsTried
-        && store.level == rootLevel) {
+    // the first solve happens in the root propagation, before search makes a decision (also in
+    // the free search, which propagates its root a level up, and under lazy clause generation)
+    if (status == DualSimplex.OPTIMAL && objective != null && CUTS && !cutsTried && calls == 1) {
       cutsTried = true;
       status = cutRounds();
     }
