@@ -496,8 +496,41 @@ public class LinearRelaxation extends Constraint
    * The combination {@code sum lambda_i a_i x} of the rows, by column, with its two sides: {@code
    * <= upper} when every row has the side its multiplier needs, and {@code >= lower} likewise.
    */
-  private record Aggregate(
-      long[] coef, long upper, boolean hasUpper, long lower, boolean hasLower) {}
+  private static final class Aggregate {
+    private final long[] coef;
+    private final long upper;
+    private final boolean hasUpper;
+    private final long lower;
+    private final boolean hasLower;
+
+    Aggregate(long[] coef, long upper, boolean hasUpper, long lower, boolean hasLower) {
+      this.coef = coef;
+      this.upper = upper;
+      this.hasUpper = hasUpper;
+      this.lower = lower;
+      this.hasLower = hasLower;
+    }
+
+    long[] coef() {
+      return coef;
+    }
+
+    long upper() {
+      return upper;
+    }
+
+    boolean hasUpper() {
+      return hasUpper;
+    }
+
+    long lower() {
+      return lower;
+    }
+
+    boolean hasLower() {
+      return hasLower;
+    }
+  }
 
   // the combination of the rows by lambda, exact; null on overflow
   private Aggregate aggregate(long[] lambda) {

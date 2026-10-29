@@ -210,7 +210,7 @@ final class MirCut {
     }
     long gcd = 0;
     for (long w : g) {
-      gcd = gcd(gcd, Math.abs(w));
+      gcd = gcd(gcd, Math.absExact(w));
     }
     int[] columns = new int[nonzero];
     long[] weights = new long[nonzero];
@@ -230,8 +230,8 @@ final class MirCut {
     long largest = 0;
     long smallest = Long.MAX_VALUE;
     for (long w : weights) {
-      largest = Math.max(largest, Math.abs(w));
-      smallest = Math.min(smallest, Math.abs(w));
+      largest = Math.max(largest, Math.absExact(w));
+      smallest = Math.min(smallest, Math.absExact(w));
     }
     if (!(efficacy > MIN_EFFICACY) || largest > MAX_RATIO * smallest || largest > MAX_WEIGHT) {
       return null;
