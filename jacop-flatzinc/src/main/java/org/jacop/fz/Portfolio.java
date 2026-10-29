@@ -74,10 +74,7 @@ final class Portfolio {
     {"free-cacd", "-f", "--free-config", "heuristic=cacd"},
     {"free-afc", "-f", "--free-config", "heuristic=afc,phase=0"},
     {"lcg-fixed", "--lcg"},
-    {"free-luby-keep", "-f", "--free-config", "restarts=luby,scale=50,flush=0"},
-    {"free-lns", "-f", "--free-config", "lns-share=4,probe=0"},
-    {"free-lns2", "-f", "--free-config", "lns-share=3"},
-    {"free-nolns", "-f", "--free-config", "lns=0"}
+    {"free-luby-keep", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
   };
 
   /** The most threads the portfolio uses: the options given and each setting above. */
@@ -200,20 +197,7 @@ final class Portfolio {
     List<String> base = baseArguments(args);
     int threads = Math.min(options.threads(), MAX_THREADS);
     workers.add(new Worker("given", arguments(base, List.of(), false)));
-    String[][] configs = CONFIGS;
-    String order = System.getProperty("jacop.portfolio");
-    if (order != null) {
-      List<String[]> l = new ArrayList<>();
-      for (String n : order.split(",")) {
-        for (String[] c : CONFIGS) {
-          if (c[0].equals(n)) {
-            l.add(c);
-          }
-        }
-      }
-      configs = l.toArray(new String[0][]);
-    }
-    for (String[] config : configs) {
+    for (String[] config : CONFIGS) {
       if (workers.size() == threads) {
         break;
       }
