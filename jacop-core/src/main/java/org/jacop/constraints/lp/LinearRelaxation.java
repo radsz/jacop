@@ -249,6 +249,36 @@ public class LinearRelaxation extends Constraint
    *     have more than {@code org.jacop.lp.maxTableau} (4,000,000) entries
    */
   public static LinearRelaxation of(Store store, IntVar objective, boolean maximize) {
+    return of(store, objective, maximize, List.of(), Set.of());
+  }
+
+  /**
+   * Creates the relaxation of the linear constraints of a store, with rows that are not store
+   * constraints and with variables substituted by their definitions.
+   *
+   * <p>The extra rows are relations implied by the model that the store holds elsewhere, such as
+   * the clauses that lazy clause generation hands to the SAT solver. A substituted variable {@code
+   * s} has a definition, an equality row {@code sum a x + w s = c} with {@code w} = 1 or -1 among
+   * the rows; the definition is dropped and {@code s} is replaced by {@code w (c - sum a x)} in the
+   * other rows. The block sums of a long linear constraint split for lazy clause generation are
+   * such variables: substituting them gives the constraint back as one row, so the relaxation has
+   * the rows and columns of the unsplit model. A variable without a definition, the objective, and
+   * every variable when a substitution overflows a {@code long} are left as they are.
+   *
+   * @param store the store
+   * @param objective the variable to minimize, or null for satisfaction
+   * @param maximize whether the objective is maximized instead
+   * @param extra rows to add to those of the store's constraints
+   * @param substituted variables to replace by their definitions
+   * @return the relaxation, or null when it has fewer than two rows or the tableau would have more
+   *     than {@code org.jacop.lp.maxTableau} (4,000,000) entries
+   */
+  public static LinearRelaxation of(
+      Store store,
+      IntVar objective,
+      boolean maximize,
+      Collection<LinearForm> extra,
+      Set<? extends IntVar> substituted) {
     // the constraints of the variables in the store and of the named ones, such as Boolean
     // variables, which have no store index
     Set<Constraint> constraints = new LinkedHashSet<>();
@@ -265,22 +295,130 @@ public class LinearRelaxation extends Constraint
       store.watchedConstraints.values().forEach(constraints::addAll);
     }
     List<LinearForm> forms = new ArrayList<>();
-    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
-    long rows = 0;
     for (Constraint c : constraints) {
       LinearForm f = LinearForms.of(c);
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         forms.add(f);
-        vars.addAll(Arrays.asList(f.vars()));
-        rows++;
-        // the dense tableau has a column for each variable and for each row
-        if (rows * (rows + vars.size() + 1) > MAX_TABLEAU) {
-          return null;
-        }
+      }
+    }
+    for (LinearForm f : extra) {
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+        forms.add(f);
+      }
+    }
+    if (!substituted.isEmpty()) {
+      forms = substitute(forms, substituted, objective);
+    }
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    long rows = 0;
+    for (LinearForm f : forms) {
+      vars.addAll(Arrays.asList(f.vars()));
+      rows++;
+      // the dense tableau has a column for each variable and for each row
+      if (rows * (rows + vars.size() + 1) > MAX_TABLEAU) {
+        return null;
       }
     }
     LinearRelaxation r = new LinearRelaxation(forms, objective, maximize);
     return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * Returns the rows with the variables that have a definition among them replaced by it, and the
+   * definitions left out; the rows unchanged when a substitution overflows.
+   */
+  private static List<LinearForm> substitute(
+      List<LinearForm> forms, Set<? extends IntVar> substituted, IntVar objective) {
+    Map<IntVar, LinearForm> definition = new IdentityHashMap<>();
+    Map<IntVar, Long> weight = new IdentityHashMap<>();
+    Set<LinearForm> definitions = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (LinearForm f : forms) {
+      if (f.relation() != LinearForm.EQ) {
+        continue;
+      }
+      IntVar s = null;
+      int count = 0;
+      for (int k = 0; k < f.vars().length; k++) {
+        IntVar v = f.vars()[k];
+        if (substituted.contains(v) && v != objective && !definition.containsKey(v)) {
+          if (s == null && Math.abs(f.weights()[k]) == 1) {
+            s = v;
+          }
+          if (v == s) {
+            count++;
+          }
+        }
+      }
+      if (s != null && count == 1) {
+        definition.put(s, f);
+        weight.put(s, f.weights()[indexOf(f, s)]);
+        definitions.add(f);
+      }
+    }
+    if (definition.isEmpty()) {
+      return forms;
+    }
+    List<LinearForm> result = new ArrayList<>();
+    try {
+      for (LinearForm f : forms) {
+        if (!definitions.contains(f)) {
+          result.add(expand(f, definition, weight, 0));
+        }
+      }
+    } catch (ArithmeticException overflow) {
+      return forms;
+    }
+    return result;
+  }
+
+  // f with every defined variable replaced by its definition; definitions may use defined
+  // variables, up to a small depth
+  private static LinearForm expand(
+      LinearForm f, Map<IntVar, LinearForm> definition, Map<IntVar, Long> weight, int depth) {
+    boolean any = false;
+    for (IntVar v : f.vars()) {
+      any |= definition.containsKey(v);
+    }
+    if (!any || depth > 8) {
+      return f;
+    }
+    List<IntVar> vs = new ArrayList<>();
+    List<Long> ws = new ArrayList<>();
+    long c = f.c();
+    for (int k = 0; k < f.vars().length; k++) {
+      IntVar v = f.vars()[k];
+      long w = f.weights()[k];
+      LinearForm d = definition.get(v);
+      if (d == null) {
+        vs.add(v);
+        ws.add(w);
+        continue;
+      }
+      // d: sum a x + ws s = cd, so w s = w ws cd - w ws sum a x (ws is 1 or -1)
+      long f0 = Math.multiplyExact(w, weight.get(v));
+      c = Math.subtractExact(c, Math.multiplyExact(f0, d.c()));
+      for (int j = 0; j < d.vars().length; j++) {
+        if (d.vars()[j] != v) {
+          vs.add(d.vars()[j]);
+          ws.add(Math.negateExact(Math.multiplyExact(f0, d.weights()[j])));
+        }
+      }
+    }
+    long[] w = new long[ws.size()];
+    for (int k = 0; k < w.length; k++) {
+      w[k] = ws.get(k);
+    }
+    LinearForm e = new LinearForm(vs.toArray(new IntVar[0]), w, c, f.relation());
+    return expand(e, definition, weight, depth + 1);
+  }
+
+  private static int indexOf(LinearForm f, IntVar v) {
+    for (int k = 0; k < f.vars().length; k++) {
+      if (f.vars()[k] == v) {
+        return k;
+      }
+    }
+    return -1;
   }
 
   /**
