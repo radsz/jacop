@@ -291,6 +291,10 @@ class LcgSolverTest {
 
   private static final int SEED = Integer.getInteger("lcg.table.seed", 0);
 
+  /** Instances of the scheduling checks against search; the {@code min} profile lowers it. */
+  private static final int SCHEDULING_INSTANCES =
+      Integer.getInteger("lcg.scheduling.instances", 400);
+
   private static long[] checkHybridTables(Random rnd, int instances, boolean betweenColumns) {
     int sat = 0;
     int unsat = 0;
@@ -1643,7 +1647,7 @@ class LcgSolverTest {
     Random rnd = new Random(5);
     int sat = 0;
     int unsat = 0;
-    for (int instance = 0; instance < 400; instance++) {
+    for (int instance = 0; instance < SCHEDULING_INSTANCES; instance++) {
       int n = 7 + rnd.nextInt(4);
       int horizon = 8 + rnd.nextInt(8);
       int[] d = new int[n];
@@ -1713,8 +1717,8 @@ class LcgSolverTest {
         unsat++;
       }
     }
-    assertThat(sat).isGreaterThan(50);
-    assertThat(unsat).isGreaterThan(50);
+    assertThat(sat).isGreaterThan(SCHEDULING_INSTANCES / 8);
+    assertThat(unsat).isGreaterThan(SCHEDULING_INSTANCES / 8);
   }
 
   /**
@@ -1932,7 +1936,7 @@ class LcgSolverTest {
     long lowerBoundRaised = 0;
     long annotationDecisions = 0;
     long semanticUips = 0;
-    for (int instance = 0; instance < 150; instance++) {
+    for (int instance = 0; instance < SCHEDULING_INSTANCES * 3 / 8; instance++) {
       int n = 6 + rnd.nextInt(4);
       int horizon = 25;
       int[] d = new int[n];

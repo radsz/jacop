@@ -191,6 +191,30 @@ class GlobalConstraintBruteForceTest {
   /** Comma-separated parts of case names to run, from -Dglobals.bruteforce.cases; all if unset. */
   private static final String CASES = System.getProperty("globals.bruteforce.cases", "");
 
+  /**
+   * Largest number of assignments an instance may have: larger ones get random variables fixed, as
+   * {@link #boxes} does, since the brute force over them took most of the time and found nothing
+   * smaller instances do not.
+   */
+  private static final long MAX_ASSIGNMENTS = 50_000;
+
+  static Instance generate(Function<Random, Instance> generator, Random random) {
+    Instance instance = generator.apply(random);
+    int[][] domains = instance.domains();
+    long size = 1;
+    for (int[] domain : domains) {
+      size *= domain.length;
+    }
+    while (size > MAX_ASSIGNMENTS) {
+      int v = random.nextInt(domains.length);
+      if (domains[v].length > 1) {
+        size /= domains[v].length;
+        domains[v] = new int[] {domains[v][random.nextInt(domains[v].length)]};
+      }
+    }
+    return instance;
+  }
+
   static Stream<Arguments> cases() {
     if (CASES.isBlank()) {
       return allCases();
@@ -394,7 +418,7 @@ class GlobalConstraintBruteForceTest {
   void solutionsMatchBruteForce(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode());
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       Set<List<Integer>> expected = new HashSet<>();
       bruteForce(instance, new int[instance.domains().length], 0, expected);
 
@@ -418,7 +442,7 @@ class GlobalConstraintBruteForceTest {
       String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 1);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       Set<List<Integer>> expected = new HashSet<>();
       bruteForce(instance, new int[instance.domains().length], 0, expected);
 
@@ -449,7 +473,7 @@ class GlobalConstraintBruteForceTest {
   void satisfiedMeansEntailed(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 3);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       Set<List<Integer>> solutions = new HashSet<>();
       bruteForce(instance, new int[instance.domains().length], 0, solutions);
 
@@ -531,7 +555,7 @@ class GlobalConstraintBruteForceTest {
       String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 4);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       int n = instance.domains().length;
       if (n < 2) {
         continue;
@@ -633,7 +657,7 @@ class GlobalConstraintBruteForceTest {
   void negationAndReificationMatchBruteForce(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 5);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       int n = instance.domains().length;
       if (Arrays.stream(instance.domains()).mapToDouble(d -> d.length).reduce(1, (p, q) -> p * q)
           > 50_000) {
@@ -730,7 +754,7 @@ class GlobalConstraintBruteForceTest {
   void solutionsMatchBruteForceThroughPresolve(String name, Function<Random, Instance> generator) {
     Random random = new Random(name.hashCode() + 2);
     for (int trial = 0; trial < TRIALS; trial++) {
-      Instance instance = generator.apply(random);
+      Instance instance = generate(generator, random);
       int restricted = trial % 4 < 2 ? -1 : random.nextInt(instance.domains().length);
       int kept =
           restricted < 0

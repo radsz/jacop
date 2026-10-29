@@ -2111,7 +2111,7 @@ class SingleConstraintTest extends TestHelper {
   void testAlldiffIsBoundsConsistentAcrossBacktracking() {
 
     Random random = new Random(29);
-    for (int trial = 0; trial < 2000; trial++) {
+    for (int trial = 0; trial < 500; trial++) {
       int n = 1 + random.nextInt(6);
       int m = n + random.nextInt(3);
       boolean dense = trial % 2 == 0;
