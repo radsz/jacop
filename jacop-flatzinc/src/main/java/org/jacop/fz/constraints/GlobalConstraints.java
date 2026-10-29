@@ -32,7 +32,6 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -168,17 +167,6 @@ class GlobalConstraints implements ParserTreeConstants {
 
   final Store store;
   final Support support;
-  final Comparator<ArrayList<Integer>> rowComparator =
-      (o1, o2) -> {
-        for (int i = 0; i < o1.size(); i++) {
-          if (o1.get(i) > o2.get(i)) {
-            return 1;
-          } else if (o1.get(i) < o2.get(i)) {
-            return -1;
-          }
-        }
-        return 0; // all equal
-      };
   boolean useDisjunctions;
   boolean useCumulativeUnary;
   ArrayList<Pair> duplicates;
@@ -1402,7 +1390,6 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(new Reified(new Member(x, y), b));
   }
 
-  @SuppressWarnings("unchecked")
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int size = v.length;
@@ -1519,7 +1506,7 @@ class GlobalConstraints implements ParserTreeConstants {
       }
     }
     int k = t.length - n;
-    int[][] newT = new int[k][size];
+    int[][] newT = new int[k][];
     int m = 0;
     for (int i = 0; i < t.length; i++) {
       if (!tuplesToRemove[i]) {
@@ -1583,23 +1570,15 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private int[][] deduplicateTableRows(int[][] t) {
-    ArrayList<Integer>[] tl = new ArrayList[t.length];
-    for (int i = 0; i < t.length; i++) {
-      ArrayList<Integer> tmp = new ArrayList<>(t[i].length);
-      for (int j = 0; j < t[i].length; j++) {
-        tmp.add(t[i][j]);
-      }
-      tl[i] = tmp;
-    }
-    Arrays.sort(tl, 0, tl.length, rowComparator);
-    t = toIntArray(tl);
+    // stable lexicographic sort of the rows, then drop the repeated ones
+    Arrays.sort(t, Arrays::compare);
 
-    int[][] dt = new int[t.length][t[0].length];
+    int[][] dt = new int[t.length][];
     int[] rc = t[0];
     int kk = 0;
     dt[kk++] = rc;
     for (int i = 1; i < t.length; i++) {
-      if (!equalRows(rc, t[i])) {
+      if (!Arrays.equals(rc, t[i])) {
         dt[kk++] = t[i];
         rc = t[i];
       }
@@ -1652,25 +1631,6 @@ class GlobalConstraints implements ParserTreeConstants {
     } else {
       support.pose(new HybridTable(v, t));
     }
-  }
-
-  int[][] toIntArray(ArrayList<Integer>[] l) {
-    int[][] a = new int[l.length][l[0].size()];
-    for (int i = 0; i < l.length; i++) {
-      for (int j = 0; j < l[i].size(); j++) {
-        a[i][j] = l[i].get(j);
-      }
-    }
-    return a;
-  }
-
-  boolean equalRows(int[] r1, int[] r2) {
-    for (int i = 0; i < r1.length; i++) {
-      if (r1[i] != r2[i]) {
-        return false;
-      }
-    }
-    return true;
   }
 
   void gen_jacop_assignment(SimpleNode node) {

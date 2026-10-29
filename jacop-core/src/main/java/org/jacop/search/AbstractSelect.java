@@ -55,6 +55,12 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
   /** It stores the original positions of variables to be used for input order tie-breaking. */
   public final Map<T, Integer> position;
 
+  /**
+   * The input position of the variable at each index of searchVariables, kept in step with it by
+   * placeSearchVariable, so input order tie-breaking does not look up the position map.
+   */
+  final int[] inputPosition;
+
   /** The value ordering heuristic. */
   final Indomain<T> valueOrdering;
 
@@ -83,6 +89,11 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
 
     for (Map.Entry<T, Integer> e : position.entrySet()) {
       searchVariables[e.getValue()] = e.getKey();
+    }
+
+    inputPosition = new int[searchVariables.length];
+    for (int i = 0; i < inputPosition.length; i++) {
+      inputPosition[i] = i;
     }
 
     valueOrdering = indomain;
@@ -146,6 +157,10 @@ public abstract class AbstractSelect<T extends Var> implements SelectChoicePoint
       searchVariables[searchPosition] = searchVariables[variablePosition];
 
       searchVariables[variablePosition] = temp;
+
+      int tempPosition = inputPosition[searchPosition];
+      inputPosition[searchPosition] = inputPosition[variablePosition];
+      inputPosition[variablePosition] = tempPosition;
     }
 
     return searchVariables[searchPosition];
