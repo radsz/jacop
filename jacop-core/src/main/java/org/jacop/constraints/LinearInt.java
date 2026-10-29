@@ -603,12 +603,15 @@ public class LinearInt extends PrimitiveConstraint
 
   @Override
   public void removeLevel(int level) {
-    dropped.removeLevel(level);
+    if (dropped != null) {
+      dropped.removeLevel(level);
+    }
   }
 
   @Override
   public boolean isStateful() {
-    return dropped != null;
+    // the dropped terms restore themselves from the store's trail, at the levels where they changed
+    return false;
   }
 
   void pruneLtEq(long b) {
