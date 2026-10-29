@@ -84,6 +84,14 @@ public interface ExternalPropagator {
   default void notifyLearntLiteral(int lit) {}
 
   /**
+   * A literal of a reason the solver keeps as a learnt clause. Called once per literal of each kept
+   * reason, so the propagator knows the literal now occurs in a clause.
+   *
+   * @param lit the literal
+   */
+  default void notifyKeptLiteral(int lit) {}
+
+  /**
    * Shortens a clause just learnt by conflict analysis by removing literals that imply another
    * literal of the clause, an implication only the propagator knows (semantic minimisation). The
    * first literal, the one the clause asserts, stays first and is never removed.

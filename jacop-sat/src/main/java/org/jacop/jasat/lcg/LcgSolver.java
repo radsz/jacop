@@ -92,6 +92,34 @@ public final class LcgSolver implements ExternalPropagator {
   private IntDomain[] root = new IntDomain[0];
   private final LiteralMap[] ge;
   private final LiteralMap[] eq;
+  // the literals of ge linked to their neighbours by binary clauses; the others are transient
+  private final LiteralMap[] linked;
+
+  /**
+   * Releases the literals created only to push a bound, as in Chuffed's lazy literals with the
+   * unused ones collected: such a literal is in no clause, and when the level it was created at is
+   * backtracked, its variable is given to the next new literal. The literals of a variable then
+   * stay few, so a bound change no longer runs down a long chain of binary clauses.
+   */
+  private static final boolean RELEASE =
+      !"false".equals(System.getProperty("jacop.lcg.releaseLiterals"));
+
+  // per DIMACS variable: true while a transient literal, in no clause and not linked
+  private boolean[] transientLit = new boolean[16];
+  // the transient literals by the decision level they were created at
+  private int[] transients = new int[64];
+  private int[] transientLevel = new int[64];
+  private int numTransients;
+  // released DIMACS variables, given to the next new literals
+  private int[] free = new int[16];
+  private int numFree;
+  // linked literals the domains imply, with the entries that imply them, pushed first
+  private int[] impliedLits = new int[16];
+  private int[] impliedEntries = new int[16];
+  private int numImplied;
+
+  /** Statistics: transient literals released. */
+  public long literalsReleased;
 
   // per DIMACS variable: its variable's trail id, kind and value
   private int[] litVar = new int[16];
@@ -250,6 +278,7 @@ public final class LcgSolver implements ExternalPropagator {
     root = new IntDomain[n];
     ge = new LiteralMap[n];
     eq = new LiteralMap[n];
+    linked = new LiteralMap[n];
     activity = new double[n];
     heap.grow(n, activity);
     wide.grow(n, activity);
@@ -261,6 +290,7 @@ public final class LcgSolver implements ExternalPropagator {
       root[i] = x.dom().cloneLight();
       ge[i] = new LiteralMap();
       eq[i] = new LiteralMap();
+      linked[i] = new LiteralMap();
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
       }
@@ -271,13 +301,25 @@ public final class LcgSolver implements ExternalPropagator {
   // ------------------------------------------------------------------------------- literals
 
   private int newLiteral(int i, int kind, int value) {
-    int d = sat.newVariables(1);
-    sat.observe(d);
+    int d;
+    if (numFree > 0) {
+      d = free[--numFree];
+      sat.reuse(d);
+    } else {
+      d = sat.newVariables(1);
+      sat.observe(d);
+    }
     if (d >= litVar.length) {
       int n = 2 * d;
       litVar = Arrays.copyOf(litVar, n);
       litKind = Arrays.copyOf(litKind, n);
       litValue = Arrays.copyOf(litValue, n);
+    }
+    if (d >= transientLit.length) {
+      transientLit = Arrays.copyOf(transientLit, 2 * d);
+    }
+    if (d < atomUse.length) {
+      atomUse[d] = 0;
     }
     litVar[d] = i;
     litKind[d] = (byte) kind;
@@ -298,23 +340,121 @@ public final class LcgSolver implements ExternalPropagator {
     return d;
   }
 
-  /** The variable of [x >= v] for v in (root min, root max], created when missing. */
+  /** The variable of [x >= v] for v in (root min, root max], created when missing, linked. */
   private int geVar(int i, int v) {
     int d = ge[i].get(v);
     if (d != LiteralMap.NONE) {
+      if (transientLit[d]) {
+        link(i, v, d);
+      }
       return d;
     }
     int lit = newLiteral(i, GE_KIND, v);
-    int below = ge[i].lower(v);
-    int above = ge[i].higher(v);
+    ge[i].put(v, lit);
+    link(i, v, lit);
+    return lit;
+  }
+
+  /**
+   * Links [x >= v] to its linked neighbours by binary clauses, and pushes it when the domain
+   * already decides it, since no clause may imply it yet.
+   */
+  private void link(int i, int v, int lit) {
+    transientLit[lit] = false;
+    int below = linked[i].lower(v);
+    int above = linked[i].higher(v);
     if (below != LiteralMap.NONE) {
       structural.add(new int[] {-lit, below}); // [x >= v] -> [x >= below]
     }
     if (above != LiteralMap.NONE) {
       structural.add(new int[] {-above, lit}); // [x >= above] -> [x >= v]
     }
+    linked[i].put(v, lit);
+    if (!RELEASE || sat.value(lit) != 0) {
+      return;
+    }
+    int e = trail.earliestLowerBound(vars[i], v, pushed);
+    int implied = lit;
+    if (e < 0 || e >= pushed) {
+      e = trail.earliestUpperBound(vars[i], v - 1L, pushed);
+      implied = -lit;
+    }
+    if (e >= 0 && e < pushed) {
+      if (numImplied == impliedLits.length) {
+        impliedLits = Arrays.copyOf(impliedLits, 2 * numImplied);
+        impliedEntries = Arrays.copyOf(impliedEntries, 2 * numImplied);
+      }
+      impliedLits[numImplied] = implied;
+      impliedEntries[numImplied++] = e;
+    }
+  }
+
+  /**
+   * The variable of [x >= v] for a trail entry: an existing one, or a transient one, which is not
+   * linked; the caller pushes the nearest linked literal it implies.
+   */
+  private int geEntryVar(int i, int v) {
+    int d = ge[i].get(v);
+    if (d != LiteralMap.NONE) {
+      return d;
+    }
+    if (!RELEASE || sat.hasProof()) {
+      return geVar(i, v);
+    }
+    int lit = newLiteral(i, GE_KIND, v);
     ge[i].put(v, lit);
+    transientLit[lit] = true;
+    if (numTransients == transients.length) {
+      transients = Arrays.copyOf(transients, 2 * numTransients);
+      transientLevel = Arrays.copyOf(transientLevel, 2 * numTransients);
+    }
+    transients[numTransients] = lit;
+    transientLevel[numTransients++] = sat.decisionLevel();
     return lit;
+  }
+
+  /** Links a transient literal that now occurs in a clause. */
+  private void keep(int lit) {
+    int d = Math.abs(lit);
+    if (d < transientLit.length && transientLit[d]) {
+      link(litVar[d], litValue[d], d);
+    }
+  }
+
+  /** Releases the transient literals created above a level, now unassigned. */
+  private void release(int level) {
+    while (numTransients > 0 && transientLevel[numTransients - 1] > level) {
+      int d = transients[--numTransients];
+      if (!transientLit[d]) {
+        continue;
+      }
+      transientLit[d] = false;
+      ge[litVar[d]].remove(litValue[d]);
+      sat.retire(d);
+      if (numFree == free.length) {
+        free = Arrays.copyOf(free, 2 * numFree);
+      }
+      free[numFree++] = d;
+      literalsReleased++;
+    }
+  }
+
+  /**
+   * The nearest linked literal the atom of an entry implies when the entry's own literal is
+   * transient, or 0.
+   */
+  private int linkedNeighbour(int entry, int lit) {
+    if (!transientLit[Math.abs(lit)]) {
+      return 0;
+    }
+    int i = trail.id(trail.variable(entry));
+    int v = trail.value(entry);
+    if (trail.kind(entry) == AtomicTrail.GE) {
+      int below = linked[i].lower(v);
+      return below == LiteralMap.NONE ? 0 : below;
+    }
+    int above = linked[i].higher(v + 1);
+    return above == LiteralMap.NONE ? 0 : -above;
   }
 
   /** The literal [x >= v]; 0 stands for a constant, which callers rule out. */
@@ -360,10 +500,17 @@ public final class LcgSolver implements ExternalPropagator {
     int i = trail.id(trail.variable(entry));
     int v = trail.value(entry);
     return switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> geLit(i, v);
-      case AtomicTrail.LE -> -geLit(i, v + 1);
+      case AtomicTrail.GE -> geEntryLit(i, v);
+      case AtomicTrail.LE -> -geEntryLit(i, v + 1);
       default -> -eqVar(i, v);
     };
+  }
+
+  private int geEntryLit(int i, int v) {
+    if (v <= root[i].min() || v > root[i].max()) {
+      throw new IllegalStateException("[" + vars[i].id() + " >= " + v + "] is a constant");
+    }
+    return geEntryVar(i, v);
   }
 
   /**
@@ -699,6 +846,12 @@ public final class LcgSolver implements ExternalPropagator {
       atomUse[dimacsVar] = 2;
       atomLiteralsLearnt++;
     }
+    keep(lit);
+  }
+
+  @Override
+  public void notifyKeptLiteral(int lit) {
+    keep(lit);
   }
 
   @Override
@@ -733,6 +886,8 @@ public final class LcgSolver implements ExternalPropagator {
     numPending = 0;
     failed = false;
     pushed = Math.min(pushed, trail.size());
+    numImplied = 0;
+    release(level);
   }
 
   @Override
@@ -883,6 +1038,13 @@ public final class LcgSolver implements ExternalPropagator {
     return d == LiteralMap.NONE ? 0 : sign * d;
   }
 
+  private void setPropagated(int dimacsVar, int e) {
+    if (dimacsVar >= propagated.length) {
+      propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
+    }
+    propagated[dimacsVar] = e;
+  }
+
   @Override
   public int[] externalClause() {
     return structural.poll();
@@ -900,17 +1062,28 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     while (true) {
+      while (numImplied > 0) {
+        int lit = impliedLits[--numImplied];
+        if (sat.value(lit) <= 0) {
+          setPropagated(Math.abs(lit), impliedEntries[numImplied]);
+          return lit;
+        }
+      }
       while (pushed < trail.size()) {
-        int e = pushed++;
+        int e = pushed;
         int lit = atomLit(e);
         if (sat.value(lit) > 0) {
+          // a transient literal implies no linked one by a clause: the nearest is pushed too
+          int next = linkedNeighbour(e, lit);
+          if (next != 0 && sat.value(next) <= 0) {
+            setPropagated(Math.abs(next), e);
+            return next;
+          }
+          pushed++;
           continue;
         }
         int dimacsVar = Math.abs(lit);
-        if (dimacsVar >= propagated.length) {
-          propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
-        }
-        propagated[dimacsVar] = e;
+        setPropagated(dimacsVar, e);
         if (dimacsVar >= atomUse.length) {
           atomUse = Arrays.copyOf(atomUse, propagated.length);
         }
@@ -1137,7 +1310,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (activityBranching) {
       return activityDecision();
     }
-    if (sat.trailSize() < sat.numVars() || !structural.isEmpty()) {
+    if (sat.trailSize() < sat.numVars() - numFree || !structural.isEmpty()) {
       return 0;
     }
     int best = -1;

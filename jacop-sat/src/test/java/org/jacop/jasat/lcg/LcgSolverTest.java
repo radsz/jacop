@@ -1907,6 +1907,9 @@ class LcgSolverTest {
         if (rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
           map.put(v, step + 1);
           reference.put(v, step + 1);
+        } else if (rnd.nextInt(4) == 0 && reference.containsKey(v)) {
+          map.remove(v);
+          reference.remove(v);
         }
         Integer lower = reference.lowerKey(v);
         Integer higher = reference.higherKey(v);
@@ -1932,6 +1935,7 @@ class LcgSolverTest {
     long lowerBoundRaised = 0;
     long annotationDecisions = 0;
     long semanticUips = 0;
+    long released = 0;
     for (int instance = 0; instance < 150; instance++) {
       int n = 6 + rnd.nextInt(4);
       int horizon = 25;
@@ -2001,6 +2005,7 @@ class LcgSolverTest {
           lowerBoundRaised += solver.lowerBoundRaised;
           annotationDecisions += solver.annotationDecisions;
           semanticUips += solver.sat().semanticUips;
+          released += solver.literalsReleased;
           if (mode == 5) {
             // every start fixed fixes the ends and the makespan: no decision is left for them
             assertThat(solver.lateDecisions).as("instance %d", instance).isZero();
@@ -2017,6 +2022,8 @@ class LcgSolverTest {
     assertThat(annotationDecisions).isPositive();
     // conflict analysis stops at some semantic UIPs, and the optima above still agree
     assertThat(semanticUips).isPositive();
+    // literals created only to push a bound are released, their variables given to new literals
+    assertThat(released).isPositive();
   }
 
   /**
