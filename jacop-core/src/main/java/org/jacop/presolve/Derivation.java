@@ -648,7 +648,7 @@ public final class Derivation implements VarMap {
         kept.addAll(c.arguments());
       }
     }
-    VariableElimination elimination = new VariableElimination(kept, solutionPreserving);
+    VariableElimination elimination = new VariableElimination(kept, solutionPreserving, aliases);
     List<Constraint> result = elimination.apply(carried);
     for (Var v : elimination.eliminated()) {
       entries.put(v, new Entry.Eliminated());

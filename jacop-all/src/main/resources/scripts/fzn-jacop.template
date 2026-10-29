@@ -14,4 +14,13 @@ if [[ "$sep" == ';' ]]; then
   CLASSPATH=$(echo "$CLASSPATH" | tr ':' ';')
 fi
 
-exec java -XX:+UseSerialGC -server -Xmx12G -Xss100M -cp "$CLASSPATH" org.jacop.fz.Fz2jacop "$@"
+# JVM warnings go to stderr, so that they never mix with the FlatZinc output on stdout
+JVM_OPTS=(-XX:+UseSerialGC -Xmx12G -Xss100M -Xlog:disable -Xlog:all=warning:stderr)
+
+# Ahead-of-time cache made by ./fzn-jacop-aot (optional): it cuts JVM start-up and class loading.
+# A cache older than the jar was made for another build and is not used.
+if [ -f jacop.aot ] && [ jacop.aot -nt "$JACOP_JAR" ]; then
+  JVM_OPTS+=(-XX:AOTCache=jacop.aot)
+fi
+
+exec java "${JVM_OPTS[@]}" -cp "$CLASSPATH" org.jacop.fz.Fz2jacop "$@"

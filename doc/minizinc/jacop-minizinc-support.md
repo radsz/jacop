@@ -62,6 +62,8 @@ Bugs found and fixed while wiring the hooks in B5 (all with regression tests):
 jacop-all/target/
   org.jacop.msc             solver configuration (version from the pom, relative paths)
   fzn-jacop                 launcher script
+  fzn-jacop-aot             makes jacop.aot, the optional start-up cache (see below)
+  aot-training/             FlatZinc models fzn-jacop-aot trains the cache on
   jacop-all-<version>.jar
   lib/                      runtime dependencies
   mznlib/                   JaCoP's MiniZinc library
@@ -74,6 +76,20 @@ MZN_SOLVER_PATH=/path/to/jacop/jacop-all/target minizinc --solver org.jacop mode
 ```
 
 or copy those files into one directory and put that directory on `MZN_SOLVER_PATH`, or copy them into MiniZinc's `share/minizinc/solvers/` directory. Checked with MiniZinc 2.10.1 and 2.8.7.
+
+### Faster start-up with an AOT cache (optional)
+
+Every run starts a JVM, which loads and links JaCoP's classes and runs them in the interpreter before the JIT compiles them; on a small instance this is most of the time. Java 25's ahead-of-time cache (JEP 483, 514 and 515) records the loaded and linked classes and the method profiles of a training run, and a later JVM starts from them. Make the cache once after building:
+
+```
+jacop-all/target/fzn-jacop-aot            # or: mvn -Paot -DskipTests install
+```
+
+It solves the FlatZinc models in `target/aot-training/` (or the `.fzn` files given as arguments) with default search, `-f` and `--lcg -f`, about 10 s, and writes `target/jacop.aot` (about 26 MB). `fzn-jacop` uses the cache when it is there and newer than the jar; without it, or with a cache made for another build, it runs as before. The cache holds no solver state: answers, solutions and search are the same. Make it again after rebuilding the jar or changing the JDK; the JVM must be the `java` on the `PATH` in both cases, and copied bundles need the cache, the jar and `lib/` together. `fzn-jacop` sends JVM warnings, such as a rejected cache, to stderr, so they never mix with the FlatZinc output.
+
+Measured on 54 mznbench instances that `--lcg -f` solves in under 4 s (Java 25, 4-core cloud machine, 3 runs each, `-t 20000`): with the same search, the median run is 30 % shorter (0.21 s less) with `--lcg -f` and 31 % shorter (0.19 s) with the model's own search; runs under 1 s take a median 0.35 s instead of 0.56 s. JaCoP's `initTime` falls from 0.15 to 0.09 s. Runs of several seconds stay within noise. On an empty model `fzn-jacop` takes 0.12 s instead of 0.25 s.
+
+JaCoP's search can depend on identity hash codes (variables and constraints in hash sets), which shift with any change of the JVM's start-up, the cache included. So on some instances the cache leads to another, equally valid search path with a different node count and time, as other JVM flags do; the answers are the same.
 
 ## Free search (`-f`)
 

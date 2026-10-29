@@ -102,6 +102,7 @@ final class VariableElimination {
 
   private final Set<Var> frozen;
   private final boolean defined;
+  private final Map<Var, Var> aliases;
   private final Map<Var, List<Constraint>> occurrences = new IdentityHashMap<>();
   private final Map<Constraint, List<Var>> scope = new IdentityHashMap<>();
   private final Map<Constraint, Boolean> live = new IdentityHashMap<>();
@@ -120,10 +121,18 @@ final class VariableElimination {
    * @param defined true to eliminate only variables whose value the others determine, so every
    *     solution of the parent keeps one solution of the child; false to eliminate also those that
    *     some value completes, which keeps the solutions projected on the frozen variables only.
+   * @param aliases each merged variable mapped to the variable of its class that stays in the
+   *     child.
    */
-  VariableElimination(Set<Var> frozen, boolean defined) {
+  VariableElimination(Set<Var> frozen, boolean defined, Map<Var, Var> aliases) {
     this.frozen = frozen;
     this.defined = defined;
+    this.aliases = aliases;
+  }
+
+  /** The variable of the class of a merged variable that stays, or the variable itself. */
+  private IntVar stays(IntVar v) {
+    return (IntVar) aliases.getOrDefault(v, v);
   }
 
   /**
@@ -501,13 +510,15 @@ final class VariableElimination {
     long rhs;
     try {
       for (int i = 0; i < fl.vars().length; i++) {
+        // terms of one class of merged variables become one term, since the child names the class
+        // by one variable
         if (i != atl) {
-          terms.merge(fl.vars()[i], fl.weights()[i], Math::addExact);
+          terms.merge(stays(fl.vars()[i]), fl.weights()[i], Math::addExact);
         }
       }
       for (int i = 0; i < fe.vars().length; i++) {
         if (i != ate) {
-          terms.merge(fe.vars()[i], Math.multiplyExact(-k, fe.weights()[i]), Math::addExact);
+          terms.merge(stays(fe.vars()[i]), Math.multiplyExact(-k, fe.weights()[i]), Math::addExact);
         }
       }
       rhs = Math.subtractExact(fl.c(), Math.multiplyExact(k, fe.c()));

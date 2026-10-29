@@ -670,10 +670,15 @@ final class SatPresolve {
         d[j] = repr[c[j]] >= 0 ? repr[c[j]] : c[j];
       }
       steps += c.length;
+      // no propagation until every clause names only representatives: a unit propagated now
+      // would fix a replaced literal of a clause not rewritten yet, apart from its representative
       addClause(d);
-      if (infeasible || !propagate()) {
+      if (infeasible) {
         return;
       }
+    }
+    if (!propagate()) {
+      return;
     }
     for (int v : replaced) {
       int r = repr[2 * v];

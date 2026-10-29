@@ -81,6 +81,45 @@ class VariableEliminationTest {
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
 
   @Test
+  void eliminationOnAChainOfEqualitiesKeepsTheModel() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 11);
+    IntVar x3 = new IntVar(store, "x3", 0, 2);
+    IntVar x4 = new IntVar(store, "x4", 1, 1);
+    IntVar x5 = new IntVar(store, "x5", 1, 12);
+    IntVar z = new IntVar(store, "z", -20, 20);
+    store.impose(new LinearInt(new IntVar[] {x0, z}, new int[] {1, -2}, "<", -1));
+    store.impose(new XplusYlteqZ(x1, x2, x5));
+    store.impose(new XeqY(x3, x2));
+    store.impose(new XplusYeqZ(x4, x5, z));
+    store.impose(new XeqY(x3, x5));
+    IntVar[] all = {x0, x1, x2, x3, x4, x5, z};
+
+    Derivation d =
+        Presolver.of(store).keep(x0, x1, x2).solutionPreserving(false).checking(true).presolve();
+
+    Set<List<Integer>> found = new HashSet<>();
+    System.err.println(
+        "CHILD "
+            + d.child()
+            + " entries "
+            + Arrays.stream(all).map(v -> v.id() + ":" + d.entry(v)).toList());
+    search(
+        d.child(),
+        d.counterparts(all),
+        0,
+        () -> {
+          assertThat(d.returnSolution()).isTrue();
+          found.add(values(new IntVar[] {x0, x1, x2}));
+        });
+    assertThat(found)
+        .containsExactlyInAnyOrder(
+            List.of(0, 0, 1), List.of(0, 0, 2), List.of(1, 0, 1), List.of(1, 0, 2));
+  }
+
+  @Test
   void aDefinedVariableIsEliminatedWithItsDefinition() {
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 0, 3);
