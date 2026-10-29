@@ -2079,7 +2079,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .defined(dictionary.definedVariables)
             .timeLimit(Duration.ofMillis(budget))
             .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
-            .seed(Store.getRandom().nextLong());
+            // the seed of -r, so that runs repeat and portfolio threads do not share a generator
+            .seed(options.getRandomSeed());
     if (costVar instanceof IntVar c) {
       b.minimize(c).onSolution(ls -> printSolution());
       if (worker != null) {
