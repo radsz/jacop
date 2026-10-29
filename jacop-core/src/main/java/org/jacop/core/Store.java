@@ -1303,11 +1303,13 @@ public class Store {
   /**
    * Records that a timestamp got a value at a new level, so the value is removed with the level. A
    * {@link TrailedInts} records itself the same way; its removeLevel restores every level at once.
+   * Any other state that changes at few levels can record itself too, instead of listening to the
+   * removal of every level.
    *
-   * @param timeStamp the timestamp.
+   * @param timeStamp the timestamp, or other state with a removeLevel.
    * @param stampLevel the level of the new value.
    */
-  void recordTimeStampLevel(Stateful timeStamp, int stampLevel) {
+  public void recordTimeStampLevel(Stateful timeStamp, int stampLevel) {
     if (timeStampTrailSize >= timeStampTrail.length) {
       growTimeStampTrail();
     }
