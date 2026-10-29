@@ -2656,9 +2656,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean complete =
           freeSearchStatus == FreeSearch.Status.OPTIMAL
               || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
+      // a solution of local search counts: free search then only looked for a better one
       printResultStatus(
           interrupted,
-          freeSearch.getSolutions() > 0,
+          freeSearch.getSolutions() > 0 || localSearch != null && localSearch.getSolutions() > 0,
           freeSearch.limitReached(),
           complete && !interrupted);
       if (options.getStatistics()) {

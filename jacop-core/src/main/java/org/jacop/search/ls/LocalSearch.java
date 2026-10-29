@@ -1670,7 +1670,7 @@ public final class LocalSearch {
     int base = store.level;
     boolean ok;
     try {
-      ok = fixInStore();
+      ok = fixInStore() && extraHold();
       if (ok) {
         solutions++;
         solution = val.clone();
@@ -1753,6 +1753,32 @@ public final class LocalSearch {
       }
     }
     return completeOthers();
+  }
+
+  /**
+   * Checks the constraints given with {@link Builder#extraConstraints}, which the store does not
+   * have, against the values the store holds.
+   */
+  private boolean extraHold() {
+    if (extra == null) {
+      return true;
+    }
+    ToIntFunction<IntVar> fixed = IntVar::value;
+    for (Constraint c : extra) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null) {
+        long sum = 0;
+        for (int k = 0; k < f.vars().length; k++) {
+          sum += f.weights()[k] * f.vars()[k].value();
+        }
+        if (amount(f.relation(), sum, f.c()) != 0) {
+          return false;
+        }
+      } else if (!(c instanceof Violation v) || v.violation(fixed) != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // gives the variables still not fixed their smallest value, with propagation

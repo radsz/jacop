@@ -299,6 +299,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
+                                <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
@@ -434,6 +435,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
+                                <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
@@ -564,6 +566,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
+                                <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
