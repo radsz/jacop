@@ -2236,8 +2236,9 @@ public final class LcgSolver implements ExternalPropagator {
       numAnnotationIndices--; // a later index at the same level replaces it
     }
     if (numAnnotationIndices == annotationIndex.length) {
-      annotationIndex = Arrays.copyOf(annotationIndex, 2 * numAnnotationIndices);
-      annotationLevel = Arrays.copyOf(annotationLevel, 2 * numAnnotationIndices);
+      int n = Math.max(16, 2 * numAnnotationIndices);
+      annotationIndex = Arrays.copyOf(annotationIndex, n);
+      annotationLevel = Arrays.copyOf(annotationLevel, n);
     }
     annotationIndex[numAnnotationIndices] =
         v != null || c != null ? annotation.getIndex() : ANNOTATION_DONE;
