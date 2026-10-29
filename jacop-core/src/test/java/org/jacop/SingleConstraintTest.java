@@ -197,10 +197,13 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
+import org.jacop.search.InputOrderSelect;
+import org.jacop.search.RandomSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SplitSelect;
 import org.jacop.util.DominatorTree;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
@@ -5346,6 +5349,37 @@ class SingleConstraintTest extends TestHelper {
       assertThat(store.consistency()).as("x0 = %d", x0).isTrue();
       // x1 = x0 - 3, x0 - 1, x0 + 1, x0 + 3 interleave or touch; x0 +- 2 and x0 overlap
       assertThat(noOfAllSolutions(store, x)).as("x0 = %d", x0).isEqualTo(4);
+    }
+  }
+
+  @Test
+  void searchOverNoVariablesFindsTheEmptySolution() {
+    // A search over no variables (all of them removed by presolve, for example) reported no
+    // solution with InputOrderSelect and threw with SimpleSelect, SplitSelect and RandomSelect.
+    for (int kind = 0; kind < 4; kind++) {
+      for (boolean feasible : new boolean[] {true, false}) {
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 1, 2);
+        store.impose(new XneqC(x, 1));
+        if (!feasible) {
+          store.impose(new XneqC(x, 2));
+        }
+        IntVar[] none = new IntVar[0];
+        SelectChoicePoint<IntVar> select =
+            switch (kind) {
+              case 0 -> new SimpleSelect<>(none, null, new IndomainMin<>());
+              case 1 -> new InputOrderSelect<>(store, none, new IndomainMin<>());
+              case 2 -> new RandomSelect<>(none, new IndomainMin<>());
+              default -> new SplitSelect<>(none, null, new IndomainMin<>());
+            };
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+
+        assertThat(search.labeling(store, select)).as("select %d", kind).isEqualTo(feasible);
+        assertThat(search.getSolutionListener().solutionsNo())
+            .as("select %d", kind)
+            .isEqualTo(feasible ? 1 : 0);
+      }
     }
   }
 
