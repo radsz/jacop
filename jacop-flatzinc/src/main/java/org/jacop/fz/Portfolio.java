@@ -62,14 +62,21 @@ final class Portfolio {
 
   /** The settings of the threads after the first, in this order; -f and --lcg are given here. */
   private static final String[][] CONFIGS = {
-    {"free", "-f"},
-    {"lcg", "--lcg", "-f"},
-    {"free-chs-luby", "-f", "--free-config", "heuristic=chs,restarts=luby,scale=100"},
-    {"lcg-bb", "--lcg", "-f", "--free-config", "lcg-core=0,lcg-lb=0"},
-    {"free-cacd", "-f", "--free-config", "heuristic=cacd"},
-    {"free-afc", "-f", "--free-config", "heuristic=afc,phase=0"},
-    {"lcg-fixed", "--lcg"},
-    {"free-luby-keep", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
+    {"free", "--lcg", "off", "-f"},
+    {"lcg", "--lcg", "on", "-f"},
+    {
+      "free-chs-luby",
+      "--lcg",
+      "off",
+      "-f",
+      "--free-config",
+      "heuristic=chs,restarts=luby,scale=100"
+    },
+    {"lcg-bb", "--lcg", "on", "-f", "--free-config", "lcg-core=0,lcg-lb=0"},
+    {"free-cacd", "--lcg", "off", "-f", "--free-config", "heuristic=cacd"},
+    {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
+    {"lcg-fixed", "--lcg", "on"},
+    {"free-luby-keep", "--lcg", "off", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
   };
 
   /** The most threads the portfolio uses: the options given and each setting above. */
@@ -311,9 +318,12 @@ final class Portfolio {
   /** The arguments of a thread: the options given, with its own search settings if any. */
   private List<String> arguments(List<String> base, List<String> flags, boolean ownSearch) {
     List<String> a = new ArrayList<>();
-    for (String arg : base) {
+    for (int i = 0; i < base.size(); i++) {
+      String arg = base.get(i);
       if (!ownSearch || !isSearchFlag(arg)) {
         a.add(arg);
+      } else if ("--lcg".equals(arg) && i + 1 < base.size() && isOnOff(base.get(i + 1))) {
+        i++;
       }
     }
     a.addAll(flags);
@@ -324,6 +334,10 @@ final class Portfolio {
     return a;
   }
 
+  private static boolean isOnOff(String arg) {
+    return "on".equals(arg) || "off".equals(arg);
+  }
+
   private static boolean isSearchFlag(String arg) {
     return "-f".equals(arg) || "--free-search".equals(arg) || "--lcg".equals(arg);
   }
@@ -331,7 +345,7 @@ final class Portfolio {
   /** Whether a setting is what the options given select already, so it would repeat that thread. */
   private boolean sameAsGiven(String[] config) {
     List<String> flags = Arrays.asList(config);
-    return flags.contains("--lcg") == options.lcg()
+    return "on".equals(flags.get(flags.indexOf("--lcg") + 1)) == options.lcg()
         && flags.contains("-f") == options.freeSearch()
         && !flags.contains("--free-config")
         && options.freeConfig.isEmpty();

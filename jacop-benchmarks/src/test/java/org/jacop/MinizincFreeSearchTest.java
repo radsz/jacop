@@ -56,6 +56,9 @@ import org.junit.jupiter.params.provider.MethodSource;
  * better than the optimum. Free search finds other solutions in another order, so the outputs
  * themselves are not compared.
  *
+ * <p>The system property {@code freesearch.options} replaces {@code -f}, for example {@code
+ * -Dfreesearch.options="--lcg on --presolve check"} checks the default fixed search of fzn-jacop.
+ *
  * <p>Each line of the reference file is {@code model kind value}: kind {@code UNSAT}, {@code SAT}
  * (one solution), {@code ALL} (value is the number of solutions), {@code MIN} or {@code MAX} (value
  * is the optimum).
@@ -79,7 +82,7 @@ class MinizincFreeSearchTest {
   @MethodSource("reference")
   @Timeout(30)
   void freeSearchAgreesWithTheModelSearch(String line) throws IOException {
-    check(line, List.of("-f"));
+    check(line, List.of(System.getProperty("freesearch.options", "-f").trim().split("\\s+")));
   }
 
   /**

@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -2021,6 +2022,83 @@ class FlatzincFrontEndTest {
     vars.append("var -1000..1000: obj :: output_var;\n");
     constraints.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(weights, terms));
     return vars + constraints.toString() + "solve minimize obj;\n";
+  }
+
+  @Test
+  void lcgAndPresolveAreOnByDefault() {
+    // the test suites run with -Djacop.lcg=off -Djacop.presolve=off; fzn-jacop runs without them
+    String lcg = System.clearProperty("jacop.lcg");
+    String presolve = System.clearProperty("jacop.presolve");
+    try {
+      Options defaults = new Options(new String[] {"-s", "model.fzn"});
+      assertTrue(defaults.lcg());
+      assertEquals(Options.Presolve.ON, defaults.presolve());
+
+      Options off = new Options(new String[] {"--lcg", "off", "--presolve", "off", "model.fzn"});
+      assertFalse(off.lcg());
+      assertEquals(Options.Presolve.OFF, off.presolve());
+      assertTrue(new Options(new String[] {"--lcg", "model.fzn"}).lcg());
+      assertTrue(new Options(new String[] {"--lcg", "on", "-f", "model.fzn"}).lcg());
+      // -sat is CP with a SAT solver for the Boolean constraints, not LCG, unless --lcg is given
+      assertFalse(new Options(new String[] {"-sat", "model.fzn"}).lcg());
+      assertTrue(new Options(new String[] {"-sat", "--lcg", "model.fzn"}).lcg());
+
+      // a model loaded for the API keeps its constraints in the loaded store
+      Options loaded = new Options(new String[] {"model.fzn"});
+      loaded.doNotRunSearch();
+      assertFalse(loaded.lcg());
+      assertEquals(Options.Presolve.OFF, loaded.presolve());
+      Options asked = new Options(new String[] {"--lcg", "--presolve", "on", "model.fzn"});
+      asked.doNotRunSearch();
+      assertTrue(asked.lcg());
+      assertEquals(Options.Presolve.ON, asked.presolve());
+    } finally {
+      restoreProperty("jacop.lcg", lcg);
+      restoreProperty("jacop.presolve", presolve);
+    }
+  }
+
+  @Test
+  void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
+    // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
+    // message, and the Boolean constraints are not turned into clauses
+    String floats =
+        """
+        var 0.0..2.0: f:: output_var;
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        constraint bool_xor(a,b,true);
+        constraint float_lin_le([1.0],[f],1.5);
+        solve maximize f;
+        """;
+    String sat =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        constraint bool_xor(a,b,true);
+        solve satisfy;
+        """;
+    String lcg = System.clearProperty("jacop.lcg");
+    try {
+      String[] out = run(floats, "--precision", "0.5");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertTrue(out[0].contains("=========="), out[0]);
+      out = run(sat, "-a");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
+      // asked for, LCG is still reported as ignored
+      assertTrue(run(sat, "-a", "--lcg")[0].contains("--lcg ignored"));
+    } finally {
+      restoreProperty("jacop.lcg", lcg);
+    }
+  }
+
+  private static void restoreProperty(String name, String value) {
+    if (value == null) {
+      System.clearProperty(name);
+    } else {
+      System.setProperty(name, value);
+    }
   }
 
   private String[] run(String model, String... options) throws IOException {

@@ -73,7 +73,11 @@ public class Options {
   boolean boundConsistency;
   boolean runSearch = true;
   boolean useSat;
-  boolean lcg;
+  // the default can be changed by the system property jacop.lcg ("on" or "off"), for example to
+  // run the FlatZinc test suites, whose expected outputs were recorded without LCG
+  boolean lcg = !"off".equals(System.getProperty("jacop.lcg", "on"));
+  // whether --lcg was given; without it, LCG is left out for models it does not support
+  boolean lcgGiven;
   boolean lp = true;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
@@ -82,7 +86,8 @@ public class Options {
   // FlatZinc test suites with presolve
   Presolve presolve =
       Objects.requireNonNullElse(
-          presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
+          presolveMode(System.getProperty("jacop.presolve", "on")), Presolve.ON);
+  boolean presolveGiven;
   boolean presolveImplied;
   boolean symmetry = true;
   boolean presolveDual = true;
@@ -189,10 +194,12 @@ public class Options {
                 overrides annotation ":: domain" and selects constraints
                 implementing bounds consistency (default false).
             -sat use SAT solver for boolean constraints.
-            --lcg solve integer and Boolean models with lazy clause generation (JaSAT as
-                the SAT core); the search annotation is followed without restarts, or with -f
+            --lcg [on|off] solve integer and Boolean models with lazy clause generation (JaSAT
+                as the SAT core); the search annotation is followed without restarts, or with -f
                 the SAT core's decisions on literals take turns with activity branching and
-                the annotation (see lcg-branching of --free-config).
+                the annotation (see lcg-branching of --free-config). On by default ("--lcg off"
+                turns it off); left out by default for models with float variables, for
+                satisfaction problems asking for more than one solution (-a, -n), and with -sat.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default), "off".
@@ -201,8 +208,9 @@ public class Options {
                 settings; they share the objective value of the best solution. One thread
                 (default 1) for all solutions of satisfaction problems (-a, -n) and for
                 models with float variables.
-            --presolve <value> presolve the model before search; one of "off" (default), "on",
-                "check" (as "on", and every solution is checked against the loaded model)
+            --presolve <value> presolve the model before search; one of "off", "on" (default),
+                "check" (as "on", and every solution is checked against the loaded model);
+                left out by default for satisfaction problems asking for more than one solution
             --presolve-implied <value> with presolve, post the constraints implied by
                 all-different constraints (sum bounds); "off" (default) or "on"
             --symmetry <value> with presolve, break the variable symmetries of the model with
@@ -257,7 +265,7 @@ public class Options {
       case "--free-config" -> i = handleFreeConfig(args, i);
       case "--default-search" -> i = handleDefaultSearch(args, i);
       case "-sat" -> i = handleSat(i);
-      case "--lcg" -> i = handleLcg(i);
+      case "--lcg" -> i = handleLcg(args, i);
       case "--lp" -> i = handleLp(args, i);
       case "-p", "--parallel" -> i = handleParallel(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
@@ -352,11 +360,21 @@ public class Options {
 
   private int handleSat(int i) {
     useSat = true;
+    // -sat solves with CP and a SAT solver for the Boolean constraints, not with LCG
+    if (!lcgGiven) {
+      lcg = false;
+    }
     return i + 1;
   }
 
-  private int handleLcg(int i) {
-    lcg = true;
+  // --lcg alone turns LCG on; --lcg on|off sets it
+  private int handleLcg(String[] args, int i) {
+    lcgGiven = true;
+    if (i + 1 < args.length - 1 && ("on".equals(args[i + 1]) || "off".equals(args[i + 1]))) {
+      lcg = "on".equals(args[++i]);
+    } else {
+      lcg = true;
+    }
     return i + 1;
   }
 
@@ -378,6 +396,7 @@ public class Options {
     Presolve mode = presolveMode(args[++i]);
     if (mode != null) {
       presolve = mode;
+      presolveGiven = true;
     }
     return i + 1;
   }
@@ -687,9 +706,26 @@ public class Options {
     return interval;
   }
 
-  /** It defines whether to run the solver. */
+  /**
+   * Turns off presolve that is on by default, for a satisfaction problem asking for more than one
+   * solution.
+   */
+  void dropDefaultPresolve() {
+    if (!presolveGiven) {
+      presolve = Presolve.OFF;
+    }
+  }
+
+  /**
+   * It defines whether to run the solver. A model loaded without search keeps every constraint in
+   * the loaded store: LCG and presolve, on by default, are turned off unless they were asked for.
+   */
   public void doNotRunSearch() {
     this.runSearch = false;
+    dropDefaultLcg();
+    if (!presolveGiven) {
+      presolve = Presolve.OFF;
+    }
   }
 
   /**
@@ -741,10 +777,21 @@ public class Options {
   /**
    * It defines whether the model is solved with lazy clause generation.
    *
-   * @return true when --lcg was given
+   * @return true when the model is solved with LCG: --lcg was given, or it is on by default
    */
   public boolean lcg() {
     return lcg;
+  }
+
+  /**
+   * Turns off LCG that is on by default, for a model it does not support (float variables, more
+   * than one solution of a satisfaction problem), so the model is solved as without --lcg. LCG
+   * asked for with --lcg stays on; the solver reports why it ignores it.
+   */
+  void dropDefaultLcg() {
+    if (!lcgGiven) {
+      lcg = false;
+    }
   }
 
   /**

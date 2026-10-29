@@ -1088,6 +1088,10 @@ setup to run configuration. -->
                     <!-- run JaCoP's internal consistency checks (Store.ASSERTS_ENABLED) in all tests -->
                     <systemPropertyVariables>
                         <jacop.asserts.enabled>true</jacop.asserts.enabled>
+                        <!-- the FlatZinc tests' expected outputs were recorded without LCG and
+                             presolve, which fzn-jacop runs by default; tests that need them ask -->
+                        <jacop.lcg>off</jacop.lcg>
+                        <jacop.presolve>off</jacop.presolve>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>
