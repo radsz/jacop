@@ -84,6 +84,14 @@ public class Fz2jacop {
 
     Options opt = new Options(args);
 
+    if (opt.threads() > 1) {
+      String unsupported = Portfolio.unsupported(opt);
+      if (unsupported == null) {
+        return Portfolio.solve(args, opt);
+      }
+      IO.println("%% -p ignored: " + unsupported);
+    }
+
     if (opt.debug()) {
       IO.println("%% Flatzinc2JaCoP: compiling and executing " + args[args.length - 1]);
     }
@@ -97,6 +105,17 @@ public class Fz2jacop {
       log.error("Failed to close {}", opt.getFileName(), e);
     }
     return status;
+  }
+
+  /**
+   * Parses and solves the model in a thread of a parallel portfolio.
+   *
+   * @param opt the options of the thread
+   * @param file the model
+   * @return the exit status, as {@link #callMain}
+   */
+  static int solveInPortfolio(Options opt, FileInputStream file) {
+    return new Fz2jacop().solve(opt, file);
   }
 
   private int solve(Options opt, FileInputStream file) {

@@ -55,7 +55,13 @@ import org.jacop.core.ValueEnumeration;
  *       variable of the expression that is defined by a linear equation with coefficient +1 or -1
  *       is replaced by its definition, so the objective becomes one sum over the variables the
  *       costs really depend on. A count {@code n = count(x, v)} defines n as the sum of the value
- *       literals {@code x[i] = v} when every x[i] that can take v has one.
+ *       literals {@code x[i] = v} when every x[i] that can take v has one. An element {@code y =
+ *       c[x]} of constants defines y as {@code sum(c_v * (x = v))} when every value v of x has a
+ *       literal, and a disjunction {@code r <-> or(b)} of literals of which at most one can be 1
+ *       (literals of one variable, or literals of one value for variables that are all different)
+ *       defines r as {@code sum(b)}. A variable without a definition of its own is replaced by an
+ *       equal variable that has one ({@code bool2int}, {@code bool_eq}, or a 0/1 variable x and the
+ *       literal of x = 1).
  *   <li><b>Shifting.</b> For a set of 0/1 variables of which exactly one is 1 (a linear equation
  *       {@code sum(b) = 1}, or the literals {@code b_v <-> x = v} for every value v of a variable
  *       x), {@code sum(c_v * b_v) = m + sum((c_v - m) * b_v)} with m the smallest cost of the set
@@ -120,6 +126,39 @@ public final class ObjectivePresolve implements Rule {
   private final List<IntVar[]> exactlyOnes = new ArrayList<>();
   private final Map<IntVar, Map<Integer, IntVar>> encodings = new LinkedHashMap<>();
   private final List<Count> counts = new ArrayList<>();
+  private final List<Element> elements = new ArrayList<>();
+  private final List<Or> ors = new ArrayList<>();
+  private final List<IntVar[]> allDifferents = new ArrayList<>();
+  private final Map<IntVar, List<IntVar>> equals = new IdentityHashMap<>();
+
+  /**
+   * An element {@code y = values[x - firstIndex]}, turned into an equation once all literals are
+   * known.
+   */
+  private static final class Element {
+    private final IntVar x;
+    private final int[] values;
+    private final int firstIndex;
+    private final IntVar y;
+
+    Element(IntVar x, int[] values, int firstIndex, IntVar y) {
+      this.x = x;
+      this.values = values.clone();
+      this.firstIndex = firstIndex;
+      this.y = y;
+    }
+  }
+
+  /** A disjunction {@code r <-> or(literals)}. */
+  private static final class Or {
+    private final IntVar r;
+    private final IntVar[] literals;
+
+    Or(IntVar r, IntVar[] literals) {
+      this.r = r;
+      this.literals = literals.clone();
+    }
+  }
 
   /** A count {@code n = count(x, value)}, turned into an equation once all literals are known. */
   private static final class Count {
@@ -192,6 +231,61 @@ public final class ObjectivePresolve implements Rule {
    */
   public void addValueLiteral(IntVar x, int value, IntVar literal) {
     encodings.computeIfAbsent(x, k -> new LinkedHashMap<>()).putIfAbsent(value, literal);
+    if (value == 1 && x.min() >= 0 && x.max() <= 1) {
+      // a 0/1 variable is its own literal of the value 1
+      addEquality(x, literal);
+    }
+  }
+
+  /**
+   * Adds an equality: {@code a = b} holds in every solution of the model. A variable of the
+   * objective without a definition of its own is replaced by an equal variable that has one.
+   *
+   * @param a the first variable.
+   * @param b the second variable.
+   */
+  public void addEquality(IntVar a, IntVar b) {
+    if (a != b) {
+      equals.computeIfAbsent(a, k -> new ArrayList<>()).add(b);
+      equals.computeIfAbsent(b, k -> new ArrayList<>()).add(a);
+    }
+  }
+
+  /**
+   * Adds an element constraint {@code y = values[x - firstIndex]} of constants. When every value of
+   * x has a value literal, it becomes the equation {@code y = sum(values[v - firstIndex] * (x =
+   * v))} that defines y, unless another equation defines y already.
+   *
+   * @param x the index variable.
+   * @param values the constants.
+   * @param firstIndex the index of the first constant.
+   * @param y the value variable.
+   */
+  public void addElement(IntVar x, int[] values, int firstIndex, IntVar y) {
+    elements.add(new Element(x, values, firstIndex, y));
+  }
+
+  /**
+   * Adds a disjunction {@code r <-> or(literals)} of 0/1 variables. When at most one of the
+   * literals can be 1, it becomes the equation {@code r = sum(literals)} that defines r, unless
+   * another equation defines r already. Literals that exclude each other are value literals of one
+   * variable for different values, or of one value for different variables of an all-different
+   * constraint ({@link #addAllDifferent(IntVar[])}).
+   *
+   * @param r the 0/1 variable that is 1 exactly when one of the literals is.
+   * @param literals the literals.
+   */
+  public void addOr(IntVar r, IntVar[] literals) {
+    ors.add(new Or(r, literals));
+  }
+
+  /**
+   * Adds an all-different constraint: the variables take different values in every solution.
+   *
+   * @param x the variables.
+   */
+  public void addAllDifferent(IntVar[] x) {
+    allDifferents.add(x.clone());
   }
 
   /**
@@ -331,6 +425,8 @@ public final class ObjectivePresolve implements Rule {
       return null;
     }
     addCountEquations();
+    addElementEquations();
+    addOrEquations();
     Equation definition = objectiveDefinition();
     if (definition == null) {
       return null;
@@ -450,6 +546,122 @@ public final class ObjectivePresolve implements Rule {
     counts.clear();
   }
 
+  /**
+   * Adds the equation {@code y - sum(c_v * literal_v) = 0} of each element that has all literals.
+   */
+  private void addElementEquations() {
+    for (Element e : elements) {
+      if (definitions.containsKey(e.y) || e.y.singleton() || e.x.singleton()) {
+        continue;
+      }
+      Map<Integer, IntVar> byValue = encodings.get(e.x);
+      IntVar[] literals = byValue == null ? new IntVar[0] : literals(e.x, byValue);
+      if (literals.length == 0 || literals.length + 1 > MAX_TERMS) {
+        continue;
+      }
+      IntVar[] vars = new IntVar[literals.length + 1];
+      int[] coefs = new int[vars.length];
+      vars[0] = e.y;
+      coefs[0] = 1;
+      boolean inside = true;
+      int i = 0;
+      for (ValueEnumeration v = e.x.dom().valueEnumeration(); v.hasMoreElements() && inside; i++) {
+        long index = (long) v.nextElement() - e.firstIndex;
+        inside = index >= 0 && index < e.values.length && literals[i] != e.y;
+        if (inside) {
+          vars[i + 1] = literals[i];
+          coefs[i + 1] = -e.values[(int) index];
+        }
+      }
+      if (inside) {
+        addEquation(vars, coefs, 0, e.y);
+      }
+    }
+    elements.clear();
+  }
+
+  /** Adds the equation {@code r - sum(literals) = 0} of each disjunction of exclusive literals. */
+  private void addOrEquations() {
+    Map<IntVar, IntVar> variableOf = new IdentityHashMap<>();
+    Map<IntVar, Integer> valueOf = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : encodings.entrySet()) {
+      for (Map.Entry<Integer, IntVar> lit : e.getValue().entrySet()) {
+        if (variableOf.putIfAbsent(lit.getValue(), e.getKey()) == null) {
+          valueOf.put(lit.getValue(), lit.getKey());
+        }
+      }
+    }
+    Map<IntVar, List<Integer>> groupsOf = new IdentityHashMap<>();
+    for (int g = 0; g < allDifferents.size(); g++) {
+      for (IntVar x : allDifferents.get(g)) {
+        List<Integer> groups = groupsOf.computeIfAbsent(x, k -> new ArrayList<>());
+        if (groups.isEmpty() || groups.getLast() != g) {
+          groups.add(g);
+        }
+      }
+    }
+    for (Or or : ors) {
+      if (definitions.containsKey(or.r)
+          || or.r.singleton()
+          || or.literals.length < 2
+          || or.literals.length + 1 > MAX_TERMS
+          || !exclusive(or, variableOf, valueOf, groupsOf)) {
+        continue;
+      }
+      IntVar[] vars = new IntVar[or.literals.length + 1];
+      int[] coefs = new int[vars.length];
+      vars[0] = or.r;
+      coefs[0] = 1;
+      for (int i = 0; i < or.literals.length; i++) {
+        vars[i + 1] = or.literals[i];
+        coefs[i + 1] = -1;
+      }
+      addEquation(vars, coefs, 0, or.r);
+    }
+    ors.clear();
+  }
+
+  /**
+   * True if the literals of the disjunction are distinct 0/1 variables and at most one can be 1.
+   */
+  private static boolean exclusive(
+      Or or,
+      Map<IntVar, IntVar> variableOf,
+      Map<IntVar, Integer> valueOf,
+      Map<IntVar, List<Integer>> groupsOf) {
+    IntVar[] b = or.literals;
+    for (int i = 0; i < b.length; i++) {
+      IntVar xi = variableOf.get(b[i]);
+      if (xi == null || b[i] == or.r || b[i].min() < 0 || b[i].max() > 1) {
+        return false;
+      }
+      for (int j = 0; j < i; j++) {
+        IntVar xj = variableOf.get(b[j]);
+        boolean sameValue = valueOf.get(b[i]).equals(valueOf.get(b[j]));
+        boolean excluded =
+            b[i] != b[j] && (xi == xj ? !sameValue : sameValue && allDifferent(xi, xj, groupsOf));
+        if (!excluded) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static boolean allDifferent(IntVar x, IntVar y, Map<IntVar, List<Integer>> groupsOf) {
+    List<Integer> gx = groupsOf.get(x);
+    List<Integer> gy = groupsOf.get(y);
+    if (gx == null || gy == null) {
+      return false;
+    }
+    for (Integer g : gx) {
+      if (gy.contains(g)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private Equation objectiveDefinition() {
     Equation d = definitions.get(objective);
     if (d != null) {
@@ -514,12 +726,23 @@ public final class ObjectivePresolve implements Rule {
     boolean changed = true;
     while (changed) {
       changed = false;
-      for (IntVar y : new ArrayList<>(expression.keySet())) {
-        Equation d = definitions.get(y);
-        Long cy = expression.get(y);
-        if (d == null || cy == null || used.containsKey(d) || coefficient(d, objective) != 0) {
+      for (IntVar x : new ArrayList<>(expression.keySet())) {
+        IntVar y;
+        try {
+          y = expandableVariable(expression, x, used);
+        } catch (ArithmeticException overflow) {
+          return false;
+        }
+        if (y == null) {
           continue;
         }
+        Long cy = expression.get(y);
+        if (cy == null) {
+          // the equal variable cancelled the term
+          changed = true;
+          continue;
+        }
+        Equation d = definitions.get(y);
         if (expression.size() + d.vars().length > MAX_TERMS) {
           return true;
         }
@@ -541,6 +764,59 @@ public final class ObjectivePresolve implements Rule {
       }
     }
     return true;
+  }
+
+  /**
+   * The variable of the expression to expand for its term x: x itself if its definition is not used
+   * yet, otherwise an equal variable with such a definition, which then takes over the term of x.
+   * Null if there is none.
+   */
+  private IntVar expandableVariable(
+      Map<IntVar, Long> expression, IntVar x, Map<Equation, Boolean> used) {
+    Long cx = expression.get(x);
+    if (cx == null) {
+      return null;
+    }
+    if (expandable(definitions.get(x), used)) {
+      return x;
+    }
+    IntVar z = equalWithDefinition(x, used);
+    if (z != null) {
+      expression.remove(x);
+      long sum = Math.addExact(expression.getOrDefault(z, 0L), cx);
+      if (sum == 0) {
+        expression.remove(z);
+      } else {
+        expression.put(z, sum);
+      }
+    }
+    return z;
+  }
+
+  private boolean expandable(Equation d, Map<Equation, Boolean> used) {
+    return d != null && !used.containsKey(d) && coefficient(d, objective) == 0;
+  }
+
+  /** A variable equal to y, through a chain of equalities, whose definition is not used yet. */
+  private IntVar equalWithDefinition(IntVar y, Map<Equation, Boolean> used) {
+    if (!equals.containsKey(y)) {
+      return null;
+    }
+    Map<IntVar, Boolean> seen = new IdentityHashMap<>();
+    List<IntVar> queue = new ArrayList<>();
+    queue.add(y);
+    seen.put(y, Boolean.TRUE);
+    for (int i = 0; i < queue.size(); i++) {
+      for (IntVar z : equals.getOrDefault(queue.get(i), List.of())) {
+        if (seen.put(z, Boolean.TRUE) == null) {
+          if (!z.singleton() && expandable(definitions.get(z), used)) {
+            return z;
+          }
+          queue.add(z);
+        }
+      }
+    }
+    return null;
   }
 
   /** The explicit exactly-one sets, then the value literals of variables encoded on all values. */

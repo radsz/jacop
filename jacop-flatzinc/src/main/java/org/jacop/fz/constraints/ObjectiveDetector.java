@@ -44,9 +44,11 @@ import org.jacop.presolve.ObjectivePresolve;
 /**
  * It reads the facts objective presolve needs from the constraint items of a model: the linear
  * equations ({@code int_lin_eq}, {@code bool_lin_eq}) with their {@code defines_var} annotations,
- * the value literals ({@code int_eq_reif} of a variable and a constant) and the counts of a
- * constant ({@code jacop_count}). Variables are those of the loaded store; see {@link
- * ObjectivePresolve}.
+ * the value literals ({@code int_eq_reif} of a variable and a constant), the counts of a constant
+ * ({@code jacop_count}), the elements of constant arrays, the disjunctions ({@code array_bool_or},
+ * {@code bool_clause_reif} without negative literals), the all-different constraints and the
+ * equalities ({@code bool2int}, {@code bool_eq}). Variables are those of the loaded store; see
+ * {@link ObjectivePresolve}.
  *
  * <p>Setting the system property {@code org.jacop.fz.objectivePresolve} to false turns objective
  * presolve off.
@@ -136,10 +138,57 @@ public class ObjectiveDetector implements ParserTreeConstants {
           presolve.addValueLiteral(y, x.value(), b);
         }
       }
+      case "bool2int", "bool_eq" ->
+          presolve.addEquality(
+              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0)),
+              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1)));
+      case "array_bool_or" ->
+          presolve.addOr(
+              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1)),
+              support.getVarArray(child(node, 0)));
+      case "bool_clause_reif" -> {
+        if (support.getVarArray(child(node, 1)).length == 0) {
+          presolve.addOr(
+              support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2)),
+              support.getVarArray(child(node, 0)));
+        }
+      }
+      case "jacop_alldiff", "jacop_alldistinct" ->
+          presolve.addAllDifferent(support.getVarArray(child(node, 0)));
+      case "array_int_element" -> element(presolve, node, support.getIntArray(child(node, 1)), 1);
+      case "array_var_int_element" -> element(presolve, node, constants(child(node, 1)), 1);
+      case "jacop_array_var_int_element_nonshifted" ->
+          element(
+              presolve,
+              node,
+              constants(child(node, 1)),
+              support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
       default -> {
         // not used by objective presolve
       }
     }
+  }
+
+  private void element(ObjectivePresolve presolve, ASTConstElem node, int[] array, int firstIndex) {
+    if (array == null || array.length == 0) {
+      return;
+    }
+    IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntVar value = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    presolve.addElement(index, array, firstIndex, value);
+  }
+
+  // the values of an array of constants, or an empty array if one of them is a variable
+  private int[] constants(SimpleNode node) {
+    IntVar[] vars = support.getVarArray(node);
+    int[] values = new int[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      if (!vars[i].singleton()) {
+        return new int[0];
+      }
+      values[i] = vars[i].value();
+    }
+    return values;
   }
 
   private IntVar definedVar(SimpleNode item) {
