@@ -1700,6 +1700,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setLateVariables(late);
     }
     if (free) {
+      // turns: activity branching changes between the two orders at each restart. Each order wins
+      // clearly on some models (smelt, java-routing and jobshop swv07 without, community-detection
+      // dolphin and mario with), and no feature of the model tells which, neither the kinds of its
+      // output and annotation variables nor the share of 0/1 variables. On mznbench (60 s,
+      // lcg-split=0, two runs each) turns did better than Booleans first on 23 instances and worse
+      // on 10 in both runs. Not the default yet: with lcg-split=40, the core-guided phase stalls on
+      // celar graph05 without Booleans first (proved in 13 s with them, not in 60 s in turns)
+      String booleansFirst = options.freeConfig("lcg-booleans-first", "");
+      switch (booleansFirst) {
+        case "on" -> lcg.setBooleansFirst(true);
+        case "off" -> lcg.setBooleansFirst(false);
+        case "turns" -> lcg.setBooleansFirstTurns(true);
+        case "" -> {}
+        default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
+      }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
       // core-guided search for a sum objective before branch and bound: its share of the time,
@@ -1838,6 +1853,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
+            + "\n%%%mzn-stat: lcgBooleanVariables="
+            + lcg.booleanVariables
+            + "\n%%%mzn-stat: lcgWideVariables="
+            + lcg.wideVariables
+            + "\n%%%mzn-stat: lcgBooleansFirst="
+            + lcg.booleansFirst()
             + "\n%%%mzn-stat: lcgLateVariables="
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgLateDecisions="

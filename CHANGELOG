@@ -586,7 +586,23 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
-44. --lcg -f no longer spends half of the time on core-guided search when
+44. LCG free search (--lcg -f) can take turns between deciding the 0/1
+    variables first and one order of activity for all variables: with
+    --free-config lcg-booleans-first=turns its runs change between the two
+    orders at each restart (on, the default, and off fix one order, as
+    does -Djacop.lcg.booleansFirst). Each order wins clearly on some
+    models (without: smelt, java-routing, jobshop swv07, on-call-rostering;
+    with: community-detection, mario), and no static feature of the model
+    predicted which. On the 249 mznbench instances of the free-search kit
+    (60 s, lcg-split=0, two runs each), turns solved 161 and 159 against
+    156 and 159 with Booleans first, and was better on 23 instances and
+    worse on 10 in both runs. With lcg-split=40 it loses celar graph05,
+    whose core-guided phase stalls without Booleans first, so it is not
+    the default yet. New: LcgSolver.setBooleansFirst,
+    setBooleansFirstTurns and the statistics lcgBooleanVariables,
+    lcgWideVariables and lcgBooleansFirst.
+
+45. --lcg -f no longer spends half of the time on core-guided search when
     branch and bound would prove the optimum at once. The core-guided
     phase now runs for 2% of the time, then branch and bound for 5%, then
     the rest of the core-guided phase, picking up where it stopped. The
@@ -601,7 +617,7 @@ Version 5.0 (unreleased)
     sums again: with lcg-split it took the block sums for its terms, and
     trucking lost its proofs in 0.2 s.
 
-45. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
+46. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
     The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
     the FlatZinc models in jacop-all/target/aot-training/ through the new
     org.jacop.fz.AotTraining and writes jacop.aot; fzn-jacop uses it when
