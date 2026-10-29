@@ -678,6 +678,35 @@ Version 5.0 (unreleased)
     gp10-4 proved in 4 runs of 4 (2 of 4 before).
     -Djacop.lcg.unaryExplain=false turns it off.
 
+52. Steadier --lcg -f measurements. The seed of -r now reaches LCG search
+    (LcgSolver.setSeed): it changes the initial activity order of the
+    variables and of the literals, so a configuration can be measured with
+    several seeds. Constraint scopes are LinkedHashSets, so the order in
+    which constraints are attached to their variables no longer follows
+    identity hash codes: --lcg -f gave different searches with and without
+    -Xshare:off (gfd-schedule n50f7d40m10k4: 53,045 and 24,313 nodes) and
+    now gives one. --free-config lcg-keep=1 (LcgSolver.setKeepImprovingRun)
+    lets a run that improved the best solution keep its way of branching at
+    the next restart, as on city-position, where the large improvements
+    come from one run descending from a solution and the restart rotated
+    away from it. On 92 mznbench instances (60 s, seeds 0 to 2) it halved
+    the spread of the final objectives between seeds, on develop-5.0 and
+    with the Booleans-first turns, but Borda moved +2.2 and -3.0, so it
+    is off by default. Scripts and runs: osolpro benchmarks/lcg-variance.
+
+53. The dom/wdeg variable selection of free search (-f) is incremental.
+    The unfixed search variables and the unfixed variables of the
+    constraints are kept in reversible sparse sets, each constraint
+    counts its unfixed variables, and for the default weighting the
+    weighted degree of each variable is kept up to date, so a node no
+    longer rescans every variable and the scopes of its constraints. The
+    search is the same: same scores and the same ties (the variable
+    given first). On the 652 instances of the dev tier and the
+    free-search kit under -f (10 s, paired runs) the nodes per second
+    rise by 15% in geometric mean over the 358 instances with at least
+    1 s of search; on the dev tier with 8 repetitions by 7%, with no
+    instance slower by more than 5%.
+
 Version 4.11
 =============
 
