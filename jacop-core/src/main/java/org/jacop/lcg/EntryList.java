@@ -66,6 +66,16 @@ public final class EntryList {
   }
 
   /**
+   * Replaces the entry at a position.
+   *
+   * @param position the position, below {@link #size()}
+   * @param entry the entry
+   */
+  public void set(int position, int entry) {
+    entries[position] = entry;
+  }
+
+  /**
    * Returns the number of entries.
    *
    * @return the size

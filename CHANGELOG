@@ -586,7 +586,16 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
-44. IntVar keeps the bounds of its domain in two int fields, as Gecode's
+44. Under --lcg a failure of element with a constant list is explained by
+    the value's atoms when that takes fewer atoms than the index's: one
+    atom of the value covers every position of its constant. On
+    crosswords grid-19.05 dict-80 a failure took about 6,000 atoms and
+    now takes 273 on average, and --lcg -f finds solutions there (550 in
+    60 s, none before). Linear reasons of a bound that skipped holes now
+    cite only the holes next to the bound, not every hole of the
+    variable.
+
+45. IntVar keeps the bounds of its domain in two int fields, as Gecode's
     IntVarImp does, so min(), max(), singleton() and value() no longer
     test the domain class and load from the domain. The fields are updated
     on every domain event other than ANY and on backtracking; search is
@@ -597,7 +606,7 @@ Version 5.0 (unreleased)
     than through the domain's in methods, addDom or setDomain (for example
     x.domain.subtractAdapt(v) before search) must call x.refreshBounds().
 
-45. LCG free search (--lcg -f) can take turns between deciding the 0/1
+46. LCG free search (--lcg -f) can take turns between deciding the 0/1
     variables first and one order of activity for all variables: with
     --free-config lcg-booleans-first=turns its runs change between the two
     orders at each restart (on, the default, and off fix one order, as
@@ -613,7 +622,7 @@ Version 5.0 (unreleased)
     setBooleansFirstTurns and the statistics lcgBooleanVariables,
     lcgWideVariables and lcgBooleansFirst.
 
-46. --lcg -f no longer spends half of the time on core-guided search when
+47. --lcg -f no longer spends half of the time on core-guided search when
     branch and bound would prove the optimum at once. The core-guided
     phase now runs for 2% of the time, then branch and bound for 5%, then
     the rest of the core-guided phase, picking up where it stopped. The
@@ -628,7 +637,7 @@ Version 5.0 (unreleased)
     sums again: with lcg-split it took the block sums for its terms, and
     trucking lost its proofs in 0.2 s.
 
-47. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
+48. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
     The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
     the FlatZinc models in jacop-all/target/aot-training/ through the new
     org.jacop.fz.AotTraining and writes jacop.aot; fzn-jacop uses it when
@@ -638,7 +647,7 @@ Version 5.0 (unreleased)
     nothing changes. fzn-jacop now sends JVM warnings to stderr, so they
     cannot mix with the FlatZinc output.
 
-48. --lcg -f on a model without a search annotation that has cumulative or
+49. --lcg -f on a model without a search annotation that has cumulative or
     disjunctive resources (also those found from disjunctions, as in job
     shop) branches on the start times of their tasks by set times in the
     runs that used dom/wdeg: the task that can start first starts as early

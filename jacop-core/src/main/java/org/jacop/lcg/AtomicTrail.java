@@ -786,12 +786,25 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @param entry a {@link #GE} or {@link #LE} entry
    * @param bound the bound the propagator computed: at most the value of a {@link #GE} entry, at
    *     least the value of a {@link #LE} entry; when it is not known, {@link Integer#MIN_VALUE} or
-   *     {@link Integer#MAX_VALUE} adds every hole recorded beyond the recorded bound
+   *     {@link Integer#MAX_VALUE} adds the holes next to the recorded bound, up to the value
+   *     nearest to it that was still in the domain: the entry removed that value, so the computed
+   *     bound was past it
    * @param out where the entries are added
    */
   public void addSkippedHoles(int entry, int bound, EntryList out) {
     int v = value[entry];
     boolean ge = kind[entry] == GE;
+    if (bound == (ge ? Integer.MIN_VALUE : Integer.MAX_VALUE)) {
+      // the holes are inside the bounds before the entry, so each is a != entry of its own
+      int lo = minBefore(entryVar[entry], entry);
+      int hi = maxBefore(entryVar[entry], entry);
+      for (int u = ge ? v - 1 : v + 1; u > lo && u < hi; u += ge ? -1 : 1) {
+        if (!excludedBefore(entryVar[entry], u, entry, out)) {
+          return;
+        }
+      }
+      return;
+    }
     for (int f = previous[entry]; f >= 0; f = previous[f]) {
       if (kind[f] == NE
           && (ge ? value[f] >= bound && value[f] < v : value[f] <= bound && value[f] > v)) {

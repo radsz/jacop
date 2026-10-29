@@ -714,6 +714,45 @@ class AtomicTrailTest {
     }
   }
 
+  @Test
+  void elementFailureCitesTheFewerAtoms() {
+    Store store = new Store();
+    int n = 200;
+    int[] list = new int[n];
+    for (int j = 0; j < n; j++) {
+      list[j] = j % 4;
+    }
+    IntVar index = new IntVar(store, "index", 1, n);
+    IntVar value = new IntVar(store, "value", 0, 3);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int c = 0; c < 3; c++) {
+      value.domain.inComplement(store.level, value, c);
+    }
+    // the index leaves out every position of constant 3 and 40 positions of constant 0
+    store.setLevel(store.level + 1);
+    for (int j = 0; j < n; j++) {
+      if (list[j] == 3 || list[j] == 0 && j < 160) {
+        index.domain.inComplement(store.level, index, j + 1);
+      }
+    }
+    EntryList out = new EntryList();
+    assertThat(ElementExplanation.explainFailure(trail, index, list, value, 0, out)).isTrue();
+    // at most 3 atoms of the value and 50 of the index, against 90 of the index first
+    assertThat(out.size()).isLessThanOrEqualTo(53);
+    for (int j = 0; j < n; j++) {
+      boolean covered = false;
+      for (int k = 0; k < out.size(); k++) {
+        int e = out.get(k);
+        covered |=
+            trail.variable(e) == index && removes(trail, e, j + 1)
+                || trail.variable(e) == value && removes(trail, e, list[j]);
+      }
+      assertThat(covered).as("position %d", j).isTrue();
+    }
+    trail.detach();
+  }
+
   private static boolean removes(AtomicTrail trail, int e, int v) {
     int a = trail.value(e);
     return switch (trail.kind(e)) {
