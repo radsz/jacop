@@ -184,6 +184,7 @@ class LinearRelaxationTest {
   void keepsSolutionsAndOptima() {
     long pruned = 0;
     long failures = 0;
+    long cuts = 0;
     for (int run = 0; run < RUNS; run++) {
       long[] expected = search(new Model(run));
       Model model = new Model(run);
@@ -192,9 +193,11 @@ class LinearRelaxationTest {
       assertThat(actual).as("seed %d", run).isEqualTo(expected);
       pruned += r.prunings;
       failures += r.failures;
+      cuts += r.cuts;
     }
     assertThat(pruned).isPositive();
     assertThat(failures).isPositive();
+    assertThat(cuts).isPositive();
   }
 
   @Test
@@ -249,6 +252,45 @@ class LinearRelaxationTest {
    * The relaxation's own pruning fixes every variable to an assignment that breaks a row; the
    * explanation checker, which copies the relaxation alone, found that assignment.
    */
+  // seed 14768 under lazy clause generation, with the last row a cut the root found: the duals
+  // made a combination with weights near 2^60, whose slack overflowed a long and failed a node with
+  // a solution
+  @Test
+  void keepsASolutionWhenTheSlackOfACombinationOverflows() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -3, 2);
+    IntVar x1 = new IntVar(store, "x1", -3, 2);
+    IntVar x2 = new IntVar(store, "x2", -2, 4);
+    IntVar x3 = new IntVar(store, "x3", -3, 2);
+    IntVar x4 = new IntVar(store, "x4", -3, -3);
+    x4.addDom(-1, 2);
+    IntVar x5 = new IntVar(store, "x5", -3, 1);
+    x5.addDom(3, 4);
+    IntVar obj = new IntVar(store, "obj", -25, 27);
+    List<LinearForm> rows =
+        List.of(
+            new LinearForm(new IntVar[] {x1, x2, x5, x3}, new long[] {-3, 3, 4, 1}, 1, 1),
+            new LinearForm(new IntVar[] {x5, x1, x2, x3}, new long[] {1, 1, 1, 2}, -1, 1),
+            new LinearForm(
+                new IntVar[] {x0, x1, x2, x3, x4, x5, obj},
+                new long[] {0, 1, 1, -1, -3, -3, -1},
+                0,
+                2),
+            new LinearForm(
+                new IntVar[] {obj, x2, x4},
+                new long[] {39254654638L, -78509047132L, 58881981957L},
+                333665612999L,
+                0));
+    store.impose(new LinearRelaxation(rows, obj, true));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    obj.domain.in(1, obj, -7, -7);
+    x2.domain.inMax(1, x2, 0);
+    // x = (-3, -3, -2, 2, -3, 3), obj = -7 meets every row
+    assertThat(store.consistency()).isTrue();
+    assertThat(x2.min()).isLessThanOrEqualTo(-2);
+  }
+
   @Test
   void rejectsAnAssignmentItsOwnPruningFixed() {
     lazyClauseGeneration(5_901_220L, new TreeMap<>());

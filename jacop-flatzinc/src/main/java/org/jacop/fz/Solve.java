@@ -495,6 +495,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
             + r.prunings
+            + "\n%%%mzn-stat: lpRootBound="
+            + r.rootBound
+            + "\n%%%mzn-stat: lpCuts="
+            + r.cuts
+            + "\n%%%mzn-stat: lpCutBound="
+            + r.cutBound
             + "\n%%%mzn-stat-end");
   }
 

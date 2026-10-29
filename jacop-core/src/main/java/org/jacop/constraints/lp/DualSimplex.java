@@ -65,41 +65,41 @@ final class DualSimplex {
   // refactorizations after this many pivots, against the drift of the tableau
   private static final int REFACTOR_PIVOTS = 400;
 
-  final int m;
+  int m;
   final int n;
-  private final int cols;
-  private final double[][] a;
-  private final double[] cost;
-  private final double[] lo;
-  private final double[] hi;
+  private int cols;
+  private double[][] a;
+  private double[] cost;
+  private double[] lo;
+  private double[] hi;
 
-  private final double[][] t;
-  private final int[] basis;
-  private final int[] row; // the row of a basic column, -1 for a nonbasic one
-  private final boolean[] upper; // a nonbasic column at its upper bound
-  private final double[] d;
-  private final double[] beta;
+  private double[][] t;
+  private int[] basis;
+  private int[] row; // the row of a basic column, -1 for a nonbasic one
+  private boolean[] upper; // a nonbasic column at its upper bound
+  private double[] d;
+  private double[] beta;
   private int pivots;
   private int infeasibleRow = -1;
 
   // the values of the nonbasic columns that beta was computed with
-  private final double[] at;
+  private double[] at;
   private boolean betaValid;
 
   // the nonbasic columns that move beta, and by how much
-  private final int[] moved;
-  private final double[] movedBy;
+  private int[] moved;
+  private double[] movedBy;
 
   // the squared norm of the row of B^-1 in each row of the tableau, valid while the row is
   // unchanged
-  private final double[] norm;
-  private final boolean[] normValid;
+  private double[] norm;
+  private boolean[] normValid;
 
   // the ratio test: its candidates, and the columns it flips to their other bound
-  private final int[] candidate;
-  private final double[] pivotSize;
-  private final double[] ratio;
-  private final int[] flipped;
+  private int[] candidate;
+  private double[] pivotSize;
+  private double[] ratio;
+  private int[] flipped;
   private int flips;
 
   /** Statistics: pivots made. */
@@ -196,18 +196,107 @@ final class DualSimplex {
   }
 
   /**
+   * Adds rows, each with a basic slack, keeping the current basis: the basis stays dual feasible,
+   * so a re-solve goes on from it with a few dual pivots for the rows the current solution breaks.
+   *
+   * @param rows the new rows, dense over the n columns
+   * @param rowLo their lower bounds, or negative infinity
+   * @param rowHi their upper bounds, or positive infinity
+   */
+  void addRows(double[][] rows, double[] rowLo, double[] rowHi) {
+    int k = rows.length;
+    if (k == 0) {
+      return;
+    }
+    int m2 = m + k;
+    int cols2 = cols + k;
+    a = Arrays.copyOf(a, m2);
+    cost = Arrays.copyOf(cost, cols2);
+    lo = Arrays.copyOf(lo, cols2);
+    hi = Arrays.copyOf(hi, cols2);
+    t = Arrays.copyOf(t, m2);
+    for (int i = 0; i < m; i++) {
+      t[i] = Arrays.copyOf(t[i], cols2);
+    }
+    for (int q = 0; q < k; q++) {
+      a[m + q] = rows[q];
+      lo[cols + q] = rowLo[q];
+      hi[cols + q] = rowHi[q];
+      // s - a x = 0, with the basic columns eliminated by their rows of the tableau
+      double[] v = new double[cols2];
+      for (int j = 0; j < n; j++) {
+        v[j] = -rows[q][j];
+      }
+      v[cols + q] = 1;
+      for (int j = 0; j < n; j++) {
+        double f = v[j];
+        if (f != 0 && row[j] >= 0) {
+          double[] tr = t[row[j]];
+          for (int c = 0; c < cols; c++) {
+            v[c] -= f * tr[c];
+          }
+          v[j] = 0;
+        }
+      }
+      t[m + q] = v;
+    }
+    basis = Arrays.copyOf(basis, m2);
+    row = Arrays.copyOf(row, cols2);
+    for (int q = 0; q < k; q++) {
+      basis[m + q] = cols + q;
+      row[cols + q] = m + q;
+    }
+    upper = Arrays.copyOf(upper, cols2);
+    d = Arrays.copyOf(d, cols2);
+    beta = Arrays.copyOf(beta, m2);
+    norm = Arrays.copyOf(norm, m2);
+    normValid = Arrays.copyOf(normValid, m2);
+    at = new double[cols2];
+    moved = new int[cols2];
+    movedBy = new double[cols2];
+    candidate = new int[cols2];
+    pivotSize = new double[cols2];
+    ratio = new double[cols2];
+    flipped = new int[cols2];
+    betaValid = false;
+    m = m2;
+    cols = cols2;
+  }
+
+  /**
+   * Returns the row of the tableau in which a column is basic.
+   *
+   * @param j the column
+   * @return its row, or -1 when the column is nonbasic
+   */
+  int basicRow(int j) {
+    return row[j];
+  }
+
+  /**
+   * Returns a row of the basis inverse: the multipliers of the rows whose combination is the row of
+   * the tableau, {@code x_B(r) + sum_N t_rj x_j}.
+   *
+   * @param r the row of the tableau
+   * @return y, by row
+   */
+  double[] inverseRow(int r) {
+    double[] y = new double[m];
+    double[] tr = t[r];
+    for (int i = 0; i < m; i++) {
+      y[i] = -tr[n + i];
+    }
+    return y;
+  }
+
+  /**
    * Returns the multipliers of the rows that prove infeasibility: the row of the basis inverse of
    * the infeasible row, so that {@code y [A -I] (x, s) = 0} has no solution within the bounds.
    *
    * @return y, by row
    */
   double[] farkas() {
-    double[] y = new double[m];
-    double[] tr = t[infeasibleRow];
-    for (int i = 0; i < m; i++) {
-      y[i] = -tr[n + i];
-    }
-    return y;
+    return inverseRow(infeasibleRow);
   }
 
   /**
