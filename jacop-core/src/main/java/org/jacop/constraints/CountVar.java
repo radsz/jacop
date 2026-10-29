@@ -40,6 +40,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * CountVar constraint implements the counting over number of occurrences of a given value in a list
@@ -48,7 +51,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountVar extends AbstractCount implements Copyable<CountVar> {
+public class CountVar extends AbstractCount implements Copyable<CountVar>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -359,6 +362,305 @@ public class CountVar extends AbstractCount implements Copyable<CountVar> {
     result.append("], ").append(counter).append(" )");
 
     return result.toString();
+  }
+
+  /*
+   * Explanations for lazy clause generation. A list variable is ruled out when its domain misses
+   * the value's, and counted when it and the value are fixed to the same w. The counter is at
+   * least the number counted and at most the number not ruled out. When the counter needs every
+   * variable not ruled out, each of them equals the value, so it is within the value's domain and
+   * the value within its domain; when the counter allows no more than those counted and the value
+   * is fixed to w, the others lose w. The pruning of the value by counts per value is left to the
+   * generic reason.
+   */
+
+  /** A list variable and the value are compared value by value over at most this many values. */
+  private static final int OVERLAP_WIDTH = 256;
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar v = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int mark = out.size();
+    if (v == counter) {
+      if (kind == AtomicTrail.NE) {
+        return false;
+      }
+      int bound = trail.skippedBound(entry);
+      if (kind == AtomicTrail.GE) {
+        int w = fixedValue(trail, entry);
+        if (w != Integer.MIN_VALUE && addCounted(trail, entry, w, bound, -1, out)) {
+          trail.addSkippedHoles(entry, bound, out);
+          citeValue(trail, entry, w, out);
+          return true;
+        }
+      } else if (addRuledOut(trail, entry, list.length - bound, -1, out)) {
+        trail.addSkippedHoles(entry, bound, out);
+        return true;
+      }
+      out.truncate(mark);
+      return false;
+    }
+    int least = trail.minBefore(counter, entry);
+    if (v == value) {
+      if (kind == AtomicTrail.NE && explainValueOut(trail, entry, trail.value(entry), out)) {
+        return true;
+      }
+      out.truncate(mark);
+      // every list variable not ruled out equals the value, and one of them misses the atom's
+      // values
+      if (least < 1) {
+        return false;
+      }
+      for (int i = 0; i < list.length; i++) {
+        if (list[i] != value
+            && list[i] != counter
+            && within(trail, entry, list[i], out)
+            && addRuledOut(trail, entry, list.length - least, i, out)) {
+          trail.addBoundReaching(counter, entry, true, least, out);
+          return true;
+        }
+        out.truncate(mark);
+      }
+      return false;
+    }
+    for (int i = 0; i < list.length; i++) {
+      if (list[i] != v || v == counter) {
+        continue;
+      }
+      int w = fixedValue(trail, entry);
+      if (w != Integer.MIN_VALUE && removesOnly(trail, entry, w)) {
+        // the counter allows no more than the others counted
+        int most = trail.maxBefore(counter, entry);
+        if (addCounted(trail, entry, w, most, i, out)) {
+          trail.addBoundReaching(counter, entry, false, most, out);
+          if (kind != AtomicTrail.NE) {
+            // a bound that steps over w and the holes behind it
+            boolean ge = kind == AtomicTrail.GE;
+            trail.addBoundReaching(v, entry, ge, w, out);
+            trail.addSkippedHoles(entry, ge ? w + 1 : w - 1, out);
+          }
+          citeValue(trail, entry, w, out);
+          return true;
+        }
+        out.truncate(mark);
+      }
+      // the counter needs every other variable not ruled out, and this one, which equals the value
+      if (within(trail, entry, value, out)
+          && addRuledOut(trail, entry, list.length - least, i, out)) {
+        trail.addBoundReaching(counter, entry, true, least, out);
+        return true;
+      }
+      out.truncate(mark);
+      return false;
+    }
+    return false;
+  }
+
+  // the value cannot be a: more list variables are fixed to a than the counter allows, or fewer
+  // can take a than it needs
+  private boolean explainValueOut(AtomicTrail trail, int entry, int a, EntryList out) {
+    int most = trail.maxBefore(counter, entry);
+    if (most < list.length && addCounted(trail, entry, a, most + 1, -1, out)) {
+      trail.addBoundReaching(counter, entry, false, most, out);
+      return true;
+    }
+    int least = trail.minBefore(counter, entry);
+    int found = 0;
+    for (int i = 0; i < list.length && found <= list.length - least; i++) {
+      if (list[i] != value && excludes(trail, list[i], entry, a, out)) {
+        found++;
+      }
+    }
+    if (found > list.length - least) {
+      trail.addBoundReaching(counter, entry, true, least, out);
+      return true;
+    }
+    return false;
+  }
+
+  // cites why the entry's atom (on another variable) holds for every value of x before it
+  private static boolean within(AtomicTrail trail, int entry, IntVar x, EntryList out) {
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.NE) {
+      return excludes(trail, x, entry, trail.value(entry), out);
+    }
+    int bound = trail.skippedBound(entry);
+    boolean ge = kind == AtomicTrail.GE;
+    if (ge ? trail.minBefore(x, entry) < bound : trail.maxBefore(x, entry) > bound) {
+      return false;
+    }
+    trail.addBoundReaching(x, entry, ge, bound, out);
+    trail.addSkippedHoles(entry, bound, out);
+    return true;
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    int mark = out.size();
+    int cmin = trail.minBefore(counter, position);
+    int cmax = trail.maxBefore(counter, position);
+    int w = fixedValue(trail, position);
+    if (entailed) {
+      if (w != Integer.MIN_VALUE
+          && cmin == cmax
+          && addCounted(trail, position, w, cmin, -1, out)
+          && addRuledOut(trail, position, list.length - cmin, -1, out)) {
+        trail.addBoundReaching(counter, position, true, cmin, out);
+        trail.addBoundReaching(counter, position, false, cmin, out);
+        citeValue(trail, position, w, out);
+        return true;
+      }
+    } else {
+      if (w != Integer.MIN_VALUE && addCounted(trail, position, w, cmax + 1, -1, out)) {
+        trail.addBoundReaching(counter, position, false, cmax, out);
+        citeValue(trail, position, w, out);
+        return true;
+      }
+      out.truncate(mark);
+      if (addRuledOut(trail, position, list.length - cmin + 1, -1, out)) {
+        trail.addBoundReaching(counter, position, true, cmin, out);
+        return true;
+      }
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explainEntailment(trail, trail.size(), false, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    // the counter differs from the count once every variable is counted or ruled out
+    if (trail.variable(entry) != counter || trail.kind(entry) != AtomicTrail.NE) {
+      return false;
+    }
+    int w = fixedValue(trail, entry);
+    int c = trail.value(entry);
+    int mark = out.size();
+    if (w != Integer.MIN_VALUE
+        && addCounted(trail, entry, w, c, -1, out)
+        && addRuledOut(trail, entry, list.length - c, -1, out)) {
+      citeValue(trail, entry, w, out);
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return explainEntailment(trail, trail.size(), true, out);
+  }
+
+  // the value fixed before the position, or Integer.MIN_VALUE
+  private int fixedValue(AtomicTrail trail, int position) {
+    int w = trail.minBefore(value, position);
+    return w == trail.maxBefore(value, position) ? w : Integer.MIN_VALUE;
+  }
+
+  private void citeValue(AtomicTrail trail, int position, int w, EntryList out) {
+    trail.addBoundReaching(value, position, true, w, out);
+    trail.addBoundReaching(value, position, false, w, out);
+  }
+
+  // cites k list variables other than skip fixed to w
+  private boolean addCounted(
+      AtomicTrail trail, int position, int w, int k, int skip, EntryList out) {
+    int found = 0;
+    for (int i = 0; i < list.length && found < k; i++) {
+      IntVar x = list[i];
+      if (i != skip
+          && x != value
+          && trail.minBefore(x, position) == w
+          && trail.maxBefore(x, position) == w) {
+        trail.addBoundReaching(x, position, true, w, out);
+        trail.addBoundReaching(x, position, false, w, out);
+        found++;
+      }
+    }
+    return found >= k;
+  }
+
+  // cites k list variables other than skip whose domains miss the value's
+  private boolean addRuledOut(AtomicTrail trail, int position, int k, int skip, EntryList out) {
+    int found = 0;
+    for (int i = 0; i < list.length && found < k; i++) {
+      IntVar x = list[i];
+      int mark = out.size();
+      if (i != skip && x != value && x != counter) {
+        if (disjoint(trail, x, position, out)) {
+          found++;
+        } else {
+          out.truncate(mark);
+        }
+      }
+    }
+    return found >= k;
+  }
+
+  // cites why x and the value have no common value before the position
+  private boolean disjoint(AtomicTrail trail, IntVar x, int position, EntryList out) {
+    int xMin = trail.minBefore(x, position);
+    int xMax = trail.maxBefore(x, position);
+    int yMin = trail.minBefore(value, position);
+    int yMax = trail.maxBefore(value, position);
+    if (xMax < yMin) {
+      trail.addBoundReaching(x, position, false, xMax, out);
+      trail.addBoundReaching(value, position, true, xMax + 1L, out);
+      return true;
+    }
+    if (yMax < xMin) {
+      trail.addBoundReaching(value, position, false, yMax, out);
+      trail.addBoundReaching(x, position, true, yMax + 1L, out);
+      return true;
+    }
+    int lo = Math.max(xMin, yMin);
+    int hi = Math.min(xMax, yMax);
+    if ((long) hi - lo >= OVERLAP_WIDTH) {
+      return false;
+    }
+    trail.addBoundReaching(xMin >= yMin ? x : value, position, true, lo, out);
+    trail.addBoundReaching(xMax <= yMax ? x : value, position, false, hi, out);
+    for (int a = lo; a <= hi; a++) {
+      if (!trail.excludedBefore(x, a, position, out)
+          && !trail.excludedBefore(value, a, position, out)) {
+        return false;
+      }
+      if (a == hi) {
+        break;
+      }
+    }
+    return true;
+  }
+
+  // cites why x cannot take a before the position
+  private static boolean excludes(AtomicTrail trail, IntVar x, int position, int a, EntryList out) {
+    if (trail.minBefore(x, position) > a) {
+      trail.addBoundReaching(x, position, true, a + 1L, out);
+      return true;
+    }
+    if (trail.maxBefore(x, position) < a) {
+      trail.addBoundReaching(x, position, false, a - 1L, out);
+      return true;
+    }
+    return trail.excludedBefore(x, a, position, out);
+  }
+
+  // whether the entry removes w and nothing else that its variable had before it
+  private static boolean removesOnly(AtomicTrail trail, int entry, int w) {
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      return trail.value(entry) == w;
+    }
+    IntVar x = trail.variable(entry);
+    int bound = trail.skippedBound(entry);
+    return trail.kind(entry) == AtomicTrail.GE
+        ? trail.minBefore(x, entry) == w && bound == w + 1
+        : trail.maxBefore(x, entry) == w && bound == w - 1;
   }
 
   @Override

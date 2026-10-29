@@ -739,6 +739,20 @@ Version 5.0 (unreleased)
     -Djacop.lcg.liftLiterals=false turns it off; %%%mzn-stat
     lcgLiftedLiterals counts the literals cited.
 
+55. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
+    explain their own pruning under --lcg instead of the generic or
+    replayed reason. IncreasingSum cites the bounds of the order and the
+    sum, LexOrder the bounds of the prefix that is forced equal or
+    greater and of the position that decides, CountVar the variables
+    counted and those whose domains miss the value. Generic reasons fall
+    from 876,758 to 0 on primes_param and from 209,374 to 0 on
+    amaze_mod; LexOrder reasons on mqueens from 129 to 21 atoms. Paired
+    60 s runs: --lcg better on 10 instances and worse on 1 (mqueens n11
+    6 s to 4 s, mqueens n20 solved); --lcg -f is within noise on the
+    order and sum instances (a rerun of the 12 that differed split 4
+    to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
+    to 1.4 s).
+
 Version 4.11
 =============
 
