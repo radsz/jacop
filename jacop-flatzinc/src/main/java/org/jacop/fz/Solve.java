@@ -2576,6 +2576,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     BooleanVar[] boolSearchVariables = searchVars.getBoolVars();
     FloatVar[] floatSearchVariables = searchVars.getFloatVars();
 
+    if (outputVarsOnly
+        && label != null
+        && !options.freeSearch()
+        && noSearchVariables(
+            intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+      // every output variable is fixed already (root probing of presolve fixes them): labelling
+      // every variable instead would report the one output solution again for each assignment of
+      // the other variables, so they are only completed once
+      intAndSetSearch[4] = addCompletionSearch(label);
+      if (intAndSetSearch[4] != null) {
+        return intAndSetSearch;
+      }
+    }
+
     if (shouldUseDefaultSearchVars(
         intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
       outputVarsOnly = false;
