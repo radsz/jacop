@@ -318,6 +318,8 @@ class LcgSolverTest {
       }
       solver.sat().setInitialPhase(false);
       solver.setBooleansFirstTurns(instance % 8 >= 4);
+      solver.setKeepImprovingRun(instance / 8 % 2 == 1);
+      solver.setSeed(instance % 3);
       int status = solver.minimize(cost);
       if (best == Long.MAX_VALUE) {
         assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
@@ -2442,12 +2444,14 @@ class LcgSolverTest {
   @Test
   void literalMapAgreesWithTreeMap() {
     Random rnd = new Random(3);
-    for (int instance = 0; instance < 200; instance++) {
-      LiteralMap map = new LiteralMap();
+    for (int instance = 0; instance < 400; instance++) {
+      // a narrow root domain becomes indexed by value as it fills; a wide one stays sorted
+      int span = instance % 2 == 0 ? 60 : 2 * LiteralMap.DENSE_SPAN;
+      LiteralMap map = new LiteralMap(-30, span - 31);
       TreeMap<Integer, Integer> reference = new TreeMap<>();
       for (int step = 0; step < 100; step++) {
-        int v = rnd.nextInt(60) - 30;
-        if (rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
+        int v = rnd.nextInt(70) - 35;
+        if (v >= -30 && v < 30 && rnd.nextInt(3) == 0 && !reference.containsKey(v)) {
           map.put(v, step + 1);
           reference.put(v, step + 1);
         } else if (rnd.nextInt(4) == 0 && reference.containsKey(v)) {
