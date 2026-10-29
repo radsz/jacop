@@ -137,12 +137,15 @@ class PresolveFlatzincTest {
 
   /**
    * The front end prints the same with presolve in checking mode as without it: the same solutions
-   * in the same order, and checking mode verifies each of them against the loaded model.
+   * in the same order, and checking mode verifies each of them against the loaded model. Probing is
+   * off here, since the default search orders variables by domain size.
    */
   @ParameterizedTest
   @MethodSource("models")
   void frontEndPrintsTheSameWithPresolve(String model) {
-    assertThat(solve(model, "check")).as(model).isEqualTo(solve(model, "off"));
+    assertThat(solve(model, "check", "--presolve-probe", "off"))
+        .as(model)
+        .isEqualTo(solve(model, "off"));
   }
 
   /**
@@ -152,7 +155,32 @@ class PresolveFlatzincTest {
   @ParameterizedTest
   @MethodSource("models")
   void frontEndPrintsTheSameWithPresolveAndSat(String model) {
-    assertThat(solve(model, "check", "-sat")).as(model).isEqualTo(solve(model, "off", "-sat"));
+    assertThat(solve(model, "check", "--presolve-probe", "off", "-sat"))
+        .as(model)
+        .isEqualTo(solve(model, "off", "-sat"));
+  }
+
+  /**
+   * Probing, on by default with presolve, removes only values that belong to no solution, so the
+   * front end prints the same solutions. The order can differ, since the default search labels the
+   * variables with the smallest domains first.
+   */
+  @ParameterizedTest
+  @MethodSource("models")
+  void frontEndPrintsTheSameSolutionsWithProbing(String model) {
+    assertSameSolutions(model, solve(model, "off"), solve(model, "check"));
+    assertSameSolutions(model, solve(model, "off", "-sat"), solve(model, "check", "-sat"));
+  }
+
+  private static void assertSameSolutions(String model, String expectedOutput, String output) {
+    List<String> expected = solutions(expectedOutput);
+    List<String> found = solutions(output);
+    if (expected.size() >= LIMIT) {
+      // the first solutions in another order are other solutions
+      assertThat(found).as(model).hasSameSizeAs(expected);
+    } else {
+      assertThat(found).as(model).isEqualTo(expected);
+    }
   }
 
   /**
@@ -163,14 +191,7 @@ class PresolveFlatzincTest {
   @ParameterizedTest
   @MethodSource("models")
   void frontEndPrintsTheSameSolutionsWithTabling(String model) {
-    List<String> expected = solutions(solve(model, "off"));
-    List<String> found = solutions(solve(model, "check", "--presolve-tabling"));
-    if (expected.size() >= LIMIT) {
-      // the first solutions in another order are other solutions
-      assertThat(found).as(model).hasSameSizeAs(expected);
-    } else {
-      assertThat(found).as(model).isEqualTo(expected);
-    }
+    assertSameSolutions(model, solve(model, "off"), solve(model, "check", "--presolve-tabling"));
   }
 
   /** The printed solutions, sorted, and the line that ends the output. */
@@ -201,10 +222,20 @@ class PresolveFlatzincTest {
   void dualReductionsKeepTheOptimumAndStayOffForAllSolutions(@TempDir Path dir) throws IOException {
     Path optimisation = dir.resolve("dual-max.fzn");
     Files.writeString(optimisation, DUAL_MODEL + "solve maximize obj;\n");
-    String reduced = run("-s", "--presolve", "check", optimisation.toString());
+    String reduced =
+        run("-s", "--presolve", "check", "--presolve-probe", "off", optimisation.toString());
     assertThat(reduced).contains("%%%mzn-stat: presolveDualTightened=2");
     assertThat(reduced).contains("obj = 33;").contains("==========");
-    assertThat(run("-s", "--presolve", "check", "--presolve-dual", "off", optimisation.toString()))
+    assertThat(
+            run(
+                "-s",
+                "--presolve",
+                "check",
+                "--presolve-probe",
+                "off",
+                "--presolve-dual",
+                "off",
+                optimisation.toString()))
         .doesNotContain("presolveDual")
         .contains("obj = 33;");
 
