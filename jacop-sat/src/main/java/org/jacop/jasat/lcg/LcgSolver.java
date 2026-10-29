@@ -53,6 +53,7 @@ import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
+import org.jacop.lcg.ExplanationMinimality;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
@@ -163,6 +164,12 @@ public final class LcgSolver implements ExternalPropagator {
   private Runnable onSolution;
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
+
+  // every this many explanations one is minimised (see ExplanationChecker#minimise), 0 for none
+  private final int minimality = Integer.getInteger("jacop.lcg.minimality", 0);
+  private ExplanationMinimality minimiser;
+  private long untilMinimised;
+  private final Map<String, long[]> minimalityCounts = new TreeMap<>();
 
   /** Statistics: reasons the solver asked for. */
   public long reasons;
@@ -341,6 +348,9 @@ public final class LcgSolver implements ExternalPropagator {
     sat.setTierLimits(3, 8);
     if (Boolean.getBoolean("jacop.lcg.check")) {
       checker = new ExplanationChecker(trail);
+    }
+    if (minimality > 0) {
+      minimiser = new ExplanationMinimality(trail);
     }
     List<IntVar> all = new ArrayList<>();
     for (int i = 0; i < store.size(); i++) {
@@ -1664,6 +1674,7 @@ public final class LcgSolver implements ExternalPropagator {
         atoms.clear();
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
+        measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
         }
@@ -1686,6 +1697,7 @@ public final class LcgSolver implements ExternalPropagator {
     int mark = out.size();
     boolean own = trail.explain(e, out);
     count(trail.reason(e), own, out.size() - mark, 0);
+    measure(trail.reason(e), own, e, out, mark);
     if (checker != null) {
       EntryList reason = new EntryList();
       for (int k = mark; k < out.size(); k++) {
@@ -1708,6 +1720,52 @@ public final class LcgSolver implements ExternalPropagator {
       counts[6 + at / 3]++;
     }
     counts[at + 2] += atoms;
+  }
+
+  // every minimality-th explanation: how many of its atoms propagation needs (and how many of
+  // those a weaker earlier atom replaces), per class and kind (own or generic, reason or failure)
+  private void measure(Constraint c, boolean own, int entry, EntryList out, int mark) {
+    if (minimiser == null || c == null || ++untilMinimised < minimality) {
+      return;
+    }
+    untilMinimised = 0;
+    EntryList reason = new EntryList();
+    for (int k = mark; k < out.size(); k++) {
+      reason.add(out.get(k));
+    }
+    // an explanation may cite an entry more than once; only the distinct ones are measured
+    reason.sortUnique(0);
+    int[] m = minimiser.minimise(c, entry, reason);
+    String key =
+        c.getClass().getSimpleName()
+            + (entry < 0 ? "/failure" : "/reason")
+            + (own ? "" : "/generic");
+    long[] counts = minimalityCounts.computeIfAbsent(key, k -> new long[7]);
+    if (m == null) {
+      counts[5]++;
+    } else if (m[1] < 0) {
+      counts[4]++;
+    } else {
+      counts[0]++;
+      counts[1] += m[0];
+      counts[2] += m[1];
+      counts[3] += m[2];
+      counts[6] += m[3];
+    }
+  }
+
+  /**
+   * Returns the minimality statistics of the explanations sampled with the system property {@code
+   * jacop.lcg.minimality} (every n-th one), per constraint class and kind ({@code Class/reason} or
+   * {@code Class/failure}, with {@code /generic} for the generic reason): explanations minimised,
+   * their atoms, the atoms propagation needed, the needed atoms a weaker earlier atom replaced,
+   * explanations propagation could not use as a whole, explanations that could not be checked, and
+   * the needed bound atoms that a weaker bound, not on the trail, could replace.
+   *
+   * @return seven counts per key, in the order above
+   */
+  public Map<String, long[]> minimalityStatistics() {
+    return minimalityCounts;
   }
 
   /**
