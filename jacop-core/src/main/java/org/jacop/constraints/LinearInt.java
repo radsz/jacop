@@ -30,7 +30,10 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +113,9 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
   /** It specifies the number of variables/coefficients. */
   int l;
+
+  // the arguments folded into b, for explanations (see addFolded)
+  private IntVar[] folded;
 
   /*
    * It specifies "variability" of each variable
@@ -1072,16 +1078,27 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
   // the bounds of the variables fixed when the constraint was created and folded into b
   void addFolded(AtomicTrail trail, int position, EntryList out) {
+    if (folded == null) {
+      folded = foldedVariables();
+    }
+    for (IntVar z : folded) {
+      trail.addLowerBound(z, position, out);
+      trail.addUpperBound(z, position, out);
+    }
+  }
+
+  // the arguments that are not among the terms, found once: explanations of long sums ask often
+  private IntVar[] foldedVariables() {
+    Set<IntVar> terms = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < l; i++) {
+      terms.add(x[i]);
+    }
+    List<IntVar> result = new ArrayList<>();
     for (Var v : arguments()) {
-      IntVar z = (IntVar) v;
-      boolean folded = true;
-      for (int i = 0; i < l && folded; i++) {
-        folded = x[i] != z;
-      }
-      if (folded) {
-        trail.addLowerBound(z, position, out);
-        trail.addUpperBound(z, position, out);
+      if (!terms.contains(v)) {
+        result.add((IntVar) v);
       }
     }
+    return result.toArray(new IntVar[0]);
   }
 }
