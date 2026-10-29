@@ -79,4 +79,12 @@ final class LiteralMap {
     literals[k] = literal;
     size++;
   }
+
+  /** Removes value v, which must be present. */
+  void remove(int v) {
+    int k = Arrays.binarySearch(values, 0, size, v);
+    size--;
+    System.arraycopy(values, k + 1, values, k, size - k);
+    System.arraycopy(literals, k + 1, literals, k, size - k);
+  }
 }
