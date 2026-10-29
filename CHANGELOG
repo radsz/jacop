@@ -718,6 +718,36 @@ Version 5.0 (unreleased)
     org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
     2.5% faster on mznbench.
 
+54. Presolve breaks value symmetries and orbitopes too (--presolve on|check,
+    unless --symmetry off), in org.jacop.fz.SymmetryBreaking:
+    - Value precedence. Integer variables whose values are only compared
+      (int_eq/int_ne and x - y = 0 or != 0, all_different, all_equal,
+      count, at least, at most, member, nvalue, element, gcc and bin packing
+      with their value-indexed counts and loads) form a value space; groups
+      with the same values form one space, as the machines of jobs that no
+      constraint joins. A second graph joins the space's variables to
+      vertices of their values and constants in those arguments become the
+      value vertices; the generators that fix the variables permute the
+      values, and a set of values they permute in every way (connected
+      transpositions, or a Schreier-Sims check up to 40 values) is posted
+      as one SeqPrecedeChain over the space's variables, which then come
+      first in the lex-leader order of the variable symmetries. A
+      minimised objective that only bounds the space from above (x <= z,
+      z = max(x)), as the number of colours, is a dominance that keeps
+      the precedence and the optimum.
+    - Orbitopes. Generators that swap two columns of variables, row by
+      row, and chain into connected swaps of columns are replaced by one
+      LexChain over the columns when the columns fit the lex-leader order.
+      GraphAutomorphisms now prefers transpositions, which finds them.
+    On 140 generated instances (graph colouring, fewest colours, bin
+    packing with integer and 0/1 models, P||Cmax, jobs on identical
+    machines) at 30 s, solved instances go from 74 to 93 with the
+    annotation search, 84 to 93 with -f and 89 to 93 with --lcg -f; bin
+    packing from 0 to 10 with the annotation search. --lcg -f loses 2
+    P||Cmax instances to a different search. Detection takes a median of
+    0.05 s on one model of each directory of jacop-benchmarks; value
+    precedence fires on 38 of 1,926 and orbitopes on 101.
+
 Version 4.11
 =============
 
