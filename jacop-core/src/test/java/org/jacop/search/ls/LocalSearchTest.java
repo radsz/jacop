@@ -44,8 +44,13 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 
 /** Tests of {@link LocalSearch}. */
@@ -158,5 +163,44 @@ class LocalSearchTest {
     // the energy is 24 on a capacity of 3
     assertTrue(ls.getCostValue() >= 8);
     assertEquals(0, ls.getSolution(new IntVar[] {s[0]})[0]);
+  }
+
+  /**
+   * The time limit holds when one step evaluates thousands of costly constraints: two Regular
+   * constraints on the sum modulo 40 of 150 variables that no assignment satisfies together.
+   */
+  @Test
+  void stopsInTimeOnCostlySteps() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[150];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+    }
+    store.impose(new Regular(sumModulo(40, 0), x));
+    store.impose(new Regular(sumModulo(40, 1), x));
+    assertTrue(store.consistency());
+    LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(Duration.ofMillis(300)).build();
+    long start = System.nanoTime();
+    assertEquals(LocalSearch.Status.UNKNOWN, ls.solve());
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(millis < 3000, "local search ran " + millis + " ms with a limit of 300 ms");
+  }
+
+  // words whose sum is r modulo m
+  private static Fsm sumModulo(int m, int r) {
+    Fsm fsm = new Fsm();
+    FsmState[] s = new FsmState[m];
+    for (int i = 0; i < m; i++) {
+      s[i] = new FsmState();
+      fsm.allStates.add(s[i]);
+    }
+    fsm.initState = s[0];
+    fsm.finalStates.add(s[r]);
+    for (int i = 0; i < m; i++) {
+      for (int v = 0; v <= 9; v++) {
+        s[i].addTransition(new FsmTransition(new IntervalDomain(v, v), s[(i + v) % m]));
+      }
+    }
+    return fsm;
   }
 }

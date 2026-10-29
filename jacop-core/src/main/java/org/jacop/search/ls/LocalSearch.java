@@ -1147,7 +1147,7 @@ public final class LocalSearch {
         Integer h = hints.get(x);
         int v = h != null && x.domain.contains(h) ? h : nearestToZero(x.dom());
         val[i] = v;
-        if ((i & 63) == 0 && timeUp()) {
+        if (expired()) {
           // the rest keeps the value nearest to zero without propagation
           for (int j = i + 1; j < vars.length; j++) {
             val[j] = vars[j].singleton() ? vars[j].value() : nearestToZero(vars[j].dom());
@@ -1373,8 +1373,11 @@ public final class LocalSearch {
     int fewest = Integer.MAX_VALUE;
     boolean progressed = true;
     long lastProgress = System.currentTimeMillis();
+    long checkedAt = evaluations;
     while (!stopRequested) {
-      if ((steps & 255) == 0) {
+      // the clock every 256 steps, or sooner when steps evaluate costly constraints (Regular)
+      if ((steps & 255) == 0 || evaluations - checkedAt > 4096) {
+        checkedAt = evaluations;
         if (timeUp()) {
           return;
         }
@@ -1438,6 +1441,10 @@ public final class LocalSearch {
     int scan = Math.min(size, SCAN_LIMIT);
     int offset = size > SCAN_LIMIT ? random.nextInt(size) : 0;
     for (int t = 0; t < scan; t++) {
+      if (t > 0 && expired()) {
+        // a step on costly constraints can take long: the moves seen so far will do
+        break;
+      }
       int p = (offset + t) % size;
       int i = p < s.length ? s[p] : enforcer[c];
       long a = p < s.length ? coef(c, p) : 0;
@@ -1806,6 +1813,10 @@ public final class LocalSearch {
     }
     rhs[boundRow] = bound - 1;
     setViolation(boundRow, currentViolation(boundRow));
+  }
+
+  private boolean expired() {
+    return stopRequested || System.currentTimeMillis() >= deadline;
   }
 
   private boolean timeUp() {
