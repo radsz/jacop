@@ -39,6 +39,8 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 
 /**
  * CumulativeUnary implements the scheduling constraint for unary resources using the overload
@@ -494,6 +496,35 @@ public class CumulativeUnary extends Cumulative {
       }
     }
     return identityOrder;
+  }
+
+  // explains the bounds of the unary rules by precedences, unless -Djacop.lcg.unaryExplain=false
+  private static final boolean UNARY_EXPLAIN =
+      !"false".equals(System.getProperty("jacop.lcg.unaryExplain"));
+  // created on first use, for constant durations only
+  private UnaryExplanation unaryExplanation;
+
+  /**
+   * Explains a bound of a start time by the tasks that must run before (or after) the task, as the
+   * detectable precedences, edge finding and not-first rules found them (see {@link
+   * UnaryExplanation}); otherwise by the time table, as {@link CumulativeBasic} does.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (UNARY_EXPLAIN
+        && constantDurations
+        && trail.kind(entry) != AtomicTrail.NE
+        && getClass() == CumulativeUnary.class) {
+      if (unaryExplanation == null) {
+        unaryExplanation = new UnaryExplanation(taskNormal, limit);
+      }
+      int mark = out.size();
+      if (unaryExplanation.explain(trail, entry, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return super.explain(trail, entry, out);
   }
 
   @Override
