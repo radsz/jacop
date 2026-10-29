@@ -1638,8 +1638,40 @@ class FlatzincFrontEndTest {
         run(model.toString(), "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
     assertTrue(out.strip().contains("=========="), out);
     String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
-    // obj, the objective, and the block sums of the two long constraints
-    assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 10, out);
+    // obj, the objective, and the 8 block sums of the long inequality (the objective's sum is kept
+    // whole)
+    assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 7, out);
+  }
+
+  @Test
+  void lcgKeepsTheObjectivesSumWhole() throws IOException {
+    // --lcg splits linear constraints of more than 40 terms into block sums, but not the one the
+    // objective is a term of: split, its blocks hid the objective's terms from core-guided search
+    // and the linear relaxation (smelt_5 took 20 to 47 s instead of 5 s)
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 60; i++) {
+      model.append("var 0..1: x%d;\n".formatted(i));
+    }
+    model.append("var 0..200: obj :: output_var;\n");
+    String xs =
+        java.util.stream.IntStream.range(0, 60)
+            .mapToObj(i -> "x" + i)
+            .collect(Collectors.joining(","));
+    String ws =
+        java.util.stream.IntStream.range(0, 60)
+            .mapToObj(i -> Integer.toString(1 + i % 5))
+            .collect(Collectors.joining(","));
+    model.append(
+        "constraint int_lin_eq([%s,-1], [%s,obj], 0) :: defines_var(obj);\n".formatted(ws, xs));
+    model.append(
+        "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
+    model.append("solve minimize obj;\n");
+    String out = run(model.toString(), "--lcg", "-f", "-debug")[0];
+    // one sum of block sums, the inequality's; the objective's equation keeps its 61 terms
+    long sumsOfBlocks =
+        out.lines().filter(l -> l.matches("% LinearInt\\d+ : LinearInt\\( \\[ _.*")).count();
+    assertEquals(1, sumsOfBlocks, out);
+    assertTrue(out.contains("obj = 30;"), out);
   }
 
   @Test

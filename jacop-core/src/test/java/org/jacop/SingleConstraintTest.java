@@ -8471,4 +8471,24 @@ class SingleConstraintTest extends TestHelper {
     }
     assertThat(noOfAllSolutions(store, x)).isEqualTo(expected);
   }
+
+  // Under --lcg a long linear constraint is split into block sums, and a failure of the sum of the
+  // blocks weighed only the block sums, which dom/wdeg does not branch on: cutstock type04_TEST9
+  // found no solution in 60 s. The sum of the blocks now weighs the terms it stands for.
+  @Test
+  void testLinearIntFailureWeighsTheVariablesItIsGiven() {
+
+    Store store = new Store();
+    store.variableWeightManagement = true;
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar s = new IntVar(store, "s", 0, 2);
+    IntVar t = new IntVar(store, "t", 0, 2);
+    LinearInt sum = new LinearInt(new IntVar[] {s, t}, new int[] {1, 1}, ">=", 5);
+    sum.setWeightedVariables(new IntVar[] {x, y});
+    store.impose(sum);
+
+    assertThat(store.consistency()).isFalse();
+    assertThat(new int[] {x.weight, y.weight, s.weight, t.weight}).containsExactly(2, 2, 1, 1);
+  }
 }

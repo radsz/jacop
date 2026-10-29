@@ -137,6 +137,8 @@ public class Support implements ParserTreeConstants {
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar;
+  // the variable of the solve item, or null; lazy clause generation keeps its definition whole
+  public IntVar objective;
   boolean intPresent = true;
   boolean floatPresent = true;
 
@@ -975,6 +977,7 @@ public class Support implements ParserTreeConstants {
               store,
               c,
               Integer.parseInt(options.freeConfig("lcg-split", "40")),
+              objective,
               // free LCG search branches on the block sums last, as on other defined variables
               dictionary::addDefinedVar);
       if (split != null) {
