@@ -46,6 +46,7 @@ import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.Restriction.Relation;
 import org.jacop.constraints.table.Table;
 import org.jacop.constraints.table.TableCompressor;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -267,6 +268,53 @@ class HybridTableTest {
     Set<List<Integer>> found = new HashSet<>();
     explore(store, x, instance.tuples(), random, found, instance.toString());
     assertThat(found).as("solutions %s", instance).isEqualTo(expected);
+  }
+
+  @Test
+  void validTuplesComeBackFromTheStoreTrailOnly() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    IntVar z = new IntVar(store, "z", 1, 3);
+    IntVar w = new IntVar(store, "w", 1, 2);
+    HybridTable table =
+        new HybridTable(
+            new IntVar[] {x, y, z}, new int[][] {{1, 1, 2}, {2, 2, 3}, {3, 1, 1}, {3, 3, 3}});
+    store.impose(table);
+    assertThat(store.consistency()).isTrue();
+    // The table does not listen to the removal of every level.
+    assertThat(store.removeLevelListeners).doesNotContain(table);
+
+    for (int round = 0; round < 3; round++) {
+      store.setLevel(store.level + 1);
+      x.domain.in(store.level, x, 3, 3);
+      assertThat(store.consistency()).isTrue();
+      assertThat(y.dom().toString()).isEqualTo("{1, 3}");
+      store.setLevel(store.level + 1);
+      y.domain.in(store.level, y, 1, 1);
+      assertThat(store.consistency()).isTrue();
+      assertThat(z.dom().toString()).isEqualTo("1");
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+
+      // A failure before the table runs leaves z queued; the backtrack does not tell the table.
+      store.setLevel(store.level + 1);
+      z.domain.in(store.level, z, 2, 2);
+      assertThatThrownBy(() -> w.domain.in(store.level, w, 3, 3)).isInstanceOf(FailException.class);
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+
+      store.setLevel(store.level + 1);
+      y.domain.in(store.level, y, 2, 2);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.dom().toString()).isEqualTo("2");
+      assertThat(z.dom().toString()).isEqualTo("3");
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+      assertThat(x.dom().toString()).isEqualTo("{1..3}");
+    }
   }
 
   @Test

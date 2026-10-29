@@ -32,7 +32,9 @@ package org.jacop.constraints.table;
 
 import java.util.Arrays;
 import java.util.Map;
+import org.jacop.api.Stateful;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.core.Var;
 
 /**
@@ -44,7 +46,7 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class TrailedTupleSet {
+final class TrailedTupleSet implements Stateful {
 
   /** The records: the words, the limit, then the records of the owner. */
   final long[] state;
@@ -76,6 +78,9 @@ final class TrailedTupleSet {
   private int topLevel = Integer.MIN_VALUE;
 
   private int currentLevel;
+
+  /** The store whose trail calls removeLevel at the levels with marks, or null. */
+  private Store store;
 
   /**
    * It creates the set of all tuples 0..tuples-1.
@@ -116,6 +121,16 @@ final class TrailedTupleSet {
   // ---------------------------------------------------------------------------------------------
   // Trailing.
 
+  /**
+   * It records each level with a mark on the trail of the store, so the store restores the set at
+   * those levels only, and the owner need not listen to the removal of every level.
+   *
+   * @param store the store.
+   */
+  void recordOn(Store store) {
+    this.store = store;
+  }
+
   void newEpochIfNeeded(int level) {
     currentLevel = level;
     if (epochLevel != currentLevel) {
@@ -141,6 +156,9 @@ final class TrailedTupleSet {
       markLevel[markTop] = currentLevel;
       markPosition[markTop++] = trailTop;
       topLevel = currentLevel;
+      if (store != null) {
+        store.recordTimeStampLevel(this, currentLevel);
+      }
     }
     if (trailTop + 2 > trail.length) {
       trail = Arrays.copyOf(trail, trail.length * 2);
@@ -162,7 +180,8 @@ final class TrailedTupleSet {
   }
 
   /** It restores the records changed at the level or later. */
-  void removeLevel(int level) {
+  @Override
+  public void removeLevel(int level) {
     // Most levels change no record; the stamps of the current epoch are then on no record.
     if (topLevel < level) {
       return;
