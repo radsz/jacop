@@ -87,7 +87,7 @@ public class Options {
   boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
-          probeMode(System.getProperty("jacop.presolve.probe", "off")), Probing.Mode.OFF);
+          probeMode(System.getProperty("jacop.presolve.probe", "sac")), Probing.Mode.SAC);
   long probeBudget = 1000;
   boolean complementarySearch;
   float decay = 0.99f;
@@ -188,8 +188,9 @@ public class Options {
             --presolve-tabling replace small groups of constraints by the tables of their
                 solutions when presolving (default false)
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
-                of "off" (default), "shave" (bound shaving and failed-literal probing of 0-1
-                variables), "sac" (as "shave", and every value of small domains)
+                of "off", "shave" (bound shaving and failed-literal probing of 0-1
+                variables), "sac" (default; as "shave", and every value of small
+                domains)
             --presolve-probe-budget <ms> time probing may take (default 1000)
             -cs, --complementary-search - gathers all model, non-defined
                  variables to create the final search
@@ -791,7 +792,7 @@ public class Options {
   /**
    * It defines what presolve probes at the root (--presolve-probe).
    *
-   * @return the probing mode, OFF by default
+   * @return the probing mode, SAC by default
    */
   public Probing.Mode probe() {
     return probe;
