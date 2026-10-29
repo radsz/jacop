@@ -103,6 +103,7 @@ import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -167,6 +168,12 @@ class GlobalConstraints implements ParserTreeConstants {
 
   final Store store;
   final Support support;
+
+  // the two-dimensional diffn constraints read so far: x, y, lx, ly
+  private final List<IntVar[][]> diffnProjections = new ArrayList<>();
+
+  // the tasks of the cumulative constraints read so far, see taskKey
+  private final Set<List<IntVar>> cumulativeTasks = new HashSet<>();
   boolean useDisjunctions;
   boolean useCumulativeUnary;
   ArrayList<Pair> duplicates;
@@ -219,6 +226,12 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
+
+    cumulativeTasks.add(taskKey(str, dur, res));
+    poseCumulative(str, dur, res, b);
+  }
+
+  private void poseCumulative(IntVar[] str, IntVar[] dur, IntVar[] res, IntVar b) {
 
     IntVar[][] sdr = filterCumulativeTasks(str, dur, res);
     IntVar[] s = sdr[0];
@@ -987,6 +1000,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.pose(
         Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(true).build());
+    diffnProjections.add(new IntVar[][] {x, y, lx, ly});
   }
 
   void gen_jacop_list_diff2(SimpleNode node) {
@@ -997,6 +1011,106 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.pose(
         Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
+    diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  /**
+   * Whether diffn also gets a cumulative per axis, from the system property {@code
+   * fz_diffn_cumulative} (true by default).
+   *
+   * @return true if the projections are posted.
+   */
+  static boolean diffnCumulativeEnabled() {
+    return Boolean.parseBoolean(System.getProperty("fz_diffn_cumulative", "true"));
+  }
+
+  /**
+   * Poses, for each two-dimensional diffn, a cumulative per axis: the rectangles crossing a line
+   * across one axis are disjoint along the other, so their lengths along it fit in the span of all
+   * rectangles along it. A projection is skipped when the model already has a cumulative over the
+   * same tasks and heights, as rectangle packing models often do, or when the rectangles are fixed
+   * along the other axis and do not all cross one line along it. Called after the whole model is
+   * read, before the delayed constraints are imposed.
+   */
+  void poseDiffnProjections() {
+    if (!diffnCumulativeEnabled()) {
+      return;
+    }
+    for (IntVar[][] d : diffnProjections) {
+      IntVar[] x = d[0];
+      IntVar[] y = d[1];
+      IntVar[] lx = d[2];
+      IntVar[] ly = d[3];
+      if (x.length < 2 || negativeMin(lx) || negativeMin(ly)) {
+        continue;
+      }
+      // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
+      // projection then only adds cost (accap), unless all of them cross one line (filters)
+      if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
+        poseCumulative(x, lx, ly, span(y, ly));
+      }
+      if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
+        poseCumulative(y, ly, lx, span(x, lx));
+      }
+    }
+    diffnProjections.clear();
+  }
+
+  // whether all intervals [o, o + l) are fixed and not all of them share a point
+  private boolean fixedApart(IntVar[] o, IntVar[] l) {
+    if (!allVarGround(o) || !allVarGround(l)) {
+      return false;
+    }
+    long lastStart = Long.MIN_VALUE;
+    long firstEnd = Long.MAX_VALUE;
+    for (int i = 0; i < o.length; i++) {
+      lastStart = Math.max(lastStart, o[i].value());
+      firstEnd = Math.min(firstEnd, (long) o[i].value() + l[i].value());
+    }
+    return lastStart >= firstEnd;
+  }
+
+  private static boolean negativeMin(IntVar[] v) {
+    for (IntVar e : v) {
+      if (e.min() < 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // the identity of the tasks of a cumulative: its starts, durations and resource uses
+  private static List<IntVar> taskKey(IntVar[] s, IntVar[] d, IntVar[] r) {
+    List<IntVar> key = new ArrayList<>(3 * s.length);
+    key.addAll(Arrays.asList(s));
+    key.addAll(Arrays.asList(d));
+    key.addAll(Arrays.asList(r));
+    return key;
+  }
+
+  /** A variable equal to max(o[i] + l[i]) - min(o[i]), the span of the intervals along one axis. */
+  private IntVar span(IntVar[] o, IntVar[] l) {
+    Store store = support.store;
+    IntVar[] end = new IntVar[o.length];
+    int low = IntDomain.MAX_INT;
+    int high = IntDomain.MIN_INT;
+    for (int i = 0; i < o.length; i++) {
+      low = Math.min(low, o[i].min());
+      high = Math.max(high, o[i].max() + l[i].max());
+      if (l[i].singleton(0)) {
+        end[i] = o[i];
+      } else {
+        end[i] = new IntVar(store, o[i].min() + l[i].min(), o[i].max() + l[i].max());
+        support.pose(new XplusYeqZ(o[i], l[i], end[i]));
+      }
+    }
+    IntVar first = new IntVar(store, low, high);
+    IntVar last = new IntVar(store, low, high);
+    IntVar span = new IntVar(store, 0, Math.max(0, high - low));
+    support.pose(new Min(o, first));
+    support.pose(new Max(end, last));
+    support.pose(new XplusYeqZ(first, span, last));
+    return span;
   }
 
   void gen_jacop_diffn_k(SimpleNode node) {
@@ -1014,6 +1128,8 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     DiffnK c = new DiffnK(origin, length, strict);
+    c.doProjection(Boolean.parseBoolean(System.getProperty("fz_diffnk_projection", FALSE)));
+    c.doSlices(Boolean.parseBoolean(System.getProperty("fz_diffnk_slices", FALSE)));
     support.pose(c);
     if (!strict) {
       support.nonStrictDiffnK.add(c);

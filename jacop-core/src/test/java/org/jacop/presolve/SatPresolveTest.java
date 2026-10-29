@@ -87,6 +87,61 @@ class SatPresolveTest {
     MERGE
   }
 
+  /**
+   * x1 = -x2 and x2 = x0 make x1 = -x0, and with x1 -> x0 the model is infeasible. Propagating a
+   * unit while some clauses still named replaced literals fixed x0 apart from its representative,
+   * so presolve returned a child without clauses (found with rotated seeds of the clause tests).
+   */
+  @Test
+  void equivalentLiteralsAreSubstitutedBeforePropagating() {
+    Store store = new Store();
+    IntVar x0 = new BooleanVar(store, "x0");
+    IntVar x3 = new IntVar(store, "x3", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 1);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar zero = new IntVar(store, "zero", 0, 0);
+    store.impose(new BoolClause(new IntVar[] {x2, x0}, new IntVar[] {x3, x0}));
+    store.impose(new AndBoolVector(new IntVar[] {x1, x3, x0}, zero));
+    store.impose(new OrBoolVector(new IntVar[] {x1, x3, x2, x0}, one));
+    store.impose(new XlteqY(x2, x0));
+    store.impose(new XlteqY(x1, x0));
+    store.impose(new XneqY(x1, x2));
+    //    store.impose(new XlteqY(x3, x1));
+    // x1 != x2 and both <= x0 give x0 = 1, then x2 (third clause) and x1 (second clause)
+    List<IntVar[][]> clauses = new ArrayList<>();
+    //    clauses.add(new IntVar[][] {{x2, x1}, {x0, x1}});
+    clauses.add(new IntVar[][] {{x1}, {x0, x2}});
+    clauses.add(new IntVar[][] {{x2, x2, x2}, {x0}});
+    //    clauses.add(new IntVar[][] {{x0, x1, x2}, {x0}});
+    IntVar[] vars = {x0, x1, x2, x3};
+
+    Derivation d =
+        Derivation.of(store).retention(Derivation.Retention.KEPT).clauses(clauses).derive();
+    if (d.outcome() == Derivation.Outcome.INFEASIBLE) {
+      return;
+    }
+    Store child = d.child();
+    for (IntVar[][] c : clauses) {
+      child.impose(new BoolClause(c[0], c[1]));
+    }
+    List<List<Integer>> found = new ArrayList<>();
+    if (child.consistency()) {
+      IntVar[] counterparts = d.counterparts(vars);
+      Runnable record =
+          () -> {
+            assertThat(d.returnSolution()).isTrue();
+            found.add(values(vars));
+          };
+      if (counterparts.length == 0) {
+        record.run();
+      } else {
+        solve(child, counterparts, record);
+      }
+    }
+    assertThat(found).isEmpty();
+  }
+
   @Test
   void childHasTheSolutionsOfTheParent() {
     for (Mode mode : Mode.values()) {

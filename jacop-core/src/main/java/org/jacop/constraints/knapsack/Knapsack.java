@@ -53,6 +53,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * It specifies a knapsack constraint. This implementation was inspired by the paper by Irit
@@ -73,7 +76,11 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class Knapsack extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate, Copyable<Knapsack> {
+    implements UsesQueueVariable,
+        SatisfiedPresent,
+        RemoveLevelLate,
+        Copyable<Knapsack>,
+        Explainable {
 
   /** It specifies if any debugging information should be printed. */
   public static final boolean DEBUG_ALL = false;
@@ -1029,6 +1036,30 @@ public class Knapsack extends Constraint
     }
 
     return tree.alreadyUsedCapacity == knapsackCapacity.value();
+  }
+
+  // the surrogate rows of the items, whose explanations are checked to imply the atom
+  private KnapsackExplanation explanation() {
+    int n = items.length;
+    IntVar[] quantity = new IntVar[n];
+    int[] weight = new int[n];
+    int[] profit = new int[n];
+    for (int i = 0; i < n; i++) {
+      quantity[i] = items[i].quantity;
+      weight[i] = items[i].weight;
+      profit[i] = items[i].profit;
+    }
+    return new KnapsackExplanation(quantity, weight, profit, knapsackCapacity, knapsackProfit);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == Knapsack.class && explanation().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == Knapsack.class && explanation().explainFailure(trail, out);
   }
 
   @Override

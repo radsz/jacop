@@ -43,6 +43,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * GlobalCardinality constraint: for each i, the number of variables of list equal to values[i] lies
@@ -78,7 +81,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class GlobalCardinality extends Constraint
-    implements SatisfiedPresent, Copyable<GlobalCardinality> {
+    implements SatisfiedPresent, Copyable<GlobalCardinality>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -852,6 +855,23 @@ public class GlobalCardinality extends Constraint
       }
     }
     return true;
+  }
+
+  // the flow network; a variable may take a value that is not counted
+  private CardinalityExplanation.Network network() {
+    return fixedBounds
+        ? new CardinalityExplanation.Network(list, values, null, fixedLow, fixedUp, true, null)
+        : new CardinalityExplanation.Network(list, values, counters, null, null, true, null);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == GlobalCardinality.class && network().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == GlobalCardinality.class && network().explainFailure(trail, out);
   }
 
   @Override

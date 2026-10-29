@@ -32,7 +32,9 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -74,7 +76,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class SubcircuitCost extends Constraint implements SatisfiedPresent {
+public class SubcircuitCost extends Constraint
+    implements SatisfiedPresent, Copyable<SubcircuitCost> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -404,5 +407,13 @@ public class SubcircuitCost extends Constraint implements SatisfiedPresent {
         }
       }
     }
+  }
+
+  @Override
+  public SubcircuitCost copy(VarMap map) {
+    SubcircuitCost c = new SubcircuitCost(map.get(list), costs, map.get(cost), offset);
+    c.useAssignment = useAssignment;
+    c.useSteiner = useSteiner;
+    return c;
   }
 }

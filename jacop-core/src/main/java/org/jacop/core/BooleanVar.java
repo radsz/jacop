@@ -44,6 +44,16 @@ import org.jacop.constraints.Constraint;
 public class BooleanVar extends IntVar {
 
   /**
+   * The lazy clause generation trail that numbered this variable, which has no store index, and the
+   * number it gave ({@link org.jacop.lcg.AtomicTrail#id}). A trail checks the owner, so that
+   * another trail on the same variables keeps its own numbers.
+   */
+  public Object trailOwner;
+
+  /** The number {@link #trailOwner} knows this variable by. */
+  public int trailId;
+
+  /**
    * This constructor creates a variable with empty domain (standard FD domain), automatically
    * generated name, and empty attached constraint list.
    *

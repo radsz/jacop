@@ -265,6 +265,8 @@ public final class CdclSolver {
   private volatile boolean interrupted;
   // set by cancel(): every later solve() stops at once as well
   private volatile boolean cancelled;
+  // set when propagateAll stopped at the deadline before reaching a fixpoint
+  private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
   private DratWriter proof;
@@ -478,6 +480,7 @@ public final class CdclSolver {
       }
     }
     interrupted = cancelled;
+    outOfTime = false;
     backtrack(0);
     if (elimination && !eliminationTried && conflicts == 0 && !externalUsed && numUnits == 0) {
       eliminationTried = true;
@@ -506,6 +509,53 @@ public final class CdclSolver {
       queuedExternal = null;
     }
     return result;
+  }
+
+  /**
+   * Probes a literal at the root: assigns it at a new level and propagates, the external propagator
+   * included, then goes back to the root. Nothing is learnt.
+   *
+   * @param lit a DIMACS literal
+   * @return the literals it implies, in the order assigned; null when it leads to a conflict, so
+   *     its negation holds in every solution; empty when it is already true at the root
+   */
+  public int[] probe(int lit) {
+    if (!ok) {
+      return null;
+    }
+    ensureVars(Math.abs(lit));
+    backtrack(0);
+    int l = toLit(lit);
+    if (vals[l] != 0) {
+      return vals[l] > 0 ? new int[0] : null;
+    }
+    notifying = external != null;
+    try {
+      // the root first, as a search starts, so that only the literal's consequences are undone
+      if (propagateAll() != NO_CONFLICT) {
+        ok = false;
+        return null;
+      }
+      if (vals[l] != 0) {
+        return vals[l] > 0 ? new int[0] : null;
+      }
+      newDecisionLevel();
+      int start = trailSize;
+      assign(l, NO_REASON);
+      if (propagateAll() != NO_CONFLICT || !ok) {
+        backtrack(0);
+        return null;
+      }
+      int[] implied = new int[trailSize - start - 1];
+      for (int i = start + 1; i < trailSize; i++) {
+        implied[i - start - 1] = toDimacs(trail[i]);
+      }
+      backtrack(0);
+      return implied;
+    } finally {
+      notifying = false;
+      queuedExternal = null;
+    }
   }
 
   /**
@@ -1081,11 +1131,13 @@ public final class CdclSolver {
       orderForWatches(c);
       if (n == 2) {
         addLearntBinary(c[0], c[1]);
+        notifyKept(c, n);
         r = -2 - c[1];
       } else if (n <= externalReasonKeep) {
         r = allocate(c, n, true, n);
         learnts = push(learnts, numLearnts++, r);
         attach(r);
+        notifyKept(c, n);
       } else {
         r = allocate(c, n, false, n);
         mem[r + META] |= TEMPORARY;
@@ -1093,6 +1145,14 @@ public final class CdclSolver {
     }
     reason[v] = r;
     return r;
+  }
+
+  private void notifyKept(int[] c, int n) {
+    if (notifying) {
+      for (int i = 0; i < n; i++) {
+        external.notifyKeptLiteral(toDimacs(c[i]));
+      }
+    }
   }
 
   /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
@@ -1976,6 +2036,10 @@ public final class CdclSolver {
       if (!ok) {
         return UNSAT;
       }
+      if (outOfTime) {
+        outOfTime = false;
+        return UNKNOWN;
+      }
       if (confl != NO_CONFLICT) {
         conflicts++;
         if (decisionLevel == 0) {
@@ -2111,10 +2175,16 @@ public final class CdclSolver {
    *     found unsatisfiable
    */
   private int propagateAll() {
-    while (true) {
+    for (int rounds = 1; ; rounds++) {
       int confl = propagate();
       if (confl != NO_CONFLICT || external == null) {
         return confl;
+      }
+      // an external propagator can take many rounds to reach a fixpoint (bounds that creep by one
+      // value at a time between constraints), so the clock is read here too, not only per decision
+      if ((rounds & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+        outOfTime = true;
+        return NO_CONFLICT;
       }
       for (int i = 0; i < numLateObserved; i++) {
         int v = lateObserved[i];
@@ -2202,6 +2272,9 @@ public final class CdclSolver {
     if (proof != null) {
       proof.add(c, 0, size);
     }
+    if (implied >= 0) {
+      notifyKept(c, size);
+    }
     if (size <= 1) {
       backtrack(0);
       if (size == 0 || vals[c[0]] < 0) {
@@ -2283,6 +2356,46 @@ public final class CdclSolver {
       lateObserved = push(lateObserved, numLateObserved++, v);
     }
     observed[v] = true;
+  }
+
+  /**
+   * Takes an unassigned variable that occurs in no clause out of the decisions, so its index can be
+   * given to another variable with {@link #reuse}. The caller keeps it out of clauses meanwhile.
+   *
+   * @param variable a DIMACS variable
+   */
+  public void retire(int variable) {
+    int v = variable - 1;
+    if (vals[2 * v] != 0 || binSize[2 * v] != 0 || binSize[2 * v + 1] != 0) {
+      throw new IllegalStateException(
+          "variable " + variable + " is assigned or in a binary clause");
+    }
+    order.remove(v);
+  }
+
+  /**
+   * Gives a retired variable a fresh start, as if it were new: no activity, the initial phase and a
+   * place among the decisions.
+   *
+   * @param variable a DIMACS variable passed to {@link #retire}
+   */
+  public void reuse(int variable) {
+    int v = variable - 1;
+    reason[v] = NO_REASON;
+    activity[v] = 0;
+    savedSign[v] = originalSign;
+    targetSign[v] = -1;
+    bestSign[v] = originalSign;
+    order.insert(v);
+  }
+
+  /**
+   * Tells whether the solver writes a proof, in which a variable keeps one meaning.
+   *
+   * @return true with a proof writer
+   */
+  public boolean hasProof() {
+    return proof != null;
   }
 
   /**

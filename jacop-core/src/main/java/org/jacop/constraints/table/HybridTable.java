@@ -1070,8 +1070,10 @@ public class HybridTable extends Constraint
       onlyChanged = -1;
     }
 
-    if (binaryAll != null) {
-      reviseBinaryTuples();
+    // A tuple the revision removes may have been the only support of a value of the changed
+    // column too, for example x[0] = -1 supported only by a tuple with x[1] <= x[2].
+    if (binaryAll != null && reviseBinaryTuples()) {
+      onlyChanged = -1;
     }
 
     if (init.begin(store)) {
@@ -1197,8 +1199,10 @@ public class HybridTable extends Constraint
   /**
    * It checks every valid tuple with restrictions between columns by arc consistency on its
    * restrictions, removes the tuples that fail and collects the values the others support.
+   *
+   * @return true if a tuple was removed.
    */
-  private void reviseBinaryTuples() {
+  private boolean reviseBinaryTuples() {
 
     if (useMarks) {
       for (int i = 0; i < arity; i++) {
@@ -1209,6 +1213,7 @@ public class HybridTable extends Constraint
     } else {
       Arrays.fill(binarySupport, null);
     }
+    boolean removed = false;
     int limit = limit();
     for (int p = limit; p >= 0; p--) {
       int w = index[p];
@@ -1227,12 +1232,14 @@ public class HybridTable extends Constraint
         }
         if (!consistent) {
           valid.removeTuple(t, p);
+          removed = true;
         }
       }
     }
     if (limit() < 0) {
       throw Store.failException;
     }
+    return removed;
   }
 
   private void resetMarks(int i) {

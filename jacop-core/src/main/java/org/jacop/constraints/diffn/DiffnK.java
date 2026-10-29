@@ -90,6 +90,18 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
 
   Store store;
 
+  private boolean projection;
+
+  private boolean slices;
+
+  // work arrays of layers 4 and 5
+  private long[] events;
+  private boolean[] active;
+  private long[] crossSection;
+  private long[] segmentStart;
+  private long[] segmentEnd;
+  private long[] segmentHeight;
+
   /**
    * It creates a strict non-overlapping constraint.
    *
@@ -251,13 +263,246 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
     }
   }
 
+  /**
+   * It switches the cumulative projection per dimension on or off (off by default). For each
+   * dimension d, the boxes crossing a hyperplane across d are disjoint in the other dimensions, so
+   * their cross-sections (the products of their minimal lengths in the other dimensions) fit in the
+   * cross-section of the space all boxes may take. It fails on an overloaded time-table of the
+   * compulsory parts and moves the origins of the boxes away from where they would overload it.
+   *
+   * @param projection true to run the projection.
+   */
+  public void doProjection(boolean projection) {
+    this.projection = projection;
+  }
+
+  /**
+   * It switches the slice check on or off (off by default). For each dimension d and each point t,
+   * the boxes whose compulsory part in d contains t are pairwise disjoint in the other dimensions,
+   * so their cross-sections must fit in their own bounding box there. It only fails.
+   *
+   * @param slices true to run the slice check.
+   */
+  public void doSlices(boolean slices) {
+    this.slices = slices;
+  }
+
   @Override
   public void consistency(Store store) {
     this.store = store;
     do {
       store.propagationHasOccurred = false;
       pruning();
+      if (!store.propagationHasOccurred && (projection || slices) && box.length > 1) {
+        for (int d = 0; d < k && !store.propagationHasOccurred; d++) {
+          int m = compulsoryParts(d);
+          if (m == 0) {
+            continue;
+          }
+          if (slices) {
+            slices(d, m);
+          }
+          if (projection) {
+            projection(d, m);
+          }
+        }
+      }
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Sorts the start and end events of the compulsory parts in dimension d into events, by date with
+   * ends before starts at the same date.
+   *
+   * @return the number of events.
+   */
+  private int compulsoryParts(int d) {
+    if (events == null) {
+      events = new long[2 * box.length];
+      active = new boolean[box.length];
+      crossSection = new long[box.length];
+      segmentStart = new long[2 * box.length];
+      segmentEnd = new long[2 * box.length];
+      segmentHeight = new long[2 * box.length];
+    }
+    int m = 0;
+    for (int i = 0; i < box.length; i++) {
+      Box b = box[i];
+      long lst = b.lst(d);
+      long ect = b.ect(d);
+      if (lst < ect) {
+        events[m++] = event(lst, true, i);
+        events[m++] = event(ect, false, i);
+      }
+    }
+    Arrays.sort(events, 0, m);
+    return m;
+  }
+
+  // dates are origins and ends of boxes, so they fit in 32 bits with a sign
+  private static long event(long date, boolean start, int i) {
+    return (date << 32) | (start ? 1L << 31 : 0) | i;
+  }
+
+  private static long date(long event) {
+    return event >> 32;
+  }
+
+  private static boolean start(long event) {
+    return (event & (1L << 31)) != 0;
+  }
+
+  private static int boxOf(long event) {
+    return (int) (event & Integer.MAX_VALUE);
+  }
+
+  /** The product of the minimal lengths of b in all dimensions but d. */
+  private long crossSection(Box b, int d) {
+    long v = 1;
+    for (int e = 0; e < k && v > 0; e++) {
+      if (e != d) {
+        v = multiply(v, b.length[e].min());
+      }
+    }
+    return v;
+  }
+
+  /**
+   * Layer 4: the boxes as tasks in dimension d with their cross-sections as heights, against the
+   * cross-section of the space all boxes may take (all boxes, not only the candidates, since any of
+   * them may cross the hyperplane).
+   */
+  private void projection(int d, int m) {
+    long capacity = 1;
+    for (int e = 0; e < k && capacity > 0; e++) {
+      if (e != d) {
+        long low = Long.MAX_VALUE;
+        long high = Long.MIN_VALUE;
+        for (Box b : box) {
+          low = Math.min(low, b.est(e));
+          high = Math.max(high, b.lct(e));
+        }
+        capacity = multiply(capacity, Math.max(0, high - low));
+      }
+    }
+    if (capacity == Long.MAX_VALUE) {
+      return;
+    }
+
+    // the time-table: segments of constant height between consecutive dates
+    int segments = 0;
+    long height = 0;
+    for (int t = 0; t < m; t++) {
+      long e = events[t];
+      int i = boxOf(e);
+      if (start(e)) {
+        crossSection[i] = crossSection(box[i], d);
+        height = add(height, crossSection[i]);
+      } else {
+        height -= crossSection[i];
+      }
+      if (t + 1 < m && date(events[t + 1]) == date(e)) {
+        continue;
+      }
+      if (height > capacity) {
+        throw Store.failException;
+      }
+      if (height > 0 && t + 1 < m) {
+        segmentStart[segments] = date(e);
+        segmentEnd[segments] = date(events[t + 1]);
+        segmentHeight[segments] = height;
+        segments++;
+      }
+    }
+    if (segments == 0) {
+      return;
+    }
+
+    for (Box b : box) {
+      long lengthMin = b.length[d].min();
+      if (lengthMin == 0 || b.origin[d].singleton()) {
+        continue;
+      }
+      long h = crossSection(b, d);
+      if (h == 0) {
+        continue;
+      }
+      long lst = b.lst(d);
+      long ect = b.ect(d);
+      // the box's own compulsory part is in the time-table
+      long est = b.est(d);
+      for (int s = 0; s < segments; s++) {
+        if (segmentStart[s] >= est + lengthMin) {
+          break;
+        }
+        if (segmentEnd[s] > est && overloads(s, h, lst, ect, capacity)) {
+          est = segmentEnd[s];
+        }
+      }
+      inMin(b.origin[d], est);
+
+      long start = b.lst(d);
+      for (int s = segments - 1; s >= 0; s--) {
+        if (segmentEnd[s] <= start) {
+          break;
+        }
+        if (segmentStart[s] < start + lengthMin && overloads(s, h, lst, ect, capacity)) {
+          start = segmentStart[s] - lengthMin;
+        }
+      }
+      inMax(b.origin[d], start);
+    }
+  }
+
+  // whether a box of cross-section h, with compulsory part [lst, ect), cannot cover segment s
+  private boolean overloads(int s, long h, long lst, long ect, long capacity) {
+    long others = segmentHeight[s];
+    if (lst <= segmentStart[s] && segmentEnd[s] <= ect) {
+      others -= h;
+    }
+    return add(others, h) > capacity;
+  }
+
+  /**
+   * Layer 5: the boxes whose compulsory parts in dimension d all contain a point are pairwise
+   * disjoint in the other dimensions, so their cross-sections fit in their bounding box there.
+   */
+  private void slices(int d, int m) {
+    Arrays.fill(active, false);
+    int count = 0;
+    for (int t = 0; t < m; t++) {
+      long e = events[t];
+      int i = boxOf(e);
+      active[i] = start(e);
+      count += start(e) ? 1 : -1;
+      if (count < 2 || t + 1 < m && date(events[t + 1]) == date(e)) {
+        continue;
+      }
+      long volume = 0;
+      long space = 1;
+      for (int dim = 0; dim < k && space > 0; dim++) {
+        if (dim == d) {
+          continue;
+        }
+        long low = Long.MAX_VALUE;
+        long high = Long.MIN_VALUE;
+        for (int j = 0; j < box.length; j++) {
+          if (active[j]) {
+            low = Math.min(low, box[j].est(dim));
+            high = Math.max(high, box[j].lct(dim));
+          }
+        }
+        space = multiply(space, Math.max(0, high - low));
+      }
+      for (int j = 0; j < box.length; j++) {
+        if (active[j]) {
+          volume = add(volume, crossSection(box[j], d));
+        }
+      }
+      if (volume > space) {
+        throw Store.failException;
+      }
+    }
   }
 
   private void pruning() {
@@ -621,6 +866,9 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
         h[i] = handle[i] == null ? null : map.get(handle[i]);
       }
     }
-    return new DiffnK(origin, length, strict, h);
+    DiffnK c = new DiffnK(origin, length, strict, h);
+    c.projection = projection;
+    c.slices = slices;
+    return c;
   }
 }

@@ -49,8 +49,10 @@ import org.jacop.search.DomainOperationHandler;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.SearchHandlerRegistry;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.GeometricCalculator;
+import org.jacop.search.restart.RestartHook;
 
 /**
  * A search engine for free search: depth-first search with binary branching, restarts,
@@ -162,6 +164,20 @@ public final class FreeSearch {
   private IntVar[] nogoodVars = new IntVar[16];
   private int[] nogoodValues = new int[16];
 
+  // large neighbourhood search: runs that fix variables to their values in the best solution
+  private final AdaptiveLns lns;
+  private final double lnsShare;
+  private final long lnsFailLimit;
+  private long lnsNanos;
+  private long searchNanos;
+  private long lnsRuns;
+  // MiniZinc's on_restart: code that fixes variables at the root of every run
+  private final RestartHook hook;
+  private int hookStatus = RestartHook.START;
+  // the run fixes variables at its root, so what it explores holds only under them
+  private boolean conditionalRun;
+  private long runSolutions;
+
   private final List<Frame> stack = new ArrayList<>();
   private int stackSize;
   private int rootLevel;
@@ -222,7 +238,12 @@ public final class FreeSearch {
     learnNogoods = builder.nogoods && restarts != null;
     maxNogoods = builder.maxNogoods;
     maxNogoodLength = builder.maxNogoodLength;
-    probeShare = cost != null && restarts != null ? builder.probeShare : 0;
+    hook = builder.hook;
+    // the model's own neighbourhoods replace those of large neighbourhood search and probes
+    lns = hook == null && cost != null && restarts != null ? builder.lns : null;
+    lnsShare = builder.lnsShare;
+    lnsFailLimit = builder.lnsFailLimit;
+    probeShare = hook == null && cost != null && restarts != null ? builder.probeShare : 0;
     probeLimit = builder.probeFailLimit;
   }
 
@@ -289,8 +310,10 @@ public final class FreeSearch {
       }
     } finally {
       unwind();
-      if (probing) {
-        store.removeLevel(rootLevel + 1);
+      // the level where a conditional run fixed its variables
+      while (store.level > rootLevel) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
       }
       if (nogoods != null) {
         nogoods.detach();
@@ -308,15 +331,34 @@ public final class FreeSearch {
   private boolean runs() {
     while (true) {
       runFailures = 0;
+      runSolutions = 0;
+      if (hook != null && hook.completeMarked()) {
+        return true;
+      }
       // a probe propagates above the root, so what the nogoods and bounds just added there must be
       // propagated at the root first; otherwise the end of the probe would undo it
       if (probeShare > 0 && !store.consistency()) {
         return true;
       }
       probing = startProbe();
-      select = probing ? mainSelect : branchingOfRun();
-      RunEnd end = run();
       boolean probe = probing;
+      select = probe ? mainSelect : branchingOfRun();
+      // the time before the first solution is not shared with neighbourhoods, nor that of probes
+      boolean afterSolution = !probe && lns != null && lns.ready();
+      boolean lnsRun = afterSolution && lnsNanos < lnsShare * searchNanos;
+      conditionalRun = !probe && (lnsRun || hook != null);
+      long start = System.nanoTime();
+      RunEnd end;
+      if (conditionalRun) {
+        end = conditionalRun(lnsRun);
+      } else {
+        end = run();
+      }
+      if (lnsRun) {
+        lnsNanos += System.nanoTime() - start;
+      } else if (afterSolution) {
+        searchNanos += System.nanoTime() - start;
+      }
       if (probe) {
         if (endProbe(end)) {
           return true;
@@ -325,7 +367,7 @@ public final class FreeSearch {
           continue;
         }
       }
-      if (end == RunEnd.EXHAUSTED) {
+      if (end == RunEnd.EXHAUSTED && !conditionalRun) {
         return true;
       }
       if (end == RunEnd.STOP) {
@@ -339,7 +381,12 @@ public final class FreeSearch {
         // count restarts of the regular runs (dom/wdeg flushes its weights every k of them)
         continue;
       }
-      if (nogoods != null) {
+      if (conditionalRun) {
+        store.removeLevel(rootLevel + 1);
+        store.setLevel(rootLevel);
+        endConditionalRun(lnsRun, end);
+      } else if (nogoods != null) {
+        // the decisions of a conditional run hold only under the variables fixed at its root
         learnNogoods(depth);
       }
       for (SearchMonitor m : monitors) {
@@ -349,7 +396,7 @@ public final class FreeSearch {
       if (restarts != null) {
         if (runEndedBySolution && resetRestartsOnSolution) {
           restarts.reset();
-        } else {
+        } else if (!lnsRun) {
           restarts.newLimit();
         }
       }
@@ -426,6 +473,63 @@ public final class FreeSearch {
       return probeTarget;
     }
     return maximize ? Math.max(probeTarget, bound) : Math.min(probeTarget, bound);
+  }
+
+  /**
+   * Runs at a level above the root where the hook or a neighbourhood fixes variables. The root is
+   * propagated first, at its own level: nogoods learned at the last restart prune there, and
+   * constraints that trail their state (tables) would lose what they learn from those prunings if
+   * they first saw them at the run's level, which is removed. A failure there proves that no better
+   * solution exists.
+   */
+  private RunEnd conditionalRun(boolean lnsRun) {
+    if (!propagate()) {
+      store.recentlyFailedConstraint = null;
+      conditionalRun = false;
+      return RunEnd.EXHAUSTED;
+    }
+    store.setLevel(rootLevel + 1);
+    try {
+      if (lnsRun) {
+        lnsRuns++;
+        IntVar[] xs = lns.variables();
+        for (int k : lns.neighbourhood()) {
+          if (xs[k].domain.contains(lns.value(k))) {
+            xs[k].domain.inValue(store.level, xs[k], lns.value(k));
+          }
+        }
+      } else {
+        hook.restart(store, hookStatus);
+      }
+    } catch (FailException _) {
+      store.recentlyFailedConstraint = null;
+      runEndedBySolution = false;
+      runEndedByFailure = false;
+      return RunEnd.EXHAUSTED;
+    }
+    return run();
+  }
+
+  /** Tells the neighbourhoods or the hook how a conditional run ended. */
+  private void endConditionalRun(boolean lnsRun, RunEnd end) {
+    if (lnsRun) {
+      AdaptiveLns.Outcome outcome;
+      if (runSolutions > 0) {
+        outcome = AdaptiveLns.Outcome.IMPROVED;
+      } else if (end == RunEnd.EXHAUSTED) {
+        outcome = AdaptiveLns.Outcome.EXHAUSTED;
+      } else {
+        outcome = AdaptiveLns.Outcome.LIMIT;
+      }
+      lns.outcome(outcome);
+    } else if (hook != null) {
+      // until the first solution the status stays START, as in Chuffed
+      if (runSolutions > 0) {
+        hookStatus = RestartHook.SAT;
+      } else if (solutions > 0) {
+        hookStatus = end == RunEnd.EXHAUSTED ? RestartHook.UNSAT : RestartHook.UNKNOWN;
+      }
+    }
   }
 
   /**
@@ -529,7 +633,7 @@ public final class FreeSearch {
       if (backtrack()) {
         return RunEnd.EXHAUSTED;
       }
-      if (restarts != null && runFailures >= (probing ? probeLimit : restarts.getFailLimit())) {
+      if (restarts != null && runFailures >= runFailLimit()) {
         runEndedByFailure = true;
         return RunEnd.RESTART;
       }
@@ -537,6 +641,13 @@ public final class FreeSearch {
       consistent = rightBranch();
       nextIndex = failedFrame.firstIndex;
     }
+  }
+
+  private long runFailLimit() {
+    if (probing) {
+      return probeLimit;
+    }
+    return conditionalRun && hook == null ? lnsFailLimit : restarts.getFailLimit();
   }
 
   /**
@@ -728,6 +839,13 @@ public final class FreeSearch {
       hasBound = true;
       bound = maximize ? lastCost + 1 : lastCost - 1;
     }
+    runSolutions++;
+    if (lns != null) {
+      lns.solution();
+    }
+    if (hook != null) {
+      hook.solution();
+    }
     for (SearchMonitor m : monitors) {
       m.onSolution(this);
     }
@@ -910,6 +1028,15 @@ public final class FreeSearch {
   }
 
   /**
+   * Returns the number of runs in large neighbourhoods.
+   *
+   * @return the number of runs.
+   */
+  public long getLnsRuns() {
+    return lnsRuns;
+  }
+
+  /**
    * Returns the largest number of decisions on the stack.
    *
    * @return the peak depth.
@@ -953,6 +1080,10 @@ public final class FreeSearch {
     private int maxNogoodLength = RestartNoGoods.DEFAULT_MAX_LENGTH;
     private double probeShare;
     private long probeFailLimit;
+    private AdaptiveLns lns;
+    private double lnsShare;
+    private long lnsFailLimit;
+    private RestartHook hook;
 
     private Builder(Store store, SelectChoicePoint<? extends Var> select) {
       this.store = store;
@@ -1034,6 +1165,39 @@ public final class FreeSearch {
     public Builder nogoodLimits(int max, int maxLength) {
       this.maxNogoods = max;
       this.maxNogoodLength = maxLength;
+      return this;
+    }
+
+    /**
+     * For optimisation with restarts, spends a share of the time in runs in large neighbourhoods of
+     * the best solution: from the first solution on, a run fixes the variables outside a
+     * neighbourhood to their values in the best solution, and ends at its own fail limit or at an
+     * improvement. Such runs learn no nogoods and prove nothing when they explore their whole tree.
+     * A {@link #restartHook(RestartHook)} turns them off.
+     *
+     * @param neighbourhoods the neighbourhoods.
+     * @param share the time of runs in neighbourhoods per unit of time of the other runs.
+     * @param failLimit the failures of one run in a neighbourhood.
+     * @return this builder.
+     */
+    public Builder lns(AdaptiveLns neighbourhoods, double share, long failLimit) {
+      this.lns = neighbourhoods;
+      this.lnsShare = share;
+      this.lnsFailLimit = Math.max(1, failLimit);
+      return this;
+    }
+
+    /**
+     * Runs code at the root of every run, for MiniZinc's on_restart: it fixes variables that depend
+     * on the outcome of the last run and on the best solution. Every run is then conditional on
+     * what the hook fixed, so it learns no nogoods, and the search ends when the hook marks it
+     * complete, when the bound on the objective fails at the root, or at a limit.
+     *
+     * @param restartHook the hook.
+     * @return this builder.
+     */
+    public Builder restartHook(RestartHook restartHook) {
+      this.hook = restartHook;
       return this;
     }
 
@@ -1197,6 +1361,9 @@ public final class FreeSearch {
     public FreeSearch build() {
       if (store == null || select == null) {
         throw new IllegalArgumentException("A store and a branching are required");
+      }
+      if (hook != null && (restarts == null || allSolutions && cost == null)) {
+        throw new IllegalArgumentException("A restart hook needs restarts");
       }
       return new FreeSearch(this);
     }

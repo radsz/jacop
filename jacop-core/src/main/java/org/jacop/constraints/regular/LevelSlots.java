@@ -68,6 +68,16 @@ final class LevelSlots {
 
   private int stamp;
 
+  /**
+   * Returns the value of a slot.
+   *
+   * @param slot the slot
+   * @return the value labelling its edges
+   */
+  int value(int slot) {
+    return value[slot];
+  }
+
   LevelSlots(IntVar[] list, int[] levelStart, int[] value, Class<?> owner) {
     this.list = list;
     this.levelStart = levelStart;

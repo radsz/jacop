@@ -317,6 +317,9 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
+    // the simplex may skip a node, round its multipliers to nothing, or fix the last variables by
+    // its own pruning without being run again; an assignment that breaks a row must still fail
+    checkGround();
     credit = Math.min(credit + WORK_PER_CALL, WORK);
     if (++tick < period || credit < 0 || stalled >= IDLE_RUNS) {
       return;
@@ -344,6 +347,40 @@ public class LinearRelaxation extends Constraint
           idle = 0;
           period *= 2;
         }
+      }
+    }
+    checkGround();
+  }
+
+  // fails when every variable is fixed and a row does not hold
+  private void checkGround() {
+    for (IntVar v : x) {
+      if (!v.singleton()) {
+        return;
+      }
+    }
+    for (int i = 0; i < rows(); i++) {
+      int[] cs = rowColumns[i];
+      long[] ws = rowWeights[i];
+      long sum = 0;
+      try {
+        for (int k = 0; k < cs.length; k++) {
+          sum = Math.addExact(sum, Math.multiplyExact(ws[k], x[cs[k]].value()));
+        }
+      } catch (ArithmeticException overflow) {
+        continue;
+      }
+      boolean above = hasHi[i] && sum > rowHi[i];
+      if (above || hasLo[i] && sum < rowLo[i]) {
+        IntVar[] vars = new IntVar[cs.length];
+        long[] w = new long[cs.length];
+        for (int k = 0; k < cs.length; k++) {
+          vars[k] = x[cs[k]];
+          w[k] = above ? ws[k] : -ws[k];
+        }
+        failureForm = new LinearForm(vars, w, above ? rowHi[i] : -rowLo[i], LinearForm.LE);
+        failures++;
+        throw Store.failException;
       }
     }
   }

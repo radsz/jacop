@@ -42,7 +42,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -1641,6 +1643,84 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgFreeSearchWithoutAnnotationStartsTasksBySetTimes() throws IOException {
+    // a job shop without a search annotation: LCG free search branches on the task starts with set
+    // times (dom/wdeg found a first makespan of 3803 against the optimum 784 on jobshop la17, and
+    // branch and bound needed 273 solutions). The optimum must be the one depth-first search proves
+    Random random = new Random(7);
+    for (int trial = 0; trial < 5; trial++) {
+      int jobs = 4;
+      int machines = 3;
+      int[][] duration = new int[jobs][machines];
+      int[][] machine = new int[jobs][machines];
+      int horizon = 0;
+      for (int j = 0; j < jobs; j++) {
+        List<Integer> order = new ArrayList<>(List.of(0, 1, 2));
+        Collections.shuffle(order, random);
+        for (int k = 0; k < machines; k++) {
+          duration[j][k] = 1 + random.nextInt(6);
+          machine[j][k] = order.get(k);
+          horizon += duration[j][k];
+        }
+      }
+      StringBuilder model = new StringBuilder();
+      for (int j = 0; j < jobs; j++) {
+        for (int k = 0; k < machines; k++) {
+          model.append("var 0..%d: s%d_%d;\n".formatted(horizon, j, k));
+        }
+      }
+      model.append("var 0..%d: obj :: output_var;\n".formatted(horizon));
+      for (int j = 0; j < jobs; j++) {
+        for (int k = 0; k < machines; k++) {
+          String next = k + 1 < machines ? "s%d_%d".formatted(j, k + 1) : "obj";
+          model.append(
+              "constraint int_lin_le([1,-1], [s%d_%d,%s], %d);\n"
+                  .formatted(j, k, next, -duration[j][k]));
+        }
+      }
+      for (int m = 0; m < machines; m++) {
+        List<String> starts = new ArrayList<>();
+        List<String> durations = new ArrayList<>();
+        for (int j = 0; j < jobs; j++) {
+          for (int k = 0; k < machines; k++) {
+            if (machine[j][k] == m) {
+              starts.add("s%d_%d".formatted(j, k));
+              durations.add(Integer.toString(duration[j][k]));
+            }
+          }
+        }
+        model.append(
+            "constraint jacop_cumulative([%s], [%s], [%s], 1);\n"
+                .formatted(
+                    String.join(",", starts),
+                    String.join(",", durations),
+                    String.join(",", Collections.nCopies(starts.size(), "1"))));
+      }
+      model.append("solve minimize obj;\n");
+      String lcg = run(model.toString(), "--lcg", "-f", "-s")[0];
+      String dfs = run(model.toString(), "-s", "--default-search", "input")[0];
+      assertTrue(lcg.contains("=========="), lcg);
+      assertTrue(dfs.contains("=========="), dfs);
+      assertEquals(lastObjective(dfs), lastObjective(lcg), lcg);
+      assertEquals(jobs * machines, statistic(lcg, "lcgSetTimesStarts"), lcg);
+    }
+  }
+
+  private static String lastObjective(String out) {
+    int at = out.lastIndexOf("obj = ");
+    assertTrue(at >= 0, out);
+    return out.substring(at, out.indexOf(';', at));
+  }
+
+  private static long statistic(String out, String name) {
+    String key = "%%%mzn-stat: " + name + "=";
+    int at = out.indexOf(key);
+    assertTrue(at >= 0, out);
+    String rest = out.substring(at + key.length());
+    return Long.parseLong(rest.substring(0, rest.indexOf('\n')).strip());
+  }
+
+  @Test
   void lcgFreeSearchKeepsDefinedBooleansOutOfTheLateTier() throws IOException {
     // a defined 0/1 variable is the truth of a reified constraint, a literal to branch on: on
     // skill-allocation 5d_1, where all but 126 of 12,851 variables are such reifications, the late
@@ -1689,8 +1769,13 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg", "-s")[0];
     String last = out.substring(out.lastIndexOf("x = "));
     assertTrue(last.startsWith("x = 250000;"), out);
-    String literals = out.substring(out.indexOf("lcgAtomLiterals=") + 16);
-    assertTrue(Long.parseLong(literals.substring(0, literals.indexOf('\n')).strip()) < 1000, out);
+    // literals created only to push a bound are released on backtrack: count the live ones
+    assertTrue(stat(out, "lcgAtomLiterals") - stat(out, "lcgLiteralsReleased") < 1000, out);
+  }
+
+  private static long stat(String out, String name) {
+    String from = out.substring(out.indexOf("%%%mzn-stat: " + name + "=") + name.length() + 14);
+    return Long.parseLong(from.substring(0, from.indexOf('\n')).strip());
   }
 
   @Test

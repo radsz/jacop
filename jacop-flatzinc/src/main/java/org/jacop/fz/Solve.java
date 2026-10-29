@@ -44,6 +44,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -52,6 +53,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -104,6 +106,8 @@ import org.jacop.search.SequenceSelect;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
+import org.jacop.search.SmallestMax;
+import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
@@ -112,6 +116,7 @@ import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
+import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -1531,8 +1536,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     try {
       if (dictionary.onRestart != null) {
-        if (!startOnRestart()) {
+        // free search runs the built-ins at the root of its own runs, which the annotation's
+        // restarts limit
+        boolean freeRuns = restartCalculator != null && useFreeSearchEngine(costVar);
+        if (!startOnRestart(freeRuns)) {
           return false;
+        }
+        if (freeRuns) {
+          return executeFreeSearch(costVar);
         }
         if (restartCalculator != null) {
           // the runs of the restart search are where on_restart fixes its variables
@@ -1558,12 +1569,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Prepares MiniZinc's on_restart built-ins before the search. Without restarts there is a single
    * run, so their variables are fixed for good, as in the first run of a restart search.
    *
+   * @param runs true when the search runs the built-ins at the root of each of its runs.
    * @return false if fixing them fails.
    */
-  private boolean startOnRestart() {
+  private boolean startOnRestart(boolean runs) {
     OnRestart onRestart = dictionary.onRestart;
     onRestart.impose(store);
-    if (restartCalculator != null) {
+    if (runs || restartCalculator != null) {
       return true;
     }
     try {
@@ -1691,6 +1703,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setLateVariables(late);
     }
     if (free) {
+      // turns: activity branching changes between the two orders at each restart. Each order wins
+      // clearly on some models (smelt, java-routing and jobshop swv07 without, community-detection
+      // dolphin and mario with), and no feature of the model tells which, neither the kinds of its
+      // output and annotation variables nor the share of 0/1 variables. On mznbench (60 s,
+      // lcg-split=0, two runs each) turns did better than Booleans first on 23 instances and worse
+      // on 10 in both runs. Not the default yet: with lcg-split=40, the core-guided phase stalls on
+      // celar graph05 without Booleans first (proved in 13 s with them, not in 60 s in turns)
+      String booleansFirst = options.freeConfig("lcg-booleans-first", "");
+      switch (booleansFirst) {
+        case "on" -> lcg.setBooleansFirst(true);
+        case "off" -> lcg.setBooleansFirst(false);
+        case "turns" -> lcg.setBooleansFirstTurns(true);
+        case "" -> {}
+        default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
+      }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
       // core-guided search for a sum objective before branch and bound: its share of the time,
@@ -1702,6 +1729,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
+      // a short core-guided probe, then branch and bound for a share of the time, then the rest
+      // of the core-guided phase: easy models need no core-guided phase
+      lcg.setCoreDelay(
+          Double.parseDouble(options.freeConfig("lcg-core-delay", "0.05")),
+          10_000,
+          Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
+    }
+    AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
+    if (lns != null) {
+      // propagating the store between solver calls would pass the solver's view of the root
+      lns.disable(AdaptiveLns.Kind.PROPAGATION);
+      lcg.setLns(
+          lns,
+          Double.parseDouble(options.freeConfig("lns-share", "3")),
+          Long.parseLong(options.freeConfig("lns-conflicts", "200")));
     }
     if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
       // the annotation is followed down each branch, as without learning
@@ -1714,14 +1756,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return numberSolutions > 0;
   }
 
+  // the start variables lcgDefaultSelect gave to set times, for the statistics
+  private int setTimesStarts;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
-   * annotation: dom/wdeg on the default search variables, smallest value first. The store's
-   * constraints fail under LCG too, so their weights grow as without learning. Activity alone
-   * misses first solutions this finds, for example on cutstock, where each item's demand is a sum
-   * over hundreds of variables.
+   * annotation. A model with cumulative or unary resources gets set times on the start variables of
+   * its tasks: the task that can start first is started as early as it can. Any other model gets
+   * dom/wdeg on the default search variables, smallest value first. The store's constraints fail
+   * under LCG too, so their weights grow as without learning. Activity alone misses first solutions
+   * this finds, for example on cutstock, where each item's demand is a sum over hundreds of
+   * variables.
    */
   private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+    IntVar[] starts = resourceStarts();
+    setTimesStarts = starts.length;
+    if (starts.length > 0) {
+      // a scheduling model: the task that can start first starts as early as it can (the ties go
+      // to the one that must start first), the schedule generation of set times; the activity
+      // completes the assignment. dom/wdeg on jobshop la17 reaches a first makespan of 3803 against
+      // the optimum 784, and branch and bound then needs 273 solutions to prove it
+      SimpleSelect<IntVar> select =
+          new SimpleSelect<>(starts, new SmallestMin<>(), new SmallestMax<>(), new IndomainMin<>());
+      select.inputOrderTieBreaking = false;
+      return select;
+    }
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     List<IntVar> vars = new ArrayList<>();
@@ -1741,6 +1800,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // ties go to the first variable met, without the input-order lookups per tie
     select.inputOrderTieBreaking = false;
     return select;
+  }
+
+  /**
+   * Returns the start variables, not yet fixed, of the cumulative and unary resource constraints of
+   * the store, each once, in the order the store meets them.
+   */
+  private IntVar[] resourceStarts() {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> starts = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> ordered = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof CumulativeBasic resource && seen.add(c)) {
+          for (IntVar x : resource.tasks()[0]) {
+            if (!x.singleton() && starts.add(x)) {
+              ordered.add(x);
+            }
+          }
+        }
+      }
+    }
+    return ordered.toArray(new IntVar[0]);
   }
 
   private void printLcgStatistics(boolean interrupted) {
@@ -1787,8 +1868,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(" generic=")
           .append(n[4])
           .append(" avgAtoms=")
-          .append(nf.format(n[3] == 0 ? 0 : (double) n[5] / n[3]))
-          .append('\n');
+          .append(nf.format(n[3] == 0 ? 0 : (double) n[5] / n[3]));
+      if (n[6] + n[7] > 0) {
+        perClass.append(" replayed=").append(n[6]).append('/').append(n[7]);
+      }
+      perClass.append('\n');
     }
     IO.print(
         "%%%mzn-stat: lcgAtoms="
@@ -1797,6 +1881,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.atomLiterals
             + "\n%%%mzn-stat: lcgAtomLiteralsLearnt="
             + lcg.atomLiteralsLearnt
+            + "\n%%%mzn-stat: lcgLiteralsReleased="
+            + lcg.literalsReleased
             + "\n%%%mzn-stat: lcgExplanations="
             + reasons
             + "\n%%%mzn-stat: lcgGenericShare="
@@ -1809,8 +1895,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
+            + "\n%%%mzn-stat: lcgBooleanVariables="
+            + lcg.booleanVariables
+            + "\n%%%mzn-stat: lcgWideVariables="
+            + lcg.wideVariables
+            + "\n%%%mzn-stat: lcgBooleansFirst="
+            + lcg.booleansFirst()
             + "\n%%%mzn-stat: lcgLateVariables="
             + lcg.lateVariables
+            + "\n%%%mzn-stat: lcgSetTimesStarts="
+            + setTimesStarts
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
@@ -1820,6 +1914,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: lcgSemanticUips="
             + lcg.sat().semanticUips
             + coreStatistics()
+            + lnsStatistics(lcg.lns())
             + "\n%%%mzn-stat-end\n"
             + perClass);
   }
@@ -1835,8 +1930,48 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.coreLiterals
         + "\n%%%mzn-stat: lcgCoreHardened="
         + core.hardened
+        + "\n%%%mzn-stat: lcgCoreAmoGroups="
+        + core.amoGroups
+        + "\n%%%mzn-stat: lcgCoreAmoBound="
+        + core.amoBound
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
+  }
+
+  /**
+   * The neighbourhoods of large neighbourhood search over the decision variables of the model, or
+   * null when there is no integer objective or --free-config lns=0 turns it off.
+   */
+  private AdaptiveLns lnsNeighbourhoods(Var costVar) {
+    if (!(costVar instanceof IntVar cost) || !"1".equals(options.freeConfig("lns", "1"))) {
+      return null;
+    }
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    LinkedHashSet<IntVar> vars = new LinkedHashSet<>(Arrays.asList(searchVars.getIntVars()));
+    vars.addAll(Arrays.asList(searchVars.getBoolVars()));
+    vars.remove(cost);
+    if (objectiveVariable instanceof IntVar o) {
+      vars.remove(o);
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    return new AdaptiveLns(
+        store, vars.toArray(new IntVar[0]), cost, new Random(Store.getRandom().nextLong()));
+  }
+
+  private static String lnsStatistics(AdaptiveLns lns) {
+    if (lns == null) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lnsRuns="
+        + lns.runs()
+        + "\n%%%mzn-stat: lnsImproved="
+        + lns.improved()
+        + "\n%%%mzn-stat: lnsNeighbourhoods=\""
+        + lns.statistics()
+        + "\"";
   }
 
   private boolean useFreeSearchEngine(Var costVar) {
@@ -1872,6 +2007,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
   private int flushEvery;
 
+  // the neighbourhoods of large neighbourhood search in the FreeSearch engine, or null
+  private AdaptiveLns freeLns;
+
   /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
@@ -1892,7 +2030,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // restarts. Satisfaction keeps long runs, which puzzles and proofs of unsatisfiability need.
     boolean optimisation = costVar != null;
     Calculator restarts = restartCalculator;
-    if (!options.restartGiven()) {
+    // on_restart keeps the restarts of the model, whose runs its built-ins restrict
+    boolean onRestart = dictionary.onRestart != null && restartCalculator != null;
+    if (!options.restartGiven() && !onRestart) {
       int scale = Integer.parseInt(options.freeConfig("scale", optimisation ? "10" : "100"));
       restarts =
           switch (options.freeConfig("restarts", "geometric")) {
@@ -1997,6 +2137,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
+    }
+    if (onRestart) {
+      builder.restartHook(dictionary.onRestart);
+    } else if (restarts != null && !allSolutions) {
+      freeLns = lnsNeighbourhoods(costVar);
+      if (freeLns != null) {
+        builder.lns(
+            freeLns,
+            Double.parseDouble(options.freeConfig("lns-share", "1")),
+            Long.parseLong(options.freeConfig("lns-fails", "100")));
+      }
     }
     freeSearch = builder.build();
     if (worker != null) {
@@ -2958,6 +3109,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     + "\n%%%mzn-stat: objectiveProbeFailures="
                     + nf.format(freeSearch.getProbeFailures())
                 : "")
+            + lnsStatistics(freeLns)
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {
