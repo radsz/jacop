@@ -127,6 +127,7 @@ public class BooleanVar extends IntVar {
     id = name;
     domain = dom;
     domain.stamp = 0;
+    refreshBounds();
     this.store = store;
     // the return code is ignored as the variable is not stored within store.vars;
     store.putVariable(this);
@@ -213,6 +214,7 @@ public class BooleanVar extends IntVar {
   public void addDom(Domain dom) {
 
     domain.addDom((IntDomain) dom);
+    refreshBounds();
   }
 
   /**

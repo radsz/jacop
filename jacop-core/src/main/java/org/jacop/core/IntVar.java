@@ -43,8 +43,18 @@ import org.jacop.constraints.Constraint;
  */
 public class IntVar extends Var {
 
-  /** It stores pointer to a current domain, which has stamp equal to store stamp. */
+  /**
+   * It stores pointer to a current domain, which has stamp equal to store stamp. A change of the
+   * domain in place other than through its in methods, {@link #addDom} or {@link #setDomain} must
+   * be followed by {@link #refreshBounds()}.
+   */
   public IntDomain domain;
+
+  // the bounds of domain, refreshed on every change of it, so that min() and max() read a field of
+  // the variable instead of the domain (Gecode's IntVarImp keeps them the same way); an empty
+  // domain has lb > ub
+  private int lb = Integer.MAX_VALUE;
+  private int ub = Integer.MIN_VALUE;
 
   /*
   public SatCpBridge satBridge;
@@ -139,6 +149,7 @@ public class IntVar extends Var {
     id = name;
     domain = dom;
     domain.stamp = 0;
+    refreshBounds();
     storeIndex = store.putVariable(this);
     this.store = store;
   }
@@ -154,6 +165,7 @@ public class IntVar extends Var {
   public void addDom(int min, int max) {
     widenDomainFor(min, max);
     domain.unionAdapt(min, max);
+    refreshBounds();
   }
 
   /**
@@ -167,6 +179,7 @@ public class IntVar extends Var {
       widenDomainFor(dom.min(), dom.max());
     }
     domain.addDom(dom);
+    refreshBounds();
   }
 
   /**
@@ -209,6 +222,7 @@ public class IntVar extends Var {
    */
   public void setDomain(int min, int max) {
     domain.setDomain(min, max);
+    refreshBounds();
   }
 
   /**
@@ -219,6 +233,61 @@ public class IntVar extends Var {
    */
   public void setDomain(IntDomain dom) {
     domain.setDomain(dom);
+    refreshBounds();
+  }
+
+  /**
+   * Reads the bounds of the domain again. The domain classes and IntVar call it after every change
+   * of the domain; code that changes the domain of a variable in another way, after the variable
+   * was created, calls it too.
+   */
+  public final void refreshBounds() {
+    IntDomain d = domain;
+    if (d.isEmpty()) {
+      lb = Integer.MAX_VALUE;
+      ub = Integer.MIN_VALUE;
+    } else {
+      lb = d.min();
+      ub = d.max();
+    }
+  }
+
+  // sets the bounds kept for a domain restored in place on backtracking, which does not visit the
+  // variable
+  void setBounds(int min, int max) {
+    lb = min;
+    ub = max;
+  }
+
+  // reads the bounds of a domain that is not empty (after a change, or restored on backtracking);
+  // a test per domain class keeps each call monomorphic, so the JIT can inline it
+  private void readBounds() {
+    IntDomain d = domain;
+    if (d instanceof IntervalDomain interval) {
+      lb = interval.min();
+      ub = interval.max();
+    } else if (d instanceof SmallDenseDomain smallDense) {
+      lb = smallDense.min();
+      ub = smallDense.max();
+    } else if (d instanceof LazyBitSetDomain lazy) {
+      lb = lazy.min();
+      ub = lazy.max();
+    } else if (d instanceof BoundDomain bound) {
+      lb = bound.min();
+      ub = bound.max();
+    } else {
+      lb = d.min();
+      ub = d.max();
+    }
+  }
+
+  // with asserts enabled, checks that the bounds are those of the domain
+  private void checkBounds() {
+    IntDomain d = domain;
+    if (d.isEmpty() ? lb <= ub : lb != d.min() || ub != d.max()) {
+      throw new IllegalStateException(
+          "Cached bounds " + lb + ".." + ub + " of " + id + " differ from its domain " + d);
+    }
   }
 
   /**
@@ -234,7 +303,7 @@ public class IntVar extends Var {
           String.valueOf("Request for a value of not grounded variable " + this));
     }
 
-    return domain.min();
+    return min();
   }
 
   /**
@@ -244,7 +313,10 @@ public class IntVar extends Var {
    * @return true if a variable domain is singleton and it is equal to the specified value.
    */
   public boolean singleton(int val) {
-    return domain.singleton(val);
+    if (ASSERTS_ENABLED) {
+      checkBounds();
+    }
+    return lb == val && ub == val;
   }
 
   /**
@@ -253,18 +325,10 @@ public class IntVar extends Var {
    * @return true if the variable domain is a singleton, false otherwise.
    */
   public boolean singleton() {
-    IntDomain d = domain;
-    // a test per domain class keeps each call monomorphic, so the JIT can inline it
-    if (d instanceof IntervalDomain interval) {
-      return interval.singleton();
+    if (ASSERTS_ENABLED) {
+      checkBounds();
     }
-    if (d instanceof SmallDenseDomain smallDense) {
-      return smallDense.singleton();
-    }
-    if (d instanceof LazyBitSetDomain lazy) {
-      return lazy.singleton();
-    }
-    return d.singleton();
+    return lb == ub;
   }
 
   /**
@@ -273,18 +337,10 @@ public class IntVar extends Var {
    * @return the maximum value belonging to the domain.
    */
   public int max() {
-    IntDomain d = domain;
-    // a test per domain class keeps each call monomorphic, so the JIT can inline it
-    if (d instanceof IntervalDomain interval) {
-      return interval.max();
+    if (ASSERTS_ENABLED) {
+      checkBounds();
     }
-    if (d instanceof SmallDenseDomain smallDense) {
-      return smallDense.max();
-    }
-    if (d instanceof LazyBitSetDomain lazy) {
-      return lazy.max();
-    }
-    return d.max();
+    return ub;
   }
 
   /**
@@ -293,18 +349,10 @@ public class IntVar extends Var {
    * @return the minimum value beloning to the domain.
    */
   public int min() {
-    IntDomain d = domain;
-    // a test per domain class keeps each call monomorphic, so the JIT can inline it
-    if (d instanceof IntervalDomain interval) {
-      return interval.min();
+    if (ASSERTS_ENABLED) {
+      checkBounds();
     }
-    if (d instanceof SmallDenseDomain smallDense) {
-      return smallDense.min();
-    }
-    if (d instanceof LazyBitSetDomain lazy) {
-      return lazy.min();
-    }
-    return d.min();
+    return lb;
   }
 
   /**
@@ -384,6 +432,7 @@ public class IntVar extends Var {
    */
   public void remove(int removedLevel) {
     domain.removeLevel(removedLevel, this);
+    readBounds();
   }
 
   /**
@@ -404,6 +453,11 @@ public class IntVar extends Var {
    * @param event the type of the change (GROUND, BOUND, ANY).
    */
   public void domainHasChanged(int event) {
+
+    // an ANY event leaves the bounds as they were
+    if (event != IntDomain.ANY) {
+      readBounds();
+    }
 
     if (ASSERTS_ENABLED
         && !((event == IntDomain.ANY && !singleton())

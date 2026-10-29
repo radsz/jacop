@@ -6959,7 +6959,7 @@ class SingleConstraintTest extends TestHelper {
       for (int i = 0; i < n; i++) {
         x[i] = randomVar(store, "x" + i, -1, Math.min(n, 4), random);
         if (offset != 0 && random.nextBoolean()) {
-          x[i].domain.unionAdapt(offset, offset);
+          x[i].addDom(offset, offset);
         }
       }
       boolean zero = run % 3 == 0;
@@ -7293,7 +7293,9 @@ class SingleConstraintTest extends TestHelper {
     IntVar x = new IntVar(store, "x", 9, 9);
     IntVar y = new IntVar(store, "y", -3, 3);
     y.domain.subtractAdapt(0);
+    y.refreshBounds();
     y.domain.subtractAdapt(2);
+    y.refreshBounds();
     IntVar z = new IntVar(store, "z", -1, -1);
     z.addDom(1, 6);
     z.addDom(9, 9);

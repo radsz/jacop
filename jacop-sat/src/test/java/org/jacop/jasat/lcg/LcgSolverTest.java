@@ -125,6 +125,7 @@ class LcgSolverTest {
     IntVar x = new IntVar(store, name, rnd.nextInt(2) - 1, 3 + rnd.nextInt(3));
     if (rnd.nextInt(3) == 0) {
       x.domain.subtractAdapt(x.min() + 1 + rnd.nextInt(x.max() - x.min() - 1));
+      x.refreshBounds();
     }
     return x;
   }
@@ -503,6 +504,7 @@ class LcgSolverTest {
       for (int v = 0; v < 150; v++) {
         if (rnd.nextInt(5) == 0) {
           x[0].domain.subtractAdapt(v);
+          x[0].refreshBounds();
         }
       }
       for (int i = 1; i < x.length; i++) {
@@ -566,6 +568,7 @@ class LcgSolverTest {
         x[i] = new IntVar(store, "o" + i, 0, side);
         if (rnd.nextInt(4) == 0) {
           x[i].domain.subtractAdapt(rnd.nextInt(side + 1));
+          x[i].refreshBounds();
         }
       }
       for (int i = 2 * n; i < 4 * n; i++) {
@@ -670,6 +673,7 @@ class LcgSolverTest {
                   store, "b" + k, minBin - rnd.nextInt(2), minBin + bins - 1 + rnd.nextInt(2));
           if (rnd.nextInt(3) == 0) {
             b.domain.subtractAdapt(b.min() + rnd.nextInt(b.max() - b.min() + 1));
+            b.refreshBounds();
           }
           at[k] = distinct.size();
           distinct.add(b);
@@ -687,6 +691,7 @@ class LcgSolverTest {
         load[i] = new IntVar(store, "l" + i, lo, lo + 2 + rnd.nextInt(12));
         for (int h = rnd.nextInt(3); h > 0 && load[i].getSize() > 2; h--) {
           load[i].domain.subtractAdapt(load[i].min() + 1 + rnd.nextInt(load[i].getSize() - 2));
+          load[i].refreshBounds();
         }
       }
       List<Relation> relations = new ArrayList<>();
@@ -780,6 +785,7 @@ class LcgSolverTest {
         s[i] = new IntVar(store, "s" + i, rnd.nextInt(2), horizon);
         if (rnd.nextInt(4) == 0) {
           s[i].domain.subtractAdapt(s[i].min() + 1 + rnd.nextInt(s[i].max() - s[i].min() - 1));
+          s[i].refreshBounds();
         }
         all.add(s[i]);
       }
@@ -1271,6 +1277,7 @@ class LcgSolverTest {
           for (int w = 1; w <= n; w++) {
             if (w != i + 1 && rnd.nextInt(3) == 0) {
               x[i].domain.subtractAdapt(w);
+              x[i].refreshBounds();
             }
           }
         }
@@ -1375,6 +1382,7 @@ class LcgSolverTest {
         for (int w = 0; w < n; w++) {
           if (w != i && rnd.nextInt(4) == 0) {
             x[i].domain.subtractAdapt(offset + w);
+            x[i].refreshBounds();
           }
         }
       }
@@ -1490,6 +1498,7 @@ class LcgSolverTest {
           int v = x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1);
           if (x[i].getSize() > 2) {
             x[i].domain.subtractAdapt(v);
+            x[i].refreshBounds();
           }
         }
       }
@@ -2181,6 +2190,7 @@ class LcgSolverTest {
         x[i] = new IntVar(store, "x" + i, -1, 3);
       }
       x[2].domain.unionAdapt(4, 4);
+      x[2].refreshBounds();
       x[4] = new IntVar(store, "x4", 1, 3);
       x[5] = new IntVar(store, "x5", 1, 3);
       IntVar objective = new IntVar(store, "obj", -30, 30);
@@ -2219,12 +2229,15 @@ class LcgSolverTest {
     Store store = new Store();
     IntVar x0 = new IntVar(store, "x0", 1, 1);
     x0.domain.unionAdapt(3, 4);
+    x0.refreshBounds();
     IntVar x1 = new IntVar(store, "x1", -1, 4);
     IntVar x2 = new IntVar(store, "x2", -1, 0);
     x2.domain.unionAdapt(2, 2);
+    x2.refreshBounds();
     IntVar x3 = new IntVar(store, "x3", -1, 3);
     IntVar x4 = new IntVar(store, "x4", 1, 1);
     x4.domain.unionAdapt(3, 3);
+    x4.refreshBounds();
     IntVar x5 = new IntVar(store, "x5", 1, 2);
     BooleanVar b0 = new BooleanVar(store, "b0");
     BooleanVar b1 = new BooleanVar(store, "b1");
@@ -2568,6 +2581,7 @@ class LcgSolverTest {
     IntVar y = new IntVar(store, "y", new IntervalDomain(0, 0));
     for (int v = 250_000; v <= 1_000_000; v += 250_000) {
       y.domain.unionAdapt(v, v);
+      y.refreshBounds();
     }
     BooleanVar b = new BooleanVar(store, "b");
     IntVar cost = new IntVar(store, "cost", 0, 3_000_000);
