@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -53,7 +55,7 @@ import org.jacop.core.TimeStamp;
  */
 
 @Slf4j
-class CumulativePrimary extends Constraint {
+class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary> {
 
   private static final boolean DEBUG = false;
   private static final boolean DEBUG_NARR = false;
@@ -445,5 +447,10 @@ class CumulativePrimary extends Constraint {
       activeMap[i] = activeMap[j];
       activeMap[j] = tmp;
     }
+  }
+
+  @Override
+  public CumulativePrimary copy(VarMap map) {
+    return new CumulativePrimary(map.get(start), dur, res, map.get(limit));
   }
 }

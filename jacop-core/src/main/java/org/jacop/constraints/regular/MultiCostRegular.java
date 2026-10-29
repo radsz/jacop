@@ -49,6 +49,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * MultiCostRegular constraint (Menana and Demassey, "Sequencing and counting with the
@@ -90,7 +93,11 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class MultiCostRegular extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<MultiCostRegular> {
+    implements UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Copyable<MultiCostRegular>,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -986,6 +993,45 @@ public class MultiCostRegular extends Constraint
               list, transition, firstValue, initialState, finalStates, costs[r], cost[r]));
     }
     return result;
+  }
+
+  // explained by the shortest and longest paths of single resources; the pruning of the Lagrangian
+  // relaxation, which no single resource implies, keeps the generic reason
+  private CostPathExplanation costPaths(AtomicTrail trail, int position) {
+    int m = edgeStart[list.length];
+    int[] label = new int[m];
+    int[][] edgeCosts = new int[resources][m];
+    for (int e = 0; e < m; e++) {
+      label[e] = slots.value(edgeSlot[e]);
+      for (int r = 0; r < resources; r++) {
+        edgeCosts[r][e] = edgeCost[e * resources + r];
+      }
+    }
+    return new CostPathExplanation(
+        trail,
+        position,
+        list,
+        levelNodeStart,
+        edgeStart,
+        edgeSource,
+        edgeTarget,
+        label,
+        edgeCosts,
+        cost);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == MultiCostRegular.class
+        && edgeSource != null
+        && costPaths(trail, entry).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == MultiCostRegular.class
+        && edgeSource != null
+        && costPaths(trail, trail.size()).explainFailure(out);
   }
 
   @Override

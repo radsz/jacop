@@ -1787,8 +1787,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           .append(" generic=")
           .append(n[4])
           .append(" avgAtoms=")
-          .append(nf.format(n[3] == 0 ? 0 : (double) n[5] / n[3]))
-          .append('\n');
+          .append(nf.format(n[3] == 0 ? 0 : (double) n[5] / n[3]));
+      if (n[6] + n[7] > 0) {
+        perClass.append(" replayed=").append(n[6]).append('/').append(n[7]);
+      }
+      perClass.append('\n');
     }
     IO.print(
         "%%%mzn-stat: lcgAtoms="

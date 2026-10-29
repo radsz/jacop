@@ -38,6 +38,9 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * CountValues constraint implements the counting over numbers of occurrences of a given vector of
@@ -46,7 +49,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class CountValues extends AbstractCountValues implements Copyable<CountValues> {
+public class CountValues extends AbstractCountValues implements Copyable<CountValues>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -192,6 +195,26 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
     }
 
     return true;
+  }
+
+  // the flow network over the values in increasing order, the rest counted by counterRest
+  private CardinalityExplanation.Network network() {
+    IntVar[] sortedCounter = new IntVar[sortedValues.length];
+    for (int k = 0; k < sortedValues.length; k++) {
+      sortedCounter[k] = counter[indexOfSorted[k]];
+    }
+    return new CardinalityExplanation.Network(
+        list, sortedValues, sortedCounter, null, null, true, counterRest);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == CountValues.class && network().explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == CountValues.class && network().explainFailure(trail, out);
   }
 
   @Override

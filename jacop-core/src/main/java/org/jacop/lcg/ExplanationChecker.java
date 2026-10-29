@@ -30,14 +30,10 @@
 
 package org.jacop.lcg;
 
-import java.util.IdentityHashMap;
 import java.util.Map;
-import org.jacop.api.Copyable;
-import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -110,46 +106,20 @@ public final class ExplanationChecker {
   }
 
   private String check(Constraint c, int entry, EntryList reason) {
-    if (!Copyable.canCopy(c)) {
+    ScratchCopy copy = ScratchCopy.of(trail, c);
+    if (copy == null) {
       skipped++;
       return null;
     }
-    Store scratch = new Store();
-    Map<Var, Var> copies = new IdentityHashMap<>();
-    for (Var v : c.arguments()) {
-      if (!copy(scratch, v, copies)) {
-        skipped++;
-        return null;
-      }
-    }
-    VarMap map =
-        new VarMap() {
-          @Override
-          public Store target() {
-            return scratch;
-          }
-
-          @Override
-          @SuppressWarnings("unchecked")
-          public <V extends Var> V get(V v) {
-            Var copy = copies.get(v);
-            if (copy == null) {
-              throw new IllegalArgumentException(v + " is not a variable of the constraint");
-            }
-            return (V) copy;
-          }
-        };
+    Store scratch = copy.store;
     checked++;
     try {
       for (int k = 0; k < reason.size(); k++) {
-        int f = reason.get(k);
-        IntVar y = (IntVar) copies.get(trail.variable(f));
-        if (y == null) {
+        if (!copy.impose(reason.get(k))) {
           return describe(c, entry, reason, "has an atom on a variable outside the constraint");
         }
-        impose(scratch, y, trail.kind(f), trail.value(f));
       }
-      scratch.impose(((Copyable<?>) c).copy(map));
+      copy.imposeCopy(c);
       if (!scratch.consistency()) {
         return null;
       }
@@ -157,19 +127,12 @@ public final class ExplanationChecker {
       return null;
     }
     if (entry < 0) {
-      return counterexample(scratch, copies, c, entry, reason);
+      return counterexample(scratch, copy.copies, c, entry, reason);
     }
-    IntVar y = (IntVar) copies.get(trail.variable(entry));
-    if (y == null) {
-      return describe(c, entry, reason, "explains an atom on a variable outside the constraint");
-    }
-    int v = trail.value(entry);
     try {
       // the propagator may be weaker than the explanation: look for a solution with the atom false
-      switch (trail.kind(entry)) {
-        case AtomicTrail.GE -> y.domain.inMax(scratch.level, y, v - 1);
-        case AtomicTrail.LE -> y.domain.inMin(scratch.level, y, v + 1);
-        default -> y.domain.in(scratch.level, y, v, v);
+      if (!copy.imposeNegation(entry)) {
+        return describe(c, entry, reason, "explains an atom on a variable outside the constraint");
       }
       if (!scratch.consistency()) {
         return null;
@@ -177,7 +140,7 @@ public final class ExplanationChecker {
     } catch (FailException _) {
       return null;
     }
-    return counterexample(scratch, copies, c, entry, reason);
+    return counterexample(scratch, copy.copies, c, entry, reason);
   }
 
   /**
@@ -214,60 +177,6 @@ public final class ExplanationChecker {
       undecided++;
     }
     return null;
-  }
-
-  /**
-   * Copies a variable of the constraint into the scratch store: an integer variable with its
-   * initial domain, or a {@link Mirrored} one tied to copies of its mirror, which then hold its
-   * atoms.
-   *
-   * @return false when the variable cannot be copied
-   */
-  private boolean copy(Store scratch, Var v, Map<Var, Var> copies) {
-    if (copies.containsKey(v)) {
-      return true;
-    }
-    if (v instanceof IntVar x) {
-      IntVar copy = copy(scratch, x);
-      copies.put(v, copy);
-      return copy != null;
-    }
-    if (!(v instanceof Mirrored m) || m.mirror() == null) {
-      return false;
-    }
-    IntVar[] mirror = m.mirror();
-    IntVar[] mirrorCopies = new IntVar[mirror.length];
-    for (int i = 0; i < mirror.length; i++) {
-      if (!copy(scratch, mirror[i], copies)) {
-        return false;
-      }
-      mirrorCopies[i] = (IntVar) copies.get(mirror[i]);
-    }
-    copies.put(v, m.copyMirrored(scratch, mirrorCopies));
-    return true;
-  }
-
-  private IntVar copy(Store scratch, IntVar x) {
-    IntDomain root = trail.rootDomain(x);
-    if (x.getClass() == IntVar.class) {
-      return new IntVar(scratch, x.id(), root.cloneLight());
-    }
-    if (x.getClass() == BooleanVar.class) {
-      return new BooleanVar(scratch, x.id(), root.min(), root.max());
-    }
-    return null;
-  }
-
-  private static void impose(Store scratch, IntVar y, int kind, int v) {
-    switch (kind) {
-      case AtomicTrail.GE -> y.domain.inMin(scratch.level, y, v);
-      case AtomicTrail.LE -> y.domain.inMax(scratch.level, y, v);
-      default -> {
-        if (y.domain.contains(v)) {
-          y.domain.inComplement(scratch.level, y, v);
-        }
-      }
-    }
   }
 
   private String describe(Constraint c, int entry, EntryList reason, String problem) {

@@ -60,6 +60,9 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
+import org.jacop.constraints.GCC;
+import org.jacop.constraints.GlobalCardinality;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
@@ -85,6 +88,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
@@ -863,6 +867,288 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * Random global cardinality and count constraints, with fixed bounds or with counters that are
+   * variables of the problem (counted themselves or not), against brute force. Their explanations
+   * are cuts of the flow network, which check that the negated atom makes it infeasible.
+   */
+  @Test
+  void cardinalityAgreesWithBruteForce() {
+    Random rnd = new Random(43);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(cardinality(x, rnd));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"GCC", "GlobalCardinality", "CountValues"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          own += counts[0] - counts[1] + counts[3] - counts[4];
+          generic += counts[1] + counts[4];
+        }
+      }
+    }
+    System.out.printf(
+        "cardinality: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(1000);
+    assertThat(own).isGreaterThan(50 * generic);
+  }
+
+  /**
+   * Random knapsacks over the variables, with a capacity and a profit that are variables of the
+   * problem, against brute force. Knapsack explains the bounds of its linear relaxation by
+   * surrogate rows, which are checked to imply the atom; prunings of its dynamic program keep the
+   * generic reason.
+   */
+  @Test
+  void knapsackAgreesWithBruteForce() {
+    Random rnd = new Random(47);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      int k = 3 + rnd.nextInt(2);
+      int[] w = new int[k];
+      int[] p = new int[k];
+      IntVar[] q = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        w[i] = 1 + rnd.nextInt(4);
+        p[i] = 1 + rnd.nextInt(4);
+        q[i] = x[i];
+        // quantities are not negative
+        q[i].domain.in(store.level, q[i], 0, Math.min(q[i].max(), 1 + rnd.nextInt(2)));
+      }
+      int c = k;
+      int f = k + 1;
+      for (IntVar v : new IntVar[] {x[c], x[f]}) {
+        v.domain.in(store.level, v, 0, v.max() + 3 * rnd.nextInt(3));
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Knapsack(p, w, q, x[c], x[f]),
+              t -> {
+                long weight = 0;
+                long profit = 0;
+                for (int i = 0; i < k; i++) {
+                  weight += (long) w[i] * t[i];
+                  profit += (long) p[i] * t[i];
+                }
+                return weight == t[c] && profit == t[f];
+              }));
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Knapsack");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "knapsack: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(100);
+  }
+
+  /**
+   * A constraint without an explanation of its own, {@link IncreasingSum}, is explained by
+   * replaying a copy of it: the answers agree with brute force, every reason is checked, and the
+   * reasons come from the replay rather than the generic reason.
+   */
+  @Test
+  void replayedExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(53);
+    int sat = 0;
+    int unsat = 0;
+    long replayed = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      boolean strict = rnd.nextBoolean();
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new IncreasingSum(new IntVar[] {x[0], x[1], x[2]}, x[3], strict),
+              t ->
+                  (strict ? t[0] < t[1] && t[1] < t[2] : t[0] <= t[1] && t[1] <= t[2])
+                      && t[0] + t[1] + t[2] == t[3]));
+      relations.add(relation(x, rnd));
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("IncreasingSum");
+      if (counts != null) {
+        replayed += counts[6] + counts[7];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "replay: %d sat, %d unsat, %d replayed and %d generic explanations%n",
+        sat, unsat, replayed, generic);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(replayed).isGreaterThan(100);
+    assertThat(generic).isLessThan(replayed / 10);
+  }
+
+  // a cardinality constraint over 3 or 4 of the variables
+  private static Relation cardinality(IntVar[] x, Random rnd) {
+    int n = x.length;
+    int[] at = new int[3 + rnd.nextInt(2)];
+    for (int k = 0; k < at.length; k++) {
+      at[k] = pick(rnd, n, Arrays.copyOf(at, k));
+    }
+    IntVar[] q = new IntVar[at.length];
+    for (int k = 0; k < at.length; k++) {
+      q[k] = x[at[k]];
+    }
+    int kind = rnd.nextInt(4);
+    int[] values =
+        kind == 2
+            ? new int[] {2, 0, 3}
+            : kind == 3 ? new int[] {-1, 0, 1, 2, 3} : new int[] {0, 1, 2, 3};
+    // counters: variables of the problem, possibly counted too
+    int[] counterAt = new int[values.length];
+    IntVar[] counters = new IntVar[values.length];
+    for (int k = 0; k < values.length; k++) {
+      counterAt[k] = rnd.nextInt(n);
+      counters[k] = x[counterAt[k]];
+    }
+    int[] low = new int[values.length];
+    int[] up = new int[values.length];
+    for (int k = 0; k < values.length; k++) {
+      low[k] = rnd.nextInt(2);
+      up[k] = low[k] + rnd.nextInt(3);
+    }
+    boolean fixed = kind == 0;
+    boolean closed = kind == 3;
+    Constraint constraint =
+        switch (kind) {
+          case 0 -> new GlobalCardinality(q, values, low, up);
+          case 1 -> new GlobalCardinality(q, values, counters);
+          case 2 -> new CountValues(q, counters, values);
+          default -> new GCC(q, counters, -1);
+        };
+    return new Relation(
+        constraint,
+        t -> {
+          int[] count = new int[values.length];
+          for (int k : at) {
+            int a = -1;
+            for (int j = 0; j < values.length; j++) {
+              if (values[j] == t[k]) {
+                a = j;
+              }
+            }
+            if (a >= 0) {
+              count[a]++;
+            } else if (closed) {
+              return false;
+            }
+          }
+          for (int j = 0; j < values.length; j++) {
+            if (fixed ? count[j] < low[j] || count[j] > up[j] : count[j] != t[counterAt[j]]) {
+              return false;
+            }
+          }
+          return true;
+        });
   }
 
   @Test

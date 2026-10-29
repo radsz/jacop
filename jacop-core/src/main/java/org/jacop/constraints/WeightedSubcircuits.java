@@ -34,7 +34,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -74,7 +76,8 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class WeightedSubcircuits extends Constraint implements SatisfiedPresent {
+public class WeightedSubcircuits extends Constraint
+    implements SatisfiedPresent, Copyable<WeightedSubcircuits> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -745,5 +748,15 @@ public class WeightedSubcircuits extends Constraint implements SatisfiedPresent 
     }
     result.append(')');
     return result.toString();
+  }
+
+  @Override
+  public WeightedSubcircuits copy(VarMap map) {
+    WeightedSubcircuits c =
+        new WeightedSubcircuits(
+            map.get(list), map.get(tour), costs, map.get(tourCost), map.get(cost), offset);
+    c.useAssignment = useAssignment;
+    c.useSteiner = useSteiner;
+    return c;
   }
 }

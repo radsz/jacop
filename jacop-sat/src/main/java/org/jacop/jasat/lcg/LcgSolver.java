@@ -1200,10 +1200,12 @@ public final class LcgSolver implements ExternalPropagator {
   private void count(Constraint c, boolean own, int atoms, int at) {
     long[] counts =
         explanationCounts.computeIfAbsent(
-            c == null ? "none" : c.getClass().getSimpleName(), k -> new long[6]);
+            c == null ? "none" : c.getClass().getSimpleName(), k -> new long[8]);
     counts[at]++;
     if (!own) {
       counts[at + 1]++;
+    } else if (trail.replayed()) {
+      counts[6 + at / 3]++;
     }
     counts[at + 2] += atoms;
   }
@@ -1211,9 +1213,10 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Returns the explanation statistics per constraint class (simple name): reasons asked, those
    * given by the generic reason, and the atoms in them; then failures explained, those explained
-   * generically, and their atoms.
+   * generically, and their atoms; then the reasons and the failures explained by replaying the
+   * constraint (counted as its own).
    *
-   * @return six counts per class, in the order above
+   * @return eight counts per class, in the order above
    */
   public Map<String, long[]> explanationStatistics() {
     return explanationCounts;

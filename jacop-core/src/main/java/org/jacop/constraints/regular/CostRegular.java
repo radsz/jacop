@@ -51,6 +51,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * CostRegular constraint (Demassey, Pesant and Rousseau, "A cost-regular based hybrid column
@@ -84,7 +87,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class CostRegular extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<CostRegular> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<CostRegular>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -714,6 +717,46 @@ public class CostRegular extends Constraint
     result.add(new In(q[list.length], accepting));
     result.add(new SumInt(w, "==", cost));
     return result;
+  }
+
+  // explained by the costs of the paths, which are its whole semantics for itself and CostMdd
+  private boolean explainedByPaths() {
+    return (getClass() == CostRegular.class || getClass() == CostMdd.class) && edge != null;
+  }
+
+  private CostPathExplanation costPaths(AtomicTrail trail, int position) {
+    int m = edgeStart[list.length];
+    int[] source = new int[m];
+    int[] target = new int[m];
+    int[] label = new int[m];
+    int[][] edgeCost = new int[1][m];
+    for (int e = 0; e < m; e++) {
+      source[e] = edge[4 * e];
+      target[e] = edge[4 * e + 1];
+      label[e] = slots.value(edge[4 * e + 2]);
+      edgeCost[0][e] = edge[4 * e + 3];
+    }
+    return new CostPathExplanation(
+        trail,
+        position,
+        list,
+        levelNodeStart,
+        edgeStart,
+        source,
+        target,
+        label,
+        edgeCost,
+        new IntVar[] {cost});
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explainedByPaths() && costPaths(trail, entry).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explainedByPaths() && costPaths(trail, trail.size()).explainFailure(out);
   }
 
   @Override
