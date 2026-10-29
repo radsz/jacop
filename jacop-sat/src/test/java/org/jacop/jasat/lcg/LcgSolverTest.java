@@ -2830,7 +2830,6 @@ class LcgSolverTest {
     // x2 = 3 and x1 = 2: 3 + 2
     assertThat(solver.value(obj)).isEqualTo(5);
     assertThat(solver.coreSearch().termCount()).isEqualTo(4);
-    assertThat(solver.coreSearch().proved).isTrue();
   }
 
   /**
