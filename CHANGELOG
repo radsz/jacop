@@ -462,7 +462,20 @@ Version 5.0 (unreleased)
     spot5, gbac and cutstock (60 s, --lcg -f) more instances end better
     than worse.
 
-35. Free search (-f) for optimisation spends about one failure in twenty on
+35. Binpacking with cardinality also reasons on groups of consecutive
+    bins: the items whose bins all lie in the group are packed in it, its
+    count and load bounds are the sums over its bins, and the rules of one
+    bin (counts, "too small", "too big", load bounds) are applied to the
+    group. Each bin of a group can be fillable on its own while the group
+    is not, as in curriculum models where precedences confine courses to
+    ranges of periods. When the group rules keep pruning nothing they are
+    run at fewer and fewer calls until they prune again. On 40 generated
+    balanced academic curriculum instances (60 s) JaCoP proves all 40
+    optima, against 37 before, and bacp_p10_n71_s0_1_6 needs 42 failures
+    instead of 251,141; the minizinc-benchmarks bacp, curriculum and gbac
+    instances end as before.
+
+36. Free search (-f) for optimisation spends about one failure in twenty on
     objective probes, after OR-Tools CP-SAT's objective_lb_search and
     objective_shaving workers: runs with the objective bounded by its lower
     bound plus an offset (0 at first, doubled after each refuted probe,
