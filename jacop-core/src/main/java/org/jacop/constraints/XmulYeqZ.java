@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
@@ -57,7 +58,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class XmulYeqZ extends AbstractXopYeqZ
-    implements Violation, Simplifiable, Copyable<XmulYeqZ>, Explainable {
+    implements Functional, Violation, Simplifiable, Copyable<XmulYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -260,5 +261,16 @@ public class XmulYeqZ extends AbstractXopYeqZ
   public long violation(ToIntFunction<IntVar> value) {
     long xy = (long) value.applyAsInt(x) * value.applyAsInt(y);
     return Math.min(Integer.MAX_VALUE, Math.abs(xy - value.applyAsInt(z)));
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return z;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    long xy = (long) value.applyAsInt(x) * value.applyAsInt(y);
+    return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, xy));
   }
 }

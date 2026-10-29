@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.stream.Stream;
+import org.jacop.api.Functional;
 import org.jacop.api.Violation;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
@@ -56,6 +57,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariableFast;
@@ -156,6 +158,14 @@ class ViolationTest {
             (s, x) ->
                 new CountValues(
                     Arrays.asList(head(x, 4)), new IntVar[] {x[4], x[5]}, new int[] {1, 2})));
+    cs.add(
+        new Case(
+            "CountValuesBounds",
+            4,
+            0,
+            3,
+            (s, x) ->
+                new CountValuesBounds(x, new int[] {1, 0}, new int[] {2, 1}, new int[] {1, 2})));
     cs.add(new Case("Regular", 5, 0, 2, (s, x) -> new Regular(noTwoOnes(), x)));
     cs.add(
         new Case(
@@ -263,6 +273,39 @@ class ViolationTest {
       }
     }
     assertTrue(accepted > 0 && accepted < TRIALS, c.name() + " accepted " + accepted);
+  }
+
+  /**
+   * For a constraint that gives one of its variables as a function of the others, that value
+   * satisfies it whenever it is in the domain of the variable.
+   */
+  @ParameterizedTest
+  @MethodSource("cases")
+  void functionalValueSatisfies(Case c) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[c.n()];
+    for (int i = 0; i < c.n(); i++) {
+      x[i] = new IntVar(store, "x" + i, c.min(), c.max());
+    }
+    Constraint constraint = c.make().apply(store, x);
+    if (!(constraint instanceof Functional f)) {
+      return;
+    }
+    IntVar result = f.functionalResult();
+    Random random = new Random(c.name().hashCode() + 1);
+    for (int t = 0; t < TRIALS; t++) {
+      Map<IntVar, Integer> at = new IdentityHashMap<>();
+      for (int i = 0; i < c.n(); i++) {
+        at.put(x[i], x[i].dom().getElementAt(random.nextInt(x[i].getSize())));
+      }
+      int v = f.functionalValue(y -> at.getOrDefault(y, y.min()));
+      at.put(result, v);
+      long violation = ((Violation) constraint).violation(y -> at.getOrDefault(y, y.min()));
+      if (result.domain.contains(v) && violation != 0) {
+        // an element with its index out of range has no value that satisfies it
+        assertTrue(c.name().startsWith("Element"), c.name() + " " + at.values());
+      }
+    }
   }
 
   // imposes the constraint over variables fixed to the values and propagates

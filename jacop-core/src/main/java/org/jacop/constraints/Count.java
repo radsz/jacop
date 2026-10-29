@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
@@ -54,7 +55,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class Count extends AbstractCount
-    implements Violation, Simplifiable, Copyable<Count>, Explainable {
+    implements Functional, Violation, Simplifiable, Copyable<Count>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -221,5 +222,15 @@ public class Count extends AbstractCount
   @Override
   public long violation(ToIntFunction<IntVar> value) {
     return Math.abs(Violations.count(list, this.value, value) - value.applyAsInt(counter));
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return counter;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    return Violations.count(list, this.value, value);
   }
 }

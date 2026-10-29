@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.Monotone;
 import org.jacop.api.MonotoneDefinition;
 import org.jacop.api.VarMap;
@@ -52,7 +53,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class OrBoolVector extends AbstractBoolVector
-    implements Violation, Copyable<OrBoolVector>, Monotone, MonotoneDefinition {
+    implements Functional, Violation, Copyable<OrBoolVector>, Monotone, MonotoneDefinition {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -264,5 +265,19 @@ public class OrBoolVector extends AbstractBoolVector
       or |= value.applyAsInt(v);
     }
     return value.applyAsInt(result) == or ? 0 : 1;
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return result;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    int or = 0;
+    for (IntVar v : list) {
+      or |= value.applyAsInt(v);
+    }
+    return or;
   }
 }

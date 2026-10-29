@@ -33,6 +33,7 @@ package org.jacop.search.ls;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,10 +43,15 @@ import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
 import org.jacop.constraints.AbstractReifiedConstraint;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Reified;
@@ -104,6 +110,7 @@ public final class LocalSearch {
   // domains up to this size are tried value by value
   private static final int SMALL_DOMAIN = 8;
   private static final double WEIGHT_LIMIT = 1e12;
+  private static final boolean DEBUG_REJECT = Boolean.getBoolean("jacop.ls.debug");
 
   private final Store store;
   private final IntVar cost;
@@ -116,6 +123,8 @@ public final class LocalSearch {
   private final IntVar[] hintVars;
   private final int[] hintValues;
   private final long stallSteps;
+  private final long patienceMillis;
+  private final Collection<? extends Constraint> extra;
 
   // the variables, their root domains and current values
   private IntVar[] vars;
@@ -138,6 +147,9 @@ public final class LocalSearch {
   private Store scratch;
   // constraints that measure their own violation
   private Violation[] measures;
+  // constraints whose violation a swap of the values of two of their variables may lower
+  // without changing how often each value is taken
+  private boolean[] swaps;
   // the index of each variable of the store among the variables of the local search, or -1
   private int[] slot;
   private final Values values = new Values();
@@ -153,6 +165,39 @@ public final class LocalSearch {
   private int[] violatedPos;
   private int violatedCount;
 
+  // the variables defined by the model, which definitions keep at the value of their function
+  private final Set<Var> definedVars;
+  // the definition giving each variable, or -1
+  private int[] defOf;
+  // per definition: the variable it gives, how, the row or function it uses, and what it reads
+  private int[] defOut;
+  private int[] defKind;
+  private int[] defRow;
+  private long[] defCoef;
+  private Functional[] defFunction;
+  private int[][] defInputs;
+  private int[] defLevel;
+  private int defCount;
+  // the definitions that read each variable
+  private int[][] dependents;
+  // the rows of b <=> form, by the row of b = 1 -> form, with b as the enforcer
+  private final List<int[]> reifiedRows = new ArrayList<>();
+  // definitions waiting to be recomputed, by level, and whether each one is waiting
+  private long[] heap = new long[16];
+  private int heapSize;
+  private boolean[] queued;
+  // the moves made while trying a move, to undo it
+  private int[] undoVar = new int[64];
+  private int[] undoValue = new int[64];
+  private int undoSize;
+  private boolean recording;
+  // the weighted violation of all constraints
+  private double total;
+
+  private static final int LINEAR_DEFINITION = 0;
+  private static final int REIFIED_DEFINITION = 1;
+  private static final int FUNCTION_DEFINITION = 2;
+
   // the row cost <= bound - 1 for optimisation, or -1
   private int boundRow = -1;
   private int costIndex = -1;
@@ -160,8 +205,8 @@ public final class LocalSearch {
   private long[] tabu;
   private int[] bestAssignment;
   private int[] solution;
-  // the values of the integer variables of the store in the best solution, by store index
-  private int[] storeSolution;
+  // the values of the integer variables of the store in the best solution
+  private Map<IntVar, Integer> storeSolution;
   private int solutionCost;
 
   private long steps;
@@ -190,6 +235,13 @@ public final class LocalSearch {
     hintVars = b.hintVars;
     hintValues = b.hintValues;
     stallSteps = b.stallSteps;
+    definedVars =
+        b.defined == null ? null : java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    if (b.defined != null) {
+      definedVars.addAll(b.defined);
+    }
+    patienceMillis = b.patienceMillis;
+    extra = b.extra;
   }
 
   /**
@@ -239,8 +291,7 @@ public final class LocalSearch {
     }
     int[] result = new int[of.length];
     for (int k = 0; k < of.length; k++) {
-      int s = of[k].index();
-      result[k] = s >= 0 && s < storeSolution.length ? storeSolution[s] : of[k].min();
+      result[k] = storeSolution.getOrDefault(of[k], of[k].min());
     }
     return result;
   }
@@ -320,17 +371,50 @@ public final class LocalSearch {
   // ---------------------------------------------------------------- model
 
   private boolean applicable() {
-    for (int i = 0; i < store.size(); i++) {
-      Var v = store.vars[i];
-      if (v != null && !(v instanceof IntVar) && !v.singleton()) {
+    for (Var v : storeVariables()) {
+      if (!(v instanceof IntVar) && !v.singleton()) {
         return false;
       }
     }
     return true;
   }
 
+  /**
+   * The variables of the store: those with a store index and the named ones, such as Boolean
+   * variables, which have none.
+   */
+  private List<Var> storeVariables() {
+    if (allVars == null) {
+      Set<Var> all = java.util.Collections.newSetFromMap(new java.util.LinkedHashMap<>());
+      for (int i = 0; i < store.size(); i++) {
+        if (store.vars[i] != null) {
+          all.add(store.vars[i]);
+        }
+      }
+      all.addAll(store.variablesHashMap.values());
+      allVars = new ArrayList<>(all);
+    }
+    return allVars;
+  }
+
+  private List<Var> allVars;
+
   private void build() {
-    Set<Constraint> constraints = store.getConstraints();
+    Set<Constraint> constraints = new java.util.LinkedHashSet<>();
+    for (Var v : storeVariables()) {
+      constraints.addAll(v.dom().constraints());
+      // constraints that watch values, such as long pseudo-Boolean sums, are not in the domains
+      constraints.addAll(store.valueWatchers(v));
+    }
+    // constraints with watched literals are not in the lists of the domains either
+    if (store.watchedConstraints != null) {
+      for (Set<Constraint> watched : store.watchedConstraints.values()) {
+        constraints.addAll(watched);
+      }
+    }
+    if (extra != null) {
+      constraints.addAll(extra);
+    }
     List<IntVar> varList = new ArrayList<>();
     if (order != null) {
       for (IntVar x : order) {
@@ -378,6 +462,15 @@ public final class LocalSearch {
         }
       }
     }
+    // a defined variable may be given values outside its domain; its domain is then a constraint
+    List<Integer> domainRows = new ArrayList<>();
+    if (definedVars != null) {
+      for (int i = 0; i < varList.size(); i++) {
+        if (definedVars.contains(varList.get(i)) && !varList.get(i).singleton()) {
+          domainRows.add(i);
+        }
+      }
+    }
     int n = varList.size();
     vars = varList.toArray(new IntVar[0]);
     domains = new IntDomain[n];
@@ -387,7 +480,7 @@ public final class LocalSearch {
     val = new int[n];
     tabu = new long[n];
     // one row more for the bound on the cost
-    m = rows.size() + measured.size() + checked.size() + (cost != null ? 1 : 0);
+    m = rows.size() + measured.size() + domainRows.size() + checked.size() + (cost != null ? 1 : 0);
     weight = new double[m];
     Arrays.fill(weight, 1.0);
     viol = new long[m];
@@ -401,6 +494,7 @@ public final class LocalSearch {
     lhs = new long[m];
     copies = new IntVar[m][];
     measures = new Violation[m];
+    swaps = new boolean[m];
     int c = 0;
     for (Object[] row : rows) {
       scope[c] = (int[]) row[0];
@@ -425,10 +519,16 @@ public final class LocalSearch {
     }
     for (int k = 0; k < measured.size(); k++) {
       measures[c] = measured.get(k);
+      swaps[c] = swapsValues(measuredConstraints.get(k));
       scope[c] = scopeOf(measuredConstraints.get(k));
       c++;
     }
-    measuredCount = measured.size();
+    for (int i : domainRows) {
+      measures[c] = value -> distance(domains[i], value.applyAsInt(vars[i]));
+      scope[c] = new int[] {i};
+      c++;
+    }
+    measuredCount = measured.size() + domainRows.size();
     scratch = checked.isEmpty() ? null : new Store();
     for (Constraint k : checked) {
       if (copy(k, c)) {
@@ -453,6 +553,7 @@ public final class LocalSearch {
       scratch = null;
     }
     buildOccurrences();
+    buildDefinitions(measured.size());
     violated = new int[m];
     violatedPos = new int[m];
     Arrays.fill(violatedPos, -1);
@@ -488,6 +589,13 @@ public final class LocalSearch {
     return c instanceof AbstractReifiedConstraint r
         ? name + "(" + r.c.getClass().getSimpleName() + ")"
         : name;
+  }
+
+  private static boolean swapsValues(Constraint c) {
+    return c instanceof Alldistinct
+        || c instanceof Alldifferent
+        || c instanceof CountValues
+        || c instanceof CountValuesBounds;
   }
 
   private static boolean intArguments(Constraint c) {
@@ -530,6 +638,297 @@ public final class LocalSearch {
     }
   }
 
+  private static long distance(IntDomain d, int v) {
+    if (d.contains(v)) {
+      return 0;
+    }
+    if (v < d.min()) {
+      return (long) d.min() - v;
+    }
+    if (v > d.max()) {
+      return (long) v - d.max();
+    }
+    return Math.min((long) v - d.previousValue(v), (long) d.nextValue(v) - v);
+  }
+
+  /**
+   * Finds the definitions of the defined variables: a linear equation in which the variable has
+   * coefficient 1 or -1, a reified linear constraint giving its 0/1 variable, or a {@link
+   * Functional} constraint giving it. Each variable gets at most one, and definitions that would
+   * depend on each other in a cycle are dropped.
+   */
+  private void buildDefinitions(int measuredSize) {
+    int n = vars.length;
+    defOf = new int[n];
+    Arrays.fill(defOf, -1);
+    List<int[]> found = new ArrayList<>(); // {out, kind, row}
+    List<Long> coefs = new ArrayList<>();
+    List<Functional> functions = new ArrayList<>();
+    List<int[]> inputs = new ArrayList<>();
+    if (definedVars != null) {
+      for (int c = 0; c < linearCount; c++) {
+        if (enforcer[c] >= 0 || rel[c] != EQ) {
+          continue;
+        }
+        for (int k = 0; k < scope[c].length; k++) {
+          int y = scope[c][k];
+          if (Math.abs(coef[c][k]) == 1 && defOf[y] < 0 && isDefined(y)) {
+            defOf[y] = found.size();
+            found.add(new int[] {y, LINEAR_DEFINITION, c});
+            coefs.add(coef[c][k]);
+            functions.add(null);
+            inputs.add(without(scope[c], y));
+            break;
+          }
+        }
+      }
+      for (int[] pair : reifiedRows) {
+        int c = pair[0];
+        int b = pair[1];
+        if (defOf[b] < 0 && isDefined(b) && !contains(scope[c], b)) {
+          defOf[b] = found.size();
+          found.add(new int[] {b, REIFIED_DEFINITION, c});
+          coefs.add(0L);
+          functions.add(null);
+          inputs.add(scope[c].clone());
+        }
+      }
+      for (int k = 0; k < measuredSize; k++) {
+        Functional f = functional(measuredConstraints.get(k));
+        Integer y =
+            f == null || f.functionalResult() == null ? null : index.get(f.functionalResult());
+        int c = linearCount + k;
+        if (y != null && defOf[y] < 0 && isDefined(y)) {
+          int[] in = without(scope[c], y);
+          if (in.length == scope[c].length) {
+            continue;
+          }
+          defOf[y] = found.size();
+          found.add(new int[] {y, FUNCTION_DEFINITION, c});
+          coefs.add(0L);
+          functions.add(f);
+          inputs.add(in);
+        }
+      }
+    }
+    defCount = found.size();
+    defOut = new int[defCount];
+    defKind = new int[defCount];
+    defRow = new int[defCount];
+    defCoef = new long[defCount];
+    defFunction = functions.toArray(new Functional[0]);
+    defInputs = inputs.toArray(new int[0][]);
+    for (int d = 0; d < defCount; d++) {
+      defOut[d] = found.get(d)[0];
+      defKind[d] = found.get(d)[1];
+      defRow[d] = found.get(d)[2];
+      defCoef[d] = coefs.get(d);
+    }
+    orderDefinitions();
+    queued = new boolean[defCount];
+  }
+
+  private boolean isDefined(int i) {
+    return definedVars.contains(vars[i]) && !domains[i].singleton() && i != costIndex;
+  }
+
+  private static int[] without(int[] a, int x) {
+    return Arrays.stream(a).filter(y -> y != x).toArray();
+  }
+
+  // the function of a constraint, or of b <=> c for a measured c
+  private static Functional functional(Constraint c) {
+    if (c instanceof Functional f) {
+      return f;
+    }
+    if (c.getClass() == Reified.class && ((Reified) c).c instanceof Violation inner) {
+      IntVar b = ((Reified) c).b;
+      return new Functional() {
+        @Override
+        public IntVar functionalResult() {
+          return b;
+        }
+
+        @Override
+        public int functionalValue(ToIntFunction<IntVar> value) {
+          return inner.violation(value) == 0 ? 1 : 0;
+        }
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Gives each definition its level, one more than the levels of the definitions of what it reads,
+   * and drops definitions on a cycle; then lists for each variable the definitions that read it.
+   */
+  private void orderDefinitions() {
+    int n = vars.length;
+    defLevel = new int[defCount];
+    int[] waiting = new int[defCount];
+    List<List<Integer>> readers = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      readers.add(new ArrayList<>());
+    }
+    for (int d = 0; d < defCount; d++) {
+      for (int x : defInputs[d]) {
+        readers.get(x).add(d);
+        if (defOf[x] >= 0) {
+          waiting[d]++;
+        }
+      }
+    }
+    int[] queue = new int[defCount];
+    int head = 0;
+    int tail = 0;
+    for (int d = 0; d < defCount; d++) {
+      if (waiting[d] == 0) {
+        queue[tail++] = d;
+      }
+    }
+    while (head < tail) {
+      int d = queue[head++];
+      for (int r : readers.get(defOut[d])) {
+        defLevel[r] = Math.max(defLevel[r], defLevel[d] + 1);
+        if (--waiting[r] == 0) {
+          queue[tail++] = r;
+        }
+      }
+    }
+    // the definitions left wait on a cycle: their variables are moved as the others
+    for (int d = 0; d < defCount; d++) {
+      if (waiting[d] > 0) {
+        defOf[defOut[d]] = -1;
+        defLevel[d] = -1;
+      }
+    }
+    topological = Arrays.copyOf(queue, tail);
+    dependents = new int[n][];
+    for (int i = 0; i < n; i++) {
+      dependents[i] =
+          readers.get(i).stream()
+              .mapToInt(Integer::intValue)
+              .filter(d -> defLevel[d] >= 0)
+              .toArray();
+    }
+  }
+
+  // the definitions in an order where each comes after those it reads
+  private int[] topological = new int[0];
+
+  /** The value the definition gives its variable now. */
+  private int defined(int d) {
+    int y = defOut[d];
+    int c = defRow[d];
+    return switch (defKind[d]) {
+      case LINEAR_DEFINITION -> {
+        long a = defCoef[d];
+        long rest = lhs[c] - a * val[y];
+        // a is 1 or -1
+        long v = (rhs[c] - rest) * a;
+        yield (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, v));
+      }
+      case REIFIED_DEFINITION -> amount(rel[c], lhs[c], rhs[c]) == 0 ? 1 : 0;
+      default -> {
+        values.moved = -1;
+        yield defFunction[d].functionalValue(values);
+      }
+    };
+  }
+
+  // gives every defined variable its value, in the order of the definitions
+  private void defineAll() {
+    for (int d : topological) {
+      int v = defined(d);
+      if (v != val[defOut[d]]) {
+        setValue(defOut[d], v);
+      }
+    }
+  }
+
+  /**
+   * Moves variable i to value v, and the variables defined by it to the values of their
+   * definitions, level by level.
+   */
+  private void moveDefined(int i, int v) {
+    setValue(i, v);
+    if (dependents[i].length == 0) {
+      return;
+    }
+    push(dependents[i]);
+    while (heapSize > 0) {
+      int d = pop();
+      int y = defOut[d];
+      int w = defined(d);
+      if (w != val[y]) {
+        setValue(y, w);
+        push(dependents[y]);
+      }
+    }
+  }
+
+  private void push(int[] ds) {
+    for (int d : ds) {
+      if (queued[d]) {
+        continue;
+      }
+      queued[d] = true;
+      if (heapSize == heap.length) {
+        heap = Arrays.copyOf(heap, 2 * heapSize);
+      }
+      long key = ((long) defLevel[d] << 32) | d;
+      int k = heapSize++;
+      while (k > 0 && heap[(k - 1) / 2] > key) {
+        heap[k] = heap[(k - 1) / 2];
+        k = (k - 1) / 2;
+      }
+      heap[k] = key;
+    }
+  }
+
+  private int pop() {
+    long top = heap[0];
+    long last = heap[--heapSize];
+    int k = 0;
+    while (2 * k + 1 < heapSize) {
+      int child = 2 * k + 1;
+      if (child + 1 < heapSize && heap[child + 1] < heap[child]) {
+        child++;
+      }
+      if (heap[child] >= last) {
+        break;
+      }
+      heap[k] = heap[child];
+      k = child;
+    }
+    heap[k] = last;
+    int d = (int) top;
+    queued[d] = false;
+    return d;
+  }
+
+  /** The change of the weighted violation if variable i takes value v, with what it defines. */
+  private double tryMove(int i, int v) {
+    if (dependents[i].length == 0) {
+      return delta(i, v);
+    }
+    double before = total;
+    recording = true;
+    undoSize = 0;
+    moveDefined(i, v);
+    recording = false;
+    double change = total - before;
+    undo();
+    return change;
+  }
+
+  private void undo() {
+    for (int k = undoSize - 1; k >= 0; k--) {
+      setValue(undoVar[k], undoValue[k]);
+    }
+    undoSize = 0;
+  }
+
   private int addVar(IntVar x, List<IntVar> varList) {
     Integer i = index.get(x);
     if (i != null) {
@@ -570,9 +969,13 @@ public final class LocalSearch {
         return c.getClass() != Reified.class || addRow(inner.negated(), null, rows, varList);
       }
       int b = addVar(r.b, varList);
+      int first = rows.size();
       boolean ok = addRow(inner, new int[] {b, 1}, rows, varList);
       if (ok && c.getClass() == Reified.class) {
         ok = addRow(inner.negated(), new int[] {b, 0}, rows, varList);
+        if (ok) {
+          reifiedRows.add(new int[] {first, b});
+        }
       }
       return ok;
     }
@@ -776,6 +1179,7 @@ public final class LocalSearch {
       }
     }
     evaluateAll();
+    defineAll();
     bestAssignment = val.clone();
   }
 
@@ -792,6 +1196,8 @@ public final class LocalSearch {
   private void evaluateAll() {
     violatedCount = 0;
     Arrays.fill(violatedPos, -1);
+    Arrays.fill(viol, 0);
+    total = 0;
     for (int c = 0; c < m; c++) {
       if (coef[c] != null) {
         long s = 0;
@@ -831,6 +1237,9 @@ public final class LocalSearch {
   }
 
   private void setViolation(int c, long v) {
+    if (v != viol[c]) {
+      total += weight[c] * (scaled(v) - scaled(viol[c]));
+    }
     viol[c] = v;
     int p = violatedPos[c];
     if (v > 0 && p < 0) {
@@ -927,9 +1336,22 @@ public final class LocalSearch {
   }
 
   private void move(int i, int v) {
-    int old = val[i];
-    val[i] = v;
     moves++;
+    moveDefined(i, v);
+  }
+
+  // changes the value of one variable and the violations of its constraints
+  private void setValue(int i, int v) {
+    int old = val[i];
+    if (recording) {
+      if (undoSize == undoVar.length) {
+        undoVar = Arrays.copyOf(undoVar, 2 * undoSize);
+        undoValue = Arrays.copyOf(undoValue, 2 * undoSize);
+      }
+      undoVar[undoSize] = i;
+      undoValue[undoSize++] = old;
+    }
+    val[i] = v;
     int[] cs = occ[i];
     long[] as = occCoef[i];
     for (int k = 0; k < cs.length; k++) {
@@ -947,9 +1369,22 @@ public final class LocalSearch {
     double bestScore = Double.MAX_VALUE;
     long lastImprovement = 0;
     int[] candidates = new int[64];
+    // the fewest violated constraints since the last solution, and when that last improved
+    int fewest = Integer.MAX_VALUE;
+    boolean progressed = true;
+    long lastProgress = System.currentTimeMillis();
     while (!stopRequested) {
-      if ((steps & 255) == 0 && timeUp()) {
-        return;
+      if ((steps & 255) == 0) {
+        if (timeUp()) {
+          return;
+        }
+        long now = System.currentTimeMillis();
+        if (progressed) {
+          lastProgress = now;
+          progressed = false;
+        } else if (patienceMillis > 0 && now - lastProgress > patienceMillis) {
+          return;
+        }
       }
       if (violatedCount == 0) {
         if (feasible()) {
@@ -958,10 +1393,16 @@ public final class LocalSearch {
           }
           bestScore = Double.MAX_VALUE;
           lastImprovement = steps;
+          fewest = Integer.MAX_VALUE;
+          progressed = true;
           continue;
         }
         perturb();
         continue;
+      }
+      if (violatedCount < fewest) {
+        fewest = violatedCount;
+        progressed = true;
       }
       steps++;
       double score = totalViolation();
@@ -985,6 +1426,9 @@ public final class LocalSearch {
   }
 
   private void step(int c, int[] candidates) {
+    if (swaps[c] && random.nextBoolean() && swapStep(c)) {
+      return;
+    }
     int[] s = scope[c];
     int bestVar = -1;
     int bestVal = 0;
@@ -996,14 +1440,23 @@ public final class LocalSearch {
     for (int t = 0; t < scan; t++) {
       int p = (offset + t) % size;
       int i = p < s.length ? s[p] : enforcer[c];
+      long a = p < s.length ? coef(c, p) : 0;
+      if (defOf[i] >= 0) {
+        // a defined variable follows the variables it is defined by: move one of them
+        i = upstream(i);
+        a = 0;
+        if (i < 0) {
+          continue;
+        }
+      }
       if (domains[i].singleton()) {
         continue;
       }
       boolean isTabu = tabu[i] > steps;
-      int nc = candidates(i, c, p < s.length ? coef(c, p) : 0, candidates);
+      int nc = candidates(i, c, a, candidates);
       for (int k = 0; k < nc; k++) {
         int v = candidates[k];
-        double d = delta(i, v);
+        double d = tryMove(i, v);
         if (isTabu && d >= 0) {
           continue;
         }
@@ -1025,15 +1478,84 @@ public final class LocalSearch {
     }
     // a local minimum for this constraint: weigh it more, and sometimes move anyway
     weight[c] += 1;
+    total += scaled(viol[c]);
     if (weight[c] > WEIGHT_LIMIT) {
+      total = 0;
       for (int k = 0; k < m; k++) {
         weight[k] = Math.max(1, weight[k] * 1e-6);
+        total += weight[k] * scaled(viol[k]);
       }
     }
     if (bestVar >= 0 && random.nextInt(10) == 0) {
       move(bestVar, bestVal);
       tabu[bestVar] = steps + 3 + random.nextInt(8);
     }
+  }
+
+  /**
+   * Tries swaps of the values of two variables of a constraint whose violation is about how often
+   * values are taken, and makes the best one if it lowers the weighted violation.
+   *
+   * @return false when no swap helps
+   */
+  private boolean swapStep(int c) {
+    int[] s = scope[c];
+    if (s.length < 2) {
+      return false;
+    }
+    double best = 0;
+    int bi = -1;
+    int bj = -1;
+    for (int t = 0; t < SCAN_LIMIT; t++) {
+      int i = s[random.nextInt(s.length)];
+      int j = s[random.nextInt(s.length)];
+      int vi = val[i];
+      int vj = val[j];
+      if (vi == vj
+          || defOf[i] >= 0
+          || defOf[j] >= 0
+          || !domains[i].contains(vj)
+          || !domains[j].contains(vi)) {
+        continue;
+      }
+      if ((tabu[i] > steps || tabu[j] > steps) && random.nextInt(4) > 0) {
+        continue;
+      }
+      double before = total;
+      recording = true;
+      undoSize = 0;
+      moveDefined(i, vj);
+      moveDefined(j, vi);
+      recording = false;
+      double d = total - before;
+      undo();
+      if (d < best) {
+        best = d;
+        bi = i;
+        bj = j;
+      }
+    }
+    if (bi < 0) {
+      return false;
+    }
+    int vi = val[bi];
+    move(bi, val[bj]);
+    move(bj, vi);
+    tabu[bi] = steps + 3 + random.nextInt(8);
+    tabu[bj] = tabu[bi];
+    return true;
+  }
+
+  // a variable that is not defined and that the defined variable i depends on, or -1
+  private int upstream(int i) {
+    for (int depth = 0; depth < 32 && defOf[i] >= 0; depth++) {
+      int[] in = defInputs[defOf[i]];
+      if (in.length == 0) {
+        return -1;
+      }
+      i = in[random.nextInt(in.length)];
+    }
+    return defOf[i] >= 0 ? -1 : i;
   }
 
   private long coef(int c, int p) {
@@ -1128,6 +1650,9 @@ public final class LocalSearch {
       } else {
         i = random.nextInt(vars.length);
       }
+      if (defOf[i] >= 0 && (i = upstream(i)) < 0) {
+        continue;
+      }
       IntDomain d = domains[i];
       if (!d.singleton()) {
         move(i, d.getElementAt(random.nextInt(d.getSize())));
@@ -1142,6 +1667,28 @@ public final class LocalSearch {
    * @return false when the store rejected it.
    */
   private boolean feasible() {
+    if (DEBUG_REJECT) {
+      for (int c = 0; c < m; c++) {
+        if (coef[c] != null) {
+          long l = 0;
+          for (int k = 0; k < scope[c].length; k++) {
+            l += coef[c][k] * val[scope[c][k]];
+          }
+          if (l != lhs[c]) {
+            System.out.println("% lhs drift row " + c + " " + l + " vs " + lhs[c]);
+          }
+        }
+        long v = currentViolation(c);
+        if (v != viol[c]) {
+          System.out.println("% violation drift " + c + " " + v + " vs " + viol[c]);
+        }
+      }
+      for (int d : topological) {
+        if (defined(d) != val[defOut[d]]) {
+          System.out.println("% definition drift " + d + " kind " + defKind[d]);
+        }
+      }
+    }
     int base = store.level;
     boolean ok;
     try {
@@ -1149,10 +1696,10 @@ public final class LocalSearch {
       if (ok) {
         solutions++;
         solution = val.clone();
-        storeSolution = new int[store.size()];
-        for (int k = 0; k < store.size(); k++) {
-          if (store.vars[k] instanceof IntVar x) {
-            storeSolution[k] = x.value();
+        storeSolution = new IdentityHashMap<>();
+        for (Var v : storeVariables()) {
+          if (v instanceof IntVar x) {
+            storeSolution.put(x, x.value());
           }
         }
         if (cost != null) {
@@ -1170,6 +1717,33 @@ public final class LocalSearch {
     }
     if (!ok) {
       rejected++;
+      if (DEBUG_REJECT) {
+        store.setLevel(base + 1);
+        try {
+          for (int i = 0; i < vars.length; i++) {
+            if (!vars[i].domain.contains(val[i])) {
+              System.out.println("% all: not in domain " + vars[i] + " " + val[i]);
+            } else if (!vars[i].singleton()) {
+              vars[i].domain.in(store.level, vars[i], val[i], val[i]);
+            }
+          }
+          if (!store.consistency()) {
+            Constraint f = store.recentlyFailedConstraint;
+            System.out.println(
+                "% all: rejected by "
+                    + f
+                    + " cost "
+                    + (cost == null
+                        ? "-"
+                        : cost + " ls " + val[costIndex] + " bound " + rhs[boundRow]));
+          }
+        } catch (FailException e) {
+          System.out.println("% all: fail " + store.recentlyFailedConstraint);
+        } finally {
+          store.removeLevel(base + 1);
+          store.setLevel(base);
+        }
+      }
       return false;
     }
     if (cost != null) {
@@ -1198,9 +1772,15 @@ public final class LocalSearch {
         }
       }
       if (!store.consistency()) {
+        if (DEBUG_REJECT) {
+          System.out.println("% rejected by " + store.recentlyFailedConstraint);
+        }
         return false;
       }
     } catch (FailException e) {
+      if (DEBUG_REJECT) {
+        System.out.println("% rejected (fail) by " + store.recentlyFailedConstraint);
+      }
       return false;
     }
     for (int i = orderCount; i < vars.length; i++) {
@@ -1227,8 +1807,8 @@ public final class LocalSearch {
   // gives the variables still not fixed their smallest value, with propagation
   private boolean completeOthers() {
     try {
-      for (int k = 0; k < store.size(); k++) {
-        if (store.vars[k] instanceof IntVar x && !x.singleton()) {
+      for (Var v : storeVariables()) {
+        if (v instanceof IntVar x && !x.singleton()) {
           store.setLevel(store.level + 1);
           x.domain.in(store.level, x, x.min(), x.min());
           if (!store.consistency()) {
@@ -1297,6 +1877,9 @@ public final class LocalSearch {
     private IntVar[] hintVars;
     private int[] hintValues;
     private long stallSteps = 20_000;
+    private long patienceMillis;
+    private Collection<? extends Var> defined;
+    private Collection<? extends Constraint> extra;
 
     private Builder(Store store) {
       this.store = store;
@@ -1383,6 +1966,44 @@ public final class LocalSearch {
      */
     public Builder stallSteps(long steps) {
       this.stallSteps = steps;
+      return this;
+    }
+
+    /**
+     * Adds constraints of the model that are not imposed in the store, such as clauses kept for a
+     * SAT solver. The store does not check them, so they must be ones the local search evaluates
+     * (linear ones, or ones that measure their violation).
+     *
+     * @param constraints the constraints, not imposed.
+     * @return this builder.
+     */
+    public Builder extraConstraints(Collection<? extends Constraint> constraints) {
+      this.extra = constraints;
+      return this;
+    }
+
+    /**
+     * Gives the variables the model defines as functions of others (FlatZinc's defined variables).
+     * A constraint that gives such a variable as a function of its other variables then keeps it at
+     * that value: the local search moves the other variables, and the defined ones follow.
+     *
+     * @param vars the defined variables.
+     * @return this builder.
+     */
+    public Builder defined(Collection<? extends Var> vars) {
+      this.defined = vars;
+      return this;
+    }
+
+    /**
+     * Stops the search when it has neither found a solution nor reached fewer violated constraints
+     * than before for this long.
+     *
+     * @param patience the time, or zero for no such limit.
+     * @return this builder.
+     */
+    public Builder patience(Duration patience) {
+      this.patienceMillis = patience.toMillis();
       return this;
     }
 

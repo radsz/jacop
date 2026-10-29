@@ -56,6 +56,16 @@ class LocalSearchTest {
   /** n queens with all-distinct diagonals, through views made by x + c = z. */
   @Test
   void findsQueens() {
+    queens(false);
+  }
+
+  /** The same with the diagonals defined by the queens: they follow every move of a queen. */
+  @Test
+  void findsQueensWithDefinedDiagonals() {
+    queens(true);
+  }
+
+  private static void queens(boolean defined) {
     int n = 12;
     Store store = new Store();
     IntVar[] q = new IntVar[n];
@@ -74,9 +84,12 @@ class LocalSearchTest {
     assertTrue(store.consistency());
     int level = store.level;
     List<int[]> found = new ArrayList<>();
+    List<IntVar> diagonals = new ArrayList<>(List.of(up));
+    diagonals.addAll(List.of(down));
     LocalSearch ls =
         LocalSearch.builder(store)
             .order(q)
+            .defined(defined ? diagonals : List.of())
             .timeLimit(LIMIT)
             .seed(3)
             .onSolution(

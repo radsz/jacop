@@ -38,6 +38,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.UsesQueueVariable;
@@ -67,7 +68,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementInteger extends AbstractElement
-    implements Violation,
+    implements Functional,
+        Violation,
         Simplifiable,
         UsesQueueVariable,
         SatisfiedPresent,
@@ -551,5 +553,16 @@ public class ElementInteger extends AbstractElement
       return 1;
     }
     return list[i] == value.applyAsInt(this.value) ? 0 : 1;
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return value;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    int i = value.applyAsInt(index) - indexOffset - 1;
+    return list[Math.max(0, Math.min(list.length - 1, i))];
   }
 }
