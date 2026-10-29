@@ -227,6 +227,115 @@ class UnaryReasoningTest {
     }
   }
 
+  /**
+   * Not-last as a rule on sets, for each task i of a view: for a set of other tasks whose ect is
+   * over lst(i), i ends by the largest lst in the set. Returns two bounds on the new lct of each
+   * task: the strongest over the sets {j != i : lst(j) <= L} (no correct one-pass rule on such sets
+   * prunes more), and the one Vilím's algorithm guarantees with the set {j != i : lst(j) < lct(i)}.
+   */
+  private static int[][] notLastBounds(TaskView[] ts) {
+    int n = ts.length;
+    int[] strongest = new int[n];
+    int[] guaranteed = new int[n];
+    for (int i = 0; i < n; i++) {
+      strongest[i] = ts[i].lct();
+      guaranteed[i] = ts[i].lct();
+      for (int j = 0; j < n; j++) {
+        int bound = ts[j].lst();
+        if (j == i || bound >= ts[i].lct()) {
+          continue;
+        }
+        if (ectOfSet(ts, i, bound) > ts[i].lst()) {
+          strongest[i] = Math.min(strongest[i], bound);
+        }
+      }
+      int largest = Integer.MIN_VALUE;
+      for (int j = 0; j < n; j++) {
+        if (j != i && ts[j].lst() < ts[i].lct()) {
+          largest = Math.max(largest, ts[j].lst());
+        }
+      }
+      if (largest != Integer.MIN_VALUE && ectOfSet(ts, i, largest) > ts[i].lst()) {
+        guaranteed[i] = Math.min(guaranteed[i], largest);
+      }
+    }
+    return new int[][] {strongest, guaranteed};
+  }
+
+  /** ect of the tasks other than i with lst at most bound: the largest est plus the work after. */
+  private static long ectOfSet(TaskView[] ts, int i, int bound) {
+    long ect = Long.MIN_VALUE;
+    for (int k = 0; k < ts.length; k++) {
+      if (k == i || ts[k].lst() > bound) {
+        continue;
+      }
+      long e = ts[k].est();
+      for (int j = 0; j < ts.length; j++) {
+        if (j != i && ts[j].lst() <= bound && ts[j].est() >= ts[k].est()) {
+          e += ts[j].dur.min();
+        }
+      }
+      ect = Math.max(ect, e);
+    }
+    return ect;
+  }
+
+  /** The bounds of the start variables after setting the given latest completions in a view. */
+  private static int[][] withLct(Instance inst, boolean reversed, int[] lct) {
+    Store store = new Store();
+    IntVar[][] v = inst.post(store);
+    store.setLevel(1);
+    try {
+      for (int i = 0; i < inst.n(); i++) {
+        TaskView t =
+            reversed
+                ? new TaskReversedView(v[0][i], v[1][i], v[2][i])
+                : new TaskNormalView(v[0][i], v[1][i], v[2][i]);
+        t.updateNotFirstNotLast(store.level, lct[i]);
+      }
+    } catch (FailException e) {
+      return null;
+    }
+    return bounds(v[0]);
+  }
+
+  @Test
+  void notLastTestsEveryTaskAndPrunesNoMoreThanTheRule() {
+    // a task whose lct ties with the task before it in lct order inserts nothing into Theta, and
+    // it must still be tested
+    Random random = new Random(16);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      Instance inst = instance(random, trial % 2 == 0 ? 8 : 40);
+      for (boolean reversed : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[][] v = inst.post(store);
+        TaskView[] ts = new TaskView[inst.n()];
+        for (int i = 0; i < inst.n(); i++) {
+          ts[i] =
+              reversed
+                  ? new TaskReversedView(v[0][i], v[1][i], v[2][i])
+                  : new TaskNormalView(v[0][i], v[1][i], v[2][i]);
+        }
+        int[][] rule = notLastBounds(ts);
+        int[][] strongest = withLct(inst, reversed, rule[0]);
+        int[][] guaranteed = withLct(inst, reversed, rule[1]);
+        int[][] actual = apply(inst, Rule.NOT_LAST, reversed, false);
+        String as = "reversed=" + reversed + " on " + inst;
+        if (strongest == null) {
+          continue;
+        }
+        assertThat(actual).as(as).isNotNull();
+        assertThat(guaranteed).as(as).isNotNull();
+        int k = reversed ? 0 : 1;
+        for (int i = 0; i < inst.n(); i++) {
+          int lo = Math.min(strongest[i][k], guaranteed[i][k]);
+          int hi = Math.max(strongest[i][k], guaranteed[i][k]);
+          assertThat(actual[i][k]).as("task %d: %s", i, as).isBetween(lo, hi);
+        }
+      }
+    }
+  }
+
   @Test
   void detectablePrecedencesLieBetweenOneCallAndTheFixpointOfTheThetaTree() {
     Random random = new Random(12);

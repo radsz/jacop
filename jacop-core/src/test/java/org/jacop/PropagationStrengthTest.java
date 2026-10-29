@@ -886,18 +886,19 @@ class PropagationStrengthTest {
   @Test
   void testInterDistanceIsBoundsConsistentWhereTheUnaryResourceIsNot() {
 
-    // x3 = 9 or 10 leaves x0 in 8..12 and x2 in 9..14 both at 12 or later, 3 apart: impossible
-    int[] lo = {6, 0, 9, 9, 5};
-    int[] hi = {12, 3, 14, 16, 6};
+    // x3 = 8 or 9 puts x0 before it, so x1 cannot be before it too (both in 4..6); x1 and x2 then
+    // both follow it in 11..13, 3 apart: impossible
+    int[] lo = {4, 4, 8, 8};
+    int[] hi = {7, 11, 13, 15};
     Store store = new Store();
     IntVar[] x = equalLengthTasks(store, lo, hi, 3, 1, true);
     assertThat(store.consistency()).isTrue();
-    assertThat(x[3].min()).isEqualTo(11);
+    assertThat(x[3].min()).isEqualTo(10);
 
     Store unaryStore = new Store();
     IntVar[] y = equalLengthTasks(unaryStore, lo, hi, 3, 1, false);
     assertThat(unaryStore.consistency()).isTrue();
-    assertThat(y[3].min()).isEqualTo(9);
+    assertThat(y[3].min()).isEqualTo(8);
   }
 
   @Test
