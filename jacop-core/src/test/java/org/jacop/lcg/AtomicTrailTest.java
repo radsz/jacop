@@ -640,7 +640,6 @@ class AtomicTrailTest {
   @Test
   void excludedBeforeCitesTheLatestEntryThatRemovesTheValue() {
     Random rnd = new Random(12);
-    // the first two spans index the removed values, the last walks the chain
     int[] spans = {40, 600, (1 << 16) + 10};
     for (int run = 0; run < 90; run++) {
       Store store = new Store();
@@ -687,6 +686,30 @@ class AtomicTrailTest {
         }
       }
       trail.detach();
+    }
+  }
+
+  @Test
+  void entryIndexAgreesWithAMap() {
+    Random rnd = new Random(13);
+    EntryIndex index = new EntryIndex();
+    java.util.Map<Long, Integer> expected = new java.util.HashMap<>();
+    for (int step = 0; step < 200_000; step++) {
+      int variable = rnd.nextInt(40);
+      int value = rnd.nextInt(60) - 30;
+      long k = ((long) variable << 32) | (value & 0xffffffffL);
+      if (rnd.nextInt(3) == 0) {
+        index.remove(variable, value);
+        expected.remove(k);
+      } else if (rnd.nextBoolean()) {
+        index.put(variable, value, step);
+        expected.put(k, step);
+      }
+      assertThat(index.get(variable, value)).isEqualTo(expected.getOrDefault(k, -1));
+    }
+    for (var e : expected.entrySet()) {
+      assertThat(index.get((int) (e.getKey() >>> 32), (int) (long) e.getKey()))
+          .isEqualTo(e.getValue());
     }
   }
 
