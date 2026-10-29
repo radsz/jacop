@@ -310,6 +310,7 @@ class LcgSolverTest {
         solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
       }
       solver.sat().setInitialPhase(false);
+      solver.setBooleansFirstTurns(instance % 8 >= 4);
       int status = solver.minimize(cost);
       if (best == Long.MAX_VALUE) {
         assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
@@ -2014,6 +2015,51 @@ class LcgSolverTest {
     solver.setChecking(true);
     assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
     assertThat(new int[] {solver.value(b), solver.value(y)}).containsExactly(0, 51);
+  }
+
+  /**
+   * Booleans first set after the solver is made moves the variables between the two orders: off
+   * gives y first, as with the property off; on again gives b first.
+   */
+  @Test
+  void booleansFirstSetAfterConstructionMovesTheVariables() {
+    for (boolean[] settings : new boolean[][] {{false}, {false, true}}) {
+      Store store = new Store();
+      IntVar y = new IntVar(store, "y", 0, 100);
+      BooleanVar b = new BooleanVar(store, "b");
+      store.impose(new Reified(new XlteqC(y, 50), b));
+      LcgSolver solver = new LcgSolver(store);
+      for (boolean first : settings) {
+        solver.setBooleansFirst(first);
+      }
+      solver.setChecking(true);
+      boolean first = settings[settings.length - 1];
+      assertThat(solver.booleansFirst()).isEqualTo(first);
+      assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(new int[] {solver.value(b), solver.value(y)})
+          .as("Booleans first: %s", first)
+          .containsExactly(first ? new int[] {0, 51} : new int[] {1, 0});
+    }
+  }
+
+  /** With turns, each restart into activity branching switches Booleans first. */
+  @Test
+  void booleansFirstTurnsSwitchAtRestarts() {
+    Store store = new Store();
+    IntVar y = new IntVar(store, "y", 0, 100);
+    BooleanVar b = new BooleanVar(store, "b");
+    store.impose(new Reified(new XlteqC(y, 50), b));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setBranching(LcgSolver.Branching.ACTIVITY);
+    solver.setBooleansFirstTurns(true);
+    solver.notifyRestart();
+    assertThat(solver.booleansFirst()).isFalse();
+    solver.notifyRestart();
+    assertThat(solver.booleansFirst()).isTrue();
+    solver.notifyRestart();
+    solver.setChecking(true);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(new int[] {solver.value(b), solver.value(y)}).containsExactly(1, 0);
   }
 
   /** The literal map against a TreeMap, under random insertions and lookups. */

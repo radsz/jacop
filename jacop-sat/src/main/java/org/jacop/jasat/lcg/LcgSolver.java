@@ -161,6 +161,12 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: the late variables (see {@link #setLateVariables}). */
   public long lateVariables;
 
+  /** Statistics: the unfixed 0/1 variables at the start, late ones included. */
+  public long booleanVariables;
+
+  /** Statistics: the unfixed variables at the start that are not 0/1, late ones included. */
+  public long wideVariables;
+
   /** Statistics: decisions taken from the model's search annotation. */
   public long annotationDecisions;
 
@@ -206,7 +212,9 @@ public final class LcgSolver implements ExternalPropagator {
   private final VarHeap heap = new VarHeap();
   private final VarHeap wide = new VarHeap();
   // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
-  private final boolean split = !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
+  private boolean split = !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
+  // whether the runs of activity branching take turns with and without Booleans first
+  private boolean booleansFirstTurns;
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private boolean[] late;
@@ -310,6 +318,11 @@ public final class LcgSolver implements ExternalPropagator {
       eq[i] = new LiteralMap();
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
+        if (root[i].min() < 0 || root[i].max() > 1) {
+          wideVariables++;
+        } else {
+          booleanVariables++;
+        }
       }
     }
     sat.connect(this);
@@ -691,6 +704,48 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets whether activity branching decides the 0/1 variables first, before any other variable is
+   * decided, as CP-SAT's default search does, or takes all variables in one order of activity. The
+   * default is the first, unless the system property {@code jacop.lcg.booleansFirst} is false. Set
+   * it before solving.
+   *
+   * @param booleansFirst true for the 0/1 variables first
+   */
+  public void setBooleansFirst(boolean booleansFirst) {
+    if (booleansFirst == split) {
+      return;
+    }
+    split = booleansFirst;
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] != null && !late[i] && (heap.contains(i) || wide.contains(i))) {
+        (heap.contains(i) ? heap : wide).remove(i);
+        heapOf(i).insert(i);
+      }
+    }
+  }
+
+  /**
+   * Sets whether the runs of activity branching take turns at restarts with and without the 0/1
+   * variables first (see {@link #setBooleansFirst}), starting with the current setting. Neither
+   * order is better on most models, and the one that is differs between models of one kind. Set it
+   * before solving.
+   *
+   * @param turns true for turns
+   */
+  public void setBooleansFirstTurns(boolean turns) {
+    booleansFirstTurns = turns;
+  }
+
+  /**
+   * Returns whether activity branching decides the 0/1 variables first.
+   *
+   * @return true for the 0/1 variables first
+   */
+  public boolean booleansFirst() {
+    return split;
+  }
+
+  /**
    * Sets the model's search annotation as the branching. Under fixed search every run follows it;
    * under free search the runs alternate between it and the activity of the variables, starting
    * with it. When it has fixed all its variables, the activity completes the assignment.
@@ -847,6 +902,9 @@ public final class LcgSolver implements ExternalPropagator {
       activityBranching = !activityBranching;
     } else if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
+    }
+    if (booleansFirstTurns && activityBranching) {
+      setBooleansFirst(!split);
     }
   }
 
