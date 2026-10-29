@@ -148,6 +148,15 @@ public final class LcgSolver implements ExternalPropagator {
   private int pushed; // trail entries below are true in the solver
   private boolean failed;
   private int[] pushedReason;
+  // buffers of conflict and reason: the atoms to explain, those in the solver, other literals,
+  // and stamps of the entries explained and of the clause's literals (by 2 * variable + sign)
+  private final EntryList failureAtoms = new EntryList();
+  private final EntryList conflictInSolver = new EntryList();
+  private final EntryList conflictLits = new EntryList();
+  private final EntryList reasonEntries = new EntryList();
+  private int[] entryStamp = new int[64];
+  private int[] litStamp = new int[64];
+  private int stamp;
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
@@ -1597,7 +1606,8 @@ public final class LcgSolver implements ExternalPropagator {
           apply(lit);
         } catch (FailException _) {
           IntVar x = vars[litVar[Math.abs(lit)]];
-          EntryList atoms = new EntryList();
+          EntryList atoms = failureAtoms;
+          atoms.clear();
           trail.atomsBefore(x, trail.size(), atoms);
           return conflict(atoms, lit);
         }
@@ -1611,7 +1621,8 @@ public final class LcgSolver implements ExternalPropagator {
       numPending = 0;
       if (!store.consistency()) {
         constraintConflicts++;
-        EntryList atoms = new EntryList();
+        EntryList atoms = failureAtoms;
+        atoms.clear();
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
         if (checker != null) {
@@ -1686,9 +1697,14 @@ public final class LcgSolver implements ExternalPropagator {
   private int conflict(EntryList atoms, int extra) {
     numPending = 0;
     failed = true;
-    boolean[] seen = new boolean[trail.size()];
-    EntryList inSolver = new EntryList();
-    EntryList lits = new EntryList();
+    int seen = nextStamp();
+    if (entryStamp.length < trail.size()) {
+      entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
+    }
+    EntryList inSolver = conflictInSolver;
+    inSolver.clear();
+    EntryList lits = conflictLits;
+    lits.clear();
     if (extra != 0) {
       lits.add(-extra);
     }
@@ -1696,10 +1712,10 @@ public final class LcgSolver implements ExternalPropagator {
     while (stack.size() > 0) {
       int e = stack.get(stack.size() - 1);
       stack.truncate(stack.size() - 1);
-      if (seen[e]) {
+      if (entryStamp[e] == seen) {
         continue;
       }
-      seen[e] = true;
+      entryStamp[e] = seen;
       int lit = atomLit(e);
       if (sat.value(lit) > 0) {
         inSolver.add(e);
@@ -1711,13 +1727,22 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     int[] clause = new int[inSolver.size() + lits.size()];
-    for (int k = 0; k < inSolver.size(); k++) {
-      clause[k] = -atomLit(inSolver.get(k));
+    int size = 0;
+    int distinct = nextStamp();
+    for (int k = 0; k < clause.length; k++) {
+      int lit = k < inSolver.size() ? -atomLit(inSolver.get(k)) : lits.get(k - inSolver.size());
+      int key = 2 * Math.abs(lit) + (lit < 0 ? 1 : 0);
+      if (key >= litStamp.length) {
+        litStamp = Arrays.copyOf(litStamp, Math.max(key + 1, 2 * litStamp.length));
+      }
+      if (litStamp[key] != distinct) {
+        litStamp[key] = distinct;
+        clause[size++] = lit;
+      }
     }
-    for (int k = 0; k < lits.size(); k++) {
-      clause[inSolver.size() + k] = lits.get(k);
+    if (size < clause.length) {
+      clause = Arrays.copyOf(clause, size);
     }
-    clause = Arrays.stream(clause).distinct().toArray();
     if (clause.length == 0) {
       // the explanations, stronger than propagation at the root, prove the model unsatisfiable:
       // the empty clause follows, and so does any clause, here one false literal; the solver
@@ -1732,6 +1757,16 @@ public final class LcgSolver implements ExternalPropagator {
     }
     pushedReason = clause;
     return clause[0];
+  }
+
+  // a new stamp for entryStamp and litStamp, clearing both when the stamps wrap around
+  private int nextStamp() {
+    if (++stamp == Integer.MAX_VALUE) {
+      Arrays.fill(entryStamp, 0);
+      Arrays.fill(litStamp, 0);
+      stamp = 1;
+    }
+    return stamp;
   }
 
   // a literal the solver has true, or 0 when it has assigned nothing
@@ -1770,7 +1805,8 @@ public final class LcgSolver implements ExternalPropagator {
       return r;
     }
     int e = propagated[Math.abs(lit)];
-    EntryList reason = new EntryList();
+    EntryList reason = reasonEntries;
+    reason.clear();
     int extra = explainEntry(e, reason);
     int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
     clause[0] = lit;

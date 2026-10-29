@@ -654,6 +654,17 @@ Version 5.0 (unreleased)
     instances (60 s) 29 are proved instead of 17. The statistic
     lcgSetTimesStarts gives the number of start variables.
 
+50. Under --lcg, a lazy explanation that is not kept as a learnt clause
+    (more than 3 literals) goes on a reason stack beside the clause
+    arena, freed when its literal is unassigned, instead of a temporary
+    arena clause that only a full arena compaction (learnt clauses and
+    watch lists too) could reclaim. Conflicts from the CP side no longer
+    allocate a boolean[] of the whole trail nor box literals to remove
+    repeats. Learnt clauses are the same. Paired runs at 20 s: --lcg on
+    carpet-cutting 17% faster per failure and the dev tier unchanged
+    overall; --lcg -f 3% faster on the mznbench kit (also with
+    --free-config lcg-split=0).
+
 Version 4.11
 =============
 
