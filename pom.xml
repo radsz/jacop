@@ -327,6 +327,9 @@ setup to run configuration. -->
                         <artifactId>maven-surefire-plugin</artifactId>
                         <version>${maven.surefire.version}</version>
                         <configuration>
+                            <systemPropertyVariables>
+                                <upTo30sec.list>list-commit.txt</upTo30sec.list>
+                            </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
