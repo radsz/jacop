@@ -318,6 +318,8 @@ class LcgSolverTest {
       }
       solver.sat().setInitialPhase(false);
       solver.setBooleansFirstTurns(instance % 8 >= 4);
+      solver.setKeepImprovingRun(instance / 8 % 2 == 1);
+      solver.setSeed(instance % 3);
       int status = solver.minimize(cost);
       if (best == Long.MAX_VALUE) {
         assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);

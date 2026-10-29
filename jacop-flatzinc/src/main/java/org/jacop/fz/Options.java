@@ -59,6 +59,7 @@ public class Options {
   boolean freeSearchWithoutAnnotation = true;
   boolean newFreeSearchEngine = true;
   final Map<String, String> freeConfig = new HashMap<>();
+  private long randomSeed;
   boolean restartGiven;
   int timeOut;
 
@@ -172,6 +173,8 @@ public class Options {
                 lcg-booleans-first=on|off|turns (with --lcg: activity branching decides the 0/1
                 variables before the others (on, default), or all variables in one order of
                 activity (off); turns changes between the two at each restart),
+                lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
+                way of branching at the next restart; steadier between seeds, default 0),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
                 blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
@@ -550,7 +553,17 @@ public class Options {
   private int handleRandomSeed(String[] args, int i) {
     long seed = Long.parseLong(args[++i]);
     Store.setSeed(seed);
+    randomSeed = seed;
     return i + 1;
+  }
+
+  /**
+   * Returns the seed given with -r, or 0 when none was given.
+   *
+   * @return the seed
+   */
+  public long getRandomSeed() {
+    return randomSeed;
   }
 
   private int handleRestart(String[] args, int i) {
