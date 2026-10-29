@@ -50,6 +50,7 @@ import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearExplanation;
 import org.jacop.lcg.LinearForm;
+import org.jacop.util.VarIntMap;
 
 /**
  * Linear constraint over 0/1 variables: w[0]*x[0] + ... + w[n-1]*x[n-1] rel z, where rel is one of
@@ -118,7 +119,7 @@ public class LinearBool extends Constraint
 
   private int watchMinLength = WATCH_MIN_LENGTH;
 
-  private Map<Var, Integer> position;
+  private VarIntMap position;
 
   /** True if the constraint uses watched propagation, decided when it is imposed. */
   private boolean watched;
@@ -323,7 +324,7 @@ public class LinearBool extends Constraint
       return;
     }
 
-    position = new IdentityHashMap<>();
+    position = new VarIntMap(x.length);
     for (int i = 0; i < x.length; i++) {
       position.put(x[i], i);
     }
@@ -350,12 +351,12 @@ public class LinearBool extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
-    Integer i = position.get(v);
+    int i = position.get(v);
     // A 0/1 variable changes only when it gets fixed, so this is called once per variable on a
     // path of the search, at the level of the change, where the trailed counters record the new
     // sums.
     // The constraint does not implement UsesQueueVariable, which would also call this on imposing.
-    if (i != null) {
+    if (i != VarIntMap.ABSENT) {
       assert x[i].singleton() : "LinearBool expects a 0/1 variable to change only when it is fixed";
       long weight = w[i];
       if (x[i].min() == 1) {

@@ -719,6 +719,17 @@ Version 5.0 (unreleased)
     the 63 lost-free ones. New: FreeSearch.Builder.sharedSolution,
     SharedSolution, DepthFirstSearch.setSharedBound; -s prints
     portfolioImports.
+    
+55. Store.watchedConstraints (a public map from variables to the constraints
+    that watch them as watched literals) is removed; the store keeps these
+    constraints in the variable. Use registerWatchedLiteralConstraint and
+    deregisterWatchedLiteralConstraint as before, and the new
+    watchedLiteralConstraints(v) and watchedLiteralConstraints() to read them.
+    Waking them, and finding the position of a woken variable in Nooverlap,
+    LinearBool, LexOrder, LexChain, ExtensionalSupportStr and the restart
+    nogoods of free search, no longer goes through a HashMap (new
+    org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
+    2.5% faster on mznbench.
 
 Version 4.11
 =============
