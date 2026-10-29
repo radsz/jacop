@@ -42,16 +42,21 @@ import org.jacop.fz.FzConsole;
 
 /**
  * It finds bin packing constraints over the same bin variables, one per dimension of a vector bin
- * packing problem, and posts the cliques of their conflict graph as {@link
- * org.jacop.constraints.Alldistinct} constraints, the decomposition of {@link VectorBinpacking}
- * (Gualandi and Lombardi, CP 2013). MiniZinc has no vector bin packing global, so models write one
- * {@code bin_packing_capa} or {@code bin_packing_load} per dimension.
+ * packing problem (MiniZinc has no vector bin packing global, so models write one {@code
+ * bin_packing_capa} or {@code bin_packing_load} per dimension), and posts what {@link
+ * VectorBinpacking} adds to them: a bin packing constraint on the surrogate dimension, the sum of
+ * the dimensions scaled to a common capacity, and optionally the cliques of the conflict graph as
+ * {@link org.jacop.constraints.Alldistinct} constraints (Gualandi and Lombardi, CP 2013).
  *
- * <p>The system property {@code org.jacop.fz.binPackingCliques} selects the groups: {@code vector}
- * the groups of at least two constraints, {@code all} also single constraints, and {@code false}
- * (the default) none. The cliques are off by default because on random vector bin packing
- * benchmarks they changed the number of failures by less than 20% and proved no more optima with
- * the model's search; with free search they proved one more optimum of 27 hard instances.
+ * <p>The surrogate dimension is on by default; the system property {@code
+ * org.jacop.fz.binPackingSurrogate=false} turns it off. On 75 random vector bin packing instances
+ * (30 s) it proved 62 optima instead of 49 with the model's search and 65 instead of 54 with free
+ * search, for example every instance with anti-correlated sizes, where no bin holds three items.
+ *
+ * <p>The system property {@code org.jacop.fz.binPackingCliques} selects the groups that get
+ * cliques: {@code vector} the groups of at least two constraints, {@code all} also single
+ * constraints, and {@code false} (the default) none. The cliques are off by default because on the
+ * same benchmarks they proved no more optima, with or without the surrogate dimension.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -62,11 +67,13 @@ public class BinPackingCliqueDetector {
   // record would compare its arrays by identity
   private static final class Group {
     final IntVar[] bin;
+    final int minBin;
     final List<IntVar[]> loads = new ArrayList<>();
     final List<int[]> sizes = new ArrayList<>();
 
-    Group(IntVar[] bin) {
+    Group(IntVar[] bin, int minBin) {
       this.bin = bin;
+      this.minBin = minBin;
     }
   }
 
@@ -106,29 +113,50 @@ public class BinPackingCliqueDetector {
     key.add(minBin);
     key.add(load.length);
     key.addAll(Arrays.asList(bin));
-    Group group = groups.computeIfAbsent(key, k -> new Group(bin));
+    Group group = groups.computeIfAbsent(key, k -> new Group(bin, minBin));
     group.loads.add(load);
     group.sizes.add(w);
   }
 
-  /** It posts the cliques of each group of bin packing constraints over the same bins. */
+  /**
+   * It tells if the surrogate dimensions are posted.
+   *
+   * @return false if the system property org.jacop.fz.binPackingSurrogate is false.
+   */
+  public static boolean surrogateEnabled() {
+    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.binPackingSurrogate"));
+  }
+
+  /**
+   * It posts the surrogate dimensions and the cliques of each group of bin packing constraints over
+   * the same bins.
+   */
   public void detect() {
-    if (!enabled()) {
+    boolean cliques = enabled();
+    boolean surrogates = surrogateEnabled();
+    if (!cliques && !surrogates) {
       return;
     }
     long start = System.nanoTime();
     int minDimensions = minDimensions();
     int found = 0;
+    int surrogate = 0;
     for (Group group : groups.values()) {
-      if (group.loads.size() < minDimensions) {
-        continue;
-      }
       IntVar[][] load = group.loads.toArray(new IntVar[0][]);
       int[][] w = group.sizes.toArray(new int[0][]);
-      List<Constraint> cliques =
+      if (surrogates && group.loads.size() >= 2) {
+        List<Constraint> s =
+            VectorBinpacking.surrogateConstraints(support.store, group.bin, load, w, group.minBin);
+        support.delayedConstraints.addAll(s);
+        surrogate += s.size();
+      }
+      if (!cliques || group.loads.size() < minDimensions) {
+        continue;
+      }
+      List<Constraint> c =
           VectorBinpacking.cliqueConstraints(group.bin, w, VectorBinpacking.maxCapacities(load));
-      support.delayedConstraints.addAll(cliques);
-      found += cliques.size();
+      support.delayedConstraints.addAll(c);
+      found += c.size();
     }
     if (support.options.debug() && !groups.isEmpty()) {
       FzConsole.println(
@@ -137,6 +165,8 @@ public class BinPackingCliqueDetector {
               + " groups, "
               + found
               + " cliques, "
+              + surrogate
+              + " surrogate dimensions, "
               + (System.nanoTime() - start) / 1_000_000
               + " ms");
     }

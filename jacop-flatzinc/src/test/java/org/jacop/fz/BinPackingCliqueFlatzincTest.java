@@ -47,8 +47,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 /**
- * Checks the cliques that the FlatZinc front end posts for bin packing constraints over the same
- * bins (vector bin packing): all solutions must match a brute-force enumeration.
+ * Checks the surrogate dimension and the cliques that the FlatZinc front end posts for bin packing
+ * constraints over the same bins (vector bin packing): all solutions must match a brute-force
+ * enumeration.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -212,6 +213,39 @@ class BinPackingCliqueFlatzincTest {
       assertEquals(6, solutions(on).size());
     } finally {
       System.clearProperty(PROPERTY);
+    }
+  }
+
+  @Test
+  void surrogateDimensionIsOnByDefault() throws IOException {
+    // sizes (w, 80 - w): no bin holds three items in the summed dimension, so seven items do not
+    // fit three bins, while each dimension alone fits them
+    String fzn =
+        """
+        var 1..3: x0;
+        var 1..3: x1;
+        var 1..3: x2;
+        var 1..3: x3;
+        var 1..3: x4;
+        var 1..3: x5;
+        var 1..3: x6;
+        array [1..7] of var int: x:: output_array([1..7]) = [x0,x1,x2,x3,x4,x5,x6];
+        constraint jacop_bin_packing_capacity([x0,x1,x2,x3,x4,x5,x6],[100,100,100],\
+        [10,20,30,40,50,60,70],1);
+        constraint jacop_bin_packing_capacity([x0,x1,x2,x3,x4,x5,x6],[100,100,100],\
+        [70,60,50,40,30,20,10],1);
+        solve satisfy;
+        """;
+    String on = run(fzn, "-s", "-debug");
+    assertTrue(on.contains("1 surrogate dimensions"), on);
+    assertTrue(on.contains("UNSATISFIABLE"), on);
+    System.setProperty("org.jacop.fz.binPackingSurrogate", "false");
+    try {
+      String off = run(fzn, "-s", "-debug");
+      assertFalse(off.contains("surrogate dimensions"), off);
+      assertTrue(off.contains("UNSATISFIABLE"), off);
+    } finally {
+      System.clearProperty("org.jacop.fz.binPackingSurrogate");
     }
   }
 

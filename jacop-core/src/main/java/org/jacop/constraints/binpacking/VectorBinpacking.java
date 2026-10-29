@@ -55,6 +55,16 @@ import org.jacop.core.Store;
  * The paper also breaks the symmetry of the bins; that removes solutions, so it is left to the
  * model.
  *
+ * <p>It also posts a {@link Binpacking} on a surrogate dimension, the sum of the dimensions each
+ * scaled to a common capacity (surrogate relaxation, as in the lower bounds of Caprara and Toth,
+ * "Lower bounds and algorithms for the 2-dimensional vector packing problem", Discrete Applied
+ * Mathematics 2001). Items that fit a bin together fit it in the surrogate dimension, so no
+ * solution is lost, and the bin-count bounds (L2 and dual feasible functions) and cardinality rules
+ * of Binpacking on that dimension see what no single dimension shows: with sizes (w, 80 - w) in
+ * bins of capacity (100, 100) every item takes 80 of the surrogate capacity 200, so no bin holds
+ * three items, while each dimension alone allows many more. Surrogates of pairs of dimensions,
+ * tried on three-dimensional instances, pruned nothing more and slowed the search.
+ *
  * <p>The cliques are found greedily ({@link #conflictCliques}): each one starts from an edge not
  * covered yet and grows by the item adjacent to the most remaining candidates. Cliques of fewer
  * than three items are dropped, since Binpacking already separates two conflicting items once one
@@ -67,6 +77,9 @@ public class VectorBinpacking extends DecomposedConstraint<Constraint> {
 
   /** The largest number of items for which cliques are searched. */
   public static final int MAX_ITEMS = 5000;
+
+  // the largest common capacity of the surrogate dimensions taken as the lcm of the capacities
+  private static final long MAX_LCM = 1L << 20;
 
   /** The largest number of cliques posted. */
   public static final int MAX_CLIQUES = 500;
@@ -161,6 +174,7 @@ public class VectorBinpacking extends DecomposedConstraint<Constraint> {
       for (int d = 0; d < w.length; d++) {
         constraints.add(new Binpacking(bin, load[d], w[d], minBin));
       }
+      constraints.addAll(surrogateConstraints(store, bin, load, w, minBin));
       constraints.addAll(cliqueConstraints(bin, w, maxCapacities(load)));
     }
     return constraints;
@@ -181,6 +195,89 @@ public class VectorBinpacking extends DecomposedConstraint<Constraint> {
       }
     }
     return capacity;
+  }
+
+  /**
+   * It returns a {@link Binpacking}, with its cardinality rules, on the surrogate dimension, the
+   * sum of all dimensions. Dimension d is multiplied by L / c[d], where c[d] is its largest
+   * capacity and L the least common multiple of the capacities (or by the nearest integer to max(c)
+   * / c[d] when that multiple is too large), so every dimension weighs about the same. The load of
+   * a bin in a surrogate dimension is a new variable between 0 and the weighted sum of the largest
+   * loads of the bin. Any positive multipliers give a relaxation: items that fit a bin in every
+   * dimension fit it in the sum.
+   *
+   * @param store the store in which the surrogate loads are created.
+   * @param bin the bin of each item.
+   * @param load the load of each bin in each dimension, load[d][b].
+   * @param w the size of each item in each dimension, w[d][i].
+   * @param minBin the index of the first bin.
+   * @return the Binpacking constraint, or none with fewer than two dimensions or when a surrogate
+   *     size or capacity would not fit an int.
+   */
+  public static List<Constraint> surrogateConstraints(
+      Store store, IntVar[] bin, IntVar[][] load, int[][] w, int minBin) {
+    List<Constraint> result = new ArrayList<>();
+    int k = w.length;
+    if (k < 2) {
+      return result;
+    }
+    long[] multiplier = multipliers(maxCapacities(load));
+    if (multiplier == null) {
+      return result;
+    }
+    int[] size = new int[bin.length];
+    long total = 0;
+    for (int i = 0; i < bin.length; i++) {
+      long sum = 0;
+      for (int d = 0; d < k; d++) {
+        sum += multiplier[d] * w[d][i];
+      }
+      total += sum;
+      if (total > Integer.MAX_VALUE) {
+        return result;
+      }
+      size[i] = (int) sum;
+    }
+    IntVar[] surrogateLoad = new IntVar[load[0].length];
+    for (int b = 0; b < surrogateLoad.length; b++) {
+      long capacity = 0;
+      for (int d = 0; d < k; d++) {
+        capacity += multiplier[d] * Math.max(0, load[d][b].max());
+      }
+      if (capacity > Integer.MAX_VALUE) {
+        return result;
+      }
+      surrogateLoad[b] = new IntVar(store, 0, (int) capacity);
+    }
+    // the cardinality rules bound the items of a bin by the smallest surrogate sizes
+    result.add(new Binpacking(bin, surrogateLoad, size, minBin).cardinalityReasoning(true));
+    return result;
+  }
+
+  // L / c[d] with L the lcm of the capacities, or round(max(c) / c[d]) when L is too large; null
+  // when a capacity is not positive
+  private static long[] multipliers(int[] capacity) {
+    long lcm = 1;
+    long max = 0;
+    for (int c : capacity) {
+      if (c <= 0) {
+        return null;
+      }
+      max = Math.max(max, c);
+      if (lcm <= MAX_LCM) {
+        lcm = lcm / gcd(lcm, c) * c;
+      }
+    }
+    long[] multiplier = new long[capacity.length];
+    for (int d = 0; d < capacity.length; d++) {
+      multiplier[d] =
+          lcm <= MAX_LCM ? lcm / capacity[d] : Math.max(1, Math.round((double) max / capacity[d]));
+    }
+    return multiplier;
+  }
+
+  private static long gcd(long a, long b) {
+    return b == 0 ? a : gcd(b, a % b);
   }
 
   /**
