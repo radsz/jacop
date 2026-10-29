@@ -492,6 +492,14 @@ Version 5.0 (unreleased)
     60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
     on 24 of the others and a worse one on 21.
 
+37. A LinearInt that drops its fixed variables restores that state on
+    backtracking only at the levels where it changed, instead of being
+    called at every removed level. Many short sums, such as the blocks of
+    a long sum split under --lcg, no longer slow down backtracking:
+    skill_allocation_mzn_1m_2 (-f --lcg) solves in 11.9 s instead of
+    17.2 s with the same search. Store.recordChange(Stateful) is the new
+    hook for such state.
+
 Version 4.11
 =============
 

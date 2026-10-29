@@ -8352,4 +8352,32 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(y0.dom().toString()).isEqualTo("{0, 3}");
   }
+
+  // A LinearInt that drops fixed variables listened to every removed level, so many short sums
+  // (such as the blocks of a split long sum) were each called at every backtrack. It now restores
+  // its state only at the levels where it dropped a variable.
+  @Test
+  void testLinearIntRestoresDroppedTermsOnlyWhereTheyChanged() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 4);
+    }
+    int[] a = {1, 2, -1, 3, -2};
+    store.impose(new LinearInt(x, a, "==", 5));
+    assertThat(store.removeLevelListeners).isEmpty();
+
+    int expected = 0;
+    for (int t = 0; t < 5 * 5 * 5 * 5 * 5; t++) {
+      long sum = 0;
+      for (int i = 0, v = t; i < x.length; i++, v /= 5) {
+        sum += (long) a[i] * (v % 5);
+      }
+      if (sum == 5) {
+        expected++;
+      }
+    }
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(expected);
+  }
 }
