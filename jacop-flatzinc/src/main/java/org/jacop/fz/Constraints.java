@@ -30,7 +30,9 @@
 
 package org.jacop.fz;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -72,6 +74,9 @@ public class Constraints implements ParserTreeConstants {
   final SatTranslation sat;
   final Support support;
   String p;
+
+  // constraint generators by name; getMethod scans every public method on each call
+  final Map<String, java.lang.reflect.Method> generators = new HashMap<>();
   boolean debug;
   long boolClauses;
   long noConstraints;
@@ -240,7 +245,11 @@ public class Constraints implements ParserTreeConstants {
 
       try {
 
-        java.lang.reflect.Method method = cf.getClass().getMethod(p, SimpleNode.class);
+        java.lang.reflect.Method method = generators.get(p);
+        if (method == null) {
+          method = cf.getClass().getMethod(p, SimpleNode.class);
+          generators.put(p, method);
+        }
         method.invoke(cf, node);
 
       } catch (NoSuchMethodException _) {

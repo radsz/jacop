@@ -220,6 +220,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -229,6 +230,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -339,6 +341,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -348,6 +351,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -462,6 +466,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -471,6 +476,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -585,6 +591,7 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
@@ -594,6 +601,7 @@ setup to run configuration. -->
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
+                                <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
@@ -1080,6 +1088,7 @@ setup to run configuration. -->
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
                         <include>**/AccumulatedFailureCountTest.java</include>
+                        <include>**/SimpleSelectTieBreakTest.java</include>
                         <include>**/FreeSearchTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>

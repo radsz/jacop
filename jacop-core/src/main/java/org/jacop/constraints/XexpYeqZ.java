@@ -38,16 +38,21 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Constraint X ^ Y #= Z.
  *
- * <p>Boundary consistecny is used.
+ * <p>Bounds consistency for every exponent (see {@link DivModPowBounds#pow}); domain consistency
+ * for a fixed positive exponent where the power is monotone (odd, or x non-negative), and when x
+ * and y have at most {@link #SUPPORT_LIMIT} pairs of values.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
+public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -61,6 +66,9 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
   public XexpYeqZ(IntVar x, IntVar y, IntVar z) {
     super(idNumber, x, y, z);
   }
+
+  /** The most pairs of x and y values whose powers are enumerated for domain consistency. */
+  static final int SUPPORT_LIMIT = 64;
 
   // Outside the domain of every IntVar, so it cannot be mistaken for a negative power.
   private static final int NO_VALUE = Integer.MIN_VALUE;
@@ -114,7 +122,22 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
     }
 
     do {
+      store.propagationHasOccurred = false;
+      long[] b = {x.min(), x.max(), y.min(), y.max(), z.min(), z.max()};
+      if (!DivModPowBounds.pow(b)) {
+        throw Store.failException;
+      }
+      x.domain.in(store.level, x, (int) b[0], (int) b[1]);
+      y.domain.in(store.level, y, (int) b[2], (int) b[3]);
+      z.domain.in(store.level, z, (int) b[4], (int) b[5]);
+    } while (store.propagationHasOccurred);
 
+    if ((long) x.getSize() * y.getSize() > SUPPORT_LIMIT) {
+      return;
+    }
+
+    // few pairs: domain consistency by their powers
+    do {
       store.propagationHasOccurred = false;
 
       IntDomain zDom = new IntervalDomain();
@@ -129,6 +152,16 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
     } while (store.propagationHasOccurred);
   }
 
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return BoxExplanation.explain(trail, entry, new IntVar[] {x, y, z}, DivModPowBounds::pow, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return BoxExplanation.explainFailure(trail, new IntVar[] {x, y, z}, DivModPowBounds::pow, out);
+  }
+
   /**
    * Domain consistency for a fixed exponent n &gt; 0 where x^n is strictly increasing on the domain
    * of x (n odd, or x non-negative). The bounds are narrowed first, which is all most calls need,
@@ -141,12 +174,16 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
       store.propagationHasOccurred = false;
 
       // x^n is increasing, so the bounds of z follow from those of x
-      z.domain.in(store.level, z, long2int(power(x.min(), n)), long2int(power(x.max(), n)));
+      z.domain.in(
+          store.level,
+          z,
+          long2int(DivModPowBounds.power(x.min(), n)),
+          long2int(DivModPowBounds.power(x.max(), n)));
 
       // the smallest r with r^n >= z.min() and the largest r with r^n <= z.max(); there is none
       // when z holds no n-th power
-      long xMin = floorRoot(z.min() - 1L, n) + 1;
-      long xMax = floorRoot(z.max(), n);
+      long xMin = DivModPowBounds.floorRoot(z.min() - 1L, n) + 1;
+      long xMax = DivModPowBounds.floorRoot(z.max(), n);
       if (xMin > xMax) {
         throw Store.failException;
       }
@@ -166,7 +203,7 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
     IntervalDomain xDom = null;
     int supported = 0;
     for (int v = xd.min(); ; v = xd.nextValue(v)) {
-      if (zd.contains((int) power(v, n))) {
+      if (zd.contains((int) DivModPowBounds.power(v, n))) {
         supported++;
         if (xDom != null) {
           xDom.unionAdapt(v, v);
@@ -194,52 +231,11 @@ public class XexpYeqZ extends AbstractXopYeqZ implements Copyable<XexpYeqZ> {
       // z has values that are not powers of x; the supported powers are all in z
       IntervalDomain zDom = new IntervalDomain(supported + 1);
       for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
-        int p = (int) power(e.nextElement(), n);
+        int p = (int) DivModPowBounds.power(e.nextElement(), n);
         zDom.unionAdapt(p, p);
       }
       z.domain.in(store.level, z, zDom);
     }
-  }
-
-  /** v^n for n &gt; 0, saturated to a value outside the int range when it does not fit. */
-  private static long power(long v, int n) {
-    if (v == 0 || v == 1) {
-      return v;
-    }
-    if (v == -1) {
-      return (n & 1) == 0 ? 1 : -1;
-    }
-    long r = 1;
-    for (int i = 0; i < n; i++) {
-      r *= v;
-      if (r > Integer.MAX_VALUE || r < Integer.MIN_VALUE) {
-        // |v| >= 2, so the remaining factors only move r further out
-        return v > 0 || (n & 1) == 0 ? Long.MAX_VALUE / 2 : Long.MIN_VALUE / 2;
-      }
-    }
-    return r;
-  }
-
-  /**
-   * The largest r with r^n &lt;= w, for n &gt; 0 where r^n is strictly increasing on the candidate
-   * values: n odd, or w and r non-negative (r = -1 when w &lt; 0 and n is even).
-   */
-  private static long floorRoot(long w, int n) {
-    if (n == 1) {
-      return w;
-    }
-    if (w < 0 && (n & 1) == 0) {
-      return -1;
-    }
-    double estimate = Math.pow(Math.abs((double) w), 1.0 / n);
-    long r = (long) Math.floor(w < 0 ? -estimate : estimate);
-    while (power(r + 1, n) <= w) {
-      r++;
-    }
-    while (power(r, n) > w) {
-      r--;
-    }
-    return r;
   }
 
   @Override
