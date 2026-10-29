@@ -43,7 +43,11 @@ import org.jacop.constraints.Constraint;
  */
 public class IntVar extends Var {
 
-  /** It stores pointer to a current domain, which has stamp equal to store stamp. */
+  /**
+   * It stores pointer to a current domain, which has stamp equal to store stamp. A change of the
+   * domain in place other than through its in methods, {@link #addDom} or {@link #setDomain} must
+   * be followed by {@link #refreshBounds()}.
+   */
   public IntDomain domain;
 
   // the bounds of domain, refreshed on every change of it, so that min() and max() read a field of

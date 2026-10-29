@@ -586,6 +586,17 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
+44. IntVar keeps the bounds of its domain in two int fields, as Gecode's
+    IntVarImp does, so min(), max(), singleton() and value() no longer
+    test the domain class and load from the domain. The fields are updated
+    on every domain event other than ANY and on backtracking; search is
+    unchanged (same node counts). Paired runs, 10 s: on the 100-instance
+    dev tier (8 reps) the default search is 8.7% faster (geometric mean),
+    -f 17.6% and --lcg 3.3%; on mznbench (249 instances, 3 reps) 8.5%,
+    13.6% and 1.5%. Code that changes a variable's domain in place other
+    than through the domain's in methods, addDom or setDomain (for example
+    x.domain.subtractAdapt(v) before search) must call x.refreshBounds().
+
 Version 4.11
 =============
 
