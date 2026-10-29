@@ -38,6 +38,7 @@ import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntVar;
+import org.jacop.core.TrailedInts;
 import org.jacop.core.Var;
 import org.jacop.search.Indomain;
 import org.jacop.search.SelectChoicePoint;
@@ -54,6 +55,10 @@ import org.jacop.search.SelectChoicePoint;
  *
  * <p>It is a {@link SearchMonitor}: add it to the {@link FreeSearch} it branches for, so that it
  * sees the failures. Ties go to the variable given first.
+ *
+ * <p>The selection is incremental: the unfixed search variables and the unfixed variables of the
+ * constraints are kept in reversible sparse sets, and each constraint counts its unfixed variables,
+ * so a selection visits only the unfixed variables and not the scopes of their constraints.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -89,17 +94,52 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
   private final Weighting weighting;
 
   private final Map<Constraint, Integer> constraintIndex = new IdentityHashMap<>();
-  private final Var[][] scopes;
   private final double[] weights;
   private final int[][] varConstraints;
+
+  /** The distinct variables of the constraints' scopes. */
+  private final Var[] scopeVars;
+
+  /** For each scope variable, the constraint of each of its occurrences in a scope. */
+  private final int[][] occurrences;
+
+  /** For each constraint, the number of occurrences of unfixed variables in its scope. */
+  private final int[] unfixed;
+
+  /**
+   * Sparse sets of the search variables and of the scope variables: the elements not seen fixed
+   * come first, and those seen fixed last, as many as counted in {@link #removed}.
+   */
+  private final int[] searchOrder;
+
+  private final int[] scopeOrder;
+
+  /**
+   * The number of elements seen fixed in each sparse set, restored on backtracking; created at the
+   * first selection. Zero, the initial value, holds at every level.
+   */
+  private TrailedInts removed;
+
+  /** The size of the scope variable set that {@link #unfixed} counts. */
+  private int countedScopeSize;
 
   /**
    * For wdeg^ca.cd, the weight of each constraint of a variable, in the order of varConstraints.
    */
   private final double[][] varWeights;
 
-  /** For wdeg^ca.cd, the positions i and j in varWeights of the variables of each constraint. */
+  /**
+   * For wdeg and wdeg^ca.cd, the positions i of the search variables of each constraint, each
+   * followed by the position j of the constraint in varConstraints[i].
+   */
   private final int[][] scopePositions;
+
+  /**
+   * For wdeg, the weighted degree of each search variable, kept up to date as constraints get fewer
+   * than two unfixed variables and as weights grow. The weights are whole numbers, so the sums are
+   * exact and equal to those of {@link #weightedDegree(int)}.
+   */
+  private final double[] degrees;
 
   /**
    * For CHS, the number of failures so far and the failure count when each constraint last failed.
@@ -111,12 +151,6 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
 
   /** Added to the weight of every constraint; for CHS, so that the degree breaks ties at first. */
   private final double offset;
-
-  /** Whether a constraint has two unfixed variables, computed once per selection. */
-  private final boolean[] future;
-
-  private final long[] futureStamp;
-  private long stamp;
 
   private IntVar selected;
 
@@ -165,25 +199,64 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
       }
       varConstraints[i] = Arrays.copyOf(indices, n);
     }
-    scopes = scopeList.toArray(new Var[0][]);
-    weights = new double[scopes.length];
+    int constraints = scopeList.size();
+    weights = new double[constraints];
     Arrays.fill(weights, weighting == Weighting.CHS ? 0.0d : 1.0d);
     offset = weighting == Weighting.CHS ? CHS_DELTA : 0.0d;
-    future = new boolean[scopes.length];
-    futureStamp = new long[scopes.length];
-    lastConflict = new long[scopes.length];
+    lastConflict = new long[constraints];
+    unfixed = new int[constraints];
+    Map<Var, Integer> scopeIndex = new IdentityHashMap<>();
+    List<Var> scopeVarList = new ArrayList<>();
+    int[] occurrenceCounts = new int[0];
+    for (Var[] scope : scopeList) {
+      for (Var v : scope) {
+        Integer x = scopeIndex.get(v);
+        if (x == null) {
+          x = scopeVarList.size();
+          scopeIndex.put(v, x);
+          scopeVarList.add(v);
+          if (x == occurrenceCounts.length) {
+            occurrenceCounts = Arrays.copyOf(occurrenceCounts, 2 * x + 8);
+          }
+        }
+        occurrenceCounts[x]++;
+      }
+    }
+    scopeVars = scopeVarList.toArray(new Var[0]);
+    occurrences = new int[scopeVars.length][];
+    for (int x = 0; x < scopeVars.length; x++) {
+      occurrences[x] = new int[occurrenceCounts[x]];
+      occurrenceCounts[x] = 0;
+    }
+    for (int k = 0; k < constraints; k++) {
+      Var[] scope = scopeList.get(k);
+      unfixed[k] = scope.length;
+      for (Var v : scope) {
+        int x = scopeIndex.get(v);
+        occurrences[x][occurrenceCounts[x]++] = k;
+      }
+    }
+    countedScopeSize = scopeVars.length;
+    scopeOrder = identity(scopeVars.length);
+    searchOrder = identity(vars.length);
     if (weighting == Weighting.CACD) {
       varWeights = new double[vars.length][];
-      int[] counts = new int[scopes.length];
       for (int i = 0; i < vars.length; i++) {
         varWeights[i] = new double[varConstraints[i].length];
         Arrays.fill(varWeights[i], 1.0d);
+      }
+    } else {
+      varWeights = null;
+    }
+    if (weighting != Weighting.CHS) {
+      int[] counts = new int[constraints];
+      for (int i = 0; i < vars.length; i++) {
         for (int k : varConstraints[i]) {
           counts[k]++;
         }
       }
-      scopePositions = new int[scopes.length][];
-      for (int k = 0; k < scopes.length; k++) {
+      scopePositions = new int[constraints][];
+      for (int k = 0; k < constraints; k++) {
         scopePositions[k] = new int[2 * counts[k]];
         counts[k] = 0;
       }
@@ -195,8 +268,26 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
         }
       }
     } else {
-      varWeights = null;
       scopePositions = null;
+    }
+    degrees = weighting == Weighting.WDEG ? new double[vars.length] : null;
+    computeDegrees();
+  }
+
+  /** Computes the cached weighted degrees from the weights and the unfixed counts. */
+  private void computeDegrees() {
+    if (degrees != null) {
+      for (int i = 0; i < vars.length; i++) {
+        degrees[i] = weightedDegree(i);
+      }
+    }
+  }
+
+  /** Adds a change of the weight of a constraint to the cached degrees of its search variables. */
+  private void addToDegrees(int k, double delta) {
+    int[] positions = scopePositions[k];
+    for (int p = 0; p < positions.length; p += 2) {
+      degrees[positions[p]] += delta;
     }
   }
 
@@ -209,18 +300,45 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     return false;
   }
 
-  private boolean hasTwoUnfixed(int k) {
-    if (futureStamp[k] != stamp) {
-      futureStamp[k] = stamp;
-      int unfixed = 0;
-      for (Var v : scopes[k]) {
-        if (!v.singleton() && ++unfixed == 2) {
-          break;
+  private static int[] identity(int n) {
+    int[] a = new int[n];
+    for (int i = 0; i < n; i++) {
+      a[i] = i;
+    }
+    return a;
+  }
+
+  /**
+   * Brings the unfixed counts of the constraints up to date: the scope variables put back in the
+   * set by backtracking count again, then the variables now fixed leave the set.
+   */
+  private void updateUnfixed() {
+    int size = scopeVars.length - removed.get(1);
+    for (int p = countedScopeSize; p < size; p++) {
+      for (int k : occurrences[scopeOrder[p]]) {
+        if (++unfixed[k] == 2 && degrees != null) {
+          addToDegrees(k, weights[k]);
         }
       }
-      future[k] = unfixed >= 2;
     }
-    return future[k];
+    int p = 0;
+    while (p < size) {
+      int x = scopeOrder[p];
+      if (scopeVars[x].singleton()) {
+        size--;
+        scopeOrder[p] = scopeOrder[size];
+        scopeOrder[size] = x;
+        for (int k : occurrences[x]) {
+          if (--unfixed[k] == 1 && degrees != null) {
+            addToDegrees(k, -weights[k]);
+          }
+        }
+      } else {
+        p++;
+      }
+    }
+    countedScopeSize = size;
+    removed.set(1, scopeVars.length - size);
   }
 
   /**
@@ -235,7 +353,7 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     int[] constraints = varConstraints[i];
     for (int j = 0; j < constraints.length; j++) {
       int k = constraints[j];
-      if (hasTwoUnfixed(k)) {
+      if (unfixed[k] >= 2) {
         w += varWeights == null ? weights[k] + offset : varWeights[i][j];
       }
     }
@@ -244,22 +362,39 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
 
   @Override
   public IntVar getChoiceVariable(int index) {
-    stamp++;
     selected = null;
+    if (vars.length == 0) {
+      return null;
+    }
+    if (removed == null) {
+      removed = new TrailedInts(vars[0].getStore(), 2);
+    }
+    updateUnfixed();
     double best = Double.MAX_VALUE;
-    for (int i = 0; i < vars.length; i++) {
+    int bestIndex = -1;
+    int size = vars.length - removed.get(0);
+    int p = 0;
+    while (p < size) {
+      int i = searchOrder[p];
       IntVar v = vars[i];
       if (v.singleton()) {
+        size--;
+        searchOrder[p] = searchOrder[size];
+        searchOrder[size] = i;
         continue;
       }
-      double w = weightedDegree(i);
+      p++;
+      double w = degrees != null ? degrees[i] : weightedDegree(i);
       // a variable without constraints left comes last, smaller domains first
       double score = w > 0.0d ? v.getSize() / w : Double.MAX_VALUE / 2 + v.getSize();
-      if (selected == null || score < best) {
+      // the set is not in the order of the variables, so ties go to the smaller position
+      if (selected == null || score < best || (score == best && i < bestIndex)) {
         best = score;
+        bestIndex = i;
         selected = v;
       }
     }
+    removed.set(0, vars.length - size);
     return selected;
   }
 
@@ -292,7 +427,12 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     Integer k = failed == null ? null : constraintIndex.get(failed);
     if (k != null) {
       switch (weighting) {
-        case WDEG -> weights[k] += 1.0d;
+        case WDEG -> {
+          weights[k] += 1.0d;
+          if (unfixed[k] >= 2) {
+            addToDegrees(k, 1.0d);
+          }
+        }
         case CACD -> increaseVariableWeights(k);
         case CHS -> {
           double reward = 1.0d / (conflicts - lastConflict[k] + 1);
@@ -347,6 +487,7 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
           Arrays.fill(w, 1.0d);
         }
       }
+      computeDegrees();
       return;
     }
     if (weighting == Weighting.CHS) {

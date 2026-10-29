@@ -1653,6 +1653,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     lcg = new LcgSolver(store);
+    lcg.setSeed(options.getRandomSeed());
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
       if (costVar != null) {
@@ -1680,6 +1681,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (branching != LcgSolver.Branching.ACTIVITY) {
         lcg.sat().setInitialPhase(false);
       }
+      lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
     }
     SelectChoicePoint<? extends Var> annotated =
         free && "none".equals(interleave) ? null : annotationSelect(annotatedSearch);
