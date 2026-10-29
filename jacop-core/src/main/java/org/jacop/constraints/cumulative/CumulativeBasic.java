@@ -423,16 +423,16 @@ public class CumulativeBasic extends Constraint
         overloaded(trail, entry, j, t, room, out);
         return true;
       }
-      int[] pair = pairConflict(entry, j, v, d, room);
-      if (pair != null) {
-        addPairReason(trail, entry, j, pair, room, out);
+      int[] window = overloadedWindow(trail, entry, j, v);
+      if (window != null) {
+        addWindowReason(trail, entry, j, window, out);
         return true;
       }
-      int[] window = overloadedWindow(trail, entry, j, v);
-      if (window == null) {
+      int[] pair = pairConflict(entry, j, v, d, room);
+      if (pair == null) {
         return false;
       }
-      addWindowReason(trail, entry, j, window, out);
+      addPairReason(trail, entry, j, pair, room, out);
       return true;
     } else if (kind == AtomicTrail.GE) {
       trail.addLowerBound(y, entry, out);
@@ -451,19 +451,19 @@ public class CumulativeBasic extends Constraint
           u = t - d;
           continue;
         }
-        int[] pair = pairConflict(entry, j, u, d, room);
-        if (pair != null) {
-          addPairReason(trail, entry, j, pair, room, out);
-          // every start from p2 - d + 1 up to u covers both points
-          u = pair[2] - d;
+        int[] window = overloadedWindow(trail, entry, j, u);
+        if (window != null) {
+          addWindowReason(trail, entry, j, window, out);
+          u = windowRight(trail, entry, j, u, v, window);
           continue;
         }
-        int[] window = overloadedWindow(trail, entry, j, u);
-        if (window == null) {
+        int[] pair = pairConflict(entry, j, u, d, room);
+        if (pair == null) {
           return false;
         }
-        addWindowReason(trail, entry, j, window, out);
-        u = windowRight(trail, entry, j, u, v, window);
+        addPairReason(trail, entry, j, pair, room, out);
+        // every start from p2 - d + 1 up to u covers both points
+        u = pair[2] - d;
       }
     }
     return true;
@@ -633,19 +633,19 @@ public class CumulativeBasic extends Constraint
         u = t + 1;
         continue;
       }
-      int[] pair = pairConflict(entry, j, u, d, room);
-      if (pair != null) {
-        addPairReason(trail, entry, j, pair, room, out);
-        // every start from u up to p1 covers both points
-        u = pair[1] + 1;
+      int[] window = overloadedWindow(trail, entry, j, u);
+      if (window != null) {
+        addWindowReason(trail, entry, j, window, out);
+        u = windowLeft(trail, entry, j, u, v, window);
         continue;
       }
-      int[] window = overloadedWindow(trail, entry, j, u);
-      if (window == null) {
+      int[] pair = pairConflict(entry, j, u, d, room);
+      if (pair == null) {
         return false;
       }
-      addWindowReason(trail, entry, j, window, out);
-      u = windowLeft(trail, entry, j, u, v, window);
+      addPairReason(trail, entry, j, pair, room, out);
+      // every start from u up to p1 covers both points
+      u = pair[1] + 1;
     }
     return true;
   }
