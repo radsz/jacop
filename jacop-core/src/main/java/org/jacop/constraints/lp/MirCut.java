@@ -212,6 +212,9 @@ final class MirCut {
     for (long w : g) {
       gcd = gcd(gcd, Math.absExact(w));
     }
+    if (gcd == 0) {
+      return null;
+    }
     int[] columns = new int[nonzero];
     long[] weights = new long[nonzero];
     double activity = 0;
