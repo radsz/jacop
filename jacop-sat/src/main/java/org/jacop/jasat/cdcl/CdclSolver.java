@@ -128,6 +128,10 @@ public final class CdclSolver {
   private int trailSize;
   private int qhead;
   private int[] trailLim = new int[16];
+  // qhead when each level was opened: the external search may open a level before propagating
+  // (units asserted again by a backtrack), and those literals are propagated again after a
+  // backtrack to the level they were assigned at
+  private int[] qheadLim = new int[16];
   private int decisionLevel;
 
   // --- clauses
@@ -817,7 +821,9 @@ public final class CdclSolver {
   private void newDecisionLevel() {
     if (decisionLevel == trailLim.length) {
       trailLim = Arrays.copyOf(trailLim, 2 * trailLim.length);
+      qheadLim = Arrays.copyOf(qheadLim, trailLim.length);
     }
+    qheadLim[decisionLevel] = qhead;
     trailLim[decisionLevel++] = trailSize;
     if (notifying) {
       external.notifyNewDecisionLevel();
@@ -850,7 +856,7 @@ public final class CdclSolver {
       order.insert(v);
     }
     trailSize = kept;
-    qhead = start;
+    qhead = Math.min(start, qheadLim[target]);
     decisionLevel = target;
     if (rwasted > 0) {
       releaseReasons();

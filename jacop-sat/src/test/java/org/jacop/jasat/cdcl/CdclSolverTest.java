@@ -119,6 +119,7 @@ class CdclSolverTest {
       int vars = 3 + rnd.nextInt(10);
       List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       for (int[] c : f) {
         s.addClause(c);
@@ -139,6 +140,7 @@ class CdclSolverTest {
       int vars = 4 + rnd.nextInt(8);
       List<int[]> f = randomFormula(rnd, vars, vars + rnd.nextInt(3 * vars), 3);
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       for (int[] c : f) {
         s.addClause(c);
@@ -182,6 +184,7 @@ class CdclSolverTest {
       int vars = 5 + rnd.nextInt(7);
       List<int[]> f = new ArrayList<>();
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       for (int step = 0; step < 6; step++) {
         for (int[] c : randomFormula(rnd, vars, 2 + rnd.nextInt(vars), 3)) {
           f.add(c);
@@ -228,6 +231,7 @@ class CdclSolverTest {
   @Test
   void conflictLimitStopsTheSearch() {
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     pigeonhole(s, 10);
     s.setConflictLimit(100);
     assertEquals(CdclSolver.UNKNOWN, s.solve());
@@ -238,6 +242,7 @@ class CdclSolverTest {
     // The deadline was checked only on conflicts and on the solver's own decisions, so a search
     // driven by the external propagator's decisions ran past it.
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     int vars = 5000;
     s.ensureVars(vars);
     s.connect(
@@ -301,6 +306,7 @@ class CdclSolverTest {
   void readsDimacsAndWritesDrat() throws IOException {
     String cnf = "c example\np cnf 3 4\n1 2 0\n-1 2 0\n1 -2 0\n-1 -2 0\n";
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     ByteArrayOutputStream proof = new ByteArrayOutputStream();
     DratWriter drat = new DratWriter(proof);
     s.setProof(drat);
@@ -593,6 +599,7 @@ class CdclSolverTest {
       int vars = 3 + rnd.nextInt(10);
       List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       List<int[]> late = new ArrayList<>();
       for (int[] c : f) {
@@ -649,6 +656,27 @@ class CdclSolverTest {
     s.backtrackTo(3);
     assertTrue(s.propagateUnits());
     assertEquals(1, s.value(5));
+  }
+
+  @Test
+  void unitAssertedAgainByBacktrackPropagatesAtLevelZero() {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.ensureVars(3);
+    s.addClause(5, -3);
+    s.newLevel();
+    s.assume(1);
+    assertTrue(s.propagateUnits());
+    assertTrue(s.addClauseLive(new int[] {-5}, 1));
+    assertTrue(s.propagateUnits());
+    // the unit is assigned again at level 0 and propagated only after the next level is opened
+    s.backtrackTo(0);
+    s.newLevel();
+    s.assume(2);
+    assertTrue(s.propagateUnits());
+    s.backtrackTo(0);
+    assertTrue(s.propagateUnits());
+    assertEquals(-1, s.value(3));
   }
 
   @Test
