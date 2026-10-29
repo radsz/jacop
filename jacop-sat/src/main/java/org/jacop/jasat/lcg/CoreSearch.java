@@ -209,12 +209,12 @@ public final class CoreSearch {
     Set<Constraint> used = new HashSet<>();
     long[] constant = new long[1];
     for (int round = 0; round < 4 && terms.size() == 1; round++) {
-      int only = terms.keySet().iterator().next();
-      LinearForm f = definition(lcg.variable(only), used);
+      Map.Entry<Integer, Long> only = terms.entrySet().iterator().next();
+      LinearForm f = definition(lcg.variable(only.getKey()), used);
       if (f == null) {
         break;
       }
-      if (!substitute(lcg, terms, only, f, constant)) {
+      if (!substitute(lcg, terms, only.getKey(), only.getValue(), f, constant)) {
         return null;
       }
     }
@@ -229,12 +229,13 @@ public final class CoreSearch {
       boolean changed = false;
       for (int t : new ArrayList<>(terms.keySet())) {
         IntVar y = lcg.variable(t);
-        if (t == objective || !terms.containsKey(t) || otherConstraints(y, used) != 1) {
+        Long weight = terms.get(t);
+        if (t == objective || weight == null || otherConstraints(y, used) != 1) {
           continue;
         }
         LinearForm f = definition(y, used);
         if (f != null) {
-          if (!substitute(lcg, terms, t, f, constant)) {
+          if (!substitute(lcg, terms, t, weight, f, constant)) {
             return null;
           }
           changed = true;
@@ -259,11 +260,11 @@ public final class CoreSearch {
 
   /**
    * Replaces term y of the sum by its definition f, {@code a * y + sum of w_j * z_j = c} with a = 1
-   * or -1, so {@code y = (c - sum of w_j * z_j) / a}. Returns false when a z_j is not a variable of
-   * the solver.
+   * or -1, so {@code y = (c - sum of w_j * z_j) / a}, where y has the given weight in the sum.
+   * Returns false when a z_j is not a variable of the solver.
    */
   private static boolean substitute(
-      LcgSolver lcg, Map<Integer, Long> terms, int y, LinearForm f, long[] constant) {
+      LcgSolver lcg, Map<Integer, Long> terms, int y, long weight, LinearForm f, long[] constant) {
     IntVar yv = lcg.variable(y);
     long a = 0;
     for (int k = 0; k < f.vars().length; k++) {
@@ -271,7 +272,8 @@ public final class CoreSearch {
         a = f.weights()[k];
       }
     }
-    long scale = terms.remove(y) * a; // a is its own inverse
+    terms.remove(y);
+    long scale = weight * a; // a is its own inverse
     for (int k = 0; k < f.vars().length; k++) {
       IntVar z = f.vars()[k];
       if (z == yv) {
