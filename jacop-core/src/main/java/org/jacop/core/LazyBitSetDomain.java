@@ -373,8 +373,8 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
 
   private void pushWord(int word, int storeLevel, long old) {
     int entry = trail.push(this, word, storeLevel);
-    trail.ints[entry * DomainTrail.INTS + 2] = wordStamp[word];
-    trail.longs[entry] = old;
+    trail.setInt(entry, 2, wordStamp[word]);
+    trail.setLong(entry, old);
     wordStamp[word] = storeLevel;
   }
 
@@ -391,17 +391,15 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       trail = v.getStore().domainTrail;
     }
     int entry = trail.push(this, LEVEL_ENTRY, storeLevel);
-    int i = entry * DomainTrail.INTS;
-    int[] ints = trail.ints;
-    ints[i + 2] = minBound;
-    ints[i + 3] = maxBound;
-    ints[i + 4] = size;
-    ints[i + 5] = stamp;
-    ints[i + 6] = levelEntry;
-    trail.longs[entry] = bits == null ? 1L : 0L;
-    trail.objects[entry * DomainTrail.OBJECTS + 1] = ranges;
+    trail.setInt(entry, 2, minBound);
+    trail.setInt(entry, 3, maxBound);
+    trail.setInt(entry, 4, size);
+    trail.setInt(entry, 5, stamp);
+    trail.setInt(entry, 6, levelEntry);
+    trail.setLong(entry, bits == null ? 1L : 0L);
+    trail.setObject(entry, 1, ranges);
     // the variable is not visited on backtracking, so undo restores the bounds it keeps
-    trail.objects[entry * DomainTrail.OBJECTS + 2] = v;
+    trail.setObject(entry, 2, v);
     levelEntry = entry;
     stamp = storeLevel;
   }
@@ -413,13 +411,12 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       return;
     }
     int entry = trail.push(this, CONSTRAINTS_ENTRY, storeLevel);
-    trail.ints[entry * DomainTrail.INTS + 2] = constraintsStamp;
-    trail.longs[entry] =
-        ((long) searchConstraintsToEvaluate << 1) | (searchConstraintsCloned ? 1L : 0L);
-    int o = entry * DomainTrail.OBJECTS;
-    trail.objects[o + 1] = modelConstraints;
-    trail.objects[o + 2] = modelConstraintsToEvaluate;
-    trail.objects[o + 3] = searchConstraints;
+    trail.setInt(entry, 2, constraintsStamp);
+    trail.setLong(
+        entry, ((long) searchConstraintsToEvaluate << 1) | (searchConstraintsCloned ? 1L : 0L));
+    trail.setObject(entry, 1, modelConstraints);
+    trail.setObject(entry, 2, modelConstraintsToEvaluate);
+    trail.setObject(entry, 3, searchConstraints);
     constraintsStamp = storeLevel;
     // the saved state shares the constraint arrays, so they are copied before they grow
     ownedModelConstraints = null;
@@ -434,37 +431,34 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
   @SuppressWarnings("unchecked")
   public void undo(DomainTrail from, int entry) {
     bitsVersion++;
-    int i = entry * DomainTrail.INTS;
-    int[] ints = from.ints;
-    int kind = ints[i];
+    int kind = from.getInt(entry, 0);
     if (kind == LEVEL_ENTRY) {
-      minBound = ints[i + 2];
-      maxBound = ints[i + 3];
-      size = ints[i + 4];
-      stamp = ints[i + 5];
-      levelEntry = ints[i + 6];
-      ranges = (int[]) from.objects[entry * DomainTrail.OBJECTS + 1];
-      if (from.longs[entry] != 0) {
+      minBound = from.getInt(entry, 2);
+      maxBound = from.getInt(entry, 3);
+      size = from.getInt(entry, 4);
+      stamp = from.getInt(entry, 5);
+      levelEntry = from.getInt(entry, 6);
+      ranges = (int[]) from.getObject(entry, 1);
+      if (from.getLong(entry) != 0) {
         bits = null;
         wordStamp = null;
       }
-      ((IntVar) from.objects[entry * DomainTrail.OBJECTS + 2]).setBounds(minBound, maxBound);
+      ((IntVar) from.getObject(entry, 2)).setBounds(minBound, maxBound);
     } else if (kind == CONSTRAINTS_ENTRY) {
-      constraintsStamp = ints[i + 2];
-      long flags = from.longs[entry];
+      constraintsStamp = from.getInt(entry, 2);
+      long flags = from.getLong(entry);
       searchConstraintsCloned = (flags & 1L) != 0;
       searchConstraintsToEvaluate = (int) (flags >>> 1);
-      int o = entry * DomainTrail.OBJECTS;
-      modelConstraints = (Constraint[][]) from.objects[o + 1];
-      modelConstraintsToEvaluate = (int[]) from.objects[o + 2];
-      searchConstraints = (List<Constraint>) from.objects[o + 3];
+      modelConstraints = (Constraint[][]) from.getObject(entry, 1);
+      modelConstraintsToEvaluate = (int[]) from.getObject(entry, 2);
+      searchConstraints = (List<Constraint>) from.getObject(entry, 3);
     } else {
       if (bitsShared) {
         bits = bits.clone();
         bitsShared = false;
       }
-      bits[kind] = from.longs[entry];
-      wordStamp[kind] = ints[i + 2];
+      bits[kind] = from.getLong(entry);
+      wordStamp[kind] = from.getInt(entry, 2);
     }
   }
 
@@ -1278,14 +1272,13 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     if (entry < 0) {
       return null;
     }
-    int i = entry * DomainTrail.INTS;
-    int oldMin = trail.ints[i + 2];
-    int oldMax = trail.ints[i + 3];
-    int[] oldRanges = (int[]) trail.objects[entry * DomainTrail.OBJECTS + 1];
+    int oldMin = trail.getInt(entry, 2);
+    int oldMax = trail.getInt(entry, 3);
+    int[] oldRanges = (int[]) trail.getObject(entry, 1);
     if (oldRanges != null) {
       return rangesDomain(oldRanges, oldMin, oldMax);
     }
-    if ((trail.longs[entry] & 1L) != 0) {
+    if ((trail.getLong(entry) & 1L) != 0) {
       return new IntervalDomain(oldMin, oldMax);
     }
     return runs(previousWords(entry), base, oldMin, oldMax);
@@ -1338,11 +1331,10 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       IntervalDomain removed = subtractRuns(getPreviousDomain(), this);
       return removed.isEmpty() ? IntervalDomain.emptyDomain : removed;
     }
-    int i = entry * DomainTrail.INTS;
-    int oldMin = trail.ints[i + 2];
-    int oldMax = trail.ints[i + 3];
+    int oldMin = trail.getInt(entry, 2);
+    int oldMax = trail.getInt(entry, 3);
     // the words before this level, or null when the domain had no holes then
-    long[] old = (trail.longs[entry] & 1L) != 0 ? null : previousWords(entry);
+    long[] old = (trail.getLong(entry) & 1L) != 0 ? null : previousWords(entry);
     IntervalDomain result = new IntervalDomain(4);
     for (int start = oldMin; start <= oldMax; start += 64) {
       long range = bitRange(0, Math.min(63, oldMax - start));
@@ -1357,9 +1349,9 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     long[] old = bits.clone();
     // the entries after it of this domain, among those of the other domains of the store
     for (int e = trail.size() - 1; e > entry; e--) {
-      int word = trail.ints[e * DomainTrail.INTS];
-      if (word >= 0 && trail.objects[e * DomainTrail.OBJECTS] == this) {
-        old[word] = trail.longs[e];
+      int word = trail.getInt(e, 0);
+      if (word >= 0 && trail.getObject(e, 0) == this) {
+        old[word] = trail.getLong(e);
       }
     }
     return old;

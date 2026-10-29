@@ -828,9 +828,7 @@ public final class Derivation implements VarMap {
     for (Var v : variables) {
       List<Constraint> attached = new ArrayList<>(v.dom().constraints());
       attached.addAll(store.valueWatchers(v));
-      if (store.watchedConstraints != null) {
-        attached.addAll(store.watchedConstraints.getOrDefault(v, Set.of()));
-      }
+      attached.addAll(store.watchedLiteralConstraints(v));
       for (Constraint c : attached) {
         if (c != null && !c.isEntailed() && seen.put(c, Boolean.TRUE) == null) {
           result.add(c);
@@ -898,9 +896,7 @@ public final class Derivation implements VarMap {
       d.searchConstraintsCloned = false;
       parent.clearValueWatches(v);
     }
-    if (parent.watchedConstraints != null) {
-      parent.watchedConstraints.clear();
-    }
+    parent.clearWatchedConstraint();
   }
 
   /**
