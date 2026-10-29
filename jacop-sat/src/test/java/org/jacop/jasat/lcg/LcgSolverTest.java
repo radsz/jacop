@@ -86,6 +86,7 @@ import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -2113,6 +2114,71 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(SCHEDULING_INSTANCES / 8);
     assertThat(unsat).isGreaterThan(SCHEDULING_INSTANCES / 8);
+  }
+
+  /**
+   * Random unary resources with release times, deadlines and precedences, minimising the makespan:
+   * the optimum agrees with depth-first search, and every explanation of the unary rules
+   * (precedences found by detectable precedences, edge finding and not-first) is checked.
+   */
+  @Test
+  void unaryMakespanAgreesWithSearch() {
+    Random rnd = new Random(17);
+    long unaryReasons = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 8; instance++) {
+      int n = 6 + rnd.nextInt(4);
+      int[] d = new int[n];
+      int[] release = new int[n];
+      int horizon = 0;
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(9);
+        horizon += d[i];
+      }
+      for (int i = 0; i < n; i++) {
+        release[i] = rnd.nextInt(horizon / 2);
+      }
+      horizon += horizon / 4;
+      int[][] prec = new int[rnd.nextInt(3)][];
+      for (int p = 0; p < prec.length; p++) {
+        int a = rnd.nextInt(n - 1);
+        prec[p] = new int[] {a, a + 1 + rnd.nextInt(n - a - 1)};
+      }
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, release[i], horizon - d[i]);
+          durations[i] = new IntVar(store, d[i], d[i]);
+          resources[i] = new IntVar(store, 1, 1);
+          store.impose(new XplusClteqZ(s[i], d[i], makespan));
+        }
+        for (int[] p : prec) {
+          store.impose(new XplusClteqZ(s[p[0]], d[p[0]], s[p[1]]));
+        }
+        store.impose(new CumulativeUnary(s, durations, resources, new IntVar(store, 1, 1)));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          optimum[0] =
+              search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()), makespan)
+                  ? search.getCostValue()
+                  : -1;
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          int status = solver.minimize(makespan);
+          optimum[1] = status == CdclSolver.SAT ? solver.value(makespan) : -1;
+          long[] counts = solver.explanationStatistics().get("CumulativeUnary");
+          unaryReasons += counts == null ? 0 : counts[0];
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(unaryReasons).isPositive();
   }
 
   /**

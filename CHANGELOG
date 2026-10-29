@@ -667,6 +667,19 @@ Version 5.0 (unreleased)
     overall; --lcg -f 3% faster on the mznbench kit (also with
     --free-config lcg-split=0).
 
+51. Under --lcg, CumulativeUnary (MiniZinc disjunctive, and unary
+    resources found from disjunctions) explains the bounds its rules give
+    a start time by the tasks that must run before (or after) the task:
+    detectable precedences, edge finding and not-first, with each bound
+    lifted to the weakest atom on the trail the rule needs. Before, the
+    time-table and energy explanations of CumulativeBasic could not derive
+    detectable precedences at all, so many reasons were generic (48% on
+    openshop j7per10-1, 290 atoms each) and learnt clauses ran to
+    thousands of literals. --lcg -f, 30 s, 36 job shop instances: 27
+    proved instead of 23, 21 better and 4 worse; openshop j7per10-1 and
+    gp10-4 proved in 4 runs of 4 (2 of 4 before).
+    -Djacop.lcg.unaryExplain=false turns it off.
+
 Version 4.11
 =============
 
