@@ -177,7 +177,10 @@ public class Options {
                 lns=0|1 (adaptive large neighbourhood search for optimisation, default 1),
                 lns-share=<share> (time of neighbourhood runs per unit of time of the other runs,
                 default 1, 3 with --lcg), lns-fails=<failures> (one neighbourhood run, default 100),
-                lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200)
+                lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
+                lcg-core-delay=<share> (share of the time for branch and bound between a short
+                core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
+                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

@@ -586,7 +586,22 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
-44. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
+44. --lcg -f no longer spends half of the time on core-guided search when
+    branch and bound would prove the optimum at once. The core-guided
+    phase now runs for 2% of the time, then branch and bound for 5%, then
+    the rest of the core-guided phase, picking up where it stopped. The
+    branch and bound in between bounds the objective by an assumption, not
+    a clause, so the core-guided strata stay easy. nfc 18_3_10 takes 1.2 s
+    instead of 25 s, fast-food ff36 1.5 s instead of 16 s, amaze 1 to 3 s
+    instead of 15 to 31 s. On 97 instances (60 s, the OR-Tools set, a
+    Challenge sample and the slow easy ones) the score is 53.0 against
+    40.0, with 60 proofs against 58 and none lost (--free-config
+    lcg-core-probe=<share>, lcg-core-delay=<share>, 0 = core-guided search
+    first). The core-guided phase also reads the objective through partial
+    sums again: with lcg-split it took the block sums for its terms, and
+    trucking lost its proofs in 0.2 s.
+
+45. Optional ahead-of-time cache for fzn-jacop (Java 25, JEP 483/514/515).
     The new script fzn-jacop-aot (or mvn -Paot install) trains the JVM on
     the FlatZinc models in jacop-all/target/aot-training/ through the new
     org.jacop.fz.AotTraining and writes jacop.aot; fzn-jacop uses it when

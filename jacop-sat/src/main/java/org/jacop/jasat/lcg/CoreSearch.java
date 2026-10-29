@@ -160,6 +160,7 @@ public final class CoreSearch {
 
   private long startTime; // when the first call of the solver started, and the bound then
   private long startBound;
+  private long runEnd; // when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
@@ -352,6 +353,11 @@ public final class CoreSearch {
     return found;
   }
 
+  /** The number of terms of the objective's sum. */
+  int termCount() {
+    return termVar.length;
+  }
+
   /**
    * Continues the search until it proves the best solution optimal, proves there is none, or a
    * limit stops it. Each run picks up where the last one stopped.
@@ -363,7 +369,12 @@ public final class CoreSearch {
    *     there is no solution, {@link CdclSolver#UNKNOWN} otherwise
    */
   int run(long phaseLimit, long callLimit) {
+    if (startTime != 0) {
+      // the rate of the lower bound counts only the phase's own time, not branch and bound between
+      startTime += System.nanoTime() - runEnd;
+    }
     int result = search(phaseLimit, callLimit);
+    runEnd = System.nanoTime();
     if (result != CdclSolver.UNKNOWN) {
       proved = true;
     }
@@ -768,7 +779,10 @@ public final class CoreSearch {
    * cores near the optimum do not end the phase.
    */
   private boolean tooSlow() {
+    // only once the phase has a solution of its own: a poor one from branch and bound before it
+    // would stop the phase before its strata find better ones
     return System.nanoTime() - startTime >= RATE_WINDOW
+        && stratumSolutions > 0
         && lcg.bestObjective() != Long.MAX_VALUE
         && !rising();
   }

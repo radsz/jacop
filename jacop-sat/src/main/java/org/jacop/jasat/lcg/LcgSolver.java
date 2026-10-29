@@ -278,6 +278,9 @@ public final class LcgSolver implements ExternalPropagator {
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
+  private double coreDelayShare;
+  private long coreDelayBudget;
+  private double coreProbeShare;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   private CoreSearch coreSearch;
   // the objective value of the best solution found outside this solver, and the last one imported
@@ -653,50 +656,22 @@ public final class LcgSolver implements ExternalPropagator {
   private static final int MAX_CORE_EXTENSIONS = 8;
 
   private int minimizeWithCores() {
-    long deadline = sat.deadline();
-    long now = System.nanoTime();
-    long phaseLimit = Long.MAX_VALUE;
-    if (deadline != Long.MAX_VALUE) {
-      sat.setDeadline(now + (long) (coreShare * Math.max(0, deadline - now)));
-    } else {
-      phaseLimit = sat.conflicts + coreBudget;
+    int result;
+    if (coreDelayShare > 0) {
+      if (coreProbeShare > 0) {
+        result = runCores(coreProbeShare, coreDelayBudget, false);
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
+      }
+      result = minimizeBeforeCores();
+      if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+        return result;
+      }
     }
     double[] saved = CORE_RESTORE ? activity.clone() : null;
     double savedInc = activityInc;
-    coreMode = true;
-    int result;
-    try {
-      long full = sat.deadline();
-      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
-        // without a solution by this share of the phase, branch and bound gets the time
-        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
-        sat.setDeadline(first);
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
-          sat.setDeadline(full);
-          result = coreSearch.run(phaseLimit, coreCallLimit);
-        }
-      } else {
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-      }
-      // a phase that ran out of its time while its lower bound, at its rate so far, would meet the
-      // best solution before the deadline gets another share of the time left
-      for (int extension = 0;
-          extension < MAX_CORE_EXTENSIONS
-              && result == CdclSolver.UNKNOWN
-              && deadline != Long.MAX_VALUE
-              && System.nanoTime() >= sat.deadline()
-              && coreSearch.closing(deadline);
-          extension++) {
-        now = System.nanoTime();
-        sat.setDeadline(now + (long) (coreShare * Math.max(0, deadline - now)));
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-      }
-    } finally {
-      coreMode = false;
-      sat.setDeadline(deadline);
-      sat.setConflictLimit(Long.MAX_VALUE);
-    }
+    result = runCores(coreShare, coreBudget, true);
     if (result != CdclSolver.UNKNOWN) {
       return result;
     }
@@ -719,6 +694,95 @@ public final class LcgSolver implements ExternalPropagator {
   /** Whether runs of branch and bound alternate with lower-bound or neighbourhood runs. */
   private boolean interleaved() {
     return lowerBoundShare > 0 || lns != null;
+  }
+
+  /**
+   * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
+   * deadline. A later run picks up where this one stopped. When extend is set, a run that ran out
+   * of its time while its lower bound, at its rate so far, would meet the best solution before the
+   * deadline gets another share of the time left.
+   */
+  private int runCores(double share, long conflicts, boolean extend) {
+    long deadline = sat.deadline();
+    long now = System.nanoTime();
+    long phaseLimit = Long.MAX_VALUE;
+    if (deadline != Long.MAX_VALUE) {
+      sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
+    } else {
+      phaseLimit = sat.conflicts + conflicts;
+    }
+    coreMode = true;
+    int result;
+    try {
+      long full = sat.deadline();
+      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+        // without a solution by this share of the phase, branch and bound gets the time
+        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        sat.setDeadline(first);
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
+          sat.setDeadline(full);
+          result = coreSearch.run(phaseLimit, coreCallLimit);
+        }
+      } else {
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
+      for (int extension = 0;
+          extend
+              && extension < MAX_CORE_EXTENSIONS
+              && result == CdclSolver.UNKNOWN
+              && deadline != Long.MAX_VALUE
+              && System.nanoTime() >= sat.deadline()
+              && coreSearch.closing(deadline);
+          extension++) {
+        now = System.nanoTime();
+        sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
+        result = coreSearch.run(phaseLimit, coreCallLimit);
+      }
+      return result;
+    } finally {
+      coreMode = false;
+      sat.setDeadline(deadline);
+      sat.setConflictLimit(Long.MAX_VALUE);
+    }
+  }
+
+  /**
+   * Runs branch and bound for the share of the time left that {@link #setCoreDelay} gives it (its
+   * budget of conflicts when there is no deadline), before core-guided search. Easy models, which
+   * branch and bound proves in a few conflicts, are then done before the core-guided phase spends
+   * its share on cores that raise the lower bound slowly. The bound that each solution must improve
+   * is an assumption, not a clause: under a bound every stratum of the core-guided phase would have
+   * to improve, which makes its strata hard. Clauses learnt under an assumption hold without it.
+   */
+  private int minimizeBeforeCores() {
+    long deadline = sat.deadline();
+    long now = System.nanoTime();
+    if (deadline != Long.MAX_VALUE) {
+      sat.setDeadline(now + (long) (coreDelayShare * Math.max(0, deadline - now)));
+    } else {
+      sat.setConflictLimit(sat.conflicts + coreDelayBudget);
+    }
+    coreMode = true; // a solution ends the call of the solver without a clause
+    try {
+      while (true) {
+        if (best != null && best[objective] <= root[objective].min()) {
+          return CdclSolver.SAT;
+        }
+        int result = best == null ? solve() : solve(-geLit(objective, best[objective]));
+        if (result == CdclSolver.UNSAT) {
+          // with a best solution: none is better, whether or not the bound took part
+          return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+        }
+        if (result == CdclSolver.UNKNOWN) {
+          return result;
+        }
+      }
+    } finally {
+      coreMode = false;
+      sat.setDeadline(deadline);
+      sat.setConflictLimit(Long.MAX_VALUE);
+    }
   }
 
   /**
@@ -751,6 +815,23 @@ public final class LcgSolver implements ExternalPropagator {
     coreShare = share;
     coreBudget = Math.max(1, conflicts);
     coreCallLimit = Math.max(1, callLimit);
+  }
+
+  /**
+   * Lets branch and bound run first when {@link #minimize} uses core-guided search: for a share of
+   * the time left, or for a number of conflicts when there is no deadline. The core-guided phase
+   * starts only when this run neither proves the optimum nor shows there is no solution, and keeps
+   * its best solution.
+   *
+   * @param share the share of the time left for branch and bound first; 0 for none
+   * @param conflicts the conflicts of that run, and of the probe, when there is no deadline
+   * @param probe the share of the time left for core-guided search before that run, which proves
+   *     the models where cores close the gap at once; 0 for none
+   */
+  public void setCoreDelay(double share, long conflicts, double probe) {
+    coreDelayShare = share;
+    coreDelayBudget = Math.max(1, conflicts);
+    coreProbeShare = probe;
   }
 
   /**

@@ -2607,9 +2607,9 @@ class LcgSolverTest {
     for (int instance = 0; instance < 300; instance++) {
       long seed = rnd.nextLong();
       Integer expected = coreModelOptimum(seed, -1, new long[3]);
-      for (int mode = 0; mode < 3; mode++) {
+      for (int mode = 0; mode < 4; mode++) {
         // mode 0: core-guided search alone; 1: a few conflicts, then branch and bound; 2: the
-        // objective maximised through its negation
+        // objective maximised through its negation; 3: a few conflicts of branch and bound first
         long[] stats = new long[3];
         Integer found = coreModelOptimum(seed, mode, stats);
         assertThat(found)
@@ -2744,9 +2744,36 @@ class LcgSolverTest {
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 
+  @Test
+  void coreGuidedSearchReadsThroughPartialSums() {
+    // obj = s1 + s2 with s1 = 2 * x0 + x1 and s2 = x2 + 3 * x3, as --lcg splits a long sum into
+    // blocks; the terms of the core-guided phase are the x's, not the block sums
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar s1 = new IntVar(store, "s1", 0, 9);
+    IntVar s2 = new IntVar(store, "s2", 0, 12);
+    IntVar obj = new IntVar(store, "obj", 0, 21);
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1], s1}, new int[] {2, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], s2}, new int[] {1, 3, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[2]}, new int[] {1, 1}, ">=", 3));
+    store.impose(new LinearInt(new IntVar[] {x[1], x[3]}, new int[] {1, 1}, ">=", 2));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // x2 = 3 and x1 = 2: 3 + 2
+    assertThat(solver.value(obj)).isEqualTo(5);
+    assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+    assertThat(solver.coreSearch().proved).isTrue();
+  }
+
   /**
    * Builds a random model with a weighted sum objective and minimises it: by depth-first search
-   * (mode -1) or by LCG with core-guided search (modes 0 to 2). Returns the optimum, or null when
+   * (mode -1) or by LCG with core-guided search (modes 0 to 3). Returns the optimum, or null when
    * there is no solution; stats gets the cores, whether core-guided search proved the optimum and
    * the soft literals it made hard.
    */
@@ -2819,6 +2846,11 @@ class LcgSolverTest {
     solver.setChecking(true);
     solver.setCoreSearch(
         1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    if (mode == 3) {
+      // a few conflicts of branch and bound, after a few of core-guided search or none, then the
+      // core-guided phase picks up where it stopped
+      solver.setCoreDelay(1, 1 + rnd.nextInt(5), rnd.nextInt(2));
+    }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {
