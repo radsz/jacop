@@ -67,7 +67,7 @@ class MinizincFreeSearchTest {
 
   private static final String CATEGORY = "src/test/fz/upTo5sec/";
   private static final String REFERENCE = CATEGORY + "free-search-reference.txt";
-  private static final String TIME_LIMIT_MS = "10000";
+  private static final String TIME_LIMIT_MS = "5000";
   private static final String OBJECTIVE = "%%%mzn-stat: objective=";
 
   static Stream<String> reference() throws IOException {

@@ -81,7 +81,8 @@ class ImposeGroundingTest {
                       (Function<Random, GlobalConstraintBruteForceTest.Instance>) a.get()[1];
                   Function<Random, Case> generator =
                       random -> {
-                        GlobalConstraintBruteForceTest.Instance i = g.apply(random);
+                        GlobalConstraintBruteForceTest.Instance i =
+                            GlobalConstraintBruteForceTest.generate(g, random);
                         return Case.of(i.domains(), i.impose(), i.semantics(), i.description());
                       };
                   return Arguments.of(a.get()[0], generator);

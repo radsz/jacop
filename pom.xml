@@ -201,6 +201,7 @@ setup to run configuration. -->
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
+                                <lcg.scheduling.instances>100</lcg.scheduling.instances>
                                 <lp.test.runs>300</lp.test.runs>
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
