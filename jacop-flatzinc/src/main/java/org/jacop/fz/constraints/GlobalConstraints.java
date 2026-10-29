@@ -596,6 +596,19 @@ class GlobalConstraints implements ParserTreeConstants {
     return n > 0 && q / n <= 0.5;
   }
 
+  /**
+   * The largest number of values, from the system property {@code org.jacop.fz.alldiffDomainSize}
+   * (64 by default), of an all_different over dense domains that gets domain consistency
+   * (Alldistinct) instead of bounds consistency (Alldiff). Bounds consistency does not see the
+   * holes that other constraints make, as in sudoku, where the domain-consistent one needs a tenth
+   * of the failures; over small domains it costs little more.
+   *
+   * @return the number of values.
+   */
+  static int alldiffDomainSize() {
+    return Integer.getInteger("org.jacop.fz.alldiffDomainSize", 64);
+  }
+
   void gen_jacop_alldiff(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
 
@@ -619,7 +632,9 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
     boolean useAlldiff =
-        (support.boundsConsistency || support.options.getBoundConsistency()) && !isSparseDomains(v);
+        (support.boundsConsistency || support.options.getBoundConsistency())
+            && !isSparseDomains(v)
+            && dom.getSize() > alldiffDomainSize();
     if (useAlldiff) {
       support.pose(new Alldiff(v));
     } else {

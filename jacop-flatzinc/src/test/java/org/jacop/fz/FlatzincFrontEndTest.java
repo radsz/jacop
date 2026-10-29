@@ -196,6 +196,24 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void allDifferentOverSmallDenseDomainsIsDomainConsistent() throws IOException {
+    // a and b take 1 and 3, so c = 2. A dense all_different was bounds consistent, which does not
+    // see the hole in a and b and needed a failed decision c = 1 (sudoku_opt, fixed search).
+    String fzn =
+        """
+        var {1,3}: a;
+        var {1,3}: b;
+        var 1..3: c:: output_var;
+        constraint jacop_alldiff([a,b,c]);
+        solve :: int_search([c],input_order,indomain_min,complete) satisfy;
+        """;
+
+    String out = run(fzn, "-s")[0];
+    assertTrue(out.contains("c = 2;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
+  @Test
   void reifiedAllEqualOfThreeFindsNoCommonValueWithoutSearch() throws IOException {
     // x1 and x3 have no common value, so b must be false before any search. Three variables
     // were posted as b <-> (x1 = x2 /\ x2 = x3), which only looks at neighbouring pairs and
