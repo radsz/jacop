@@ -37,13 +37,17 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.OrBool;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
@@ -305,6 +309,186 @@ class ObjectivePresolveTest {
     assertThat(checked).isGreaterThan(100);
   }
 
+  /**
+   * An assignment as in rel2onto: x[i] all different, a node v is used ({@code u_v <-> or(x[i] =
+   * v)}) when some x[i] takes it, an edge e_v equal to u_v costs w_v, and x[i] costs c_i[x[i]]
+   * through an element. The disjunction of exclusive literals is a sum, the edge is replaced by the
+   * equal disjunction, and each x[i] costs at least its cheapest c_i[v] + w_v.
+   */
+  @Test
+  void anExclusiveDisjunctionReachedThroughEqualitiesIsExpanded() {
+    for (boolean allDifferent : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar obj = new IntVar(store, "obj", 0, 1000);
+      ObjectivePresolve presolve = new ObjectivePresolve(obj, true);
+      int[][] cost = {{0, 4, 9}, {3, 0, 5}};
+      int[] w = {10, 20, 6};
+      IntVar[] x = {new IntVar(store, "x0", 1, 3), new IntVar(store, "x1", 1, 3)};
+      if (allDifferent) {
+        store.impose(new Alldistinct(x));
+        presolve.addAllDifferent(x);
+      }
+      IntVar[][] lit = new IntVar[x.length][];
+      for (int i = 0; i < x.length; i++) {
+        lit[i] = bools(store, 3);
+        for (int v = 1; v <= 3; v++) {
+          store.impose(new Reified(new XeqC(x[i], v), lit[i][v - 1]));
+          presolve.addValueLiteral(x[i], v, lit[i][v - 1]);
+        }
+      }
+      List<IntVar> vars = new ArrayList<>(List.of(obj));
+      List<Integer> coefs = new ArrayList<>(List.of(-1));
+      for (int v = 1; v <= 3; v++) {
+        IntVar used = new IntVar(store, "u" + v, 0, 1);
+        IntVar[] or = {lit[0][v - 1], lit[1][v - 1]};
+        store.imposeDecomposition(new OrBool(or, used));
+        presolve.addOr(used, or);
+        IntVar edge = new IntVar(store, "e" + v, 0, 1);
+        store.impose(new XeqY(edge, used));
+        presolve.addEquality(edge, used);
+        vars.add(edge);
+        coefs.add(w[v - 1]);
+      }
+      for (int i = 0; i < x.length; i++) {
+        IntVar y = new IntVar(store, "y" + i, 0, 9);
+        store.impose(new ElementInteger(x[i], cost[i], y, 0));
+        presolve.addElement(x[i], cost[i], 1, y);
+        vars.add(y);
+        coefs.add(1);
+      }
+      equation(
+          store,
+          presolve,
+          vars.toArray(new IntVar[0]),
+          coefs.stream().mapToInt(Integer::intValue).toArray(),
+          0,
+          obj);
+      assertThat(store.consistency()).isTrue();
+      assertThat(obj.min()).isZero();
+
+      List<Constraint> reformulation = presolve.reformulate(store);
+      if (!allDifferent) {
+        // two variables may take the same node, so the disjunction is not a sum
+        assertThat(reformulation).isEmpty();
+        continue;
+      }
+      assertThat(presolve.shifted()).isEqualTo(2);
+      reformulation.forEach(store::impose);
+      assertThat(store.consistency()).isTrue();
+      // x0 costs at least min(0 + 10, 4 + 20, 9 + 6) = 10, x1 at least min(13, 20, 11) = 11
+      assertThat(obj.min()).isEqualTo(10 + 11);
+    }
+  }
+
+  /**
+   * Random assignments with all-different constraints, value literals, disjunctions of the literals
+   * of one value, equalities and element costs have the same solutions with the reformulation
+   * imposed, and its bound is no weaker.
+   */
+  @Test
+  void randomAssignmentsKeepTheirSolutions() {
+    Random random = new Random(20261028L);
+    int reformulated = 0;
+    for (int run = 0; run < 200; run++) {
+      long seed = random.nextLong();
+      List<List<Integer>> without = assignmentSolutions(seed, false);
+      List<List<Integer>> with = assignmentSolutions(seed, true);
+      assertThat(new HashSet<>(with)).as("seed %d", seed).isEqualTo(new HashSet<>(without));
+      assertThat(with).as("seed %d", seed).hasSameSizeAs(without);
+      if (lastReformulated) {
+        reformulated++;
+      }
+    }
+    assertThat(reformulated).isGreaterThan(50);
+  }
+
+  private static List<List<Integer>> assignmentSolutions(long seed, boolean reformulate) {
+    Random r = new Random(seed);
+    Store store = new Store();
+    boolean minimize = r.nextBoolean();
+    IntVar obj = new IntVar(store, "obj", -1000, 1000);
+    ObjectivePresolve presolve = new ObjectivePresolve(obj, minimize);
+    int n = 2 + r.nextInt(2);
+    int values = n + r.nextInt(2);
+    IntVar[] x = new IntVar[n];
+    IntVar[][] lit = new IntVar[n][values];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, values);
+      for (int v = 1; v <= values; v++) {
+        lit[i][v - 1] = new IntVar(store, 0, 1);
+        store.impose(new Reified(new XeqC(x[i], v), lit[i][v - 1]));
+        presolve.addValueLiteral(x[i], v, lit[i][v - 1]);
+      }
+    }
+    // all different over all variables, over some of them, or not at all
+    int different = r.nextInt(3) == 0 ? 0 : 2 + r.nextInt(n - 1);
+    if (different > 0) {
+      IntVar[] d = Arrays.copyOf(x, different);
+      store.impose(new Alldistinct(d));
+      presolve.addAllDifferent(d);
+    }
+    List<IntVar> all = new ArrayList<>(Arrays.asList(x));
+    List<IntVar> vars = new ArrayList<>(List.of(obj));
+    List<Integer> coefs = new ArrayList<>(List.of(-1));
+    for (int v = 1; v <= values; v++) {
+      IntVar used = new IntVar(store, "u" + v, 0, 1);
+      IntVar[] or = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        or[i] = lit[i][v - 1];
+      }
+      store.imposeDecomposition(new OrBool(or, used));
+      presolve.addOr(used, or);
+      IntVar term = used;
+      if (r.nextBoolean()) {
+        term = new IntVar(store, "e" + v, 0, 1);
+        store.impose(new XeqY(term, used));
+        presolve.addEquality(term, used);
+      }
+      all.add(term);
+      vars.add(term);
+      coefs.add(r.nextInt(21) - 5);
+    }
+    for (int i = 0; i < n; i++) {
+      if (r.nextBoolean()) {
+        int[] cost = new int[values];
+        for (int v = 0; v < values; v++) {
+          cost[v] = r.nextInt(15) - 3;
+        }
+        IntVar y = new IntVar(store, "y" + i, -3, 11);
+        store.impose(new ElementInteger(x[i], cost, y, 0));
+        presolve.addElement(x[i], cost, 1, y);
+        all.add(y);
+        vars.add(y);
+        coefs.add(1 + r.nextInt(2));
+      }
+    }
+    equation(
+        store,
+        presolve,
+        vars.toArray(new IntVar[0]),
+        coefs.stream().mapToInt(Integer::intValue).toArray(),
+        r.nextInt(7) - 3,
+        obj);
+    all.add(obj);
+    lastReformulated = false;
+    if (!store.consistency()) {
+      return List.of();
+    }
+    if (reformulate) {
+      List<Constraint> reformulation = presolve.reformulate(store);
+      if (!reformulation.isEmpty()) {
+        lastReformulated = true;
+        int before = minimize ? obj.min() : obj.max();
+        reformulation.forEach(store::impose);
+        if (!store.consistency()) {
+          return List.of();
+        }
+        assertThat(minimize ? obj.min() >= before : obj.max() <= before).isTrue();
+      }
+    }
+    return allSolutions(store, all.toArray(new IntVar[0]));
+  }
+
   private static boolean lastReformulated;
 
   /** How the random models are solved: as given, with the equation, with cost variables too. */
@@ -420,7 +604,10 @@ class ObjectivePresolveTest {
         assertThat(minimize ? obj.min() >= before : obj.max() <= before).isTrue();
       }
     }
-    IntVar[] decisions = all.toArray(new IntVar[0]);
+    return allSolutions(store, all.toArray(new IntVar[0]));
+  }
+
+  private static List<List<Integer>> allSolutions(Store store, IntVar[] decisions) {
     List<List<Integer>> found = new ArrayList<>();
     Search<IntVar> search = new DepthFirstSearch<>();
     SelectChoicePoint<IntVar> select = new SimpleSelect<>(decisions, null, new IndomainMin<>());

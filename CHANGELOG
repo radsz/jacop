@@ -492,7 +492,23 @@ Version 5.0 (unreleased)
     60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
     on 24 of the others and a worse one on 21.
 
-37. A LinearInt that drops its fixed variables restores that state on
+37. New constraint SubcircuitCostPair(x, c1, s1, c2, s2): two sums of arc
+    costs on one subcircuit, such as a prize collected within a length
+    budget, bounded together by Lagrangian relaxation: for lambda >= 0,
+    s1 >= min assignment of (c1 + lambda * c2) - lambda * max(s2), and the
+    same for the other sides. It searches lambda on the concave piecewise
+    linear bound, prunes arcs by reduced costs, and backs off a direction
+    that prunes nothing. The FlatZinc front end weighs the sum of a
+    redundant SubcircuitCost against each other sum on the subcircuit
+    (also a prize made of tests only), except under --lcg;
+    -Dorg.jacop.fz.circuitCostPair=true or false decides. On mario
+    (MiniZinc challenge) the default search proves the optimum 3x faster
+    (geometric mean of 5 instances, medium_4 32 s to 3 s) and -f stays
+    within 0.5 s; on the 6 hardest orienteering instances proved in 30 s
+    it is 1.4x faster (1.3x with -f), with an extra proof on
+    orienteering_40_1.
+
+38. A LinearInt that drops its fixed variables restores that state on
     backtracking only at the levels where it changed, instead of being
     called at every removed level. Many short sums, such as the blocks of
     a long sum split under --lcg, no longer slow down backtracking:
@@ -500,7 +516,7 @@ Version 5.0 (unreleased)
     17.2 s with the same search. Store.recordChange(Stateful) is the new
     hook for such state.
 
-38. Not-last in CumulativeUnary (MiniZinc disjunctive) now tests every
+39. Not-last in CumulativeUnary (MiniZinc disjunctive) now tests every
     task, as Vilim's algorithm does. A task whose latest completion lets
     no new task into Theta was skipped, and a task bounded by its own
     latest start now gets the largest latest start of the other tasks.
@@ -508,7 +524,7 @@ Version 5.0 (unreleased)
     open shop instances solved to optimality keep their node counts, and
     a 150x15 job shop reaches makespan 8992 in 30 s instead of 9003.
 
-39. Faster FlatZinc front end and input order tie-breaking. SimpleSelect
+40. Faster FlatZinc front end and input order tie-breaking. SimpleSelect
     breaks ties in input order from an int array kept in step with its
     search array instead of two map lookups per comparison; removing
     aliased variables from the default search is linear instead of
@@ -517,7 +533,7 @@ Version 5.0 (unreleased)
     generator method once. oocsp_racks_100_r1 runs in 18 s instead of
     29 s (search 5.5 s instead of 15 s), with the same search tree.
 
-40. --lcg -f takes turns at restarts between three kinds of runs: the
+41. --lcg -f takes turns at restarts between three kinds of runs: the
     search annotation (dom/wdeg without one), the SAT solver's own decisions
     on literals with phase false and phase saving, as in CP-SAT's default
     search, and activity branching. Before, it alternated the annotation
@@ -541,6 +557,34 @@ Version 5.0 (unreleased)
     and the semantic minimisation of learnt clauses takes linear time on a
     long group of literals on one variable (city-position 7-04 learnt
     clauses of 7,527 literals).
+
+42. Parallel portfolio for FlatZinc: fzn-jacop -p <n> (minizinc -p) solves
+    the model in n threads, each with a store of its own: the options
+    given, then free search and lazy clause generation with other settings
+    (up to 9 threads). The threads share the objective value of the best
+    solution, which FreeSearch reads at every node and LcgSolver adds as a
+    clause, and the first thread that completes decides the answer. With
+    -f -p 4 on 4 cores, 60 s: 52 of the 63 lost-free instances solved
+    instead of 39 and 156 of 160 regression instances instead of 144. All
+    solutions of satisfaction problems (-a, -n), -o and float models stay
+    on one thread. New: FreeSearch.Builder.sharedBound, LcgSolver
+    .setSharedBound and stop, CdclSolver.cancel, Store.interrupt.
+
+43. FlatZinc objective presolve expands the objective through more of the
+    model: equalities (bool2int, bool_eq, a 0/1 variable and its literal
+    of 1) lead a term to an equal variable that has a definition; a
+    disjunction r <-> or(b) (array_bool_or, bool_clause_reif) is
+    r = sum(b) when at most one b can be 1 (literals of one variable, or
+    of one value for variables of one jacop_alldiff/jacop_alldistinct);
+    an element y = c[x] of constants is y = sum(c_v * (x = v)) when every
+    value of x has a literal. On rel2onto each matched attribute now pays
+    for its leaf edge at the root (5_5: bound 153,163 instead of 33,163,
+    optimum 161,783). All six instances are proved in every mode (60 s):
+    by default in 0.4 to 5.7 s instead of 1.9 to 26 s, with --lcg in 0.5
+    to 1.4 s (2 of 6 proved before), with --lcg -f in 0.1 to 5.3 s (1 of
+    6) and with -f in 0.1 to 6.9 s (3 of 6). On the 552 instances of the
+    free-search kit only rel2onto and one prize-collecting instance
+    change, with the same result.
 
 Version 4.11
 =============

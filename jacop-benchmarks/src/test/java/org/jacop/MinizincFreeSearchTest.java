@@ -79,12 +79,20 @@ class MinizincFreeSearchTest {
   @MethodSource("reference")
   @Timeout(30)
   void freeSearchAgreesWithTheModelSearch(String line) throws IOException {
+    check(line, List.of("-f"));
+  }
+
+  /**
+   * Solves a model of the reference with the given search options and checks the result against the
+   * reference line.
+   */
+  static void check(String line, List<String> searchOptions) throws IOException {
     String[] fields = line.trim().split("\\s+");
     String model = fields[0];
     String kind = fields[1];
     long value = fields.length > 2 ? Long.parseLong(fields[2]) : 0;
 
-    List<String> output = run(model);
+    List<String> output = run(model, searchOptions);
     long solutions = output.stream().filter(l -> l.trim().equals("----------")).count();
     boolean complete = output.stream().anyMatch(l -> l.trim().equals("=========="));
     boolean unsat = output.stream().anyMatch(l -> l.contains("=====UNSATISFIABLE====="));
@@ -126,8 +134,8 @@ class MinizincFreeSearchTest {
     }
   }
 
-  /** Runs free search on the model and returns what it prints. */
-  private List<String> run(String model) throws IOException {
+  /** Runs the model with the search options and returns what it prints. */
+  private static List<String> run(String model, List<String> searchOptions) throws IOException {
     String fzn = CATEGORY + model + ".fzn";
     List<String> args = new ArrayList<>();
     Path options = Path.of(fzn).getParent().resolve("options.opt");
@@ -137,7 +145,8 @@ class MinizincFreeSearchTest {
         args.add(reader.readLine());
       }
     }
-    args.addAll(List.of("-f", "-v", "-t", TIME_LIMIT_MS, fzn));
+    args.addAll(searchOptions);
+    args.addAll(List.of("-v", "-t", TIME_LIMIT_MS, fzn));
     PrintStream out = System.out;
     ByteArrayOutputStream captured = new ByteArrayOutputStream();
     try (PrintStream capture = new PrintStream(captured, true, StandardCharsets.UTF_8)) {

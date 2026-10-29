@@ -1637,6 +1637,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     lcg = new LcgSolver(store);
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      if (costVar != null) {
+        lcg.setSharedBound(worker::sharedBound);
+      }
+      worker.onStop(lcg::stop);
+    }
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
@@ -1987,7 +1994,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("probe", "0.05")),
           Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null && costVar != null) {
+      builder.sharedBound(worker::sharedBound);
+    }
     freeSearch = builder.build();
+    if (worker != null) {
+      worker.onStop(freeSearch::stop);
+    }
     if (options.debug()) {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
@@ -2144,6 +2158,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
       printSearch(label);
     }
+    stopInPortfolio();
     rs =
         new RestartSearch<>(
             store, label, select, restartCalculator, costVar != null ? (T) costVar : null);
@@ -2158,6 +2173,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return rs.labeling();
   }
 
+  /**
+   * In a portfolio thread, a depth-first search is stopped through its store: propagation fails
+   * from then on, as at a time-out, and what the search then reports is ignored.
+   */
+  private void stopInPortfolio() {
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      worker.onStop(store::interrupt);
+    }
+  }
+
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
@@ -2165,6 +2191,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.print("% " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
       printSearch(label);
     }
+    stopInPortfolio();
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
@@ -3272,6 +3299,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     printBuffer.append("----------\n");
+
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      Integer cost = costVariable instanceof IntVar c ? c.min() : null;
+      worker.solution(printBuffer.toString(), cost, !minimize);
+    }
 
     if (options.getAll()) {
       IO.print(printBuffer.toString());

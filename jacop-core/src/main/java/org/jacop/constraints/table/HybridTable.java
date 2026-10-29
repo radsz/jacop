@@ -473,6 +473,7 @@ public class HybridTable extends Constraint
     }
     int n = tupleCount;
     valid = new TrailedTupleSet(n, arity);
+    valid.recordOn(store);
     words = valid.words;
     queue = new int[arity];
     queued = new boolean[arity];
@@ -950,6 +951,14 @@ public class HybridTable extends Constraint
   }
 
   @Override
+  public boolean isStateful() {
+    // The valid tuples restore themselves from the store's trail, at the levels where they changed.
+    // A column left in the queue by a backtrack only costs a check of its live classes, which are
+    // restored.
+    return false;
+  }
+
+  @Override
   public void queueVariable(int level, Var v) {
     if (pruning) {
       return;
@@ -1038,14 +1047,18 @@ public class HybridTable extends Constraint
       throw Store.failException;
     }
 
-    int changed = queueSize;
-    int onlyChanged = queueSize == 1 ? queue[0] : -1;
-    for (int p = 0; p < queueSize; p++) {
-      int i = queue[p];
+    // The queue stays consistent when an update fails, since no backtrack empties it. A column
+    // left in it by a backtrack has no live class to lose, so only the columns that lost one count.
+    int changed = 0;
+    int onlyChanged = -1;
+    while (queueSize > 0) {
+      int i = queue[--queueSize];
       queued[i] = false;
-      updateTable(i);
+      if (updateTable(i)) {
+        changed++;
+        onlyChanged = changed == 1 ? i : -1;
+      }
     }
-    queueSize = 0;
 
     // Restrictions between columns can remove further values of the changed column itself, for
     // example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple, and the tuples they remove may have
@@ -1070,19 +1083,23 @@ public class HybridTable extends Constraint
     }
 
     pruning = true;
-    boolean anyScanned = scanValidTuples(onlyChanged);
     int notGround = 0;
-    for (int i = 0; i < arity; i++) {
-      IntVar xi = x[i];
-      boolean wasSingleton = xi.singleton();
-      if (i != onlyChanged && (!wasSingleton || changed > 0) && !supportedByRestrictions(i)) {
-        filterDomain(i, anyScanned && scanColumn[i]);
+    try {
+      boolean anyScanned = scanValidTuples(onlyChanged);
+      for (int i = 0; i < arity; i++) {
+        IntVar xi = x[i];
+        boolean wasSingleton = xi.singleton();
+        if (i != onlyChanged && (!wasSingleton || changed > 0) && !supportedByRestrictions(i)) {
+          filterDomain(i, anyScanned && scanColumn[i]);
+        }
+        if (!xi.singleton()) {
+          notGround++;
+        }
       }
-      if (!xi.singleton()) {
-        notGround++;
-      }
+    } finally {
+      // No backtrack resets it, and a failure here must not hide the next changes.
+      pruning = false;
     }
-    pruning = false;
 
     if (notGround <= 1) {
       removeConstraint();
@@ -1097,8 +1114,12 @@ public class HybridTable extends Constraint
     valid.set(liveRecord + i, size);
   }
 
-  /** It updates the valid tuples after the domain of variable i changed. */
-  private void updateTable(int i) {
+  /**
+   * It updates the valid tuples after the domain of variable i changed.
+   *
+   * @return true when the column lost a live class.
+   */
+  private boolean updateTable(int i) {
 
     IntDomain d = x[i].dom();
     int[] l = live[i];
@@ -1120,7 +1141,7 @@ public class HybridTable extends Constraint
       }
     }
     if (s == size) {
-      return;
+      return false;
     }
     setLiveSize(i, s);
 
@@ -1152,6 +1173,7 @@ public class HybridTable extends Constraint
     if (limit() < 0) {
       throw Store.failException;
     }
+    return true;
   }
 
   /** The tuples whose in or not in restriction on column i accepts one of the live classes. */

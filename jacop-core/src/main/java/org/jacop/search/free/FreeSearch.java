@@ -38,6 +38,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.FailException;
@@ -152,6 +153,7 @@ public final class FreeSearch {
   private final Set<Var> projection;
   private final List<SearchMonitor> monitors;
   private final Consumer<FreeSearch> solutionHandler;
+  private final IntSupplier sharedBound;
   private final boolean learnNogoods;
   private final int maxNogoods;
   private final int maxNogoodLength;
@@ -164,7 +166,8 @@ public final class FreeSearch {
   private int stackSize;
   private int rootLevel;
   private long deadline;
-  private boolean stopRequested;
+  // set by stop(), possibly from another thread
+  private volatile boolean stopRequested;
   private boolean limitReached;
 
   private boolean hasBound;
@@ -215,6 +218,7 @@ public final class FreeSearch {
     }
     monitors = List.copyOf(builder.monitors);
     solutionHandler = builder.solutionHandler;
+    sharedBound = cost == null ? null : builder.sharedBound;
     learnNogoods = builder.nogoods && restarts != null;
     maxNogoods = builder.maxNogoods;
     maxNogoodLength = builder.maxNogoodLength;
@@ -672,6 +676,9 @@ public final class FreeSearch {
   /** Imposes the objective bound and propagates the current node. */
   private boolean propagate() {
     nodes++;
+    if (sharedBound != null) {
+      importBound();
+    }
     if (hasBound || probing) {
       int limit = probing ? probeLimit() : bound;
       try {
@@ -688,6 +695,20 @@ public final class FreeSearch {
       }
     }
     return store.consistency();
+  }
+
+  /** Takes the objective value of a better solution found elsewhere as the bound. */
+  private void importBound() {
+    int shared = sharedBound.getAsInt();
+    if (maximize) {
+      if (shared != Integer.MIN_VALUE && (!hasBound || shared >= bound)) {
+        hasBound = true;
+        bound = shared + 1;
+      }
+    } else if (shared != Integer.MAX_VALUE && (!hasBound || shared <= bound)) {
+      hasBound = true;
+      bound = shared - 1;
+    }
   }
 
   /**
@@ -739,7 +760,10 @@ public final class FreeSearch {
     return false;
   }
 
-  /** Asks the search to stop at the next node; it can be called from a solution handler. */
+  /**
+   * Asks the search to stop at the next node; it can be called from a solution handler or from
+   * another thread.
+   */
   public void stop() {
     stopRequested = true;
   }
@@ -923,6 +947,7 @@ public final class FreeSearch {
     private Var[] projection;
     private final List<SearchMonitor> monitors = new ArrayList<>();
     private Consumer<FreeSearch> solutionHandler;
+    private IntSupplier sharedBound;
     private boolean nogoods;
     private int maxNogoods = RestartNoGoods.DEFAULT_MAX_NOGOODS;
     private int maxNogoodLength = RestartNoGoods.DEFAULT_MAX_LENGTH;
@@ -1145,6 +1170,22 @@ public final class FreeSearch {
      */
     public Builder onSolution(Consumer<FreeSearch> handler) {
       this.solutionHandler = handler;
+      return this;
+    }
+
+    /**
+     * For optimisation, reads at every node the objective value of the best solution found outside
+     * this search, for example by another search of the same model in a parallel portfolio, and
+     * looks only for better solutions. The supplier gives {@link Integer#MAX_VALUE} when minimising
+     * ({@link Integer#MIN_VALUE} when maximising) as long as there is none, and is called from the
+     * thread of the search. When the search then explores its whole space, the best solution found
+     * outside or by this search is optimal.
+     *
+     * @param bound the objective value of the best solution found elsewhere.
+     * @return this builder.
+     */
+    public Builder sharedBound(IntSupplier bound) {
+      this.sharedBound = bound;
       return this;
     }
 

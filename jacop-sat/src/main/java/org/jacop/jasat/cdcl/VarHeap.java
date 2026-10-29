@@ -156,8 +156,14 @@ public final class VarHeap {
     return v;
   }
 
-  /** Rebuilds the heap from the given variables (all others are removed). */
-  void rebuild(int[] vars, int n) {
+  /**
+   * Rebuilds the heap from the given variables (all others are removed), for example after their
+   * activities changed together.
+   *
+   * @param vars the variables, in the first n entries
+   * @param n the number of variables
+   */
+  public void rebuild(int[] vars, int n) {
     for (int i = 0; i < size; i++) {
       index[heap[i]] = -1;
     }
