@@ -1723,9 +1723,10 @@ public class Geost extends Constraint
         log.debug("grounding {}", v);
       }
 
-      if (!inConsistency) {
-        pruneIfGrounded[o.no] = true;
-      }
+      // the grounded object is swept once more in its final place, also when Geost's own pruning
+      // grounds it during consistency: the flag is not restored on backtracking, so it can still
+      // be false from a sweep made in another branch
+      pruneIfGrounded[o.no] = true;
 
       if (lastLevelLastVar.stamp() < store.level) {
         lastLevelLastVar.update(groundedVars.size());

@@ -39,7 +39,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.Function;
@@ -47,6 +49,7 @@ import java.util.function.Supplier;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
@@ -1001,6 +1004,133 @@ class FreeSearchTest {
       assertTrue(search.getProbesRefuted() > 0);
       assertEquals(0, cost.min());
       assertEquals(63, cost.max());
+    }
+  }
+
+  /**
+   * dom/wdeg as a full scan of the variables and of the scopes of their constraints at every node,
+   * the way DomWdeg selected before it kept its unfixed sets incrementally.
+   */
+  private static final class ScanDomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
+    private final IntVar[] vars;
+    private final Indomain<IntVar> indomain;
+    private final List<List<Constraint>> constraints = new ArrayList<>();
+    private final Map<Constraint, Double> weights = new IdentityHashMap<>();
+    private IntVar selected;
+
+    ScanDomWdeg(IntVar[] vars, Indomain<IntVar> indomain) {
+      this.vars = vars;
+      this.indomain = indomain;
+      for (IntVar v : vars) {
+        List<Constraint> cs = new ArrayList<>();
+        for (Constraint c : v.dom().constraints()) {
+          if (cs.stream().noneMatch(d -> d == c)) {
+            cs.add(c);
+            weights.put(c, 1.0d);
+          }
+        }
+        constraints.add(cs);
+      }
+    }
+
+    @Override
+    public IntVar getChoiceVariable(int index) {
+      selected = null;
+      double best = Double.MAX_VALUE;
+      for (int i = 0; i < vars.length; i++) {
+        IntVar v = vars[i];
+        if (v.singleton()) {
+          continue;
+        }
+        double w = 0.0d;
+        for (Constraint c : constraints.get(i)) {
+          if (c.arguments().stream().filter(x -> !x.singleton()).count() >= 2) {
+            w += weights.get(c);
+          }
+        }
+        double score = w > 0.0d ? v.getSize() / w : Double.MAX_VALUE / 2 + v.getSize();
+        if (selected == null || score < best) {
+          best = score;
+          selected = v;
+        }
+      }
+      return selected;
+    }
+
+    @Override
+    public int getChoiceValue() {
+      return indomain.indomain(selected);
+    }
+
+    @Override
+    public PrimitiveConstraint getChoiceConstraint(int index) {
+      return null;
+    }
+
+    @Override
+    public Map<IntVar, Integer> getVariablesMapping() {
+      Map<IntVar, Integer> mapping = new IdentityHashMap<>();
+      for (int i = 0; i < vars.length; i++) {
+        mapping.putIfAbsent(vars[i], i);
+      }
+      return mapping;
+    }
+
+    @Override
+    public int getIndex() {
+      return 0;
+    }
+
+    @Override
+    public void onFailure(Constraint failed, Var decision) {
+      weights.computeIfPresent(failed, (c, w) -> w + 1.0d);
+    }
+  }
+
+  /** Runs dom/wdeg with restarts and nogoods, minimising the cost, and returns its statistics. */
+  private static long[] domWdegRun(Instance instance, boolean scan) {
+    Model model = new Model(instance);
+    IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+    SelectChoicePoint<IntVar> select;
+    SearchMonitor weights;
+    if (scan) {
+      ScanDomWdeg s = new ScanDomWdeg(concat(model), phase);
+      select = s;
+      weights = s;
+    } else {
+      DomWdeg d = new DomWdeg(concat(model), phase);
+      select = d;
+      weights = d;
+    }
+    FreeSearch search =
+        FreeSearch.builder(model.store, select)
+            .monitor(phase)
+            .monitor(weights)
+            .restarts(new LubyCalculator(1))
+            .nogoodsFromRestarts(true)
+            .restartOnSolution(true)
+            .minimize(model.cost)
+            .build();
+    Status status = search.solve();
+    return new long[] {
+      status.ordinal(),
+      search.getNodes(),
+      search.getFailures(),
+      search.getRestarts(),
+      search.getSolutions(),
+      status == Status.OPTIMAL ? search.getCostValue() : 0
+    };
+  }
+
+  @Test
+  void domWdegSearchesLikeAFullScan() {
+    Random rnd = new Random(11);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      assertEquals(
+          Arrays.toString(domWdegRun(instance, true)),
+          Arrays.toString(domWdegRun(instance, false)),
+          instance.toString());
     }
   }
 

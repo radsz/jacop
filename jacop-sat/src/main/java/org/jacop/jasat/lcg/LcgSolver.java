@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
 import org.jacop.constraints.Constraint;
@@ -233,6 +234,9 @@ public final class LcgSolver implements ExternalPropagator {
   // whether decisions are on the most active variable, now
   private boolean activityBranching = branching == Branching.ACTIVITY;
   private long runs; // restarts so far, for the turns of Branching.ALTERNATE
+  // whether a run that improved the best solution keeps its turn at the next restart
+  private boolean keepImprovingRun;
+  private boolean improvedInRun;
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
   // last-conflict branching, on unless -Djacop.lcg.lastConflict=false
   private final boolean lastConflict =
@@ -373,9 +377,9 @@ public final class LcgSolver implements ExternalPropagator {
       int i = trail.id(x);
       vars[i] = x;
       root[i] = x.dom().cloneLight();
-      ge[i] = new LiteralMap();
-      eq[i] = new LiteralMap();
-      linked[i] = new LiteralMap();
+      ge[i] = new LiteralMap(root[i].min(), root[i].max());
+      eq[i] = new LiteralMap(root[i].min(), root[i].max());
+      linked[i] = new LiteralMap(root[i].min(), root[i].max());
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
         if (root[i].min() < 0 || root[i].max() > 1) {
@@ -1075,6 +1079,36 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets the random seed, which changes the initial order of the variables in activity branching
+   * and of the literals in the SAT solver's decisions. Set it before solving; 0 keeps the order of
+   * the variables.
+   *
+   * @param seed the seed
+   */
+  public void setSeed(long seed) {
+    sat.setSeed(seed);
+    if (seed != 0) {
+      SplittableRandom random = new SplittableRandom(seed);
+      for (int i = 0; i < activity.length; i++) {
+        activity[i] = random.nextDouble() * 1e-3;
+      }
+      rebuildHeap(heap);
+      rebuildHeap(wide);
+      rebuildHeap(lateHeap);
+    }
+  }
+
+  /**
+   * Makes a run of {@link Branching#ALTERNATE} that improved the best solution keep its turn at the
+   * next restart, instead of passing it to the next way of branching.
+   *
+   * @param keep whether an improving run keeps its turn
+   */
+  public void setKeepImprovingRun(boolean keep) {
+    keepImprovingRun = keep;
+  }
+
+  /**
    * Sets how decisions are made outside the runs of the annotation. Set it before solving.
    *
    * @param branching the branching
@@ -1281,6 +1315,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
+    boolean improved = improvedInRun;
+    improvedInRun = false;
+    if (keepImprovingRun && improved) {
+      return; // the run that improved the best solution goes on in the same way
+    }
     if (branching == Branching.ALTERNATE && annotation != null && freeSearch) {
       // the annotation, the literals and the activity in turn, with the activity completing the
       // annotation's runs
@@ -2067,6 +2106,7 @@ public final class LcgSolver implements ExternalPropagator {
       return true;
     }
     if (improving) {
+      improvedInRun = true;
       best = solution;
       phase = solution;
       if (branching == Branching.AUTO) {
