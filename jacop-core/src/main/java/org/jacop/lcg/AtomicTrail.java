@@ -169,7 +169,14 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (i >= 0) {
       return 2 * i;
     }
-    return 2 * booleanIds.computeIfAbsent(x, b -> booleanIds.size()) + 1;
+    if (x instanceof BooleanVar b) {
+      if (b.trailOwner != this) {
+        b.trailId = 2 * booleanIds.computeIfAbsent(x, v -> booleanIds.size()) + 1;
+        b.trailOwner = this;
+      }
+      return b.trailId;
+    }
+    return 2 * booleanIds.computeIfAbsent(x, v -> booleanIds.size()) + 1;
   }
 
   private int slot(IntVar x) {
