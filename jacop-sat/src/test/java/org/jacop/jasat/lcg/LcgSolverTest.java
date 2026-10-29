@@ -1895,6 +1895,27 @@ class LcgSolverTest {
     }
   }
 
+  @Test
+  void freeSearchWithoutBooleansFirstKeepsOneActivityOrder() {
+    // with Booleans first off, every variable is in one order of activity again, as before the two
+    // heaps: at equal activity the first variable goes first, here the 0/1 variable b, not the
+    // wider y (skill-allocation 1m_2 took twice the nodes when y won such ties)
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    store.impose(new Reified(new XlteqC(y, 50), b));
+    System.setProperty("jacop.lcg.booleansFirst", "false");
+    LcgSolver solver;
+    try {
+      solver = new LcgSolver(store);
+    } finally {
+      System.clearProperty("jacop.lcg.booleansFirst");
+    }
+    solver.setChecking(true);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(new int[] {solver.value(b), solver.value(y)}).containsExactly(0, 51);
+  }
+
   /** The literal map against a TreeMap, under random insertions and lookups. */
   @Test
   void literalMapAgreesWithTreeMap() {
