@@ -2286,18 +2286,7 @@ public final class CdclSolver {
     int v = variable - 1;
     if (vals[2 * v] != 0 || binSize[2 * v] != 0 || binSize[2 * v + 1] != 0) {
       throw new IllegalStateException(
-          "variable "
-              + variable
-              + " is assigned or in a clause "
-              + vals[2 * v]
-              + " "
-              + level[v]
-              + " "
-              + binSize[2 * v]
-              + " "
-              + binSize[2 * v + 1]
-              + " dl "
-              + decisionLevel);
+          "variable " + variable + " is assigned or in a binary clause");
     }
     order.remove(v);
   }
