@@ -219,9 +219,11 @@ final class MirCut {
     for (int j = 0, q = 0; j < n; j++) {
       if (g[j] != 0) {
         columns[q] = j;
-        weights[q++] = g[j] / gcd;
-        activity += (double) (g[j] / gcd) * value[j];
-        norm += (double) (g[j] / gcd) * (g[j] / gcd);
+        long w = g[j] / gcd;
+        weights[q++] = w;
+        double weight = w;
+        activity += weight * value[j];
+        norm += weight * weight;
       }
     }
     // the weights are integers, so the right side rounds down: a Chvatal-Gomory step for free
@@ -256,7 +258,7 @@ final class MirCut {
       }
     }
     double right = (double) Math.floorDiv(side, d) * k;
-    return norm == 0 ? 0 : (activity - right) / Math.sqrt(norm);
+    return norm > 0 ? (activity - right) / Math.sqrt(norm) : 0;
   }
 
   private static boolean contains(long[] a, int size, long v) {

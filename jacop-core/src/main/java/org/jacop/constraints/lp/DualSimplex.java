@@ -272,7 +272,7 @@ final class DualSimplex {
       v[cols + q] = 1;
       for (int j = 0; j < n; j++) {
         double f = v[j];
-        if (f != 0 && row[j] >= 0) {
+        if (Math.abs(f) > 0 && row[j] >= 0) {
           double[] tr = t[row[j]];
           for (int c = 0; c < cols; c++) {
             v[c] -= f * tr[c];

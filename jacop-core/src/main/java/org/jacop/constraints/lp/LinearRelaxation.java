@@ -652,7 +652,7 @@ public class LinearRelaxation extends Constraint
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
       List<MirCut> chosen = new ArrayList<>();
       for (MirCut c : found) {
-        long m = rows() + chosen.size() + 1L;
+        long m = (long) rows() + chosen.size() + 1;
         if (chosen.size() >= CUTS_PER_ROUND || m * (m + n) > MAX_TABLEAU) {
           break;
         }
