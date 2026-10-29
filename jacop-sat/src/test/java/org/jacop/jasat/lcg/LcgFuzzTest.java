@@ -915,6 +915,10 @@ class LcgFuzzTest {
     Random core = new Random(seed * 17 + 3);
     if (core.nextInt(3) == 0) {
       solver.setCoreSearch(1, 1 + core.nextInt(50), 1 + core.nextInt(20));
+      if (core.nextBoolean()) {
+        // half of them after a few conflicts of branch and bound, with or without a core probe
+        solver.setCoreDelay(1, 1 + core.nextInt(20), core.nextInt(2));
+      }
     }
     int kind = (int) (seed / 3 % 4);
     if (kind == 0) {

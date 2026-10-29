@@ -1711,6 +1711,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
+      // a short core-guided probe, then branch and bound for a share of the time, then the rest
+      // of the core-guided phase: easy models need no core-guided phase
+      lcg.setCoreDelay(
+          Double.parseDouble(options.freeConfig("lcg-core-delay", "0.05")),
+          10_000,
+          Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
     if (lns != null) {
