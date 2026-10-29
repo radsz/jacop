@@ -605,6 +605,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_list_diff2(n);
   }
 
+  /** Poses the axis projections of the diffn constraints read, see GlobalConstraints. */
+  public void poseDiffnProjections() {
+    gc.poseDiffnProjections();
+  }
+
   /** Poses the jacop_count constraints collected while the model was read. */
   public void poseCounts() {
     gc.poseCounts();
