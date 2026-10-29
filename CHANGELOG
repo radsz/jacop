@@ -586,6 +586,15 @@ Version 5.0 (unreleased)
     free-search kit only rel2onto and one prize-collecting instance
     change, with the same result.
 
+44. Under --lcg a failure of element with a constant list is explained by
+    the value's atoms when that takes fewer atoms than the index's: one
+    atom of the value covers every position of its constant. On
+    crosswords grid-19.05 dict-80 a failure took about 6,000 atoms and
+    now takes 273 on average, and --lcg -f finds solutions there (550 in
+    60 s, none before). Linear reasons of a bound that skipped holes now
+    cite only the holes next to the bound, not every hole of the
+    variable.
+
 Version 4.11
 =============
 

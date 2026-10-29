@@ -83,7 +83,10 @@ public final class ElementExplanation {
 
   /**
    * Adds to {@code out} the reason of a failure: every position is excluded, by the index or by the
-   * value.
+   * value. Of the two choices, one atom per excluded index value first or one per excluded constant
+   * first, it keeps the one with fewer distinct atoms: a constant out of the value's domain
+   * excludes every position that holds it, so a long list of few constants (a dictionary of words
+   * over an alphabet) needs a few atoms of the value instead of one atom of the index per position.
    *
    * @param trail the trail
    * @param index the index variable
@@ -96,10 +99,32 @@ public final class ElementExplanation {
   public static boolean explainFailure(
       AtomicTrail trail, IntVar index, int[] list, IntVar value, int offset, EntryList out) {
     int now = trail.size();
+    int mark = out.size();
     for (int j = 0; j < list.length; j++) {
       if (!excluded(trail, j, now, index, list, value, offset, out)) {
+        out.truncate(mark);
         return false;
       }
+    }
+    out.sortUnique(mark);
+    int byIndex = out.size() - mark;
+    int second = out.size();
+    for (int j = 0; j < list.length; j++) {
+      if (!trail.excludedBefore(value, list[j], now, out)
+          && !trail.excludedBefore(index, j + 1 + offset, now, out)) {
+        out.truncate(second);
+        return true; // cannot happen: the first pass excluded every position
+      }
+    }
+    out.sortUnique(second);
+    int byValue = out.size() - second;
+    if (byValue < byIndex) {
+      for (int k = 0; k < byValue; k++) {
+        out.set(mark + k, out.get(second + k));
+      }
+      out.truncate(mark + byValue);
+    } else {
+      out.truncate(second);
     }
     return true;
   }
