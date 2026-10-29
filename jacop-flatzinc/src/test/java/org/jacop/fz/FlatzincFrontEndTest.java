@@ -92,6 +92,24 @@ class FlatzincFrontEndTest {
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
   }
 
+  @Test
+  void secondBool2IntOfAnIntegerJoinsTheTwoBooleans() throws IOException {
+    // x is the alias of a after the first bool2int; the second one, which makes b equal to a, was
+    // dropped with "Double int var alias for bool var", so a != b was accepted
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..1: x:: output_var;
+        constraint bool2int(a,x);
+        constraint bool2int(b,x);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("a = false; b = false; x = 0;", "a = true; b = true; x = 1;"), solveAll(fzn));
+  }
+
   /**
    * Four variables in 1..3 that must differ pairwise, after eight free variables, all left out of
    * the search annotation. int_ne finds no conflict until three of them are fixed.
