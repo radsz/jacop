@@ -1047,13 +1047,17 @@ public class HybridTable extends Constraint
       throw Store.failException;
     }
 
-    int changed = queueSize;
-    int onlyChanged = queueSize == 1 ? queue[0] : -1;
-    // The queue stays consistent when an update fails, since no backtrack empties it.
+    // The queue stays consistent when an update fails, since no backtrack empties it. A column
+    // left in it by a backtrack has no live class to lose, so only the columns that lost one count.
+    int changed = 0;
+    int onlyChanged = -1;
     while (queueSize > 0) {
       int i = queue[--queueSize];
       queued[i] = false;
-      updateTable(i);
+      if (updateTable(i)) {
+        changed++;
+        onlyChanged = changed == 1 ? i : -1;
+      }
     }
 
     // Restrictions between columns can remove further values of the changed column itself, for
@@ -1110,8 +1114,12 @@ public class HybridTable extends Constraint
     valid.set(liveRecord + i, size);
   }
 
-  /** It updates the valid tuples after the domain of variable i changed. */
-  private void updateTable(int i) {
+  /**
+   * It updates the valid tuples after the domain of variable i changed.
+   *
+   * @return true when the column lost a live class.
+   */
+  private boolean updateTable(int i) {
 
     IntDomain d = x[i].dom();
     int[] l = live[i];
@@ -1133,7 +1141,7 @@ public class HybridTable extends Constraint
       }
     }
     if (s == size) {
-      return;
+      return false;
     }
     setLiveSize(i, s);
 
@@ -1165,6 +1173,7 @@ public class HybridTable extends Constraint
     if (limit() < 0) {
       throw Store.failException;
     }
+    return true;
   }
 
   /** The tuples whose in or not in restriction on column i accepts one of the live classes. */
