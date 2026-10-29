@@ -95,6 +95,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // the bound before a position is found by binary search instead of a walk along the chain
   private int[][] bounds = new int[0][];
   private int[] numBounds = new int[0];
+  // the NE entry of each removed value, so that whether a value was removed before a position is
+  // found without a walk along the variable's chain
+  private final EntryIndex removals = new EntryIndex();
 
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
@@ -363,7 +366,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     reason[size] = store.currentConstraint;
     previous[size] = last[i];
     last[i] = size;
-    if (k != NE) {
+    if (k == NE) {
+      removals.put(i, v, size);
+    } else {
       int b = 2 * i + k;
       if (bounds[b] == null) {
         bounds[b] = new int[8];
@@ -384,6 +389,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       last[i] = previous[size];
       if (kind[size] != NE) {
         numBounds[2 * i + kind[size]]--;
+      } else {
+        removals.remove(i, value[size]);
       }
       if (last[i] < 0 || level[last[i]] < removedLevel) {
         setShadow(i, x.dom()); // the variable's last removed entry: its domain is restored
@@ -740,25 +747,27 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return true when v was not in the domain
    */
   public boolean excludedBefore(IntVar x, int v, int position, EntryList out) {
-    if (!root[slot(x)].contains(v)) {
+    int i = slot(x);
+    if (!root[i].contains(v)) {
       return true;
     }
-    for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
-      if (removes(f, v)) {
-        out.add(f);
-        return true;
-      }
+    // the latest entry before the position that removes v: the value's NE entry, or the last bound
+    // of either kind, which removes v when any bound of its kind before it does
+    int f = removals.get(i, v);
+    int found = f < position ? f : -1;
+    int g = latest(x, position, GE);
+    if (g > found && value[g] > v) {
+      found = g;
     }
-    return false;
-  }
-
-  // whether entry f removes value v from its variable's domain
-  private boolean removes(int f, int v) {
-    return switch (kind[f]) {
-      case NE -> value[f] == v;
-      case GE -> value[f] > v;
-      default -> value[f] < v;
-    };
+    int l = latest(x, position, LE);
+    if (l > found && value[l] < v) {
+      found = l;
+    }
+    if (found < 0) {
+      return false;
+    }
+    out.add(found);
+    return true;
   }
 
   /**

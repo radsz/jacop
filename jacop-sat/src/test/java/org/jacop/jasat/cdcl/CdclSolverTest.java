@@ -265,6 +265,31 @@ class CdclSolverTest {
   }
 
   @Test
+  void deadlineStopsAPropagationThatTakesManyRounds() {
+    // The deadline was checked only on conflicts and decisions, so an external propagator that
+    // took many rounds to reach its fixpoint (bounds creeping one value at a time) ran past it.
+    CdclSolver s = new CdclSolver();
+    int vars = 100_000;
+    s.ensureVars(vars);
+    int[] implied = {0};
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int propagate() {
+            return implied[0] < vars ? ++implied[0] : 0;
+          }
+
+          @Override
+          public int[] reason(int lit) {
+            return new int[] {lit};
+          }
+        });
+    s.setDeadline(System.nanoTime() - 1);
+    assertEquals(CdclSolver.UNKNOWN, s.solve());
+    assertTrue(implied[0] < 5000, "rounds after the deadline: " + implied[0]);
+  }
+
+  @Test
   void lubySequence() {
     long[] expected = {1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8};
     for (int i = 0; i < expected.length; i++) {
