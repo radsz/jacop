@@ -307,12 +307,12 @@ public class Store {
   public boolean isLastConsistencyFailure;
 
   /**
-   * This keeps information about watched constraints by given variable. Watched constraints are
-   * active all the time. Use this with care and do not be surprised if some constraints stay longer
-   * than you expect. It can be directly manipulated in any way (including setting to null if no
-   * watched constraints are being in the queue system).
+   * The variables that have been watched by a constraint as a watched literal, in the order of
+   * their first watch; the watching constraints are kept in each variable.
    */
-  public Map<Var, Set<Constraint>> watchedConstraints;
+  private Var[] watchedVars = new Var[0];
+
+  private int watchedVarCount;
 
   /** It stores integer variables created within a store. */
   public Var[] vars;
@@ -432,7 +432,7 @@ public class Store {
    */
   public void deregisterWatchedLiteralConstraint(Var v, Constraint c) {
 
-    watchedConstraints.get(v).remove(c);
+    v.watchedConstraints.remove(c);
   }
 
   /**
@@ -443,9 +443,8 @@ public class Store {
   public void deregisterWatchedLiteralConstraint(Constraint c) {
 
     for (Var v : c.arguments()) {
-      Set<Constraint> forVariable = watchedConstraints.get(v);
-      if (forVariable != null) {
-        forVariable.remove(c);
+      if (v.watchedConstraints != null) {
+        v.watchedConstraints.remove(c);
       }
     }
   }
@@ -457,14 +456,10 @@ public class Store {
    */
   public int countWatches() {
 
-    if (watchedConstraints == null) {
-      return 0;
-    }
-
     int count = 0;
 
-    for (Set<Constraint> c : watchedConstraints.values()) {
-      count += c.size();
+    for (int i = 0; i < watchedVarCount; i++) {
+      count += watchedVars[i].watchedConstraints.size;
     }
 
     return count;
@@ -479,15 +474,43 @@ public class Store {
    */
   public void registerWatchedLiteralConstraint(Var v, Constraint c) {
 
-    Set<Constraint> forVariable = watchedConstraints.get(v);
-
-    if (forVariable != null) {
-      forVariable.add(c);
-    } else {
-      forVariable = new LinkedHashSet<>();
-      forVariable.add(c);
-      watchedConstraints.put(v, forVariable);
+    if (v.watchedConstraints == null) {
+      v.watchedConstraints = new WatchedConstraints();
+      if (watchedVarCount == watchedVars.length) {
+        watchedVars = Arrays.copyOf(watchedVars, 2 * watchedVarCount + 8);
+      }
+      watchedVars[watchedVarCount++] = v;
     }
+    v.watchedConstraints.add(c);
+  }
+
+  /**
+   * Returns the constraints that watch a variable as a watched literal ({@link
+   * #registerWatchedLiteralConstraint(Var, Constraint)}), in the order they started to watch it.
+   *
+   * @param v the variable.
+   * @return the watching constraints.
+   */
+  public List<Constraint> watchedLiteralConstraints(Var v) {
+    WatchedConstraints watches = v.watchedConstraints;
+    if (watches == null) {
+      return List.of();
+    }
+    return new ArrayList<>(Arrays.asList(watches.constraints).subList(0, watches.size));
+  }
+
+  /**
+   * Returns the constraints that watch any variable as a watched literal, by variable in the order
+   * the variables were first watched; a constraint watching two variables is there twice.
+   *
+   * @return the watching constraints.
+   */
+  public List<Constraint> watchedLiteralConstraints() {
+    List<Constraint> result = new ArrayList<>();
+    for (int i = 0; i < watchedVarCount; i++) {
+      result.addAll(watchedLiteralConstraints(watchedVars[i]));
+    }
+    return result;
   }
 
   /**
@@ -496,7 +519,11 @@ public class Store {
    */
   public void clearWatchedConstraint() {
 
-    watchedConstraints.clear();
+    for (int i = 0; i < watchedVarCount; i++) {
+      watchedVars[i].watchedConstraints = null;
+      watchedVars[i] = null;
+    }
+    watchedVarCount = 0;
   }
 
   /**
@@ -563,7 +590,7 @@ public class Store {
     queueModelConstraintsForVariable(vdomain, v, pruningEvent);
     queueSearchConstraintsForVariable(vdomain, v);
 
-    if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
+    if (v.watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
       queueWatchedConstraintsForVariable(v);
     }
 
@@ -711,11 +738,10 @@ public class Store {
   }
 
   private void queueWatchedConstraintsForVariable(Var v) {
-    Set<Constraint> list = watchedConstraints.get(v);
-    if (list == null) {
-      return;
-    }
-    for (Constraint con : list) {
+    WatchedConstraints watches = v.watchedConstraints;
+    Constraint[] list = watches.constraints;
+    for (int i = 0, n = watches.size; i < n; i++) {
+      Constraint con = list[i];
       if (con.isEntailed()) {
         continue;
       }
