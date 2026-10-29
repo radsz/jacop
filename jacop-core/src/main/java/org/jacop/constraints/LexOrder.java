@@ -74,6 +74,9 @@ public class LexOrder extends Constraint
   /** Size of the longest vector. */
   final int n;
 
+  /** The longest vectors whose positions are found by comparing the variables, not by the map. */
+  private static final int SCAN_MAX = 16;
+
   /** For each variable, its positions in x followed by its positions in y. */
   final Map<Var, int[]> varToIndex = Var.createEmptyPositioning();
 
@@ -268,6 +271,16 @@ public class LexOrder extends Constraint
   @Override
   public void queueVariable(int level, Var v) {
 
+    if (n <= SCAN_MAX) {
+      // comparing a few references is cheaper than a map lookup on every change of a variable
+      for (int i = 0; i < n; i++) {
+        if ((x[i] == v || y[i] == v) && !queued[i]) {
+          queued[i] = true;
+          indexQueue[indexQueueSize++] = i;
+        }
+      }
+      return;
+    }
     int[] positions = varToIndex.get(v);
     if (positions != null) {
       for (int i : positions) {
