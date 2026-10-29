@@ -147,6 +147,12 @@ public abstract class IntDomain extends Domain {
   int[] ownedModelConstraintTableSizes;
 
   /**
+   * The modelConstraintsToEvaluate array that this domain object allocated. No other domain reads
+   * it, so its counts are changed in place while it is the one in modelConstraintsToEvaluate.
+   */
+  int[] ownedModelConstraintsToEvaluate;
+
+  /**
    * Finds the result interval for multiplication of {a..b} * {c..d}.
    *
    * @param a the minimum of the first interval.
@@ -1342,17 +1348,18 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
-   * Creates a copy of the modelConstraintsToEvaluate array with the specified pruning event count
-   * updated.
+   * Changes the count of the specified pruning event. The array is copied once per domain object,
+   * as earlier domains share it, and changed in place afterwards.
    *
    * @param pruningEvent the pruning event index
    * @param delta the change to apply to the count (positive for add, negative for remove)
-   * @return a new modelConstraintsToEvaluate array
    */
-  private int[] copyModelConstraintsToEvaluateArray(int pruningEvent, int delta) {
-    int[] newModelConstraintsToEvaluate = modelConstraintsToEvaluate.clone();
-    newModelConstraintsToEvaluate[pruningEvent] = modelConstraintsToEvaluate[pruningEvent] + delta;
-    return newModelConstraintsToEvaluate;
+  private void changeModelConstraintsToEvaluate(int pruningEvent, int delta) {
+    if (modelConstraintsToEvaluate != ownedModelConstraintsToEvaluate) {
+      ownedModelConstraintsToEvaluate = modelConstraintsToEvaluate.clone();
+      modelConstraintsToEvaluate = ownedModelConstraintsToEvaluate;
+    }
+    modelConstraintsToEvaluate[pruningEvent] += delta;
   }
 
   /**
@@ -1418,7 +1425,7 @@ public abstract class IntDomain extends Domain {
         setTable(pruningEvent, newPruningEventConstraints, pruningConstraintsToEvaluate + 1);
       }
     }
-    modelConstraintsToEvaluate = copyModelConstraintsToEvaluateArray(pruningEvent, 1);
+    changeModelConstraintsToEvaluate(pruningEvent, 1);
   }
 
   /**
@@ -1541,7 +1548,7 @@ public abstract class IntDomain extends Domain {
           modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
         }
 
-        modelConstraintsToEvaluate = copyModelConstraintsToEvaluateArray(pruningEvent, -1);
+        changeModelConstraintsToEvaluate(pruningEvent, -1);
         return true;
       }
     }
