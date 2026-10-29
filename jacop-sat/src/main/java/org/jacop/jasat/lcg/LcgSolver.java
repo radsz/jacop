@@ -1099,13 +1099,12 @@ public final class LcgSolver implements ExternalPropagator {
     while (true) {
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
-      long start = System.nanoTime();
       int result = solve();
       if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
         return result; // done, or stopped by the deadline
       }
       if (lns != null && best != null) {
-        result = neighbourhoodRuns((long) (lnsShare * (System.nanoTime() - start)));
+        result = neighbourhoodRuns((long) (lnsShare * budget));
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
           return result;
         }
@@ -1135,17 +1134,18 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Runs in large neighbourhoods of the best solution for the given time: each run assumes that the
-   * variables outside the neighbourhood keep their values in the best solution and stops after its
-   * conflicts. The assumptions are decisions, so what the runs learn holds for every later search.
+   * Runs in large neighbourhoods of the best solution for the given conflicts (conflicts, not time,
+   * so that a run repeats its search): each run assumes that the variables outside the
+   * neighbourhood keep their values in the best solution and stops after its conflicts. The
+   * assumptions are decisions, so what the runs learn holds for every later search.
    *
    * @return {@link CdclSolver#UNKNOWN} to go on, or the result of the search when a run proved that
    *     no better solution exists (UNSAT without failed assumptions, or SAT at the objective's
    *     smallest value)
    */
-  private int neighbourhoodRuns(long nanos) {
-    long end = Math.min(System.nanoTime() + nanos, sat.deadline());
-    while (System.nanoTime() < end) {
+  private int neighbourhoodRuns(long conflicts) {
+    long end = sat.conflicts + conflicts;
+    while (sat.conflicts < end && System.nanoTime() <= sat.deadline()) {
       int[] fixed = lns.neighbourhood();
       int[] assumed = new int[fixed.length];
       int n = 0;
@@ -1185,10 +1185,10 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Turns on large neighbourhood search in {@link #minimize}: after each run of branch and bound
    * from the first solution on, runs in neighbourhoods of the best solution take the given share of
-   * the time that run took. The neighbourhoods fix their variables by assumptions.
+   * the conflicts that run took. The neighbourhoods fix their variables by assumptions.
    *
    * @param neighbourhoods the neighbourhoods, over variables of the store; null turns it off
-   * @param share the time of neighbourhood runs per unit of time of branch and bound
+   * @param share the conflicts of neighbourhood runs per conflict of branch and bound
    * @param conflicts the conflicts of one neighbourhood run
    */
   public void setLns(AdaptiveLns neighbourhoods, double share, long conflicts) {
