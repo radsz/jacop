@@ -46,16 +46,7 @@ import java.util.Random;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class DualSimplex {
-
-  /** The solve result: an optimal basis. */
-  static final int OPTIMAL = 0;
-
-  /** The solve result: a row whose basic variable cannot reach its bounds. */
-  static final int INFEASIBLE = 1;
-
-  /** The solve result: the iteration limit was reached. */
-  static final int LIMIT = 2;
+final class DualSimplex implements LpSolver {
 
   private static final double PRIMAL_TOL = 1e-6;
   private static final double DUAL_TOL = 1e-9;
@@ -188,7 +179,28 @@ final class DualSimplex {
    *
    * @return the copy
    */
-  DualSimplex copy() {
+  @Override
+  public int rows() {
+    return m;
+  }
+
+  @Override
+  public int columns() {
+    return n;
+  }
+
+  @Override
+  public long pivots() {
+    return totalPivots;
+  }
+
+  @Override
+  public long pivotWork() {
+    return (long) m * cols;
+  }
+
+  @Override
+  public DualSimplex copy() {
     return new DualSimplex(this);
   }
 
@@ -199,7 +211,8 @@ final class DualSimplex {
    * @param min its lower bound
    * @param max its upper bound
    */
-  void setBounds(int j, double min, double max) {
+  @Override
+  public void setBounds(int j, double min, double max) {
     lo[j] = min;
     hi[j] = max;
   }
@@ -210,7 +223,8 @@ final class DualSimplex {
    * @param limit the most pivots
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE} or {@link #LIMIT}
    */
-  int solve(int limit) {
+  @Override
+  public int solve(int limit) {
     infeasibleRow = -1;
     placeNonbasic();
     updateBeta();
@@ -246,7 +260,8 @@ final class DualSimplex {
    * @param rowLo their lower bounds, or negative infinity
    * @param rowHi their upper bounds, or positive infinity
    */
-  void addRows(double[][] rows, double[] rowLo, double[] rowHi) {
+  @Override
+  public void addRows(double[][] rows, double[] rowLo, double[] rowHi) {
     int k = rows.length;
     if (k == 0) {
       return;
@@ -312,7 +327,8 @@ final class DualSimplex {
    * @param j the column
    * @return its row, or -1 when the column is nonbasic
    */
-  int basicRow(int j) {
+  @Override
+  public int basicRow(int j) {
     return row[j];
   }
 
@@ -323,7 +339,8 @@ final class DualSimplex {
    * @param r the row of the tableau
    * @return y, by row
    */
-  double[] inverseRow(int r) {
+  @Override
+  public double[] inverseRow(int r) {
     double[] y = new double[m];
     double[] tr = t[r];
     for (int i = 0; i < m; i++) {
@@ -338,7 +355,8 @@ final class DualSimplex {
    *
    * @return y, by row
    */
-  double[] farkas() {
+  @Override
+  public double[] farkas() {
     return inverseRow(infeasibleRow);
   }
 
@@ -347,7 +365,8 @@ final class DualSimplex {
    *
    * @return y, by row
    */
-  double[] duals() {
+  @Override
+  public double[] duals() {
     double[] y = new double[m];
     for (int r = 0; r < m; r++) {
       double c = cost[basis[r]];
@@ -366,7 +385,8 @@ final class DualSimplex {
    *
    * @return c x
    */
-  double objective() {
+  @Override
+  public double objective() {
     double z = 0;
     for (int j = 0; j < n; j++) {
       if (cost[j] != 0) {
@@ -382,7 +402,8 @@ final class DualSimplex {
    * @param j the column
    * @return its value
    */
-  double value(int j) {
+  @Override
+  public double value(int j) {
     return row[j] >= 0 ? beta[row[j]] : upper[j] ? hi[j] : lo[j];
   }
 

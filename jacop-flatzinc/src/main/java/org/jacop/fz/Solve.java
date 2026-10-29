@@ -484,7 +484,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         clauses.add(clauseRow(clause[0], clause[1]));
       }
     }
-    linearRelaxation = LinearRelaxation.of(store, objective, maximize, clauses, splitSums());
+    linearRelaxation =
+        LinearRelaxation.of(store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
@@ -544,6 +545,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
             + r.prunings
+            + "\n%%%mzn-stat: lpSolveTime="
+            + r.solveNanos / 1e9
+            + "\n%%%mzn-stat: lpColumns="
+            + r.columns()
+            + "\n%%%mzn-stat: lpPivotWork="
+            + r.pivotWork()
+            + "\n%%%mzn-stat: lpSimplexRows="
+            + r.simplexRows()
+            + "\n%%%mzn-stat: lpLazyAdded="
+            + r.lazyAdded
+            + "\n%%%mzn-stat: lpLazyRemoved="
+            + r.lazyRemoved
             + "\n%%%mzn-stat: lpRootBound="
             + r.rootBound
             + "\n%%%mzn-stat: lpCuts="
