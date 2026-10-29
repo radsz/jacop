@@ -492,7 +492,15 @@ Version 5.0 (unreleased)
     60 s -> 11 s, road-cons 60 s -> 1 s), and ends with a better objective
     on 24 of the others and a worse one on 21.
 
-37. Not-last in CumulativeUnary (MiniZinc disjunctive) now tests every
+37. A LinearInt that drops its fixed variables restores that state on
+    backtracking only at the levels where it changed, instead of being
+    called at every removed level. Many short sums, such as the blocks of
+    a long sum split under --lcg, no longer slow down backtracking:
+    skill_allocation_mzn_1m_2 (-f --lcg) solves in 11.9 s instead of
+    17.2 s with the same search. Store.recordChange(Stateful) is the new
+    hook for such state.
+
+38. Not-last in CumulativeUnary (MiniZinc disjunctive) now tests every
     task, as Vilim's algorithm does. A task whose latest completion lets
     no new task into Theta was skipped, and a task bounded by its own
     latest start now gets the largest latest start of the other tasks.
@@ -500,7 +508,7 @@ Version 5.0 (unreleased)
     open shop instances solved to optimality keep their node counts, and
     a 150x15 job shop reaches makespan 8992 in 30 s instead of 9003.
 
-38. Faster FlatZinc front end and input order tie-breaking. SimpleSelect
+39. Faster FlatZinc front end and input order tie-breaking. SimpleSelect
     breaks ties in input order from an int array kept in step with its
     search array instead of two map lookups per comparison; removing
     aliased variables from the default search is linear instead of
