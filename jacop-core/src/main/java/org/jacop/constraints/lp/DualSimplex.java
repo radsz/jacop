@@ -86,6 +86,15 @@ final class DualSimplex {
   private final double[] at;
   private boolean betaValid;
 
+  // the nonbasic columns that move beta, and by how much
+  private final int[] moved;
+  private final double[] movedBy;
+
+  // the squared norm of the row of B^-1 in each row of the tableau, valid while the row is
+  // unchanged
+  private final double[] norm;
+  private final boolean[] normValid;
+
   // the ratio test: its candidates, and the columns it flips to their other bound
   private final int[] candidate;
   private final double[] pivotSize;
@@ -129,6 +138,10 @@ final class DualSimplex {
     d = new double[cols];
     beta = new double[m];
     at = new double[cols];
+    moved = new int[cols];
+    movedBy = new double[cols];
+    norm = new double[m];
+    normValid = new boolean[m];
     candidate = new int[cols];
     pivotSize = new double[cols];
     ratio = new double[cols];
@@ -258,6 +271,7 @@ final class DualSimplex {
     System.arraycopy(cost, 0, d, 0, cols);
     pivots = 0;
     betaValid = false;
+    Arrays.fill(normValid, false);
   }
 
   // puts each nonbasic column at the bound its reduced cost asks for, a finite one
@@ -282,39 +296,55 @@ final class DualSimplex {
       computeBeta();
       return;
     }
+    int k = 0;
     for (int j = 0; j < cols; j++) {
       if (row[j] < 0) {
         double v = upper[j] ? hi[j] : lo[j];
         double delta = v - at[j];
         if (delta != 0) {
-          for (int i = 0; i < m; i++) {
-            double tij = t[i][j];
-            if (tij != 0) {
-              beta[i] -= tij * delta;
-            }
-          }
+          moved[k] = j;
+          movedBy[k++] = delta;
           at[j] = v;
         }
       }
     }
+    if (k > 0) {
+      subtractColumns(k);
+    }
   }
 
   private void computeBeta() {
-    Arrays.fill(beta, 0);
     betaValid = true;
+    int k = 0;
     for (int j = 0; j < cols; j++) {
       if (row[j] < 0) {
         double v = upper[j] ? hi[j] : lo[j];
         at[j] = v;
         if (v != 0) {
-          for (int i = 0; i < m; i++) {
-            double tij = t[i][j];
-            if (tij != 0) {
-              beta[i] -= tij * v;
-            }
-          }
+          moved[k] = j;
+          movedBy[k++] = v;
         }
       }
+    }
+    Arrays.fill(beta, 0);
+    if (k > 0) {
+      subtractColumns(k);
+    }
+  }
+
+  // beta[i] -= sum over the first k moved columns of t[i][j] times its move, row by row (the
+  // tableau is row-major) and over the columns in increasing order, so the sums stay the same
+  private void subtractColumns(int k) {
+    for (int i = 0; i < m; i++) {
+      double[] ti = t[i];
+      double b = beta[i];
+      for (int c = 0; c < k; c++) {
+        double tij = ti[moved[c]];
+        if (tij != 0) {
+          b -= tij * movedBy[c];
+        }
+      }
+      beta[i] = b;
     }
   }
 
@@ -333,12 +363,16 @@ final class DualSimplex {
       }
       if (gap > 0) {
         // dual steepest edge: the infeasibility relative to the norm of the row of B^-1
-        double[] ti = t[i];
-        double norm = 0;
-        for (int k = n; k < cols; k++) {
-          norm += ti[k] * ti[k];
+        if (!normValid[i]) {
+          double[] ti = t[i];
+          double s = 0;
+          for (int k = n; k < cols; k++) {
+            s += ti[k] * ti[k];
+          }
+          norm[i] = s;
+          normValid[i] = true;
         }
-        double score = gap * gap / Math.max(norm, 1e-12);
+        double score = gap * gap / Math.max(norm[i], 1e-12);
         if (score > worst) {
           worst = score;
           r = i;
@@ -421,6 +455,7 @@ final class DualSimplex {
       tr[j] *= inv;
     }
     tr[q] = 1;
+    normValid[r] = false;
     for (int i = 0; i < m; i++) {
       if (i != r) {
         double[] ti = t[i];
@@ -430,6 +465,7 @@ final class DualSimplex {
             ti[j] -= f * tr[j];
           }
           ti[q] = 0;
+          normValid[i] = false;
         }
       }
     }
@@ -453,6 +489,7 @@ final class DualSimplex {
    * back to the slack basis when the basis is singular in floating point.
    */
   private void refactor() {
+    Arrays.fill(normValid, false);
     int[] columns = basis.clone();
     for (int i = 0; i < m; i++) {
       double[] ti = t[i];
