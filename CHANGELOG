@@ -707,6 +707,17 @@ Version 5.0 (unreleased)
     1 s of search; on the dev tier with 8 repetitions by 7%, with no
     instance slower by more than 5%.
 
+53. Store.watchedConstraints (a public map from variables to the constraints
+    that watch them as watched literals) is removed; the store keeps these
+    constraints in the variable. Use registerWatchedLiteralConstraint and
+    deregisterWatchedLiteralConstraint as before, and the new
+    watchedLiteralConstraints(v) and watchedLiteralConstraints() to read them.
+    Waking them, and finding the position of a woken variable in Nooverlap,
+    LinearBool, LexOrder, LexChain, ExtensionalSupportStr and the restart
+    nogoods of free search, no longer goes through a HashMap (new
+    org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
+    2.5% faster on mznbench.
+
 54. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
     first focused phase of 1,000 conflicts is over, instead of
     alternating the two modes. Restarts become far rarer, and each one

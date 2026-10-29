@@ -76,6 +76,9 @@ public abstract class Var implements Backtrackable {
   /** The constraints watching this variable for a value, see {@link Store#watchValue}. */
   ValueWatches valueWatches;
 
+  /** The constraints watching this variable as a watched literal, see {@link Store}. */
+  WatchedConstraints watchedConstraints;
+
   /**
    * Creates an empty position mapping.
    *
