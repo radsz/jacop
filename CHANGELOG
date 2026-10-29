@@ -596,6 +596,15 @@ Version 5.0 (unreleased)
     nothing changes. fzn-jacop now sends JVM warnings to stderr, so they
     cannot mix with the FlatZinc output.
 
+45. --lcg -f on a model without a search annotation that has cumulative or
+    disjunctive resources (also those found from disjunctions, as in job
+    shop) branches on the start times of their tasks by set times in the
+    runs that used dom/wdeg: the task that can start first starts as early
+    as it can. dom/wdeg found a first makespan of 3803 on jobshop la17
+    (optimum 784) and branch and bound needed 273 solutions. On 36 job shop
+    instances (60 s) 29 are proved instead of 17. The statistic
+    lcgSetTimesStarts gives the number of start variables.
+
 Version 4.11
 =============
 
