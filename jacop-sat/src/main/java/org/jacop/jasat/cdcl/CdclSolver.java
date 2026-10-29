@@ -509,6 +509,53 @@ public final class CdclSolver {
   }
 
   /**
+   * Probes a literal at the root: assigns it at a new level and propagates, the external propagator
+   * included, then goes back to the root. Nothing is learnt.
+   *
+   * @param lit a DIMACS literal
+   * @return the literals it implies, in the order assigned; null when it leads to a conflict, so
+   *     its negation holds in every solution; empty when it is already true at the root
+   */
+  public int[] probe(int lit) {
+    if (!ok) {
+      return null;
+    }
+    ensureVars(Math.abs(lit));
+    backtrack(0);
+    int l = toLit(lit);
+    if (vals[l] != 0) {
+      return vals[l] > 0 ? new int[0] : null;
+    }
+    notifying = external != null;
+    try {
+      // the root first, as a search starts, so that only the literal's consequences are undone
+      if (propagateAll() != NO_CONFLICT) {
+        ok = false;
+        return null;
+      }
+      if (vals[l] != 0) {
+        return vals[l] > 0 ? new int[0] : null;
+      }
+      newDecisionLevel();
+      int start = trailSize;
+      assign(l, NO_REASON);
+      if (propagateAll() != NO_CONFLICT || !ok) {
+        backtrack(0);
+        return null;
+      }
+      int[] implied = new int[trailSize - start - 1];
+      for (int i = start + 1; i < trailSize; i++) {
+        implied[i - start - 1] = toDimacs(trail[i]);
+      }
+      backtrack(0);
+      return implied;
+    } finally {
+      notifying = false;
+      queuedExternal = null;
+    }
+  }
+
+  /**
    * Returns the value of a variable in the last model.
    *
    * @param variable a DIMACS variable

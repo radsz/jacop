@@ -97,6 +97,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.lcg.ValueIndicator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMiddle;
@@ -2558,6 +2559,119 @@ class LcgSolverTest {
     // soft literals heavier than the gap to the best solution are made hard
     assertThat(hardened).isPositive();
     assertThat(unsat).isPositive();
+  }
+
+  @Test
+  void coreGuidedSearchWithAtMostOneGroupsAgreesWithSearch() {
+    Random rnd = new Random(29);
+    long groups = 0;
+    long expanded = 0;
+    long proved = 0;
+    for (int instance = 0; instance < 200; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = selectionOptimum(seed, false, new long[3]);
+      long[] stats = new long[3];
+      Integer found = selectionOptimum(seed, true, stats);
+      assertThat(found).as("instance %d (seed %d)", instance, seed).isEqualTo(expected);
+      groups += stats[0];
+      expanded += stats[1];
+      proved += stats[2];
+    }
+    assertThat(groups).isPositive();
+    assertThat(expanded).isPositive();
+    assertThat(proved).isPositive();
+  }
+
+  /** {@code b <=> x = c}, which core-guided search reads as an indicator of the value. */
+  private static final class Indicator extends Reified implements ValueIndicator {
+    private final IntVar b;
+    private final IntVar x;
+    private final int c;
+
+    Indicator(IntVar x, int c, IntVar b) {
+      super(new XeqC(x, c), b);
+      this.b = b;
+      this.x = x;
+      this.c = c;
+    }
+
+    @Override
+    public IntVar indicator() {
+      return b;
+    }
+
+    @Override
+    public IntVar variable() {
+      return x;
+    }
+
+    @Override
+    public int value() {
+      return c;
+    }
+  }
+
+  /**
+   * A random selection problem as spot5: each x[i] is 0 (not selected) or one of a few values,
+   * binary tables forbid pairs of values, and the objective is the weight of the variables at 0,
+   * through indicators. Minimised by depth-first search, or by LCG with core-guided search alone;
+   * stats gets the at-most-one groups, the terms seen through their values, and whether core-guided
+   * search proved the optimum.
+   */
+  private static Integer selectionOptimum(long seed, boolean lcg, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 5 + rnd.nextInt(6);
+    IntVar[] x = new IntVar[n];
+    IntVar[] b = new IntVar[n];
+    int[] w = new int[n + 1];
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1 + rnd.nextInt(3));
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+      store.impose(new Indicator(x[i], 0, b[i]));
+      w[i] = 1 + rnd.nextInt(3);
+      sum += w[i];
+    }
+    int pairs = n + rnd.nextInt(2 * n);
+    for (int k = 0; k < pairs; k++) {
+      int i = rnd.nextInt(n);
+      int j = (i + 1 + rnd.nextInt(n - 1)) % n;
+      List<int[]> allowed = new ArrayList<>();
+      for (int u = 0; u <= x[i].max(); u++) {
+        for (int v = 0; v <= x[j].max(); v++) {
+          // a forbidden pair of selected values, or all of them
+          boolean conflict = u > 0 && v > 0 && (rnd.nextInt(3) > 0 || u == v);
+          if (!conflict) {
+            allowed.add(new int[] {u, v});
+          }
+        }
+      }
+      store.impose(new HybridTable(new IntVar[] {x[i], x[j]}, allowed.toArray(new int[0][])));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, sum);
+    IntVar[] terms = Arrays.copyOf(b, n + 1);
+    terms[n] = cost;
+    w[n] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    if (!lcg) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    if (solver.coreSearch() != null) {
+      stats[0] += solver.coreSearch().amoGroups;
+      stats[1] += solver.coreSearch().expandedTerms;
+      stats[2] += solver.coreSearch().proved ? 1 : 0;
+    }
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 
   /**
