@@ -75,6 +75,7 @@ class LinearRelaxationTest {
         x[i] = new IntVar(store, "x" + i, -2 - rnd.nextInt(2), 2 + rnd.nextInt(3));
         if (rnd.nextInt(3) == 0) {
           x[i].domain.subtractAdapt(x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1));
+          x[i].refreshBounds();
         }
       }
       String[] relations = {"==", "<=", ">=", "<", ">", "!="};

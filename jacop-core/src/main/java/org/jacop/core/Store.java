@@ -1522,8 +1522,7 @@ public class Store {
         // exception will occur.
         if (dom.stamp == level) {
 
-          changeHistory4BooleanVariables[i].domain.removeLevel(
-              level, changeHistory4BooleanVariables[i]);
+          changeHistory4BooleanVariables[i].remove(level);
         }
       }
     }

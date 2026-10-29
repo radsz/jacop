@@ -187,6 +187,7 @@ class LcgFuzzTest {
         x[i] = intVar("x" + i, rnd.nextInt(3) - 1, 2 + rnd.nextInt(3));
         if (rnd.nextInt(3) == 0 && x[i].max() - x[i].min() >= 2) {
           x[i].domain.subtractAdapt(x[i].min() + 1 + rnd.nextInt(x[i].max() - x[i].min() - 1));
+          x[i].refreshBounds();
         }
       }
       b = new IntVar[3 + rnd.nextInt(2)];
