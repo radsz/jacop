@@ -1247,6 +1247,21 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * The objective value that a solution must beat: that of the best solution, here or found
+   * elsewhere and given by {@link #setSharedBound}; {@link Long#MAX_VALUE} while there is none.
+   */
+  long boundObjective() {
+    long bound = bestObjective();
+    if (sharedBound != null) {
+      int shared = sharedBound.getAsInt();
+      if (shared != Integer.MAX_VALUE) {
+        bound = Math.min(bound, shared);
+      }
+    }
+    return bound;
+  }
+
+  /**
    * Alternates branch and bound with objective lower-bound search: runs of branch and bound end
    * after a number of conflicts, and each is followed by a run under the assumption that the
    * objective is at its lower bound, with a share of those conflicts. When that run proves the
