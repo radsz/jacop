@@ -172,6 +172,24 @@
                             </resources>
                         </configuration>
                     </execution>
+                    <!-- FlatZinc models the fzn-jacop-aot script trains the JVM's ahead-of-time cache on -->
+                    <execution>
+                        <id>copy-aot-training-models</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}/aot-training</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/aot-training</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
                     <execution>
                         <id>copy-minizinc-library</id>
                         <phase>package</phase>
@@ -214,6 +232,10 @@
                                       overwrite="true"/>
                                 <chmod file="${project.build.directory}/fzn-jacop" perm="ugo+x"/>
                                 <chmod file="${project.build.directory}/jacop" perm="ugo+x"/>
+                                <move file="${project.build.directory}/fzn-jacop-aot.template"
+                                      tofile="${project.build.directory}/fzn-jacop-aot"
+                                      overwrite="true"/>
+                                <chmod file="${project.build.directory}/fzn-jacop-aot" perm="ugo+x"/>
                             </target>
                         </configuration>
                     </execution>
@@ -221,5 +243,38 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- mvn -Paot -DskipTests install: also makes target/jacop.aot, the ahead-of-time cache that
+             cuts fzn-jacop's JVM start-up (needs bash and Java 25 as java on the PATH) -->
+        <profile>
+            <id>aot</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>make-aot-cache</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <exec executable="bash" dir="${project.build.directory}"
+                                              failonerror="true">
+                                            <arg value="./fzn-jacop-aot"/>
+                                        </exec>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
