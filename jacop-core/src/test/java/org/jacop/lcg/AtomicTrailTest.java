@@ -637,6 +637,68 @@ class AtomicTrailTest {
     }
   }
 
+  @Test
+  void excludedBeforeCitesTheLatestEntryThatRemovesTheValue() {
+    Random rnd = new Random(12);
+    // the first two spans index the removed values, the last walks the chain
+    int[] spans = {40, 600, (1 << 16) + 10};
+    for (int run = 0; run < 90; run++) {
+      Store store = new Store();
+      int span = spans[run % spans.length];
+      IntVar[] vars = new IntVar[2];
+      for (int i = 0; i < 2; i++) {
+        vars[i] = new IntVar(store, "x" + i, -5, span - 5);
+      }
+      AtomicTrail trail = new AtomicTrail(store);
+      EntryList out = new EntryList();
+      for (int step = 0; step < 60; step++) {
+        if (store.level > 0 && rnd.nextInt(4) == 0) {
+          int target = rnd.nextInt(store.level);
+          while (store.level > target) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        } else {
+          store.setLevel(store.level + 1);
+          IntVar x = vars[rnd.nextInt(2)];
+          if (x.getSize() > 1) {
+            prune(x, store, rnd);
+          }
+        }
+        for (int probe = 0; probe < 40; probe++) {
+          IntVar x = vars[rnd.nextInt(2)];
+          int v = -6 + rnd.nextInt(Math.min(span, 800) + 2);
+          int position = rnd.nextInt(trail.size() + 1);
+          int expected = -1;
+          for (int e = 0; e < position; e++) {
+            if (trail.variable(e) == x && removes(trail, e, v)) {
+              expected = e;
+            }
+          }
+          out.clear();
+          boolean inRoot = trail.rootDomain(x).contains(v);
+          assertThat(trail.excludedBefore(x, v, position, out))
+              .as("%s != %d before %d", x.id(), v, position)
+              .isEqualTo(!inRoot || expected >= 0);
+          assertThat(out.size()).isEqualTo(inRoot && expected >= 0 ? 1 : 0);
+          if (out.size() == 1) {
+            assertThat(out.get(0)).isEqualTo(expected);
+          }
+        }
+      }
+      trail.detach();
+    }
+  }
+
+  private static boolean removes(AtomicTrail trail, int e, int v) {
+    int a = trail.value(e);
+    return switch (trail.kind(e)) {
+      case AtomicTrail.GE -> a > v;
+      case AtomicTrail.LE -> a < v;
+      default -> a == v;
+    };
+  }
+
   // removes a value, a range or values outside a set, or raises a bound, at the current level
   private static void prune(IntVar x, Store store, Random rnd) {
     int a = x.min() + rnd.nextInt(Math.min(x.max() - x.min() + 1, 700));

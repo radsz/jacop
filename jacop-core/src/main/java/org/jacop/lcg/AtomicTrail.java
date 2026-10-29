@@ -95,6 +95,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // the bound before a position is found by binary search instead of a walk along the chain
   private int[][] bounds = new int[0][];
   private int[] numBounds = new int[0];
+  // per variable (by id) whose initial domain spans at most NE_INDEX_SPAN values: its NE entry per
+  // value (offset by the initial minimum), or -1, so that whether a value was removed before a
+  // position is found without a walk along the chain; null until the variable's first NE entry
+  private int[][] neEntry = new int[0][];
+  private static final int NE_INDEX_SPAN = 1 << 16;
 
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
@@ -184,6 +189,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       Arrays.fill(last, old, n, -1);
       bounds = Arrays.copyOf(bounds, 2 * n);
       numBounds = Arrays.copyOf(numBounds, 2 * n);
+      neEntry = Arrays.copyOf(neEntry, n);
     }
     if (root[i] == null) {
       root[i] = x.dom().cloneLight();
@@ -363,7 +369,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     reason[size] = store.currentConstraint;
     previous[size] = last[i];
     last[i] = size;
-    if (k != NE) {
+    if (k == NE) {
+      int[] ne = neIndex(i);
+      if (ne != null) {
+        ne[v - root[i].min()] = size;
+      }
+    } else {
       int b = 2 * i + k;
       if (bounds[b] == null) {
         bounds[b] = new int[8];
@@ -384,6 +395,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       last[i] = previous[size];
       if (kind[size] != NE) {
         numBounds[2 * i + kind[size]]--;
+      } else if (neEntry[i] != null) {
+        neEntry[i][value[size] - root[i].min()] = -1;
       }
       if (last[i] < 0 || level[last[i]] < removedLevel) {
         setShadow(i, x.dom()); // the variable's last removed entry: its domain is restored
@@ -740,8 +753,30 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return true when v was not in the domain
    */
   public boolean excludedBefore(IntVar x, int v, int position, EntryList out) {
-    if (!root[slot(x)].contains(v)) {
+    int i = slot(x);
+    if (!root[i].contains(v)) {
       return true;
+    }
+    if (indexed(i)) {
+      // the latest entry before the position that removes v, as the walk below finds it: the
+      // value's
+      // NE entry, or the last bound of either kind, which removes v when any of its kind does
+      int[] ne = neEntry[i];
+      int f = ne == null ? -1 : ne[v - root[i].min()];
+      int found = f < position ? f : -1;
+      int g = latest(x, position, GE);
+      if (g > found && value[g] > v) {
+        found = g;
+      }
+      int l = latest(x, position, LE);
+      if (l > found && value[l] < v) {
+        found = l;
+      }
+      if (found >= 0) {
+        out.add(found);
+        return true;
+      }
+      return false;
     }
     for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
       if (removes(f, v)) {
@@ -750,6 +785,22 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       }
     }
     return false;
+  }
+
+  // whether the NE entries of variable i are indexed by value
+  private boolean indexed(int i) {
+    return (long) root[i].max() - root[i].min() < NE_INDEX_SPAN;
+  }
+
+  // the NE index of variable i, made at its first NE entry; null when its values are not indexed
+  private int[] neIndex(int i) {
+    int[] ne = neEntry[i];
+    if (ne == null && indexed(i)) {
+      ne = new int[root[i].max() - root[i].min() + 1];
+      Arrays.fill(ne, -1);
+      neEntry[i] = ne;
+    }
+    return ne;
   }
 
   // whether entry f removes value v from its variable's domain
