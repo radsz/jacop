@@ -367,9 +367,9 @@ public final class LcgSolver implements ExternalPropagator {
       int i = trail.id(x);
       vars[i] = x;
       root[i] = x.dom().cloneLight();
-      ge[i] = new LiteralMap();
-      eq[i] = new LiteralMap();
-      linked[i] = new LiteralMap();
+      ge[i] = new LiteralMap(root[i].min(), root[i].max());
+      eq[i] = new LiteralMap(root[i].min(), root[i].max());
+      linked[i] = new LiteralMap(root[i].min(), root[i].max());
       if (!root[i].singleton()) {
         heapOf(i).insert(i);
         if (root[i].min() < 0 || root[i].max() > 1) {
