@@ -30,8 +30,6 @@
 
 package org.jacop.core;
 
-import java.util.Arrays;
-
 /**
  * One trail shared by the domains of a store that are changed in place ({@link LazyBitSetDomain}).
  * A domain pushes an entry before its first change at a level, and the store pops the entries of a
@@ -67,16 +65,32 @@ public final class DomainTrail {
   /** The number of objects of an entry. */
   static final int OBJECTS = 4;
 
-  /** Per entry: kind, level, then the domain's values. */
-  int[] ints = new int[INTS * 256];
+  /** The log of the number of entries of the first segment. */
+  private static final int FIRST_SHIFT = 8;
+
+  /** The number of entries of the first segment; segment s has FIRST << s entries. */
+  private static final int FIRST = 1 << FIRST_SHIFT;
+
+  /** The number of segments; the last one has 2^27 entries, so its ints still fit an array. */
+  private static final int SEGMENTS = 20;
+
+  /**
+   * The entries are kept in segments of doubling size, so the trail grows without copying: on a
+   * deep search the trail can hold millions of entries, and copying them into ever larger arrays
+   * touches twice the memory they need.
+   */
+  private final int[][] ints = new int[SEGMENTS][];
 
   /** Per entry: a value of the domain. */
-  long[] longs = new long[256];
+  private final long[][] longs = new long[SEGMENTS][];
 
   /** Per entry: the domain, then the domain's objects. */
-  Object[] objects = new Object[OBJECTS * 256];
+  private final Object[][] objects = new Object[SEGMENTS][];
 
   private int size;
+
+  /** The number of entries the allocated segments hold. */
+  private int capacity;
 
   /**
    * Pushes an entry; the caller fills in its values.
@@ -87,24 +101,111 @@ public final class DomainTrail {
    * @return the index of the entry.
    */
   int push(Entry domain, int kind, int level) {
-    if (size == longs.length) {
+    if (size == capacity) {
       grow();
     }
     int entry = size++;
-    ints[entry * INTS] = kind;
-    ints[entry * INTS + 1] = level;
-    objects[entry * OBJECTS] = domain;
+    int s = segment(entry);
+    int i = offset(entry, s);
+    int[] in = ints[s];
+    in[i * INTS] = kind;
+    in[i * INTS + 1] = level;
+    objects[s][i * OBJECTS] = domain;
     return entry;
   }
 
   private void grow() {
-    if (size > (Integer.MAX_VALUE / INTS - 64) / 2) {
+    int s = segment(capacity);
+    if (s >= SEGMENTS) {
       throw new IllegalStateException("Trail too large");
     }
-    int capacity = 2 * size + 64;
-    ints = Arrays.copyOf(ints, capacity * INTS);
-    longs = Arrays.copyOf(longs, capacity);
-    objects = Arrays.copyOf(objects, capacity * OBJECTS);
+    int n = FIRST << s;
+    ints[s] = new int[n * INTS];
+    longs[s] = new long[n];
+    objects[s] = new Object[n * OBJECTS];
+    capacity += n;
+  }
+
+  /**
+   * The segment of an entry: segment s holds entries FIRST * (2^s - 1) to FIRST * (2^(s+1) - 1).
+   */
+  private static int segment(int entry) {
+    return 31 - FIRST_SHIFT - Integer.numberOfLeadingZeros(entry + FIRST);
+  }
+
+  /** The position of an entry in its segment. */
+  private static int offset(int entry, int segment) {
+    return entry + FIRST - (FIRST << segment);
+  }
+
+  /**
+   * Returns an int of an entry.
+   *
+   * @param entry the index of the entry.
+   * @param k the index of the int, 0 for the kind and 1 for the level.
+   * @return the int.
+   */
+  int getInt(int entry, int k) {
+    int s = segment(entry);
+    return ints[s][offset(entry, s) * INTS + k];
+  }
+
+  /**
+   * Sets an int of an entry.
+   *
+   * @param entry the index of the entry.
+   * @param k the index of the int, at least 2.
+   * @param value the int.
+   */
+  void setInt(int entry, int k, int value) {
+    int s = segment(entry);
+    ints[s][offset(entry, s) * INTS + k] = value;
+  }
+
+  /**
+   * Returns the long of an entry.
+   *
+   * @param entry the index of the entry.
+   * @return the long.
+   */
+  long getLong(int entry) {
+    int s = segment(entry);
+    return longs[s][offset(entry, s)];
+  }
+
+  /**
+   * Sets the long of an entry.
+   *
+   * @param entry the index of the entry.
+   * @param value the long.
+   */
+  void setLong(int entry, long value) {
+    int s = segment(entry);
+    longs[s][offset(entry, s)] = value;
+  }
+
+  /**
+   * Returns an object of an entry.
+   *
+   * @param entry the index of the entry.
+   * @param k the index of the object, 0 for the domain.
+   * @return the object.
+   */
+  Object getObject(int entry, int k) {
+    int s = segment(entry);
+    return objects[s][offset(entry, s) * OBJECTS + k];
+  }
+
+  /**
+   * Sets an object of an entry.
+   *
+   * @param entry the index of the entry.
+   * @param k the index of the object, at least 1.
+   * @param value the object.
+   */
+  void setObject(int entry, int k, Object value) {
+    int s = segment(entry);
+    objects[s][offset(entry, s) * OBJECTS + k] = value;
   }
 
   /**
@@ -113,14 +214,29 @@ public final class DomainTrail {
    * @param level the lowest level removed.
    */
   void removeLevel(int level) {
-    while (size > 0 && ints[(size - 1) * INTS + 1] >= level) {
-      int entry = --size;
-      int o = entry * OBJECTS;
-      ((Entry) objects[o]).undo(this, entry);
-      objects[o] = null;
-      objects[o + 1] = null;
-      objects[o + 2] = null;
-      objects[o + 3] = null;
+    // kept small so that it inlines into the store's backtracking, which most stores do without
+    // ever pushing an entry
+    if (size > 0) {
+      pop(level);
+    }
+  }
+
+  private void pop(int level) {
+    while (size > 0) {
+      int entry = size - 1;
+      int s = segment(entry);
+      int i = offset(entry, s);
+      if (ints[s][i * INTS + 1] < level) {
+        return;
+      }
+      size = entry;
+      Object[] in = objects[s];
+      int o = i * OBJECTS;
+      ((Entry) in[o]).undo(this, entry);
+      in[o] = null;
+      in[o + 1] = null;
+      in[o + 2] = null;
+      in[o + 3] = null;
     }
   }
 

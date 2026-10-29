@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +45,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.util.VarIntMap;
 
 /**
  * It constructs a LexOrder (lexicographical order) constraint.
@@ -77,8 +77,11 @@ public class LexOrder extends Constraint
   /** The longest vectors whose positions are found by comparing the variables, not by the map. */
   private static final int SCAN_MAX = 16;
 
-  /** For each variable, its positions in x followed by its positions in y. */
-  final Map<Var, int[]> varToIndex = Var.createEmptyPositioning();
+  /** The slot in {@link #positionsOf} of each variable. */
+  final VarIntMap varToIndex = new VarIntMap();
+
+  /** For each variable slot, its positions in x followed by its positions in y. */
+  int[][] positionsOf = new int[8][];
 
   /** Lex enforcing "{@literal <}" relationship (true). */
   private boolean lexLt;
@@ -191,13 +194,19 @@ public class LexOrder extends Constraint
   }
 
   private void addPosition(IntVar v, int i) {
-    int[] positions = varToIndex.get(v);
-    if (positions == null) {
-      varToIndex.put(v, new int[] {i});
+    int slot = varToIndex.get(v);
+    if (slot == VarIntMap.ABSENT) {
+      slot = varToIndex.size();
+      varToIndex.put(v, slot);
+      if (slot == positionsOf.length) {
+        positionsOf = Arrays.copyOf(positionsOf, 2 * slot);
+      }
+      positionsOf[slot] = new int[] {i};
     } else {
+      int[] positions = positionsOf[slot];
       int[] newPositions = Arrays.copyOf(positions, positions.length + 1);
       newPositions[positions.length] = i;
-      varToIndex.put(v, newPositions);
+      positionsOf[slot] = newPositions;
     }
   }
 
@@ -281,9 +290,9 @@ public class LexOrder extends Constraint
       }
       return;
     }
-    int[] positions = varToIndex.get(v);
-    if (positions != null) {
-      for (int i : positions) {
+    int slot = varToIndex.get(v);
+    if (slot != VarIntMap.ABSENT) {
+      for (int i : positionsOf[slot]) {
         if (!queued[i]) {
           queued[i] = true;
           indexQueue[indexQueueSize++] = i;

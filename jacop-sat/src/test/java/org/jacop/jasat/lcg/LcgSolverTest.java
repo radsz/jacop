@@ -2939,6 +2939,51 @@ class LcgSolverTest {
   }
 
   @Test
+  void atMostOneGroupKeepsTheNextLevelsOfIntegerTerms() {
+    // x0 = 0 forces x1 >= 4 and x1 = 0 forces x0 >= 4, so [x0 >= 1] and [x1 >= 1] form a group;
+    // the levels above 1 must still cost their weight, or a solution with every soft literal false
+    // (x0 = 4, x1 = 0, cost 8) ends the core-guided phase above its lower bound without a proof
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 5);
+    IntVar x1 = new IntVar(store, "x1", 0, 5);
+    IntVar obj = new IntVar(store, "obj", 0, 25);
+    store.impose(new LinearInt(new IntVar[] {x0, x1}, new int[] {1, 1}, ">=", 4));
+    store.impose(new LinearInt(new IntVar[] {x0, x1, obj}, new int[] {2, 3, -1}, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(8);
+    assertThat(solver.coreSearch().amoGroups).isEqualTo(1);
+    assertThat(solver.coreSearch().proved).isTrue();
+  }
+
+  @Test
+  void coreGuidedSearchReadsThroughPartialSumsWithoutGroups() {
+    // obj = s1 + s2 with s1 = x0 + x1 and s2 = x2 + x3, and no two terms exclude each other: the
+    // terms are still the x's (trucking lost its proofs when the block sums were kept)
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar s1 = new IntVar(store, "s1", 0, 6);
+    IntVar s2 = new IntVar(store, "s2", 0, 6);
+    IntVar obj = new IntVar(store, "obj", 0, 12);
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1], s1}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], s2}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, ">=", 2));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(2);
+    assertThat(solver.coreSearch().amoGroups).isZero();
+    assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+  }
+
+  @Test
   void coreGuidedSearchReadsThroughPartialSums() {
     // obj = s1 + s2 with s1 = 2 * x0 + x1 and s2 = x2 + 3 * x3, as --lcg splits a long sum into
     // blocks; the terms of the core-guided phase are the x's, not the block sums
@@ -2962,6 +3007,7 @@ class LcgSolverTest {
     // x2 = 3 and x1 = 2: 3 + 2
     assertThat(solver.value(obj)).isEqualTo(5);
     assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+    assertThat(solver.coreSearch().proved).isTrue();
   }
 
   /**

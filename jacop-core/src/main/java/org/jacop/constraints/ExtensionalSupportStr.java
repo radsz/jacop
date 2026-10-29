@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
@@ -44,6 +43,7 @@ import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 import org.jacop.util.IndexDomainView;
 import org.jacop.util.TupleUtils;
+import org.jacop.util.VarIntMap;
 
 /**
  * Extensional constraint assures that one of the tuples is enforced in the relation.
@@ -130,7 +130,7 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   private int[] supportsVariablePositions;
 
   /** It specifies the mapping of the variable into its index. */
-  private Map<Var, Integer> varToIndex;
+  private VarIntMap varToIndex;
 
   /** It specifies the position of the last assigned variable. */
   private int lastAssignedVariablePosition = -1;
@@ -538,7 +538,11 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
 
     this.store = store;
 
-    varToIndex = Var.positionMapping(list, false, this.getClass());
+    Var.positionMapping(list, false, this.getClass());
+    varToIndex = new VarIntMap(list.length);
+    for (int i = 0; i < list.length; i++) {
+      varToIndex.put(list[i], i);
+    }
 
     if (DEBUG_ALL) {
       for (Var v : list) {

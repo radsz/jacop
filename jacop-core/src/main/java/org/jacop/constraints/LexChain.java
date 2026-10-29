@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -42,6 +41,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.VarIntMap;
 
 /**
  * LexChain constrains a chain of vectors of the same length to be lexicographically ordered, x[0]
@@ -98,7 +98,10 @@ public class LexChain extends Constraint
   private final int[][] upper;
 
   /** For each variable, its positions i * n + j in the chain. */
-  private final Map<Var, int[]> varToPositions = Var.createEmptyPositioning();
+  private final VarIntMap varToSlot = new VarIntMap();
+
+  /** For each variable slot, its positions i * n + j in x. */
+  private int[][] varToPositions = new int[8][];
 
   /** Vectors whose domains changed since lower and upper were computed. */
   private final boolean[] changed;
@@ -209,13 +212,19 @@ public class LexChain extends Constraint
   public void impose(Store store) {
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < n; j++) {
-        int[] positions = varToPositions.get(x[i][j]);
-        if (positions == null) {
-          varToPositions.put(x[i][j], new int[] {i * n + j});
+        int slot = varToSlot.get(x[i][j]);
+        if (slot == VarIntMap.ABSENT) {
+          slot = varToSlot.size();
+          varToSlot.put(x[i][j], slot);
+          if (slot == varToPositions.length) {
+            varToPositions = Arrays.copyOf(varToPositions, 2 * slot);
+          }
+          varToPositions[slot] = new int[] {i * n + j};
         } else {
+          int[] positions = varToPositions[slot];
           int[] more = Arrays.copyOf(positions, positions.length + 1);
           more[positions.length] = i * n + j;
-          varToPositions.put(x[i][j], more);
+          varToPositions[slot] = more;
         }
       }
     }
@@ -229,7 +238,7 @@ public class LexChain extends Constraint
 
   @Override
   public void queueVariable(int level, Var var) {
-    for (int k : varToPositions.get(var)) {
+    for (int k : varToPositions[varToSlot.get(var)]) {
       if (!positionChanged[k]) {
         positionChanged[k] = true;
         int i = k / n;
