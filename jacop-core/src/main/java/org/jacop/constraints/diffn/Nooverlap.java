@@ -739,12 +739,24 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return explainable() && DiffnExplanation.explain(trail, entry, rectangle, out);
+    if (!explainable()) {
+      return false;
+    }
+    if (!DiffnExplanation.explain(trail, entry, rectangle, out)) {
+      DiffnExplanation.bounds(trail, entry, rectangle, out);
+    }
+    return true;
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return explainable() && DiffnExplanation.explainFailure(trail, rectangle, out);
+    if (!explainable()) {
+      return false;
+    }
+    if (!DiffnExplanation.explainFailure(trail, rectangle, out)) {
+      DiffnExplanation.bounds(trail, trail.size(), rectangle, out);
+    }
+    return true;
   }
 
   // a subclass may prune by other rules, so only the classes explained here give reasons
