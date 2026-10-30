@@ -155,6 +155,9 @@ public final class CdclSolver {
   private int numOriginals;
   private int[] learnts = new int[64];
   private int numLearnts;
+  // the watch list of a literal no clause has watched yet, shared and never written
+  private static final int[] NO_WATCHES = new int[0];
+
   private int[][] watches = new int[0][];
   private int[] watchSize = new int[0];
   private int[][] binWatches = new int[0][];
@@ -371,11 +374,10 @@ public final class CdclSolver {
         activity[v] = random.nextDouble() * 1e-3; // NOSONAR: activity holds n variables, see above
       }
     }
-    // the arrays hold at least n variables here (SonarCloud does not see it)
-    for (int l = 2 * numVars; l < 2 * n; l++) {
-      watches[l] = new int[4]; // NOSONAR
-      binWatches[l] = new int[2]; // NOSONAR
-    }
+    // a literal gets its watch lists when a clause first watches it: under LCG most literals are
+    // atoms in no clause, and four small arrays each filled a 3 GB heap on a 4096-variable alldiff
+    Arrays.fill(watches, 2 * numVars, 2 * n, NO_WATCHES);
+    Arrays.fill(binWatches, 2 * numVars, 2 * n, NO_WATCHES);
     for (int v = numVars; v < n; v++) {
       order.insert(v);
     }
@@ -542,7 +544,8 @@ public final class CdclSolver {
    *
    * @param lit a DIMACS literal
    * @return the literals it implies, in the order assigned; null when it leads to a conflict, so
-   *     its negation holds in every solution; empty when it is already true at the root
+   *     its negation holds in every solution; empty when it is already true at the root, or when
+   *     the deadline stops the propagation of the root
    */
   public int[] probe(int lit) {
     if (!ok) {
@@ -560,6 +563,12 @@ public final class CdclSolver {
       if (propagateAll() != NO_CONFLICT) {
         ok = false;
         return null;
+      }
+      if (outOfTime) {
+        // the root is not at its fixpoint: a decision now would take the rest of the root's
+        // consequences to its level, and they would be undone with it
+        outOfTime = false;
+        return new int[0];
       }
       if (vals[l] != 0) {
         return vals[l] > 0 ? new int[0] : null;
@@ -749,7 +758,7 @@ public final class CdclSolver {
     int[] ws = watches[lit];
     int n = watchSize[lit];
     if (n + 2 > ws.length) {
-      ws = Arrays.copyOf(ws, 2 * ws.length);
+      ws = Arrays.copyOf(ws, Math.max(4, 2 * ws.length));
       watches[lit] = ws;
     }
     ws[n] = blocker;

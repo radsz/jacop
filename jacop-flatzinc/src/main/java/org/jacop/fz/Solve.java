@@ -118,6 +118,7 @@ import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
+import org.jacop.search.ls.LocalSearch;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -563,6 +564,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpBaseBound="
+            + r.baseBound
+            + "\n%%%mzn-stat: lpExtraRows="
+            + r.extraRows
+            + "\n%%%mzn-stat: lpExtraDropped="
+            + r.extraDropped
             + "\n%%%mzn-stat-end");
   }
 
@@ -1724,19 +1731,52 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * explain their prunings. Solutions are printed when found, with the domains fixed to them.
    */
   private boolean executeLcgSearch(Var costVar) {
+    Portfolio.Worker worker = options.portfolioWorker();
+    // local search runs on the store before the solver takes it over
+    LocalSearch ls = null;
+    // -a on an optimisation problem prints every better solution, local search included
+    if (options.freeSearch() && !(options.getAll() && costVar == null)) {
+      DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+      searchVars.defaultVars();
+      ls = runLocalSearch(costVar, searchVars, worker, true);
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
-    Portfolio.Worker worker = options.portfolioWorker();
-    if (worker != null) {
-      if (costVar != null) {
-        lcg.setSharedBound(worker::sharedBound);
+    if (ls != null) {
+      IntVar[] hinted = hintedVariables();
+      int[] hintValues = ls.getSolution(hinted);
+      if (hintValues != null) {
+        lcg.setPhase(hinted, hintValues);
       }
+      if (costVar == null) {
+        // the solution of local search, printed already, is the answer
+        lcgStatus = CdclSolver.SAT;
+        return true;
+      }
+      lcgLastCost = ls.getCostValue();
+      int lsCost = ls.getCostValue();
+      lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (worker != null && costVar != null) {
+      lcg.setSharedBound(worker::sharedBound);
+    }
+    if (worker != null) {
       worker.onStop(lcg::stop);
     }
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    lcg.onSolution(this::printSolution);
+    if (ls != null && costVar instanceof IntVar cost) {
+      // the solution of local search was printed already; the core-guided phase, which ignores
+      // the bound, or the first descent, before the bound is taken, can find one no better
+      lcg.onSolution(
+          () -> {
+            if (cost.value() < lcgLastCost) {
+              printSolution();
+            }
+          });
+    } else {
+      lcg.onSolution(this::printSolution);
+    }
     boolean free = options.freeSearch();
     if (free && costVar == null && !LcgSolver.FULL_FIXPOINT_SET) {
       // satisfaction under free search returns to the clauses after each pruning: with the full
@@ -1989,6 +2029,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.atomLiteralsLearnt
             + "\n%%%mzn-stat: lcgLiteralsReleased="
             + lcg.literalsReleased
+            + "\n%%%mzn-stat: lcgDeferredAtoms="
+            + lcg.deferredAtoms
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
             + "\n%%%mzn-stat: lcgBoundLiterals="
@@ -2058,6 +2100,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.amoGroups
         + "\n%%%mzn-stat: lcgCoreAmoBound="
         + core.amoBound
+        + "\n%%%mzn-stat: lcgCoreNoSolutionStops="
+        + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
@@ -2126,6 +2170,133 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         new SimpleSelect<>(
             objectiveCosts, null, objectiveMinimized ? new IndomainMin<>() : new IndomainMax<>());
     return annotated == null ? costs : new SequenceSelect(List.of(costs, annotated));
+  }
+
+  // the solution-based phase saving of free search, which takes the solution of local search
+  private final List<IndomainLastSolution> phaseSavers = new ArrayList<>();
+
+  // the local search run before free search, or null
+  private LocalSearch localSearch;
+
+  /**
+   * Runs local search before free search when --free-config ls gives it a share of the time (ls-max
+   * caps it in milliseconds). Its solutions are checked in the store; for optimisation each better
+   * one is printed as it is found. The best becomes the hint of free search's phase saving, and the
+   * first run of free search follows it, so free search starts from that solution.
+   */
+  private void localSearchPhase(
+      Var costVar, DefaultSearchVars searchVars, Portfolio.Worker worker, FreeSearch.Builder fs) {
+    if (runLocalSearch(costVar, searchVars, worker, false) == null) {
+      return;
+    }
+    IntVar[] hinted = hintedVariables();
+    int[] values = localSearch.getSolution(hinted);
+    if (values == null) {
+      return;
+    }
+    for (IndomainLastSolution saver : phaseSavers) {
+      saver.hint(hinted, values);
+    }
+    fs.mainBranchingFirst(true);
+  }
+
+  /**
+   * Runs local search when --free-config ls gives it a share of the time left (ls-max caps it in
+   * milliseconds). Solutions of optimisation, and of satisfaction when asked, are printed as they
+   * are found.
+   *
+   * @return the local search when it found a solution, otherwise null
+   */
+  private LocalSearch runLocalSearch(
+      Var costVar, DefaultSearchVars searchVars, Portfolio.Worker worker, boolean printSatisfied) {
+    double share = Double.parseDouble(options.freeConfig("ls", "0"));
+    if (share <= 0 || (costVar != null && !(costVar instanceof IntVar))) {
+      return null;
+    }
+    long budget = Long.parseLong(options.freeConfig("ls-max", "0"));
+    if (options.getTimeOut() > 0) {
+      long part = (long) (share * options.getRemainingTimeOut());
+      budget = budget > 0 ? Math.min(budget, part) : part;
+    } else if (budget <= 0) {
+      budget = 10_000;
+    }
+    List<IntVar> order = new ArrayList<>(Arrays.asList(searchVars.getIntVars()));
+    order.addAll(Arrays.asList(searchVars.getBoolVars()));
+    LocalSearch.Builder b =
+        LocalSearch.builder(store)
+            .order(order.toArray(new IntVar[0]))
+            .defined(dictionary.definedVariables)
+            .timeLimit(Duration.ofMillis(budget))
+            .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
+            // the seed of -r, so that runs repeat and portfolio threads do not share a generator
+            .seed(options.getRandomSeed());
+    if (costVar instanceof IntVar c) {
+      b.minimize(c).onSolution(ls -> printSolution());
+      if (worker != null) {
+        b.sharedBound(worker::sharedBound);
+      }
+    } else if (printSatisfied) {
+      b.onSolution(ls -> printSolution());
+    }
+    if (!sat.collectedClauses().isEmpty()) {
+      // under --lcg the clauses go to the SAT solver, not to the store
+      List<Constraint> clauses = new ArrayList<>();
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        clauses.add(new BoolClause(clause[0], clause[1]));
+      }
+      b.extraConstraints(clauses);
+    }
+    localSearch = b.build();
+    if (worker != null) {
+      worker.onStop(localSearch::stop);
+    }
+    LocalSearch.Status status = localSearch.solve();
+    if (options.debug()) {
+      IO.println("% " + localSearch + " " + status);
+    }
+    return status == LocalSearch.Status.SATISFIED ? localSearch : null;
+  }
+
+  // the integer variables of the store not fixed at the root, which a solution hint covers
+  private IntVar[] hintedVariables() {
+    Set<IntVar> all = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof IntVar x && !x.singleton()) {
+        all.add(x);
+      }
+    }
+    // Boolean variables have no store index
+    for (Var v : store.variablesHashMap.values()) {
+      if (v instanceof IntVar x && !x.singleton()) {
+        all.add(x);
+      }
+    }
+    return all.toArray(new IntVar[0]);
+  }
+
+  private String localSearchStatistics() {
+    if (localSearch == null) {
+      return "";
+    }
+    int[] counts = localSearch.getConstraintCounts();
+    return "\n%%%mzn-stat: lsSolutions="
+        + localSearch.getSolutions()
+        + "\n%%%mzn-stat: lsMoves="
+        + localSearch.getMoves()
+        + "\n%%%mzn-stat: lsSteps="
+        + localSearch.getSteps()
+        + "\n%%%mzn-stat: lsRestarts="
+        + localSearch.getRestarts()
+        + "\n%%%mzn-stat: lsRejected="
+        + localSearch.getRejected()
+        + "\n%%%mzn-stat: lsConstraints="
+        + counts[0]
+        + "/"
+        + counts[1]
+        + "/"
+        + counts[2]
+        + "\n%%%mzn-stat: lsEvaluations="
+        + localSearch.getEvaluations();
   }
 
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
@@ -2248,6 +2419,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               ? FreeSearch.Alternation.UNTIL_FIRST_SOLUTION
               : FreeSearch.Alternation.EVERY_RESTART);
     }
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (!allSolutions && !onRestart && !phaseSavers.isEmpty()) {
+      localSearchPhase(costVar, searchVars, worker, builder);
+    }
     if (options.getTimeOut() > 0) {
       builder.timeLimit(Duration.ofMillis(options.getRemainingTimeOut()));
     }
@@ -2258,8 +2433,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("probe", "0.05")),
           Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
-    Portfolio.Worker worker = options.portfolioWorker();
-    if (worker != null && costVar != null) {
+    if (costVar != null && localSearch != null && localSearch.getSolutions() > 0) {
+      // free search improves on the best solution of local search
+      int lsCost = localSearch.getCostValue();
+      builder.sharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
       builder.sharedSolution(worker.sharedSolution(dictionary::getVariable));
     }
@@ -2328,6 +2506,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (phase) {
       IndomainLastSolution saving = new IndomainLastSolution(vars, values);
+      phaseSavers.add(saving);
       monitors.add(saving);
       values = saving;
     }
@@ -2648,9 +2827,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean complete =
           freeSearchStatus == FreeSearch.Status.OPTIMAL
               || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
+      // a solution of local search counts: free search then only looked for a better one
       printResultStatus(
           interrupted,
-          freeSearch.getSolutions() > 0,
+          freeSearch.getSolutions() > 0 || localSearch != null && localSearch.getSolutions() > 0,
           freeSearch.limitReached(),
           complete && !interrupted);
       if (options.getStatistics()) {
@@ -3268,6 +3448,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     + nf.format(freeSearch.getProbeFailures())
                 : "")
             + lnsStatistics(freeLns)
+            + localSearchStatistics()
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {

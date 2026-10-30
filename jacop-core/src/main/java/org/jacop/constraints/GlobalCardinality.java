@@ -857,11 +857,16 @@ public class GlobalCardinality extends Constraint
     return true;
   }
 
+  // the time spent in flow explanations of this constraint
+  private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
+
   // the flow network; a variable may take a value that is not counted
   private CardinalityExplanation.Network network() {
     return fixedBounds
-        ? new CardinalityExplanation.Network(list, values, null, fixedLow, fixedUp, true, null)
-        : new CardinalityExplanation.Network(list, values, counters, null, null, true, null);
+        ? new CardinalityExplanation.Network(
+            list, values, null, fixedLow, fixedUp, true, null, budget)
+        : new CardinalityExplanation.Network(
+            list, values, counters, null, null, true, null, budget);
   }
 
   @Override

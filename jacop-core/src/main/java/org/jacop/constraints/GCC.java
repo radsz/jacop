@@ -519,9 +519,13 @@ public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC>, 
     return true;
   }
 
+  // the time spent in flow explanations of this constraint
+  private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
+
   // the flow network of the counted values; GCC is closed, the variables take counted values only
   private CardinalityExplanation.Network network() {
-    return new CardinalityExplanation.Network(x, domainHash, counters, null, null, false, null);
+    return new CardinalityExplanation.Network(
+        x, domainHash, counters, null, null, false, null, budget);
   }
 
   @Override

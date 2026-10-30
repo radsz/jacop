@@ -36,11 +36,14 @@ import java.util.List;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -65,7 +68,9 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementInteger extends AbstractElement
-    implements Simplifiable,
+    implements Functional,
+        Violation,
+        Simplifiable,
         UsesQueueVariable,
         SatisfiedPresent,
         Copyable<ElementInteger>,
@@ -97,13 +102,13 @@ public class ElementInteger extends AbstractElement
   private final boolean checkDuplicates;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  private final IntVar value;
+  final IntVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  private final int[] list;
+  final int[] list;
 
   /**
    * It specifies for each value what are the possible values of the index variable (it takes into
@@ -539,5 +544,29 @@ public class ElementInteger extends AbstractElement
     return getClass() == ElementInteger.class
         && index != value
         && ElementExplanation.explainFailure(trail, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int i = value.applyAsInt(index) - indexOffset - 1;
+    if (i < 0 || i >= list.length) {
+      return 1;
+    }
+    return list[i] == value.applyAsInt(this.value) ? 0 : 1;
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return value;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    int i = value.applyAsInt(index) - indexOffset - 1;
+    if (i < 0 || i >= list.length) {
+      // The constraint is violated whatever the result, so the result keeps its value.
+      return value.applyAsInt(this.value);
+    }
+    return list[i];
   }
 }
