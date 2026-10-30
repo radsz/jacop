@@ -192,6 +192,7 @@ setup to run configuration. -->
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
                                 <balance.trials>300</balance.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
+                                <multicumulative.trials>100</multicumulative.trials>
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
@@ -245,6 +246,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -373,6 +375,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -502,6 +505,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -631,6 +635,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>

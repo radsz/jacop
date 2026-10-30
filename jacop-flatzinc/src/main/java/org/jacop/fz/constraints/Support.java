@@ -52,6 +52,7 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
+import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
@@ -775,6 +776,20 @@ public class Support implements ParserTreeConstants {
           }
           delayedConstraints.add(c);
         }
+      }
+    }
+
+    // cumulative constraints over the same tasks share one time-table sweep; not under lazy clause
+    // generation, where each cumulative constraint explains its own time-table pruning, nor with
+    // presolve, whose cumulative reductions read each resource as one constraint;
+    // org.jacop.fz.multiCumulative=false keeps them apart
+    if (!options.lcg()
+        && options.presolve() == Options.Presolve.OFF
+        && Boolean.parseBoolean(System.getProperty("org.jacop.fz.multiCumulative", "true"))) {
+      List<Constraint> merged = MultiCumulative.merge(delayedConstraints);
+      if (merged != delayedConstraints) {
+        delayedConstraints.clear();
+        delayedConstraints.addAll(merged);
       }
     }
 
