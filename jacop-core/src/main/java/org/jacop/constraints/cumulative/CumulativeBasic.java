@@ -37,11 +37,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -58,7 +60,7 @@ import org.jacop.lcg.Explainable;
  */
 @Slf4j
 public class CumulativeBasic extends Constraint
-    implements Simplifiable, Copyable<CumulativeBasic>, Explainable {
+    implements Simplifiable, Copyable<CumulativeBasic>, Explainable, Violation {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1312,5 +1314,54 @@ public class CumulativeBasic extends Constraint
     trail.addBoundReaching(task.start, position, false, t, out);
     trail.addLowerBound(task.dur, position, out);
     trail.addLowerBound(task.res, position, out);
+  }
+
+  /**
+   * Returns the overload: the sum over time of the resource used above the limit.
+   *
+   * @param value the value of each variable.
+   * @return the overload.
+   */
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int n = taskNormal.length;
+    long[] events = new long[2 * n];
+    int k = 0;
+    for (int i = 0; i < n; i++) {
+      TaskView t = taskNormal[i];
+      int r = value.applyAsInt(t.res);
+      int d = value.applyAsInt(t.dur);
+      if (r <= 0 || d <= 0 || !present(i, value)) {
+        continue;
+      }
+      int s = value.applyAsInt(t.start);
+      // time in the high bits, the change of usage in the low 32 bits
+      events[k++] = ((long) s << 32) | (r & 0xffffffffL);
+      events[k++] = ((long) s + d << 32) | (-r & 0xffffffffL);
+    }
+    Arrays.sort(events, 0, k);
+    long cap = value.applyAsInt(limit);
+    long usage = 0;
+    long over = 0;
+    for (int e = 0; e < k; e++) {
+      long time = events[e] >> 32;
+      if (usage > cap) {
+        long previous = events[e - 1] >> 32;
+        over += (usage - cap) * (time - previous);
+      }
+      usage += (int) events[e];
+    }
+    return over;
+  }
+
+  /**
+   * Whether a task is present for {@link #violation(ToIntFunction)}; optional tasks override it.
+   *
+   * @param i the task.
+   * @param value the value of each variable.
+   * @return true when the task uses the resource.
+   */
+  protected boolean present(int i, ToIntFunction<IntVar> value) {
+    return true;
   }
 }

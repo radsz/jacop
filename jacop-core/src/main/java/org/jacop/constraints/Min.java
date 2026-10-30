@@ -33,9 +33,12 @@ package org.jacop.constraints;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -51,7 +54,8 @@ import org.jacop.lcg.MaxExplanation;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Min extends AbstractMinMax implements Simplifiable, Copyable<Min>, Explainable {
+public class Min extends AbstractMinMax
+    implements Functional, Violation, Simplifiable, Copyable<Min>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -191,5 +195,28 @@ public class Min extends AbstractMinMax implements Simplifiable, Copyable<Min>, 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == Min.class && MaxExplanation.explainFailure(trail, list, min, false, out);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    long min = Long.MAX_VALUE;
+    for (IntVar v : list) {
+      min = Math.min(min, value.applyAsInt(v));
+    }
+    return Math.abs(min - value.applyAsInt(target));
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return min;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    int min = Integer.MAX_VALUE;
+    for (IntVar v : list) {
+      min = Math.min(min, value.applyAsInt(v));
+    }
+    return min;
   }
 }

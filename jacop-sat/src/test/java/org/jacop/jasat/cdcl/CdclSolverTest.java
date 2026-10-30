@@ -33,6 +33,7 @@ package org.jacop.jasat.cdcl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -292,6 +293,39 @@ class CdclSolverTest {
     s.setDeadline(System.nanoTime() - 1);
     assertEquals(CdclSolver.UNKNOWN, s.solve());
     assertTrue(implied[0] < 5000, "rounds after the deadline: " + implied[0]);
+  }
+
+  @Test
+  void probeAfterTheDeadlineDecidesNothingBeforeTheRootFixpoint() {
+    // The root propagation of a probe stops at the deadline without its fixpoint, and the probe
+    // still decided its literal: the external propagator then pushed the rest of its root
+    // consequences at level 1, and they were undone with the probe while the propagator kept them,
+    // so later reasons cited unassigned literals (ma-path-finding under --lcg -f)
+    CdclSolver s = new CdclSolver();
+    int vars = 100_000;
+    s.ensureVars(vars + 1);
+    int[] implied = {0};
+    boolean[] early = {false};
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int propagate() {
+            return implied[0] < vars ? ++implied[0] : 0;
+          }
+
+          @Override
+          public int[] reason(int lit) {
+            return new int[] {lit};
+          }
+
+          @Override
+          public void notifyNewDecisionLevel() {
+            early[0] |= implied[0] < vars;
+          }
+        });
+    s.setDeadline(System.nanoTime() - 1);
+    assertNotNull(s.probe(vars + 1));
+    assertFalse(early[0], "a decision with " + (vars - implied[0]) + " root consequences to come");
   }
 
   @Test

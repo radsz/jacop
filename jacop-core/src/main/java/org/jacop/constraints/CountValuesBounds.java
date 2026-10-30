@@ -33,8 +33,10 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
@@ -50,7 +52,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class CountValuesBounds extends AbstractCountValues
-    implements Copyable<CountValuesBounds>, Explainable {
+    implements Copyable<CountValuesBounds>, Explainable, Violation {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -270,5 +272,15 @@ public class CountValuesBounds extends AbstractCountValues
   @Override
   public CountValuesBounds copy(VarMap map) {
     return new CountValuesBounds(map.get(list), lb, ub, values);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    long violated = 0;
+    for (int i = 0; i < values.length; i++) {
+      int c = Violations.count(list, values[i], value);
+      violated += Math.max(0, lb[i] - c) + Math.max(0, c - ub[i]);
+    }
+    return violated;
   }
 }

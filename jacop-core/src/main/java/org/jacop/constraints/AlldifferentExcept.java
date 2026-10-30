@@ -30,7 +30,9 @@
 
 package org.jacop.constraints;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.ToIntFunction;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
@@ -158,5 +160,26 @@ public class AlldifferentExcept extends Alldifferent
   @Override
   public AlldifferentExcept copy(VarMap map) {
     return new AlldifferentExcept(map.get(list), s);
+  }
+
+  /** Returns the number of variables whose value, not an exception, an earlier variable has. */
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int[] a = new int[list.length];
+    int n = 0;
+    for (IntVar x : list) {
+      int v = value.applyAsInt(x);
+      if (!s.contains(v)) {
+        a[n++] = v;
+      }
+    }
+    Arrays.sort(a, 0, n);
+    long d = 0;
+    for (int i = 1; i < n; i++) {
+      if (a[i] == a[i - 1]) {
+        d++;
+      }
+    }
+    return d;
   }
 }

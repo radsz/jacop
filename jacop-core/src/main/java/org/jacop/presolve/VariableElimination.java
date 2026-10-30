@@ -254,6 +254,10 @@ final class VariableElimination {
 
   /** Whether every assignment of the other variables of c leaves a value of v that satisfies c. */
   private boolean projectable(IntVar v, Constraint c) {
+    if (!c.arguments().stream().allMatch(IntVar.class::isInstance)) {
+      // the postsolve copies integer variables only (a reification of a set constraint)
+      return false;
+    }
     LinearForm f = linear(c);
     if (f != null) {
       int at = position(f, v);

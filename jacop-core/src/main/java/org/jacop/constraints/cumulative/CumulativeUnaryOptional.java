@@ -32,6 +32,7 @@ package org.jacop.constraints.cumulative;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
@@ -310,5 +311,10 @@ public class CumulativeUnaryOptional extends CumulativeUnary {
                 t[0], t[1], t[2], map.get(limit), map.get(opt), doProfile, doUnaryEdgeFind));
     copy.doOptionalOverload(doOptionalOverload);
     return copy;
+  }
+
+  @Override
+  protected boolean present(int i, ToIntFunction<IntVar> value) {
+    return value.applyAsInt(opt[i]) == 1;
   }
 }

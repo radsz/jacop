@@ -192,6 +192,7 @@ setup to run configuration. -->
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
                                 <balance.trials>300</balance.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
+                                <multicumulative.trials>100</multicumulative.trials>
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
                                 <costassignment.instances>300</costassignment.instances>
@@ -235,6 +236,8 @@ setup to run configuration. -->
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/LocalSearchTest.java</include>
+                                <include>**/ViolationTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -246,6 +249,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -303,6 +307,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
+                                <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -368,6 +373,8 @@ setup to run configuration. -->
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/LocalSearchTest.java</include>
+                                <include>**/ViolationTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -379,6 +386,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -442,6 +450,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
+                                <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -502,6 +511,8 @@ setup to run configuration. -->
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/LocalSearchTest.java</include>
+                                <include>**/ViolationTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -513,6 +524,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -576,6 +588,7 @@ setup to run configuration. -->
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
+                                <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -636,6 +649,8 @@ setup to run configuration. -->
                                 <include>**/SimpleSelectTieBreakTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/LocalSearchTest.java</include>
+                                <include>**/ViolationTest.java</include>
                                 <include>**/MddTest.java</include>
                                 <include>**/LayeredGraphEngineTest.java</include>
                                 <include>**/HybridTableTest.java</include>
@@ -647,6 +662,7 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -1130,6 +1146,8 @@ setup to run configuration. -->
                         <include>**/SimpleSelectTieBreakTest.java</include>
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/LocalSearchTest.java</include>
+                                <include>**/ViolationTest.java</include>
                         <include>**/MddTest.java</include>
                         <include>**/HybridTableTest.java</include>
                         <include>**/TrailedTupleSetTest.java</include>
