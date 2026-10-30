@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.BoolClause;
@@ -500,10 +501,47 @@ class LinearRelaxationTest {
       }
       LinearRelaxation r = LinearRelaxation.of(split, null, false, clauses, new HashSet<>(sums));
       assertThat(r).as("seed %d", run).isNotNull();
-      assertThat(r.rows()).as("seed %d", run).isEqualTo(rows + clauseCount);
+      // the clauses are added at the first solve
+      assertThat(r.rows()).as("seed %d", run).isEqualTo(rows);
       split.impose(r);
       assertThat(solutions(split, y, c)).as("seed %d", run).isEqualTo(solutions(plain, x, b));
     }
+  }
+
+  /**
+   * Many extra rows that do not change the root bound are not kept: on rel2onto under lazy clause
+   * generation the clauses made 1,135 rows of a relaxation that had 65, and the large relaxation
+   * stalled at its pivot limit and pruned nothing.
+   */
+  @Test
+  void dropsManyExtraRowsThatDoNotHelp() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 5);
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 30);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], cost}, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, ">=", 3));
+    // clauses over Booleans that the objective does not depend on
+    List<LinearForm> clauses = new ArrayList<>();
+    IntVar[] b = new IntVar[40];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    for (int i = 0; i < 150; i++) {
+      IntVar[] v = {b[i % b.length], b[(i * 7 + 1) % b.length]};
+      clauses.add(new LinearForm(v, new long[] {1, 1}, 1, LinearForm.GE));
+    }
+    LinearRelaxation r = LinearRelaxation.of(store, cost, false, clauses, Set.of());
+    assertThat(r).isNotNull();
+    assertThat(r.rows()).isEqualTo(2);
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(cost.min()).isEqualTo(3);
+    assertThat(r.rows()).isEqualTo(2);
   }
 
   // the number of solutions over the given variables
