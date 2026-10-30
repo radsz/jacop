@@ -180,8 +180,13 @@ class MultiCumulativeTest {
     }
     if (kind == 2) {
       List<Constraint> merged = MultiCumulative.merge(cs);
-      assertThat(merged).hasSize(cs.size() + 1);
-      assertThat(merged.get(merged.size() - 1)).isInstanceOf(MultiCumulative.class);
+      if (Arrays.stream(s).allMatch(IntVar::singleton)) {
+        // fixed starts do not make tasks shared, so the cumulative constraints stay as they are
+        assertThat(merged).isSameAs(cs);
+      } else {
+        assertThat(merged).hasSize(cs.size() + 1);
+        assertThat(merged.get(merged.size() - 1)).isInstanceOf(MultiCumulative.class);
+      }
       cs = merged;
     } else if (kind == 0) {
       cs.add(new MultiCumulative(s, in.dur(), in.heights(), l));
