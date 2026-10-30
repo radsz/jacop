@@ -32,7 +32,9 @@ package org.jacop.fz;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -256,12 +258,29 @@ public class Options {
     System.exit(0);
   }
 
-  private void parseMultipleArgs(String[] args) {
+  private void parseMultipleArgs(String[] given) {
+    String[] args = splitValues(given);
     int i = 0;
     while (i < args.length - 1) {
       i = parseOption(args, i);
     }
     fileName = args[args.length - 1];
+  }
+
+  // --name=value before the file name is the same as --name value
+  private static String[] splitValues(String[] args) {
+    List<String> split = new ArrayList<>();
+    for (int i = 0; i < args.length - 1; i++) {
+      int eq = args[i].indexOf('=');
+      if (args[i].startsWith("--") && eq > 2) {
+        split.add(args[i].substring(0, eq));
+        split.add(args[i].substring(eq + 1));
+      } else {
+        split.add(args[i]);
+      }
+    }
+    split.add(args[args.length - 1]);
+    return split.toArray(new String[0]);
   }
 
   private int parseOption(String[] args, int i) {
