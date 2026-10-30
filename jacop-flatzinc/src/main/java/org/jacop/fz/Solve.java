@@ -1779,6 +1779,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    lcg.setRestartPresolve(options.presolveRestart());
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2099,14 +2100,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(reasons == 0 ? 0 : (double) atoms / reasons)
             + "\n%%%mzn-stat: lcgRestarts="
             + lcg.sat().restarts
-            + "\n%%%mzn-stat: lcgRootVariables="
-            + lcg.rootVariables
-            + "\n%%%mzn-stat: lcgRootFixedStart="
-            + lcg.rootFixedStart
-            + "\n%%%mzn-stat: lcgRootFixedMax="
-            + lcg.rootFixedMax
-            + "\n%%%mzn-stat: lcgRootNarrowedMax="
-            + lcg.rootNarrowedMax
+            + "\n%%%mzn-stat: lcgRepresolves="
+            + lcg.represolves
+            + "\n%%%mzn-stat: lcgRepresolveEntailed="
+            + lcg.represolveEntailed
             + "\n%%%mzn-stat: lcgAnnotationDecisions="
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
