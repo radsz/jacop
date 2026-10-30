@@ -60,6 +60,11 @@ public final class AtMostOneRule implements Rule {
   }
 
   @Override
+  public Timing timing() {
+    return Timing.MEDIUM;
+  }
+
+  @Override
   public void apply(Context context) {
     if (enabled) {
       statistics =

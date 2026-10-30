@@ -407,6 +407,9 @@ public final class LcgSolver implements ExternalPropagator {
     this.store = store;
     rootFailed = !store.consistency();
     this.baseLevel = store.level; // consistency may raise the level after impositions
+    if (ROOT_STATS) {
+      rootStats();
+    }
     trail = new AtomicTrail(store);
     if (liftLiterals) {
       trail.setWeakerBounds(this::weakest);
@@ -1725,8 +1728,52 @@ public final class LcgSolver implements ExternalPropagator {
     return m;
   }
 
+  // measurement only (jacop.lcg.rootStats): the integer variables of the store, those fixed at the
+  // root when the solver was built, and the most fixed and narrowed at a restart
+  private static final boolean ROOT_STATS = Boolean.getBoolean("jacop.lcg.rootStats");
+  private double[] rootSizes;
+  public int rootVariables;
+  public int rootFixedStart;
+  public int rootFixedMax;
+  public int rootNarrowedMax;
+
+  private void rootStats() {
+    int n = Math.min(store.size(), rootSizes == null ? store.size() : rootSizes.length);
+    if (rootSizes == null) {
+      rootSizes = new double[n];
+      for (int i = 0; i < n; i++) {
+        rootSizes[i] = store.vars[i].getSizeFloat();
+        if (store.vars[i] instanceof org.jacop.core.IntVar) {
+          rootVariables++;
+          if (store.vars[i].singleton()) {
+            rootFixedStart++;
+          }
+        }
+      }
+      rootFixedMax = rootFixedStart;
+      return;
+    }
+    int fixed = 0;
+    int narrowed = 0;
+    for (int i = 0; i < n; i++) {
+      if (store.vars[i] instanceof org.jacop.core.IntVar) {
+        if (store.vars[i].singleton()) {
+          fixed++;
+        }
+        if (store.vars[i].getSizeFloat() < rootSizes[i]) {
+          narrowed++;
+        }
+      }
+    }
+    rootFixedMax = Math.max(rootFixedMax, fixed);
+    rootNarrowedMax = Math.max(rootNarrowedMax, narrowed);
+  }
+
   @Override
   public void notifyRestart() {
+    if (ROOT_STATS) {
+      rootStats();
+    }
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {

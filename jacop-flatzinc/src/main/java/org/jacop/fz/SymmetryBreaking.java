@@ -115,6 +115,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
   }
 
+  // when the time of run ends; building a graph of a large model stops there too
+  private long deadline = Long.MAX_VALUE;
+
+  private void checkDeadline() {
+    if (System.nanoTime() > deadline) {
+      throw new Unsupported("time budget spent building the graph");
+    }
+  }
+
   private static final class Unsupported extends RuntimeException {
     Unsupported(String reason) {
       super(reason, null, false, false);
@@ -396,7 +405,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       // a form of argument the front end reads elsewhere; the model is left as it is
       return new Outcome(0, 0, 0, true, String.valueOf(e.getMessage()));
     }
-    long deadline = System.nanoTime() + maxNanos;
+    deadline = System.nanoTime() + maxNanos;
 
     // the lex-leader order: the variables of the search annotation, then the others as the model
     // first uses them
@@ -433,6 +442,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Graph graph = new Graph(goal, null);
     try {
       for (Item item : items) {
+        checkDeadline();
         graph.addConstraint(item);
       }
       graph.finish();
@@ -888,6 +898,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     graph.spaces = spaces;
     try {
       for (Item item : items) {
+        checkDeadline();
         graph.addConstraint(item);
       }
       graph.finish();
