@@ -173,17 +173,6 @@ public class ElementBool extends Constraint
     this(index, list.stream().mapToInt(i -> i).toArray(), value, indexOffset);
   }
 
-  /**
-   * It constructs an element constraint with indexOffset by default set to 0.
-   *
-   * @param index variable index
-   * @param list list of integers from which an index-th element is taken
-   * @param value a value of the index-th element from list
-   */
-  ElementBool(IntVar index, int[] list, IntVar value) {
-    this(index, list, value, 0);
-  }
-
   @Override
   public void consistency(Store store) {
 

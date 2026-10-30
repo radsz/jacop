@@ -257,14 +257,6 @@ public abstract class SetDomain extends Domain {
   public abstract boolean isIntersecting(int min, int max);
 
   /**
-   * A set is never numeric.
-   *
-   * @return false
-   */
-  @Override
-  public abstract boolean isNumeric();
-
-  /**
    * A set is not sparse.
    *
    * @return false
@@ -813,19 +805,6 @@ public abstract class SetDomain extends Domain {
    * @param set the value assigned to a set variable.
    */
   public abstract void inValue(int level, SetVar v, IntDomain set);
-
-  /**
-   * It returns the number of constraints.
-   *
-   * @return the number of constraints attached to this domain.
-   */
-  public int noConstraints() {
-    return searchConstraintsToEvaluate
-        + modelConstraintsToEvaluate[GROUND]
-        + modelConstraintsToEvaluate[LUB_EVENT]
-        + modelConstraintsToEvaluate[GLB_EVENT]
-        + modelConstraintsToEvaluate[ANY];
-  }
 
   /**
    * It restricts the possible cardinality of the set domain.

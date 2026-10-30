@@ -47,12 +47,6 @@ import org.jacop.core.Var;
  */
 public abstract class InternalConstraint {
 
-  /** The ordering of constraints requires to maintain a reverse mapping. */
-  int constraintListIndex;
-
-  /** The current applicability of the constraint. */
-  Applicability applicability;
-
   /**
    * It provides the largest or smallest point contained in the forbidden area represented by this
    * constraint. This point must be larger or equal (resp. smaller or equal) to the

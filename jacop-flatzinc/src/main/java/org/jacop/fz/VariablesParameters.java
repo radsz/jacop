@@ -88,7 +88,6 @@ public class VariablesParameters implements ParserTreeConstants {
   int numberSetVariables;
 
   Options options;
-  boolean debug;
 
   /** It constructs variables parameters. */
   public VariablesParameters() {
@@ -97,7 +96,6 @@ public class VariablesParameters implements ParserTreeConstants {
 
   void setOptions(Options options) {
     this.options = options;
-    debug = options.debug();
   }
 
   /**
@@ -1555,11 +1553,6 @@ public class VariablesParameters implements ParserTreeConstants {
       }
     }
     return s;
-  }
-
-  boolean ground(Var v) {
-
-    return v.singleton();
   }
 
   void pose(Store store, Constraint c) throws FailException {

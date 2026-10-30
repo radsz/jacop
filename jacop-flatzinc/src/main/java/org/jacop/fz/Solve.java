@@ -200,8 +200,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
-  // sequence search
-  Search<T> finalSearchSeq;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -1965,6 +1963,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.literalsReleased
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
+            + "\n%%%mzn-stat: lcgBoundLiterals="
+            + lcg.boundLiterals
+            + "\n%%%mzn-stat: lcgEqualityLiterals="
+            + lcg.equalityLiterals
+            + "\n%%%mzn-stat: lcgTransientLiterals="
+            + lcg.transientLiterals
+            + "\n%%%mzn-stat: lcgAuxiliaryVariables="
+            + lcg.auxiliaryVariables
+            + "\n%%%mzn-stat: lcgSatVariables="
+            + lcg.sat().numVars()
+            + "\n%%%mzn-stat: lcgSatConflicts="
+            + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgSatPropagations="
+            + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
             + reasons
             + "\n%%%mzn-stat: lcgGenericShare="
@@ -3027,8 +3039,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     result = false;
     optimization = solveKind > 0;
-
-    finalSearchSeq = listSeqSearches.getLast();
 
     long currentTime = timer.getCpuTime();
     initTime = currentTime - startCpu;

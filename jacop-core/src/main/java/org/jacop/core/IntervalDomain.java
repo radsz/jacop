@@ -3872,11 +3872,6 @@ public class IntervalDomain extends IntDomain {
   }
 
   @Override
-  public boolean isNumeric() {
-    return true;
-  }
-
-  @Override
   public int leftElement(int intervalNo) {
 
     if (ASSERTS_ENABLED && intervalNo >= size) {

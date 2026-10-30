@@ -33,7 +33,6 @@ package org.jacop.core;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import lombok.Getter;
 import org.jacop.constraints.Constraint;
 
@@ -108,25 +107,6 @@ public abstract class Var implements Backtrackable {
   }
 
   /**
-   * Creates a position mapping from variables to values computed by the given function.
-   *
-   * @param <T> type of the variable.
-   * @param <R> type of the mapped value.
-   * @param list array of variables to map.
-   * @param function the function applied to each variable to compute the mapped value.
-   * @param skipSingletons if true, duplicate singleton variables are ignored.
-   * @param clazz the constraint class used for error reporting.
-   * @return a map from each variable to its computed value.
-   */
-  public static <T extends Var, R> Map<T, R> positionMapping(
-      T[] list, Function<T, R> function, boolean skipSingletons, Class<?> clazz) {
-
-    Map<T, R> position = new LinkedHashMap<>();
-    addPositionMapping(position, list, function, skipSingletons, clazz);
-    return position;
-  }
-
-  /**
    * Adds index-based position mappings for the given variables into an existing map.
    *
    * @param <T> type of the variable.
@@ -149,38 +129,6 @@ public abstract class Var implements Backtrackable {
                 + " can not create a position mapping for list as duplicates in the list exists.");
       }
       position.put(list[i], i);
-    }
-  }
-
-  /**
-   * Adds function-based position mappings for the given variables into an existing map.
-   *
-   * @param <T> type of the variable.
-   * @param <R> type of the mapped value.
-   * @param position the map to add entries to.
-   * @param list array of variables to map.
-   * @param function the function applied to each variable to compute the mapped value.
-   * @param skipSingletons if true, duplicate singleton variables are ignored.
-   * @param clazz the constraint class used for error reporting.
-   */
-  public static <T extends Var, R> void addPositionMapping(
-      Map<T, R> position,
-      T[] list,
-      Function<T, R> function,
-      boolean skipSingletons,
-      Class<?> clazz) {
-
-    for (T aList : list) {
-      if (position.get(aList) != null) {
-        if (skipSingletons && aList.singleton()) {
-          continue;
-        }
-        throw new IllegalArgumentException(
-            "Constraint "
-                + clazz.getSimpleName()
-                + " can not create a position mapping for list as duplicates in the list exists.");
-      }
-      position.put(aList, function.apply(aList));
     }
   }
 
@@ -355,16 +303,6 @@ public abstract class Var implements Backtrackable {
   }
 
   /**
-   * It returns current number of constraints which are associated with variable and are not yet
-   * satisfied.
-   *
-   * @return number of attached search constraints.
-   */
-  public int sizeSearchConstraints() {
-    return dom().searchConstraintsToEvaluate;
-  }
-
-  /**
    * This function returns stamp of the current domain of variable. It is equal or smaller to the
    * stamp of store. Larger difference indicates that variable has not been changed for a longer
    * time.
@@ -426,19 +364,6 @@ public abstract class Var implements Backtrackable {
    */
   public int index() {
     return storeIndex;
-  }
-
-  /**
-   * Computes the accumulated failure count (AFC) value for this variable.
-   *
-   * @return the sum of AFC values of all constraints attached to this variable.
-   */
-  public float afcValue() {
-    float value = 0.0f;
-    for (Constraint c : dom().constraints()) {
-      value += c.afc();
-    }
-    return value;
   }
 
   /** Increments the pruning activity counter for this variable. */

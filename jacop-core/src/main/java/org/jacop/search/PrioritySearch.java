@@ -78,7 +78,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
   int noSolutions;
 
   int solutionsLimit = -1; // Integer.MAX_VALUE;
-  boolean solutionsReached;
 
   private static final String SOLUTION_COST_IS = "Solution cost is {}";
 
@@ -218,7 +217,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (collectStatistics) {
           getStatistics();
         }
-        solutionsReached = true;
         if (printInfo) {
           log.info("Solution limit {} reached", solutionsLimit);
         }
@@ -260,7 +258,6 @@ public class PrioritySearch<T extends Var> extends DepthFirstSearch<T> {
         if (collectStatistics) {
           getStatistics();
         }
-        solutionsReached = true;
         if (printInfo) {
           log.info("Solution limit {} reached", solutionsLimit);
         }

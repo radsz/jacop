@@ -351,34 +351,6 @@ public class Alldifferent extends Constraint
   }
 
   /**
-   * Performs a full consistency check to determine if the constraint is satisfied. Verifies that
-   * all variable domains are pairwise non-intersecting.
-   *
-   * @param store the constraint store
-   * @return true if all variable domains are disjoint, false otherwise
-   */
-  @SuppressWarnings("unused")
-  private boolean satisfiedFullCheck(Store store) {
-
-    int i = 0;
-
-    IntervalDomain result = new IntervalDomain();
-
-    while (i < list.length - 1) {
-
-      if (list[i].domain.isIntersecting(result)) {
-        return false;
-      }
-
-      result.addDom(list[i].domain);
-
-      i++;
-    }
-
-    return true;
-  }
-
-  /**
    * Check whether the constraint is not satisfied based on bipartite graph matching. Variables that
    * can take an exception value are left out, as any number of them can take one.
    *
@@ -468,31 +440,6 @@ public class Alldifferent extends Constraint
       }
       changed[changedSize++] = (IntVar) v;
     }
-  }
-
-  /**
-   * Checks if the constraint is satisfied based on variable bounds. Verifies that variable domains
-   * do not overlap based on their min/max values.
-   *
-   * @return true if all variable bounds are disjoint, false otherwise
-   */
-  @SuppressWarnings("unused")
-  private boolean satisfiedBound() {
-    boolean sat = true;
-    int i = 0;
-    while (sat && i < list.length) {
-      IntDomain vDom = list[i].dom();
-      int vMin = vDom.min();
-      int vMax = vDom.max();
-      int j = i + 1;
-      while (sat && j < list.length) {
-        IntDomain ljDom = list[j].dom();
-        sat = vMin > ljDom.max() || vMax < ljDom.min();
-        j++;
-      }
-      i++;
-    }
-    return sat;
   }
 
   @Override

@@ -62,15 +62,6 @@ public interface BacktrackableManager {
   void setSize(int size);
 
   /**
-   * It allows for easy testing if a given object is considered by the manager as the object which
-   * has changed and needs being informed about backtracking.
-   *
-   * @param index the position of the object which status is in question.
-   * @return it returns true if the manager recognizes object at position index as changed one.
-   */
-  boolean isRecognizedAsChanged(int index);
-
-  /**
    * It returns the current level at which the changes are being registered.
    *
    * @return the active level for which the changes are being registered.

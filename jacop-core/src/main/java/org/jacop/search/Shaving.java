@@ -117,8 +117,6 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
   @Setter Store store;
 
   Constraint recentlyFailedConstraint;
-  boolean rightChild;
-  boolean wrongDecisionEncountered;
   private ExitChildListener<T>[] exitChildListeners;
   private ConsistencyListener[] consistencyListeners;
   private boolean leftChildWrongDecision;

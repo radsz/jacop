@@ -372,10 +372,6 @@ public class Rectangle {
     return use;
   }
 
-  Var origin(int i) {
-    return origin[i];
-  }
-
   /**
    * It checks whether the rectangle is completely fixed.
    *
