@@ -483,13 +483,15 @@ public class LinearRelaxation extends Constraint
    * constraints and with variables substituted by their definitions, solved by the given simplex.
    *
    * <p>The extra rows are relations implied by the model that the store holds elsewhere, such as
-   * the clauses that lazy clause generation hands to the SAT solver. A substituted variable {@code
-   * s} has a definition, an equality row {@code sum a x + w s = c} with {@code w} = 1 or -1 among
-   * the rows; the definition is dropped and {@code s} is replaced by {@code w (c - sum a x)} in the
-   * other rows. The block sums of a long linear constraint split for lazy clause generation are
-   * such variables: substituting them gives the constraint back as one row, so the relaxation has
-   * the rows and columns of the unsplit model. A variable without a definition, the objective, and
-   * every variable when a substitution overflows a {@code long} are left as they are.
+   * the clauses that lazy clause generation hands to the SAT solver. They are added at the first
+   * solve together with the linearized rows of the other constraints, and kept on the same terms. A
+   * substituted variable {@code s} has a definition, an equality row {@code sum a x + w s = c} with
+   * {@code w} = 1 or -1 among the rows; the definition is dropped and {@code s} is replaced by
+   * {@code w (c - sum a x)} in the other rows. The block sums of a long linear constraint split for
+   * lazy clause generation are such variables: substituting them gives the constraint back as one
+   * row, so the relaxation has the rows and columns of the unsplit model. A variable without a
+   * definition, the objective, and every variable when a substitution overflows a {@code long} are
+   * left as they are.
    *
    * @param store the store
    * @param objective the variable to minimize, or null for satisfaction
@@ -531,9 +533,12 @@ public class LinearRelaxation extends Constraint
         relaxed.addAll(Linearizations.of(c));
       }
     }
+    // like the linearized rows, they are kept only when they help the root relaxation: the
+    // clauses of lazy clause generation make thousands of rows on some models (rel2onto: 65 rows
+    // become 1,135), and a relaxation that large stalls at its pivot limit and prunes nothing
     for (LinearForm f : extra) {
-      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
-        forms.add(f);
+      if (f != null) {
+        relaxed.add(f);
       }
     }
     if (!substituted.isEmpty()) {
