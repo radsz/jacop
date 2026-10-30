@@ -136,8 +136,8 @@ public class CircuitCostDetector implements ParserTreeConstants {
     final Kind kind;
     int offset;
     int m;
-    int[] values;
-    IntVar[] counters;
+    int[] values = new int[0];
+    IntVar[] counters = new IntVar[0];
 
     Target(IntVar[] x, Kind kind, int offset) {
       this.x = x;

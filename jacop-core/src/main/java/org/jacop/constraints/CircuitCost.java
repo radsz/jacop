@@ -400,7 +400,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
     private long dualSum;
 
     // With copies, value j has the columns first[j]..first[j] + open[j] - 1 and column c is a copy
-    // of value valueOf[c]; without, column j is value j.
+    // of value valueOf[c]; without, column j is value j and the arrays are the identity.
     private final int[] first;
     private final int[] open;
     private final int[] valueOf;
@@ -449,15 +449,20 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
         }
       } else {
         assert values >= n : "fewer columns than rows";
-        first = null;
-        open = null;
-        valueOf = null;
+        first = new int[values];
+        open = new int[values];
+        valueOf = new int[values];
+        for (int j = 0; j < values; j++) {
+          first[j] = j;
+          open[j] = 1;
+          valueOf[j] = j;
+        }
       }
       this.m = columns;
       weight = new long[n][m];
       for (int i = 0; i < n; i++) {
         for (int c = 0; c < m; c++) {
-          int j = valueOf == null ? c : valueOf[c];
+          int j = valueOf[c];
           weight[i][c] = negate ? -(long) costs[i][j] : costs[i][j];
         }
       }
@@ -503,9 +508,6 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
 
     // the column of a matched arc is gone from the domain or is a copy that is closed
     private boolean gone(IntVar x, int column, int offset) {
-      if (valueOf == null) {
-        return !x.domain.contains(column + offset);
-      }
       int j = valueOf[column];
       return column - first[j] >= open[j] || !x.domain.contains(j + offset);
     }
@@ -583,8 +585,8 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
         int last = x.max();
         for (int val = x.min(); ; val = x.domain.nextValue(val)) {
           int j = val - offset;
-          int end = valueOf == null ? j + 1 : first[j] + open[j];
-          for (int c = valueOf == null ? j : first[j]; c < end; c++) {
+          int end = first[j] + open[j];
+          for (int c = first[j]; c < end; c++) {
             long rc = w[c] - v[c];
             if (rc < min) {
               min = rc;
@@ -622,8 +624,8 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
         int last = x.max();
         for (int val = x.min(); ; val = x.domain.nextValue(val)) {
           int j = val - offset;
-          int end = valueOf == null ? j + 1 : first[j] + open[j];
-          for (int c = valueOf == null ? j : first[j]; c < end; c++) {
+          int end = first[j] + open[j];
+          for (int c = first[j]; c < end; c++) {
             if (!used[c]) {
               long cur = w[c] - ui - v[c];
               if (cur < minv[c]) {
@@ -685,7 +687,7 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
         }
         long[] w = weight[i];
         long ui = u[i];
-        int mate = valueOf == null ? rowMate[i] : valueOf[rowMate[i]];
+        int mate = valueOf[rowMate[i]];
         for (int val = x.min(); ; val = x.domain.nextValue(val)) {
           int j = val - offset;
           if (j != mate && reducedCost(w, ui, j) > slack) {
@@ -700,9 +702,6 @@ public class CircuitCost extends Constraint implements SatisfiedPresent, Copyabl
 
     // the smallest reduced cost of row i taking value j, over its open copies
     private long reducedCost(long[] w, long ui, int j) {
-      if (valueOf == null) {
-        return w[j] - ui - v[j];
-      }
       long min = INF;
       for (int c = first[j], end = c + open[j]; c < end; c++) {
         min = Math.min(min, w[c] - ui - v[c]);
