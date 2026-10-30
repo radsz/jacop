@@ -763,15 +763,10 @@ public final class LcgSolver implements ExternalPropagator {
           extend
               && extension < MAX_CORE_EXTENSIONS
               && result == CdclSolver.UNKNOWN
-              && deadline != Long.MAX_VALUE
-              && (System.nanoTime() >= sat.deadline()
-                  || !coreSearch.exhausted() && coreSearch.halfWay())
-              && coreSearch.rose()
-              && coreSearch.closing(deadline);
+              && extendCores(deadline);
           extension++) {
         now = System.nanoTime();
-        full = now + (long) (share * Math.max(0, deadline - now));
-        sat.setDeadline(full);
+        sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
         result = coreSearch.run(phaseLimit, coreCallLimit);
       }
       return result;
@@ -780,6 +775,17 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setDeadline(deadline);
       sat.setConflictLimit(Long.MAX_VALUE);
     }
+  }
+
+  /**
+   * Whether the core-guided run that just stopped gets another share of the time left before the
+   * given deadline, as {@link #runCores} describes.
+   */
+  private boolean extendCores(long deadline) {
+    if (deadline == Long.MAX_VALUE || !coreSearch.rose() || !coreSearch.closing(deadline)) {
+      return false;
+    }
+    return System.nanoTime() >= sat.deadline() || !coreSearch.exhausted() && coreSearch.halfWay();
   }
 
   /**
