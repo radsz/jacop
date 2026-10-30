@@ -253,6 +253,15 @@ class CostAlldifferentFlatzincTest {
   }
 
   private void check(int kind, long seed, String detection) throws IOException {
+    System.setProperty("org.jacop.fz.costGcc", "true");
+    try {
+      checkModels(kind, seed, detection);
+    } finally {
+      System.clearProperty("org.jacop.fz.costGcc");
+    }
+  }
+
+  private void checkModels(int kind, long seed, String detection) throws IOException {
     Random random = new Random(seed);
     int detected = 0;
     for (int trial = 0; trial < 150; trial++) {

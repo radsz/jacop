@@ -76,8 +76,10 @@ import org.jacop.fz.SimpleNode;
  * already those of a circuit.
  *
  * <p>Setting the system property {@code org.jacop.fz.circuitCost} to false turns the detection off,
- * and {@code org.jacop.fz.costAlldifferent} set to false turns off only the all-different and
- * global cardinality part.
+ * and {@code org.jacop.fz.costAlldifferent} set to false turns off only the all-different part. The
+ * global cardinality part is off unless {@code org.jacop.fz.costGcc} is true: on the MiniZinc
+ * Challenge models it was found on (chessboard, blocks-world, evm-super-compilation) it pruned too
+ * little for its cost.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -175,6 +177,11 @@ public class CircuitCostDetector implements ParserTreeConstants {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.costAlldifferent"));
   }
 
+  // off by default: on the Challenge models it found it cost more time than it saved
+  private static boolean gccEnabled() {
+    return "true".equalsIgnoreCase(System.getProperty("org.jacop.fz.costGcc"));
+  }
+
   // the pairs are on by default except under lazy clause generation, where their generic
   // explanations cost more than they prune; org.jacop.fz.circuitCostPair=true or false decides
   private boolean pairsEnabled() {
@@ -204,7 +211,8 @@ public class CircuitCostDetector implements ParserTreeConstants {
       }
     }
     for (Target t : targets) {
-      if (t.circuit() || alldifferentEnabled() && values(t, circuits)) {
+      boolean enabled = t.kind == Kind.GCC ? gccEnabled() : alldifferentEnabled();
+      if (t.circuit() || enabled && values(t, circuits)) {
         post(t);
       }
     }
