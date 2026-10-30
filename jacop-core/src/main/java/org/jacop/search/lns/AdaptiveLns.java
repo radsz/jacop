@@ -621,7 +621,7 @@ public final class AdaptiveLns {
       adjacency.add(new ArrayList<>());
     }
     for (IntVar x : nodes) {
-      for (Constraint c : x.dom().constraints()) {
+      for (Constraint c : x.constraintsWithWatches()) {
         if (conOf.containsKey(c)) {
           continue;
         }

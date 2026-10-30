@@ -576,6 +576,21 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * Tells whether a watch of this constraint ({@link Store#watchValue(Var, int, Constraint, int)})
+   * makes it a constraint of the watched variable for the variable selections and neighbourhoods
+   * that read the constraints of a variable ({@link Var#watchingConstraints()}), as an attached
+   * constraint is. A constraint that is not attached to the variables it watches returns true for
+   * one watch per variable, while it propagates.
+   *
+   * @param value the watched value.
+   * @param tag the tag of the watch.
+   * @return true if the watch counts the constraint as one of the variable.
+   */
+  public boolean countsValueWatch(int value, int tag) {
+    return false;
+  }
+
+  /**
    * Tells whether {@link #queueVariable(int, Var)} does anything for this constraint, that is,
    * whether its class overrides it. The store skips the call for constraints that do not.
    *

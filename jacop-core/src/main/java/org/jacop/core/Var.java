@@ -30,7 +30,9 @@
 
 package org.jacop.core;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.Getter;
@@ -303,6 +305,44 @@ public abstract class Var implements Backtrackable {
    */
   public void adjustDegree(int delta) {
     degreeAdjustment += delta;
+  }
+
+  /**
+   * Returns the constraints that watch a value of this variable and count as its constraints
+   * ({@link Constraint#countsValueWatch(int, int)}), and are not entailed. They are not attached to
+   * the domain, so {@link Domain#constraints()} leaves them out.
+   *
+   * @return the counted watching constraints, an empty list if there are none.
+   */
+  public List<Constraint> watchingConstraints() {
+    ValueWatches watches = valueWatches;
+    if (watches == null) {
+      return List.of();
+    }
+    List<Constraint> result = new ArrayList<>();
+    for (int value = 0; value < 2; value++) {
+      for (int i = 0; i < watches.size[value]; i++) {
+        Constraint c = watches.constraints[value][i];
+        if (!c.isEntailed() && c.countsValueWatch(value, watches.tags[value][i])) {
+          result.add(c);
+        }
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Returns the constraints of this variable for the variable selections and neighbourhoods: the
+   * constraints attached to its domain and the watching constraints that count as its constraints.
+   *
+   * @return the constraints of the variable.
+   */
+  public List<Constraint> constraintsWithWatches() {
+    List<Constraint> attached = dom().constraints();
+    if (valueWatches != null) {
+      attached.addAll(watchingConstraints());
+    }
+    return attached;
   }
 
   /**

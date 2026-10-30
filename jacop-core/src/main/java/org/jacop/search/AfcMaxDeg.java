@@ -96,7 +96,7 @@ public class AfcMaxDeg<T extends Var> implements ComparatorVariable<T> {
 
   double afcValue(Var v) {
     double value = 0.0f;
-    for (Constraint c : v.dom().constraints()) {
+    for (Constraint c : v.constraintsWithWatches()) {
       value += c.afc();
     }
     return value;

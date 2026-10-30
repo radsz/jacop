@@ -183,7 +183,7 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
     List<Var[]> scopeList = new ArrayList<>();
     varConstraints = new int[vars.length][];
     for (int i = 0; i < vars.length; i++) {
-      List<Constraint> cs = vars[i].dom().constraints();
+      List<Constraint> cs = vars[i].constraintsWithWatches();
       int[] indices = new int[cs.size()];
       int n = 0;
       for (Constraint c : cs) {

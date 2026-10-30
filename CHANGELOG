@@ -1099,6 +1099,19 @@ Version 5.0 (unreleased)
     in 46 s with -Xmx3G, with --lcg and with --lcg -f; below the budget
     nothing changes.
 
+74. New constraint OrBoolWatched(list, result, negated): result is the
+    disjunction of 0/1 variables (or its negation), propagated with value
+    watches as the two watched literals of a clause, so a variable fixed
+    to 0 that is not watched does not wake it. The FlatZinc front end
+    posts int_lin_le_reif(sum(x) <= 0, b) over 8 or more Booleans with it
+    instead of Not(OrBoolVector) (not under --lcg;
+    -Dorg.jacop.fz.orBoolWatchMin sets the length). It visits the same
+    search tree; on pattern-set-mining the default search runs 1.6-3.9x
+    more nodes per second and proves ionosphere in 35 s. A constraint
+    that watches values can now count as a constraint of the watched
+    variable (Constraint.countsValueWatch, Var.constraintsWithWatches),
+    which dom/wdeg, the failure-count selections and LNS read.
+
 Version 4.11
 =============
 
