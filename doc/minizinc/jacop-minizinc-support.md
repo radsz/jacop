@@ -114,6 +114,24 @@ With `-f` (MiniZinc's "free search" flag) JaCoP ignores the search annotations a
 
 `--restart` (with `--restart-scale` and `--restart-base`), when given, replaces the restart policy of the free search.
 
+## Several objectives (`goal_hierarchy`, `pareto`)
+
+A solve item with `satisfy` can carry MiniZinc's `goal_hierarchy` annotation (declared in `std/experimental.mzn`) for the lexicographic optimum of its goals, or JaCoP's `pareto` annotation (declared in `jacop.mzn`, which includes `experimental.mzn`) for the Pareto front:
+
+```minizinc
+include "jacop.mzn";
+solve :: goal_hierarchy([int_min_goal(cost), max_goal(quality), sat_goal(on_time)]) satisfy;
+solve :: pareto([min_goal(cost), min_goal(delay)]) satisfy;
+```
+
+Goals are `min_goal`, `int_min_goal`, `max_goal` and `int_max_goal` of an integer, and `sat_goal` of a Boolean (true is better); float goals are not supported (the annotation is then ignored with a warning on stderr). JaCoP solves a sequence of single-objective subproblems (`org.jacop.search.MultiObjective`), each the FlatZinc model with its bounds as constraints and `minimize` or `maximize` of one goal, with the options given (`-f`, `--lcg`, `--presolve`, `-p` all apply to each subproblem); `-t` limits them all together.
+
+- `goal_hierarchy` prints what an optimisation prints: the best solution (with `-a` each solution lexicographically better than the one before) and `==========` when it is the lexicographic optimum.
+- `pareto` prints each point of the front as soon as it is proven Pareto optimal (one solution per vector of goal values, not in a particular order) and `==========` when the front is complete. At a time-out the last solution found, not dominated by the points printed but not proven optimal, is printed last.
+- `-s` adds `goalSubproblems`, `paretoPoints` (Pareto) or `objective` (the first goal, lexicographic), and the nodes, failures, propagations and restarts of all subproblems.
+
+In the MiniZinc 2.9.4 bundle, Gecode and OR-Tools CP-SAT ignored `goal_hierarchy` on our test model and returned the first solution of the satisfaction problem.
+
 ## How to reproduce
 - MiniZinc bundle: `MiniZincIDE-2.10.1-x86_64-linux-gnu.tgz` from GitHub releases; JaCoP built with `mvn -DskipTests install -pl jacop-all -am` on JDK 25 (the pom hard-codes `<release>25</release>`, so JDK 21 cannot build develop-5.0).
 - Point `MZN_SOLVER_PATH` at `jacop-all/target` (see below).

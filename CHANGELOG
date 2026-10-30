@@ -954,6 +954,26 @@ Version 5.0 (unreleased)
     on none (mesh2x2_mp3 3.1 s to 1.6 s), --lcg -f better on 8 and
     worse on 1 (mesh2x2_mp3 4.4 s to 1.6 s).
 
+68. Several objectives, lexicographic or Pareto. New class
+    org.jacop.search.MultiObjective optimises integer objectives (each
+    minimised or maximised) as a sequence of single-objective
+    subproblems: lexicographic() optimises them in order, each with the
+    earlier ones fixed at their optimum and required to be strictly
+    better than the best solution so far; pareto() returns the Pareto
+    front, each point optimised that way among the solutions no point
+    found before dominates, with the later objectives bounded by the best
+    solution so far, so every point found is Pareto optimal and the front
+    is complete when no solution is left. MultiObjective.DepthFirst
+    solves the subproblems by branch and bound in a store. The FlatZinc
+    front end reads MiniZinc's goal_hierarchy annotation
+    (std/experimental.mzn: min_goal, max_goal, int_min_goal,
+    int_max_goal, sat_goal) for the lexicographic optimum and JaCoP's
+    pareto annotation (jacop.mzn) for the Pareto front, on a solve item
+    with satisfy. Each subproblem is solved as a FlatZinc model with the
+    options given (-f, --lcg, --presolve, -p apply to it) and -t covers
+    them all. Pareto points are printed as they are proven, followed by
+    ========== when the front is complete. Float goals are not supported.
+
 Version 4.11
 =============
 
