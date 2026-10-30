@@ -178,6 +178,7 @@ final class DualSimplex {
     ratio = new double[cols];
     flipped = new int[cols];
     pivots = o.pivots;
+    flips = o.flips;
     infeasibleRow = o.infeasibleRow;
     totalPivots = o.totalPivots;
   }

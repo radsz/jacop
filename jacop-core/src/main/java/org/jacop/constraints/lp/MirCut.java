@@ -104,7 +104,7 @@ final class MirCut {
   static MirCut of(long[] c, long b, double[] value, long[] lo, long[] hi) {
     try {
       return cut(c, b, value, lo, hi);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return null;
     }
   }
@@ -125,7 +125,7 @@ final class MirCut {
         continue;
       }
       size++;
-      double v = Math.clamp(value[j], lo[j], hi[j]);
+      double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
       up[j] = hi[j] - v < v - lo[j];
       if (up[j]) {
         cc[j] = -w;
@@ -155,21 +155,25 @@ final class MirCut {
     double best = MIN_EFFICACY;
     long[] tried = new long[MAX_DIVISORS * 4];
     int triedCount = 0;
-    for (int i = 0, taken = 0; i < count && taken < MAX_DIVISORS; i++) {
+    int i = 0;
+    int taken = 0;
+    while (i < count && taken < MAX_DIVISORS) {
       long first = divisor[order[i]];
-      if (contains(tried, triedCount, first)) {
-        continue;
-      }
-      taken++;
-      for (long d = first, halvings = 0; d > 0 && halvings < 4; d /= 2, halvings++) {
-        if (contains(tried, triedCount, d)) {
-          continue;
-        }
-        tried[triedCount++] = d;
-        double e = efficacy(cc, side, xs, d);
-        if (e > best) {
-          best = e;
-          bestDivisor = d;
+      i++;
+      if (!contains(tried, triedCount, first)) {
+        taken++;
+        long d = first;
+        for (int halvings = 0; d > 0 && halvings < 4; halvings++) {
+          if (!contains(tried, triedCount, d)) {
+            tried[triedCount] = d;
+            triedCount++;
+            double e = efficacy(cc, side, xs, d);
+            if (e > best) {
+              best = e;
+              bestDivisor = d;
+            }
+          }
+          d /= 2;
         }
       }
     }
@@ -219,12 +223,14 @@ final class MirCut {
     long[] weights = new long[nonzero];
     double activity = 0;
     double norm = 0;
-    for (int j = 0, q = 0; j < n; j++) {
+    int q = 0;
+    for (int j = 0; j < n; j++) {
       if (g[j] != 0) {
         columns[q] = j;
         long w = g[j] / gcd;
-        weights[q++] = w;
-        double weight = w;
+        weights[q] = w;
+        q++;
+        double weight = (double) w;
         activity += weight * value[j];
         norm += weight * weight;
       }

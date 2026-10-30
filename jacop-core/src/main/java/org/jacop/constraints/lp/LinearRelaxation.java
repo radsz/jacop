@@ -467,9 +467,6 @@ public class LinearRelaxation extends Constraint
         return;
       }
       LinearForm[] combined = combine(lambda);
-      if (combined == null) {
-        continue;
-      }
       for (LinearForm f : combined) {
         if (f != null) {
           propagate(store, f);
@@ -577,7 +574,7 @@ public class LinearRelaxation extends Constraint
   private LinearForm[] combine(long[] lambda) {
     Aggregate g = aggregate(lambda);
     if (g == null) {
-      return null;
+      return new LinearForm[0];
     }
     long[] coef = g.coef();
     int size = 0;
@@ -678,7 +675,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = (long) rows() * (rows() + n);
-      status = lp.solve((int) Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
+      status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
@@ -703,9 +700,13 @@ public class LinearRelaxation extends Constraint
   private static boolean orthogonal(MirCut c, List<MirCut> chosen) {
     for (MirCut o : chosen) {
       double dot = 0;
-      for (int p = 0, q = 0; p < c.columns.length && q < o.columns.length; ) {
+      int p = 0;
+      int q = 0;
+      while (p < c.columns.length && q < o.columns.length) {
         if (c.columns[p] == o.columns[q]) {
-          dot += (double) c.weights[p++] * o.weights[q++];
+          dot += (double) c.weights[p] * o.weights[q];
+          p++;
+          q++;
         } else if (c.columns[p] < o.columns[q]) {
           p++;
         } else {
@@ -778,10 +779,10 @@ public class LinearRelaxation extends Constraint
       rowHi[m + q] = c.rhs;
       hasHi[m + q] = true;
       for (int t = 0; t < c.columns.length; t++) {
-        a[q][c.columns[t]] = c.weights[t];
+        a[q][c.columns[t]] = (double) c.weights[t];
       }
       lo[q] = Double.NEGATIVE_INFINITY;
-      hi[q] = c.rhs;
+      hi[q] = (double) c.rhs;
     }
     lp.addRows(a, lo, hi);
     cuts += k;
