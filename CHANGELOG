@@ -1035,7 +1035,25 @@ Version 5.0 (unreleased)
     paired runs: 29 better, 11 worse. -s prints lcgCoreNoSolutionStops;
     -Djacop.lcg.coreAnySolution=true restores the old test.
 
-71. The FlatZinc front end merges the copies MiniZinc makes of the result
+71. The linear relaxation (--lp) also reads constraints that are not
+    linear relations (org.jacop.constraints.Linearizations): big-M rows
+    of reified and half-reified linear constraints, and/or of Booleans,
+    McCormick rows of products, the lower side of max/min, abs,
+    alldifferent sum bounds, value encodings of a variable by
+    Booleans (b_v <-> x = v gives sum b_v = 1 and x = sum v b_v) and
+    element over an encoded index. These rows are added at the first
+    solve and kept only when they raise the root bound, make the
+    relaxation infeasible or are at most 100 (-Dorg.jacop.lp.smallExtra);
+    a relaxation whose solves in search hit the pivot limit three times
+    (and in one of twenty solves) goes back to the rows without them.
+    -Dorg.jacop.lp.linearize=false turns them off. On the 195 of the 422
+    vs-ortools instances whose relaxation they change (20 s, paired),
+    proofs go from 82 to 87 (default), 114 to 117 (--lcg) and 108 to 114
+    (-f): rcpsp-wet j30_27_5, j30_43_10 and j60_19_6, maximum-dag 25_01
+    and 25_04, smelt_4. New statistics lpBaseBound, lpExtraRows,
+    lpExtraDropped.
+
+72. The FlatZinc front end merges the copies MiniZinc makes of the result
    of a partial function used in a reified context (to_enum, an array
    access whose index may be out of range): each call site gets a fresh
    z with b -> z = x, c -> z = k and not b -> c. Copies with the same x,
@@ -1048,7 +1066,7 @@ Version 5.0 (unreleased)
    tree halves and a node is about 15% cheaper; backache_train4 and
    colic_train4 are now proved within 20 minutes.
 
-72. New constraint MultiCumulative(starts, durations, heights, limits):
+73. New constraint MultiCumulative(starts, durations, heights, limits):
     several cumulative resources used by the same tasks with fixed
     durations, heights[r][i] being the use of resource r by task i (the
     cumulative resources of SICStus multi_cumulative). One time-table sweep
