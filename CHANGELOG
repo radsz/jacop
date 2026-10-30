@@ -993,6 +993,37 @@ Version 5.0 (unreleased)
     instance and halves the time of another; rel2onto and seat-moving
     are unchanged.
 
+68. Free search (-f) no longer depends on identity hash codes, so runs
+    of the same model under other JVM flags (-Xshare:off, CDS or AOT
+    caches, -XX:hashCode) or after unrelated class changes search the
+    same tree. Besides the constraint scopes (item 52), the variables of
+    the Boolean vector constraints (and_bool, or_bool, ...), the
+    channeling constraints the FlatZinc front end collects from
+    int_eq_reif and its alias equalities were hash sets or maps keyed by
+    variables, so constraints were attached and posted in a different
+    order: zephyrus 12_6_8_3 took 107777, 106436 or 113314 nodes to prove
+    its optimum. Adaptive LNS under -f still shares its time by the wall
+    clock (see item 69).
+
+69. FlatZinc runs repeat their search from run to run of one build.
+    Without -r the seed is 0 (it was drawn by the JVM), so the
+    neighbourhoods of adaptive LNS, indomain_random and on_restart
+    random values repeat. Under -f, runs in neighbourhoods take their
+    share (lns-share, now 0.8 by default) of the propagations of the
+    other runs, not of their time; by propagations a share of 1 gave
+    them more time than before and lost 3 to 4 proofs per seed on 92
+    mznbench instances, 0.8 is level with the old split (Borda 46.3 :
+    45.7 over 3 seeds, 30 s). Under --lcg, the
+    replays of a constraint that explain its pruning take at most
+    jacop.lcg.replayShare (0.25) of the consistency calls the store made
+    for it (Constraint.consistencyCalls()), not 25% of the time, which
+    made rel2onto 5_17 take 2759 to 2770 nodes. Before, 2DBinPacking
+    Class7_40_6 under -f took 3,494, 29,933 or 12,964 nodes in 20 s and
+    now 22,488 every time. With a time limit, the phases of --lcg -f
+    (branch and bound, core-guided search, neighbourhood runs) still
+    share the time by the clock: by conflicts, the neighbourhood runs
+    took 1.3 to 7.7 times the time of branch and bound instead of 3.
+
 Version 4.11
 =============
 
