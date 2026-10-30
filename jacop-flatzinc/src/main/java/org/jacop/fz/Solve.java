@@ -484,7 +484,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         clauses.add(clauseRow(clause[0], clause[1]));
       }
     }
-    linearRelaxation = LinearRelaxation.of(store, objective, maximize, clauses, splitSums());
+    linearRelaxation =
+        LinearRelaxation.of(store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
@@ -544,6 +545,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
             + r.prunings
+            + "\n%%%mzn-stat: lpSolveTime="
+            + r.solveNanos / 1e9
+            + "\n%%%mzn-stat: lpColumns="
+            + r.columns()
+            + "\n%%%mzn-stat: lpPivotWork="
+            + r.pivotWork()
+            + "\n%%%mzn-stat: lpSimplexRows="
+            + r.simplexRows()
+            + "\n%%%mzn-stat: lpLazyAdded="
+            + r.lazyAdded
+            + "\n%%%mzn-stat: lpLazyRemoved="
+            + r.lazyRemoved
             + "\n%%%mzn-stat: lpRootBound="
             + r.rootBound
             + "\n%%%mzn-stat: lpCuts="
@@ -708,12 +721,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void presolve(ASTSolveItem node, ObjectivePresolve objective) {
     long start = timer.getCpuTime();
+    String affine = System.getProperty("jacop.presolve.affine", "on");
     Presolver presolver =
         Presolver.of(store)
             .keep(keptVariables(node))
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
-            .probing(options.probe(), options.probeBudget());
+            .probing(options.probe(), options.probeBudget())
+            // the LCG solver explains with the trail of each variable, which a view does not have;
+            // the property jacop.presolve.affine (on, aliases or off) is for measuring rule 2
+            .affine(!"off".equals(affine))
+            .views(!options.lcg() && !"aliases".equals(affine));
     if (objective != null) {
       // a rule, imposed in the first round in which there is an equation: the domains narrowed by
       // earlier rounds can complete a value encoding
@@ -1078,6 +1096,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
       s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
+      s.append("%%%mzn-stat: presolveAffineSubstituted=")
+          .append(d.affineSubstituted())
+          .append('\n');
     }
     if (cumulative != null) {
       s.append("%%%mzn-stat: presolveCumulativeFixedStarts=")
@@ -1717,6 +1738,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcg.onSolution(this::printSolution);
     boolean free = options.freeSearch();
+    if (free && costVar == null && !LcgSolver.FULL_FIXPOINT_SET) {
+      // satisfaction under free search returns to the clauses after each pruning: with the full
+      // fixpoint (#317) nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s. Over 250
+      // instances and two seeds (60 s), the satisfaction models that differed on both seeds all
+      // did better without it (5 of 5), and the optimisation models with it (11 of 18)
+      lcg.setFullFixpoint(false);
+    }
     // under free search, runs that take turns at restarts: the annotation (or dom/wdeg without
     // one), the SAT solver's own decisions on literals with phase false, as in CP-SAT's default
     // search, and activity branching. The literals alone close the gap to CP-SAT on city-position
@@ -1995,6 +2023,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.wideVariables
             + "\n%%%mzn-stat: lcgBooleansFirst="
             + lcg.booleansFirst()
+            + "\n%%%mzn-stat: lcgFullFixpoint="
+            + lcg.fullFixpoint()
             + "\n%%%mzn-stat: lcgLateVariables="
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="
@@ -2240,7 +2270,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (freeLns != null) {
         builder.lns(
             freeLns,
-            Double.parseDouble(options.freeConfig("lns-share", "1")),
+            Double.parseDouble(options.freeConfig("lns-share", "0.8")),
             Long.parseLong(options.freeConfig("lns-fails", "100")));
       }
     }
