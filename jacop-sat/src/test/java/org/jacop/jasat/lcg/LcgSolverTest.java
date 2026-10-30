@@ -57,12 +57,15 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
@@ -231,6 +234,7 @@ class LcgSolverTest {
     Random rnd = new Random(11);
     int sat = 0;
     int unsat = 0;
+    long lifted = 0;
     for (int instance = 0; instance < 3000; instance++) {
       Store store = new Store();
       int n = 4 + rnd.nextInt(3);
@@ -250,6 +254,7 @@ class LcgSolverTest {
       solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
+      lifted += solver.liftedLiterals;
       assertThat(status)
           .as("instance %d", instance)
           .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
@@ -268,6 +273,8 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+    // lifted bounds cite weaker literals the solver has, which the checker verifies
+    assertThat(lifted).isGreaterThan(0);
   }
 
   /**
@@ -1035,9 +1042,9 @@ class LcgSolverTest {
   }
 
   /**
-   * A constraint without an explanation of its own, {@link IncreasingSum}, is explained by
-   * replaying a copy of it: the answers agree with brute force, every reason is checked, and the
-   * reasons come from the replay rather than the generic reason.
+   * A constraint without an explanation of its own, {@link LexChain}, is explained by replaying a
+   * copy of it: the answers agree with brute force, every reason is checked, and the reasons come
+   * from the replay rather than the generic reason.
    */
   @Test
   void replayedExplanationsAgreeWithBruteForce() {
@@ -1048,7 +1055,7 @@ class LcgSolverTest {
     long generic = 0;
     for (int instance = 0; instance < 1500; instance++) {
       Store store = new Store();
-      int n = 5;
+      int n = 6;
       IntVar[] x = new IntVar[n];
       for (int i = 0; i < n; i++) {
         x[i] = newVar(store, "x" + i, rnd);
@@ -1057,11 +1064,13 @@ class LcgSolverTest {
       List<Relation> relations = new ArrayList<>();
       relations.add(
           new Relation(
-              new IncreasingSum(new IntVar[] {x[0], x[1], x[2]}, x[3], strict),
+              new LexChain(new IntVar[][] {{x[0], x[1]}, {x[2], x[3]}, {x[4], x[5]}}, strict),
               t ->
-                  (strict ? t[0] < t[1] && t[1] < t[2] : t[0] <= t[1] && t[1] <= t[2])
-                      && t[0] + t[1] + t[2] == t[3]));
-      relations.add(relation(x, rnd));
+                  lexBefore(t[0], t[1], t[2], t[3], strict)
+                      && lexBefore(t[2], t[3], t[4], t[5], strict)));
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
       boolean expected = bruteForce(x, relations, new int[n], 0);
       for (Relation r : relations) {
         store.impose(r.constraint);
@@ -1084,7 +1093,7 @@ class LcgSolverTest {
       } else {
         unsat++;
       }
-      long[] counts = solver.explanationStatistics().get("IncreasingSum");
+      long[] counts = solver.explanationStatistics().get("LexChain");
       if (counts != null) {
         replayed += counts[6] + counts[7];
         generic += counts[1] + counts[4];
@@ -1097,6 +1106,98 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(replayed).isGreaterThan(100);
     assertThat(generic).isLessThan(replayed / 10);
+  }
+
+  // (a, b) before (c, d) lexicographically
+  private static boolean lexBefore(int a, int b, int c, int d, boolean strict) {
+    return a < c || a == c && (strict ? b < d : b <= d);
+  }
+
+  /**
+   * {@link IncreasingSum}, {@link LexOrder} and {@link CountVar} (also reified) explain their own
+   * pruning: the answers agree with brute force, every reason is checked, and none is generic or
+   * replayed.
+   */
+  @Test
+  void sumOrderAndCountExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(59);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long other = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n - 1; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      x[n - 1] = new IntVar(store, "b", 0, 1);
+      boolean strict = rnd.nextBoolean();
+      List<Relation> relations = new ArrayList<>();
+      switch (rnd.nextInt(3)) {
+        case 0 ->
+            relations.add(
+                new Relation(
+                    new IncreasingSum(new IntVar[] {x[0], x[1], x[2]}, x[3], strict),
+                    t ->
+                        (strict ? t[0] < t[1] && t[1] < t[2] : t[0] <= t[1] && t[1] <= t[2])
+                            && t[0] + t[1] + t[2] == t[3]));
+        case 1 ->
+            relations.add(
+                new Relation(
+                    new LexOrder(new IntVar[] {x[0], x[1]}, new IntVar[] {x[2], x[3]}, strict),
+                    t -> lexBefore(t[0], t[1], t[2], t[3], strict)));
+        default -> {
+          CountVar count = new CountVar(new IntVar[] {x[0], x[1], x[2]}, x[3], x[4]);
+          Predicate<int[]> counted =
+              t -> (t[0] == t[4] ? 1 : 0) + (t[1] == t[4] ? 1 : 0) + (t[2] == t[4] ? 1 : 0) == t[3];
+          relations.add(
+              strict
+                  ? new Relation(new Reified(count, x[5]), t -> counted.test(t) == (t[5] == 1))
+                  : new Relation(count, counted));
+        }
+      }
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"IncreasingSum", "LexOrder", "CountVar", "Reified"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          long notOwn = counts[1] + counts[4] + counts[6] + counts[7];
+          own += counts[0] + counts[3] - notOwn;
+          other += notOwn;
+        }
+      }
+    }
+    System.out.printf(
+        "sum, order and count: %d sat, %d unsat, %d own and %d generic or replayed explanations%n",
+        sat, unsat, own, other);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(10 * other);
   }
 
   // a cardinality constraint over 3 or 4 of the variables

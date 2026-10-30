@@ -1834,6 +1834,16 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the position of a literal's variable on the trail.
+   *
+   * @param lit a DIMACS literal
+   * @return its position, or -1 when the variable is unassigned
+   */
+  public int trailPosition(int lit) {
+    return vals[toLit(lit)] == 0 ? -1 : trailPos[Math.abs(lit) - 1];
+  }
+
+  /**
    * Returns the number of assigned literals.
    *
    * @return the size of the trail
