@@ -129,11 +129,6 @@ public class TrailBacktrackableManager implements BacktrackableManager {
   }
 
   @Override
-  public boolean isRecognizedAsChanged(int index) {
-    return recordedAt[index] == currentLevel;
-  }
-
-  @Override
   public int getLevel() {
     return currentLevel;
   }

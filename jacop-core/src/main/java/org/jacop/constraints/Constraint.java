@@ -50,7 +50,6 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.BipartiteGraphMatching;
@@ -72,8 +71,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * should have their weight increased.
    */
   protected static final boolean IS_INCREASE_WEIGHT_ENABLED = true;
-
-  protected boolean traceEnabled = SwitchesPruningLogging.TRACE_CONSTRAINT;
 
   /**
    * It specifies the number id for a given constraint. All constraints within the same type have
@@ -156,6 +153,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The store level of the first consistency call, or NOT_RUN or RUN_UNDONE. */
   private int firstRunAt = NOT_RUN;
 
+  private long consistencyCalls;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
@@ -209,14 +208,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   static int toInt(final float f) {
-    if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
-      return (int) f;
-    } else {
-      throw new ArithmeticException("Overflow occurred " + f);
-    }
-  }
-
-  static int toInt(final double f) {
     if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
       return (int) f;
     } else {
@@ -497,6 +488,21 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public final void setFirstRunAt(int level) {
     firstRunAt = level;
+  }
+
+  /**
+   * Returns the number of consistency calls the store made for the constraint, as {@link
+   * Store#numberConsistencyCalls} counts them over all constraints.
+   *
+   * @return the number of calls.
+   */
+  public final long consistencyCalls() {
+    return consistencyCalls;
+  }
+
+  /** Counts a consistency call of the store for the constraint; only the store calls it. */
+  public final void countConsistencyCall() {
+    consistencyCalls++;
   }
 
   /**

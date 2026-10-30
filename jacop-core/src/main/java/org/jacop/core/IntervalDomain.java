@@ -2167,8 +2167,9 @@ public class IntervalDomain extends IntDomain {
   @Override
   public void inMin(int storeLevel, Var v, int min) {
 
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    if (ASSERTS_ENABLED && (size == 0 || checkInvariants() != null)) {
+      throw new IllegalStateException(
+          size == 0 ? "inMin called on an empty domain" : String.valueOf(checkInvariants()));
     }
 
     if (min > intervals[size - 1].max()) {
@@ -3869,11 +3870,6 @@ public class IntervalDomain extends IntDomain {
   @Override
   public boolean isSparseRepresentation() {
     return false;
-  }
-
-  @Override
-  public boolean isNumeric() {
-    return true;
   }
 
   @Override

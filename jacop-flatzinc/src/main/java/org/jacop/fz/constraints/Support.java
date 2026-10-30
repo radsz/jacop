@@ -126,6 +126,7 @@ public class Support implements ParserTreeConstants {
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
+  final BinPackingCliqueDetector binPackingCliques = new BinPackingCliqueDetector(this);
   // unary resources found by the disjunctive clique detection: starts and durations
   final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
@@ -137,6 +138,8 @@ public class Support implements ParserTreeConstants {
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar;
+  // the variable of the solve item, or null; lazy clause generation keeps its definition whole
+  public IntVar objective;
   boolean intPresent = true;
   boolean floatPresent = true;
 
@@ -748,6 +751,11 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /** Posts the conflict cliques of the bin packing constraints over the same bins. */
+  public void detectBinPackingCliques() {
+    binPackingCliques.detect();
+  }
+
   /** Imposes all delayed constraints. */
   public void poseDelayedConstraints() {
     binPackingCardinality.attach();
@@ -975,8 +983,10 @@ public class Support implements ParserTreeConstants {
               store,
               c,
               Integer.parseInt(options.freeConfig("lcg-split", "40")),
-              // free LCG search branches on the block sums last, as on other defined variables
-              dictionary::addDefinedVar);
+              objective,
+              // free LCG search branches on the block sums last, as on other defined variables, and
+              // the linear relaxation replaces them by their blocks
+              dictionary::addSplitSum);
       if (split != null) {
         c = split;
       }

@@ -35,6 +35,7 @@ import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.presolve.Derivation;
@@ -76,6 +77,7 @@ public class Options {
   boolean useSat;
   boolean lcg;
   boolean lp = true;
+  LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.DENSE;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
   Portfolio.Worker portfolioWorker;
@@ -181,13 +183,13 @@ public class Options {
                 at its lower bound or a growing offset above it, per failure of the other runs;
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),
                 lns=0|1 (adaptive large neighbourhood search for optimisation, default 1),
-                lns-share=<share> (time of neighbourhood runs per unit of time of the other runs,
-                default 1, 3 with --lcg), lns-fails=<failures> (one neighbourhood run, default 100),
+                lns-share=<share> (propagations of neighbourhood runs per propagation of the other
+                runs, default 0.8; with --lcg time per unit of time, default 3), lns-fails=<failures> (one neighbourhood run, default 100),
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)
-            -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using.
+            -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
                 implementing bounds consistency (default false).
@@ -198,7 +200,9 @@ public class Options {
                 the annotation (see lcg-branching of --free-config).
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
-                rows, explained under --lcg; one of "on" (default), "off".
+                rows, explained under --lcg; one of "on" (default, the dense simplex), "off",
+                "sparse" (the sparse simplex, for large sparse relaxations), "lazy" (the sparse
+                simplex with rows added and removed lazily).
             -p <value>, --parallel <value> solve with a portfolio of <value> threads: the
                 options given, then free search and lazy clause generation with other
                 settings; they share the objective value of the best solution. One thread
@@ -208,9 +212,10 @@ public class Options {
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
                 all-different constraints (sum bounds); "off" (default) or "on"
-            --symmetry <value> with presolve, break the variable symmetries of the model with
-                lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
-                problem asks for more than one solution (-a, -n).
+            --symmetry <value> with presolve, break the symmetries of the model: variable
+                symmetries with lex-leader constraints (a lex chain for interchangeable columns),
+                interchangeable values with value precedence; one of "on" (default), "off". Off
+                when a satisfaction problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
@@ -365,8 +370,19 @@ public class Options {
 
   private int handleLp(String[] args, int i) {
     switch (args[++i]) {
-      case "on" -> lp = true;
+      case "on" -> {
+        lp = true;
+        lpSimplex = LinearRelaxation.Simplex.DENSE;
+      }
       case "off" -> lp = false;
+      case "sparse" -> {
+        lp = true;
+        lpSimplex = LinearRelaxation.Simplex.SPARSE;
+      }
+      case "lazy" -> {
+        lp = true;
+        lpSimplex = LinearRelaxation.Simplex.LAZY;
+      }
       default -> System.err.println("%% Linear relaxation mode " + args[i] + " not known; ignored");
     }
     return i + 1;
@@ -767,6 +783,15 @@ public class Options {
    */
   public boolean lp() {
     return lp;
+  }
+
+  /**
+   * It defines the simplex of the linear relaxation (--lp on, sparse or lazy).
+   *
+   * @return the simplex
+   */
+  public LinearRelaxation.Simplex lpSimplex() {
+    return lpSimplex;
   }
 
   /**

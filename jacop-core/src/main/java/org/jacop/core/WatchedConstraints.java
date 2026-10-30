@@ -1,5 +1,5 @@
 /*
- * RemoveLevelLate.java
+ * WatchedConstraints.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -27,41 +27,48 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
+package org.jacop.core;
 
-package org.jacop.api;
-
+import java.util.Arrays;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.DecomposedConstraint;
 
 /**
- * Interface that provides ability to configure constraint store to replace a particular type of
- * constraints into another one.
+ * The constraints that watch a variable as a watched literal, see {@link
+ * Store#registerWatchedLiteralConstraint(Var, Constraint)}, in the order they started to watch it
+ * and without duplicates. They are kept in the variable, so waking them needs no map lookup.
  *
- * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public interface Replaceable<T extends Constraint> {
+final class WatchedConstraints {
 
-  /**
-   * Returns the class type that this replaceable constraint handler is designed for.
-   *
-   * @return the constraint class type
-   */
-  Class<T> forClass();
+  /** The watching constraints; the first size entries are used. */
+  Constraint[] constraints = new Constraint[2];
 
-  /**
-   * Checks if the given constraint can be replaced.
-   *
-   * @param constraint the constraint to check
-   * @return true if the constraint can be replaced, false otherwise
-   */
-  boolean isReplaceable(T constraint);
+  /** The number of watching constraints. */
+  int size;
 
-  /**
-   * Replaces the constraint with a decomposed version.
-   *
-   * @param constraint the constraint to replace
-   * @return the decomposed constraint
-   */
-  DecomposedConstraint<Constraint> replace(T constraint);
+  /** Adds a constraint at the end unless it already watches the variable. */
+  void add(Constraint c) {
+    for (int i = 0; i < size; i++) {
+      if (constraints[i] == c) {
+        return;
+      }
+    }
+    if (size == constraints.length) {
+      constraints = Arrays.copyOf(constraints, 2 * size);
+    }
+    constraints[size++] = c;
+  }
+
+  /** Removes a constraint, keeping the order of the others. */
+  void remove(Constraint c) {
+    for (int i = 0; i < size; i++) {
+      if (constraints[i] == c) {
+        System.arraycopy(constraints, i + 1, constraints, i, size - i - 1);
+        constraints[--size] = null;
+        return;
+      }
+    }
+  }
 }

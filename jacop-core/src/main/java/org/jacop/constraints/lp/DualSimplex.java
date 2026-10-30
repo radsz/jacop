@@ -46,61 +46,45 @@ import java.util.Random;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class DualSimplex {
+final class DualSimplex implements LpSolver {
 
-  /** The solve result: an optimal basis. */
-  static final int OPTIMAL = 0;
-
-  /** The solve result: a row whose basic variable cannot reach its bounds. */
-  static final int INFEASIBLE = 1;
-
-  /** The solve result: the iteration limit was reached. */
-  static final int LIMIT = 2;
-
-  private static final double PRIMAL_TOL = 1e-6;
-  private static final double DUAL_TOL = 1e-9;
-  private static final double PIVOT_TOL = 1e-9;
   private static final double PERTURBATION = 1e-7;
 
   // refactorizations after this many pivots, against the drift of the tableau
   private static final int REFACTOR_PIVOTS = 400;
 
-  final int m;
+  int m;
   final int n;
-  private final int cols;
-  private final double[][] a;
-  private final double[] cost;
-  private final double[] lo;
-  private final double[] hi;
+  private int cols;
+  private double[][] a;
+  private double[] cost;
+  private double[] lo;
+  private double[] hi;
 
-  private final double[][] t;
-  private final int[] basis;
-  private final int[] row; // the row of a basic column, -1 for a nonbasic one
-  private final boolean[] upper; // a nonbasic column at its upper bound
-  private final double[] d;
-  private final double[] beta;
+  private double[][] t;
+  private int[] basis;
+  private int[] row; // the row of a basic column, -1 for a nonbasic one
+  private boolean[] upper; // a nonbasic column at its upper bound
+  private double[] d;
+  private double[] beta;
   private int pivots;
   private int infeasibleRow = -1;
 
   // the values of the nonbasic columns that beta was computed with
-  private final double[] at;
+  private double[] at;
   private boolean betaValid;
 
   // the nonbasic columns that move beta, and by how much
-  private final int[] moved;
-  private final double[] movedBy;
+  private int[] moved;
+  private double[] movedBy;
 
   // the squared norm of the row of B^-1 in each row of the tableau, valid while the row is
   // unchanged
-  private final double[] norm;
-  private final boolean[] normValid;
+  private double[] norm;
+  private boolean[] normValid;
 
-  // the ratio test: its candidates, and the columns it flips to their other bound
-  private final int[] candidate;
-  private final double[] pivotSize;
-  private final double[] ratio;
-  private final int[] flipped;
-  private int flips;
+  // the ratio test, with the columns it flips to their other bound
+  private RatioTest ratioTest;
 
   /** Statistics: pivots made. */
   long totalPivots;
@@ -142,11 +126,68 @@ final class DualSimplex {
     movedBy = new double[cols];
     norm = new double[m];
     normValid = new boolean[m];
-    candidate = new int[cols];
-    pivotSize = new double[cols];
-    ratio = new double[cols];
-    flipped = new int[cols];
+    ratioTest = new RatioTest(cols);
     slackBasis();
+  }
+
+  // a deep copy of the state of another simplex
+  private DualSimplex(DualSimplex o) {
+    m = o.m;
+    n = o.n;
+    cols = o.cols;
+    a = o.a.clone(); // the rows themselves are never changed
+    cost = o.cost.clone();
+    lo = o.lo.clone();
+    hi = o.hi.clone();
+    t = new double[m][];
+    for (int i = 0; i < m; i++) {
+      t[i] = o.t[i].clone();
+    }
+    basis = o.basis.clone();
+    row = o.row.clone();
+    upper = o.upper.clone();
+    d = o.d.clone();
+    beta = o.beta.clone();
+    at = o.at.clone();
+    betaValid = o.betaValid;
+    moved = new int[cols];
+    movedBy = new double[cols];
+    norm = o.norm.clone();
+    normValid = o.normValid.clone();
+    ratioTest = new RatioTest(o.ratioTest);
+    pivots = o.pivots;
+    infeasibleRow = o.infeasibleRow;
+    totalPivots = o.totalPivots;
+  }
+
+  /**
+   * Returns a copy of this simplex with its basis, which goes on independently.
+   *
+   * @return the copy
+   */
+  @Override
+  public int rows() {
+    return m;
+  }
+
+  @Override
+  public int columns() {
+    return n;
+  }
+
+  @Override
+  public long pivots() {
+    return totalPivots;
+  }
+
+  @Override
+  public long pivotWork() {
+    return (long) m * cols;
+  }
+
+  @Override
+  public DualSimplex copy() {
+    return new DualSimplex(this);
   }
 
   /**
@@ -156,7 +197,8 @@ final class DualSimplex {
    * @param min its lower bound
    * @param max its upper bound
    */
-  void setBounds(int j, double min, double max) {
+  @Override
+  public void setBounds(int j, double min, double max) {
     lo[j] = min;
     hi[j] = max;
   }
@@ -167,7 +209,8 @@ final class DualSimplex {
    * @param limit the most pivots
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE} or {@link #LIMIT}
    */
-  int solve(int limit) {
+  @Override
+  public int solve(int limit) {
     infeasibleRow = -1;
     placeNonbasic();
     updateBeta();
@@ -183,8 +226,8 @@ final class DualSimplex {
         infeasibleRow = r;
         return INFEASIBLE;
       }
-      for (int k = 0; k < flips; k++) {
-        upper[flipped[k]] = !upper[flipped[k]];
+      for (int k = 0; k < ratioTest.flips(); k++) {
+        upper[ratioTest.flipped(k)] = !upper[ratioTest.flipped(k)];
       }
       pivot(r, q, toLower);
       if (pivots >= REFACTOR_PIVOTS) {
@@ -196,14 +239,93 @@ final class DualSimplex {
   }
 
   /**
-   * Returns the multipliers of the rows that prove infeasibility: the row of the basis inverse of
-   * the infeasible row, so that {@code y [A -I] (x, s) = 0} has no solution within the bounds.
+   * Adds rows, each with a basic slack, keeping the current basis: the basis stays dual feasible,
+   * so a re-solve goes on from it with a few dual pivots for the rows the current solution breaks.
    *
+   * @param rows the new rows, dense over the n columns
+   * @param rowLo their lower bounds, or negative infinity
+   * @param rowHi their upper bounds, or positive infinity
+   */
+  @Override
+  public void addRows(double[][] rows, double[] rowLo, double[] rowHi) {
+    int k = rows.length;
+    if (k == 0) {
+      return;
+    }
+    int m2 = m + k;
+    int cols2 = cols + k;
+    a = Arrays.copyOf(a, m2);
+    cost = Arrays.copyOf(cost, cols2);
+    lo = Arrays.copyOf(lo, cols2);
+    hi = Arrays.copyOf(hi, cols2);
+    t = Arrays.copyOf(t, m2);
+    for (int i = 0; i < m; i++) {
+      t[i] = Arrays.copyOf(t[i], cols2);
+    }
+    for (int q = 0; q < k; q++) {
+      a[m + q] = rows[q];
+      lo[cols + q] = rowLo[q];
+      hi[cols + q] = rowHi[q];
+      // s - a x = 0, with the basic columns eliminated by their rows of the tableau
+      double[] v = new double[cols2];
+      for (int j = 0; j < n; j++) {
+        v[j] = -rows[q][j];
+      }
+      v[cols + q] = 1;
+      for (int j = 0; j < n; j++) {
+        double f = v[j];
+        if (Math.abs(f) > 0 && row[j] >= 0) {
+          double[] tr = t[row[j]];
+          for (int c = 0; c < cols; c++) {
+            v[c] -= f * tr[c];
+          }
+          v[j] = 0;
+        }
+      }
+      t[m + q] = v;
+    }
+    basis = Arrays.copyOf(basis, m2);
+    row = Arrays.copyOf(row, cols2);
+    for (int q = 0; q < k; q++) {
+      basis[m + q] = cols + q;
+      row[cols + q] = m + q;
+    }
+    upper = Arrays.copyOf(upper, cols2);
+    d = Arrays.copyOf(d, cols2);
+    beta = Arrays.copyOf(beta, m2);
+    norm = Arrays.copyOf(norm, m2);
+    normValid = Arrays.copyOf(normValid, m2);
+    at = new double[cols2];
+    moved = new int[cols2];
+    movedBy = new double[cols2];
+    ratioTest.resize(cols2);
+    betaValid = false;
+    m = m2;
+    cols = cols2;
+  }
+
+  /**
+   * Returns the row of the tableau in which a column is basic.
+   *
+   * @param j the column
+   * @return its row, or -1 when the column is nonbasic
+   */
+  @Override
+  public int basicRow(int j) {
+    return row[j];
+  }
+
+  /**
+   * Returns a row of the basis inverse: the multipliers of the rows whose combination is the row of
+   * the tableau, {@code x_B(r) + sum_N t_rj x_j}.
+   *
+   * @param r the row of the tableau
    * @return y, by row
    */
-  double[] farkas() {
+  @Override
+  public double[] inverseRow(int r) {
     double[] y = new double[m];
-    double[] tr = t[infeasibleRow];
+    double[] tr = t[r];
     for (int i = 0; i < m; i++) {
       y[i] = -tr[n + i];
     }
@@ -211,11 +333,23 @@ final class DualSimplex {
   }
 
   /**
+   * Returns the multipliers of the rows that prove infeasibility: the row of the basis inverse of
+   * the infeasible row, so that {@code y [A -I] (x, s) = 0} has no solution within the bounds.
+   *
+   * @return y, by row
+   */
+  @Override
+  public double[] farkas() {
+    return inverseRow(infeasibleRow);
+  }
+
+  /**
    * Returns the dual values of the rows at an optimal basis, {@code c_B B^-1}.
    *
    * @return y, by row
    */
-  double[] duals() {
+  @Override
+  public double[] duals() {
     double[] y = new double[m];
     for (int r = 0; r < m; r++) {
       double c = cost[basis[r]];
@@ -234,7 +368,8 @@ final class DualSimplex {
    *
    * @return c x
    */
-  double objective() {
+  @Override
+  public double objective() {
     double z = 0;
     for (int j = 0; j < n; j++) {
       if (cost[j] != 0) {
@@ -250,7 +385,8 @@ final class DualSimplex {
    * @param j the column
    * @return its value
    */
-  double value(int j) {
+  @Override
+  public double value(int j) {
     return row[j] >= 0 ? beta[row[j]] : upper[j] ? hi[j] : lo[j];
   }
 
@@ -276,18 +412,7 @@ final class DualSimplex {
 
   // puts each nonbasic column at the bound its reduced cost asks for, a finite one
   private void placeNonbasic() {
-    for (int j = 0; j < cols; j++) {
-      if (row[j] < 0) {
-        if (d[j] > DUAL_TOL) {
-          upper[j] = false;
-        } else if (d[j] < -DUAL_TOL) {
-          upper[j] = true;
-        }
-        if (upper[j] ? hi[j] == Double.POSITIVE_INFINITY : lo[j] == Double.NEGATIVE_INFINITY) {
-          upper[j] = !upper[j];
-        }
-      }
-    }
+    RatioTest.placeNonbasic(row, d, upper, lo, hi, cols);
   }
 
   // moves the basic values with the nonbasic columns whose values changed since the last call
@@ -355,12 +480,7 @@ final class DualSimplex {
     for (int i = 0; i < m; i++) {
       int p = basis[i];
       double v = beta[i];
-      double gap = 0;
-      if (v < lo[p] - PRIMAL_TOL * Math.max(1, Math.abs(lo[p]))) {
-        gap = lo[p] - v;
-      } else if (v > hi[p] + PRIMAL_TOL * Math.max(1, Math.abs(hi[p]))) {
-        gap = v - hi[p];
-      }
+      double gap = RatioTest.gap(v, lo[p], hi[p]);
       if (gap > 0) {
         // dual steepest edge: the infeasibility relative to the norm of the row of B^-1
         if (!normValid[i]) {
@@ -383,68 +503,19 @@ final class DualSimplex {
   }
 
   /**
-   * The dual ratio test with bound flipping: the eligible columns are taken in the order of their
-   * dual ratios, and a boxed column whose move to its other bound leaves the basic variable still
-   * outside its bound is flipped ({@link #flipped}) instead of entering. Among ratios within the
-   * tolerance of the smallest, the largest pivot is taken.
+   * The dual ratio test with bound flipping over the nonbasic columns ({@link RatioTest}).
    *
-   * @return the entering column, or -1 when even every eligible column at its other bound leaves
-   *     the basic variable outside its bound, so the row proves infeasibility
+   * @return the entering column, or -1 when the row proves infeasibility
    */
   private int enteringColumn(int r, boolean toLower, double gap) {
     double[] tr = t[r];
-    int k = 0;
+    ratioTest.start();
     for (int j = 0; j < cols; j++) {
-      double alpha = eligible(tr[j], j, toLower);
-      if (alpha > 0) {
-        candidate[k] = j;
-        pivotSize[k] = alpha;
-        ratio[k] = Math.max(0, upper[j] ? -d[j] : d[j]) / alpha;
-        k++;
+      if (row[j] < 0) {
+        ratioTest.offer(j, tr[j], upper[j], d[j], lo[j], hi[j], toLower);
       }
     }
-    flips = 0;
-    double slope = gap;
-    while (k > 0) {
-      // Harris: the largest pivot among the ratios that keep every reduced cost within tolerance
-      double least = Double.POSITIVE_INFINITY;
-      for (int i = 0; i < k; i++) {
-        least = Math.min(least, ratio[i] + DUAL_TOL / pivotSize[i]);
-      }
-      int pick = -1;
-      for (int i = 0; i < k; i++) {
-        if (ratio[i] <= least && (pick < 0 || pivotSize[i] > pivotSize[pick])) {
-          pick = i;
-        }
-      }
-      int j = candidate[pick];
-      double range = hi[j] - lo[j];
-      slope -= pivotSize[pick] * range;
-      if (slope <= PRIMAL_TOL * Math.max(1, gap) || Double.isInfinite(range)) {
-        return j;
-      }
-      flipped[flips++] = j;
-      k--;
-      candidate[pick] = candidate[k];
-      pivotSize[pick] = pivotSize[k];
-      ratio[pick] = ratio[k];
-    }
-    flips = 0;
-    return -1;
-  }
-
-  /**
-   * Returns |alpha| when moving nonbasic column j towards its other bound brings the basic variable
-   * of the row back towards the bound it leaves at, otherwise 0. With x_B = -sum alpha_j x_j, a
-   * basic variable below its lower bound rises when x_j rises with alpha_j &lt; 0 or falls with
-   * alpha_j &gt; 0.
-   */
-  private double eligible(double alpha, int j, boolean toLower) {
-    if (row[j] >= 0 || Math.abs(alpha) < PIVOT_TOL || lo[j] == hi[j]) {
-      return 0;
-    }
-    boolean rises = upper[j] ? alpha > 0 : alpha < 0;
-    return rises == toLower ? Math.abs(alpha) : 0;
+    return ratioTest.choose(gap, lo, hi);
   }
 
   private void pivot(int r, int q, boolean toLower) {

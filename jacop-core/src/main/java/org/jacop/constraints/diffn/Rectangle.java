@@ -155,31 +155,20 @@ public class Rectangle {
     return est(dim) >= r.lct(dim) || r.est(dim) >= lct(dim);
   }
 
-  boolean noOverlap(Rectangle r) {
-    return noOverlap(r, 0) && noOverlap(r, 1);
-  }
-
   boolean possibleOverlap(Rectangle r) {
     return !noOverlap(r, 0) && !noOverlap(r, 1);
-  }
-
-  boolean instantiated() {
-    return origin[0].singleton()
-        && origin[1].singleton()
-        && length[0].singleton()
-        && length[1].singleton();
   }
 
   boolean instantiatedBefore(Store store) {
     int level = store.level;
     return origin[0].singleton()
         && origin[1].singleton()
-        && origin[0].domain.stamp < level
-        && origin[1].domain.stamp < level
+        && origin[0].dom().stamp() < level
+        && origin[1].dom().stamp() < level
         && length[0].singleton()
         && length[1].singleton()
-        && length[0].domain.stamp < level
-        && length[1].domain.stamp < level;
+        && length[0].dom().stamp() < level
+        && length[1].dom().stamp() < level;
   }
 
   /**

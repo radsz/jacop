@@ -95,6 +95,9 @@ public abstract class IntDomain extends Domain {
   /** Unique identifier for a lazy bit set domain type. */
   public static final int LAZY_BIT_SET_DOMAIN_ID = 4;
 
+  /** Unique identifier for the domain of an affine view, {@link AffineDomain}. */
+  public static final int AFFINE_VIEW_DOMAIN_ID = 5;
+
   /** The length from which an owned constraint array has a hash table. */
   private static final int TABLE_THRESHOLD = 16;
 
@@ -1320,20 +1323,6 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
-   * Returns the total number of constraints attached to this domain across all event types.
-   *
-   * @return the number of constraints attached to this domain.
-   */
-  public int noConstraints() {
-    return searchConstraintsToEvaluate
-        + modelConstraintsToEvaluate[GROUND]
-        + modelConstraintsToEvaluate[BOUND]
-        + modelConstraintsToEvaluate[ANY]
-        + modelConstraintsToEvaluate[MIN_EVENT]
-        + modelConstraintsToEvaluate[MAX_EVENT];
-  }
-
-  /**
    * Creates a copy of the modelConstraints array with the specified pruning event array replaced.
    *
    * @param pruningEvent the pruning event index
@@ -1467,6 +1456,18 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
+   * Returns the domain object a variable gets when its constraint lists change at a new store
+   * level; the lists are set by the caller. Usually a copy of the values, {@link #cloneLight()}; a
+   * domain that does not hold its own values, such as an {@link AffineDomain}, returns a new object
+   * of its own class.
+   *
+   * @return the new domain object.
+   */
+  protected IntDomain cloneForLevel() {
+    return cloneLight();
+  }
+
+  /**
    * Clones this domain and installs the clone on the given variable, preserving constraints and
    * metadata.
    *
@@ -1475,7 +1476,7 @@ public abstract class IntDomain extends Domain {
    * @return the cloned domain
    */
   private IntDomain cloneAndInstall(int storeLevel, Var v) {
-    IntDomain result = this.cloneLight();
+    IntDomain result = this.cloneForLevel();
     result.modelConstraints = modelConstraints;
     result.searchConstraints = searchConstraints;
     result.stamp = storeLevel;
@@ -1495,7 +1496,7 @@ public abstract class IntDomain extends Domain {
    * @return the cloned domain
    */
   private IntDomain cloneAndInstallForSearch(int storeLevel, Var v) {
-    IntDomain result = this.cloneLight();
+    IntDomain result = this.cloneForLevel();
     result.modelConstraints = modelConstraints;
     result.searchConstraints =
         new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
@@ -1725,27 +1726,6 @@ public abstract class IntDomain extends Domain {
     }
 
     return 0;
-  }
-
-  /**
-   * It returns the number of elements smaller than el.
-   *
-   * @param el the element from which counted elements must be smaller than.
-   * @return the number of elements which are smaller than the provided element el.
-   */
-  public int elementsSmallerThan(int el) {
-
-    int counter = -1;
-
-    int value = el - 1;
-
-    while (value != el) {
-      value = el;
-      el = previousValue(el);
-      counter++;
-    }
-
-    return counter;
   }
 
   /**

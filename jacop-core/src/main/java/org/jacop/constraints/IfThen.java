@@ -57,7 +57,6 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable, Co
   private final PrimitiveConstraint thenC;
 
   boolean imposed;
-  Store store;
 
   /** Set when a variable changes, so notConsistency() repeats until neither part prunes more. */
   private boolean propagation;
@@ -145,14 +144,12 @@ public class IfThen extends PrimitiveConstraint implements UsesQueueVariable, Co
   @Override
   public void impose(Store store) {
 
-    this.store = store;
     super.impose(store);
     imposed = true;
   }
 
   @Override
   public void include(Store store) {
-    this.store = store;
     super.include(store);
   }
 

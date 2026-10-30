@@ -57,12 +57,16 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
+import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
@@ -70,6 +74,7 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
@@ -84,12 +89,16 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.NetworkFlow;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
@@ -231,6 +240,7 @@ class LcgSolverTest {
     Random rnd = new Random(11);
     int sat = 0;
     int unsat = 0;
+    long lifted = 0;
     for (int instance = 0; instance < 3000; instance++) {
       Store store = new Store();
       int n = 4 + rnd.nextInt(3);
@@ -250,6 +260,7 @@ class LcgSolverTest {
       solver.setChecking(true);
       solver.sat().setSeed(instance);
       int status = solver.solve();
+      lifted += solver.liftedLiterals;
       assertThat(status)
           .as("instance %d", instance)
           .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
@@ -268,6 +279,8 @@ class LcgSolverTest {
     }
     assertThat(sat).isGreaterThan(300);
     assertThat(unsat).isGreaterThan(300);
+    // lifted bounds cite weaker literals the solver has, which the checker verifies
+    assertThat(lifted).isGreaterThan(0);
   }
 
   /**
@@ -643,7 +656,95 @@ class LcgSolverTest {
         "diffn: %d sat, %d unsat, %d own and %d generic explanations%n", sat, unsat, own, generic);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
-    assertThat(own).isGreaterThan(generic);
+    // the profile and area rules are explained by the bounds of all rectangles, never generically
+    assertThat(own).isPositive();
+    assertThat(generic).isZero();
+  }
+
+  private static IntVar constant(Store store, int c) {
+    return new IntVar(store, c, c);
+  }
+
+  /**
+   * Packings of more and larger rectangles than {@link #diffnAgreesWithBruteForce}, with origin
+   * domains full of holes, so that the profile and area rules prune: every explanation is checked,
+   * none is generic (all origin holes), and the LCG answer agrees with depth-first search.
+   */
+  @Test
+  void diffnProfileReasonsAreBoundsOnly() {
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1000; instance++) {
+      Store[] stores = new Store[2];
+      IntVar[][] all = new IntVar[2][];
+      for (int copy = 0; copy < 2; copy++) {
+        Random rnd = new Random(41 + instance);
+        Store store = new Store();
+        int n = 7 + rnd.nextInt(4);
+        int side = 5 + rnd.nextInt(3);
+        IntVar[] ox = new IntVar[n];
+        IntVar[] oy = new IntVar[n];
+        IntVar[] lx = new IntVar[n];
+        IntVar[] ly = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          ox[i] = new IntVar(store, "x" + i, 0, side - 1);
+          oy[i] = new IntVar(store, "y" + i, 0, side - 1);
+          for (IntVar o : new IntVar[] {ox[i], oy[i]}) {
+            for (int h = rnd.nextInt(3); h > 0; h--) {
+              o.domain.subtractAdapt(rnd.nextInt(side));
+            }
+            o.refreshBounds();
+          }
+          lx[i] =
+              rnd.nextInt(4) == 0 ? new IntVar(store, 1, 3) : constant(store, 1 + rnd.nextInt(3));
+          ly[i] =
+              rnd.nextInt(4) == 0 ? new IntVar(store, 1, 3) : constant(store, 1 + rnd.nextInt(3));
+          // inside a side x side square
+          store.impose(new XplusYlteqZ(ox[i], lx[i], constant(store, side)));
+          store.impose(new XplusYlteqZ(oy[i], ly[i], constant(store, side)));
+        }
+        store.impose(new Diffn(ox, oy, lx, ly, rnd.nextBoolean()));
+        stores[copy] = store;
+        IntVar[] vars = new IntVar[4 * n];
+        for (int i = 0; i < n; i++) {
+          vars[4 * i] = ox[i];
+          vars[4 * i + 1] = oy[i];
+          vars[4 * i + 2] = lx[i];
+          vars[4 * i + 3] = ly[i];
+        }
+        all[copy] = vars;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean expected =
+          stores[0].consistency()
+              && search.labeling(stores[0], new SimpleSelect<>(all[0], null, new IndomainMin<>()));
+      LcgSolver solver = new LcgSolver(stores[1]);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Diffn");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "diffn profile: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isPositive();
+    assertThat(unsat).isPositive();
+    assertThat(own).isPositive();
+    assertThat(generic).isZero();
   }
 
   /**
@@ -765,6 +866,150 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * Graph colouring under a value precedence chain, with and without a value chain, over domains
+   * with holes and values outside the chain, minimising the largest value: LCG finds the optimum
+   * depth-first search finds, every explanation is checked, and almost all are the constraint's
+   * own.
+   */
+  @Test
+  void seqPrecedeChainColouringAgreesWithSearch() {
+    long own = 0;
+    long generic = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 400; instance++) {
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Random rnd = new Random(41 + instance);
+        Store store = new Store();
+        int n = 7 + rnd.nextInt(4);
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, -1, 5);
+          if (rnd.nextInt(3) == 0) {
+            x[i].domain.subtractAdapt(rnd.nextInt(7) - 1);
+            x[i].refreshBounds();
+          }
+        }
+        int[] chain = null;
+        if (rnd.nextInt(3) != 0) {
+          List<Integer> values = new ArrayList<>(List.of(-1, 0, 1, 2, 3, 4, 5));
+          java.util.Collections.shuffle(values, rnd);
+          chain = values.subList(0, 3 + rnd.nextInt(5)).stream().mapToInt(i -> i).toArray();
+        }
+        store.impose(new SeqPrecedeChain(x, chain));
+        for (int i = 0; i < n; i++) {
+          for (int j = i + 1; j < n; j++) {
+            if (rnd.nextInt(100) < 45) {
+              store.impose(new XneqY(x[i], x[j]));
+            }
+          }
+        }
+        IntVar largest = new IntVar(store, "largest", -1, 5);
+        store.impose(new Max(x, largest));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          optimum[0] =
+              search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), largest)
+                  ? search.getCostValue()
+                  : -2;
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          int status = solver.minimize(largest);
+          optimum[1] = status == CdclSolver.SAT ? solver.value(largest) : -2;
+          long[] counts = solver.explanationStatistics().get("SeqPrecedeChain");
+          if (counts != null) {
+            own += counts[0] - counts[1] - counts[6] + counts[3] - counts[4] - counts[7];
+            generic += counts[1] + counts[4] + counts[6] + counts[7];
+          }
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+      unsat += optimum[0] == -2 ? 1 : 0;
+    }
+    System.out.printf(
+        "seq precede chain colouring: %d unsat, %d own and %d generic or replayed explanations%n",
+        unsat, own, generic);
+    assertThat(own).isGreaterThan(1000);
+    assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
+   * Lexicographically ordered rows of a small matrix (strict or not), with a sum and differences
+   * across rows, minimising a weighted sum: LCG finds the optimum depth-first search finds, every
+   * explanation is checked, and most are the constraint's own.
+   */
+  @Test
+  void lexChainAgreesWithSearch() {
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Random rnd = new Random(43 + instance);
+        Store store = new Store();
+        int rows = 3 + rnd.nextInt(3);
+        int columns = 2 + rnd.nextInt(2);
+        boolean strict = rnd.nextBoolean();
+        IntVar[][] x = new IntVar[rows][columns];
+        List<IntVar> all = new ArrayList<>();
+        for (int i = 0; i < rows; i++) {
+          for (int j = 0; j < columns; j++) {
+            x[i][j] = new IntVar(store, "x" + i + j, 0, 2 + rnd.nextInt(2));
+            if (rnd.nextInt(4) == 0) {
+              x[i][j].domain.subtractAdapt(1 + rnd.nextInt(x[i][j].max() - 1));
+              x[i][j].refreshBounds();
+            }
+            all.add(x[i][j]);
+          }
+        }
+        store.impose(new LexChain(x, strict));
+        IntVar[] v = all.toArray(new IntVar[0]);
+        for (int k = 2 + rnd.nextInt(4); k > 0; k--) {
+          int a = rnd.nextInt(v.length);
+          int b = rnd.nextInt(v.length);
+          if (a != b) {
+            store.impose(new XneqY(v[a], v[b]));
+          }
+        }
+        int[] w = new int[v.length];
+        for (int k = 0; k < v.length; k++) {
+          w[k] = rnd.nextInt(5) - 2;
+        }
+        IntVar cost = new IntVar(store, "cost", -100, 100);
+        int[] wc = Arrays.copyOf(w, v.length + 1);
+        wc[v.length] = -1;
+        IntVar[] vc = Arrays.copyOf(v, v.length + 1);
+        vc[v.length] = cost;
+        store.impose(new LinearInt(vc, wc, "==", 0));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          optimum[0] =
+              search.labeling(store, new SimpleSelect<>(v, null, new IndomainMin<>()), cost)
+                  ? search.getCostValue()
+                  : -1000;
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          int status = solver.minimize(cost);
+          optimum[1] = status == CdclSolver.SAT ? solver.value(cost) : -1000;
+          long[] counts = solver.explanationStatistics().get("LexChain");
+          if (counts != null) {
+            own += counts[0] - counts[1] - counts[6] + counts[3] - counts[4] - counts[7];
+            generic += counts[1] + counts[4] + counts[6] + counts[7];
+          }
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    System.out.printf("lex chain: %d own and %d generic or replayed explanations%n", own, generic);
+    assertThat(own).isGreaterThan(1000);
+    assertThat(own).isGreaterThan(generic);
   }
 
   @Test
@@ -1035,7 +1280,7 @@ class LcgSolverTest {
   }
 
   /**
-   * A constraint without an explanation of its own, {@link IncreasingSum}, is explained by
+   * A constraint without an explanation of its own, {@link IncreasingNValue}, is explained by
    * replaying a copy of it: the answers agree with brute force, every reason is checked, and the
    * reasons come from the replay rather than the generic reason.
    */
@@ -1048,20 +1293,28 @@ class LcgSolverTest {
     long generic = 0;
     for (int instance = 0; instance < 1500; instance++) {
       Store store = new Store();
-      int n = 5;
+      int n = 6;
       IntVar[] x = new IntVar[n];
       for (int i = 0; i < n; i++) {
         x[i] = newVar(store, "x" + i, rnd);
       }
-      boolean strict = rnd.nextBoolean();
       List<Relation> relations = new ArrayList<>();
       relations.add(
           new Relation(
-              new IncreasingSum(new IntVar[] {x[0], x[1], x[2]}, x[3], strict),
-              t ->
-                  (strict ? t[0] < t[1] && t[1] < t[2] : t[0] <= t[1] && t[1] <= t[2])
-                      && t[0] + t[1] + t[2] == t[3]));
-      relations.add(relation(x, rnd));
+              new IncreasingNValue(new IntVar[] {x[0], x[1], x[2], x[3], x[4]}, x[5]),
+              t -> {
+                int distinct = 1;
+                for (int i = 1; i < 5; i++) {
+                  if (t[i] < t[i - 1]) {
+                    return false;
+                  }
+                  distinct += t[i] > t[i - 1] ? 1 : 0;
+                }
+                return t[5] == distinct;
+              }));
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
       boolean expected = bruteForce(x, relations, new int[n], 0);
       for (Relation r : relations) {
         store.impose(r.constraint);
@@ -1084,7 +1337,7 @@ class LcgSolverTest {
       } else {
         unsat++;
       }
-      long[] counts = solver.explanationStatistics().get("IncreasingSum");
+      long[] counts = solver.explanationStatistics().get("IncreasingNValue");
       if (counts != null) {
         replayed += counts[6] + counts[7];
         generic += counts[1] + counts[4];
@@ -1097,6 +1350,189 @@ class LcgSolverTest {
     assertThat(unsat).isGreaterThan(100);
     assertThat(replayed).isGreaterThan(100);
     assertThat(generic).isLessThan(replayed / 10);
+  }
+
+  // (a, b) before (c, d) lexicographically
+  private static boolean lexBefore(int a, int b, int c, int d, boolean strict) {
+    return a < c || a == c && (strict ? b < d : b <= d);
+  }
+
+  /**
+   * {@link NetworkFlow} explains its cost pruning by the duals of a minimum cost flow and its
+   * feasibility pruning by a cut: the answers agree with brute force, every reason is checked, and
+   * on flows without holes few are generic or replayed.
+   */
+  @Test
+  void networkFlowExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(61);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long other = 0;
+    // arcs s->a, s->b, a->t, b->t, a->b on x0..x4, the cost on x5
+    int[][] arcs = {{0, 1}, {0, 2}, {1, 3}, {2, 3}, {1, 2}};
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      // flows over intervals: the flow bounds explain the pruning, holes would not
+      for (int i = 0; i < n - 1; i++) {
+        x[i] = new IntVar(store, "x" + i, rnd.nextInt(2) - 1, 2 + rnd.nextInt(3));
+      }
+      x[n - 1] = new IntVar(store, "cost", 0, 4 + rnd.nextInt(12));
+      int supply = 1 + rnd.nextInt(4);
+      int[] weight = new int[arcs.length];
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] node = {
+        net.addNode("s", supply),
+        net.addNode("a", 0),
+        net.addNode("b", 0),
+        net.addNode("t", -supply)
+      };
+      for (int k = 0; k < arcs.length; k++) {
+        weight[k] = rnd.nextInt(4);
+        net.addArc(node[arcs[k][0]], node[arcs[k][1]], weight[k], x[k]);
+      }
+      net.setCostVariable(x[n - 1]);
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new NetworkFlow(net),
+              t -> {
+                long cost = 0;
+                for (int k = 0; k < arcs.length; k++) {
+                  cost += (long) weight[k] * t[k];
+                }
+                return t[0] + t[1] == supply
+                    && t[2] + t[4] == t[0]
+                    && t[3] == t[1] + t[4]
+                    && cost == t[5];
+              }));
+      for (int c = rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("NetworkFlow");
+      if (counts != null) {
+        long notOwn = counts[1] + counts[4] + counts[6] + counts[7];
+        own += counts[0] + counts[3] - notOwn;
+        other += notOwn;
+      }
+    }
+    System.out.printf(
+        "network flow: %d sat, %d unsat, %d own and %d generic or replayed explanations%n",
+        sat, unsat, own, other);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(10 * other);
+  }
+
+  /**
+   * {@link IncreasingSum}, {@link LexOrder} and {@link CountVar} (also reified) explain their own
+   * pruning: the answers agree with brute force, every reason is checked, and none is generic or
+   * replayed.
+   */
+  @Test
+  void sumOrderAndCountExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(59);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long other = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n - 1; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      x[n - 1] = new IntVar(store, "b", 0, 1);
+      boolean strict = rnd.nextBoolean();
+      List<Relation> relations = new ArrayList<>();
+      switch (rnd.nextInt(3)) {
+        case 0 ->
+            relations.add(
+                new Relation(
+                    new IncreasingSum(new IntVar[] {x[0], x[1], x[2]}, x[3], strict),
+                    t ->
+                        (strict ? t[0] < t[1] && t[1] < t[2] : t[0] <= t[1] && t[1] <= t[2])
+                            && t[0] + t[1] + t[2] == t[3]));
+        case 1 ->
+            relations.add(
+                new Relation(
+                    new LexOrder(new IntVar[] {x[0], x[1]}, new IntVar[] {x[2], x[3]}, strict),
+                    t -> lexBefore(t[0], t[1], t[2], t[3], strict)));
+        default -> {
+          CountVar count = new CountVar(new IntVar[] {x[0], x[1], x[2]}, x[3], x[4]);
+          Predicate<int[]> counted =
+              t -> (t[0] == t[4] ? 1 : 0) + (t[1] == t[4] ? 1 : 0) + (t[2] == t[4] ? 1 : 0) == t[3];
+          relations.add(
+              strict
+                  ? new Relation(new Reified(count, x[5]), t -> counted.test(t) == (t[5] == 1))
+                  : new Relation(count, counted));
+        }
+      }
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"IncreasingSum", "LexOrder", "CountVar", "Reified"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          long notOwn = counts[1] + counts[4] + counts[6] + counts[7];
+          own += counts[0] + counts[3] - notOwn;
+          other += notOwn;
+        }
+      }
+    }
+    System.out.printf(
+        "sum, order and count: %d sat, %d unsat, %d own and %d generic or replayed explanations%n",
+        sat, unsat, own, other);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(10 * other);
   }
 
   // a cardinality constraint over 3 or 4 of the variables
@@ -2640,6 +3076,70 @@ class LcgSolverTest {
   }
 
   /**
+   * Makespan problems whose tasks trade duration for resource use (d + r fixed per task), so that
+   * the cumulative prunes upper bounds of durations and resource uses. The optimum agrees with
+   * depth-first search, every explanation is checked, and the cumulative explains every bound it
+   * prunes itself.
+   */
+  @Test
+  void variableTasksAgreeWithSearch() {
+    Random rnd = new Random(13);
+    long reasons = 0;
+    long generic = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 8; instance++) {
+      int n = 5 + rnd.nextInt(3);
+      int horizon = 20;
+      int limit = 4 + rnd.nextInt(2);
+      int[] c = new int[n];
+      for (int i = 0; i < n; i++) {
+        c[i] = 3 + rnd.nextInt(4);
+      }
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] ends = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, 0, horizon);
+          durations[i] = new IntVar(store, "d" + i, 1, c[i] - 1);
+          resources[i] = new IntVar(store, "r" + i, 1, Math.min(limit, c[i] - 1));
+          ends[i] = new IntVar(store, "e" + i, 0, horizon);
+          store.impose(new XplusYeqC(durations[i], resources[i], c[i]));
+          store.impose(new XplusYeqZ(s[i], durations[i], ends[i]));
+        }
+        IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+        store.impose(new Max(ends, makespan));
+        store.impose(new Cumulative(s, durations, resources, new IntVar(store, limit, limit)));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          IntVar[] vars = new IntVar[2 * n];
+          System.arraycopy(durations, 0, vars, 0, n);
+          System.arraycopy(s, 0, vars, n, n);
+          assertThat(
+                  search.labeling(
+                      store, new SimpleSelect<>(vars, null, new IndomainMin<>()), makespan))
+              .isTrue();
+          optimum[0] = search.getCostValue();
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
+          optimum[1] = solver.value(makespan);
+          long[] counts = solver.explanationStatistics().get("Cumulative");
+          reasons += counts[0];
+          generic += counts[1];
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(reasons).isPositive();
+    assertThat(generic).as("generic reasons of %d", reasons).isZero();
+  }
+
+  /**
    * An equality, decided during search, between a variable of a million values and one of five
    * (liner-sf-repositioning fm3_5): the large variable takes only the bounds of the small one, not
    * a million holes, each a {@code !=} atom with its own literals.
@@ -2875,6 +3375,51 @@ class LcgSolverTest {
   }
 
   @Test
+  void atMostOneGroupKeepsTheNextLevelsOfIntegerTerms() {
+    // x0 = 0 forces x1 >= 4 and x1 = 0 forces x0 >= 4, so [x0 >= 1] and [x1 >= 1] form a group;
+    // the levels above 1 must still cost their weight, or a solution with every soft literal false
+    // (x0 = 4, x1 = 0, cost 8) ends the core-guided phase above its lower bound without a proof
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 5);
+    IntVar x1 = new IntVar(store, "x1", 0, 5);
+    IntVar obj = new IntVar(store, "obj", 0, 25);
+    store.impose(new LinearInt(new IntVar[] {x0, x1}, new int[] {1, 1}, ">=", 4));
+    store.impose(new LinearInt(new IntVar[] {x0, x1, obj}, new int[] {2, 3, -1}, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(8);
+    assertThat(solver.coreSearch().amoGroups).isEqualTo(1);
+    assertThat(solver.coreSearch().proved).isTrue();
+  }
+
+  @Test
+  void coreGuidedSearchReadsThroughPartialSumsWithoutGroups() {
+    // obj = s1 + s2 with s1 = x0 + x1 and s2 = x2 + x3, and no two terms exclude each other: the
+    // terms are still the x's (trucking lost its proofs when the block sums were kept)
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar s1 = new IntVar(store, "s1", 0, 6);
+    IntVar s2 = new IntVar(store, "s2", 0, 6);
+    IntVar obj = new IntVar(store, "obj", 0, 12);
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1], s1}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], s2}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, ">=", 2));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(2);
+    assertThat(solver.coreSearch().amoGroups).isZero();
+    assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+  }
+
+  @Test
   void coreGuidedSearchReadsThroughPartialSums() {
     // obj = s1 + s2 with s1 = 2 * x0 + x1 and s2 = x2 + 3 * x3, as --lcg splits a long sum into
     // blocks; the terms of the core-guided phase are the x's, not the block sums
@@ -2898,6 +3443,87 @@ class LcgSolverTest {
     // x2 = 3 and x1 = 2: 3 + 2
     assertThat(solver.value(obj)).isEqualTo(5);
     assertThat(solver.coreSearch().termCount()).isEqualTo(4);
+    assertThat(solver.coreSearch().proved).isTrue();
+  }
+
+  @Test
+  void coreGuidedSearchJumpsOverHolesOfTheTerms() {
+    // cost variables of two values, 0 and 10, as jp-encoding's: a soft literal per level would
+    // need a core for each of the ten levels; one for the whole hole needs one
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      IntervalDomain dom = new IntervalDomain(0, 0);
+      dom.unionAdapt(10, 10);
+      x[i] = new IntVar(store, "x" + i, dom);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 40);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], obj}, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, ">=", 1));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3]}, new int[] {1, 1}, ">=", 1));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(20);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().cores).isLessThanOrEqualTo(2);
+  }
+
+  @Test
+  void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
+    // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
+    // objective over cost variables next to its definition: the y's bound obj by 6 at the root
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 10);
+    IntVar b = new IntVar(store, "b", 0, 10);
+    IntVar[] y = new IntVar[2];
+    for (int i = 0; i < 2; i++) {
+      IntervalDomain dom = new IntervalDomain(3, 3);
+      dom.unionAdapt(5, 5);
+      y[i] = new IntVar(store, "y" + i, dom);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    store.impose(new LinearInt(new IntVar[] {a, b, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {y[0], y[1], obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new XneqY(y[0], y[1]));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(8);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().cores).isLessThanOrEqualTo(1);
+  }
+
+  @Test
+  void coreGuidedSearchStratifiesByHalvingTheWeight() {
+    // sixteen distinct weights: a stratum per weight costs a solution each, halving the threshold
+    // gives five strata
+    Store store = new Store();
+    IntVar[] x = new IntVar[16];
+    int[] w = new int[17];
+    for (int i = 0; i < 16; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      w[i] = 100 + i;
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 2000);
+    IntVar[] terms = Arrays.copyOf(x, 17);
+    terms[16] = obj;
+    w[16] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    for (int i = 0; i < 16; i += 2) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(856);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().stratumSolutions).isLessThan(8);
   }
 
   /**

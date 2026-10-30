@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
@@ -42,7 +41,6 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 class Diff2Var implements MutableVar {
 
   final int index;
@@ -50,12 +48,6 @@ class Diff2Var implements MutableVar {
   final Store store;
 
   Diff2VarValue value;
-
-  Diff2Var(Store store) {
-    value = new Diff2VarValue();
-    index = store.putMutableVar(this);
-    this.store = store;
-  }
 
   Diff2Var(Store store, Rectangle[] rectangles) {
     Diff2VarValue val = new Diff2VarValue();
@@ -65,26 +57,10 @@ class Diff2Var implements MutableVar {
     this.store = store;
   }
 
-  int index() {
-    return index;
-  }
-
-  public MutableVarValue previous() {
-    return value.previousDiff2VarValue;
-  }
-
   public void removeLevel(int removeLevel) {
     if (value.stamp == removeLevel) {
       value = value.previousDiff2VarValue;
     }
-  }
-
-  public void setCurrent(MutableVarValue o) {
-    value = (Diff2VarValue) o;
-  }
-
-  int stamp() {
-    return value.stamp;
   }
 
   @Override

@@ -41,7 +41,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
@@ -67,7 +66,6 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt>, Explainable {
 
   /*
@@ -139,6 +137,9 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
    * only an imposed LinearInt does: it is then told when the store backtracks. Otherwise null.
    */
   private DroppedTerms dropped;
+
+  // the variables whose weight a failure of this constraint increases; null for its own variables
+  private Var[] weighted;
 
   private static final String WEIGHTS = "weights";
 
@@ -931,6 +932,28 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
       sMin = Math.addExact(sMin, n1);
       sMax = Math.addExact(sMax, n2);
+    }
+  }
+
+  /**
+   * Sets the variables whose weight (dom/wdeg) a failure of this constraint increases instead of
+   * its own. A long linear constraint split into block sums passes the blocks' terms, so a failure
+   * of the sum of the blocks weighs the variables it is about, as the unsplit constraint did.
+   *
+   * @param vars the variables to weigh.
+   */
+  public void setWeightedVariables(Var[] vars) {
+    weighted = vars;
+  }
+
+  @Override
+  public void increaseWeight() {
+    if (weighted == null) {
+      super.increaseWeight();
+    } else if (IS_INCREASE_WEIGHT_ENABLED) {
+      for (Var v : weighted) {
+        v.weight++;
+      }
     }
   }
 

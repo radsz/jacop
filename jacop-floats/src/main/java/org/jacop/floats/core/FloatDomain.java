@@ -1367,18 +1367,6 @@ public abstract class FloatDomain extends Domain {
   }
 
   /**
-   * It returns the number of elements smaller than el.
-   *
-   * @return the number of elements which are smaller than the provided element el.
-   */
-  public int noConstraints() {
-    return searchConstraintsToEvaluate
-        + modelConstraintsToEvaluate[GROUND]
-        + modelConstraintsToEvaluate[BOUND]
-        + modelConstraintsToEvaluate[ANY];
-  }
-
-  /**
    * Creates a deep copy of this float domain.
    *
    * @return a new FloatDomain that is a copy of this domain.

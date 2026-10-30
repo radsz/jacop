@@ -160,6 +160,7 @@ public final class CoreSearch {
 
   private long startTime; // when the first call of the solver started, and the bound then
   private long startBound;
+  private long runBound; // the lower bound when the last run started
   private long runEnd; // when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
   private long threshold = -1; // soft literals of at least this weight are assumed
@@ -211,7 +212,7 @@ public final class CoreSearch {
     long[] constant = new long[1];
     for (int round = 0; round < 4 && terms.size() == 1; round++) {
       Map.Entry<Integer, Long> only = terms.entrySet().iterator().next();
-      LinearForm f = definition(lcg.variable(only.getKey()), used);
+      LinearForm f = definition(lcg.variable(only.getKey()), only.getValue(), used);
       if (f == null) {
         break;
       }
@@ -222,8 +223,8 @@ public final class CoreSearch {
     if (terms.containsKey(objective) || terms.isEmpty()) {
       return null;
     }
-    Map<Integer, Long> sums = new HashMap<>(terms);
-    long sumsConstant = constant[0];
+    Map<Integer, Long> blocks = new HashMap<>(terms);
+    long blocksConstant = constant[0];
     // a term that is only a sum defined for the objective, such as a block of a long sum split for
     // shorter explanations, is replaced by its own terms
     for (int round = 0; round < 4; round++) {
@@ -234,7 +235,7 @@ public final class CoreSearch {
         if (t == objective || weight == null || otherConstraints(y, used) != 1) {
           continue;
         }
-        LinearForm f = definition(y, used);
+        LinearForm f = definition(y, 0, used);
         if (f != null) {
           if (!substitute(lcg, terms, t, weight, f, constant)) {
             return null;
@@ -246,17 +247,30 @@ public final class CoreSearch {
         break;
       }
     }
-    if (terms.equals(sums)) {
-      return new CoreSearch(lcg, objective, terms, constant[0]);
+    // the terms of the sums replace the sums when they have fewer levels for the cores to relax:
+    // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
+    // terms, 151 cores on its 3 sums against 2,285 on the terms)
+    if (span(lcg, terms) > span(lcg, blocks)) {
+      return new CoreSearch(lcg, objective, blocks, blocksConstant);
     }
-    // the terms of the sums are kept only when they form at-most-one groups: the cores of the sums
-    // themselves are found faster otherwise (celar graph05: 9 cores against one)
-    CoreSearch flat = new CoreSearch(lcg, objective, terms, constant[0]);
-    flat.addTermSofts();
-    if (!flat.relaxAtMostOnes() || flat.amoGroups > 0) {
-      return flat;
+    CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    if (!terms.equals(blocks)) {
+      // grouped now, as before #313's rework: the probes then have the time of the whole run, not
+      // the share of the phase (spot5 28: 58 groups and a proof in 7 s, against 6 groups)
+      search.addTermSofts();
+      search.relaxAtMostOnes();
     }
-    return new CoreSearch(lcg, objective, sums, sumsConstant);
+    return search;
+  }
+
+  /** The number of levels of the terms' variables, summed. */
+  private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
+    long span = 0;
+    for (int t : terms.keySet()) {
+      IntVar x = lcg.variable(t);
+      span += (long) x.max() - x.min();
+    }
+    return span;
   }
 
   /**
@@ -317,40 +331,82 @@ public final class CoreSearch {
     return on.size();
   }
 
-  /** A linear equality on x with coefficient 1 or -1 that is not used yet, or null. */
-  private static LinearForm definition(IntVar x, Set<Constraint> used) {
+  /**
+   * A linear equality on x with coefficient 1 or -1 that is not used yet, or null. With a nonzero
+   * weight of x in the minimised sum, the equality whose terms bound weight * x highest at the
+   * root: presolve adds the objective as a sum of cost variables, shifted by the model's
+   * exactly-one sets, next to its definition when lcg-split has split the definition into blocks
+   * (jp-encoding data1000: a root bound of 30,874 on the cost variables, 0 on the 0-1 terms of the
+   * blocks).
+   */
+  private static LinearForm definition(IntVar x, long weight, Set<Constraint> used) {
     IntDomain dom = x.dom();
     if (dom.modelConstraints == null) {
       return null;
     }
     LinearForm found = null;
-    for (int e = 0; e < dom.modelConstraints.length && found == null; e++) {
+    Constraint foundConstraint = null;
+    long foundBound = Long.MIN_VALUE;
+    for (int e = 0; e < dom.modelConstraints.length; e++) {
       Constraint[] list = dom.modelConstraints[e];
       for (int k = 0; list != null && k < dom.modelConstraintsToEvaluate[e]; k++) {
         Constraint c = list[k];
-        if (used.contains(c)) {
+        if (used.contains(c) || c == foundConstraint) {
           continue;
         }
         LinearForm f = LinearForms.of(c);
         if (f == null || f.relation() != LinearForm.EQ) {
           continue;
         }
-        int occurrences = 0;
-        long a = 0;
-        for (int j = 0; j < f.vars().length; j++) {
-          if (f.vars()[j] == x) {
-            occurrences++;
-            a = f.weights()[j];
-          }
+        long a = coefficient(f, x);
+        if (Math.abs(a) != 1) {
+          continue;
         }
-        if (occurrences == 1 && Math.abs(a) == 1) {
+        if (weight == 0) {
           used.add(c);
+          return f;
+        }
+        long bound = rootBound(x, weight * a, f);
+        if (found == null || bound > foundBound) {
           found = f;
-          break;
+          foundConstraint = c;
+          foundBound = bound;
         }
       }
     }
+    if (foundConstraint != null) {
+      used.add(foundConstraint);
+    }
     return found;
+  }
+
+  /** The coefficient of x in f, or 0 when x occurs other than once. */
+  private static long coefficient(LinearForm f, IntVar x) {
+    int occurrences = 0;
+    long a = 0;
+    for (int j = 0; j < f.vars().length; j++) {
+      if (f.vars()[j] == x) {
+        occurrences++;
+        a = f.weights()[j];
+      }
+    }
+    return occurrences == 1 ? a : 0;
+  }
+
+  /**
+   * The root lower bound of {@code scale * a * x} through {@code a * x + sum of w_j * z_j = c},
+   * that is of {@code scale * (c - sum of w_j * z_j)}.
+   */
+  private static long rootBound(IntVar x, long scale, LinearForm f) {
+    long bound = scale * f.c();
+    for (int j = 0; j < f.vars().length; j++) {
+      IntVar z = f.vars()[j];
+      if (z != x) {
+        long w = -scale * f.weights()[j];
+        bound += w > 0 ? w * z.min() : w * z.max();
+      }
+    }
+    return bound;
   }
 
   /** The number of terms of the objective's sum. */
@@ -369,6 +425,7 @@ public final class CoreSearch {
    *     there is no solution, {@link CdclSolver#UNKNOWN} otherwise
    */
   int run(long phaseLimit, long callLimit) {
+    runBound = lowerBound;
     if (startTime != 0) {
       // the rate of the lower bound counts only the phase's own time, not branch and bound between
       startTime += System.nanoTime() - runEnd;
@@ -435,7 +492,11 @@ public final class CoreSearch {
           exhausted = true;
           return lcg.bestObjective() <= lowerBound ? CdclSolver.SAT : CdclSolver.UNKNOWN;
         }
-        threshold = below;
+        // the next stratum takes the weights down to half of this one: a stratum per distinct
+        // weight costs a solution each, about 100 ms on jp-encoding data1000, whose weights near
+        // 1,000 differ by 1 to 10
+        long half = maxWeightBelow(threshold / 2 + 1);
+        threshold = half > 0 ? half : below;
         continue;
       }
       int[] core = sat.failedAssumptions();
@@ -611,6 +672,12 @@ public final class CoreSearch {
       for (int j = 0; j < clique.size(); j++) {
         Soft s = byLiteral.get(lits.get(clique.get(j)));
         s.weight -= m;
+        if (!s.expanded) {
+          // as in a core: the term's next level costs its weight once this one is relaxed, or
+          // every soft literal could be false in a solution above the lower bound
+          s.expanded = true;
+          addTermSoft(s.term, s.level + 1, termWeight[s.term]);
+        }
         all[j + 1] = -s.lit;
         if (!sat.addClause(-z, s.lit)) {
           return false;
@@ -804,6 +871,20 @@ public final class CoreSearch {
     return rate * (deadline - now) >= best - lowerBound;
   }
 
+  /** Whether the lower bound rose in the last run. */
+  boolean rose() {
+    return lowerBound > runBound;
+  }
+
+  /**
+   * Whether the lower bound rose in the last run at least as much as it still has to rise to meet
+   * the best solution. False when there is no solution yet.
+   */
+  boolean halfWay() {
+    long best = lcg.bestObjective();
+    return best != Long.MAX_VALUE && lowerBound - runBound >= best - lowerBound;
+  }
+
   /**
    * Whether the lower bound, at three times its rate since the first call of the solver, would meet
    * the best solution before the deadline. False when there is no solution yet. Without a deadline
@@ -949,12 +1030,30 @@ public final class CoreSearch {
     return sat.addClause(lcg.geLiteral(objective, (int) lowerBound));
   }
 
+  /**
+   * Adds the soft literal of term t at the given level, or at the next level its variable can take
+   * at the root: the levels in a hole of the domain are the same literal, so one soft literal
+   * stands for all of them and weighs as much (jp-encoding: cost variables of two values, 0 and
+   * about 1,000, each needed a core per level).
+   */
   private void addTermSoft(int t, int level, long weight) {
     if (level > termSpan[t]) {
       return; // the variable cannot move further
     }
-    int lit = termLiteral(t, level);
-    addSoft(new Soft(lit, weight, t, level, null, 0));
+    int to = nextLevel(t, level);
+    int lit = termLiteral(t, to);
+    addSoft(new Soft(lit, weight * (to - level + 1), t, to, null, 0));
+  }
+
+  /** The smallest level from the given one that term t's variable can take at the root. */
+  private int nextLevel(int t, int level) {
+    IntDomain dom = lcg.rootDomain(termVar[t]);
+    int v = termUp[t] ? termBase[t] + level : termBase[t] - level;
+    if (dom.contains(v)) {
+      return level;
+    }
+    int next = termUp[t] ? dom.nextValue(v) : dom.previousValue(v);
+    return termUp[t] ? next - termBase[t] : termBase[t] - next;
   }
 
   /** The literal that term t's variable is at least the given level above its bound. */

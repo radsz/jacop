@@ -27,9 +27,7 @@ package org.jacop.constraints.diffn;
 
 import java.util.Arrays;
 import java.util.BitSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
@@ -43,6 +41,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.util.VarIntMap;
 
 /**
  * Nooverlap constraint assures that any two rectangles from a vector of rectangles does not overlap
@@ -54,8 +53,6 @@ import org.jacop.lcg.Explainable;
  */
 public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explainable, Stateful {
 
-  static final boolean TRACE_ON = false;
-  static final boolean TRACE_NARR_ON = false;
   static final int X = 0;
   static final int Y = 1;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -73,9 +70,6 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   /** Defines first position of the variable that is not ground to 1. */
   TimeStamp<BitSet>[] overlapping;
-
-  /** Current stamp. */
-  int stamp;
 
   boolean doAreaCheck = true;
 
@@ -113,8 +107,11 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
   /** For each kind of pass, the rectangles changed since the previous pass of that kind began. */
   private final BitSet[] changedBefore = new BitSet[4];
 
-  /** The rectangles of each variable. */
-  private Map<Var, int[]> rectanglesOf;
+  /** The position in {@link #rectanglesOf} of each variable. */
+  private VarIntMap rectanglesSlot;
+
+  /** The rectangles of each variable, by its slot. */
+  private int[][] rectanglesOf;
 
   /**
    * It specifies a diff constraint.
@@ -470,11 +467,11 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   @Override
   public void queueVariable(int level, Var v) {
-    int[] rs = rectanglesOf.get(v);
-    if (rs == null) {
+    int slot = rectanglesSlot.get(v);
+    if (slot == VarIntMap.ABSENT) {
       return;
     }
-    for (int j : rs) {
+    for (int j : rectanglesOf[slot]) {
       changed[PRUNING_PASS].set(j);
       changed[PROFILE_PASS].set(j);
       changed[AREA_PASS].set(j);
@@ -634,7 +631,8 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     super.impose(store);
 
     overlapping = new TimeStamp[rectangle.length];
-    rectanglesOf = new HashMap<>();
+    rectanglesSlot = new VarIntMap(4 * rectangle.length);
+    rectanglesOf = new int[4 * rectangle.length][];
     for (int pass = 0; pass < changed.length; pass++) {
       changed[pass] = new BitSet(rectangle.length);
       changed[pass].set(0, rectangle.length);
@@ -651,10 +649,15 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
               rectangle[i].origin[1],
               rectangle[i].length[0],
               rectangle[i].length[1])) {
-        int[] rs = rectanglesOf.get(v);
+        int slot = rectanglesSlot.get(v);
+        if (slot == VarIntMap.ABSENT) {
+          slot = rectanglesSlot.size();
+          rectanglesSlot.put(v, slot);
+        }
+        int[] rs = rectanglesOf[slot];
         rs = rs == null ? new int[1] : Arrays.copyOf(rs, rs.length + 1);
         rs[rs.length - 1] = i;
-        rectanglesOf.put(v, rs);
+        rectanglesOf[slot] = rs;
       }
 
       // impose constraint on rectangle length >= 0
@@ -736,12 +739,24 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return explainable() && DiffnExplanation.explain(trail, entry, rectangle, out);
+    if (!explainable()) {
+      return false;
+    }
+    if (!DiffnExplanation.explain(trail, entry, rectangle, out)) {
+      DiffnExplanation.bounds(trail, entry, rectangle, out);
+    }
+    return true;
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return explainable() && DiffnExplanation.explainFailure(trail, rectangle, out);
+    if (!explainable()) {
+      return false;
+    }
+    if (!DiffnExplanation.explainFailure(trail, rectangle, out)) {
+      DiffnExplanation.bounds(trail, trail.size(), rectangle, out);
+    }
+    return true;
   }
 
   // a subclass may prune by other rules, so only the classes explained here give reasons

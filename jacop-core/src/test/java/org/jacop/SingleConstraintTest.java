@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
@@ -159,6 +160,7 @@ import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.binpacking.VectorBinpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -196,10 +198,13 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.IndomainRandom;
+import org.jacop.search.InputOrderSelect;
+import org.jacop.search.RandomSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SplitSelect;
 import org.jacop.util.DominatorTree;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
@@ -450,6 +455,31 @@ class SingleConstraintTest extends TestHelper {
             Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
     assertThat(noOfSolutions).isEqualTo(27);
+  }
+
+  // Sizes (w, 80 - w) in bins of capacity (100, 100): every item takes 80 of the 200 of the summed
+  // dimension, so no bin holds three items and seven items need four bins. Each dimension alone
+  // fits them in three bins; only the surrogate dimension of VectorBinpacking sees it at the root.
+  @Test
+  void testVectorBinpackingSurrogateDimension() {
+    int[] first = {10, 20, 30, 40, 50, 60, 70};
+    int[][] w = {first, Arrays.stream(first).map(v -> 80 - v).toArray()};
+    int[][] capacity = {{100, 100, 100}, {100, 100, 100}};
+
+    Store perDimension = new Store();
+    IntVar[] bins = getIntVars(perDimension, "x", 7, 3);
+    IntVar[][] load = {
+      getIntVars(perDimension, "a", 3, 101), getIntVars(perDimension, "b", 3, 101)
+    };
+    for (int d = 0; d < 2; d++) {
+      perDimension.impose(new Binpacking(bins, load[d], w[d]));
+    }
+    assertThat(perDimension.consistency()).isTrue();
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 7, 3);
+    new VectorBinpacking(store, x, capacity, w, 0).imposeDecomposition(store);
+    assertThat(store.consistency()).isFalse();
   }
 
   // Items of weight zero were dropped from the constraint, so their bin variables could take
@@ -5349,6 +5379,88 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void searchOverNoVariablesFindsTheEmptySolution() {
+    // A search over no variables (all of them removed by presolve, for example) reported no
+    // solution with InputOrderSelect and threw with SimpleSelect, SplitSelect and RandomSelect.
+    for (int kind = 0; kind < 4; kind++) {
+      for (boolean feasible : new boolean[] {true, false}) {
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 1, 2);
+        store.impose(new XneqC(x, 1));
+        if (!feasible) {
+          store.impose(new XneqC(x, 2));
+        }
+        IntVar[] none = new IntVar[0];
+        SelectChoicePoint<IntVar> select =
+            switch (kind) {
+              case 0 -> new SimpleSelect<>(none, null, new IndomainMin<>());
+              case 1 -> new InputOrderSelect<>(store, none, new IndomainMin<>());
+              case 2 -> new RandomSelect<>(none, new IndomainMin<>());
+              default -> new SplitSelect<>(none, null, new IndomainMin<>());
+            };
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+
+        assertThat(search.labeling(store, select)).as("select %d", kind).isEqualTo(feasible);
+        assertThat(search.getSolutionListener().solutionsNo())
+            .as("select %d", kind)
+            .isEqualTo(feasible ? 1 : 0);
+      }
+    }
+  }
+
+  @Test
+  void geostCopyMadeDuringSearchKeepsTheInitialDomains() {
+    // Lazy clause generation replays the explanations of Geost on a copy over the initial domains,
+    // made the first time an explanation is needed. The copy turned the variables fixed at that
+    // time
+    // into constants, so it failed where Geost does not and gave wrong reasons (a wrong optimum on
+    // hakank_geost_test).
+    Store store = new Store();
+    List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {2}));
+    IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 0, 3)};
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i]},
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes);
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0].domain.in(store.level, x[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+
+    Store target = new Store();
+    IntVar[] y = {new IntVar(target, "y0", 0, 3), new IntVar(target, "y1", 0, 3)};
+    Map<Var, Var> copies = Map.of(x[0], y[0], x[1], y[1]);
+    target.impose(
+        geost.copy(
+            new VarMap() {
+              @Override
+              public Store target() {
+                return target;
+              }
+
+              @Override
+              @SuppressWarnings("unchecked")
+              public <V extends Var> V get(V v) {
+                return (V) copies.get(v);
+              }
+            }));
+
+    // the pairs at distance 2 or more
+    assertThat(noOfAllSolutions(target, y)).isEqualTo(6);
+  }
+
+  @Test
   void geostNonOverlappingWithoutTimeKeepsObjectsApart() {
     // Two unit squares, object 0 at (0, 0), object 1 at (x1, 0) with x1 in 0..1. NonOverlapping
     // over the spatial dimensions only (no time dimension, 2) must forbid x1 = 0, and so must
@@ -8470,5 +8582,72 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     assertThat(noOfAllSolutions(store, x)).isEqualTo(expected);
+  }
+
+  // Under --lcg a long linear constraint is split into block sums, and a failure of the sum of the
+  // blocks weighed only the block sums, which dom/wdeg does not branch on: cutstock type04_TEST9
+  // found no solution in 60 s. The sum of the blocks now weighs the terms it stands for.
+  @Test
+  void testLinearIntFailureWeighsTheVariablesItIsGiven() {
+
+    Store store = new Store();
+    store.variableWeightManagement = true;
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar s = new IntVar(store, "s", 0, 2);
+    IntVar t = new IntVar(store, "t", 0, 2);
+    LinearInt sum = new LinearInt(new IntVar[] {s, t}, new int[] {1, 1}, ">=", 5);
+    sum.setWeightedVariables(new IntVar[] {x, y});
+    store.impose(sum);
+
+    assertThat(store.consistency()).isFalse();
+    assertThat(new int[] {x.weight, y.weight, s.weight, t.weight}).containsExactly(2, 2, 1, 1);
+  }
+
+  @Test
+  public void scopeAndBoolVectorKeepInputOrder() {
+    // both were HashSets, so their order followed identity hash codes: constraints attached to
+    // variables in another order, and -f searched another tree, under other JVM flags
+    Store store = new Store();
+    IntVar[] x = new IntVar[40];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar[] list = new IntVar[x.length + 1];
+    for (int i = 0; i < x.length; i++) {
+      list[i] = x[x.length - 1 - i];
+    }
+    list[x.length] = x[7];
+
+    OrBoolVector c = new OrBoolVector(list, y);
+
+    List<Var> expected = new ArrayList<>(Arrays.asList(list).subList(0, x.length));
+    expected.add(y);
+    assertThat(c.arguments()).containsExactlyElementsOf(expected);
+    String s = c.toString();
+    for (int i = 1; i < x.length; i++) {
+      assertThat(s.indexOf(list[i - 1].id() + ":")).isLessThan(s.indexOf(list[i].id() + ":"));
+    }
+  }
+
+  @Test
+  public void constraintCountsItsConsistencyCalls() {
+    // the replays of LCG explanations are budgeted by these counts, not by time, so that a run
+    // repeats its search
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    XltY c = new XltY(x, y);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    long calls = c.consistencyCalls();
+    assertThat(calls).isPositive();
+
+    store.setLevel(1);
+    store.impose(new XeqC(y, 5));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.consistencyCalls()).isGreaterThan(calls);
+    assertThat(store.numberConsistencyCalls).isGreaterThanOrEqualTo(c.consistencyCalls());
   }
 }

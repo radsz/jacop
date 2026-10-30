@@ -68,6 +68,7 @@ import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.RestartNoGoods;
 import org.jacop.search.free.SearchMonitor;
+import org.jacop.search.free.SharedSolution;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -167,6 +168,28 @@ class FreeSearchTest {
         sum += w[i] * x[i] + w[N + i] * b[i];
       }
       return sum;
+    }
+
+    /** Returns the values of x in a solution of the smallest cost, or null when there is none. */
+    int[] optimalX() {
+      int[] best = null;
+      int min = Integer.MAX_VALUE;
+      int[] x = new int[N];
+      int[] b = new int[N];
+      int total = (int) Math.pow(MAX_VALUE + 1, N);
+      for (int k = 0; k < total; k++) {
+        int code = k;
+        for (int i = 0; i < N; i++) {
+          x[i] = code % (MAX_VALUE + 1);
+          code /= MAX_VALUE + 1;
+          b[i] = x[i] == eq[i] ? 1 : 0;
+        }
+        if (satisfied(x, b) && cost(x, b) < min) {
+          min = cost(x, b);
+          best = x.clone();
+        }
+      }
+      return best;
     }
 
     /** Enumerates x; b is determined by x. Returns {count, min cost, max cost}. */
@@ -1340,6 +1363,132 @@ class FreeSearchTest {
       } else {
         assertEquals(Status.OPTIMAL, status);
         assertEquals(best, search.getCostValue());
+      }
+    }
+  }
+
+  /** A solution found elsewhere: the values of x, claimed to cost the given objective value. */
+  private static SharedSolution shared(Model model, int[] values, int objective) {
+    return new SharedSolution() {
+      @Override
+      public int objective() {
+        return objective;
+      }
+
+      @Override
+      public void impose(Store store) {
+        for (int i = 0; i < N; i++) {
+          if (model.x[i].domain.contains(values[i])) {
+            model.x[i].domain.inValue(store.level, model.x[i], values[i]);
+          }
+        }
+      }
+    };
+  }
+
+  private static FreeSearch.Builder sharingSearch(Model model, boolean nogoods, int seed) {
+    IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMax<>());
+    DomWdeg domWdeg = new DomWdeg(concat(model), phase);
+    AdaptiveLns lns = new AdaptiveLns(model.store, concat(model), model.cost, new Random(seed));
+    return FreeSearch.builder(model.store, domWdeg)
+        .monitor(phase)
+        .monitor(domWdeg)
+        .restarts(new GeometricCalculator(1.05, 1))
+        .restartOnSolution(true)
+        .nogoodsFromRestarts(nogoods)
+        .lns(lns, 1.0, 3)
+        .minimize(model.cost);
+  }
+
+  @Test
+  void aSharedSolutionIsReplayedAndBecomesTheBest() {
+    // as in a portfolio: another search found an optimal solution and shares its cost as the bound;
+    // the first run replays it, and the search then proves it optimal
+    Random rnd = new Random(17);
+    long imports = 0;
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] optimal = instance.optimalX();
+      if (optimal == null) {
+        continue;
+      }
+      int optimum = instance.bruteForce()[1];
+      for (boolean nogoods : new boolean[] {false, true}) {
+        Model model = new Model(instance);
+        List<Integer> costs = new ArrayList<>();
+        FreeSearch search =
+            sharingSearch(model, nogoods, k)
+                .sharedBound(() -> optimum)
+                .sharedSolution(shared(model, optimal, optimum))
+                .onSolution(
+                    s -> {
+                      model.checkSolution();
+                      costs.add(model.cost.value());
+                    })
+                .build();
+        assertEquals(Status.OPTIMAL, search.solve(), instance.toString());
+        assertEquals(optimum, search.getCostValue(), instance.toString());
+        assertEquals(List.of(optimum), costs, instance.toString());
+        assertEquals(1, search.getImportRuns());
+        imports += search.getImportRuns();
+        assertStoreIsBack(model, instance.toString());
+      }
+    }
+    assertTrue(imports > 0);
+  }
+
+  @Test
+  void aSharedAssignmentThatIsNoSolutionDoesNotLoseTheOptimum() {
+    // the replay fixes values that need not be a solution here; it must not count as a proof
+    Random rnd = new Random(19);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      int[] values = new int[N];
+      for (int i = 0; i < N; i++) {
+        values[i] = rnd.nextInt(MAX_VALUE + 1);
+      }
+      Model model = new Model(instance);
+      FreeSearch search =
+          sharingSearch(model, true, k)
+              .sharedSolution(shared(model, values, reference[0] == 0 ? 0 : reference[1]))
+              .onSolution(s -> model.checkSolution())
+              .build();
+      Status status = search.solve();
+      if (reference[0] == 0) {
+        assertEquals(Status.UNSATISFIABLE, status, instance.toString());
+        continue;
+      }
+      assertEquals(Status.OPTIMAL, status, instance.toString());
+      assertEquals(reference[1], search.getCostValue(), instance.toString());
+    }
+  }
+
+  @Test
+  void depthFirstSearchTakesTheSharedBound() {
+    Random rnd = new Random(23);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      if (reference[0] == 0) {
+        continue;
+      }
+      for (int offset : new int[] {0, 1}) {
+        Model model = new Model(instance);
+        DepthFirstSearch<IntVar> dfs = new DepthFirstSearch<>();
+        dfs.setPrintInfo(false);
+        int shared = reference[1] + offset;
+        dfs.setSharedBound(() -> shared);
+        boolean found =
+            dfs.labeling(
+                model.store,
+                new SimpleSelect<>(concat(model), null, new IndomainMax<>()),
+                model.cost);
+        // only a solution better than the shared one is looked for
+        assertEquals(offset == 1, found, instance.toString());
+        if (found) {
+          assertEquals(reference[1], dfs.getCostValue(), instance.toString());
+        }
       }
     }
   }

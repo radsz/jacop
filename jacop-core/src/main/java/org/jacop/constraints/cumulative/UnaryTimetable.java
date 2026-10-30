@@ -313,13 +313,8 @@ final class UnaryTimetable {
       }
       int excluded = from <= est ? est : from - d + 1;
       if (to <= lct) {
-        if (use == null) {
-          s.domain.inComplement(store.level, s, excluded, to - 1);
-        } else {
-          // as the sweep of CumulativeBasic, which leaves out the holes under lazy clause
-          // generation
-          TimetableSweep.removeStarts(store, s, excluded, to - 1);
-        }
+        // as the sweep of CumulativeBasic, which leaves out the holes under lazy clause generation
+        TimetableSweep.removeStarts(store, s, excluded, to - 1);
       } else {
         s.domain.inMax(store.level, s, excluded - 1);
       }

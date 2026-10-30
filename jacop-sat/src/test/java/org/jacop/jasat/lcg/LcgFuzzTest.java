@@ -66,6 +66,7 @@ import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Distance;
@@ -87,6 +88,7 @@ import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -103,6 +105,7 @@ import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.Span;
@@ -148,6 +151,9 @@ import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.NetworkFlow;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
@@ -429,7 +435,7 @@ class LcgFuzzTest {
     // the globals added in 5.0 that have no explanation of their own, explained by replay
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(16)) {
+      return switch (rnd.nextInt(18)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -467,8 +473,34 @@ class LcgFuzzTest {
                 chain("dq", 3, 0, 2),
                 intVar("dc", 0, 2 + rnd.nextInt(5)),
                 intVar("dp", rnd.nextInt(5), 12));
+        case 15 -> new LexOrder(pick(x, 3), pick(x, 3), rnd.nextBoolean());
+        case 16 -> network();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // a flow of 0 to 2 units from node 0 to node 3 over five arcs, some on the variables
+    private NetworkFlow network() {
+      NetworkBuilder net = new NetworkBuilder();
+      int supply = rnd.nextInt(3);
+      Node[] node = {
+        net.addNode("s", supply),
+        net.addNode("a", 0),
+        net.addNode("b", 0),
+        net.addNode("t", -supply)
+      };
+      int[][] arcs = {{0, 1}, {0, 2}, {1, 3}, {2, 3}, {1, 2}};
+      IntVar[] flow = pick(x, arcs.length);
+      for (int k = 0; k < arcs.length; k++) {
+        int weight = rnd.nextInt(4);
+        if (rnd.nextInt(4) == 0 || k >= flow.length) {
+          net.addArc(node[arcs[k][0]], node[arcs[k][1]], weight, 0, 1 + rnd.nextInt(2));
+        } else {
+          net.addArc(node[arcs[k][0]], node[arcs[k][1]], weight, flow[k]);
+        }
+      }
+      net.setCostVariable(intVar("nf", 0, 4 + rnd.nextInt(10)));
+      return new NetworkFlow(net);
     }
 
     private int[][] costs(int n) {
@@ -508,7 +540,10 @@ class LcgFuzzTest {
                 p, new int[] {1 + rnd.nextInt(2), -1, 2}, rnd.nextBoolean() ? "<=" : "!=", c + 2);
         case 11 -> new XplusYeqC(p[0], p[1], c + 2);
         case 12 -> new Member(pick(x, 3), p[0]);
-        case 13 -> new XeqC(bool(), rnd.nextInt(2));
+        case 13 ->
+            rnd.nextBoolean()
+                ? new XeqC(bool(), rnd.nextInt(2))
+                : new CountVar(pick(x, 3), p[0], p[1]);
         case 14 -> new Not(primitive(depth - 1));
         case 15 -> new Or(primitive(depth - 1), primitive(depth - 1));
         case 16 -> new And(primitive(depth - 1), primitive(depth - 1));
@@ -593,7 +628,15 @@ class LcgFuzzTest {
         case 26 -> new Values(q, one());
         case 27 -> new Increasing(q, rnd.nextBoolean());
         case 28 -> new AllEqual(pick(x, 2));
-        case 29 -> new ValuePrecede(0, 1, q);
+        case 29 ->
+            switch (rnd.nextInt(3)) {
+              case 0 -> new ValuePrecede(0, 1, q);
+              case 1 -> new SeqPrecedeChain(q);
+              default -> {
+                int a = value();
+                yield new SeqPrecedeChain(q, new int[] {a, a + 1 + rnd.nextInt(2), a - 1});
+              }
+            };
         case 30 -> new Member(q, one());
         case 31 -> new In(one(), new IntervalDomain(-1, 1));
         case 32 -> new SumWeight(q, new int[] {1, 2, -1, 1}, one());

@@ -64,8 +64,6 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
   /** It specifies the number of variables on the list. */
   final int l;
 
-  Store store;
-  boolean reified = true;
   /*
    * Defines first position of the variable that might equal e
    */
@@ -290,8 +288,6 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
     if (x == null) {
       return;
     }
-
-    reified = false;
 
     super.impose(store);
   }

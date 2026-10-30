@@ -45,15 +45,9 @@ import org.jacop.core.Var;
  */
 public class Lds<T extends Var> implements ExitChildListener<T> {
 
-  boolean timeOut;
-
   int noDiscrepancies;
 
   int maxNoDiscrepancies;
-
-  boolean recentExitingLeftChildGoingForDiscrepancy;
-
-  boolean recentExitingRightChild;
 
   ExitChildListener<T>[] exitChildListeners;
 

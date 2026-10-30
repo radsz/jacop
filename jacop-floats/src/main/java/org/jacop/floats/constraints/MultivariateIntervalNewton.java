@@ -307,17 +307,6 @@ public class MultivariateIntervalNewton {
     return list;
   }
 
-  boolean contains(FloatVar[] fs, FloatVar r) {
-
-    for (FloatVar f : fs) {
-      if (f.equals(r)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
   /**
    * Returns a string representation of the Newton solver including functions and derivatives.
    *

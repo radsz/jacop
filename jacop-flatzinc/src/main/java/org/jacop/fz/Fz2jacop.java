@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 
 /**
@@ -81,8 +82,17 @@ public class Fz2jacop {
     FloatDomain.setPrecision(FloatDomain.DEFAULT_PRECISION);
     FloatDomain.setFormat(FloatDomain.DEFAULT_FORMAT);
     FloatDomain.setStep(0.0d);
+    // without -r the seed is 0, so that the random choices (neighbourhoods of free search,
+    // indomain_random, on_restart) repeat from run to run
+    Store.setSeed(0);
 
     Options opt = new Options(args);
+
+    // several objectives: each subproblem is solved by this method in turn
+    Goals goals = Goals.of(opt, args);
+    if (goals != null) {
+      return goals.solve();
+    }
 
     if (opt.threads() > 1) {
       String unsupported = Portfolio.unsupported(opt);

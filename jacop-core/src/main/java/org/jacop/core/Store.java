@@ -39,13 +39,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
-import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -172,29 +170,12 @@ public class Store {
    */
   protected final List<Stateful> timeStamps = new ArrayList<>(100);
 
-  /** It switches on/off debuging of remove level facilities. */
-  final boolean removeDebug = false;
-
-  /**
-   * It stores all the active replacements of constraints that are being applied upon constraint
-   * imposition. It makes it possible to replace constraints into other constraints. It can be very
-   * useful for efficiency or testing purposes.
-   */
-  private final Map<Class<? extends Constraint>, Set<Replaceable<? extends Constraint>>>
-      replacements = new HashMap<>();
-
   /**
    * It stores boolean variables as soon as they change (become grounded or number of constraints
    * being attached is changed). Later each level remembers the part of the array which contains
    * variables changed at this level (efficient backtracking).
    */
   public BooleanVar[] changeHistory4BooleanVariables;
-
-  /**
-   * It contains all auxilary variables created by decomposable constraints. They have to be
-   * grounded by search for a solution to be valid.
-   */
-  public List<Var> auxilaryVariables = new ArrayList<>();
 
   /** It stores constraint which is currently re-evaluated. */
   public Constraint currentConstraint;
@@ -307,12 +288,12 @@ public class Store {
   public boolean isLastConsistencyFailure;
 
   /**
-   * This keeps information about watched constraints by given variable. Watched constraints are
-   * active all the time. Use this with care and do not be surprised if some constraints stay longer
-   * than you expect. It can be directly manipulated in any way (including setting to null if no
-   * watched constraints are being in the queue system).
+   * The variables that have been watched by a constraint as a watched literal, in the order of
+   * their first watch; the watching constraints are kept in each variable.
    */
-  public Map<Var, Set<Constraint>> watchedConstraints;
+  private Var[] watchedVars = new Var[0];
+
+  private int watchedVarCount;
 
   /** It stores integer variables created within a store. */
   public Var[] vars;
@@ -432,7 +413,7 @@ public class Store {
    */
   public void deregisterWatchedLiteralConstraint(Var v, Constraint c) {
 
-    watchedConstraints.get(v).remove(c);
+    v.watchedConstraints.remove(c);
   }
 
   /**
@@ -443,9 +424,8 @@ public class Store {
   public void deregisterWatchedLiteralConstraint(Constraint c) {
 
     for (Var v : c.arguments()) {
-      Set<Constraint> forVariable = watchedConstraints.get(v);
-      if (forVariable != null) {
-        forVariable.remove(c);
+      if (v.watchedConstraints != null) {
+        v.watchedConstraints.remove(c);
       }
     }
   }
@@ -457,14 +437,10 @@ public class Store {
    */
   public int countWatches() {
 
-    if (watchedConstraints == null) {
-      return 0;
-    }
-
     int count = 0;
 
-    for (Set<Constraint> c : watchedConstraints.values()) {
-      count += c.size();
+    for (int i = 0; i < watchedVarCount; i++) {
+      count += watchedVars[i].watchedConstraints.size;
     }
 
     return count;
@@ -479,15 +455,43 @@ public class Store {
    */
   public void registerWatchedLiteralConstraint(Var v, Constraint c) {
 
-    Set<Constraint> forVariable = watchedConstraints.get(v);
-
-    if (forVariable != null) {
-      forVariable.add(c);
-    } else {
-      forVariable = new LinkedHashSet<>();
-      forVariable.add(c);
-      watchedConstraints.put(v, forVariable);
+    if (v.watchedConstraints == null) {
+      v.watchedConstraints = new WatchedConstraints();
+      if (watchedVarCount == watchedVars.length) {
+        watchedVars = Arrays.copyOf(watchedVars, 2 * watchedVarCount + 8);
+      }
+      watchedVars[watchedVarCount++] = v;
     }
+    v.watchedConstraints.add(c);
+  }
+
+  /**
+   * Returns the constraints that watch a variable as a watched literal ({@link
+   * #registerWatchedLiteralConstraint(Var, Constraint)}), in the order they started to watch it.
+   *
+   * @param v the variable.
+   * @return the watching constraints.
+   */
+  public List<Constraint> watchedLiteralConstraints(Var v) {
+    WatchedConstraints watches = v.watchedConstraints;
+    if (watches == null) {
+      return List.of();
+    }
+    return new ArrayList<>(Arrays.asList(watches.constraints).subList(0, watches.size));
+  }
+
+  /**
+   * Returns the constraints that watch any variable as a watched literal, by variable in the order
+   * the variables were first watched; a constraint watching two variables is there twice.
+   *
+   * @return the watching constraints.
+   */
+  public List<Constraint> watchedLiteralConstraints() {
+    List<Constraint> result = new ArrayList<>();
+    for (int i = 0; i < watchedVarCount; i++) {
+      result.addAll(watchedLiteralConstraints(watchedVars[i]));
+    }
+    return result;
   }
 
   /**
@@ -496,7 +500,11 @@ public class Store {
    */
   public void clearWatchedConstraint() {
 
-    watchedConstraints.clear();
+    for (int i = 0; i < watchedVarCount; i++) {
+      watchedVars[i].watchedConstraints = null;
+      watchedVars[i] = null;
+    }
+    watchedVarCount = 0;
   }
 
   /**
@@ -563,12 +571,41 @@ public class Store {
     queueModelConstraintsForVariable(vdomain, v, pruningEvent);
     queueSearchConstraintsForVariable(vdomain, v);
 
-    if (watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
+    if (v.watchedConstraints != null && pruningEvent == IntDomain.GROUND) {
       queueWatchedConstraintsForVariable(v);
     }
 
     if (v.valueWatches != null && pruningEvent == IntDomain.GROUND) {
       queueValueWatches(v);
+    }
+
+    if (v.views != null) {
+      queueViews(v, pruningEvent);
+    }
+  }
+
+  /**
+   * Wakes the constraints of the affine views of a changed variable, as if each view had changed
+   * itself; a decreasing view changes its maximum when its base changes its minimum. Like the
+   * constraints of the variable itself, the constraint whose pruning made the change is told about
+   * it but not queued again, so a propagator should not have two variables of one family (a base
+   * and its view, or two views of one base): its pruning of one would change the other.
+   */
+  private void queueViews(Var base, int pruningEvent) {
+    for (AffineView view : base.views) {
+      AffineDomain d = (AffineDomain) view.domain;
+      int event = d.swap(pruningEvent);
+      if (variableActivityManagement) {
+        variablesPrunned.add(view);
+      }
+      queueModelConstraintsForVariable(d, view, event);
+      queueSearchConstraintsForVariable(d, view);
+      if (view.watchedConstraints != null && event == IntDomain.GROUND) {
+        queueWatchedConstraintsForVariable(view);
+      }
+      if (view.valueWatches != null && event == IntDomain.GROUND) {
+        queueValueWatches(view);
+      }
     }
   }
 
@@ -711,11 +748,10 @@ public class Store {
   }
 
   private void queueWatchedConstraintsForVariable(Var v) {
-    Set<Constraint> list = watchedConstraints.get(v);
-    if (list == null) {
-      return;
-    }
-    for (Constraint con : list) {
+    WatchedConstraints watches = v.watchedConstraints;
+    Constraint[] list = watches.constraints;
+    for (int i = 0, n = watches.size; i < n; i++) {
+      Constraint con = list[i];
       if (con.isEntailed()) {
         continue;
       }
@@ -898,6 +934,7 @@ public class Store {
             startFirstRun(currentConstraint);
           }
           numberConsistencyCalls++;
+          currentConstraint.countConsistencyCall();
           long changesBefore = domainChanges;
           currentConstraint.consistency(this);
           if (variableActivityManagement) {
@@ -927,17 +964,6 @@ public class Store {
    */
   public void countConstraint() {
     numberOfConstraints++;
-  }
-
-  /**
-   * This function is called when a counter of constraints should be increased by given value. If
-   * for some reason some constraints should be counted as multiple ones than this function could be
-   * called.
-   *
-   * @param n integer by which the counter of constraints should be increased.
-   */
-  public void countConstraint(int n) {
-    numberOfConstraints += n;
   }
 
   /**
@@ -1042,21 +1068,10 @@ public class Store {
    *
    * @param c constraint to be imposed.
    */
-  @SuppressWarnings("unchecked")
   public void impose(Constraint c) {
 
     checkImposeAllowed();
     record(c);
-    Optional.ofNullable(replacements.get(c.getClass()))
-        .ifPresent(
-            l ->
-                l.forEach(
-                    r -> {
-                      Replaceable<Constraint> replacement = (Replaceable<Constraint>) r;
-                      if (replacement.isReplaceable(c)) {
-                        replacement.replace(c).imposeDecomposition(this);
-                      }
-                    }));
     c.impose(this);
   }
 
@@ -1396,38 +1411,6 @@ public class Store {
   }
 
   /**
-   * It makes it possible to register replacement for a particular constraint type.
-   *
-   * @param replacement that is being registered.
-   * @return true if replacement has been added and was not already registered, false otherwise.
-   */
-  public boolean registerReplacement(Replaceable<? extends Constraint> replacement) {
-
-    if (!replacements.containsKey(replacement.forClass())) {
-      replacements.put(replacement.forClass(), new LinkedHashSet<>());
-    }
-
-    Set<Replaceable<? extends Constraint>> current = replacements.get(replacement.forClass());
-
-    return current.add(replacement);
-  }
-
-  /**
-   * It makes it possible to deregister the replacement. The constraint that have been already
-   * replaced remained replaced.
-   *
-   * @param replacement that is being deregister from within the constraint store.
-   * @return true if replacement was present and was deregistered, false otherwise.
-   */
-  public boolean deregisterReplacement(Replaceable<? extends Constraint> replacement) {
-
-    Optional<Set<Replaceable<? extends Constraint>>> forClass =
-        Optional.ofNullable(replacements.get(replacement.forClass()));
-
-    return forClass.map(replaceables -> replaceables.remove(replacement)).orElse(false);
-  }
-
-  /**
    * Any constraint in general may need information what variables have changed since the last time
    * a consistency was called. This function is called just *before* removeLevel method is executed
    * for variables, mutable variables, and timestamps.
@@ -1690,23 +1673,6 @@ public class Store {
       return;
     }
 
-    if (removeDebug && level > levelSetTo && level > 0) {
-
-      for (int i = 0; i < size; i++) {
-
-        if (ASSERTS_ENABLED
-            && vars[i].level() >= level
-            && !trailManager.isRecognizedAsChanged(vars[i].storeIndex)) {
-          throw new IllegalStateException(
-              String.valueOf("Variable position " + i + " not properly recorded to have changed "));
-        }
-      }
-    }
-
-    if (removeDebug) {
-      log.debug("Store level changes from {} to {}", level, levelSetTo);
-    }
-
     level = levelSetTo;
   }
 
@@ -1717,17 +1683,6 @@ public class Store {
    */
   public int size() {
     return size;
-  }
-
-  /**
-   * It throws an exception after printing trace information if tracing is switched on.
-   *
-   * @param x variable causing the failure exception.
-   * @throws FailException is always thrown.
-   */
-  public void throwFailException(Var x) {
-
-    throw failException;
   }
 
   /**

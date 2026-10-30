@@ -33,7 +33,6 @@ package org.jacop.core;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Arrays;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Defines small dense domain based on bits within a long number.
@@ -41,7 +40,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class SmallDenseDomain extends IntDomain {
 
   /**
@@ -1191,8 +1189,16 @@ public class SmallDenseDomain extends IntDomain {
       return;
     }
 
-    if (ASSERTS_ENABLED && domain.max() - domain.min() + 1 != domain.getSize()) {
-      throw new IllegalStateException(String.valueOf("Loosing propagation" + domain));
+    if (domain.isEmpty()) {
+      throw Store.failException;
+    }
+
+    if (domain.max() - domain.min() + 1 != domain.getSize()) {
+      // a domain of another class with holes, for example the domain of an affine view
+      IntervalDomain intervals = new IntervalDomain(domain.noIntervals());
+      intervals.addDom(domain);
+      applyInShiftForIntervalDomain(storeLevel, v, intervals, shift);
+      return;
     }
 
     in(storeLevel, v, domain.min() + shift, domain.max() + shift);
@@ -2140,12 +2146,6 @@ public class SmallDenseDomain extends IntDomain {
   public boolean isEmpty() {
 
     return bits == 0;
-  }
-
-  @Override
-  public boolean isNumeric() {
-
-    return true;
   }
 
   @Override

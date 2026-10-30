@@ -164,9 +164,7 @@ public abstract class SatCpBridge implements WrapperComponent {
    * the wrapper field is set.
    */
   protected void registerWithWrapper() {
-    if (wrapper != null) {
-      wrapper.setSatBridge(variable, this);
-    }
+    wrapper.setSatBridge(variable, this);
   }
 
   @Override

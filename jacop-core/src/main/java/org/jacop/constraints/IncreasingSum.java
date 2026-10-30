@@ -39,6 +39,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * IncreasingSum constraint: x[0] &le; x[1] &le; ... &le; x[n-1] and x[0] + ... + x[n-1] = s (Petit,
@@ -58,7 +61,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class IncreasingSum extends Constraint implements SatisfiedPresent, Copyable<IncreasingSum> {
+public class IncreasingSum extends Constraint
+    implements SatisfiedPresent, Copyable<IncreasingSum>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -256,6 +260,151 @@ public class IncreasingSum extends Constraint implements SatisfiedPresent, Copya
     result.append(", ").append(strict ? "strict" : "non-strict").append(")");
 
     return result.toString();
+  }
+
+  /*
+   * Explanations for lazy clause generation, on y[j] = x[j] - j * step, which is non-decreasing. A
+   * bound of x[i] follows from the order and the bound of a neighbour, or from the sum: y[i] >= Y + 1
+   * raises every later y to Y + 1, so the earlier minima and the later ones above Y + 1 with the
+   * upper bound of the sum rule it out (and the mirror image for lower bounds). A sum bound
+   * follows from all minima or all maxima. Every bound is weakened as far as the slack allows.
+   */
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar v = trail.variable(entry);
+    boolean ge = trail.kind(entry) == AtomicTrail.GE;
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      return false;
+    }
+    // the bound the propagation needed: below the atom's value down to the holes it skipped
+    long value = trail.skippedBound(entry);
+    trail.addSkippedHoles(entry, (int) value, out);
+    if (v == sum) {
+      // sum >= value from the minima, sum <= value from the maxima
+      long total = 0;
+      for (int j = 0; j < n; j++) {
+        total += ge ? trail.minBefore(x[j], entry) : trail.maxBefore(x[j], entry);
+      }
+      long room = ge ? total - value : value - total;
+      if (room < 0) {
+        return false;
+      }
+      for (int j = 0; j < n; j++) {
+        room -= trail.addBoundWithin(x[j], entry, ge, room, out);
+      }
+      return true;
+    }
+    int i = indexOf(v);
+    if (i < 0) {
+      return false;
+    }
+    // the order: x[i] >= x[i-1] + step, x[i] <= x[i+1] - step
+    if (ge && i > 0 && trail.minBefore(x[i - 1], entry) >= value - step) {
+      trail.addBoundReaching(x[i - 1], entry, true, value - step, out);
+      return true;
+    }
+    if (!ge && i < n - 1 && trail.maxBefore(x[i + 1], entry) <= value + step) {
+      trail.addBoundReaching(x[i + 1], entry, false, value + step, out);
+      return true;
+    }
+    return ge
+        ? fromSum(trail, entry, i, value, true, out)
+        : fromSum(trail, entry, i, value, false, out);
+  }
+
+  // x[i] <= value (lower = false): y[i] >= Y + 1 for Y = value - i * step would make the sum exceed
+  // its maximum; x[i] >= value (lower = true) is the mirror image with the minimum of the sum
+  private boolean fromSum(
+      AtomicTrail trail, int entry, int i, long value, boolean lower, EntryList out) {
+    long offset = (long) step * n * (n - 1) / 2;
+    // in the mirror image the roles of minima and maxima, and of earlier and later, swap
+    long cut = lower ? -(value - (long) i * step) + 1 : value - (long) i * step + 1;
+    long[] bound = new long[n];
+    long total = 0;
+    for (int j = 0; j < n; j++) {
+      long b =
+          lower
+              ? -((long) trail.maxBefore(x[j], entry) - (long) j * step)
+              : (long) trail.minBefore(x[j], entry) - (long) j * step;
+      bound[j] = b;
+      boolean after = lower ? j < i : j > i;
+      total += j == i ? cut : after ? Math.max(b, cut) : b;
+    }
+    long sumBound =
+        lower
+            ? -((long) trail.minBefore(sum, entry) - offset)
+            : trail.maxBefore(sum, entry) - offset;
+    long room = total - sumBound - 1;
+    if (room < 0) {
+      return false;
+    }
+    // the later bounds above the cut, cheapest to drop first; then the earlier ones; then the sum
+    for (int j = 0; j < n; j++) {
+      boolean after = lower ? j < i : j > i;
+      if (!after || bound[j] <= cut) {
+        continue;
+      }
+      long excess = bound[j] - cut;
+      if (excess <= room) {
+        room -= excess;
+      } else {
+        room -= trail.addBoundWithin(x[j], entry, !lower, room, out);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      boolean before = lower ? j > i : j < i;
+      if (before) {
+        room -= trail.addBoundWithin(x[j], entry, !lower, room, out);
+      }
+    }
+    trail.addBoundWithin(sum, entry, lower, room, out);
+    return true;
+  }
+
+  private int indexOf(IntVar v) {
+    for (int j = 0; j < n; j++) {
+      if (x[j] == v) {
+        return j;
+      }
+    }
+    return -1;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    int now = trail.size();
+    for (int i = 1; i < n; i++) {
+      long lb = (long) trail.minBefore(x[i - 1], now) + step;
+      if (lb > trail.maxBefore(x[i], now)) {
+        trail.addLowerBound(x[i - 1], now, out);
+        trail.addUpperBound(x[i], now, out);
+        return true;
+      }
+    }
+    long lo = 0;
+    long hi = 0;
+    for (int j = 0; j < n; j++) {
+      lo += trail.minBefore(x[j], now);
+      hi += trail.maxBefore(x[j], now);
+    }
+    if (lo > trail.maxBefore(sum, now)) {
+      long room = lo - trail.maxBefore(sum, now) - 1;
+      for (int j = 0; j < n; j++) {
+        room -= trail.addBoundWithin(x[j], now, true, room, out);
+      }
+      trail.addBoundWithin(sum, now, false, room, out);
+      return true;
+    }
+    if (hi < trail.minBefore(sum, now)) {
+      long room = trail.minBefore(sum, now) - hi - 1;
+      for (int j = 0; j < n; j++) {
+        room -= trail.addBoundWithin(x[j], now, false, room, out);
+      }
+      trail.addBoundWithin(sum, now, true, room, out);
+      return true;
+    }
+    return false;
   }
 
   @Override
