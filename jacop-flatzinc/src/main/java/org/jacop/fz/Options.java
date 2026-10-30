@@ -94,6 +94,9 @@ public class Options {
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean presolveImplied;
   boolean symmetry = true;
+  // whether --symmetry was given; without it, the system property jacop.symmetry ("on", or
+  // "presolve" to break symmetries only with presolve, as the FlatZinc test suites do) decides
+  boolean symmetryGiven;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
   boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
@@ -224,7 +227,7 @@ public class Options {
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
                 all-different constraints (sum bounds); "off" (default) or "on"
-            --symmetry <value> with presolve, break the symmetries of the model: variable
+            --symmetry <value> break the symmetries of the model: variable
                 symmetries with lex-leader constraints (a lex chain for interchangeable columns),
                 interchangeable values with value precedence; one of "on" (default), "off". Off
                 when a satisfaction problem asks for more than one solution (-a, -n).
@@ -452,8 +455,14 @@ public class Options {
   private int handleSymmetry(String[] args, int i) {
     String mode = args[++i];
     switch (mode) {
-      case "on" -> symmetry = true;
-      case "off" -> symmetry = false;
+      case "on" -> {
+        symmetry = true;
+        symmetryGiven = true;
+      }
+      case "off" -> {
+        symmetry = false;
+        symmetryGiven = true;
+      }
       default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
     }
     return i + 1;
@@ -891,12 +900,20 @@ public class Options {
   }
 
   /**
-   * It defines whether presolve breaks the symmetries of the model (--symmetry).
+   * It defines whether the symmetries of the model are broken (--symmetry), with or without
+   * presolve. By default they are, except in a model loaded for the API without search, whose store
+   * keeps the constraints of the model only.
    *
    * @return true by default
    */
   public boolean symmetry() {
-    return symmetry;
+    if (!symmetry) {
+      return false;
+    }
+    if (symmetryGiven || presolve != Presolve.OFF) {
+      return true;
+    }
+    return runSearch && !"presolve".equals(System.getProperty("jacop.symmetry"));
   }
 
   /**

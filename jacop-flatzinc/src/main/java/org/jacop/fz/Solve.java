@@ -281,7 +281,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
-        if (opt.presolve() != Options.Presolve.OFF && opt.symmetry()) {
+        if (opt.symmetry()) {
           breakSymmetries(astTree, solveItem, opt);
         }
         search(solveItem, table, opt);
@@ -291,9 +291,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Breaks the variable symmetries of the model with lex-leader constraints in the loaded store,
-   * before presolve derives the store to search. Symmetry breaking loses solutions, so it is not
-   * done when a satisfaction problem asks for more than one solution; it keeps the optimum, since
-   * the objective variable is kept by every symmetry.
+   * before presolve, if any, derives the store to search. Symmetry breaking loses solutions, so it
+   * is not done when a satisfaction problem asks for more than one solution; it keeps the optimum,
+   * since the objective variable is kept by every symmetry.
    */
   private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
     ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
