@@ -869,6 +869,111 @@ class LcgSolverTest {
   }
 
   /**
+   * Bin packing with the number of items of each bin as variables (bin packing with cardinality),
+   * over three or four bins so that the rules on groups of bins run, with items of weight 0 and
+   * items sharing a bin variable: the LCG answer agrees with enumerating the bins, every
+   * explanation is checked, and almost all are the constraint's own.
+   */
+  @Test
+  void binpackingWithCardinalityAgreesWithBruteForce() {
+    Random rnd = new Random(37);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      Store store = new Store();
+      int bins = 3 + rnd.nextInt(2);
+      int n = 6 + rnd.nextInt(3);
+      List<IntVar> distinct = new ArrayList<>();
+      int[] at = new int[n];
+      int[] w = new int[n];
+      for (int k = 0; k < n; k++) {
+        if (k > 0 && rnd.nextInt(8) == 0) {
+          at[k] = at[rnd.nextInt(k)];
+        } else {
+          IntVar b = new IntVar(store, "b" + k, 0, bins - 1);
+          if (rnd.nextInt(3) == 0) {
+            b.domain.subtractAdapt(rnd.nextInt(bins));
+            b.refreshBounds();
+          }
+          at[k] = distinct.size();
+          distinct.add(b);
+        }
+        w[k] = rnd.nextInt(8) == 0 ? 0 : 1 + rnd.nextInt(5);
+      }
+      IntVar[] x = distinct.toArray(new IntVar[0]);
+      IntVar[] item = new IntVar[n];
+      for (int k = 0; k < n; k++) {
+        item[k] = x[at[k]];
+      }
+      IntVar[] load = new IntVar[bins];
+      IntVar[] card = new IntVar[bins];
+      for (int i = 0; i < bins; i++) {
+        int lo = rnd.nextInt(6);
+        load[i] = new IntVar(store, "l" + i, lo, lo + 3 + rnd.nextInt(8));
+        int c = rnd.nextInt(3);
+        card[i] = new IntVar(store, "c" + i, c, c + 1 + rnd.nextInt(2));
+      }
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new Binpacking(item, load, w, 0, rnd.nextBoolean(), card),
+              t -> {
+                int[] sum = new int[bins];
+                int[] count = new int[bins];
+                for (int k = 0; k < n; k++) {
+                  int i = t[at[k]];
+                  sum[i] += w[k];
+                  count[i]++;
+                }
+                for (int i = 0; i < bins; i++) {
+                  if (!load[i].domain.contains(sum[i]) || !card[i].domain.contains(count[i])) {
+                    return false;
+                  }
+                }
+                return true;
+              }));
+      if (x.length >= 3 && rnd.nextInt(3) == 0) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[x.length], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[x.length];
+        for (int i = 0; i < x.length; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Binpacking");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "binpacking with cardinality: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isGreaterThan(50);
+    assertThat(unsat).isGreaterThan(50);
+    assertThat(own).isGreaterThan(20 * generic);
+  }
+
+  /**
    * Graph colouring under a value precedence chain, with and without a value chain, over domains
    * with holes and values outside the chain, minimising the largest value: LCG finds the optimum
    * depth-first search finds, every explanation is checked, and almost all are the constraint's
