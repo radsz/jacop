@@ -1520,6 +1520,46 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgExplainsEachDeferredRemovalOnce() {
+    // a magic sequence over a literal budget of 0, so no value removal is pushed to the solver:
+    // a reason expanded each deferred removal at every citation, and the counts cite each other's
+    // removals, which took exponential time (over a minute for 80 counts)
+    int n = 80;
+    StringBuilder model = new StringBuilder();
+    model.append("predicate jacop_count(array [int] of var int: x, int: y, var int: c);\n");
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..").append(n).append(": x").append(i).append(" :: output_var;\n");
+      xs.add("x" + i);
+    }
+    model.append("array [1..").append(n).append("] of var int: xs = [").append(xs).append("];\n");
+    for (int i = 0; i < n; i++) {
+      model.append("constraint jacop_count(xs, ").append(i).append(", x").append(i).append(");\n");
+    }
+    model.append("solve satisfy;\n");
+    System.setProperty("jacop.lcg.literalBudget", "0");
+    try {
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(30), () -> run(model.toString(), "--lcg"))[
+              0];
+      int[] x = new int[n];
+      Matcher m = Pattern.compile("x(\\d+) = (\\d+);").matcher(out);
+      int found = 0;
+      while (m.find()) {
+        x[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
+        found++;
+      }
+      assertEquals(n, found, out);
+      for (int i = 0; i < n; i++) {
+        int value = i;
+        assertEquals(x[i], Arrays.stream(x).filter(v -> v == value).count(), out);
+      }
+    } finally {
+      System.clearProperty("jacop.lcg.literalBudget");
+    }
+  }
+
+  @Test
   void lcgSolvesOptimisationWithClauses() throws IOException {
     // --lcg: bool_clause and array_bool_or go to JaSAT as clauses, the rest propagates as
     // constraints; every improving solution is printed, then the optimum.

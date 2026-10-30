@@ -34,8 +34,11 @@ package org.jacop.jasat.lcg;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
@@ -719,7 +722,8 @@ public final class LcgSolver implements ExternalPropagator {
         && RELEASE
         && !sat.hasProof()
         && sat.numVars() - numFree >= literalBudget
-        && eq[trail.id(trail.variable(entry))].get(trail.value(entry)) == LiteralMap.NONE;
+        && eq[trail.id(trail.variable(entry))].get(trail.value(entry)) == LiteralMap.NONE
+        && !genericDeferred.contains(trail.reason(entry));
   }
 
   /**
@@ -746,6 +750,12 @@ public final class LcgSolver implements ExternalPropagator {
       stack.addFrom(reason, k);
     }
     reason.clear();
+    // each deferred removal is explained once: explanations share them, and expanding one at each
+    // citation took exponential time (a magic sequence of 80 counts)
+    int seen = nextStamp();
+    if (entryStamp.length < trail.size()) {
+      entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
+    }
     while (stack.size() > 0) {
       int last = stack.size() - 1;
       int f = stack.get(last);
@@ -755,7 +765,15 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       stack.truncate(last);
+      if (entryStamp[f] == seen) {
+        continue;
+      }
+      entryStamp[f] = seen;
+      lastOwn = true;
       int lit = explainEntry(f, stack);
+      if (!lastOwn) {
+        genericDeferred.add(trail.reason(f));
+      }
       if (lit != 0) {
         if (extra != 0 && extra != lit) {
           throw new IllegalStateException("a reason with two solver literals");
@@ -2000,6 +2018,14 @@ public final class LcgSolver implements ExternalPropagator {
    *
    * @return the solver literal that is part of the reason, or 0
    */
+  // whether the last explainEntry of an entry with a reason had the constraint's own explanation
+  private boolean lastOwn = true;
+
+  // constraints that gave a deferred removal the generic reason: their removals are pushed again,
+  // since a clause citing one cites every atom of their variables in its place
+  private final Set<Constraint> genericDeferred =
+      Collections.newSetFromMap(new IdentityHashMap<>());
+
   private int explainEntry(int e, EntryList out) {
     if (trail.reason(e) == null) {
       trail.atomsBefore(trail.variable(e), e, out);
@@ -2007,6 +2033,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int mark = out.size();
     boolean own = trail.explain(e, out);
+    lastOwn = own;
     count(trail.reason(e), own, out.size() - mark, 0);
     measure(trail.reason(e), own, e, out, mark);
     if (checker != null) {
@@ -2135,7 +2162,12 @@ public final class LcgSolver implements ExternalPropagator {
       if (inSolver(e)) {
         inSolver.add(e);
       } else {
+        boolean deferred = e < pushed && trail.kind(e) == AtomicTrail.NE;
+        lastOwn = true;
         int more = explainEntry(e, stack);
+        if (deferred && !lastOwn) {
+          genericDeferred.add(trail.reason(e));
+        }
         if (more != 0) {
           lits.add(-more);
         }
