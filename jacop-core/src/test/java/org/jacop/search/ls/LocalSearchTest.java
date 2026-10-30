@@ -61,16 +61,68 @@ class LocalSearchTest {
   /** n queens with all-distinct diagonals, through views made by x + c = z. */
   @Test
   void findsQueens() {
-    queens(false);
+    queens(false, false);
   }
 
   /** The same with the diagonals defined by the queens: they follow every move of a queen. */
   @Test
   void findsQueensWithDefinedDiagonals() {
-    queens(true);
+    queens(true, false);
   }
 
-  private static void queens(boolean defined) {
+  /** The same with feasibility jump moves. */
+  @Test
+  void findsQueensWithJumps() {
+    queens(false, true);
+    queens(true, true);
+  }
+
+  /**
+   * Feasibility jump on linear rows over wide domains: a planted solution of eight variables in
+   * 0..1000 and six rows, each to be within 5 of its value at the planted solution.
+   */
+  @Test
+  void jumpsSatisfyLinearRows() {
+    Store store = new Store();
+    int n = 8;
+    int[] planted = {417, 3, 999, 250, 0, 608, 77, 512};
+    int[][] a = {
+      {3, -2, 1, 0, 5, 0, -1, 2},
+      {0, 4, -3, 2, 0, 1, 0, -1},
+      {1, 1, 1, 1, 1, 1, 1, 1},
+      {-2, 0, 0, 3, -1, 0, 4, 0},
+      {0, -1, 2, 0, 0, -3, 1, 1},
+      {5, 0, 0, -1, 2, 0, 0, -4}
+    };
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1000);
+    }
+    for (int[] row : a) {
+      int sum = 0;
+      for (int i = 0; i < n; i++) {
+        sum += row[i] * planted[i];
+      }
+      store.impose(new LinearInt(x, row, "<=", sum + 5));
+      store.impose(new LinearInt(x, row, ">=", sum - 5));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store).order(x).jump(true).timeLimit(LIMIT).seed(7).build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    int[] v = ls.getSolution(x);
+    for (int[] row : a) {
+      long sum = 0;
+      long target = 0;
+      for (int i = 0; i < n; i++) {
+        sum += (long) row[i] * v[i];
+        target += (long) row[i] * planted[i];
+      }
+      assertTrue(Math.abs(sum - target) <= 5, sum + " vs " + target);
+    }
+  }
+
+  private static void queens(boolean defined, boolean jump) {
     int n = 12;
     Store store = new Store();
     IntVar[] q = new IntVar[n];
@@ -95,6 +147,7 @@ class LocalSearchTest {
         LocalSearch.builder(store)
             .order(q)
             .defined(defined ? diagonals : List.of())
+            .jump(jump)
             .timeLimit(LIMIT)
             .seed(3)
             .onSolution(
