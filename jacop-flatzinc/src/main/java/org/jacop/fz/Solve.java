@@ -339,7 +339,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     long start = timer.getCpuTime();
     SymmetryBreaking.Outcome o =
-        new SymmetryBreaking(store, dictionary).run(astTree, objective, order, budget * 1_000_000L);
+        new SymmetryBreaking(store, dictionary)
+            .run(
+                astTree,
+                objective,
+                !satisfy && getKind(kind.getKind()) == 1,
+                order,
+                budget * 1_000_000L);
     long time = timer.getCpuTime() - start;
     if (!store.consistency()) {
       throw Store.failException;
@@ -354,6 +360,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + o.generators()
               + "\n%%%mzn-stat: symmetryConstraints="
               + o.constraints()
+              + "\n%%%mzn-stat: symmetryValuePrecedences="
+              + o.precedences()
+              + "\n%%%mzn-stat: symmetryOrbitopes="
+              + o.orbitopes()
               + "\n%%%mzn-stat: symmetrySearchComplete="
               + o.complete()
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")

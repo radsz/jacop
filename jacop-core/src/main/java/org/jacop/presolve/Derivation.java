@@ -710,6 +710,9 @@ public final class Derivation implements VarMap {
       int edits = context.edits;
       for (Rule rule : ruleList) {
         context.snapshot = null;
+        // a rule that propagates may have raised the level (raiseLevelBeforeConsistency), and the
+        // next one narrows domains at the level the store is at
+        level = parent.level;
         rule.apply(context);
       }
       if (!parent.consistency()) {

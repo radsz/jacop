@@ -33,6 +33,7 @@ package org.jacop.fz;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,6 +57,10 @@ import org.jacop.set.core.SetVar;
 public class Tables {
 
   public final Map<IntVar, IntVar> aliasTable = new HashMap<>();
+
+  /** The Boolean variables that integer variables are aliases of (the values of aliasTable). */
+  private final Set<IntVar> aliasTargets = new HashSet<>();
+
   final HashMap<Integer, IntVar> constantTable = new HashMap<>();
   final HashMap<Integer, BooleanVar> constantTableBoolean = new HashMap<>();
   final HashMap<Double, FloatVar> constantFloatTable = new HashMap<>();
@@ -182,9 +187,20 @@ public class Tables {
     IntVar x = aliasTable.get(v);
     if (x == null) {
       aliasTable.put(v, b);
+      aliasTargets.add(b);
     } else {
       System.err.println("%% Double int var alias for bool var");
     }
+  }
+
+  /**
+   * Tells whether integer variables are aliases of a variable.
+   *
+   * @param b the variable
+   * @return true if some integer variable is an alias of b
+   */
+  boolean isAliasTarget(IntVar b) {
+    return aliasTargets.contains(b);
   }
 
   /**
@@ -216,6 +232,7 @@ public class Tables {
     mapValues(constantTableBoolean, t.constantTableBoolean, map);
     mapValues(constantFloatTable, t.constantFloatTable, map);
     aliasTable.forEach((k, v) -> t.aliasTable.put(map.get(k), map.get(v)));
+    aliasTargets.forEach(v -> t.aliasTargets.add(map.get(v)));
     t.intTable.putAll(intTable);
     t.floatTable.putAll(floatTable);
     t.intArrayTable.putAll(intArrayTable);
