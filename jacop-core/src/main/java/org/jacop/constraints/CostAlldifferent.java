@@ -118,11 +118,12 @@ public class CostAlldifferent extends Constraint
       throw new IllegalArgumentException(
           "CostAlldifferent needs a cost row for each of the " + list.length + " variables");
     }
-    int columns = costs.length == 0 ? 0 : costs[0] == null ? -1 : costs[0].length;
-    for (int[] row : costs) {
-      if (row == null || row.length != columns) {
+    int columns = 0;
+    for (int i = 0; i < costs.length; i++) {
+      if (costs[i] == null || i > 0 && costs[i].length != columns) {
         throw new IllegalArgumentException("CostAlldifferent needs cost rows of the same length");
       }
+      columns = costs[i].length;
     }
     if (columns < list.length) {
       throw new IllegalArgumentException(
