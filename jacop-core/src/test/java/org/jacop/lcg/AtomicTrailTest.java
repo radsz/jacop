@@ -272,6 +272,41 @@ class AtomicTrailTest {
         });
     m.add(
         s -> {
+          // a variable duration and a variable resource use, tasks using most of the limit
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            new IntVar(s, "length", 1, 4),
+            new IntVar(s, "use", 1, 3)
+          };
+          int[] d = {0, 1 + rnd.nextInt(3), 1 + rnd.nextInt(3)};
+          int[] r = {1 + rnd.nextInt(3), 0, 1 + rnd.nextInt(3)};
+          IntVar[] durations = {v[3], new IntVar(s, d[1], d[1]), new IntVar(s, d[2], d[2])};
+          IntVar[] resources = {new IntVar(s, r[0], r[0]), v[4], new IntVar(s, r[2], r[2])};
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    int length = k == 0 ? t[3] : d[k];
+                    if (t[k] <= time && time < t[k] + length) {
+                      load += k == 1 ? t[4] : r[k];
+                    }
+                  }
+                  if (load > 3) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new Cumulative(Arrays.copyOf(v, 3), durations, resources, new IntVar(s, 3, 3)),
+              fits,
+              v);
+        });
+    m.add(
+        s -> {
           IntVar[] v = {
             newVar(s, "a", rnd),
             newVar(s, "b", rnd),

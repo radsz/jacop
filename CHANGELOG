@@ -731,7 +731,26 @@ Version 5.0 (unreleased)
     org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
     2.5% faster on mznbench.
 
-54. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
+56. Under --lcg, Cumulative explains two more kinds of pruning itself
+    instead of with the generic reason. Time-table disjunctive reasoning
+    (on by default in the FlatZinc front end) pushes a task j past a task
+    i that every placement of j would overlap where the compulsory parts
+    of the other tasks leave less than r_i + r_j; when no energy window
+    explains a start, the reason is the bounds that keep i on two points
+    (or an interval), j's bounds and the compulsory parts there. Upper
+    bounds of variable durations and resource uses are explained by the
+    time table, looking past values already out of the domain (a resource
+    use in {0, 9} capped at 2 is recorded as <= 0). Edge finding and
+    time-table edge finding were already explained by the energy windows.
+    On the 76 instances with a cumulative in the free-search sets, generic
+    Cumulative reasons fall from 0.79% (--lcg) and 5.05% (--lcg -f) to 0,
+    and those of CumulativeUnary from 4.53% to 0.78% and 0.82% to 0.03%.
+    Paired runs: --lcg 60 s 8 better and 3 worse, --lcg -f 30 s with
+    seeds 1 to 3 16 better and 10 worse. -Djacop.lcg.cumulativePairs=false
+    turns the pair reasons off. Scripts and runs: osolpro
+    benchmarks/cumulative-explanations.
+
+57. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
     first focused phase of 1,000 conflicts is over, instead of
     alternating the two modes. Restarts become far rarer, and each one
     costs the CP propagation back down from level 0. Paired runs, 60 s,
@@ -740,7 +759,7 @@ Version 5.0 (unreleased)
     1 worse. The other 126 instances barely reach stable mode.
     -Djacop.lcg.stableForGood=false restores the alternation.
 
-55. JaSAT misses no unit propagation when CP drives it. Under --lcg and
+58. JaSAT misses no unit propagation when CP drives it. Under --lcg and
     -sat, a clause added during search, a learnt clause asserted by the
     external search, or a propagator's reason kept as a clause could have
     its true watch above its false watch's level; after a backtrack between
@@ -752,7 +771,7 @@ Version 5.0 (unreleased)
     instances (60 s) --lcg solves 68 instead of 67 and --lcg -f 77 as
     before, with no measurable cost.
 
-57. LCG explanations of Regular (and the other layered graph constraints)
+59. LCG explanations of Regular (and the other layered graph constraints)
     cite only the edges that lead to the removed values: the nearest cut
     or the cut nearest the ends of the graph, whichever is shorter
     (Gange, Stuckey and Szymanek, Constraints 2011), instead of every
@@ -764,7 +783,7 @@ Version 5.0 (unreleased)
     constraint class how many atoms propagation needs and how many could
     be weaker.
 
-58. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
+60. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
     bound weaker than any trail atom when the solver already has a true
     literal for it, set before the explained one. On mznbench (249,
     60 s, paired) --lcg is better on 15 instances and worse on 6
@@ -773,7 +792,7 @@ Version 5.0 (unreleased)
     -Djacop.lcg.liftLiterals=false turns it off; %%%mzn-stat
     lcgLiftedLiterals counts the literals cited.
 
-59. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
+61. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
     explain their own pruning under --lcg instead of the generic or
     replayed reason. IncreasingSum cites the bounds of the order and the
     sum, LexOrder the bounds of the prefix that is forced equal or
