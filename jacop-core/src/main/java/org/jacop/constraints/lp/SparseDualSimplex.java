@@ -50,9 +50,6 @@ import java.util.Random;
  */
 final class SparseDualSimplex implements LpSolver {
 
-  private static final double PRIMAL_TOL = 1e-6;
-  private static final double DUAL_TOL = 1e-9;
-  private static final double PIVOT_TOL = 1e-9;
   private static final double PERTURBATION = 1e-7;
 
   // refactorizations after this many updates, against the growth and drift of the eta file
@@ -108,12 +105,8 @@ final class SparseDualSimplex implements LpSolver {
   private int touchedCount;
   private boolean[] isTouched;
 
-  // the ratio test: its candidates, and the columns it flips to their other bound
-  private int[] candidate;
-  private double[] pivotSize;
-  private double[] ratio;
-  private int[] flipped;
-  private int flips;
+  // the ratio test, with the columns it flips to their other bound
+  private RatioTest ratioTest;
 
   /** Statistics: pivots made. */
   long totalPivots;
@@ -212,6 +205,10 @@ final class SparseDualSimplex implements LpSolver {
     weightsFrom = o.weightsFrom;
     infeasibleRow = o.infeasibleRow;
     totalPivots = o.totalPivots;
+    factorizations = o.factorizations;
+    ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
+    lu = null;
+    touchedCount = 0;
     allocateWork();
   }
 
@@ -268,10 +265,7 @@ final class SparseDualSimplex implements LpSolver {
     alphaRow = new double[cols];
     touched = new int[cols];
     isTouched = new boolean[cols];
-    candidate = new int[cols];
-    pivotSize = new double[cols];
-    ratio = new double[cols];
-    flipped = new int[cols];
+    ratioTest = new RatioTest(cols);
   }
 
   // appends rows with basic slacks; the factorization and the values must be rebuilt after
@@ -418,10 +412,10 @@ final class SparseDualSimplex implements LpSolver {
         updateBeta();
         continue;
       }
-      if (flips > 0) {
+      if (ratioTest.flips() > 0) {
         Arrays.fill(work, 0);
-        for (int k = 0; k < flips; k++) {
-          int j = flipped[k];
+        for (int k = 0; k < ratioTest.flips(); k++) {
+          int j = ratioTest.flipped(k);
           double old = upper[j] ? hi[j] : lo[j];
           upper[j] = !upper[j];
           double now = upper[j] ? hi[j] : lo[j];
@@ -734,58 +728,18 @@ final class SparseDualSimplex implements LpSolver {
   }
 
   /**
-   * The dual ratio test with bound flipping over the touched columns, as in {@link DualSimplex}.
+   * The dual ratio test with bound flipping over the touched columns ({@link RatioTest}).
    *
    * @return the entering column, or -1 when the row proves infeasibility
    */
   private int enteringColumn(boolean toLower, double gap) {
     ops += 2L * touchedCount;
-    int k = 0;
+    ratioTest.start();
     for (int t = 0; t < touchedCount; t++) {
       int j = touched[t];
-      double alpha = eligible(alphaRow[j], j, toLower);
-      if (alpha > 0) {
-        candidate[k] = j;
-        pivotSize[k] = alpha;
-        ratio[k] = Math.max(0, upper[j] ? -d[j] : d[j]) / alpha;
-        k++;
-      }
+      ratioTest.offer(j, alphaRow[j], upper[j], d[j], lo[j], hi[j], toLower);
     }
-    flips = 0;
-    double slope = gap;
-    while (k > 0) {
-      double least = Double.POSITIVE_INFINITY;
-      for (int i = 0; i < k; i++) {
-        least = Math.min(least, ratio[i] + DUAL_TOL / pivotSize[i]);
-      }
-      int pick = -1;
-      for (int i = 0; i < k; i++) {
-        if (ratio[i] <= least && (pick < 0 || pivotSize[i] > pivotSize[pick])) {
-          pick = i;
-        }
-      }
-      int j = candidate[pick];
-      double range = hi[j] - lo[j];
-      slope -= pivotSize[pick] * range;
-      if (slope <= PRIMAL_TOL * Math.max(1, gap) || Double.isInfinite(range)) {
-        return j;
-      }
-      flipped[flips++] = j;
-      k--;
-      candidate[pick] = candidate[k];
-      pivotSize[pick] = pivotSize[k];
-      ratio[pick] = ratio[k];
-    }
-    flips = 0;
-    return -1;
-  }
-
-  private double eligible(double alpha, int j, boolean toLower) {
-    if (Math.abs(alpha) < PIVOT_TOL || lo[j] == hi[j]) {
-      return 0;
-    }
-    boolean rises = upper[j] ? alpha > 0 : alpha < 0;
-    return rises == toLower ? Math.abs(alpha) : 0;
+    return ratioTest.choose(gap, lo, hi);
   }
 
   // the basic row farthest outside its bounds, by dual steepest edge, or -1
@@ -795,12 +749,7 @@ final class SparseDualSimplex implements LpSolver {
     for (int i = 0; i < m; i++) {
       int p = basis[i];
       double v = beta[i];
-      double gap = 0;
-      if (v < lo[p] - PRIMAL_TOL * Math.max(1, Math.abs(lo[p]))) {
-        gap = lo[p] - v;
-      } else if (v > hi[p] + PRIMAL_TOL * Math.max(1, Math.abs(hi[p]))) {
-        gap = v - hi[p];
-      }
+      double gap = RatioTest.gap(v, lo[p], hi[p]);
       if (gap > 0) {
         double score = gap * gap / weight[i];
         if (score > worst) {
@@ -815,18 +764,7 @@ final class SparseDualSimplex implements LpSolver {
   // puts each nonbasic column at the bound its reduced cost asks for, a finite one
   private void placeNonbasic() {
     ops += cols;
-    for (int j = 0; j < cols; j++) {
-      if (row[j] < 0) {
-        if (d[j] > DUAL_TOL) {
-          upper[j] = false;
-        } else if (d[j] < -DUAL_TOL) {
-          upper[j] = true;
-        }
-        if (upper[j] ? hi[j] == Double.POSITIVE_INFINITY : lo[j] == Double.NEGATIVE_INFINITY) {
-          upper[j] = !upper[j];
-        }
-      }
-    }
+    RatioTest.placeNonbasic(row, d, upper, lo, hi, cols);
   }
 
   // moves the basic values with the nonbasic columns whose values changed since the last call

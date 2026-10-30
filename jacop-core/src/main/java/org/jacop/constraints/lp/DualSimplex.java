@@ -48,9 +48,6 @@ import java.util.Random;
  */
 final class DualSimplex implements LpSolver {
 
-  private static final double PRIMAL_TOL = 1e-6;
-  private static final double DUAL_TOL = 1e-9;
-  private static final double PIVOT_TOL = 1e-9;
   private static final double PERTURBATION = 1e-7;
 
   // refactorizations after this many pivots, against the drift of the tableau
@@ -86,12 +83,8 @@ final class DualSimplex implements LpSolver {
   private double[] norm;
   private boolean[] normValid;
 
-  // the ratio test: its candidates, and the columns it flips to their other bound
-  private int[] candidate;
-  private double[] pivotSize;
-  private double[] ratio;
-  private int[] flipped;
-  private int flips;
+  // the ratio test, with the columns it flips to their other bound
+  private RatioTest ratioTest;
 
   /** Statistics: pivots made. */
   long totalPivots;
@@ -133,10 +126,7 @@ final class DualSimplex implements LpSolver {
     movedBy = new double[cols];
     norm = new double[m];
     normValid = new boolean[m];
-    candidate = new int[cols];
-    pivotSize = new double[cols];
-    ratio = new double[cols];
-    flipped = new int[cols];
+    ratioTest = new RatioTest(cols);
     slackBasis();
   }
 
@@ -164,12 +154,8 @@ final class DualSimplex implements LpSolver {
     movedBy = new double[cols];
     norm = o.norm.clone();
     normValid = o.normValid.clone();
-    candidate = new int[cols];
-    pivotSize = new double[cols];
-    ratio = new double[cols];
-    flipped = new int[cols];
+    ratioTest = new RatioTest(o.ratioTest);
     pivots = o.pivots;
-    flips = o.flips;
     infeasibleRow = o.infeasibleRow;
     totalPivots = o.totalPivots;
   }
@@ -240,8 +226,8 @@ final class DualSimplex implements LpSolver {
         infeasibleRow = r;
         return INFEASIBLE;
       }
-      for (int k = 0; k < flips; k++) {
-        upper[flipped[k]] = !upper[flipped[k]];
+      for (int k = 0; k < ratioTest.flips(); k++) {
+        upper[ratioTest.flipped(k)] = !upper[ratioTest.flipped(k)];
       }
       pivot(r, q, toLower);
       if (pivots >= REFACTOR_PIVOTS) {
@@ -312,10 +298,7 @@ final class DualSimplex implements LpSolver {
     at = new double[cols2];
     moved = new int[cols2];
     movedBy = new double[cols2];
-    candidate = new int[cols2];
-    pivotSize = new double[cols2];
-    ratio = new double[cols2];
-    flipped = new int[cols2];
+    ratioTest.resize(cols2);
     betaValid = false;
     m = m2;
     cols = cols2;
@@ -429,18 +412,7 @@ final class DualSimplex implements LpSolver {
 
   // puts each nonbasic column at the bound its reduced cost asks for, a finite one
   private void placeNonbasic() {
-    for (int j = 0; j < cols; j++) {
-      if (row[j] < 0) {
-        if (d[j] > DUAL_TOL) {
-          upper[j] = false;
-        } else if (d[j] < -DUAL_TOL) {
-          upper[j] = true;
-        }
-        if (upper[j] ? hi[j] == Double.POSITIVE_INFINITY : lo[j] == Double.NEGATIVE_INFINITY) {
-          upper[j] = !upper[j];
-        }
-      }
-    }
+    RatioTest.placeNonbasic(row, d, upper, lo, hi, cols);
   }
 
   // moves the basic values with the nonbasic columns whose values changed since the last call
@@ -508,12 +480,7 @@ final class DualSimplex implements LpSolver {
     for (int i = 0; i < m; i++) {
       int p = basis[i];
       double v = beta[i];
-      double gap = 0;
-      if (v < lo[p] - PRIMAL_TOL * Math.max(1, Math.abs(lo[p]))) {
-        gap = lo[p] - v;
-      } else if (v > hi[p] + PRIMAL_TOL * Math.max(1, Math.abs(hi[p]))) {
-        gap = v - hi[p];
-      }
+      double gap = RatioTest.gap(v, lo[p], hi[p]);
       if (gap > 0) {
         // dual steepest edge: the infeasibility relative to the norm of the row of B^-1
         if (!normValid[i]) {
@@ -536,68 +503,19 @@ final class DualSimplex implements LpSolver {
   }
 
   /**
-   * The dual ratio test with bound flipping: the eligible columns are taken in the order of their
-   * dual ratios, and a boxed column whose move to its other bound leaves the basic variable still
-   * outside its bound is flipped ({@link #flipped}) instead of entering. Among ratios within the
-   * tolerance of the smallest, the largest pivot is taken.
+   * The dual ratio test with bound flipping over the nonbasic columns ({@link RatioTest}).
    *
-   * @return the entering column, or -1 when even every eligible column at its other bound leaves
-   *     the basic variable outside its bound, so the row proves infeasibility
+   * @return the entering column, or -1 when the row proves infeasibility
    */
   private int enteringColumn(int r, boolean toLower, double gap) {
     double[] tr = t[r];
-    int k = 0;
+    ratioTest.start();
     for (int j = 0; j < cols; j++) {
-      double alpha = eligible(tr[j], j, toLower);
-      if (alpha > 0) {
-        candidate[k] = j;
-        pivotSize[k] = alpha;
-        ratio[k] = Math.max(0, upper[j] ? -d[j] : d[j]) / alpha;
-        k++;
+      if (row[j] < 0) {
+        ratioTest.offer(j, tr[j], upper[j], d[j], lo[j], hi[j], toLower);
       }
     }
-    flips = 0;
-    double slope = gap;
-    while (k > 0) {
-      // Harris: the largest pivot among the ratios that keep every reduced cost within tolerance
-      double least = Double.POSITIVE_INFINITY;
-      for (int i = 0; i < k; i++) {
-        least = Math.min(least, ratio[i] + DUAL_TOL / pivotSize[i]);
-      }
-      int pick = -1;
-      for (int i = 0; i < k; i++) {
-        if (ratio[i] <= least && (pick < 0 || pivotSize[i] > pivotSize[pick])) {
-          pick = i;
-        }
-      }
-      int j = candidate[pick];
-      double range = hi[j] - lo[j];
-      slope -= pivotSize[pick] * range;
-      if (slope <= PRIMAL_TOL * Math.max(1, gap) || Double.isInfinite(range)) {
-        return j;
-      }
-      flipped[flips++] = j;
-      k--;
-      candidate[pick] = candidate[k];
-      pivotSize[pick] = pivotSize[k];
-      ratio[pick] = ratio[k];
-    }
-    flips = 0;
-    return -1;
-  }
-
-  /**
-   * Returns |alpha| when moving nonbasic column j towards its other bound brings the basic variable
-   * of the row back towards the bound it leaves at, otherwise 0. With x_B = -sum alpha_j x_j, a
-   * basic variable below its lower bound rises when x_j rises with alpha_j &lt; 0 or falls with
-   * alpha_j &gt; 0.
-   */
-  private double eligible(double alpha, int j, boolean toLower) {
-    if (row[j] >= 0 || Math.abs(alpha) < PIVOT_TOL || lo[j] == hi[j]) {
-      return 0;
-    }
-    boolean rises = upper[j] ? alpha > 0 : alpha < 0;
-    return rises == toLower ? Math.abs(alpha) : 0;
+    return ratioTest.choose(gap, lo, hi);
   }
 
   private void pivot(int r, int q, boolean toLower) {
