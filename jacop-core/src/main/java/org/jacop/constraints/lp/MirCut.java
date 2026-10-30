@@ -109,6 +109,30 @@ final class MirCut {
     }
   }
 
+  /**
+   * Returns the cut {@code sum weights x <= rhs} made elsewhere, or null when the LP solution does
+   * not break it enough.
+   *
+   * @param columns the columns, increasing
+   * @param weights the weights by column of the cut
+   * @param rhs the right side
+   * @param value the LP solution by column
+   * @return the cut, or null
+   */
+  static MirCut row(int[] columns, long[] weights, long rhs, double[] value) {
+    double activity = 0;
+    double norm = 0;
+    for (int k = 0; k < columns.length; k++) {
+      double w = (double) weights[k];
+      activity += w * value[columns[k]];
+      norm += w * w;
+    }
+    double efficacy = (activity - rhs) / Math.sqrt(norm);
+    return efficacy > MIN_EFFICACY
+        ? new MirCut(columns, weights, rhs, efficacy, Math.sqrt(norm))
+        : null;
+  }
+
   private static MirCut cut(long[] c, long b, double[] value, long[] lo, long[] hi) {
     int n = c.length;
     long[] cc = new long[n];

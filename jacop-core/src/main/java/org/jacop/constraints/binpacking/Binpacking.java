@@ -51,6 +51,7 @@ import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Linearizations;
 import org.jacop.core.FailException;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -62,6 +63,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that items are packed into bins
@@ -77,7 +79,12 @@ import org.jacop.lcg.Explainable;
  */
 @Slf4j
 public class Binpacking extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Binpacking>, Explainable {
+    implements UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Copyable<Binpacking>,
+        Explainable,
+        Linearizations.Relaxable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
   static long LBnumber;
@@ -1618,5 +1625,17 @@ public class Binpacking extends Constraint
   @Override
   public boolean canCopy() {
     return card != null || zeroWeightBins.length == 0 || !packAll.due();
+  }
+
+  /**
+   * Returns the row that every item is in some bin: the loads add up to the weight of all items.
+   *
+   * @return the row
+   */
+  @Override
+  public List<LinearForm> relaxation() {
+    long[] ones = new long[load.length];
+    Arrays.fill(ones, 1);
+    return List.of(new LinearForm(load.clone(), ones, sizeAllItems, LinearForm.EQ));
   }
 }
