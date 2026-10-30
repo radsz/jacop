@@ -1057,6 +1057,19 @@ Version 5.0 (unreleased)
     objectives, 1 faster proof, none worse) and +6.4% with -f (results
     within run-to-run noise).
 
+70. --lcg no longer runs out of memory on large alldiffs. Each value a
+    constraint removes from inside a domain was a SAT variable, and an
+    alldiff over 4096 variables of 4096 values removes 8.4 million
+    values on one branch (debruijn_binary_04_06 filled a 3 GB heap in
+    40 s while plain search solves it in 10 s). Past a literal budget,
+    one SAT variable per KB of maximum heap (-Djacop.lcg.literalBudget),
+    a removal with no literal of its own stays out of the SAT solver,
+    and a clause that would cite it cites its explanation instead. The
+    SAT solver also makes a literal's watch lists when a clause first
+    watches it rather than up front. debruijn_binary_04_06 now solves
+    in 46 s with -Xmx3G, with --lcg and with --lcg -f; below the budget
+    nothing changes.
+
 Version 4.11
 =============
 

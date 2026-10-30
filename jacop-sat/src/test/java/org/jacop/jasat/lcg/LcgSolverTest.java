@@ -236,6 +236,83 @@ class LcgSolverTest {
   }
 
   @Test
+  void deferredValueRemovalsAgreeWithBruteForce() {
+    // with no literal budget every value removal without a literal stays out of the solver, and
+    // clauses cite its explanation instead (the out-of-memory of a 4096-variable alldiff)
+    Random rnd = new Random(67);
+    int sat = 0;
+    int unsat = 0;
+    long deferred = 0;
+    long conflicts = 0;
+    for (int instance = 0; instance < 2000; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      IntVar[] distinct = Arrays.copyOf(x, 3 + rnd.nextInt(n - 2));
+      relations.add(
+          new Relation(
+              rnd.nextBoolean() ? new Alldiff(distinct) : new Alldistinct(distinct),
+              t -> Arrays.stream(t, 0, distinct.length).distinct().count() == distinct.length));
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setLiteralBudget(0);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      deferred += solver.deferredAtoms;
+      conflicts += solver.sat().conflicts;
+    }
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(deferred).isGreaterThan(1000);
+    assertThat(conflicts).isGreaterThan(300);
+  }
+
+  @Test
+  void largeAlldiffStaysWithinTheLiteralBudget() {
+    // each value fixed removes it from every other variable: n * n / 2 removals on one branch,
+    // which made a solver variable each and filled the heap on debruijn_binary_04_06 (n = 4096)
+    Store store = new Store();
+    int n = 300;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      // different minimums, so a value fixed is a hole in the variables with smaller ones
+      x[i] = new IntVar(store, "x" + i, i / 2, n - 1);
+    }
+    store.impose(new Alldiff(x));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setLiteralBudget(2000);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(Arrays.stream(x).mapToInt(solver::value).distinct().count()).isEqualTo(n);
+    assertThat(solver.deferredAtoms).isGreaterThan(10000);
+    assertThat(solver.sat().numVars()).isLessThan(5000);
+  }
+
+  @Test
   void agreesWithBruteForce() {
     Random rnd = new Random(11);
     int sat = 0;
