@@ -57,6 +57,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * The network flow constraint. Use the NetworkBuilder to create a network and instantiate the
@@ -67,7 +70,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class NetworkFlow extends Constraint
-    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<NetworkFlow> {
+    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<NetworkFlow>, Explainable {
 
   /** Instance counter. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -315,6 +318,44 @@ public class NetworkFlow extends Constraint
     this(builder.nodeList, builder.arcList, builder.handlerList, builder.costVariable);
   }
 
+  /** The explanations for lazy clause generation, built on first use; null when there are none. */
+  private NetworkFlowExplanation explanation;
+
+  private boolean explanationBuilt;
+
+  private NetworkFlowExplanation explanation() {
+    if (!explanationBuilt) {
+      explanationBuilt = true;
+      if (definition != null && copies.isEmpty()) {
+        boolean structures = false;
+        for (Object handler : definition.handlers()) {
+          structures |= !(handler instanceof Integer);
+        }
+        explanation =
+            NetworkFlowExplanation.of(
+                definition.balances(),
+                definition.arcs(),
+                definition.flows(),
+                definition.weights(),
+                structures,
+                costVariable);
+      }
+    }
+    return explanation;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    NetworkFlowExplanation e = explanation();
+    return e != null && e.explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    NetworkFlowExplanation e = explanation();
+    return e != null && e.explainFailure(trail, out);
+  }
+
   @Override
   public NetworkFlow copy(VarMap map) {
     if (definition == null) {
@@ -524,12 +565,14 @@ public class NetworkFlow extends Constraint
           .append(network.allArcs.get(i).tail().name)
           .append("->")
           .append(network.allArcs.get(i).head.name);
-      if (network.allArcs.get(i).companion.wVar == null) {
+      // an arc of constant cost and capacity has no companion
+      ArcCompanion companion = network.allArcs.get(i).companion;
+      if (companion == null || companion.wVar == null) {
         result.append(", ").append(network.allArcs.get(i).cost);
       } else {
-        result.append(", ").append(network.allArcs.get(i).companion.wVar);
+        result.append(", ").append(companion.wVar);
       }
-      result.append(", ").append(network.allArcs.get(i).companion.xVar);
+      result.append(", ").append(companion == null ? null : companion.xVar);
       result.append(")");
       if (i < network.allArcs.size() - 1) {
         result.append(", ");
