@@ -44,7 +44,6 @@ class LexicalAnalyzer {
 
   // constants to identify the type of the last recognized token.
   static final int INVALID_CHAR = -1; // unexpected character found.
-  static final int NO_TOKEN = 0; // No tokens recognized yet.
   static final int PLUS = 3;
   static final int DOT = 4;
   static final int WORD = 5;

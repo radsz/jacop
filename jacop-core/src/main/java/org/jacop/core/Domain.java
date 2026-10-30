@@ -158,16 +158,6 @@ public abstract class Domain {
   public abstract void removeSearchConstraint(int storeLevel, Var v, int position, Constraint c);
 
   /**
-   * Returns the search constraints imposed after setting up the model.
-   *
-   * @return it returns the array containing search constraints (the ones imposed after setting up
-   *     the model).
-   */
-  public List<Constraint> searchConstraints() {
-    return searchConstraints;
-  }
-
-  /**
    * It returns true if given domain has only one element.
    *
    * @return true if the domain contains only one element.
@@ -181,22 +171,6 @@ public abstract class Domain {
    * @return true if the domain contains only one element.
    */
   public abstract boolean singleton(Domain value);
-
-  /**
-   * It returns the number of constraints.
-   *
-   * @return the number of constraints attached to this domain.
-   */
-  public abstract int noConstraints();
-
-  /**
-   * It returns number of search constraints.
-   *
-   * @return the number of search constraints.
-   */
-  public int noSearchConstraints() {
-    return searchConstraintsToEvaluate;
-  }
 
   /**
    * It returns the stamp of the domain.
@@ -247,13 +221,6 @@ public abstract class Domain {
    * @return true if sparse, false otherwise.
    */
   public abstract boolean isSparseRepresentation();
-
-  /**
-   * It specifies if domain is a finite domain of numeric values (integers).
-   *
-   * @return true if domains contains numeric values.
-   */
-  public abstract boolean isNumeric();
 
   /**
    * It adds a constraint to a domain, it should only be called by putConstraint function of

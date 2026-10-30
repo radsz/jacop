@@ -212,9 +212,10 @@ public class Options {
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
                 all-different constraints (sum bounds); "off" (default) or "on"
-            --symmetry <value> with presolve, break the variable symmetries of the model with
-                lex-leader constraints; one of "on" (default), "off". Off when a satisfaction
-                problem asks for more than one solution (-a, -n).
+            --symmetry <value> with presolve, break the symmetries of the model: variable
+                symmetries with lex-leader constraints (a lex chain for interchangeable columns),
+                interchangeable values with value precedence; one of "on" (default), "off". Off
+                when a satisfaction problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by

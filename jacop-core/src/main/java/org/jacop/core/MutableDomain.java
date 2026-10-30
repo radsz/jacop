@@ -75,19 +75,6 @@ public class MutableDomain implements MutableVar {
     this.store = store;
   }
 
-  int index() {
-    return index;
-  }
-
-  /**
-   * Returns the previous value of this mutable domain variable.
-   *
-   * @return the previous mutable variable value.
-   */
-  public MutableVarValue previous() {
-    return value.previousMutableDomainVariableValue;
-  }
-
   /**
    * Removes the current level by restoring the previous value if the stamp matches the given level.
    *
@@ -97,14 +84,6 @@ public class MutableDomain implements MutableVar {
     if (value.stamp == removeLevel) {
       value = value.previousMutableDomainVariableValue;
     }
-  }
-
-  public void setCurrent(MutableVarValue o) {
-    value = (MutableDomainValue) o;
-  }
-
-  int stamp() {
-    return value.stamp;
   }
 
   @Override
@@ -143,7 +122,7 @@ public class MutableDomain implements MutableVar {
       value = (MutableDomainValue) val;
 
       if (DEBUG) {
-        log.debug("=> OUT {} OLD {}", this, value().previous());
+        log.debug("=> OUT {} OLD {}", this, value.previousMutableDomainVariableValue);
       }
     }
   }

@@ -105,6 +105,75 @@ class DualSimplexTest {
     assertThat(infeasible).isGreaterThan(300);
   }
 
+  @Test
+  void addedRowsKeepTheBasisAndGiveCertificates() {
+    Random rnd = new Random(5);
+    int optimal = 0;
+    int infeasible = 0;
+    for (int run = 0; run < 2000; run++) {
+      int m = 1 + rnd.nextInt(5);
+      int n = 2 + rnd.nextInt(7);
+      int extra = 1 + rnd.nextInt(4);
+      double[][] a = new double[m + extra][n];
+      double[] rowLo = new double[m + extra];
+      double[] rowHi = new double[m + extra];
+      for (int i = 0; i < m + extra; i++) {
+        for (int j = 0; j < n; j++) {
+          a[i][j] = rnd.nextInt(3) == 0 ? 0 : rnd.nextInt(11) - 5.0;
+        }
+        int kind = rnd.nextInt(3);
+        double c = rnd.nextInt(21) - 10.0;
+        rowLo[i] = kind == 0 ? Double.NEGATIVE_INFINITY : c;
+        rowHi[i] = kind == 1 ? Double.POSITIVE_INFINITY : c + (kind == 2 ? rnd.nextInt(3) : 0);
+      }
+      double[] cost = new double[n];
+      for (int j = 0; j < n; j++) {
+        cost[j] = rnd.nextInt(5) - 2.0;
+      }
+      double[] lo = new double[n];
+      double[] hi = new double[n];
+      for (int j = 0; j < n; j++) {
+        lo[j] = rnd.nextInt(5) - 3.0;
+        hi[j] = lo[j] + rnd.nextInt(5);
+      }
+      DualSimplex lp =
+          new DualSimplex(
+              java.util.Arrays.copyOf(a, m),
+              java.util.Arrays.copyOf(rowLo, m),
+              java.util.Arrays.copyOf(rowHi, m),
+              cost);
+      for (int j = 0; j < n; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      if (lp.solve(1000) != DualSimplex.OPTIMAL) {
+        continue;
+      }
+      lp.addRows(
+          java.util.Arrays.copyOfRange(a, m, m + extra),
+          java.util.Arrays.copyOfRange(rowLo, m, m + extra),
+          java.util.Arrays.copyOfRange(rowHi, m, m + extra));
+      int status = lp.solve(1000);
+      DualSimplex fresh = new DualSimplex(a, rowLo, rowHi, cost);
+      for (int j = 0; j < n; j++) {
+        fresh.setBounds(j, lo[j], hi[j]);
+      }
+      int expected = fresh.solve(1000);
+      assertThat(status).as("run %d", run).isEqualTo(expected);
+      if (status == DualSimplex.OPTIMAL) {
+        optimal++;
+        checkOptimal(lp, a, rowLo, rowHi, cost, lo, hi, run);
+        assertThat(lp.objective())
+            .as("run %d objective", run)
+            .isCloseTo(fresh.objective(), org.assertj.core.data.Offset.offset(1e-5));
+      } else {
+        infeasible++;
+        checkFarkas(lp.farkas(), a, rowLo, rowHi, lo, hi, run);
+      }
+    }
+    assertThat(optimal).isGreaterThan(200);
+    assertThat(infeasible).isGreaterThan(200);
+  }
+
   private static void checkOptimal(
       DualSimplex lp,
       double[][] a,

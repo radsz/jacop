@@ -51,8 +51,6 @@ import org.jacop.core.Var;
 @Slf4j
 public class ExtensionalSupportVa extends AbstractExtensionalVa {
 
-  static final boolean DEBUG_PRUNING = false;
-
   /** It specifies the id of the constraint. */
   static final AtomicInteger idNumber = new AtomicInteger(0);
 

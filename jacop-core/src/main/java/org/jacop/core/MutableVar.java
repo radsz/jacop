@@ -40,21 +40,6 @@ import org.jacop.api.Stateful;
  */
 public interface MutableVar extends Stateful {
 
-  /**
-   * It returns the earlier value of variable comparing to the current one.
-   *
-   * @return previous value of a mutable variable.
-   */
-  MutableVarValue previous();
-
-  /**
-   * It replace the current representation of the value with a new representation. It ignores the
-   * store level.
-   *
-   * @param o value to which a mutable variable is set.
-   */
-  void setCurrent(MutableVarValue o);
-
   /** It returns string representation of Mutable variable. */
   String toString();
 

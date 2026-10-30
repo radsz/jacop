@@ -32,7 +32,6 @@ package org.jacop.core;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Stateful;
@@ -57,7 +56,6 @@ public class TimeStamp<T> implements Stateful {
 
   static final boolean DEBUG = false;
 
-  @Getter(AccessLevel.PACKAGE)
   final int index;
 
   @Getter final Store store;

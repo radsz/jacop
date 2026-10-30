@@ -93,8 +93,6 @@ public class NetworkFlow extends Constraint
   /** Disables the queue variable function during consistency. */
   private boolean disableQueueVariable;
 
-  private int previousLevel = -1;
-
   /** Pairs of a variable of the caller and the copy the network uses for one of its roles. */
   private final List<IntVar[]> copies = new ArrayList<>();
 
@@ -460,8 +458,6 @@ public class NetworkFlow extends Constraint
       statistics.consistencyCalls++;
     }
     updateGraph();
-
-    previousLevel = store.level;
 
     int iteration = 0;
     // The pruning of one iteration (of flow variables such as counters) changes arc bounds, which

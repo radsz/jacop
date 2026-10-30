@@ -184,6 +184,8 @@ public final class GraphAutomorphisms {
   private int[] image;
   private int[] stamp;
   private int stampValue;
+  // the level at which the first path chose each vertex, or -1
+  private int[] firstLevel;
   private boolean logging;
   private int[] logPos = new int[64];
   private int[] logOld = new int[64];
@@ -347,6 +349,11 @@ public final class GraphAutomorphisms {
       image[v] = v;
     }
     stamp = new int[n];
+    firstLevel = new int[n];
+    Arrays.fill(firstLevel, -1);
+    for (int k = 0; k < depth; k++) {
+      firstLevel[levels.get(k)[3]] = k;
+    }
 
     int[] orbit = new int[n];
     for (int v = 0; v < n; v++) {
@@ -420,14 +427,26 @@ public final class GraphAutomorphisms {
           undo(marks[level]);
           continue;
         }
-        // the vertex the first path chose is tried first: it is the image under many symmetries
+        // the vertex the first path chose is tried first: it is the image under many symmetries.
+        // When the other side already took it, a vertex the first path chose since level k and
+        // the other side has not is tried first, which closes a cycle as soon as it can: the
+        // generators are then transpositions where the group allows, as (chosen w) in a symmetric
+        // group, which orbitope and value class detection read
         int[] cell = cellElements(below[1]);
+        int preferred = -1;
         for (int i = 0; i < cell.length; i++) {
           if (cell[i] == below[3]) {
-            cell[i] = cell[0];
-            cell[0] = below[3];
+            preferred = i;
             break;
           }
+          if (preferred < 0 && firstLevel[cell[i]] >= k && firstLevel[cell[i]] <= level) {
+            preferred = i;
+          }
+        }
+        if (preferred > 0) {
+          int v = cell[preferred];
+          cell[preferred] = cell[0];
+          cell[0] = v;
         }
         level++;
         candidates[level] = cell;

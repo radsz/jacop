@@ -275,6 +275,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -410,6 +411,7 @@ setup to run configuration. -->
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -541,6 +543,7 @@ setup to run configuration. -->
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -671,6 +674,7 @@ setup to run configuration. -->
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>

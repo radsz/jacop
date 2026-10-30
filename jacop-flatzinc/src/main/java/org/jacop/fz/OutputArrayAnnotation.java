@@ -62,15 +62,6 @@ public class OutputArrayAnnotation {
   }
 
   /**
-   * Returns the name of the output array annotation.
-   *
-   * @return the name
-   */
-  String getName() {
-    return id;
-  }
-
-  /**
    * Returns the variable array.
    *
    * @return the variable array
@@ -86,25 +77,6 @@ public class OutputArrayAnnotation {
    */
   void setArray(Var[] a) {
     array = a;
-  }
-
-  /**
-   * Returns the number of index dimensions.
-   *
-   * @return the number of indexes
-   */
-  int getNumberIndexes() {
-    return indexes.size();
-  }
-
-  /**
-   * Returns the index domain at the specified position.
-   *
-   * @param i the index position
-   * @return the index domain
-   */
-  IntDomain getIndexes(int i) {
-    return indexes.get(i);
   }
 
   /**

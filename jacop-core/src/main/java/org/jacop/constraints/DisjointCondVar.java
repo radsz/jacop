@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
@@ -43,7 +42,6 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 class DisjointCondVar implements MutableVar {
 
   final int index;
@@ -52,18 +50,6 @@ class DisjointCondVar implements MutableVar {
 
   DisjointCondVarValue value;
 
-  DisjointCondVar(Store store) {
-    value = new DisjointCondVarValue();
-    index = store.putMutableVar(this);
-    this.store = store;
-  }
-
-  DisjointCondVar(Store store, RectangleWithCondition[] rectangles) {
-    value = new DisjointCondVarValue(rectangles);
-    index = store.putMutableVar(this);
-    this.store = store;
-  }
-
   DisjointCondVar(Store store, List<RectangleWithCondition> rectangles) {
     value = new DisjointCondVarValue();
     value.setValue(rectangles);
@@ -71,26 +57,10 @@ class DisjointCondVar implements MutableVar {
     this.store = store;
   }
 
-  int index() {
-    return index;
-  }
-
-  public MutableVarValue previous() {
-    return value.previousDisjointCondVarValue;
-  }
-
   public void removeLevel(int removeLevel) {
     if (value.stamp == removeLevel) {
       value = value.previousDisjointCondVarValue;
     }
-  }
-
-  public void setCurrent(MutableVarValue o) {
-    value = (DisjointCondVarValue) o;
-  }
-
-  int stamp() {
-    return value.stamp;
   }
 
   @Override

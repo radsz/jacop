@@ -138,8 +138,13 @@ mvn -Pmin -pl jacop-sat test -Dtest=CdclFuzzTest -Dsurefire.rerunFailingTestsCou
 
 Every answer is checked without a reference solver: a SAT answer by its model, an UNSAT answer by
 checking its DRAT proof with `RupChecker`, and an UNSAT answer under assumptions by re-solving with
-the failed assumptions as units. A failure prints the seed and, for small formulas, the CNF. Run
-it after any change to `org.jacop.jasat.cdcl`; 10⁶ runs take about 45 minutes on one core (split
+the failed assumptions as units. The solver also checks its own propagation at every decision
+(`CdclSolver.setChecking`): no clause may be false or unit at a unit propagation fixpoint, every
+attached clause must be watched by its first two literals, and every reason must hold its literal
+first with the other literals false earlier on the trail. `-Djacop.jasat.check=true` turns the same
+check on for any test (for example `LcgFuzzTest`, `LcgSolverTest` or `SatWrapperTest`), which then
+fails on the first missed unit propagation. A failure prints the seed and, for small formulas, the
+CNF. Run it after any change to `org.jacop.jasat.cdcl`; 10⁶ runs take about 45 minutes on one core (split
 them over seeds to use more).
 
 ## Checking lazy clause generation

@@ -53,8 +53,6 @@ import org.jacop.util.VarIntMap;
  */
 public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explainable, Stateful {
 
-  static final boolean TRACE_ON = false;
-  static final boolean TRACE_NARR_ON = false;
   static final int X = 0;
   static final int Y = 1;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -72,9 +70,6 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   /** Defines first position of the variable that is not ground to 1. */
   TimeStamp<BitSet>[] overlapping;
-
-  /** Current stamp. */
-  int stamp;
 
   boolean doAreaCheck = true;
 

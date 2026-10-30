@@ -707,7 +707,20 @@ Version 5.0 (unreleased)
     1 s of search; on the dev tier with 8 repetitions by 7%, with no
     instance slower by more than 5%.
 
-53. Store.watchedConstraints (a public map from variables to the constraints
+54. The parallel portfolio (-p) shares the best solution, not only its
+    objective value: a free search thread whose best solution is worse
+    replays it in a short run (100 failures) that fixes the model's
+    variables to its values, so that its large neighbourhoods and value
+    phases start from the portfolio's best solution. The thread of the
+    options given without -f (depth-first search) now takes the shared
+    objective bound too. With -f -p 4 on 4 cores, 60 s, against the
+    portfolio without sharing: 23 instances better and 6 worse of the 160
+    regression instances (time of proofs x0.77), 14 better and 6 worse of
+    the 63 lost-free ones. New: FreeSearch.Builder.sharedSolution,
+    SharedSolution, DepthFirstSearch.setSharedBound; -s prints
+    portfolioImports.
+    
+55. Store.watchedConstraints (a public map from variables to the constraints
     that watch them as watched literals) is removed; the store keeps these
     constraints in the variable. Use registerWatchedLiteralConstraint and
     deregisterWatchedLiteralConstraint as before, and the new
@@ -717,6 +730,194 @@ Version 5.0 (unreleased)
     nogoods of free search, no longer goes through a HashMap (new
     org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
     2.5% faster on mznbench.
+
+56. The linear relaxation (--lp) adds cutting planes at its first solve,
+    in the root propagation: up to 5 rounds of mixed-integer rounding
+    (MIR) cuts, from the rows of the basis inverse of the basic columns
+    with fractional values (Gomory mixed-integer cuts) and from the rows
+    themselves. Each cut is the MIR of an integer combination of the
+    rows, computed exactly in long arithmetic with the bounds of that
+    moment, so it holds for the whole search and is explained under
+    --lcg like the other rows; the floating-point simplex only proposes
+    it. DualSimplex adds the rows and keeps its basis. A round that does
+    not move the bound is dropped again; -Dorg.jacop.lp.cuts=false turns
+    cuts off. The first solve may take 20,000 pivots
+    (-Dorg.jacop.lp.rootPivots) instead of 500, within the root work
+    budget. Fixes an overflow in the propagation of a combination of rows
+    whose slack exceeded a long, which pruned values of solutions. On 46
+    of the 422 vs-ortools instances that the change touches (20 s), proofs
+    go from 24 to 29 (default), 23 to 28 (--lcg) and 25 to 30 (-f), with
+    no proof lost: trucking 06, 07, 09 and 11 are proved in 1-5 s (06,
+    07 and 11 also under --lcg), and the cuts lift the root bound of
+    trucking 09 from 596 to the optimum 871.
+    New statistics lpRootBound, lpCuts, lpCutBound.
+
+57. Under --lcg, Cumulative explains two more kinds of pruning itself
+    instead of with the generic reason. Time-table disjunctive reasoning
+    (on by default in the FlatZinc front end) pushes a task j past a task
+    i that every placement of j would overlap where the compulsory parts
+    of the other tasks leave less than r_i + r_j; when no energy window
+    explains a start, the reason is the bounds that keep i on two points
+    (or an interval), j's bounds and the compulsory parts there. Upper
+    bounds of variable durations and resource uses are explained by the
+    time table, looking past values already out of the domain (a resource
+    use in {0, 9} capped at 2 is recorded as <= 0). Edge finding and
+    time-table edge finding were already explained by the energy windows.
+    On the 76 instances with a cumulative in the free-search sets, generic
+    Cumulative reasons fall from 0.79% (--lcg) and 5.05% (--lcg -f) to 0,
+    and those of CumulativeUnary from 4.53% to 0.78% and 0.82% to 0.03%.
+    Paired runs: --lcg 60 s 8 better and 3 worse, --lcg -f 30 s with
+    seeds 1 to 3 16 better and 10 worse. -Djacop.lcg.cumulativePairs=false
+    turns the pair reasons off. Scripts and runs: osolpro
+    benchmarks/cumulative-explanations.
+
+58. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
+    first focused phase of 1,000 conflicts is over, instead of
+    alternating the two modes. Restarts become far rarer, and each one
+    costs the CP propagation back down from level 0. Paired runs, 60 s,
+    --lcg -f on the 123 mznbench instances with at least 2,000 conflicts:
+    23 better and 13 worse, 59 complete instead of 54; --lcg: 4 better,
+    1 worse. The other 126 instances barely reach stable mode.
+    -Djacop.lcg.stableForGood=false restores the alternation.
+
+59. JaSAT misses no unit propagation when CP drives it. Under --lcg and
+    -sat, a clause added during search, a learnt clause asserted by the
+    external search, or a propagator's reason kept as a clause could have
+    its true watch above its false watch's level; after a backtrack between
+    the two levels it was unit and never visited (under --lcg even at level
+    0). Under -sat, units asserted again by a backtrack lost their
+    implications once the next level was opened. CdclSolver.setChecking
+    (-Djacop.jasat.check=true) now checks at every fixpoint that no clause
+    is false or unit and that every reason is valid. On 125 mznbench
+    instances (60 s) --lcg solves 68 instead of 67 and --lcg -f 77 as
+    before, with no measurable cost.
+
+60. LCG explanations of Regular (and the other layered graph constraints)
+    cite only the edges that lead to the removed values: the nearest cut
+    or the cut nearest the ends of the graph, whichever is shorter
+    (Gange, Stuckey and Szymanek, Constraints 2011), instead of every
+    edge leaving the reachable nodes. Reasons on nonogram fall from 15.4
+    to 3.8 atoms. On the 92 regular/mdd instances of the free-search
+    kit and jacop-benchmarks (60 s, paired), --lcg solves 66 instead of
+    60 and --lcg -f 72 instead of 66. -Djacop.lcg.minimality=N measures
+    every N-th explanation: with -s, the %% lcg-min lines give per
+    constraint class how many atoms propagation needs and how many could
+    be weaker.
+
+61. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
+    bound weaker than any trail atom when the solver already has a true
+    literal for it, set before the explained one. On mznbench (249,
+    60 s, paired) --lcg is better on 15 instances and worse on 6
+    (evilshop js-brs2-7 proved optimal, mrcpsp j30_1_10 proved UNSAT,
+    rcpsp-max j30_169 26 s to 4 s); --lcg -f is level (32 to 32).
+    -Djacop.lcg.liftLiterals=false turns it off; %%%mzn-stat
+    lcgLiftedLiterals counts the literals cited.
+
+62. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
+    explain their own pruning under --lcg instead of the generic or
+    replayed reason. IncreasingSum cites the bounds of the order and the
+    sum, LexOrder the bounds of the prefix that is forced equal or
+    greater and of the position that decides, CountVar the variables
+    counted and those whose domains miss the value. Generic reasons fall
+    from 876,758 to 0 on primes_param and from 209,374 to 0 on
+    amaze_mod; LexOrder reasons on mqueens from 129 to 21 atoms. Paired
+    60 s runs: --lcg better on 10 instances and worse on 1 (mqueens n11
+    6 s to 4 s, mqueens n20 solved); --lcg -f is within noise on the
+    order and sum instances (a rerun of the 12 that differed split 4
+    to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
+    to 1.4 s).
+
+63. Shorter Cumulative explanations under --lcg. Explaining a start bound
+    walks over the starts it removed; where those starts had been removed
+    already, it cited one removal per value, so on carpet-cutting some
+    reasons had 300 to 600 atoms. A compulsory part that rules out the
+    same starts is now cited instead when it takes fewer atoms. Energy
+    window reasons keep only the tasks the window's excess needs, each
+    with its start bounds lifted to the overlap it must have. carpet-
+    cutting test.20: 59 to 10 atoms per Cumulative reason (--lcg), 75 to
+    10 (--lcg -f). Paired runs against item 56 alone: --lcg 60 s 8 better
+    and 1 worse, --lcg -f 30 s with seeds 1 to 3 34 better and 11 worse,
+    with new proofs on rcpsp_08, smelt_3 and rcpsp-wet j60_36_8.
+    -Djacop.lcg.windowLift=false keeps the full window reasons.
+
+64. New decomposed constraint VectorBinpacking(bin, load, w, minBin) for
+    vector (multidimensional) bin packing: one Binpacking per dimension,
+    a Binpacking with cardinality rules on the surrogate dimension (the
+    sum of the dimensions scaled to a common capacity, Caprara and Toth
+    2001), and an Alldistinct on each clique of the conflict graph (items
+    that exceed the capacity of some dimension together, Gualandi and
+    Lombardi, CP 2013). The FlatZinc front end posts the surrogate
+    dimension for bin_packing constraints over the same bin variables, one
+    per dimension (-Dorg.jacop.fz.binPackingSurrogate=false turns it
+    off); the cliques are off by default
+    (-Dorg.jacop.fz.binPackingCliques=vector, or all, turns them on). On
+    75 random vector bin packing instances (30 s) the surrogate dimension
+    proved 62 optima instead of 49 with the model's search, 65 instead of
+    54 with free search and 59 instead of 44 with free search and --lcg;
+    the cliques proved no more.
+
+65. Presolve breaks value symmetries and orbitopes too (--presolve on|check,
+    unless --symmetry off), in org.jacop.fz.SymmetryBreaking:
+    - Value precedence. Integer variables whose values are only compared
+      (int_eq/int_ne and x - y = 0 or != 0, all_different, all_equal,
+      count, at least, at most, member, nvalue, element, gcc and bin packing
+      with their value-indexed counts and loads) form a value space; groups
+      with the same values form one space, as the machines of jobs that no
+      constraint joins. A second graph joins the space's variables to
+      vertices of their values and constants in those arguments become the
+      value vertices; the generators that fix the variables permute the
+      values, and a set of values they permute in every way (connected
+      transpositions, or a Schreier-Sims check up to 40 values) is posted
+      as one SeqPrecedeChain over the space's variables, which then come
+      first in the lex-leader order of the variable symmetries. A
+      minimised objective that only bounds the space from above (x <= z,
+      z = max(x)), as the number of colours, is a dominance that keeps
+      the precedence and the optimum.
+    - Orbitopes. Generators that swap two columns of variables, row by
+      row, and chain into connected swaps of columns are replaced by one
+      LexChain over the columns when the columns fit the lex-leader order.
+      GraphAutomorphisms now prefers transpositions, which finds them.
+    On 140 generated instances (graph colouring, fewest colours, bin
+    packing with integer and 0/1 models, P||Cmax, jobs on identical
+    machines) at 30 s, solved instances go from 74 to 93 with the
+    annotation search, 84 to 93 with -f and 89 to 93 with --lcg -f; bin
+    packing from 0 to 10 with the annotation search. --lcg -f loses 2
+    P||Cmax instances to a different search. Detection takes a median of
+    0.05 s on one model of each directory of jacop-benchmarks; value
+    precedence fires on 38 of 1,926 and orbitopes on 101.
+
+66. Fewer SAT variables under --lcg. A value a constraint removes from
+    inside a domain is now a transient [x = v] literal, released on
+    backtracking unless a clause keeps it, as bound literals already were;
+    before, each was linked to two new bound literals by four clauses.
+    CumulativeUnary's time table no longer cuts holes into start domains
+    under --lcg (the sweep of CumulativeBasic already did not): jobshop
+    swv07 made 357k SAT variables in 20 s, now 48k. Annotation decisions
+    x = min and x = max are taken as [x <= min] and [x >= max], without
+    the [x = v] literal, and the annotation's variable selection starts
+    from the position it reached at the decision level instead of the
+    first variable. New statistics lcgBoundLiterals, lcgEqualityLiterals,
+    lcgTransientLiterals, lcgAuxiliaryVariables, lcgSatVariables,
+    lcgSatConflicts and lcgSatPropagations. Paired runs on mznbench, 30 s:
+    --lcg 19 better / 3 worse, --lcg -f 50 / 52 (two runs; noise level),
+    with 15% fewer SAT variables at the median.
+
+67. Dead code removed (about 3,300 lines, no change in behaviour). Classes
+    nothing used: IntervalBasedBacktrackableManager and
+    SimpleBacktrackableManager (the store always uses
+    TrailBacktrackableManager), SwitchesPruningLogging (no-op tracing
+    stubs), LengauerTarjan and SophisticatedLengauerTarjan, TableMill,
+    geost ShiftOrder and BoxDisplay (an AWT debug view behind a constant
+    false switch), AbstractArithmeticConstraint and AbstractXplusYeq.
+    Unused methods of the core interfaces: Domain.isNumeric(),
+    noConstraints(), noSearchConstraints() and searchConstraints(),
+    IntDomain.elementsSmallerThan(int), Var.afcValue(),
+    Var.sizeSearchConstraints(), the Function overloads of
+    Var.positionMapping and addPositionMapping, MutableVar.previous() and
+    setCurrent(), MutableVarValue.previous(),
+    BacktrackableManager.isRecognizedAsChanged(int), and in Store
+    throwFailException(Var), clearWatchedConstraint(),
+    countConstraint(int) and the field auxilaryVariables.
 
 Version 4.11
 =============

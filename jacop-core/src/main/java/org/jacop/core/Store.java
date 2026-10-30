@@ -172,9 +172,6 @@ public class Store {
    */
   protected final List<Stateful> timeStamps = new ArrayList<>(100);
 
-  /** It switches on/off debuging of remove level facilities. */
-  final boolean removeDebug = false;
-
   /**
    * It stores all the active replacements of constraints that are being applied upon constraint
    * imposition. It makes it possible to replace constraints into other constraints. It can be very
@@ -189,12 +186,6 @@ public class Store {
    * variables changed at this level (efficient backtracking).
    */
   public BooleanVar[] changeHistory4BooleanVariables;
-
-  /**
-   * It contains all auxilary variables created by decomposable constraints. They have to be
-   * grounded by search for a solution to be valid.
-   */
-  public List<Var> auxilaryVariables = new ArrayList<>();
 
   /** It stores constraint which is currently re-evaluated. */
   public Constraint currentConstraint;
@@ -956,17 +947,6 @@ public class Store {
   }
 
   /**
-   * This function is called when a counter of constraints should be increased by given value. If
-   * for some reason some constraints should be counted as multiple ones than this function could be
-   * called.
-   *
-   * @param n integer by which the counter of constraints should be increased.
-   */
-  public void countConstraint(int n) {
-    numberOfConstraints += n;
-  }
-
-  /**
    * This function looks for a variable with given id. It will first check the existence of a
    * hashmap variablesHashMap to get the variable from the hashmap in constant time. Only if the
    * variable was not found or hashmap object was not created a linear algorithm scanning through
@@ -1716,23 +1696,6 @@ public class Store {
       return;
     }
 
-    if (removeDebug && level > levelSetTo && level > 0) {
-
-      for (int i = 0; i < size; i++) {
-
-        if (ASSERTS_ENABLED
-            && vars[i].level() >= level
-            && !trailManager.isRecognizedAsChanged(vars[i].storeIndex)) {
-          throw new IllegalStateException(
-              String.valueOf("Variable position " + i + " not properly recorded to have changed "));
-        }
-      }
-    }
-
-    if (removeDebug) {
-      log.debug("Store level changes from {} to {}", level, levelSetTo);
-    }
-
     level = levelSetTo;
   }
 
@@ -1743,17 +1706,6 @@ public class Store {
    */
   public int size() {
     return size;
-  }
-
-  /**
-   * It throws an exception after printing trace information if tracing is switched on.
-   *
-   * @param x variable causing the failure exception.
-   * @throws FailException is always thrown.
-   */
-  public void throwFailException(Var x) {
-
-    throw failException;
   }
 
   /**

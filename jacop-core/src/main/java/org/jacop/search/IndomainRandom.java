@@ -33,7 +33,6 @@ package org.jacop.search;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Random;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -46,7 +45,6 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class IndomainRandom<T extends IntVar> implements Indomain<T> {
 
   private final Random generator;

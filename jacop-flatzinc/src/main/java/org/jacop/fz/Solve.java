@@ -72,6 +72,7 @@ import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.lcg.LinearForm;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
@@ -149,6 +150,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
+
+  // the model's integer variables by name, whose values a portfolio thread shares with the others
+  private String[] sharedNames;
+  private IntVar[] sharedVars;
   // the variables search uses, in the searched store
   Tables dictionary;
   // the variables output prints, in the loaded store
@@ -196,8 +201,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
-  // sequence search
-  Search<T> finalSearchSeq;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -337,7 +340,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     long start = timer.getCpuTime();
     SymmetryBreaking.Outcome o =
-        new SymmetryBreaking(store, dictionary).run(astTree, objective, order, budget * 1_000_000L);
+        new SymmetryBreaking(store, dictionary)
+            .run(
+                astTree,
+                objective,
+                !satisfy && getKind(kind.getKind()) == 1,
+                order,
+                budget * 1_000_000L);
     long time = timer.getCpuTime() - start;
     if (!store.consistency()) {
       throw Store.failException;
@@ -352,6 +361,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + o.generators()
               + "\n%%%mzn-stat: symmetryConstraints="
               + o.constraints()
+              + "\n%%%mzn-stat: symmetryValuePrecedences="
+              + o.precedences()
+              + "\n%%%mzn-stat: symmetryOrbitopes="
+              + o.orbitopes()
               + "\n%%%mzn-stat: symmetrySearchComplete="
               + o.complete()
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
@@ -463,7 +476,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     long start = timer.getCpuTime();
-    linearRelaxation = LinearRelaxation.of(store, objective, maximize);
+    // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
+    // linear constraints are split into block sums: the relaxation gets the clauses as rows and
+    // the blocks substituted back, so it has the rows of the model as without --lcg
+    List<LinearForm> clauses = new ArrayList<>();
+    if (options.lcg()) {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        clauses.add(clauseRow(clause[0], clause[1]));
+      }
+    }
+    linearRelaxation = LinearRelaxation.of(store, objective, maximize, clauses, splitSums());
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
@@ -475,6 +497,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  // the block sums of the split linear constraints that are still variables
+  private Set<IntVar> splitSums() {
+    Set<IntVar> sums = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : dictionary.splitSums()) {
+      if (v != null && !v.singleton()) {
+        sums.add(v);
+      }
+    }
+    return sums;
+  }
+
+  // the clause "some positive literal is 1 or some negative literal is 0" as the row
+  // sum(positive) - sum(negative) >= 1 - |negative|
+  private static LinearForm clauseRow(IntVar[] positive, IntVar[] negative) {
+    IntVar[] vars = new IntVar[positive.length + negative.length];
+    long[] weights = new long[vars.length];
+    for (int i = 0; i < positive.length; i++) {
+      vars[i] = positive[i];
+      weights[i] = 1;
+    }
+    for (int i = 0; i < negative.length; i++) {
+      vars[positive.length + i] = negative[i];
+      weights[positive.length + i] = -1;
+    }
+    return new LinearForm(vars, weights, 1L - negative.length, LinearForm.GE);
   }
 
   /** Prints the counts of the linear relaxation (--lp). */
@@ -496,6 +545,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
             + r.prunings
+            + "\n%%%mzn-stat: lpRootBound="
+            + r.rootBound
+            + "\n%%%mzn-stat: lpCuts="
+            + r.cuts
+            + "\n%%%mzn-stat: lpCutBound="
+            + r.cutBound
             + "\n%%%mzn-stat-end");
   }
 
@@ -1908,6 +1963,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       perClass.append('\n');
     }
+    for (Map.Entry<String, long[]> e : lcg.minimalityStatistics().entrySet()) {
+      long[] n = e.getValue();
+      perClass
+          .append("%% lcg-min ")
+          .append(e.getKey())
+          .append(": sampled=")
+          .append(n[0])
+          .append(" atoms=")
+          .append(n[1])
+          .append(" needed=")
+          .append(n[2])
+          .append(" lifted=")
+          .append(n[3])
+          .append(" beyond=")
+          .append(n[4])
+          .append(" unchecked=")
+          .append(n[5])
+          .append(" liftable=")
+          .append(n[6])
+          .append('\n');
+    }
     IO.print(
         "%%%mzn-stat: lcgAtoms="
             + lcg.atomsPropagated
@@ -1917,6 +1993,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.atomLiteralsLearnt
             + "\n%%%mzn-stat: lcgLiteralsReleased="
             + lcg.literalsReleased
+            + "\n%%%mzn-stat: lcgLiftedLiterals="
+            + lcg.liftedLiterals
+            + "\n%%%mzn-stat: lcgBoundLiterals="
+            + lcg.boundLiterals
+            + "\n%%%mzn-stat: lcgEqualityLiterals="
+            + lcg.equalityLiterals
+            + "\n%%%mzn-stat: lcgTransientLiterals="
+            + lcg.transientLiterals
+            + "\n%%%mzn-stat: lcgAuxiliaryVariables="
+            + lcg.auxiliaryVariables
+            + "\n%%%mzn-stat: lcgSatVariables="
+            + lcg.sat().numVars()
+            + "\n%%%mzn-stat: lcgSatConflicts="
+            + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgSatPropagations="
+            + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
             + reasons
             + "\n%%%mzn-stat: lcgGenericShare="
@@ -2302,6 +2394,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.sharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
     } else if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
+      builder.sharedSolution(worker.sharedSolution(dictionary::getVariable));
     }
     if (onRestart) {
       builder.restartHook(dictionary.onRestart);
@@ -2476,6 +2569,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printSearch(label);
     }
     stopInPortfolio();
+    importBoundInPortfolio(label, costVar);
     rs =
         new RestartSearch<>(
             store, label, select, restartCalculator, costVar != null ? (T) costVar : null);
@@ -2501,6 +2595,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * In a portfolio thread, a depth-first search and its sub-searches take the objective value of
+   * the best solution of the portfolio as their bound.
+   */
+  private void importBoundInPortfolio(Search<? extends Var> search, Var costVar) {
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker == null || costVar == null) {
+      return;
+    }
+    if (search instanceof DepthFirstSearch<? extends Var> dfs) {
+      dfs.setSharedBound(worker::sharedBound);
+      if (dfs.childSearches != null) {
+        for (Search<? extends Var> child : dfs.childSearches) {
+          importBoundInPortfolio(child, costVar);
+        }
+      }
+    }
+  }
+
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
@@ -2509,6 +2622,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printSearch(label);
     }
     stopInPortfolio();
+    importBoundInPortfolio(label, costVar);
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
@@ -2740,6 +2854,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SetVar[] setSearchVariables = searchVars.getSetVars();
     BooleanVar[] boolSearchVariables = searchVars.getBoolVars();
     FloatVar[] floatSearchVariables = searchVars.getFloatVars();
+
+    if (outputVarsOnly
+        && label != null
+        && !options.freeSearch()
+        && noSearchVariables(
+            intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
+      // every output variable is fixed already (root probing of presolve fixes them): labelling
+      // every variable instead would report the one output solution again for each assignment of
+      // the other variables, so they are only completed once
+      intAndSetSearch[4] = addCompletionSearch(label);
+      if (intAndSetSearch[4] != null) {
+        return intAndSetSearch;
+      }
+    }
 
     if (shouldUseDefaultSearchVars(
         intSearchVariables, boolSearchVariables, setSearchVariables, floatSearchVariables)) {
@@ -3076,8 +3204,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     result = false;
     optimization = solveKind > 0;
-
-    finalSearchSeq = listSeqSearches.getLast();
 
     long currentTime = timer.getCpuTime();
     initTime = currentTime - startCpu;
@@ -3623,7 +3749,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
       Integer cost = costVariable instanceof IntVar c ? c.min() : null;
-      worker.solution(printBuffer.toString(), cost, !minimize);
+      worker.solution(printBuffer.toString(), cost, !minimize, sharedNames(), sharedValues());
     }
 
     if (options.getAll()) {
@@ -3636,6 +3762,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getNumberSolutions() == numberSolutions) {
       throw new NumberSolutionsReached();
     }
+  }
+
+  /** The names of the model's integer variables, whose values a portfolio thread shares. */
+  private String[] sharedNames() {
+    if (sharedNames == null) {
+      sharedNames = dictionary.variableTable.keySet().toArray(new String[0]);
+      sharedVars = new IntVar[sharedNames.length];
+      for (int i = 0; i < sharedNames.length; i++) {
+        sharedVars[i] = dictionary.getVariable(sharedNames[i]);
+      }
+    }
+    return sharedNames;
+  }
+
+  /** The values of the variables of {@link #sharedNames()} in the solution of the store. */
+  private int[] sharedValues() {
+    int[] values = new int[sharedVars.length];
+    for (int i = 0; i < values.length; i++) {
+      IntVar v = sharedVars[i];
+      values[i] = v != null && v.singleton() ? v.value() : Portfolio.UNKNOWN;
+    }
+    return values;
   }
 
   private void appendOutputVariablesToBuffer(StringBuffer printBuffer) {

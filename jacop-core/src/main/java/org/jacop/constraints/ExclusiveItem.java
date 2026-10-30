@@ -40,18 +40,6 @@ import org.jacop.core.IntVar;
  */
 record ExclusiveItem(int i1, int i2, IntVar cond) {
 
-  IntVar condition() {
-    return cond;
-  }
-
-  int index1() {
-    return i1;
-  }
-
-  int index2() {
-    return i2;
-  }
-
   @Override
   public String toString() {
     return "[" + i1 + ", " + i2 + ", " + cond + "]";

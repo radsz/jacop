@@ -199,10 +199,6 @@ public class ReversibleSparseBitSet {
     return -1;
   }
 
-  int noWords() {
-    return index.length; // words.value().length;
-  }
-
   /**
    * It returns a string representation of the reversible sparse bit set.
    *

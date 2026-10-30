@@ -209,23 +209,4 @@ public class BipartiteGraphMatching {
     }
     return true;
   }
-
-  /**
-   * It adds an edge from vertex u on the left side to vertex v on the right side of the bipartite
-   * graph.
-   *
-   * @param u the vertex on the left side.
-   * @param v the vertex on the right side.
-   */
-  void addEdge(int u, int v) {
-    if (adj[u] == null) {
-      adj[u] = new int[1];
-      adj[u][0] = v;
-    } else {
-      int[] tmp = new int[adj[u].length + 1];
-      System.arraycopy(adj[u], 0, tmp, 0, adj[u].length);
-      tmp[adj[u].length] = v; // Add u to v’s list.
-      adj[u] = tmp;
-    }
-  }
 }

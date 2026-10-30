@@ -41,15 +41,20 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import java.util.regex.Pattern;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.free.SharedSolution;
 
 /**
  * A parallel portfolio for FlatZinc models (option -p). Each thread reads the model into a store of
  * its own and solves it with its own settings: the first with the options given, the others with
  * free search and lazy clause generation under other heuristics. The threads share the objective
- * value of the best solution found so far, which bounds the search of the others, and the first
- * thread that finishes its search decides the result: a solution for satisfaction, an optimum, or
- * that there is none.
+ * value of the best solution found so far, which bounds the search of the others, and the values of
+ * the model's variables in it, which free search threads replay to start their neighbourhoods and
+ * values from it. The first thread that finishes its search decides the result: a solution for
+ * satisfaction, an optimum, or that there is none.
  *
  * <p>The threads print to their own capture, which tells when a thread has explored its whole
  * search space; the portfolio alone prints solutions and the final status.
@@ -79,6 +84,9 @@ final class Portfolio {
 
   private static final String COMPLETE = "==========";
 
+  /** The value shared for a variable that is not fixed in a solution. */
+  static final int UNKNOWN = Integer.MIN_VALUE;
+
   /** How long the portfolio waits for its stopped threads to end after printing the answer. */
   private static final long JOIN_MILLIS = 10_000;
 
@@ -101,7 +109,12 @@ final class Portfolio {
   // the objective value (of the minimised cost variable) of the best solution, read by all threads
   private volatile int bestCost = Integer.MAX_VALUE;
   private String bestSolution;
+  // the values of the model's variables in the best solution, by name; UNKNOWN when not fixed
+  private String[] bestNames;
+  private int[] bestValues;
   private Worker bestWorker;
+  // the times a thread replayed the best solution
+  private int imports;
   private boolean optimisation;
   private boolean maximisation;
   private int solutions;
@@ -274,6 +287,9 @@ final class Portfolio {
         if (bestWorker != null) {
           s.append("%%%mzn-stat: portfolioBest=").append(bestWorker.name).append('\n');
         }
+        if (imports > 0) {
+          s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+        }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {
           s.append("%%%mzn-stat: objective=").append(objective(bestCost)).append('\n');
@@ -343,7 +359,8 @@ final class Portfolio {
    * Takes a solution of a thread: the first one for satisfaction, which ends the search, and for
    * optimisation each one better than the best so far.
    */
-  private void solution(Worker w, String text, Integer cost, boolean maximise) {
+  private void solution(
+      Worker w, String text, Integer cost, boolean maximise, String[] names, int[] values) {
     synchronized (lock) {
       if (finished) {
         return;
@@ -362,6 +379,8 @@ final class Portfolio {
         maximisation = maximise;
         bestCost = cost;
         bestSolution = text;
+        bestNames = names;
+        bestValues = values;
         bestWorker = w;
         solutions++;
       }
@@ -436,9 +455,22 @@ final class Portfolio {
      * @param text the solution as printed
      * @param cost the value of the minimised cost variable, or null for satisfaction
      * @param maximise whether the cost variable is the negated objective
+     * @param names the names of the model's variables, an array the thread keeps from one solution
+     *     to the next
+     * @param values their values in the solution, {@link #UNKNOWN} for a variable not fixed
      */
-    void solution(String text, Integer cost, boolean maximise) {
-      Portfolio.this.solution(this, text, cost, maximise);
+    void solution(String text, Integer cost, boolean maximise, String[] names, int[] values) {
+      Portfolio.this.solution(this, text, cost, maximise, names, values);
+    }
+
+    /**
+     * Returns the best solution of the portfolio as a solution for this thread to replay.
+     *
+     * @param variable the variable of this thread's store with a name of the model, or null
+     * @return the shared solution
+     */
+    SharedSolution sharedSolution(Function<String, IntVar> variable) {
+      return new Replay(variable);
     }
 
     /**
@@ -467,6 +499,52 @@ final class Portfolio {
       stopped = true;
       for (Runnable r : stops) {
         r.run();
+      }
+    }
+
+    /** The best solution of the portfolio, fixed on the variables of this thread's store. */
+    private final class Replay implements SharedSolution {
+
+      private final Function<String, IntVar> variable;
+      // the variables of this thread for the names of the last solution replayed
+      private String[] names;
+      private IntVar[] vars;
+
+      Replay(Function<String, IntVar> variable) {
+        this.variable = variable;
+      }
+
+      @Override
+      public int objective() {
+        return bestCost;
+      }
+
+      @Override
+      public void impose(Store store) {
+        String[] n;
+        int[] values;
+        synchronized (lock) {
+          n = bestNames;
+          values = bestValues;
+          imports++;
+        }
+        if (n == null) {
+          return;
+        }
+        if (n != names) {
+          names = n;
+          vars = new IntVar[n.length];
+          for (int i = 0; i < n.length; i++) {
+            vars[i] = variable.apply(n[i]);
+          }
+        }
+        for (int i = 0; i < vars.length; i++) {
+          IntVar x = vars[i];
+          int v = values[i];
+          if (x != null && v != UNKNOWN && !x.singleton() && x.domain.contains(v)) {
+            x.domain.inValue(store.level, x, v);
+          }
+        }
       }
     }
   }
