@@ -45,23 +45,54 @@ class PortfolioSettingsTest {
 
   @Test
   void objectiveSettingsDoNotMatterWithoutAnObjective() {
-    List<String> lcgBb = List.of("--lcg", "-f", "--free-config", "lcg-core=0,lcg-lb=0");
-    List<String> lcg = List.of("--lcg", "-f");
+    List<String> lcgBb = List.of("--lcg", "on", "-f", "--free-config", "lcg-core=0,lcg-lb=0");
+    List<String> lcg = List.of("--lcg", "on", "-f");
     assertEquals(Portfolio.search(lcg, true), Portfolio.search(lcgBb, true));
     assertNotEquals(Portfolio.search(lcg, false), Portfolio.search(lcgBb, false));
   }
 
   @Test
   void satisfactionSkipsTheSettingsThatRepeatAnEarlierThread() {
-    String free = Portfolio.search(List.of("-f"), true);
-    assertEquals(List.of("lcg", "free-chs-luby", "free-cacd"), names(free, 3, true));
+    String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), true);
+    assertEquals(
+        List.of(
+            "lcg-lits",
+            "free-chs-luby",
+            "default",
+            "lcg-fixed",
+            "free-afc",
+            "free",
+            "ls",
+            "free-cacd"),
+        names(lcgFree, 8, true));
   }
 
   @Test
   void optimisationKeepsTheOrder() {
-    String free = Portfolio.search(List.of("-f"), false);
-    assertEquals(List.of("lcg", "free-chs-luby", "lcg-bb"), names(free, 3, false));
-    String none = Portfolio.search(List.of(), false);
-    assertEquals(List.of("free", "lcg", "free-chs-luby"), names(none, 3, false));
+    String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
+    assertEquals(List.of("lcg-lits", "free-chs-luby", "default"), names(lcgFree, 3, false));
+    assertEquals(
+        List.of(
+            "lcg-lits",
+            "free-chs-luby",
+            "default",
+            "lcg-fixed",
+            "free-afc",
+            "free",
+            "ls",
+            "lcg-bb"),
+        names(lcgFree, 8, false));
+  }
+
+  @Test
+  void theGivenSettingIsNotRepeated() {
+    String lcgFixed = Portfolio.search(List.of("--lcg", "on"), false);
+    assertEquals(
+        List.of("lcg-lits", "free-chs-luby", "default", "free-afc"), names(lcgFixed, 4, false));
+    String annotation = Portfolio.search(List.of("--lcg", "off"), false);
+    assertEquals(List.of("lcg-lits", "free-chs-luby", "lcg-fixed"), names(annotation, 3, false));
+    assertEquals(
+        Portfolio.search(List.of("--lcg", "-f"), false),
+        Portfolio.search(List.of("--lcg", "on", "-f"), false));
   }
 }

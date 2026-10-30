@@ -69,10 +69,17 @@ import org.jacop.search.free.SharedSolution;
 @SuppressWarnings("java:S106") // stdout is the interface of a FlatZinc solver
 final class Portfolio {
 
-  /** The settings of the threads after the first, in this order; -f and --lcg are given here. */
+  /**
+   * The settings of the threads after the first, in this order; -f and --lcg are given here. The
+   * order comes from each setting run alone on 240 hard instances (osolpro
+   * benchmarks/portfolio-configs) and is the best one both after --lcg on -f (the default with -f)
+   * and after --lcg on (the default without options): LCG branching on the solver's literals solves
+   * the most instances the others do not, then free search without LCG, then depth-first search on
+   * the annotation without and with LCG. The LCG settings that differ only in core-guided or
+   * lower-bound search (lcg, lcg-bb) solve the same instances as one another.
+   */
   private static final String[][] CONFIGS = {
-    {"free", "--lcg", "off", "-f"},
-    {"lcg", "--lcg", "on", "-f"},
+    {"lcg-lits", "--lcg", "on", "-f", "--free-config", "lcg-branching=literals"},
     {
       "free-chs-luby",
       "--lcg",
@@ -81,13 +88,16 @@ final class Portfolio {
       "--free-config",
       "heuristic=chs,restarts=luby,scale=100"
     },
+    {"default", "--lcg", "off"},
+    {"lcg-fixed", "--lcg", "on"},
+    {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
+    {"free", "--lcg", "off", "-f"},
+    // local search for half the time, as long as it progresses, then free search from its solution
+    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"},
+    {"lcg", "--lcg", "on", "-f"},
     {"lcg-bb", "--lcg", "on", "-f", "--free-config", "lcg-core=0,lcg-lb=0"},
     {"free-cacd", "--lcg", "off", "-f", "--free-config", "heuristic=cacd"},
-    {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
-    {"lcg-fixed", "--lcg", "on"},
-    {"free-luby-keep", "--lcg", "off", "-f", "--free-config", "restarts=luby,scale=50,flush=0"},
-    // local search for half the time, as long as it progresses, then free search from its solution
-    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"}
+    {"free-luby-keep", "--lcg", "off", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
   };
 
   /** The most threads the portfolio uses: the options given and each setting above. */
