@@ -429,11 +429,7 @@ public final class LocalSearch {
       constraints.addAll(store.valueWatchers(v));
     }
     // constraints with watched literals are not in the lists of the domains either
-    if (store.watchedConstraints != null) {
-      for (Set<Constraint> watched : store.watchedConstraints.values()) {
-        constraints.addAll(watched);
-      }
-    }
+    constraints.addAll(store.watchedLiteralConstraints());
     if (extra != null) {
       constraints.addAll(extra);
     }
