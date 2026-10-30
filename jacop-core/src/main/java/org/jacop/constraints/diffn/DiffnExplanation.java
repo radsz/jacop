@@ -153,6 +153,31 @@ final class DiffnExplanation {
   }
 
   /**
+   * Adds to {@code out} the bounds of every origin and length just before a trail position. The
+   * pruning rules of {@link Nooverlap} and {@link Diffn} read only these bounds (compulsory parts,
+   * profiles, areas) and remove whole intervals, so the bounds explain any of their prunings and
+   * failures. It replaces the generic reason, which also lists every hole of every origin: with
+   * wide origin domains that is thousands of atoms per explanation.
+   *
+   * @param trail the trail
+   * @param position the trail position (an entry index, or {@link AtomicTrail#size()} for now)
+   * @param rectangle the rectangles
+   * @param out where the reason entries are added
+   */
+  static void bounds(AtomicTrail trail, int position, Rectangle[] rectangle, EntryList out) {
+    int mark = out.size();
+    for (Rectangle r : rectangle) {
+      for (int d = 0; d < 2; d++) {
+        trail.addLowerBound(r.origin[d], position, out);
+        trail.addUpperBound(r.origin[d], position, out);
+        trail.addLowerBound(r.length[d], position, out);
+        trail.addUpperBound(r.length[d], position, out);
+      }
+    }
+    out.sortUnique(mark);
+  }
+
+  /**
    * Whether rectangle i cannot have its origin in dimension d anywhere in [from, to]: each value is
    * forbidden by another rectangle or was out of the origin's domain. If so the reason goes to out.
    */

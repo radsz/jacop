@@ -934,6 +934,7 @@ public class Store {
             startFirstRun(currentConstraint);
           }
           numberConsistencyCalls++;
+          currentConstraint.countConsistencyCall();
           long changesBefore = domainChanges;
           currentConstraint.consistency(this);
           if (variableActivityManagement) {

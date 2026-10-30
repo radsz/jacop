@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -56,7 +57,7 @@ import org.jacop.set.core.SetVar;
  */
 public class Tables {
 
-  public final Map<IntVar, IntVar> aliasTable = new HashMap<>();
+  public final Map<IntVar, IntVar> aliasTable = new LinkedHashMap<>();
 
   /** The Boolean variables that integer variables are aliases of (the values of aliasTable). */
   private final Set<IntVar> aliasTargets = new HashSet<>();

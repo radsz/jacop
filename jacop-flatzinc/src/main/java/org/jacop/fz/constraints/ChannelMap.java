@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.XeqY;
@@ -46,7 +47,7 @@ import org.jacop.core.IntVar;
  */
 class ChannelMap {
 
-  final Map<IntVar, Map<Integer, IntVar>> cs = new HashMap<>();
+  final Map<IntVar, Map<Integer, IntVar>> cs = new LinkedHashMap<>();
 
   final int minSize = 1;
 

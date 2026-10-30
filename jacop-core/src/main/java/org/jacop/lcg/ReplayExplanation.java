@@ -71,18 +71,20 @@ final class ReplayExplanation {
       Boolean.parseBoolean(System.getProperty("jacop.lcg.replay", "true"));
 
   /**
-   * The largest share of the time since the first replay that replaying may take, over all
-   * constraints and for each one ({@code -Djacop.lcg.replayShare}, 0.25 by default); beyond it the
-   * generic reason is given. A propagator as costly as edge finding could otherwise spend most of
-   * the search in its own replays.
+   * The largest number of consistency calls the replays of a constraint may take, as a multiple of
+   * the consistency calls the constraint took in the store ({@code -Djacop.lcg.replayShare}, 0.25
+   * by default); beyond it the generic reason is given. A propagator as costly as edge finding
+   * could otherwise spend most of the search in its own replays. Calls, not time, keep the search
+   * the same from run to run.
    */
   static final double SHARE =
       Double.parseDouble(System.getProperty("jacop.lcg.replayShare", "0.25"));
 
-  // replaying one constraint may take this long before its share of the time applies
-  private static final long GRACE = 50_000_000L;
+  // replaying one constraint may take this many consistency calls before its share applies
+  private static final long GRACE = 1000;
 
-  private long nanos;
+  // the consistency calls of the copy made by replays
+  private long calls;
 
   // a constraint whose copy failed to reproduce this many reasons in a row stops being replayed
   private static final int MAX_MISSES = 32;
@@ -139,18 +141,17 @@ final class ReplayExplanation {
    *
    * @param entry the entry, or -1 for a failure now
    * @param out where the entries are added
-   * @param elapsed the time since the first replay of any constraint, in nanoseconds
    * @return false when no reason was found this way
    */
-  boolean explain(int entry, EntryList out, long elapsed) {
-    if (disabled || nanos > SHARE * elapsed / 2 + GRACE) {
+  boolean explain(int entry, EntryList out) {
+    if (disabled || calls > SHARE * constraint.consistencyCalls() + GRACE) {
       return false;
     }
-    long start = System.nanoTime();
+    long before = scratch.store.numberConsistencyCalls;
     try {
       return replay(entry, out);
     } finally {
-      nanos += System.nanoTime() - start;
+      calls += scratch.store.numberConsistencyCalls - before;
     }
   }
 

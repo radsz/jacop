@@ -177,8 +177,10 @@ public final class FreeSearch {
   private final AdaptiveLns lns;
   private final double lnsShare;
   private final long lnsFailLimit;
-  private long lnsNanos;
-  private long searchNanos;
+  // the consistency calls of runs in neighbourhoods and of the other runs after the first solution;
+  // calls, not time, so that a run repeats its search
+  private long lnsCalls;
+  private long searchCalls;
   private long lnsRuns;
   // MiniZinc's on_restart: code that fixes variables at the root of every run
   private final RestartHook hook;
@@ -361,9 +363,9 @@ public final class FreeSearch {
       select = probe || importRun ? mainSelect : branchingOfRun();
       // the time before the first solution is not shared with neighbourhoods, nor that of probes
       boolean afterSolution = !probe && !importRun && lns != null && lns.ready();
-      boolean lnsRun = afterSolution && lnsNanos < lnsShare * searchNanos;
+      boolean lnsRun = afterSolution && lnsCalls < lnsShare * searchCalls;
       conditionalRun = !probe && (importRun || lnsRun || hook != null);
-      long start = System.nanoTime();
+      long start = store.numberConsistencyCalls;
       RunEnd end;
       if (conditionalRun) {
         end = conditionalRun(lnsRun);
@@ -371,9 +373,9 @@ public final class FreeSearch {
         end = run();
       }
       if (lnsRun) {
-        lnsNanos += System.nanoTime() - start;
+        lnsCalls += store.numberConsistencyCalls - start;
       } else if (afterSolution) {
-        searchNanos += System.nanoTime() - start;
+        searchCalls += store.numberConsistencyCalls - start;
       }
       if (probe) {
         if (endProbe(end)) {
@@ -1244,14 +1246,15 @@ public final class FreeSearch {
     }
 
     /**
-     * For optimisation with restarts, spends a share of the time in runs in large neighbourhoods of
-     * the best solution: from the first solution on, a run fixes the variables outside a
+     * For optimisation with restarts, spends a share of the search in runs in large neighbourhoods
+     * of the best solution: from the first solution on, a run fixes the variables outside a
      * neighbourhood to their values in the best solution, and ends at its own fail limit or at an
      * improvement. Such runs learn no nogoods and prove nothing when they explore their whole tree.
      * A {@link #restartHook(RestartHook)} turns them off.
      *
      * @param neighbourhoods the neighbourhoods.
-     * @param share the time of runs in neighbourhoods per unit of time of the other runs.
+     * @param share the consistency calls of runs in neighbourhoods per consistency call of the
+     *     other runs; calls stand for time, but repeat from run to run.
      * @param failLimit the failures of one run in a neighbourhood.
      * @return this builder.
      */

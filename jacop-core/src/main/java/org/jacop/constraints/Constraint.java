@@ -153,6 +153,8 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The store level of the first consistency call, or NOT_RUN or RUN_UNDONE. */
   private int firstRunAt = NOT_RUN;
 
+  private long consistencyCalls;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
@@ -486,6 +488,21 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    */
   public final void setFirstRunAt(int level) {
     firstRunAt = level;
+  }
+
+  /**
+   * Returns the number of consistency calls the store made for the constraint, as {@link
+   * Store#numberConsistencyCalls} counts them over all constraints.
+   *
+   * @return the number of calls.
+   */
+  public final long consistencyCalls() {
+    return consistencyCalls;
+  }
+
+  /** Counts a consistency call of the store for the constraint; only the store calls it. */
+  public final void countConsistencyCall() {
+    consistencyCalls++;
   }
 
   /**

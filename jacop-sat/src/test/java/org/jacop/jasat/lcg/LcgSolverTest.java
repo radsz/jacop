@@ -89,6 +89,7 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -655,7 +656,95 @@ class LcgSolverTest {
         "diffn: %d sat, %d unsat, %d own and %d generic explanations%n", sat, unsat, own, generic);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
-    assertThat(own).isGreaterThan(generic);
+    // the profile and area rules are explained by the bounds of all rectangles, never generically
+    assertThat(own).isPositive();
+    assertThat(generic).isZero();
+  }
+
+  private static IntVar constant(Store store, int c) {
+    return new IntVar(store, c, c);
+  }
+
+  /**
+   * Packings of more and larger rectangles than {@link #diffnAgreesWithBruteForce}, with origin
+   * domains full of holes, so that the profile and area rules prune: every explanation is checked,
+   * none is generic (all origin holes), and the LCG answer agrees with depth-first search.
+   */
+  @Test
+  void diffnProfileReasonsAreBoundsOnly() {
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int instance = 0; instance < 1000; instance++) {
+      Store[] stores = new Store[2];
+      IntVar[][] all = new IntVar[2][];
+      for (int copy = 0; copy < 2; copy++) {
+        Random rnd = new Random(41 + instance);
+        Store store = new Store();
+        int n = 7 + rnd.nextInt(4);
+        int side = 5 + rnd.nextInt(3);
+        IntVar[] ox = new IntVar[n];
+        IntVar[] oy = new IntVar[n];
+        IntVar[] lx = new IntVar[n];
+        IntVar[] ly = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          ox[i] = new IntVar(store, "x" + i, 0, side - 1);
+          oy[i] = new IntVar(store, "y" + i, 0, side - 1);
+          for (IntVar o : new IntVar[] {ox[i], oy[i]}) {
+            for (int h = rnd.nextInt(3); h > 0; h--) {
+              o.domain.subtractAdapt(rnd.nextInt(side));
+            }
+            o.refreshBounds();
+          }
+          lx[i] =
+              rnd.nextInt(4) == 0 ? new IntVar(store, 1, 3) : constant(store, 1 + rnd.nextInt(3));
+          ly[i] =
+              rnd.nextInt(4) == 0 ? new IntVar(store, 1, 3) : constant(store, 1 + rnd.nextInt(3));
+          // inside a side x side square
+          store.impose(new XplusYlteqZ(ox[i], lx[i], constant(store, side)));
+          store.impose(new XplusYlteqZ(oy[i], ly[i], constant(store, side)));
+        }
+        store.impose(new Diffn(ox, oy, lx, ly, rnd.nextBoolean()));
+        stores[copy] = store;
+        IntVar[] vars = new IntVar[4 * n];
+        for (int i = 0; i < n; i++) {
+          vars[4 * i] = ox[i];
+          vars[4 * i + 1] = oy[i];
+          vars[4 * i + 2] = lx[i];
+          vars[4 * i + 3] = ly[i];
+        }
+        all[copy] = vars;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean expected =
+          stores[0].consistency()
+              && search.labeling(stores[0], new SimpleSelect<>(all[0], null, new IndomainMin<>()));
+      LcgSolver solver = new LcgSolver(stores[1]);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("Diffn");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    System.out.printf(
+        "diffn profile: %d sat, %d unsat, %d own and %d generic explanations%n",
+        sat, unsat, own, generic);
+    assertThat(sat).isPositive();
+    assertThat(unsat).isPositive();
+    assertThat(own).isPositive();
+    assertThat(generic).isZero();
   }
 
   /**
