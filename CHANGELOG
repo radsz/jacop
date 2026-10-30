@@ -1024,6 +1024,15 @@ Version 5.0 (unreleased)
     share the time by the clock: by conflicts, the neighbourhood runs
     took 1.3 to 7.7 times the time of branch and bound instead of 3.
 
+70. Under --lcg, XplusYeqZ keeps to bounds when x or y is fixed instead of
+    copying the holes of z into the other term: each copied hole was a
+    value-removal atom, a SAT variable of its own. On CELAR6-SUB4
+    (frequency differences) that made 280k SAT variables in 30 s and cut
+    the conflict rate threefold; now 29k, 3.3x the conflicts, and
+    celar_scen06 under --lcg -f reaches 4,502 instead of 9,531 in 30 s.
+    Paired mznbench runs, 30 s: --lcg -f 24 better / 21 worse (noise
+    level apart from celar), --lcg 8 / 4. Without --lcg nothing changes.
+
 Version 4.11
 =============
 

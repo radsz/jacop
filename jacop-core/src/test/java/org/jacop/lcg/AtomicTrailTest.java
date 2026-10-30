@@ -478,6 +478,38 @@ class AtomicTrailTest {
   }
 
   /**
+   * x + y = z with x fixed: without a trail y takes the holes of z shifted, while a trail records
+   * it keeps to the bounds, since each copied hole would be a {@code !=} atom of its own (celar
+   * frequency differences made 280k SAT variables in 30 s). The solutions stay the same: y = 2
+   * fails once y is fixed.
+   */
+  @Test
+  void sumWithFixedTermKeepsToBoundsWhileRecording() {
+    for (boolean recording : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 3, 3);
+      IntVar y = new IntVar(store, "y", 0, 20);
+      IntVar z = new IntVar(store, "z", 0, 20);
+      for (int v = 1; v <= 19; v += 2) {
+        z.domain.inComplement(store.level, z, v);
+      }
+      AtomicTrail trail = recording ? new AtomicTrail(store) : null;
+      store.impose(new XplusYeqZ(x, y, z));
+      assertThat(store.consistency()).isTrue();
+      assertThat(y.min()).isEqualTo(1);
+      assertThat(y.max()).isEqualTo(17);
+      assertThat(y.getSize()).isEqualTo(recording ? 17 : 9);
+      assertThat(y.domain.contains(2)).isEqualTo(recording);
+      if (trail != null) {
+        store.setLevel(store.level + 1);
+        y.domain.in(store.level, y, 2, 2);
+        assertThat(store.consistency()).isFalse();
+        trail.detach();
+      }
+    }
+  }
+
+  /**
    * x + 19 y - z = 19 (or_matching_orig): z has lost 19..84, and x != 9 with y >= 5 leaves 1..18
    * and 85 without a support, so domain consistency moves z from 1 to 86. The reason of z >= 86
    * must hold the holes 81..84, which have supports in the domains of x and y; it held only the
