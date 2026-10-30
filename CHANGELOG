@@ -1024,7 +1024,19 @@ Version 5.0 (unreleased)
     share the time by the clock: by conflicts, the neighbourhood runs
     took 1.3 to 7.7 times the time of branch and bound instead of 3.
 
-70. Under --lcg -f, the core-guided phase gives its time to branch and
+70. Under --lcg, Binpacking explains its cardinality rules (card
+    variables, as the FlatZinc front end adds for gbac and bacp, or
+    cardinalityReasoning) instead of leaving them to the generic
+    reason: the bounds of the card variables, items kept out of a bin
+    or a group of consecutive bins that is full or that they would
+    overload or underload, items a bin or group needs, and loads from
+    the lightest or heaviest items its count allows. On gbac UD5 the
+    generic share of Binpacking's reasons drops from 43% to 0.01% and
+    the average reason from 33 to 15 atoms. --lcg -f, 30 s, 2 runs on
+    15 gbac instances: 9 better, 3 worse, mean objective 14% lower;
+    bacp unchanged. -Djacop.lcg.binpackingCounts=false turns it off.
+
+71. Under --lcg -f, the core-guided phase gives its time to branch and
     bound when it has no solution of its own after a third of its time
     (jacop.lcg.coreNoSolution), as intended. Before, a solution of the
     branch and bound run before the phase also counted, and there nearly
@@ -1035,7 +1047,7 @@ Version 5.0 (unreleased)
     paired runs: 29 better, 11 worse. -s prints lcgCoreNoSolutionStops;
     -Djacop.lcg.coreAnySolution=true restores the old test.
 
-71. The linear relaxation (--lp) also reads constraints that are not
+72. The linear relaxation (--lp) also reads constraints that are not
     linear relations (org.jacop.constraints.Linearizations): big-M rows
     of reified and half-reified linear constraints, and/or of Booleans,
     McCormick rows of products, the lower side of max/min, abs,
@@ -1053,7 +1065,7 @@ Version 5.0 (unreleased)
     and 25_04, smelt_4. New statistics lpBaseBound, lpExtraRows,
     lpExtraDropped.
 
-72. The FlatZinc front end merges the copies MiniZinc makes of the result
+73. The FlatZinc front end merges the copies MiniZinc makes of the result
    of a partial function used in a reified context (to_enum, an array
    access whose index may be out of range): each call site gets a fresh
    z with b -> z = x, c -> z = k and not b -> c. Copies with the same x,
@@ -1066,7 +1078,7 @@ Version 5.0 (unreleased)
    tree halves and a node is about 15% cheaper; backache_train4 and
    colic_train4 are now proved within 20 minutes.
 
-73. New constraint MultiCumulative(starts, durations, heights, limits):
+74. New constraint MultiCumulative(starts, durations, heights, limits):
     several cumulative resources used by the same tasks with fixed
     durations, heights[r][i] being the use of resource r by task i (the
     cumulative resources of SICStus multi_cumulative). One time-table sweep
@@ -1086,7 +1098,7 @@ Version 5.0 (unreleased)
     objectives, 1 faster proof, none worse) and +6.4% with -f (results
     within run-to-run noise).
 
-70. --lcg no longer runs out of memory on large alldiffs. Each value a
+75. --lcg no longer runs out of memory on large alldiffs. Each value a
     constraint removes from inside a domain was a SAT variable, and an
     alldiff over 4096 variables of 4096 values removes 8.4 million
     values on one branch (debruijn_binary_04_06 filled a 3 GB heap in
