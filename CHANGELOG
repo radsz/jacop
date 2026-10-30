@@ -1099,6 +1099,16 @@ Version 5.0 (unreleased)
     in 46 s with -Xmx3G, with --lcg and with --lcg -f; below the budget
     nothing changes.
 
+72. Under --lcg, CumulativeUnary (MiniZinc disjunctive) explains a
+    failure that only its unary rules detect: a task that detectable
+    precedences, edge finding or not-first push past its latest start.
+    These failures got the generic reason, every start bound of the
+    resource; on flexible-jobshop med04 that was 5,154 of 5,162 failures
+    of the resource, and its learnt clauses fall from 458 to 24 atoms on
+    average. On 40 scheduling instances with a disjunctive, 60 s, --lcg
+    gets 5 better results and 1 worse (med04 2,960 to 2,643, evilshop
+    js-setf3-10 now proved optimal), --lcg -f 7 better and 1 worse.
+
 Version 4.11
 =============
 

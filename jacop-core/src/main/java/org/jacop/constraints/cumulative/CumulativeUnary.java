@@ -527,6 +527,30 @@ public class CumulativeUnary extends Cumulative {
     return super.explain(trail, entry, out);
   }
 
+  /**
+   * Explains a failure by a task the unary rules push past its latest start (see {@link
+   * UnaryExplanation#explainFailure}); otherwise by the time table, as {@link CumulativeBasic}
+   * does.
+   */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    int mark = out.size();
+    if (super.explainFailure(trail, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (UNARY_EXPLAIN && constantDurations && getClass() == CumulativeUnary.class) {
+      if (unaryExplanation == null) {
+        unaryExplanation = new UnaryExplanation(taskNormal, limit);
+      }
+      if (unaryExplanation.explainFailure(trail, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
   @Override
   public String toString() {
 
