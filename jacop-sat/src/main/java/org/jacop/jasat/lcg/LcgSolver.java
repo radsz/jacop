@@ -333,7 +333,8 @@ public final class LcgSolver implements ExternalPropagator {
   // -Djacop.lcg.coreRestore=false
   private static final boolean CORE_RESTORE =
       !"false".equals(System.getProperty("jacop.lcg.coreRestore"));
-  // the core phase gives its time to branch and bound when it has no solution by this share of
+  // the core phase gives its time to branch and bound when it has no solution of its own by this
+  // share of
   // its time; 0 turns it off. With the restore it scored 21.3 against 14.7 and 24.3 against 12.7 on
   // the Challenge sample in two pairings, and 21.8 against 22.2 and 22.9 against 21.1 on the
   // OR-Tools set; either alone lost.
@@ -820,9 +821,10 @@ public final class LcgSolver implements ExternalPropagator {
    * core-guided search takes at most its share of the time left (its budget of conflicts when there
    * is no deadline), and stops early when one call of the solver needs more than its limit of
    * conflicts: a sign that it no longer finds cores or solutions quickly. It also stops when it has
-   * no solution after a third of its time. Under a solution bound, every solution the core-guided
-   * search finds would have to improve, which makes its strata hard, so the bound comes only after
-   * it. Branch and bound then starts from the variables' activity before the core-guided search.
+   * no solution of its own after a third of its time. Under a solution bound, every solution the
+   * core-guided search finds would have to improve, which makes its strata hard, so the bound comes
+   * only after it. Branch and bound then starts from the variables' activity before the core-guided
+   * search.
    */
   // the most times the core-guided phase gets another share of the time
   private static final int MAX_CORE_EXTENSIONS = 8;
@@ -894,13 +896,17 @@ public final class LcgSolver implements ExternalPropagator {
     try {
       long full = sat.deadline();
       if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
-        // without a solution by this share of the phase, branch and bound gets the time
+        // without a solution of its own by this share of the phase, branch and bound gets the time
         long first = now + (long) (CORE_NO_SOLUTION * (full - now));
         sat.setDeadline(first);
         result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
-          sat.setDeadline(full);
-          result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && System.nanoTime() >= first) {
+          if (ownSolution()) {
+            sat.setDeadline(full);
+            result = coreSearch.run(phaseLimit, coreCallLimit);
+          } else {
+            coreSearch.noSolutionStops++;
+          }
         }
       } else {
         result = coreSearch.run(phaseLimit, coreCallLimit);
@@ -921,6 +927,21 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setDeadline(deadline);
       sat.setConflictLimit(Long.MAX_VALUE);
     }
+  }
+
+  // -Djacop.lcg.coreAnySolution=true: the old test, any best solution, also one of branch and
+  // bound before the phase
+  private static final boolean CORE_ANY_SOLUTION =
+      "true".equals(System.getProperty("jacop.lcg.coreAnySolution"));
+
+  /**
+   * Whether the core-guided phase has a solution of its own, which lets it run past the share of
+   * its time that {@link #CORE_NO_SOLUTION} gives it without one. Solutions of branch and bound
+   * before the phase do not count: there nearly always is one, and city-position spent half of its
+   * time in cores that raised the bound to 435 against an optimum of 3,493.
+   */
+  private boolean ownSolution() {
+    return CORE_ANY_SOLUTION ? best != null : coreSearch.stratumSolutions > 0;
   }
 
   /**
