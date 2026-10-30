@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -86,7 +87,8 @@ public final class Linearizations {
    * @return the rows
    */
   public static List<LinearForm> encodings(Collection<Constraint> constraints) {
-    Map<IntVar, Map<Integer, IntVar>> byVar = new IdentityHashMap<>();
+    // in the order of the constraints, so that the rows do not depend on identity hash codes
+    Map<IntVar, Map<Integer, IntVar>> byVar = new LinkedHashMap<>();
     for (Constraint c : constraints) {
       if (c.getClass() == ChannelReif.class) {
         ChannelReif ch = (ChannelReif) c;
@@ -325,10 +327,14 @@ public final class Linearizations {
   }
 
   // r = and(xs): r <= x_i, sum x - r <= n - 1; r = or(xs): r >= x_i, r <= sum x
-  private static void andOr(IntVar[] xs, IntVar r, boolean and, List<LinearForm> out) {
+  private static void andOr(IntVar[] list, IntVar r, boolean and, List<LinearForm> out) {
     if (r.singleton() || !boolean01(r)) {
       return; // LinearForms reads a fixed result
     }
+    // the vector constraints keep their Booleans in an order that follows identity hash codes;
+    // the rows are made in the order of the names, so that the relaxation is the same every run
+    IntVar[] xs = list.clone();
+    Arrays.sort(xs, Comparator.comparing(IntVar::id));
     for (IntVar x : xs) {
       if (x == r || !boolean01(x)) {
         return;

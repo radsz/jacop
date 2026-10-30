@@ -314,6 +314,33 @@ class LinearRelaxationTest {
   }
 
   @Test
+  void keepsEverySolutionWithOnlyRowsOfConstraintsThatAreNotLinear() {
+    // no linear relation at all: the first solve has no row, and its size was a division by zero
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new org.jacop.constraints.Reified(new org.jacop.constraints.XltC(x, 2), b));
+    store.impose(new org.jacop.constraints.Reified(new org.jacop.constraints.XltY(x, y), c));
+    LinearRelaxation r = LinearRelaxation.of(store, null, false);
+    assertThat(r).isNotNull();
+    assertThat(r.rows()).isZero();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    org.jacop.search.DepthFirstSearch<IntVar> search = new org.jacop.search.DepthFirstSearch<>();
+    org.jacop.search.SelectChoicePoint<IntVar> select =
+        new org.jacop.search.InputOrderSelect<>(
+            store, new IntVar[] {x, y, b, c}, new org.jacop.search.IndomainMin<>());
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, select)).isTrue();
+    // b and c follow from x and y
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(16);
+  }
+
+  @Test
   void rejectsAnAssignmentItsOwnPruningFixed() {
     lazyClauseGeneration(5_901_220L, new TreeMap<>());
   }

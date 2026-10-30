@@ -174,6 +174,17 @@ public class LinearRelaxation extends Constraint
   /** Statistics: rows of constraints that are not linear relations, kept after the first solve. */
   public long extraRows;
 
+  /** Statistics: whether those rows were dropped in search, as too many solves hit the limit. */
+  public boolean extraDropped;
+
+  // the simplex before the rows of the other constraints, the number of rows then, and the limits
+  // hit before them; the rows are dropped when three solves with them, and one in twenty, stop at
+  // the pivot limit
+  private DualSimplex beforeExtra;
+  private int baseRows;
+  private long extraLimits;
+  private static final int EXTRA_LIMITS = 3;
+
   /** Statistics: the objective bound of the first solve without those rows, or NaN. */
   public double baseBound = Double.NaN;
 
@@ -242,6 +253,9 @@ public class LinearRelaxation extends Constraint
     List<LinearForm> all = new ArrayList<>(forms);
     all.addAll(extra);
     int base = 0;
+    // the columns of the rows of forms come first: the relaxation without the further rows has
+    // only these
+    int baseColumns = columns.size();
     for (int index = 0; index < all.size(); index++) {
       LinearForm f = all.get(index);
       if (f == null || f.relation() == LinearForm.NE) {
@@ -264,6 +278,9 @@ public class LinearRelaxation extends Constraint
         } catch (ArithmeticException e) {
           overflow = true;
         }
+      }
+      if (index < forms.size()) {
+        baseColumns = columns.size();
       }
       merged.values().removeIf(w -> w == 0);
       if (overflow || merged.size() < 2) {
@@ -305,7 +322,7 @@ public class LinearRelaxation extends Constraint
     hasHi = new boolean[m];
     double[] lo = new double[m];
     double[] hi = new double[m];
-    double[][] a = new double[m][x.length];
+    double[][] a = new double[m][baseColumns];
     for (int i = 0; i < m; i++) {
       int rel = (int) sides.get(i)[0];
       long c = sides.get(i)[1];
@@ -319,7 +336,7 @@ public class LinearRelaxation extends Constraint
         a[i][rowColumns[i][k]] = rowWeights[i][k];
       }
     }
-    double[] cost = new double[x.length];
+    double[] cost = new double[baseColumns];
     if (objective != null) {
       cost[0] = maximize ? -1 : 1;
     }
@@ -584,7 +601,7 @@ public class LinearRelaxation extends Constraint
     try {
       solveAndPropagate(store);
     } finally {
-      long cost = (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + x.length));
+      long cost = (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + lp.n));
       if (first) {
         // the root solve and its cuts may take up to their own budget; they spend the credit only
         cost = Math.min(cost, WORK);
@@ -647,10 +664,10 @@ public class LinearRelaxation extends Constraint
       return; // the bounds of the variables alone deduce nothing
     }
     calls++;
-    for (int j = 0; j < x.length; j++) {
+    for (int j = 0; j < lp.n; j++) {
       lp.setBounds(j, x[j].min(), x[j].max());
     }
-    long size = (long) rows() * (rows() + x.length);
+    long size = Math.max(1, (long) rows() * (rows() + lp.n));
     int status =
         lp.solve(
             calls == 1
@@ -672,6 +689,10 @@ public class LinearRelaxation extends Constraint
     if (status == DualSimplex.LIMIT) {
       limits++;
       stalled++;
+      long extraHits = limits - extraLimits;
+      if (beforeExtra != null && extraHits >= EXTRA_LIMITS && extraHits * 20 > calls) {
+        dropExtraRows();
+      }
       return;
     }
     stalled = 0;
@@ -760,7 +781,7 @@ public class LinearRelaxation extends Constraint
 
   // the combination of the rows by lambda, exact; null on overflow
   private Aggregate aggregate(long[] lambda) {
-    long[] coef = new long[x.length];
+    long[] coef = new long[lp.n];
     long upper = 0; // sum lambda_i a_i x <= upper
     long lower = 0; // sum lambda_i a_i x >= lower
     boolean hasUpper = true;
@@ -813,7 +834,7 @@ public class LinearRelaxation extends Constraint
     IntVar[] vars = new IntVar[size];
     long[] w = new long[size];
     long[] neg = new long[size];
-    for (int j = 0, k = 0; j < x.length; j++) {
+    for (int j = 0, k = 0; j < coef.length; j++) {
       if (coef[j] != 0) {
         vars[k] = x[j];
         w[k] = coef[j];
@@ -838,7 +859,7 @@ public class LinearRelaxation extends Constraint
    */
   private int cutRounds() {
     rootBound = lp.value(0);
-    int n = x.length;
+    int n = lp.n;
     long[] lo = new long[n];
     long[] hi = new long[n];
     for (int j = 0; j < n; j++) {
@@ -986,8 +1007,6 @@ public class LinearRelaxation extends Constraint
       before = lp.value(0);
       baseBound = before;
     }
-    DualSimplex kept = lp.copy();
-    long pivots = lp.totalPivots;
     int m = rows();
     rowColumns = Arrays.copyOf(rowColumns, m + k);
     rowWeights = Arrays.copyOf(rowWeights, m + k);
@@ -995,9 +1014,6 @@ public class LinearRelaxation extends Constraint
     rowHi = Arrays.copyOf(rowHi, m + k);
     hasLo = Arrays.copyOf(hasLo, m + k);
     hasHi = Arrays.copyOf(hasHi, m + k);
-    double[][] a = new double[k][x.length];
-    double[] lo = new double[k];
-    double[] hi = new double[k];
     for (int q = 0; q < k; q++) {
       int i = m + q;
       rowColumns[i] = extraColumns[q];
@@ -1006,15 +1022,30 @@ public class LinearRelaxation extends Constraint
       hasHi[i] = extraRelation[q] != LinearForm.GE;
       rowLo[i] = extraSide[q];
       rowHi[i] = extraSide[q];
-      lo[q] = hasLo[i] ? extraSide[q] : Double.NEGATIVE_INFINITY;
-      hi[q] = hasHi[i] ? extraSide[q] : Double.POSITIVE_INFINITY;
-      for (int t = 0; t < extraColumns[q].length; t++) {
-        a[q][extraColumns[q][t]] = extraWeights[q][t];
+    }
+    // a simplex over all the columns, the columns of the further rows too
+    int n = x.length;
+    double[][] a = new double[m + k][n];
+    double[] lo = new double[m + k];
+    double[] hi = new double[m + k];
+    for (int i = 0; i < m + k; i++) {
+      lo[i] = hasLo[i] ? (double) rowLo[i] : Double.NEGATIVE_INFINITY;
+      hi[i] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
+      for (int t = 0; t < rowColumns[i].length; t++) {
+        a[i][rowColumns[i][t]] = (double) rowWeights[i][t];
       }
     }
-    lp.addRows(a, lo, hi);
-    long size = (long) rows() * (rows() + x.length);
-    int withExtra = lp.solve((int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS));
+    double[] cost = new double[n];
+    if (objective != null) {
+      cost[0] = maximize ? -1 : 1;
+    }
+    DualSimplex full = new DualSimplex(a, lo, hi, cost);
+    for (int j = 0; j < n; j++) {
+      full.setBounds(j, x[j].min(), x[j].max());
+    }
+    full.totalPivots = lp.totalPivots;
+    long size = (long) (m + k) * (m + k + n);
+    int withExtra = full.solve(Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS));
     boolean keep;
     if (withExtra == DualSimplex.INFEASIBLE) {
       keep = true;
@@ -1024,31 +1055,57 @@ public class LinearRelaxation extends Constraint
       boolean raised =
           status != DualSimplex.OPTIMAL
               || !Double.isNaN(before)
-                  && Math.abs(lp.value(0) - before) > 1e-6 * (1 + Math.abs(before));
+                  && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
       keep = raised || k <= SMALL_EXTRA;
     }
     extraColumns = new int[0][];
     extraWeights = new long[0][];
     if (keep) {
       extraRows = k;
+      beforeExtra = lp;
+      baseRows = m;
+      extraLimits = limits;
+      lp = full;
       return withExtra;
     }
     extraForms = new ArrayList<>();
-    dropRows(k, kept, lp.totalPivots - pivots);
+    lp.totalPivots = full.totalPivots;
+    truncateRows(m);
     return status;
+  }
+
+  // the rows of the other constraints make too many solves in search stop at the pivot limit: back
+  // to the relaxation without them (and without the cuts, which may use them)
+  private void dropExtraRows() {
+    beforeExtra.totalPivots = lp.totalPivots;
+    lp = beforeExtra;
+    truncateRows(baseRows);
+    beforeExtra = null;
+    extraForms = new ArrayList<>();
+    extraRows = 0;
+    extraDropped = true;
+    // the limits were theirs: the relaxation without them starts again as at the root
+    stalled = 0;
+    idle = 0;
+    period = 1;
+    credit = WORK;
   }
 
   // removes the last k rows and goes back to the simplex before them
   private void dropRows(int k, DualSimplex kept, long pivots) {
-    int m = rows() - k;
+    truncateRows(rows() - k);
+    kept.totalPivots += pivots;
+    lp = kept;
+  }
+
+  // keeps the first m rows
+  private void truncateRows(int m) {
     rowColumns = Arrays.copyOf(rowColumns, m);
     rowWeights = Arrays.copyOf(rowWeights, m);
     rowLo = Arrays.copyOf(rowLo, m);
     rowHi = Arrays.copyOf(rowHi, m);
     hasLo = Arrays.copyOf(hasLo, m);
     hasHi = Arrays.copyOf(hasHi, m);
-    kept.totalPivots += pivots;
-    lp = kept;
   }
 
   // removes the last k rows, the cuts of the last round, and goes back to the simplex before them
@@ -1067,7 +1124,7 @@ public class LinearRelaxation extends Constraint
     rowHi = Arrays.copyOf(rowHi, m + k);
     hasLo = Arrays.copyOf(hasLo, m + k);
     hasHi = Arrays.copyOf(hasHi, m + k);
-    double[][] a = new double[k][x.length];
+    double[][] a = new double[k][lp.n];
     double[] lo = new double[k];
     double[] hi = new double[k];
     for (int q = 0; q < k; q++) {

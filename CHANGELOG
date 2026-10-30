@@ -827,6 +827,24 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
+63. The linear relaxation (--lp) also reads constraints that are not
+    linear relations (org.jacop.constraints.Linearizations): big-M rows
+    of reified and half-reified linear constraints, and/or of Booleans,
+    McCormick rows of products, the lower side of max/min, abs,
+    alldifferent sum bounds, value encodings of a variable by
+    Booleans (b_v <-> x = v gives sum b_v = 1 and x = sum v b_v) and
+    element over an encoded index. These rows are added at the first
+    solve and kept only when they raise the root bound, make the
+    relaxation infeasible or are at most 100 (-Dorg.jacop.lp.smallExtra);
+    a relaxation whose solves in search hit the pivot limit three times
+    (and in one of twenty solves) goes back to the rows without them.
+    -Dorg.jacop.lp.linearize=false turns them off. On the 195 of the 422
+    vs-ortools instances whose relaxation they change (20 s, paired),
+    proofs go from 82 to 87 (default), 114 to 117 (--lcg) and 108 to 114
+    (-f): rcpsp-wet j30_27_5, j30_43_10 and j60_19_6, maximum-dag 25_01
+    and 25_04, smelt_4. New statistics lpBaseBound, lpExtraRows,
+    lpExtraDropped.
+
 Version 4.11
 =============
 
