@@ -99,8 +99,8 @@ final class Box {
     for (int d = 0; d < origin.length; d++) {
       if (!origin[d].singleton()
           || !length[d].singleton()
-          || origin[d].domain.stamp >= level
-          || length[d].domain.stamp >= level) {
+          || origin[d].dom().stamp() >= level
+          || length[d].dom().stamp() >= level) {
         return false;
       }
     }

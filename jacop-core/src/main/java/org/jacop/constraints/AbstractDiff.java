@@ -670,8 +670,8 @@ abstract class AbstractDiff extends Constraint
       IntDomain rLength = r.length[i].dom();
       settled = settled && rOrigin.singleton() && rLength.singleton();
       minLengthEq0 = minLengthEq0 || (allowZeroLength ? rLength.min() < 0 : rLength.min() <= 0);
-      int originStamp = rOrigin.stamp;
-      int lengthStamp = rLength.stamp;
+      int originStamp = rOrigin.stamp();
+      int lengthStamp = rLength.stamp();
       if (maxLevel < originStamp) {
         maxLevel = originStamp;
       }

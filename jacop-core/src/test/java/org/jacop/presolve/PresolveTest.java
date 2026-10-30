@@ -178,7 +178,7 @@ class PresolveTest {
     store.impose(new XplusYeqZ(x, y, z));
     store.impose(new XplusYeqZ(w, x, u));
 
-    Derivation derivation = Presolver.of(store).keep(w, u).presolve();
+    Derivation derivation = Presolver.of(store).keep(w, u).affine(false).presolve();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     // x < y has fixed variables only, and x + y = z fixed z at the fixpoint; the store may have

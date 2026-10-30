@@ -1544,6 +1544,7 @@ class FlatzincFrontEndTest {
       for (int i = 0; i < n; i++) {
         model.append("var 0..2: x%d;\n".formatted(i));
       }
+      model.append("var -1000..1000: s;\n");
       model.append("var -1000..1000: obj :: output_var;\n");
       for (int i = 0; i < n; i++) {
         model.append("constraint int_le(x%d, y%d);\n".formatted(i, i % 6));
@@ -1565,7 +1566,9 @@ class FlatzincFrontEndTest {
       }
       model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[0], xs, 20 + 3 * run));
       model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[1], xs, 30 - run));
-      model.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(ws[2], xs));
+      // the objective is not a term of the long sum, which would then stay whole
+      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);\n".formatted(ws[2], xs));
+      model.append("constraint int_lin_eq([1,1,-1], [s,y0,obj], 0);\n");
       model.append(
           "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
               .formatted(run % 2 == 0 ? "minimize" : "maximize"));
@@ -1654,6 +1657,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
+    // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_lin_le([1,1], [x,y], 4);
+        constraint int_ne(x, y);
+        %s;
+        """;
+    String sat = run(model.formatted("solve satisfy"), "--lcg", "-f", "-s")[0];
+    assertTrue(sat.contains("%%%mzn-stat: lcgFullFixpoint=false\n"), sat);
+    String opt = run(model.formatted("solve maximize x"), "--lcg", "-f", "-s")[0];
+    assertTrue(opt.contains("%%%mzn-stat: lcgFullFixpoint=true\n"), opt);
+    assertTrue(opt.contains("x = 3;"), opt);
+    // the annotation, followed without -f, keeps the full fixpoint
+    String fixed =
+        run(
+            model.formatted("solve :: int_search([x,y],input_order,indomain_min,complete) satisfy"),
+            "--lcg",
+            "-s")[0];
+    assertTrue(fixed.contains("%%%mzn-stat: lcgFullFixpoint=true\n"), fixed);
+  }
+
+  @Test
   void lcgFreeSearchBranchesOnBlockSumsLast() throws IOException {
     // --lcg splits a sum of 60 terms into block sums of about 8 terms: they follow from the terms,
     // as defined variables do, so free search branches on them last (develop-5.0 branched on them
@@ -1680,8 +1709,40 @@ class FlatzincFrontEndTest {
         run(model.toString(), "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
     assertTrue(out.strip().contains("=========="), out);
     String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
-    // obj, the objective, and the block sums of the two long constraints
-    assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 10, out);
+    // obj, the objective, and the 8 block sums of the long inequality (the objective's sum is kept
+    // whole)
+    assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 7, out);
+  }
+
+  @Test
+  void lcgKeepsTheObjectivesSumWhole() throws IOException {
+    // --lcg splits linear constraints of more than 40 terms into block sums, but not the one the
+    // objective is a term of: split, its blocks hid the objective's terms from core-guided search
+    // and the linear relaxation (smelt_5 took 20 to 47 s instead of 5 s)
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 60; i++) {
+      model.append("var 0..1: x%d;\n".formatted(i));
+    }
+    model.append("var 0..200: obj :: output_var;\n");
+    String xs =
+        java.util.stream.IntStream.range(0, 60)
+            .mapToObj(i -> "x" + i)
+            .collect(Collectors.joining(","));
+    String ws =
+        java.util.stream.IntStream.range(0, 60)
+            .mapToObj(i -> Integer.toString(1 + i % 5))
+            .collect(Collectors.joining(","));
+    model.append(
+        "constraint int_lin_eq([%s,-1], [%s,obj], 0) :: defines_var(obj);\n".formatted(ws, xs));
+    model.append(
+        "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
+    model.append("solve minimize obj;\n");
+    String out = run(model.toString(), "--lcg", "-f", "-debug")[0];
+    // one sum of block sums, the inequality's; the objective's equation keeps its 61 terms
+    long sumsOfBlocks =
+        out.lines().filter(l -> l.matches("% LinearInt\\d+ : LinearInt\\( \\[ _.*")).count();
+    assertEquals(1, sumsOfBlocks, out);
+    assertTrue(out.contains("obj = 30;"), out);
   }
 
   @Test

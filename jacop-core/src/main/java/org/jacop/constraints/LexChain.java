@@ -41,6 +41,10 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LexChainExplanation;
 import org.jacop.util.VarIntMap;
 
 /**
@@ -72,7 +76,7 @@ import org.jacop.util.VarIntMap;
  * @version 5.0
  */
 public class LexChain extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<LexChain> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<LexChain>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -575,6 +579,16 @@ public class LexChain extends Constraint
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return !hasDuplicates && LexChainExplanation.explain(trail, entry, x, strict, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return !hasDuplicates && LexChainExplanation.explainFailure(trail, x, strict, out);
   }
 
   @Override
