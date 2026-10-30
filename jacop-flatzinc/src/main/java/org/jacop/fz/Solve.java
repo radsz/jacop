@@ -149,6 +149,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   final SatTranslation sat;
   final NumberFormat nf = NumberFormat.getInstance(Locale.of("en"));
   public StringBuffer lastSolution;
+
+  // the model's integer variables by name, whose values a portfolio thread shares with the others
+  private String[] sharedNames;
+  private IntVar[] sharedVars;
   // the variables search uses, in the searched store
   Tables dictionary;
   // the variables output prints, in the loaded store
@@ -2199,6 +2203,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
+      builder.sharedSolution(worker.sharedSolution(dictionary::getVariable));
     }
     if (onRestart) {
       builder.restartHook(dictionary.onRestart);
@@ -2372,6 +2377,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printSearch(label);
     }
     stopInPortfolio();
+    importBoundInPortfolio(label, costVar);
     rs =
         new RestartSearch<>(
             store, label, select, restartCalculator, costVar != null ? (T) costVar : null);
@@ -2397,6 +2403,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * In a portfolio thread, a depth-first search and its sub-searches take the objective value of
+   * the best solution of the portfolio as their bound.
+   */
+  private void importBoundInPortfolio(Search<? extends Var> search, Var costVar) {
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker == null || costVar == null) {
+      return;
+    }
+    if (search instanceof DepthFirstSearch<? extends Var> dfs) {
+      dfs.setSharedBound(worker::sharedBound);
+      if (dfs.childSearches != null) {
+        for (Search<? extends Var> child : dfs.childSearches) {
+          importBoundInPortfolio(child, costVar);
+        }
+      }
+    }
+  }
+
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
@@ -2405,6 +2430,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printSearch(label);
     }
     stopInPortfolio();
+    importBoundInPortfolio(label, costVar);
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
@@ -3531,7 +3557,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
       Integer cost = costVariable instanceof IntVar c ? c.min() : null;
-      worker.solution(printBuffer.toString(), cost, !minimize);
+      worker.solution(printBuffer.toString(), cost, !minimize, sharedNames(), sharedValues());
     }
 
     if (options.getAll()) {
@@ -3544,6 +3570,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getNumberSolutions() == numberSolutions) {
       throw new NumberSolutionsReached();
     }
+  }
+
+  /** The names of the model's integer variables, whose values a portfolio thread shares. */
+  private String[] sharedNames() {
+    if (sharedNames == null) {
+      sharedNames = dictionary.variableTable.keySet().toArray(new String[0]);
+      sharedVars = new IntVar[sharedNames.length];
+      for (int i = 0; i < sharedNames.length; i++) {
+        sharedVars[i] = dictionary.getVariable(sharedNames[i]);
+      }
+    }
+    return sharedNames;
+  }
+
+  /** The values of the variables of {@link #sharedNames()} in the solution of the store. */
+  private int[] sharedValues() {
+    int[] values = new int[sharedVars.length];
+    for (int i = 0; i < values.length; i++) {
+      IntVar v = sharedVars[i];
+      values[i] = v != null && v.singleton() ? v.value() : Portfolio.UNKNOWN;
+    }
+    return values;
   }
 
   private void appendOutputVariablesToBuffer(StringBuffer printBuffer) {

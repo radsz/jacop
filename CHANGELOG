@@ -707,7 +707,20 @@ Version 5.0 (unreleased)
     1 s of search; on the dev tier with 8 repetitions by 7%, with no
     instance slower by more than 5%.
 
-53. Store.watchedConstraints (a public map from variables to the constraints
+54. The parallel portfolio (-p) shares the best solution, not only its
+    objective value: a free search thread whose best solution is worse
+    replays it in a short run (100 failures) that fixes the model's
+    variables to its values, so that its large neighbourhoods and value
+    phases start from the portfolio's best solution. The thread of the
+    options given without -f (depth-first search) now takes the shared
+    objective bound too. With -f -p 4 on 4 cores, 60 s, against the
+    portfolio without sharing: 23 instances better and 6 worse of the 160
+    regression instances (time of proofs x0.77), 14 better and 6 worse of
+    the 63 lost-free ones. New: FreeSearch.Builder.sharedSolution,
+    SharedSolution, DepthFirstSearch.setSharedBound; -s prints
+    portfolioImports.
+    
+55. Store.watchedConstraints (a public map from variables to the constraints
     that watch them as watched literals) is removed; the store keeps these
     constraints in the variable. Use registerWatchedLiteralConstraint and
     deregisterWatchedLiteralConstraint as before, and the new
