@@ -929,9 +929,9 @@ Version 5.0 (unreleased)
     variables, so constraints were attached and posted in a different
     order: zephyrus 12_6_8_3 took 107777, 106436 or 113314 nodes to prove
     its optimum. Adaptive LNS under -f still shares its time by the wall
-    clock (see item 55).
+    clock (see item 69).
 
-55. FlatZinc runs repeat their search from run to run of one build.
+69. FlatZinc runs repeat their search from run to run of one build.
     Without -r the seed is 0 (it was drawn by the JVM), so the
     neighbourhoods of adaptive LNS, indomain_random and on_restart
     random values repeat. Under -f, runs in neighbourhoods take their
