@@ -32,10 +32,14 @@ package org.jacop.constraints.regular;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ExtensionalSupportStr;
 import org.jacop.constraints.In;
@@ -59,7 +63,7 @@ import org.jacop.util.fsm.FsmTransition;
  * @author Polina Makeeva and Radoslaw Szymanek
  * @version 5.0
  */
-public class Regular extends LayeredGraphConstraint implements Copyable<Regular> {
+public class Regular extends LayeredGraphConstraint implements Copyable<Regular>, Violation {
 
   /** It specifies if debugging information should be printed out. */
   public static final boolean DEBUG_ALL = false;
@@ -299,5 +303,89 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
     Regular copy = new Regular(fsm, map.get(list));
     copyEngineTo(copy);
     return copy;
+  }
+
+  // the automaton as arrays for violation(): transitions from, to and their values; built once
+  private int[] transitionFrom;
+  private int[] transitionTo;
+  private IntDomain[] transitionValues;
+  private boolean[] accepting;
+  private int initial;
+
+  /**
+   * Returns the least number of variables whose values must change for the automaton to accept the
+   * word (the Hamming distance to the nearest accepted word, ignoring the domains).
+   */
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    if (transitionFrom == null) {
+      indexAutomaton();
+    }
+    int states = accepting.length;
+    long[] cost = new long[states];
+    long[] next = new long[states];
+    long none = Long.MAX_VALUE / 2;
+    Arrays.fill(cost, none);
+    cost[initial] = 0;
+    for (IntVar x : list) {
+      int a = value.applyAsInt(x);
+      Arrays.fill(next, none);
+      for (int t = 0; t < transitionFrom.length; t++) {
+        long c = cost[transitionFrom[t]];
+        if (c < none) {
+          long d = c + (transitionValues[t].contains(a) ? 0 : 1);
+          if (d < next[transitionTo[t]]) {
+            next[transitionTo[t]] = d;
+          }
+        }
+      }
+      long[] swap = cost;
+      cost = next;
+      next = swap;
+    }
+    long best = none;
+    for (int q = 0; q < states; q++) {
+      if (accepting[q]) {
+        best = Math.min(best, cost[q]);
+      }
+    }
+    // no accepted word of this length: violated, by more than any word with a change
+    return best < none ? best : list.length + 1L;
+  }
+
+  private void indexAutomaton() {
+    Map<FsmState, Integer> ids = new IdentityHashMap<>();
+    List<FsmState> order = new ArrayList<>();
+    ids.put(fsm.initState, 0);
+    order.add(fsm.initState);
+    List<int[]> edges = new ArrayList<>();
+    List<IntDomain> labels = new ArrayList<>();
+    for (int k = 0; k < order.size(); k++) {
+      for (FsmTransition t : order.get(k).transitions) {
+        Integer to = ids.get(t.successor);
+        if (to == null) {
+          to = order.size();
+          ids.put(t.successor, to);
+          order.add(t.successor);
+        }
+        edges.add(new int[] {k, to});
+        labels.add(t.domain);
+      }
+    }
+    boolean[] acc = new boolean[order.size()];
+    for (int k = 0; k < order.size(); k++) {
+      acc[k] = fsm.finalStates.contains(order.get(k));
+    }
+    int[] from = new int[edges.size()];
+    int[] to = new int[edges.size()];
+    for (int t = 0; t < edges.size(); t++) {
+      from[t] = edges.get(t)[0];
+      to[t] = edges.get(t)[1];
+    }
+    transitionValues = labels.toArray(new IntDomain[0]);
+    transitionTo = to;
+    accepting = acc;
+    initial = 0;
+    transitionFrom = from;
   }
 }

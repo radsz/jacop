@@ -41,8 +41,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
@@ -1184,7 +1186,8 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = c, reified with b or implied by b. */
-  final class FzXeqC extends Constraint implements Copyable<FzXeqC>, Explainable, ValueIndicator {
+  final class FzXeqC extends Constraint
+      implements Violation, Copyable<FzXeqC>, Explainable, ValueIndicator {
 
     final IntVar x;
     final int c;
@@ -1259,6 +1262,13 @@ public class Support implements ParserTreeConstants {
     public FzXeqC copy(VarMap map) {
       return new FzXeqC(map.get(x), c, map.get(b), isReified);
     }
+
+    @Override
+    public long violation(ToIntFunction<IntVar> value) {
+      boolean holds = value.applyAsInt(x) == c;
+      boolean on = value.applyAsInt(b) == 1;
+      return (isReified ? on == holds : !on || holds) ? 0 : 1;
+    }
   }
 
   Constraint fzXeqCreified(IntVar x, int c, IntVar b) {
@@ -1274,7 +1284,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x != c, reified with b or implied by b. */
-  final class FzXneqC extends Constraint implements Copyable<FzXneqC>, Explainable {
+  final class FzXneqC extends Constraint implements Violation, Copyable<FzXneqC>, Explainable {
 
     final IntVar x;
     final int c;
@@ -1334,6 +1344,13 @@ public class Support implements ParserTreeConstants {
     public FzXneqC copy(VarMap map) {
       return new FzXneqC(map.get(x), c, map.get(b), isReified);
     }
+
+    @Override
+    public long violation(ToIntFunction<IntVar> value) {
+      boolean holds = value.applyAsInt(x) != c;
+      boolean on = value.applyAsInt(b) == 1;
+      return (isReified ? on == holds : !on || holds) ? 0 : 1;
+    }
   }
 
   Constraint fzXneqCreified(IntVar x, int c, IntVar b) {
@@ -1349,7 +1366,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = y, reified with b or implied by b. */
-  final class FzXeqY extends Constraint implements Copyable<FzXeqY>, Explainable {
+  final class FzXeqY extends Constraint implements Violation, Copyable<FzXeqY>, Explainable {
 
     final IntVar x;
     final IntVar y;
@@ -1414,6 +1431,13 @@ public class Support implements ParserTreeConstants {
     @Override
     public FzXeqY copy(VarMap map) {
       return new FzXeqY(map.get(x), map.get(y), map.get(b), isReified);
+    }
+
+    @Override
+    public long violation(ToIntFunction<IntVar> value) {
+      boolean holds = value.applyAsInt(x) == value.applyAsInt(y);
+      boolean on = value.applyAsInt(b) == 1;
+      return (isReified ? on == holds : !on || holds) ? 0 : 1;
     }
   }
 

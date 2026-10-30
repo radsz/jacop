@@ -655,11 +655,29 @@ public class LinearRelaxation extends Constraint
     return IntDomain.BOUND;
   }
 
+  // while suspended the relaxation only checks complete assignments
+  private boolean suspended;
+
+  /**
+   * Suspends or resumes solving the relaxation. While suspended, consistency only fails an
+   * assignment of every variable that breaks a row, and leaves the simplex and the schedule of
+   * solves as they are, so that propagation outside the search (local search, for example) does not
+   * spend the work the search gets.
+   *
+   * @param suspend true to suspend, false to resume.
+   */
+  public void suspend(boolean suspend) {
+    suspended = suspend;
+  }
+
   @Override
   public void consistency(Store store) {
     // the simplex may skip a node, round its multipliers to nothing, or fix the last variables by
     // its own pruning without being run again; an assignment that breaks a row must still fail
     checkGround();
+    if (suspended) {
+      return;
+    }
     credit = Math.min(credit + WORK_PER_CALL, WORK);
     if (++tick < period || credit < 0 || stalled >= IDLE_RUNS) {
       return;
