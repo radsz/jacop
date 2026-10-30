@@ -21,6 +21,22 @@ annotation activity_min_deg;
 annotation tiebreak(array[int] of ann: a);
 annotation tiebreak(ann: a1, ann: a2) = tiebreak([a1,a2]);
 
+%% ===== Multi-objective optimisation =====
+
+include "experimental.mzn";
+
+/** Asks for the Pareto front of the goals \a s (min_goal, max_goal, int_min_goal, int_max_goal
+  and sat_goal of std/experimental.mzn): every solution that no other solution improves in one
+  goal without worsening another, one for each vector of goal values. Each one is printed when it
+  is proven, followed by ========== when the front is complete. It is attached to the solve item:
+
+  \code
+  solve :: pareto([min_goal(cost), max_goal(quality)]) satisfy;
+  \endcode
+
+  MiniZinc's goal_hierarchy(s) asks for the lexicographic optimum of the goals instead. */
+annotation pareto(array [int] of ann: s);
+
 %------------------------------------------------------------------------------%
 % Following search annotation is a place holders until it is included in the
 % MiniZinc distribution

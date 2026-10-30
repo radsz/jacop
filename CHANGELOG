@@ -918,6 +918,61 @@ Version 5.0 (unreleased)
     BacktrackableManager.isRecognizedAsChanged(int), and in Store
     throwFailException(Var), clearWatchedConstraint(),
     countConstraint(int) and the field auxilaryVariables.
+    The constraint replacement feature is removed too: nothing registered
+    a replacement, yet Store.impose looked one up for every constraint.
+    Store.registerReplacement and deregisterReplacement, the interface
+    org.jacop.api.Replaceable and org.jacop.constraints.replace.ReifiedIfThen
+    are gone.
+
+66. SeqPrecedeChain (seq_precede_chain and value_precede_chain, the value
+    precedence that presolve posts) and LexChain (the orbitope chains)
+    explain their own pruning under --lcg instead of the generic or
+    replayed reason. SeqPrecedeChain cites, for a value of rank above s,
+    the removals of the value of rank s before its position (no earlier
+    position can reach rank s), and for a forced position the domain that
+    forces a rank and the removals of each rank's value between its latest
+    position and its deadline. LexChain cites the vectors of one side of
+    the chain: the smallest tuples from the first vector, or the largest
+    from the last, bound the vector they reach. Failures are explained the
+    same way. On a P||Cmax instance value precedence reasons fall from 22
+    to 8 atoms, and none is generic or replayed (before: 38% generic, the
+    rest replayed). On 25 jacop-benchmarks
+    instances with value precedence or orbitopes, --lcg -f at 30 s solves
+    22 instead of 20, and the 130 generated colouring, bin packing and
+    identical-machine instances are level (83 to 82 solved).
+
+63. NetworkFlow explains its pruning under --lcg instead of the generic
+    reason (networks with constant arc costs). The cost bound and the
+    arc bounds come from the duals of a minimum cost flow over the
+    bounds before the explained atom, which certify that every flow
+    costs at least sum_a min(rc l, rc u) - sum_v p b; a reason cites
+    the arc bounds this needs, weakened within the slack. Feasibility
+    pruning is explained by the cut that the flow search stops at, and
+    the cost's upper bound by the fixed flows. On mapping, reasons fall
+    from 23 to 5 atoms and generic ones to 0. Paired 60 s runs on the
+    30 instances with jacop_networkflow: --lcg better on 7 and worse
+    on none (mesh2x2_mp3 3.1 s to 1.6 s), --lcg -f better on 8 and
+    worse on 1 (mesh2x2_mp3 4.4 s to 1.6 s).
+
+68. Several objectives, lexicographic or Pareto. New class
+    org.jacop.search.MultiObjective optimises integer objectives (each
+    minimised or maximised) as a sequence of single-objective
+    subproblems: lexicographic() optimises them in order, each with the
+    earlier ones fixed at their optimum and required to be strictly
+    better than the best solution so far; pareto() returns the Pareto
+    front, each point optimised that way among the solutions no point
+    found before dominates, with the later objectives bounded by the best
+    solution so far, so every point found is Pareto optimal and the front
+    is complete when no solution is left. MultiObjective.DepthFirst
+    solves the subproblems by branch and bound in a store. The FlatZinc
+    front end reads MiniZinc's goal_hierarchy annotation
+    (std/experimental.mzn: min_goal, max_goal, int_min_goal,
+    int_max_goal, sat_goal) for the lexicographic optimum and JaCoP's
+    pareto annotation (jacop.mzn) for the Pareto front, on a solve item
+    with satisfy. Each subproblem is solved as a FlatZinc model with the
+    options given (-f, --lcg, --presolve, -p apply to it) and -t covers
+    them all. Pareto points are printed as they are proven, followed by
+    ========== when the front is complete. Float goals are not supported.
 
 Version 4.11
 =============

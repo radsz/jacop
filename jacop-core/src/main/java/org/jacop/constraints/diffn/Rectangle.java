@@ -163,12 +163,12 @@ public class Rectangle {
     int level = store.level;
     return origin[0].singleton()
         && origin[1].singleton()
-        && origin[0].domain.stamp < level
-        && origin[1].domain.stamp < level
+        && origin[0].dom().stamp() < level
+        && origin[1].dom().stamp() < level
         && length[0].singleton()
         && length[1].singleton()
-        && length[0].domain.stamp < level
-        && length[1].domain.stamp < level;
+        && length[0].dom().stamp() < level
+        && length[1].dom().stamp() < level;
   }
 
   /**

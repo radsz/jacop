@@ -78,6 +78,9 @@ public abstract class Var implements Backtrackable {
   /** The constraints watching this variable as a watched literal, see {@link Store}. */
   WatchedConstraints watchedConstraints;
 
+  /** The affine views whose base this variable is, or null; see {@link AffineView}. */
+  AffineView[] views;
+
   /**
    * Creates an empty position mapping.
    *

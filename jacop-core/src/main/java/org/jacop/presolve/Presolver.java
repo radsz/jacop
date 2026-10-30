@@ -161,6 +161,18 @@ public final class Presolver {
   }
 
   /**
+   * Switches rule 2, affine equality substitution, on or off; see {@link
+   * Derivation.Builder#affine(boolean)}.
+   *
+   * @param on true to substitute, the default.
+   * @return this presolver.
+   */
+  public Presolver affine(boolean on) {
+    builder.affine(on);
+    return this;
+  }
+
+  /**
    * Probes the store in the rounds of rules, after the standard rules; see {@link ProbingRule}. Off
    * by default.
    *
@@ -208,6 +220,17 @@ public final class Presolver {
    */
   public Presolver exempt(Var... vars) {
     builder.exempt(vars);
+    return this;
+  }
+
+  /**
+   * Switches affine views on or off; see {@link Derivation.Builder#views(boolean)}.
+   *
+   * @param on true to use views, the default.
+   * @return this presolver.
+   */
+  public Presolver views(boolean on) {
+    builder.views(on);
     return this;
   }
 

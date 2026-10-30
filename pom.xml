@@ -274,6 +274,7 @@ setup to run configuration. -->
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
+                                <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -294,6 +295,7 @@ setup to run configuration. -->
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
+                                <include>**/MultiObjectiveTest.java</include>
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/DiffnSkippingTest.java</include>
@@ -301,6 +303,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
+                                <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
@@ -410,6 +413,7 @@ setup to run configuration. -->
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
+                                <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -431,6 +435,7 @@ setup to run configuration. -->
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
+                                <include>**/MultiObjectiveTest.java</include>
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/DiffnSkippingTest.java</include>
@@ -438,6 +443,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
+                                <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
@@ -542,6 +548,7 @@ setup to run configuration. -->
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
+                                <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -563,6 +570,7 @@ setup to run configuration. -->
                                 <include>**/FlatzincFrontEndTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
+                                <include>**/MultiObjectiveTest.java</include>
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/DiffnSkippingTest.java</include>
@@ -570,6 +578,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
+                                <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
@@ -673,6 +682,7 @@ setup to run configuration. -->
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
+                                <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>

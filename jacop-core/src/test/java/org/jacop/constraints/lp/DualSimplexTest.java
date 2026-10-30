@@ -174,8 +174,8 @@ class DualSimplexTest {
     assertThat(infeasible).isGreaterThan(200);
   }
 
-  private static void checkOptimal(
-      DualSimplex lp,
+  static void checkOptimal(
+      LpSolver lp,
       double[][] a,
       double[] rowLo,
       double[] rowHi,
@@ -183,6 +183,20 @@ class DualSimplexTest {
       double[] lo,
       double[] hi,
       int run) {
+    checkOptimal(lp, a, rowLo, rowHi, cost, lo, hi, run, 1e-5);
+  }
+
+  // as above, with the tolerance of the dual bound against the perturbation of the costs
+  static void checkOptimal(
+      LpSolver lp,
+      double[][] a,
+      double[] rowLo,
+      double[] rowHi,
+      double[] cost,
+      double[] lo,
+      double[] hi,
+      int run,
+      double tolerance) {
     int m = a.length;
     int n = cost.length;
     double[] x = new double[n];
@@ -220,11 +234,11 @@ class DualSimplexTest {
     }
     assertThat(bound)
         .as("run %d dual bound", run)
-        .isCloseTo(primal, org.assertj.core.data.Offset.offset(1e-5));
+        .isCloseTo(primal, org.assertj.core.data.Offset.offset(tolerance));
   }
 
   // the combination y A x must be kept from the range of y [L, U] by the bounds of x
-  private static void checkFarkas(
+  static void checkFarkas(
       double[] y, double[][] a, double[] rowLo, double[] rowHi, double[] lo, double[] hi, int run) {
     int m = a.length;
     int n = lo.length;

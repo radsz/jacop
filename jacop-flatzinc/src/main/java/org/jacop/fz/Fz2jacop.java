@@ -84,6 +84,12 @@ public class Fz2jacop {
 
     Options opt = new Options(args);
 
+    // several objectives: each subproblem is solved by this method in turn
+    Goals goals = Goals.of(opt, args);
+    if (goals != null) {
+      return goals.solve();
+    }
+
     if (opt.threads() > 1) {
       String unsupported = Portfolio.unsupported(opt);
       if (unsupported == null) {
