@@ -39,13 +39,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
-import org.jacop.api.Replaceable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -171,14 +169,6 @@ public class Store {
    * changed at the removed level.
    */
   protected final List<Stateful> timeStamps = new ArrayList<>(100);
-
-  /**
-   * It stores all the active replacements of constraints that are being applied upon constraint
-   * imposition. It makes it possible to replace constraints into other constraints. It can be very
-   * useful for efficiency or testing purposes.
-   */
-  private final Map<Class<? extends Constraint>, Set<Replaceable<? extends Constraint>>>
-      replacements = new HashMap<>();
 
   /**
    * It stores boolean variables as soon as they change (become grounded or number of constraints
@@ -1048,21 +1038,10 @@ public class Store {
    *
    * @param c constraint to be imposed.
    */
-  @SuppressWarnings("unchecked")
   public void impose(Constraint c) {
 
     checkImposeAllowed();
     record(c);
-    Optional.ofNullable(replacements.get(c.getClass()))
-        .ifPresent(
-            l ->
-                l.forEach(
-                    r -> {
-                      Replaceable<Constraint> replacement = (Replaceable<Constraint>) r;
-                      if (replacement.isReplaceable(c)) {
-                        replacement.replace(c).imposeDecomposition(this);
-                      }
-                    }));
     c.impose(this);
   }
 
@@ -1399,38 +1378,6 @@ public class Store {
     // available";
 
     trailManager.addChanged(recordedVariable.storeIndex);
-  }
-
-  /**
-   * It makes it possible to register replacement for a particular constraint type.
-   *
-   * @param replacement that is being registered.
-   * @return true if replacement has been added and was not already registered, false otherwise.
-   */
-  public boolean registerReplacement(Replaceable<? extends Constraint> replacement) {
-
-    if (!replacements.containsKey(replacement.forClass())) {
-      replacements.put(replacement.forClass(), new LinkedHashSet<>());
-    }
-
-    Set<Replaceable<? extends Constraint>> current = replacements.get(replacement.forClass());
-
-    return current.add(replacement);
-  }
-
-  /**
-   * It makes it possible to deregister the replacement. The constraint that have been already
-   * replaced remained replaced.
-   *
-   * @param replacement that is being deregister from within the constraint store.
-   * @return true if replacement was present and was deregistered, false otherwise.
-   */
-  public boolean deregisterReplacement(Replaceable<? extends Constraint> replacement) {
-
-    Optional<Set<Replaceable<? extends Constraint>>> forClass =
-        Optional.ofNullable(replacements.get(replacement.forClass()));
-
-    return forClass.map(replaceables -> replaceables.remove(replacement)).orElse(false);
   }
 
   /**

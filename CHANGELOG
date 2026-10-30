@@ -843,6 +843,11 @@ Version 5.0 (unreleased)
     BacktrackableManager.isRecognizedAsChanged(int), and in Store
     throwFailException(Var), clearWatchedConstraint(),
     countConstraint(int) and the field auxilaryVariables.
+    The constraint replacement feature is removed too: nothing registered
+    a replacement, yet Store.impose looked one up for every constraint.
+    Store.registerReplacement and deregisterReplacement, the interface
+    org.jacop.api.Replaceable and org.jacop.constraints.replace.ReifiedIfThen
+    are gone.
 
 Version 4.11
 =============
