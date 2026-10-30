@@ -30,7 +30,10 @@
 
 package org.jacop.fz;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -1676,6 +1679,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     String unsupported = lcgUnsupported(costVar);
     if (unsupported != null) {
       IO.println("%% --lcg ignored: " + unsupported);
+      if (options.proof() != null) {
+        IO.println("%% --proof ignored: it needs --lcg");
+      }
       postCollectedClauses();
       return false;
     }
@@ -1741,6 +1747,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
+    if (options.proof() != null) {
+      try {
+        lcg.setProof(
+            new FileOutputStream(options.proof() + ".opb"),
+            new FileOutputStream(options.proof() + ".pbp"));
+      } catch (FileNotFoundException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);

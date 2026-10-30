@@ -83,6 +83,8 @@ public class Options {
   // whether --lcg was given; without it, LCG is left out for models it does not support
   boolean lcgGiven;
   boolean lp = true;
+  // --proof: the path prefix of the VeriPB proof (.pbp) and its OPB model (.opb), or null
+  String proof;
   LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.DENSE;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
@@ -210,6 +212,12 @@ public class Options {
                 the annotation (see lcg-branching of --free-config). On by default ("--lcg off"
                 turns it off); left out by default for models with float variables, for
                 satisfaction problems asking for more than one solution (-a, -n), and with -sat.
+            --proof <prefix> with --lcg (turned on), write a VeriPB 3 proof of the search to
+                <prefix>.pbp and the OPB model it is checked against to <prefix>.opb
+                (veripb <prefix>.opb <prefix>.pbp); one thread, branch and bound without
+                core-guided, lower-bound and neighbourhood runs, --lp off, bounds consistency
+                (as -b). The model is the store
+                at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default, the dense simplex), "off",
@@ -296,6 +304,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(args, i);
       case "--lp" -> i = handleLp(args, i);
+      case "--proof" -> i = handleProof(args, i);
       case "-p", "--parallel" -> i = handleParallel(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
@@ -384,6 +393,13 @@ public class Options {
         System.err.println("%% Free search setting " + setting + " not understood; ignored");
       }
     }
+    return i + 1;
+  }
+
+  private int handleProof(String[] args, int i) {
+    proof = args[++i];
+    lcg = true;
+    lcgGiven = true;
     return i + 1;
   }
 
@@ -779,7 +795,8 @@ public class Options {
    * @return true if bound consistency prefered, false otherwise (defult).
    */
   public boolean getBoundConsistency() {
-    return boundConsistency;
+    // a proof states each explanation by unit propagation, which derives bounds, not domains
+    return boundConsistency || proof != null;
   }
 
   /**
@@ -836,7 +853,18 @@ public class Options {
    * @return false when --lp off was given
    */
   public boolean lp() {
-    return lp;
+    // LP deductions combine rows, which a proof's unit propagation does not derive
+    return lp && proof == null;
+  }
+
+  /**
+   * The path prefix of the VeriPB proof that --proof asks for: the proof goes to prefix.pbp and the
+   * OPB model it is checked against to prefix.opb.
+   *
+   * @return the prefix, or null without --proof
+   */
+  public String proof() {
+    return proof;
   }
 
   /**
@@ -854,7 +882,7 @@ public class Options {
    * @return the number of threads
    */
   public int threads() {
-    return threads;
+    return proof == null ? threads : 1;
   }
 
   /** The portfolio thread this model is solved in, or null outside a portfolio. */

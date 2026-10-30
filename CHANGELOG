@@ -1201,6 +1201,20 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+83. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+    search: <prefix>.opb is the model as pseudo-Boolean constraints over
+    the order encoding of the variables' domains after root propagation,
+    and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
+    reasons, soli for improving solutions, deletions, and a conclusion
+    UNSAT, SAT or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
+    It is off by default, implies --lcg, one thread,
+    bounds consistency and no LP, and runs no core-guided phase. Linear
+    constraints (LinearInt and the linear forms of LCG explanations),
+    their reifications, equalities with constants, ChannelReif,
+    ChannelImply and clauses are encoded; another constraint makes it
+    stop with "proof logging does not support <class>". Root propagation
+    and the FlatZinc translation are not certified.
+
 Version 4.11
 =============
 

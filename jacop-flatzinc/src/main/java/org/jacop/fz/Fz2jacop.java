@@ -175,6 +175,10 @@ public class Fz2jacop {
 
   private void handleFailException(Options opt, Parser parser) {
     IO.println("=====UNSATISFIABLE=====");
+    if (opt.proof() != null) {
+      // the proof's model is stated over the domains after root propagation
+      IO.println("%% --proof: no proof written, the model fails before the LCG search");
+    }
     if (!opt.getOutputFilename().isEmpty()) {
       try {
         Files.writeString(Path.of(opt.getOutputFilename()), "=====UNSATISFIABLE=====");

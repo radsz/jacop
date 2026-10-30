@@ -31,11 +31,16 @@
 
 package org.jacop.jasat.lcg;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -460,6 +465,182 @@ public final class LcgSolver implements ExternalPropagator {
     sat.connect(this);
   }
 
+  // --------------------------------------------------------------------------------- proof
+
+  // the VeriPB proof and where its OPB model goes, or null
+  private VeriPbProof proof;
+  private OutputStream proofModel;
+  private boolean proofStarted;
+  // the clauses of addClause, for the OPB model
+  private final List<IntVar[][]> proofClauses = new ArrayList<>();
+
+  /**
+   * The most terms the OPB model of a proof may have; the system property {@code
+   * jacop.lcg.proofTerms} sets it.
+   */
+  private static final long PROOF_TERMS = Long.getLong("jacop.lcg.proofTerms", 20_000_000L);
+
+  /** Whether the proof names the constraint behind each explanation in a comment, for debugging. */
+  private static final boolean PROOF_TRACE = Boolean.getBoolean("jacop.lcg.proofTrace");
+
+  /**
+   * Writes a VeriPB proof of the search ({@link VeriPbProof}) and the OPB model it is checked
+   * against ({@link OpbEncoder}): the model as the store holds it when the search starts, so its
+   * root propagation and the translation to the store are not checked. Under a proof, minimisation
+   * is plain branch and bound: core-guided search, lower-bound runs, neighbourhood runs and a
+   * shared bound, which assume what the proof cannot state, are off. Set it right after the solver
+   * is built; {@link #solve} and {@link #minimize} write the model when they start and the
+   * conclusion when they end, and close both outputs.
+   *
+   * @param model where the OPB model goes
+   * @param out where the proof goes
+   */
+  public void setProof(OutputStream model, OutputStream out) {
+    proofModel = model;
+    proof = new VeriPbProof(out, this::proofName);
+    sat.setProof(proof);
+  }
+
+  /**
+   * Returns the proof writer, for its statistics.
+   *
+   * @return the proof, or null
+   */
+  public VeriPbProof proof() {
+    return proof;
+  }
+
+  // the OPB name of a solver variable
+  private String proofName(int dimacsVar) {
+    int i = litVar[dimacsVar];
+    if (i < 0) {
+      throw new IllegalStateException("an auxiliary variable in a proof");
+    }
+    return litKind[dimacsVar] == GE_KIND
+        ? OpbEncoder.ge(i, litValue[dimacsVar])
+        : OpbEncoder.eq(i, litValue[dimacsVar]);
+  }
+
+  /** Writes the OPB model and starts the proof, once. */
+  private void startProof() {
+    if (proof == null || proofStarted) {
+      return;
+    }
+    proofStarted = true;
+    OpbEncoder model = new OpbEncoder(vars, root, trail::id, PROOF_TERMS);
+    StringBuilder names = new StringBuilder();
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] != null && !root[i].singleton()) {
+        names.append("* x").append(i).append(" is ").append(vars[i].id()).append(' ');
+        names.append(root[i]).append('\n');
+      }
+    }
+    model.variables();
+    Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
+    constraints.addAll(store.watchedLiteralConstraints());
+    for (Constraint c : constraints) {
+      model.constraint(c);
+    }
+    for (IntVar[][] clause : proofClauses) {
+      model.clause(clause[0], clause[1]);
+    }
+    if (!model.unsupported().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "proof logging does not support " + String.join(", ", model.unsupported()));
+    }
+    String objectiveLine = objective >= 0 ? model.objective(vars[objective]) : null;
+    try {
+      proofModel.write(model.text(objectiveLine, names).getBytes(StandardCharsets.US_ASCII));
+      proofModel.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    proof.start(model.numConstraints());
+    if (rootFailed) {
+      // the store failed at the root, which the proof does not derive
+      proof.comment("the store failed at the root");
+    }
+  }
+
+  /**
+   * Logs the explanation of an atom the solver does not have, which a conflict clause replaces by
+   * its reason: unit propagation over the model derives the atom from its reason, but not the
+   * conflict clause from the atoms of the reasons, since a bound of an integer is several order
+   * literals. The lemma {@code reason -> atom} is the step between.
+   */
+  private void proofLemma(int entry, EntryList reason, int from, int extra) {
+    String atom = proofAtom(entry, 0);
+    if ("1".equals(atom)) {
+      return;
+    }
+    StringBuilder s = new StringBuilder("rup 1 ").append(atom);
+    for (int k = from; k < reason.size(); k++) {
+      String r = proofAtom(reason.get(k), reason.slack(k));
+      if (!"1".equals(r)) {
+        s.append(" 1 ").append(r.startsWith("~") ? r.substring(1) : "~" + r);
+      }
+    }
+    if (extra != 0) {
+      String name = proofName(Math.abs(extra));
+      s.append(" 1 ").append(extra > 0 ? "~" + name : name);
+    }
+    proof.lemma(s.append(" >= 1 ;\n"));
+  }
+
+  /** The OPB literal of a trail entry's atom weakened by slack, or "1" when the root has it. */
+  private String proofAtom(int entry, int slack) {
+    int i = trail.id(trail.variable(entry));
+    long v = trail.value(entry);
+    return switch (trail.kind(entry)) {
+      case AtomicTrail.GE -> v - slack <= root[i].min() ? "1" : OpbEncoder.ge(i, (int) (v - slack));
+      case AtomicTrail.LE ->
+          v + slack >= root[i].max() ? "1" : "~" + OpbEncoder.ge(i, (int) (v + slack + 1));
+      default -> root[i].contains((int) v) ? "~" + OpbEncoder.eq(i, (int) v) : "1";
+    };
+  }
+
+  /** Logs a solution of the store's domains: the order literals true in it. */
+  private void logSolution() {
+    List<String> lits = new ArrayList<>();
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == null || root[i].singleton()) {
+        continue;
+      }
+      int value = solution[i];
+      for (int v = root[i].min() + 1; v <= root[i].max(); v++) {
+        lits.add(v <= value ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v));
+      }
+    }
+    proof.solution(lits, objective >= 0);
+  }
+
+  /** Writes the conclusion of a search and closes the proof. */
+  private void finishProof(int result, boolean optimising) {
+    if (proof == null) {
+      return;
+    }
+    startProof();
+    if (rootFailed || result == CdclSolver.UNKNOWN) {
+      proof.concludeNothing();
+    } else if (!optimising) {
+      if (result == CdclSolver.SAT) {
+        proof.concludeSatisfiable();
+      } else {
+        proof.concludeUnsatisfiable();
+      }
+    } else if (best == null) {
+      proof.concludeBounds("INF", "INF");
+    } else {
+      String value = Integer.toString(best[objective]);
+      proof.concludeBounds(value, value);
+    }
+    try {
+      proof.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
   // ------------------------------------------------------------------------------- literals
 
   private int newLiteral(int i, int kind, int value) {
@@ -868,10 +1049,15 @@ public final class LcgSolver implements ExternalPropagator {
    * @return {@link CdclSolver#SAT}, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
    */
   public int solve() {
-    return solve(new int[0]);
+    int result = solve(new int[0]);
+    if (objective < 0) {
+      finishProof(result, false);
+    }
+    return result;
   }
 
   private int solve(int... assumed) {
+    startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
     }
@@ -901,7 +1087,7 @@ public final class LcgSolver implements ExternalPropagator {
   public int minimize(IntVar objective) {
     this.objective = trail.id(objective);
     best = null;
-    coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
+    coreSearch = coreShare > 0 && proof == null ? CoreSearch.of(this, objective) : null;
     int result;
     try {
       if (coreSearch != null) {
@@ -914,6 +1100,12 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setConflictLimit(Long.MAX_VALUE);
     }
     solution = best;
+    if (proof != null) {
+      int id = this.objective;
+      this.objective = trail.id(objective);
+      finishProof(result, true);
+      this.objective = id;
+    }
     if (result == CdclSolver.UNKNOWN && !sharedBoundUnreachable) {
       return CdclSolver.UNKNOWN;
     }
@@ -972,7 +1164,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Whether runs of branch and bound alternate with lower-bound or neighbourhood runs. */
   private boolean interleaved() {
-    return lowerBoundShare > 0 || lns != null;
+    return proof == null && (lowerBoundShare > 0 || lns != null);
   }
 
   /**
@@ -1486,6 +1678,9 @@ public final class LcgSolver implements ExternalPropagator {
    * @param negative variables of which one may be 0
    */
   public void addClause(IntVar[] positive, IntVar[] negative) {
+    if (proof != null) {
+      proofClauses.add(new IntVar[][] {positive.clone(), negative.clone()});
+    }
     List<Integer> clause = new ArrayList<>();
     for (int sign = 1; sign >= -1; sign -= 2) {
       for (IntVar x : sign > 0 ? positive : negative) {
@@ -1898,7 +2093,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public int[] externalClause() {
-    if (structural.isEmpty() && sharedBound != null && objective >= 0 && !coreMode) {
+    if (structural.isEmpty()
+        && sharedBound != null
+        && proof == null
+        && objective >= 0
+        && !coreMode) {
       importBound();
     }
     return structural.poll();
@@ -1998,6 +2197,9 @@ public final class LcgSolver implements ExternalPropagator {
         EntryList atoms = failureAtoms;
         atoms.clear();
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        if (PROOF_TRACE && proof != null) {
+          proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
+        }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
@@ -2026,6 +2228,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int mark = out.size();
     boolean own = trail.explain(e, out);
+    if (PROOF_TRACE && proof != null) {
+      proof.comment((own ? "reason " : "generic reason ") + trail.reason(e));
+    }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
       genericDeferred.add(trail.reason(e));
     }
@@ -2157,9 +2362,13 @@ public final class LcgSolver implements ExternalPropagator {
       if (inSolver(e)) {
         inSolver.add(e);
       } else {
+        int mark = stack.size();
         int more = explainEntry(e, stack);
         if (more != 0) {
           lits.add(-more);
+        }
+        if (proof != null) {
+          proofLemma(e, stack, mark, more);
         }
       }
     }
@@ -2538,6 +2747,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     // under core-guided search a solution need not improve on the best one
     boolean improving = objective < 0 || best == null || solution[objective] < best[objective];
+    if (proof != null && improving) {
+      logSolution();
+    }
     if (onSolution != null && improving) {
       onSolution.run();
     }
