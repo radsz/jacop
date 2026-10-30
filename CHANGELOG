@@ -827,7 +827,20 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
-63. New decomposed constraint VectorBinpacking(bin, load, w, minBin) for
+63. Shorter Cumulative explanations under --lcg. Explaining a start bound
+    walks over the starts it removed; where those starts had been removed
+    already, it cited one removal per value, so on carpet-cutting some
+    reasons had 300 to 600 atoms. A compulsory part that rules out the
+    same starts is now cited instead when it takes fewer atoms. Energy
+    window reasons keep only the tasks the window's excess needs, each
+    with its start bounds lifted to the overlap it must have. carpet-
+    cutting test.20: 59 to 10 atoms per Cumulative reason (--lcg), 75 to
+    10 (--lcg -f). Paired runs against item 56 alone: --lcg 60 s 8 better
+    and 1 worse, --lcg -f 30 s with seeds 1 to 3 34 better and 11 worse,
+    with new proofs on rcpsp_08, smelt_3 and rcpsp-wet j60_36_8.
+    -Djacop.lcg.windowLift=false keeps the full window reasons.
+
+64. New decomposed constraint VectorBinpacking(bin, load, w, minBin) for
     vector (multidimensional) bin packing: one Binpacking per dimension,
     a Binpacking with cardinality rules on the surrogate dimension (the
     sum of the dimensions scaled to a common capacity, Caprara and Toth
@@ -843,7 +856,7 @@ Version 5.0 (unreleased)
     54 with free search and 59 instead of 44 with free search and --lcg;
     the cliques proved no more.
 
-64. Presolve breaks value symmetries and orbitopes too (--presolve on|check,
+65. Presolve breaks value symmetries and orbitopes too (--presolve on|check,
     unless --symmetry off), in org.jacop.fz.SymmetryBreaking:
     - Value precedence. Integer variables whose values are only compared
       (int_eq/int_ne and x - y = 0 or != 0, all_different, all_equal,
@@ -873,7 +886,7 @@ Version 5.0 (unreleased)
     0.05 s on one model of each directory of jacop-benchmarks; value
     precedence fires on 38 of 1,926 and orbitopes on 101.
 
-65. Fewer SAT variables under --lcg. A value a constraint removes from
+66. Fewer SAT variables under --lcg. A value a constraint removes from
     inside a domain is now a transient [x = v] literal, released on
     backtracking unless a clause keeps it, as bound literals already were;
     before, each was linked to two new bound literals by four clauses.
@@ -889,7 +902,7 @@ Version 5.0 (unreleased)
     --lcg 19 better / 3 worse, --lcg -f 50 / 52 (two runs; noise level),
     with 15% fewer SAT variables at the median.
 
-66. Dead code removed (about 3,300 lines, no change in behaviour). Classes
+67. Dead code removed (about 3,300 lines, no change in behaviour). Classes
     nothing used: IntervalBasedBacktrackableManager and
     SimpleBacktrackableManager (the store always uses
     TrailBacktrackableManager), SwitchesPruningLogging (no-op tracing
