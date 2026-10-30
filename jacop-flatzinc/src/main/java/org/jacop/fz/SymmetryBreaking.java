@@ -115,9 +115,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
   }
 
-  private static final class Unsupported extends RuntimeException {
+  private static class Unsupported extends RuntimeException {
     Unsupported(String reason) {
       super(reason, null, false, false);
+    }
+  }
+
+  /** The time given ran out before the graph was built. */
+  private static final class OutOfTime extends Unsupported {
+    OutOfTime() {
+      super("time limit reached while building the graph");
     }
   }
 
@@ -350,6 +357,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   private final Store store;
   private final Tables dictionary;
+  // when the time given to run ends (System.nanoTime)
+  private long deadline = Long.MAX_VALUE;
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
@@ -387,16 +396,17 @@ final class SymmetryBreaking implements ParserTreeConstants {
   Outcome run(
       SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
     IntVar goal = objective != null && !objective.singleton() ? objective : null;
+    // reading the model and building its graphs count in the time given, as the search does
+    deadline = System.nanoTime() + maxNanos;
     List<Item> items;
     try {
       items = parse(astTree);
     } catch (Unsupported e) {
-      return new Outcome(0, 0, 0, true, e.getMessage());
+      return new Outcome(0, 0, 0, !(e instanceof OutOfTime), e.getMessage());
     } catch (IllegalArgumentException | ClassCastException e) {
       // a form of argument the front end reads elsewhere; the model is left as it is
       return new Outcome(0, 0, 0, true, String.valueOf(e.getMessage()));
     }
-    long deadline = System.nanoTime() + maxNanos;
 
     // the lex-leader order: the variables of the search annotation, then the others as the model
     // first uses them
@@ -433,11 +443,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Graph graph = new Graph(goal, null);
     try {
       for (Item item : items) {
+        checkTime();
         graph.addConstraint(item);
       }
       graph.finish();
     } catch (Unsupported e) {
-      return new Outcome(0, 0, values.posted(), true, e.getMessage(), values.posted(), 0);
+      return new Outcome(
+          0, 0, values.posted(), !(e instanceof OutOfTime), e.getMessage(), values.posted(), 0);
     }
     int n = graph.size();
     if (n > MAX_VERTICES) {
@@ -541,6 +553,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     return v;
   }
 
+  private void checkTime() {
+    if (System.nanoTime() > deadline) {
+      throw new OutOfTime();
+    }
+  }
+
   private List<Item> parse(SimpleNode astTree) {
     List<Item> items = new ArrayList<>();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
@@ -549,6 +567,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
+            checkTime();
             items.add(parse((ASTConstElem) item));
           }
         }
@@ -888,11 +907,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     graph.spaces = spaces;
     try {
       for (Item item : items) {
+        checkTime();
         graph.addConstraint(item);
       }
       graph.finish();
     } catch (Unsupported e) {
-      return new ValueOutcome(List.of(), 0, true);
+      return new ValueOutcome(List.of(), 0, !(e instanceof OutOfTime));
     }
     if (graph.size() > MAX_VERTICES) {
       return new ValueOutcome(List.of(), 0, true);
@@ -918,7 +938,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
                 graph.colors(),
                 graph.adjacency(),
                 base.stream().mapToInt(Integer::intValue).toArray())
-            .generators(MAX_WORK, maxNanos);
+            .generators(MAX_WORK, Math.min(maxNanos, Math.max(0, deadline - System.nanoTime())));
 
     boolean[] fixedVertex = new boolean[graph.size()];
     for (Space s : spaces) {

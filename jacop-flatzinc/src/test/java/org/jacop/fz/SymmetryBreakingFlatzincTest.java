@@ -109,6 +109,34 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void readingTheModelCountsInTheTimeGiven() throws IOException {
+    // building the graph of a large model took several times the second given to the
+    // automorphism search (groupsplitter: 7 s); it now stops when the time is up
+    String model =
+        """
+        array [1..4] of var 1..4: x :: output_array([1..4]);
+        constraint jacop_alldiff(x);
+        solve satisfy;
+        """;
+    String on = FlatzincTestRunner.run(tmp, model, "-s", "--symmetry", "on");
+    assertTrue(on.contains("symmetryConstraints=2"), on);
+    String time = System.setProperty("org.jacop.fz.symmetryTime", "0");
+    try {
+      String out = FlatzincTestRunner.run(tmp, model, "-s", "--symmetry", "on");
+      assertTrue(out.contains("symmetryConstraints=0"), out);
+      assertTrue(out.contains("symmetrySearchComplete=false"), out);
+      assertTrue(out.contains("time limit"), out);
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      if (time == null) {
+        System.clearProperty("org.jacop.fz.symmetryTime");
+      } else {
+        System.setProperty("org.jacop.fz.symmetryTime", time);
+      }
+    }
+  }
+
+  @Test
   void allSolutionsOfASatisfactionProblemAreKept() throws IOException {
     String model =
         """
@@ -137,6 +165,15 @@ class SymmetryBreakingFlatzincTest {
       assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), what);
       if (optimise && !unsat) {
         assertEquals(objective(off), objective(on), what);
+      }
+      // without presolve, as fzn-jacop runs by default; compared with LCG without symmetry
+      // breaking, since LCG rejects some of these models (array_int_maximum) that CP refutes
+      String lcgOff = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
+      String lcgOn = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg");
+      boolean lcgUnsat = lcgOff.contains("=====UNSATISFIABLE=====");
+      assertEquals(lcgUnsat, lcgOn.contains("=====UNSATISFIABLE====="), what + "\n" + lcgOn);
+      if (optimise && !lcgUnsat) {
+        assertEquals(objective(lcgOff), objective(lcgOn), what + "\n" + lcgOn);
       }
       if (generators(on) > 0) {
         broken++;
@@ -329,7 +366,11 @@ class SymmetryBreakingFlatzincTest {
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
-            {"-s", "--presolve", "check"}, {"-s", "--presolve", "check", "--lcg"},
+            {"-s", "--presolve", "check"},
+            {"-s", "--presolve", "check", "--lcg"},
+            // without presolve, as fzn-jacop runs by default, and with the annotation search
+            {"-s", "--lcg", "--symmetry", "on"},
+            {"-s", "-f", "--symmetry", "on"},
           }) {
         String on;
         try {
@@ -366,7 +407,11 @@ class SymmetryBreakingFlatzincTest {
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
-            {"-s", "--presolve", "check"}, {"-s", "--presolve", "check", "--lcg"},
+            {"-s", "--presolve", "check"},
+            {"-s", "--presolve", "check", "--lcg"},
+            // without presolve, as fzn-jacop runs by default, and with the annotation search
+            {"-s", "--lcg", "--symmetry", "on"},
+            {"-s", "-f", "--symmetry", "on"},
           }) {
         String on;
         try {
