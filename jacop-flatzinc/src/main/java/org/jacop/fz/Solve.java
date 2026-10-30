@@ -708,12 +708,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void presolve(ASTSolveItem node, ObjectivePresolve objective) {
     long start = timer.getCpuTime();
+    String affine = System.getProperty("jacop.presolve.affine", "on");
     Presolver presolver =
         Presolver.of(store)
             .keep(keptVariables(node))
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
-            .probing(options.probe(), options.probeBudget());
+            .probing(options.probe(), options.probeBudget())
+            // the LCG solver explains with the trail of each variable, which a view does not have;
+            // the property jacop.presolve.affine (on, aliases or off) is for measuring rule 2
+            .affine(!"off".equals(affine))
+            .views(!options.lcg() && !"aliases".equals(affine));
     if (objective != null) {
       // a rule, imposed in the first round in which there is an equation: the domains narrowed by
       // earlier rounds can complete a value encoding
@@ -1078,6 +1083,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveImplied=").append(implied).append('\n');
       s.append("%%%mzn-stat: presolveConstraintsSimplified=").append(st.simplified()).append('\n');
       s.append("%%%mzn-stat: presolveVariablesAliased=").append(st.aliased()).append('\n');
+      s.append("%%%mzn-stat: presolveAffineSubstituted=")
+          .append(d.affineSubstituted())
+          .append('\n');
     }
     if (cumulative != null) {
       s.append("%%%mzn-stat: presolveCumulativeFixedStarts=")

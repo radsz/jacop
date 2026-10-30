@@ -44,6 +44,12 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.core.AffineDomain;
+import org.jacop.core.AffineView;
 import org.jacop.core.Domain;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -159,6 +165,8 @@ public final class Derivation implements VarMap {
   private final boolean solutionPreserving;
   private final List<Rule> ruleList;
   private final int maxRounds;
+  private final boolean views;
+  private final boolean affine;
   private final DualReductions dual;
 
   private Outcome outcome;
@@ -176,6 +184,7 @@ public final class Derivation implements VarMap {
   private Reconstruction eliminationReconstruction;
   private int eliminated;
   private int substitutions;
+  private int affineSubstituted;
   private SatPresolve.Reconstruction reconstruction;
   private ClauseStatistics clauseStatistics;
   private int rounds;
@@ -202,6 +211,8 @@ public final class Derivation implements VarMap {
     }
     this.ruleList = List.copyOf(list);
     this.maxRounds = builder.maxRounds;
+    this.views = builder.views;
+    this.affine = builder.affine;
   }
 
   /**
@@ -229,6 +240,8 @@ public final class Derivation implements VarMap {
     private Set<Var> exempt;
     private final List<Rule> ruleList = new ArrayList<>();
     private int maxRounds = DEFAULT_ROUNDS;
+    private boolean views = true;
+    private boolean affine = true;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -383,6 +396,31 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Switches rule 2, affine equality substitution, on or off; on by default when the rules are.
+     *
+     * @param on true to substitute.
+     * @return this builder.
+     */
+    public Builder affine(boolean on) {
+      this.affine = on;
+      return this;
+    }
+
+    /**
+     * Switches affine views on or off. With them on, a variable defined as a*y + b by an equality
+     * becomes an {@link AffineView} of y's counterpart in the child; with them off only variables
+     * equal to another one are substituted. On by default; switch them off when the child is
+     * searched by a solver that does not support views, such as the LCG solver.
+     *
+     * @param on true to use views.
+     * @return this builder.
+     */
+    public Builder views(boolean on) {
+      this.views = on;
+      return this;
+    }
+
+    /**
      * Derives the child.
      *
      * @return the derivation; see {@link Derivation#outcome()}.
@@ -513,6 +551,33 @@ public final class Derivation implements VarMap {
       carried = eliminate(carried, aliases, reifications, clauseVariables);
     }
 
+    // rule 2: the equalities that define affine classes are replaced by substitution
+    AffineSubstitution affine = null;
+    if (rules && this.affine) {
+      // variables the child needs as themselves: those of the clauses, which go to the SAT solver,
+      // and those of the constraints the reification cleanup rewrites or relaxes
+      Set<Var> pinned = Collections.newSetFromMap(new IdentityHashMap<>());
+      pinned.addAll(clauseVariables);
+      pinned.addAll(reifications.relaxed().keySet());
+      List<Constraint> plain = new ArrayList<>(carried.size());
+      for (Constraint c : carried) {
+        if (reifications.rewritten(c)) {
+          pinned.addAll(c.arguments());
+          pinned.addAll(reifications.arguments(c));
+        } else {
+          plain.add(c);
+        }
+      }
+      // a merged alias is named by the constraints but takes the copy of its class
+      affine = AffineSubstitution.find(plain, views, aliases::containsKey, pinned::contains);
+      if (affine.definingCount() > 0) {
+        carried.removeIf(affine::defines);
+        dropped += affine.definingCount();
+      } else {
+        affine = null;
+      }
+    }
+
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
       used.addAll(reifications.arguments(c));
@@ -534,7 +599,11 @@ public final class Derivation implements VarMap {
           // merged into another variable, or eliminated by rule 8
           continue;
         }
-        if (used.contains(v) || !rules) {
+        if (affine != null && affine.relation(v) != null) {
+          // a member of an affine class, mapped once its representative has a counterpart
+          continue;
+        }
+        if (used.contains(v) || !rules || affine != null && affine.isRoot(v)) {
           keep(v);
         } else if (eliminatedVars.contains(v) && !v.singleton()) {
           entries.put(v, new Entry.Eliminated());
@@ -552,7 +621,22 @@ public final class Derivation implements VarMap {
       live();
       return;
     }
-    int childVariables = copies.size();
+    int childConstraints = carried.size();
+    if (affine != null) {
+      try {
+        // an equality that ties a member to its representative stands for a dropped definition
+        int tied = substitute(affine, carried, aliases);
+        dropped -= tied;
+        childConstraints += tied;
+      } catch (FailException e) {
+        outcome = Outcome.INFEASIBLE;
+        child = null;
+        return;
+      }
+    }
+    Set<Var> distinctCopies = Collections.newSetFromMap(new IdentityHashMap<>());
+    distinctCopies.addAll(copies.values());
+    int childVariables = distinctCopies.size();
     for (Map.Entry<Var, Var> e : aliases.entrySet()) {
       Var copy = copies.get(e.getValue());
       copies.put(e.getKey(), copy);
@@ -599,7 +683,7 @@ public final class Derivation implements VarMap {
             variables.size(),
             collected.size(),
             childVariables,
-            carried.size(),
+            childConstraints,
             fixed,
             dropped,
             simplified,
@@ -850,6 +934,82 @@ public final class Derivation implements VarMap {
     return true;
   }
 
+  /**
+   * Narrows the counterpart of every representative to the values all members of its class allow,
+   * and maps each member to that counterpart (an alias) or to a view of it. A propagator does not
+   * expect two of its variables to change together, so a member that shares a constraint with
+   * another variable of its class gets a copy of its own instead, tied to the representative's
+   * counterpart by an equality.
+   *
+   * @return the number of equalities imposed.
+   */
+  private int substitute(
+      AffineSubstitution affine, List<Constraint> carried, Map<Var, Var> aliases) {
+    for (Var v : variables) {
+      if (!affine.isRoot(v)) {
+        continue;
+      }
+      IntVar r = (IntVar) copies.get(v);
+      for (IntVar m : affine.members(v)) {
+        AffineSubstitution.Relation rel = affine.relation(m);
+        if (rel != null) {
+          r.domain.in(child.level, r, AffineDomain.preimage(m.dom(), 0, rel.a(), rel.b()));
+        }
+      }
+    }
+    Set<Var> shared = Collections.newSetFromMap(new IdentityHashMap<>());
+    Map<Var, Var> seen = new IdentityHashMap<>();
+    int tied = 0;
+    for (Constraint c : carried) {
+      seen.clear();
+      for (Var x : c.arguments()) {
+        Var y = aliases.getOrDefault(x, x);
+        Var other = seen.put(affine.root(y), y);
+        if (other != null && other != y) {
+          shared.add(y);
+          shared.add(other);
+        }
+      }
+    }
+    for (Var v : variables) {
+      AffineSubstitution.Relation rel = affine.relation(v);
+      if (rel == null) {
+        continue;
+      }
+      IntVar r = (IntVar) copies.get(rel.root());
+      Var copy;
+      if (shared.contains(v)) {
+        IntVar own = (IntVar) v.copyTo(child);
+        child.impose(equality(own, rel.a(), r, rel.b()));
+        tied++;
+        copy = own;
+      } else if (rel.identity()) {
+        copy = r;
+        affineSubstituted++;
+      } else {
+        copy = new AffineView(child, v.id(), r, rel.a(), rel.b());
+        affineSubstituted++;
+      }
+      copies.put(v, copy);
+      entries.put(v, new Entry.Kept(copy));
+    }
+    return tied;
+  }
+
+  /** The constraint x = a*y + b. */
+  private static Constraint equality(IntVar x, int a, IntVar y, int b) {
+    if (a == 1 && b == 0) {
+      return new XeqY(y, x);
+    }
+    if (a == 1) {
+      return new XplusCeqZ(y, b, x);
+    }
+    if (b == 0) {
+      return new XmulCeqZ(y, a, x);
+    }
+    return new LinearInt(new IntVar[] {x, y}, new int[] {1, -a}, "==", b);
+  }
+
   private void live() {
     outcome = Outcome.LIVE;
     child = parent;
@@ -859,6 +1019,7 @@ public final class Derivation implements VarMap {
     eliminationReconstruction = null;
     eliminated = 0;
     substitutions = 0;
+    affineSubstituted = 0;
     statistics =
         new Statistics(
             variables.size(), collected.size(), variables.size(), collected.size(), 0, 0, 0, 0);
@@ -986,6 +1147,16 @@ public final class Derivation implements VarMap {
    */
   public int substitutions() {
     return substitutions;
+  }
+
+  /**
+   * Returns the number of parent variables that rule 2 replaced by their class representative or by
+   * a view of it.
+   *
+   * @return the number of substituted variables.
+   */
+  public int affineSubstituted() {
+    return affineSubstituted;
   }
 
   /**
