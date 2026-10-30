@@ -88,10 +88,17 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean rootFailed;
 
   /**
+   * Whether the property {@code jacop.lcg.fullFixpoint} is set; it then decides {@link
+   * #setFullFixpoint} for every model.
+   */
+  public static final boolean FULL_FIXPOINT_SET =
+      System.getProperty("jacop.lcg.fullFixpoint") != null;
+
+  /**
    * Runs the store to its fixpoint before clauses propagate again; false returns to the clauses
    * after each pruning.
    */
-  private static final boolean FULL_FIXPOINT =
+  private boolean fullFixpoint =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.fullFixpoint", "true"));
 
   // per variable (by trail id): the root domain and the literals created so far (value -> variable)
@@ -625,7 +632,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     solution = null;
     // clauses propagate between constraints: each consistency() returns after a pruning constraint
-    store.setReturnAfterPruning(!FULL_FIXPOINT);
+    store.setReturnAfterPruning(!fullFixpoint);
     int result;
     try {
       result = sat.solve(assumed);
@@ -915,7 +922,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (rootFailed) {
       return null;
     }
-    store.setReturnAfterPruning(!FULL_FIXPOINT);
+    store.setReturnAfterPruning(!fullFixpoint);
     try {
       return sat.probe(lit);
     } finally {
@@ -1110,6 +1117,25 @@ public final class LcgSolver implements ExternalPropagator {
   public void setBranching(Branching branching) {
     this.branching = branching;
     activityBranching = branching == Branching.ACTIVITY;
+  }
+
+  /**
+   * Sets whether the store runs to its fixpoint before the clauses propagate again (the default),
+   * or returns to the clauses after each pruning constraint. Set it before solving.
+   *
+   * @param fullFixpoint true for the store's fixpoint
+   */
+  public void setFullFixpoint(boolean fullFixpoint) {
+    this.fullFixpoint = fullFixpoint;
+  }
+
+  /**
+   * Returns whether the store runs to its fixpoint before the clauses propagate again.
+   *
+   * @return see {@link #setFullFixpoint}
+   */
+  public boolean fullFixpoint() {
+    return fullFixpoint;
   }
 
   /**
