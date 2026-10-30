@@ -32,8 +32,6 @@
 package org.jacop.constraints.regular;
 
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.AtomicTrail;
@@ -68,6 +66,13 @@ final class LayeredGraphExplanation {
     final int[] source;
     final int[] value;
     final int[] target;
+    // the first node of each level in a numbering of all nodes, level by level
+    final int[] nodeBase;
+    // the edges into each node (inEdge[inStart[u] .. inStart[u + 1]]) and out of it
+    final int[] inStart;
+    final int[] inEdge;
+    final int[] outStart;
+    final int[] outEdge;
 
     Graph(LayeredGraphConstraint.LayeredGraphDescription description) {
       int[] nodes = description.levelNodes;
@@ -92,17 +97,56 @@ final class LayeredGraphExplanation {
         value[at] = e[4 * k + 2];
         target[at] = e[4 * k + 3];
       }
+      nodeBase = new int[levels + 2];
+      for (int l = 0; l <= levels; l++) {
+        nodeBase[l + 1] = nodeBase[l] + levelNodes[l];
+      }
+      inStart = new int[nodeBase[levels + 1] + 1];
+      outStart = new int[nodeBase[levels + 1] + 1];
+      for (int l = 0; l < levels; l++) {
+        for (int k = levelStart[l]; k < levelStart[l + 1]; k++) {
+          inStart[nodeBase[l + 1] + target[k] + 1]++;
+          outStart[nodeBase[l] + source[k] + 1]++;
+        }
+      }
+      for (int u = 0; u < nodeBase[levels + 1]; u++) {
+        inStart[u + 1] += inStart[u];
+        outStart[u + 1] += outStart[u];
+      }
+      inEdge = new int[size];
+      outEdge = new int[size];
+      int[] in = inStart.clone();
+      int[] out = outStart.clone();
+      for (int l = 0; l < levels; l++) {
+        for (int k = levelStart[l]; k < levelStart[l + 1]; k++) {
+          inEdge[in[nodeBase[l + 1] + target[k]]++] = k;
+          outEdge[out[nodeBase[l] + source[k]]++] = k;
+        }
+      }
     }
   }
 
   /** A variable's domain just before the position, from its atoms. */
   private static final class Before {
+    // the widest range of a domain whose holes are looked up in an array, not by binary search
+    private static final int DENSE = 1 << 16;
+
     final IntDomain root;
     final int min;
     final int max;
     final int lower;
     final int upper;
-    final Map<Integer, Integer> holes = new HashMap<>();
+    // the holes in increasing order, and the entry that made each
+    final int[] holeValue;
+    final int[] holeEntry;
+    // for a domain of at most DENSE values: per value of [min, max], 1 + the entry of its hole, or
+    // 0
+    private final int[] dense;
+    // per value of [min, max] (and the two bounds) the cut that last cited its removal, so that a
+    // cut cites each removal once
+    private final int[] cited;
+    private int lowerCited;
+    private int upperCited;
 
     Before(AtomicTrail trail, IntVar x, int position) {
       root = trail.rootDomain(x);
@@ -110,35 +154,82 @@ final class LayeredGraphExplanation {
       trail.atomsBefore(x, position, atoms);
       int ge = -1;
       int le = -1;
+      int[] hv = new int[atoms.size()];
+      int[] he = new int[atoms.size()];
+      int holes = 0;
       for (int k = 0; k < atoms.size(); k++) {
         int f = atoms.get(k);
         switch (trail.kind(f)) {
           case AtomicTrail.GE -> ge = f;
           case AtomicTrail.LE -> le = f;
-          default -> holes.put(trail.value(f), f);
+          default -> {
+            hv[holes] = trail.value(f);
+            he[holes++] = f;
+          }
         }
       }
       lower = ge;
       upper = le;
       min = trail.minBefore(x, position);
       max = trail.maxBefore(x, position);
+      long[] sorted = new long[holes];
+      for (int k = 0; k < holes; k++) {
+        sorted[k] = ((long) hv[k] << 32) | (he[k] & 0xFFFFFFFFL);
+      }
+      Arrays.sort(sorted);
+      holeValue = new int[holes];
+      holeEntry = new int[holes];
+      for (int k = 0; k < holes; k++) {
+        holeValue[k] = (int) (sorted[k] >> 32);
+        holeEntry[k] = (int) sorted[k];
+      }
+      if (min <= max && (long) max - min < DENSE) {
+        dense = new int[max - min + 1];
+        cited = new int[max - min + 1];
+        for (int k = 0; k < holes; k++) {
+          if (holeValue[k] >= min && holeValue[k] <= max) {
+            dense[holeValue[k] - min] = holeEntry[k] + 1;
+          }
+        }
+      } else {
+        dense = null;
+        cited = null;
+      }
+    }
+
+    // the entry of the hole at v, or -1
+    private int hole(int v) {
+      if (dense != null) {
+        return dense[v - min] - 1;
+      }
+      int k = Arrays.binarySearch(holeValue, v);
+      return k >= 0 ? holeEntry[k] : -1;
     }
 
     boolean contains(int v) {
-      return v >= min && v <= max && root.contains(v) && !holes.containsKey(v);
+      return v >= min && v <= max && hole(v) < 0 && root.contains(v);
     }
 
-    // the entry that removed v (none when v was never in the root domain)
-    void addRemoval(int v, EntryList out) {
-      if (!root.contains(v)) {
-        return;
-      }
+    // the entry that removed v (none when v was never in the root domain), unless cut already
+    // cited it
+    void addRemoval(int v, int cut, EntryList out) {
       if (v < min) {
-        out.add(lower);
+        if (lowerCited != cut && root.contains(v)) {
+          lowerCited = cut;
+          out.add(lower);
+        }
       } else if (v > max) {
-        out.add(upper);
-      } else {
-        out.add(holes.get(v));
+        if (upperCited != cut && root.contains(v)) {
+          upperCited = cut;
+          out.add(upper);
+        }
+      } else if (cited == null) {
+        if (root.contains(v)) {
+          out.add(hole(v));
+        }
+      } else if (cited[v - min] != cut && root.contains(v)) {
+        cited[v - min] = cut;
+        out.add(dense[v - min] - 1);
       }
     }
   }
@@ -147,13 +238,17 @@ final class LayeredGraphExplanation {
   private final IntVar[] list;
   private final Graph graph;
   private final int position;
-  private final Map<IntVar, Before> domains = new HashMap<>();
+  // the domain of each level's variable just before the position, filled on first use
+  private final Before[] levelDomain;
+  // the number of cuts made so far, which tells the removals each one cited
+  private int cuts;
 
   LayeredGraphExplanation(AtomicTrail trail, IntVar[] list, Graph graph, int position) {
     this.trail = trail;
     this.list = list;
     this.graph = graph;
     this.position = position;
+    this.levelDomain = new Before[list.length];
   }
 
   /**
@@ -169,7 +264,7 @@ final class LayeredGraphExplanation {
     int hi = trail.removedMax(entry);
     int mark = out.size();
     for (int i = 0; i < list.length; i++) {
-      if (list[i] == y && explainAt(i, y, lo, hi, out)) {
+      if (list[i] == y && explainAt(i, lo, hi, out)) {
         out.sortUnique(mark);
         return true;
       }
@@ -178,8 +273,8 @@ final class LayeredGraphExplanation {
     return false;
   }
 
-  private boolean explainAt(int i, IntVar y, int lo, int hi, EntryList out) {
-    Before own = before(y);
+  private boolean explainAt(int i, int lo, int hi, EntryList out) {
+    Before own = level(i);
     if (lo < own.min) {
       if (own.lower >= 0) {
         out.add(own.lower);
@@ -206,9 +301,9 @@ final class LayeredGraphExplanation {
       }
     }
     // removed values of y that were holes before
-    for (Map.Entry<Integer, Integer> h : own.holes.entrySet()) {
-      if (h.getKey() >= lo && h.getKey() <= hi) {
-        out.add(h.getValue());
+    for (int k = 0; k < own.holeValue.length; k++) {
+      if (own.holeValue[k] >= lo && own.holeValue[k] <= hi) {
+        out.add(own.holeEntry[k]);
       }
     }
     EntryList[] reasons = new EntryList[4];
@@ -268,26 +363,50 @@ final class LayeredGraphExplanation {
   // edge into a marked node is cut by its label's removal, or else its source is marked; with the
   // forward reachability given, a source that is unreachable is marked even when the label is gone
   private void addForwardCut(boolean[] unreachable, int level, boolean[][] forward, EntryList out) {
-    boolean[] marked = unreachable;
-    for (int l = level - 1; l >= 0; l--) {
-      boolean[] sources = new boolean[graph.levelNodes[l]];
-      boolean any = false;
-      Before d = before(list[l]);
-      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
-        if (marked[graph.target[k]]) {
-          if (d.contains(graph.value[k]) || forward != null && !forward[l][graph.source[k]]) {
-            sources[graph.source[k]] = true;
-            any = true;
+    int cut = ++cuts;
+    int[] marked = markedNodes(unreachable);
+    int count = marked.length;
+    for (int l = level - 1; l >= 0 && count > 0; l--) {
+      boolean[] isSource = new boolean[graph.levelNodes[l]];
+      int[] sources = new int[graph.levelNodes[l]];
+      int sourceCount = 0;
+      Before d = level(l);
+      for (int m = 0; m < count; m++) {
+        int u = graph.nodeBase[l + 1] + marked[m];
+        for (int a = graph.inStart[u]; a < graph.inStart[u + 1]; a++) {
+          int k = graph.inEdge[a];
+          int s = graph.source[k];
+          if (d.contains(graph.value[k]) || forward != null && !forward[l][s]) {
+            if (!isSource[s]) {
+              isSource[s] = true;
+              sources[sourceCount++] = s;
+            }
           } else {
-            d.addRemoval(graph.value[k], out);
+            d.addRemoval(graph.value[k], cut, out);
           }
         }
       }
-      if (!any) {
-        return;
-      }
       marked = sources;
+      count = sourceCount;
     }
+  }
+
+  // the nodes of a level that are marked
+  private static int[] markedNodes(boolean[] marked) {
+    int count = 0;
+    for (boolean m : marked) {
+      if (m) {
+        count++;
+      }
+    }
+    int[] nodes = new int[count];
+    count = 0;
+    for (int u = 0; u < marked.length; u++) {
+      if (marked[u]) {
+        nodes[count++] = u;
+      }
+    }
+    return nodes;
   }
 
   // the removals that keep the nodes of a level marked away from the last level: walking forward,
@@ -295,25 +414,31 @@ final class LayeredGraphExplanation {
   // the backward reachability given, a target that is a dead end is marked even when the label is
   // gone
   private void addBackwardCut(boolean[] deadEnd, int level, boolean[][] backward, EntryList out) {
-    boolean[] marked = deadEnd;
-    for (int l = level; l < graph.levels; l++) {
-      boolean[] targets = new boolean[graph.levelNodes[l + 1]];
-      boolean any = false;
-      Before d = before(list[l]);
-      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
-        if (marked[graph.source[k]]) {
-          if (d.contains(graph.value[k]) || backward != null && !backward[l + 1][graph.target[k]]) {
-            targets[graph.target[k]] = true;
-            any = true;
+    int cut = ++cuts;
+    int[] marked = markedNodes(deadEnd);
+    int count = marked.length;
+    for (int l = level; l < graph.levels && count > 0; l++) {
+      boolean[] isTarget = new boolean[graph.levelNodes[l + 1]];
+      int[] targets = new int[graph.levelNodes[l + 1]];
+      int targetCount = 0;
+      Before d = level(l);
+      for (int m = 0; m < count; m++) {
+        int u = graph.nodeBase[l] + marked[m];
+        for (int a = graph.outStart[u]; a < graph.outStart[u + 1]; a++) {
+          int k = graph.outEdge[a];
+          int t = graph.target[k];
+          if (d.contains(graph.value[k]) || backward != null && !backward[l + 1][t]) {
+            if (!isTarget[t]) {
+              isTarget[t] = true;
+              targets[targetCount++] = t;
+            }
           } else {
-            d.addRemoval(graph.value[k], out);
+            d.addRemoval(graph.value[k], cut, out);
           }
         }
       }
-      if (!any) {
-        return;
-      }
       marked = targets;
+      count = targetCount;
     }
   }
 
@@ -347,8 +472,13 @@ final class LayeredGraphExplanation {
     return true;
   }
 
-  private Before before(IntVar x) {
-    return domains.computeIfAbsent(x, z -> new Before(trail, z, position));
+  private Before level(int l) {
+    Before d = levelDomain[l];
+    if (d == null) {
+      d = new Before(trail, list[l], position);
+      levelDomain[l] = d;
+    }
+    return d;
   }
 
   // the nodes of levels 0 to upTo reachable from level 0 along edges with values in the domains
@@ -358,7 +488,7 @@ final class LayeredGraphExplanation {
     Arrays.fill(reached[0], true);
     for (int l = 0; l < upTo; l++) {
       reached[l + 1] = new boolean[graph.levelNodes[l + 1]];
-      Before d = before(list[l]);
+      Before d = level(l);
       for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
         if (reached[l][graph.source[k]] && d.contains(graph.value[k])) {
           reached[l + 1][graph.target[k]] = true;
@@ -375,7 +505,7 @@ final class LayeredGraphExplanation {
     Arrays.fill(reached[graph.levels], true);
     for (int l = graph.levels - 1; l >= from; l--) {
       reached[l] = new boolean[graph.levelNodes[l]];
-      Before d = before(list[l]);
+      Before d = level(l);
       for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
         if (reached[l + 1][graph.target[k]] && d.contains(graph.value[k])) {
           reached[l][graph.source[k]] = true;

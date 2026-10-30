@@ -54,6 +54,9 @@ import org.jacop.lcg.EntryList;
  */
 final class CountExplanation {
 
+  // the most holes cited next to a removed counted value
+  private static final int HOLES = 64;
+
   private final AtomicTrail trail;
   private final IntVar[] list;
   private final int value;
@@ -129,7 +132,7 @@ final class CountExplanation {
       hi = max;
     }
     boolean removesValue = lo <= value && value <= hi;
-    boolean removesOther = lo < value || hi > value;
+    boolean removesOther = (lo < value || hi > value) && !onlyHolesBesides(y, lo, hi, entry, out);
     if (removesOther) {
       // y = value: the counter's minimum needs every other variable that can take the value
       addCounterMin(out);
@@ -142,6 +145,25 @@ final class CountExplanation {
       // y != value: the counter's maximum is reached by others fixed to the value
       addCounterMax(out);
       if (!fixed(counterMax(), y, out)) {
+        out.truncate(mark);
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Tells whether every value of lo..hi other than the counted one was removed from y before the
+   * entry, adding the removals to {@code out}: a bound moved past the counted value skips the holes
+   * next to it, and only the counted value is removed.
+   */
+  private boolean onlyHolesBesides(IntVar y, int lo, int hi, int entry, EntryList out) {
+    if (lo > value || hi < value || (long) hi - lo > HOLES) {
+      return false;
+    }
+    int mark = out.size();
+    for (int v = lo; v <= hi; v++) {
+      if (v != value && !trail.excludedBefore(y, v, entry, out)) {
         out.truncate(mark);
         return false;
       }

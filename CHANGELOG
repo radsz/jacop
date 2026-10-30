@@ -1155,7 +1155,17 @@ Version 5.0 (unreleased)
     now runs up to 14x more nodes (pizza39 reaches 942033 in 20 s
     instead of 972454).
 
-80. Under --lcg, CumulativeUnary (MiniZinc disjunctive) explains a
+80. The linear relaxation (--lp) costs less in search. The dense dual
+    simplex reads its dual values from the reduced costs of the slack
+    columns instead of a product over the whole basis, and updates the
+    basic values four rows at a time in the same order. The search stays
+    the same on the instances checked, and on java-routing trip_8_1 a
+    solve takes 0.49 ms instead of 0.90 ms. A relaxation that deduces nothing now backs off to one
+    solve in up to 4096 calls instead of 64 (-Dorg.jacop.lp.maxPeriod).
+    Options given as --name=value, such as --lp=off, are read as
+    --name value; before, they were ignored as unknown options.
+
+81. Under --lcg, CumulativeUnary (MiniZinc disjunctive) explains a
     failure that only its unary rules detect: a task that detectable
     precedences, edge finding or not-first push past its latest start.
     These failures got the generic reason, every start bound of the
@@ -1164,6 +1174,20 @@ Version 5.0 (unreleased)
     average. On 40 scheduling instances with a disjunctive, 60 s, --lcg
     gets 5 better results and 1 worse (med04 2,960 to 2,643, evilshop
     js-setf3-10 now proved optimal), --lcg -f 7 better and 1 worse.
+
+82. Under --lcg, nvalue (Values), at_most and at_least explain their
+    pruning and failures instead of giving the generic reason. Values
+    cites variables with pairwise disjoint intervals, or the different
+    values of the fixed variables and variables whose domains miss them,
+    as its propagator counts them; at_most and at_least cite the
+    variables fixed to the value or without it, as count does. Count
+    also explains a bound that skips holes next to the counted value.
+    gfd-schedule n50f7d40m10k4 had 1.1 million generic reasons of 64
+    atoms from these constraints and has none; at 30 s it ends at 611
+    instead of 709 with --lcg and proves its optimum in 1.4 s instead of
+    9.8 s with --lcg -f. On the 51 benchmark instances with nvalue,
+    at_most, at_least or count, two paired 30 s runs: --lcg 5 better
+    and 4 worse, --lcg -f 8 better and 3 worse.
 
 Version 4.11
 =============

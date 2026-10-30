@@ -350,17 +350,8 @@ final class DualSimplex implements LpSolver {
    */
   @Override
   public double[] duals() {
-    double[] y = new double[m];
-    for (int r = 0; r < m; r++) {
-      double c = cost[basis[r]];
-      if (c != 0) {
-        double[] tr = t[r];
-        for (int i = 0; i < m; i++) {
-          y[i] -= c * tr[n + i];
-        }
-      }
-    }
-    return y;
+    // the reduced cost of the slack of row i is 0 - c_B B^-1 (-e_i), the dual value of the row
+    return Arrays.copyOfRange(d, n, cols);
   }
 
   /**
@@ -460,7 +451,43 @@ final class DualSimplex implements LpSolver {
   // beta[i] -= sum over the first k moved columns of t[i][j] times its move, row by row (the
   // tableau is row-major) and over the columns in increasing order, so the sums stay the same
   private void subtractColumns(int k) {
-    for (int i = 0; i < m; i++) {
+    // four rows at a time: their sums are independent, so the processor overlaps them
+    int i = 0;
+    for (; i + 3 < m; i += 4) {
+      double[] t0 = t[i];
+      double[] t1 = t[i + 1];
+      double[] t2 = t[i + 2];
+      double[] t3 = t[i + 3];
+      double b0 = beta[i];
+      double b1 = beta[i + 1];
+      double b2 = beta[i + 2];
+      double b3 = beta[i + 3];
+      for (int c = 0; c < k; c++) {
+        int j = moved[c];
+        double by = movedBy[c];
+        double v0 = t0[j];
+        double v1 = t1[j];
+        double v2 = t2[j];
+        double v3 = t3[j];
+        if (v0 != 0) {
+          b0 -= v0 * by;
+        }
+        if (v1 != 0) {
+          b1 -= v1 * by;
+        }
+        if (v2 != 0) {
+          b2 -= v2 * by;
+        }
+        if (v3 != 0) {
+          b3 -= v3 * by;
+        }
+      }
+      beta[i] = b0;
+      beta[i + 1] = b1;
+      beta[i + 2] = b2;
+      beta[i + 3] = b3;
+    }
+    for (; i < m; i++) {
       double[] ti = t[i];
       double b = beta[i];
       for (int c = 0; c < k; c++) {
