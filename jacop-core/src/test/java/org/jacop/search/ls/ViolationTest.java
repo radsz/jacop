@@ -393,4 +393,25 @@ class ViolationTest {
     at.put(limit, 2);
     assertEquals(1 + 1 + 3, c.violation(at::get));
   }
+
+  /** An element whose index is out of range, or whose list is empty, keeps the current result. */
+  @org.junit.jupiter.api.Test
+  void elementOutOfRangeKeepsResult() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", -5, 5);
+    IntVar result = new IntVar(store, "result", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    Functional[] elements = {
+      new ElementInteger(index, new int[] {3, 1}, result, -1),
+      new ElementInteger(index, new int[0], result, -1),
+      new ElementVariableFast(index, new IntVar[] {y}, result, -1),
+      new ElementVariableFast(index, new IntVar[0], result, -1)
+    };
+    for (Functional f : elements) {
+      for (int i : new int[] {-5, -1, 2, 5}) {
+        Map<IntVar, Integer> at = new IdentityHashMap<>(Map.of(index, i, result, 7, y, 4));
+        assertEquals(7, f.functionalValue(at::get), f + " index " + i);
+      }
+    }
+  }
 }

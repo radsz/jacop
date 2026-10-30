@@ -563,6 +563,10 @@ public class ElementInteger extends AbstractElement
   @Override
   public int functionalValue(ToIntFunction<IntVar> value) {
     int i = value.applyAsInt(index) - indexOffset - 1;
-    return list[Math.max(0, Math.min(list.length - 1, i))];
+    if (i < 0 || i >= list.length) {
+      // The constraint is violated whatever the result, so the result keeps its value.
+      return value.applyAsInt(this.value);
+    }
+    return list[i];
   }
 }
