@@ -65,7 +65,6 @@ public class IfThenElse extends PrimitiveConstraint
   // imposed variable to manifest that constraint has been imposed (top-level)
   // constraint
   boolean imposed;
-  Store store;
 
   /** Set when a variable changes, so consistency() repeats until no part prunes more. */
   private boolean propagation;
@@ -202,13 +201,11 @@ public class IfThenElse extends PrimitiveConstraint
 
     super.impose(store);
 
-    this.store = store;
     imposed = true;
   }
 
   @Override
   public void include(Store store) {
-    this.store = store;
     super.include(store);
   }
 

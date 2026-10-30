@@ -44,6 +44,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XdivYeqZ;
@@ -58,6 +59,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.LazyBitSetDomain;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
@@ -270,6 +272,41 @@ class AtomicTrailTest {
         });
     m.add(
         s -> {
+          // a variable duration and a variable resource use, tasks using most of the limit
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            new IntVar(s, "length", 1, 4),
+            new IntVar(s, "use", 1, 3)
+          };
+          int[] d = {0, 1 + rnd.nextInt(3), 1 + rnd.nextInt(3)};
+          int[] r = {1 + rnd.nextInt(3), 0, 1 + rnd.nextInt(3)};
+          IntVar[] durations = {v[3], new IntVar(s, d[1], d[1]), new IntVar(s, d[2], d[2])};
+          IntVar[] resources = {new IntVar(s, r[0], r[0]), v[4], new IntVar(s, r[2], r[2])};
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 12; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 3; k++) {
+                    int length = k == 0 ? t[3] : d[k];
+                    if (t[k] <= time && time < t[k] + length) {
+                      load += k == 1 ? t[4] : r[k];
+                    }
+                  }
+                  if (load > 3) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new Cumulative(Arrays.copyOf(v, 3), durations, resources, new IntVar(s, 3, 3)),
+              fits,
+              v);
+        });
+    m.add(
+        s -> {
           IntVar[] v = {
             newVar(s, "a", rnd),
             newVar(s, "b", rnd),
@@ -402,6 +439,55 @@ class AtomicTrailTest {
     x.domain.inMin(store.level, x, -10);
     assertThat(store.consistency()).isTrue();
     assertThat(x.min()).isEqualTo(500_000);
+    trail.detach();
+  }
+
+  /**
+   * x + 19 y - z = 19 (or_matching_orig): z has lost 19..84, and x != 9 with y >= 5 leaves 1..18
+   * and 85 without a support, so domain consistency moves z from 1 to 86. The reason of z >= 86
+   * must hold the holes 81..84, which have supports in the domains of x and y; it held only the
+   * holes next to the bound, and admitted z = 81 (a wrong optimum under --lcg).
+   */
+  @Test
+  void linearIntDomBoundReasonHoldsEveryHoleItSkips() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 19);
+    IntVar y = new IntVar(store, "y", 1, 19);
+    IntVar z = new IntVar(store, "z", 1, 361);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LinearIntDom(new IntVar[] {x, y, z}, new int[] {1, 19, -1}, "==", 19));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    z.domain.in(store.level, z, new IntervalDomain(1, 361).subtract(19, 84));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inComplement(store.level, x, 9);
+    y.domain.inMin(store.level, y, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(86);
+    int zBound = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 86) {
+        zBound = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(zBound, reason)).isTrue();
+    for (int u = 81; u <= 84; u++) {
+      boolean excluded = false;
+      for (int k = 0; k < reason.size(); k++) {
+        int f = reason.get(k);
+        if (trail.variable(f) == z
+            && (trail.kind(f) == AtomicTrail.NE && trail.value(f) == u
+                || trail.kind(f) == AtomicTrail.GE && trail.value(f) > u
+                || trail.kind(f) == AtomicTrail.LE && trail.value(f) < u)) {
+          excluded = true;
+        }
+      }
+      assertThat(excluded)
+          .as("z = %d (x = %d, y = 5) is excluded by the reason", u, u - 76)
+          .isTrue();
+    }
     trail.detach();
   }
 

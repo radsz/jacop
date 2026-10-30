@@ -47,13 +47,6 @@ public interface MutableVarValue {
   MutableVarValue copy();
 
   /**
-   * It returns the earlier value of mutable variable.
-   *
-   * @return earlier value of mutable variable.
-   */
-  MutableVarValue previous();
-
-  /**
    * It replaces the earlier value of a mutable variable with value passed as parameter.
    *
    * @param o the previous value for this mutable variable.

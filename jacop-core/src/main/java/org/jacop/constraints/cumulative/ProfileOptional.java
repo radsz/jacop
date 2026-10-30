@@ -33,7 +33,6 @@ package org.jacop.constraints.cumulative;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
@@ -43,7 +42,6 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 public class ProfileOptional {
 
   // event type
@@ -100,13 +98,6 @@ public class ProfileOptional {
    */
   public ProfileOptional(IntVar limit) {
     this.limit = limit;
-  }
-
-  void updateTasksRes(Store store, TaskView[] ts) {
-    int limitMax = limit.max();
-    for (TaskView t : ts) {
-      t.res.domain.inMax(store.level, t.res, limitMax);
-    }
   }
 
   TaskView[] filterOptionalTasks(TaskView[] ts, IntVar[] opt) {

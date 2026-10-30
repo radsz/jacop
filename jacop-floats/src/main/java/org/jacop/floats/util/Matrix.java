@@ -30,7 +30,6 @@
 
 package org.jacop.floats.util;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatInterval;
 import org.jacop.floats.core.FloatIntervalDomain;
@@ -44,7 +43,6 @@ import org.jacop.floats.core.FloatIntervalDomain;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 4.11
  */
-@Slf4j
 public class Matrix {
 
   final double[][] A;
@@ -307,14 +305,5 @@ public class Matrix {
     }
 
     return square;
-  }
-
-  void print(double[][] matrix) {
-    for (double[] doubles : matrix) {
-      for (double aDouble : doubles) {
-        IO.print(aDouble + " ");
-      }
-      log.info("");
-    }
   }
 }

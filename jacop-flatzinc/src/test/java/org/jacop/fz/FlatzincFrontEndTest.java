@@ -92,6 +92,24 @@ class FlatzincFrontEndTest {
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
   }
 
+  @Test
+  void secondBool2IntOfAnIntegerJoinsTheTwoBooleans() throws IOException {
+    // x is the alias of a after the first bool2int; the second one, which makes b equal to a, was
+    // dropped with "Double int var alias for bool var", so a != b was accepted
+    String fzn =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..1: x:: output_var;
+        constraint bool2int(a,x);
+        constraint bool2int(b,x);
+        solve satisfy;
+        """;
+
+    assertEquals(
+        Set.of("a = false; b = false; x = 0;", "a = true; b = true; x = 1;"), solveAll(fzn));
+  }
+
   /**
    * Four variables in 1..3 that must differ pairwise, after eight free variables, all left out of
    * the search annotation. int_ne finds no conflict until three of them are fixed.
@@ -368,6 +386,30 @@ class FlatzincFrontEndTest {
         """;
 
     assertEquals(List.of("x = 0;", "x = 1;"), solveAllInOrder(fzn));
+  }
+
+  @Test
+  void allSolutionsAreReportedOnceWhenProbingFixesTheOutputVariables() throws IOException {
+    // Root probing of presolve fixes x (x = 1 forces y = 2 > x). With every output variable fixed
+    // the front end labelled every variable instead, so x = 2 was reported once for each
+    // assignment of z, b1 and b2, which are not output variables (hakank_kaprekars_constant2).
+    String fzn =
+        """
+        var 1..2: x:: output_var;
+        var 1..2: y;
+        var 1..3: z;
+        var bool: b1;
+        var bool: b2;
+        constraint int_ne(x,y);
+        constraint int_le(y,x);
+        constraint int_le_imp(z,1,b1);
+        constraint int_ge_imp(z,3,b2);
+        constraint bool_clause([b1,b2],[]);
+        solve :: int_search([x], input_order, indomain_min, complete) satisfy;
+        """;
+
+    assertEquals(List.of("x = 2;"), solveAllInOrder(fzn, "--presolve", "on"));
+    assertEquals(List.of("x = 2;"), solveAllInOrder(fzn, "--presolve", "off"));
   }
 
   @Test
@@ -2050,14 +2092,17 @@ class FlatzincFrontEndTest {
     return new TreeSet<>(solveAllInOrder(model));
   }
 
-  private List<String> solveAllInOrder(String model) throws IOException {
+  private List<String> solveAllInOrder(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop().callMain(new String[] {"-a", fzn.toString()});
+      List<String> args = new ArrayList<>(List.of("-a"));
+      args.addAll(Arrays.asList(options));
+      args.add(fzn.toString());
+      new Fz2jacop().callMain(args.toArray(new String[0]));
     } finally {
       System.setOut(originalOut);
     }

@@ -43,7 +43,6 @@ public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
 
   final IntervalDomain domain;
   final int maxIntervalNo;
-  Interval i;
   int intervalNo = -1;
 
   /**
