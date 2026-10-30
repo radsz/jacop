@@ -35,6 +35,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.lang.reflect.Array;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.IntSupplier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It represents the cost variable. */
   @Getter public Var costVariable;
+
+  // the cost of the best solution found outside this search, read at each node
+  private IntSupplier sharedBound;
 
   private static final String SOLUTION_COST_IS = "Solution cost is {}";
   private static final String TIMEOUT_S = "Time-out {}s";
@@ -561,6 +565,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
    * possible or FailException).
    */
   private boolean applyOptimizationCostRestriction() {
+    if (optimize && sharedBound != null && costVariable instanceof IntVar) {
+      importSharedBound();
+    }
     if (!optimize || cost == null) {
       return true;
     }
@@ -601,6 +608,27 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
     notifyConsistencyListener(false);
     return false;
+  }
+
+  /** Takes the cost of a better solution found elsewhere as the bound on the cost. */
+  private void importSharedBound() {
+    int shared = sharedBound.getAsInt();
+    if (shared < costValue) {
+      updateCostValue(shared);
+    }
+  }
+
+  /**
+   * Makes an optimising search look only for solutions better than the best one found outside it,
+   * for example by another search of the same model in a parallel portfolio. The supplier is read
+   * at each node and gives {@link Integer#MAX_VALUE} as long as there is no such solution. When the
+   * search then ends without a better solution, the best solution found outside is optimal. Only an
+   * integer cost variable takes the bound.
+   *
+   * @param bound the cost of the best solution found elsewhere, as a value of the cost variable
+   */
+  public void setSharedBound(IntSupplier bound) {
+    sharedBound = bound;
   }
 
   private void notifyConsistencyListener(boolean consistent) {

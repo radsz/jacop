@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.api.VarMap;
@@ -87,6 +88,9 @@ public class Tables {
   final ArrayList<Var[]> defaultSearchSetArrays = new ArrayList<>();
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
+
+  // the block sums of linear constraints split for lazy clause generation
+  final ArrayList<IntVar> splitSums = new ArrayList<>();
   // IntVar zero, one;
   Store store;
   int numberBoolVariables;
@@ -254,6 +258,7 @@ public class Tables {
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
+    t.splitSums.addAll(map.get(splitSums));
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;
@@ -640,6 +645,27 @@ public class Tables {
    */
   public void addDefinedVar(Var v) {
     definedVariables.add(v);
+  }
+
+  /**
+   * Records the block sum of a linear constraint split for lazy clause generation. It is also a
+   * defined variable.
+   *
+   * @param v the block sum
+   */
+  public void addSplitSum(IntVar v) {
+    splitSums.add(v);
+    definedVariables.add(v);
+  }
+
+  /**
+   * Returns the block sums of the linear constraints split for lazy clause generation, which the
+   * linear relaxation replaces by their blocks.
+   *
+   * @return the block sums
+   */
+  public List<IntVar> splitSums() {
+    return splitSums;
   }
 
   /**
