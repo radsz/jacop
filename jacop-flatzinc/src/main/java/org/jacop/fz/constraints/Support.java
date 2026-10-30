@@ -41,8 +41,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
@@ -52,6 +54,7 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
+import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.core.FailException;
@@ -138,8 +141,6 @@ public class Support implements ParserTreeConstants {
   public int constraintPriority = -1;
   // defines_var-- not used yet
   public IntVar definedVar;
-  // the variable of the solve item, or null; lazy clause generation keeps its definition whole
-  public IntVar objective;
   boolean intPresent = true;
   boolean floatPresent = true;
 
@@ -780,6 +781,20 @@ public class Support implements ParserTreeConstants {
       }
     }
 
+    // cumulative constraints over the same tasks share one time-table sweep; not under lazy clause
+    // generation, where each cumulative constraint explains its own time-table pruning, nor with
+    // presolve, whose cumulative reductions read each resource as one constraint;
+    // org.jacop.fz.multiCumulative=false keeps them apart
+    if (!options.lcg()
+        && options.presolve() == Options.Presolve.OFF
+        && Boolean.parseBoolean(System.getProperty("org.jacop.fz.multiCumulative", "true"))) {
+      List<Constraint> merged = MultiCumulative.merge(delayedConstraints);
+      if (merged != delayedConstraints) {
+        delayedConstraints.clear();
+        delayedConstraints.addAll(merged);
+      }
+    }
+
     for (Constraint c : delayedConstraints) {
       store.impose(c);
       if (options.debug()) {
@@ -983,7 +998,6 @@ public class Support implements ParserTreeConstants {
               store,
               c,
               Integer.parseInt(options.freeConfig("lcg-split", "40")),
-              objective,
               // free LCG search branches on the block sums last, as on other defined variables, and
               // the linear relaxation replaces them by their blocks
               dictionary::addSplitSum);
@@ -1184,7 +1198,8 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = c, reified with b or implied by b. */
-  final class FzXeqC extends Constraint implements Copyable<FzXeqC>, Explainable, ValueIndicator {
+  final class FzXeqC extends Constraint
+      implements Violation, Copyable<FzXeqC>, Explainable, ValueIndicator {
 
     final IntVar x;
     final int c;
@@ -1259,6 +1274,13 @@ public class Support implements ParserTreeConstants {
     public FzXeqC copy(VarMap map) {
       return new FzXeqC(map.get(x), c, map.get(b), isReified);
     }
+
+    @Override
+    public long violation(ToIntFunction<IntVar> value) {
+      boolean holds = value.applyAsInt(x) == c;
+      boolean on = value.applyAsInt(b) == 1;
+      return (isReified ? on == holds : !on || holds) ? 0 : 1;
+    }
   }
 
   Constraint fzXeqCreified(IntVar x, int c, IntVar b) {
@@ -1274,7 +1296,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x != c, reified with b or implied by b. */
-  final class FzXneqC extends Constraint implements Copyable<FzXneqC>, Explainable {
+  final class FzXneqC extends Constraint implements Violation, Copyable<FzXneqC>, Explainable {
 
     final IntVar x;
     final int c;
@@ -1334,6 +1356,13 @@ public class Support implements ParserTreeConstants {
     public FzXneqC copy(VarMap map) {
       return new FzXneqC(map.get(x), c, map.get(b), isReified);
     }
+
+    @Override
+    public long violation(ToIntFunction<IntVar> value) {
+      boolean holds = value.applyAsInt(x) != c;
+      boolean on = value.applyAsInt(b) == 1;
+      return (isReified ? on == holds : !on || holds) ? 0 : 1;
+    }
   }
 
   Constraint fzXneqCreified(IntVar x, int c, IntVar b) {
@@ -1349,7 +1378,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = y, reified with b or implied by b. */
-  final class FzXeqY extends Constraint implements Copyable<FzXeqY>, Explainable {
+  final class FzXeqY extends Constraint implements Violation, Copyable<FzXeqY>, Explainable {
 
     final IntVar x;
     final IntVar y;
@@ -1414,6 +1443,13 @@ public class Support implements ParserTreeConstants {
     @Override
     public FzXeqY copy(VarMap map) {
       return new FzXeqY(map.get(x), map.get(y), map.get(b), isReified);
+    }
+
+    @Override
+    public long violation(ToIntFunction<IntVar> value) {
+      boolean holds = value.applyAsInt(x) == value.applyAsInt(y);
+      boolean on = value.applyAsInt(b) == 1;
+      return (isReified ? on == holds : !on || holds) ? 0 : 1;
     }
   }
 

@@ -79,6 +79,7 @@ public class Cumulative extends CumulativeBasic {
   boolean doOverload = true;
   boolean doTimeTableEdgeFind = true;
   boolean doTimeTableDisjunctive = true;
+  boolean doTimeTable = true;
   boolean doHorizontallyElasticEdgeFind;
   private HorizontallyElasticEdgeFinder horizontallyElastic;
   boolean adaptiveEnergy;
@@ -175,6 +176,7 @@ public class Cumulative extends CumulativeBasic {
     copy.doTimeTableDisjunctive(doTimeTableDisjunctive);
     copy.doHorizontallyElasticEdgeFind(doHorizontallyElasticEdgeFind);
     copy.doAdaptiveEnergyReasoning(adaptiveEnergy);
+    copy.doTimeTable(doTimeTable);
     return copy;
   }
 
@@ -228,6 +230,20 @@ public class Cumulative extends CumulativeBasic {
   }
 
   /**
+   * Sets whether this constraint runs its time-table sweep. It is on by default; switch it off only
+   * when a {@link MultiCumulative} over the same tasks and resource does the time tabling, since
+   * the other rules do not check that the tasks fit under the limit. Without it the constraint
+   * moves to the next queue, so that its other rules run after the time table of the
+   * MultiCumulative; call it before the constraint is imposed.
+   *
+   * @param doTt true to run the time-table sweep, false otherwise.
+   */
+  public void doTimeTable(boolean doTt) {
+    doTimeTable = doTt;
+    queueIndex = doTt ? 2 : 3;
+  }
+
+  /**
    * Sets whether to use horizontally elastic edge finding (Gingras and Quimper, IJCAI 2016). It is
    * off by default.
    *
@@ -247,7 +263,9 @@ public class Cumulative extends CumulativeBasic {
 
       store.propagationHasOccurred = false;
 
-      profileProp(store);
+      if (doTimeTable) {
+        profileProp(store);
+      }
 
       if (!store.propagationHasOccurred) {
         energyProp(store);

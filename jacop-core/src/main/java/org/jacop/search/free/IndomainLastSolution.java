@@ -71,6 +71,19 @@ public class IndomainLastSolution implements Indomain<IntVar>, SearchMonitor {
     return fallback.indomain(v);
   }
 
+  /**
+   * Gives values as if they were those of a last solution, for example a solution found by local
+   * search before the free search starts.
+   *
+   * @param hinted the variables.
+   * @param values their values.
+   */
+  public void hint(IntVar[] hinted, int[] values) {
+    for (int i = 0; i < hinted.length; i++) {
+      saved.put(hinted[i], values[i]);
+    }
+  }
+
   @Override
   public void onSolution(FreeSearch search) {
     for (IntVar v : vars) {

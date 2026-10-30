@@ -163,3 +163,17 @@ Chuffed 0.13.2 rejects tree and path with a variable root, s or t, accepts a dtr
 is left out of the tree, and crashes on bounded_dpath, so those cases have fixed nodes here, and
 dtree and bounded_dpath are covered by GlobalConstraintBruteForceTest instead. Run them alone with
 -DconstraintFilter=graph.
+
+## MiniZinc Challenge bench (separate repository)
+
+All MiniZinc Challenge instances from 2008 to 2025 are kept outside this repository, in
+https://github.com/radsz/minizinc-competition, with the same layout (time categories, one directory
+per problem, `list.txt`) and gzipped `.fzn` files. Their golden references (`reference.txt` per
+category: `UNSAT`, `SAT`, `MIN v`, `MAX v`, `MIN_FEAS v`, `MAX_FEAS v`, `UNKNOWN`) come from the
+Challenge's own per-instance results and from CP-SAT, Chuffed and Gecode runs, never from JaCoP.
+`MinizincCompetitionTest` runs JaCoP on them and checks each answer; it is in no build profile:
+
+    mvn -pl jacop-benchmarks test -Dtest=MinizincCompetitionTest -Dmznc.dir=../minizinc-competition \
+        -Dmznc.tiers=upTo5sec,upTo30sec [-Dmznc.options="-f"] [-Dmznc.filter=rcpsp] [-Dmznc.timeFactor=3]
+
+Without `mznc.dir` (or the environment variable `MZNC_DIR`) the test is skipped.

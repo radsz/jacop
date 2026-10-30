@@ -73,9 +73,11 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.Or;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XlteqC;
@@ -233,6 +235,83 @@ class LcgSolverTest {
       }
     }
     return false;
+  }
+
+  @Test
+  void deferredValueRemovalsAgreeWithBruteForce() {
+    // with no literal budget every value removal without a literal stays out of the solver, and
+    // clauses cite its explanation instead (the out-of-memory of a 4096-variable alldiff)
+    Random rnd = new Random(67);
+    int sat = 0;
+    int unsat = 0;
+    long deferred = 0;
+    long conflicts = 0;
+    for (int instance = 0; instance < 2000; instance++) {
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      IntVar[] distinct = Arrays.copyOf(x, 3 + rnd.nextInt(n - 2));
+      relations.add(
+          new Relation(
+              rnd.nextBoolean() ? new Alldiff(distinct) : new Alldistinct(distinct),
+              t -> Arrays.stream(t, 0, distinct.length).distinct().count() == distinct.length));
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setLiteralBudget(0);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      deferred += solver.deferredAtoms;
+      conflicts += solver.sat().conflicts;
+    }
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(deferred).isGreaterThan(1000);
+    assertThat(conflicts).isGreaterThan(300);
+  }
+
+  @Test
+  void largeAlldiffStaysWithinTheLiteralBudget() {
+    // each value fixed removes it from every other variable: n * n / 2 removals on one branch,
+    // which made a solver variable each and filled the heap on debruijn_binary_04_06 (n = 4096)
+    Store store = new Store();
+    int n = 300;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      // different minimums, so a value fixed is a hole in the variables with smaller ones
+      x[i] = new IntVar(store, "x" + i, i / 2, n - 1);
+    }
+    store.impose(new Alldiff(x));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setLiteralBudget(2000);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(Arrays.stream(x).mapToInt(solver::value).distinct().count()).isEqualTo(n);
+    assertThat(solver.deferredAtoms).isGreaterThan(10000);
+    assertThat(solver.sat().numVars()).isLessThan(5000);
   }
 
   @Test
@@ -3444,6 +3523,42 @@ class LcgSolverTest {
     assertThat(solver.value(obj)).isEqualTo(5);
     assertThat(solver.coreSearch().termCount()).isEqualTo(4);
     assertThat(solver.coreSearch().proved).isTrue();
+  }
+
+  /**
+   * The core-guided phase gives its time to branch and bound when it has no solution of its own
+   * after a third of its time, also when branch and bound before it found one. That solution made
+   * the test pass before, so the phase always ran its whole share: city-position spent half of its
+   * time on cores that raised the bound to 435 against an optimum of 3,493.
+   */
+  @Test
+  void corePhaseWithoutItsOwnSolutionStopsAfterAThird() {
+    // 12 pigeons; hole 0 takes any number of them and costs 1 each, holes 1 to 11 take one each.
+    // Branch and bound finds solutions at once (all in hole 0, then fewer), while the first core
+    // (no pigeon in hole 0) is a pigeonhole proof over disequalities, too hard for the phase
+    Store store = new Store();
+    int n = 12;
+    IntVar[] p = new IntVar[n];
+    BooleanVar[] c = new BooleanVar[n];
+    for (int i = 0; i < n; i++) {
+      p[i] = new IntVar(store, "p" + i, 0, n - 1);
+      c[i] = new BooleanVar(store, "c" + i);
+      store.impose(new Reified(new XeqC(p[i], 0), c[i]));
+      for (int j = 0; j < i; j++) {
+        store.impose(new Or(new XneqY(p[j], p[i]), new XeqC(p[i], 0)));
+      }
+    }
+    IntVar obj = new IntVar(store, "obj", 0, n);
+    store.impose(new SumBool(c, "==", obj));
+    LcgSolver solver = new LcgSolver(store);
+    // the annotation puts every pigeon in hole 0, the activity of the free search does not
+    solver.setAnnotation(new SimpleSelect<>(p, null, new IndomainMin<>()), true);
+    solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+    solver.setCoreDelay(0.05, 1_000_000, 0);
+    solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+    solver.minimize(obj);
+    assertThat(solver.coreSearch().stratumSolutions).isZero();
+    assertThat(solver.coreSearch().noSolutionStops).isEqualTo(1);
   }
 
   @Test

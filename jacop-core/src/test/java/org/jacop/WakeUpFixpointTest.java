@@ -35,8 +35,13 @@ import static org.assertj.core.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import java.util.function.Supplier;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
@@ -124,11 +129,17 @@ import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYgtC;
 import org.jacop.constraints.XplusYlteqZ;
+import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -182,11 +193,31 @@ class WakeUpFixpointTest {
     check(4, random -> new Generator(random).global());
   }
 
+  /**
+   * A copy made during search (lazy clause generation copies a constraint into a scratch store over
+   * the initial domains the first time it replays its explanations) must be the constraint over the
+   * variables it is given, not one that keeps the current domains: over the initial domains and
+   * then the current ones it prunes as a constraint built afresh does.
+   */
+  @Test
+  void copiesMadeDuringSearchAreOverTheInitialDomains() {
+    check(
+        5,
+        random ->
+            random.nextInt(4) == 0 ? new Generator(random).geost() : new Generator(random).global(),
+        true);
+    check(6, random -> new Generator(random).composed(1), true);
+  }
+
   private interface Source {
     Builder next(Random random);
   }
 
   private static void check(long kind, Source source) {
+    check(kind, source, false);
+  }
+
+  private static void check(long kind, Source source, boolean copies) {
     for (int trial = 0; trial < TRIALS; trial++) {
       long seed = kind * 1_000_000 + trial;
       Random random = new Random(seed);
@@ -208,9 +239,16 @@ class WakeUpFixpointTest {
       StringBuilder path = new StringBuilder();
       boolean consistent = consistency(store);
       for (int step = 0; consistent && step < 10; step++) {
-        String missed = missedPruning(builder, v);
-        if (missed != null) {
-          fail("seed %d, %s, path%s: a fresh store prunes %s", seed, c, path, missed);
+        if (copies) {
+          String differs = copyDifference(c, builder, v, domains);
+          if (differs != null) {
+            fail("seed %d, %s, path%s: a copy made now differs: %s", seed, c, path, differs);
+          }
+        } else {
+          String missed = missedPruning(builder, v);
+          if (missed != null) {
+            fail("seed %d, %s, path%s: a fresh store prunes %s", seed, c, path, missed);
+          }
         }
         IntVar x = all.get(random.nextInt(all.size()));
         if (x.singleton()) {
@@ -305,6 +343,109 @@ class WakeUpFixpointTest {
       }
     }
     return pruned.isEmpty() ? null : pruned + " at " + domains(v);
+  }
+
+  /**
+   * Copies the constraint into a store over the initial domains and compares it with the constraint
+   * built there afresh, at the root and once the current domains are imposed; returns the
+   * difference, or null if none (or if the constraint cannot be copied).
+   */
+  private static String copyDifference(
+      Constraint c, Builder builder, IntVar[][] v, IntDomain[] initial) {
+    if (!Copyable.canCopy(c)) {
+      return null;
+    }
+    Store copyStore = new Store();
+    IntVar[][] w = variables(copyStore, initial);
+    Map<Var, Var> map = new IdentityHashMap<>();
+    for (int g = 0; g < v.length; g++) {
+      for (int i = 0; i < v[g].length; i++) {
+        map.put(v[g][i], w[g][i]);
+      }
+    }
+    Store builtStore = new Store();
+    IntVar[][] u = variables(builtStore, initial);
+    boolean copyRoot =
+        imposeAndPropagate(
+            copyStore,
+            () ->
+                ((Copyable<?>) c)
+                    .copy(
+                        new VarMap() {
+                          @Override
+                          public Store target() {
+                            return copyStore;
+                          }
+
+                          @Override
+                          @SuppressWarnings("unchecked")
+                          public <V extends Var> V get(V x) {
+                            V y = (V) map.get(x);
+                            if (y == null) {
+                              throw new IllegalArgumentException("no copy of " + x);
+                            }
+                            return y;
+                          }
+                        }));
+    boolean builtRoot = imposeAndPropagate(builtStore, () -> builder.build(u[0], u[1], u[2]));
+    String root = compare(copyRoot, w, builtRoot, u);
+    if (root != null) {
+      return "over the initial domains" + root;
+    }
+    if (!copyRoot) {
+      return null;
+    }
+    copyStore.setLevel(1);
+    builtStore.setLevel(1);
+    boolean copyConsistent = narrowAndPropagate(copyStore, w, v);
+    boolean builtConsistent = narrowAndPropagate(builtStore, u, v);
+    String now = compare(copyConsistent, w, builtConsistent, u);
+    return now == null ? null : "over the current domains" + now;
+  }
+
+  private static boolean imposeAndPropagate(Store store, Supplier<Constraint> constraint) {
+    try {
+      store.impose(constraint.get());
+      return store.consistency();
+    } catch (FailException _) {
+      return false;
+    }
+  }
+
+  private static boolean narrowAndPropagate(Store store, IntVar[][] w, IntVar[][] v) {
+    try {
+      for (int g = 0; g < v.length; g++) {
+        for (int i = 0; i < v[g].length; i++) {
+          w[g][i].domain.in(store.level, w[g][i], v[g][i].dom());
+        }
+      }
+      return store.consistency();
+    } catch (FailException _) {
+      return false;
+    }
+  }
+
+  private static String compare(
+      boolean copyConsistent, IntVar[][] w, boolean builtConsistent, IntVar[][] u) {
+    if (copyConsistent != builtConsistent) {
+      return ": the copy "
+          + (copyConsistent ? "is consistent" : "fails")
+          + ", the built constraint "
+          + (builtConsistent ? "is consistent" : "fails");
+    }
+    if (!copyConsistent) {
+      return null;
+    }
+    StringBuilder differs = new StringBuilder();
+    for (int g = 0; g < w.length; g++) {
+      for (int i = 0; i < w[g].length; i++) {
+        if (!w[g][i].dom().eq(u[g][i].dom())) {
+          differs.append(' ').append(u[g][i].id()).append(": copy ").append(w[g][i].dom());
+          differs.append(", built ").append(u[g][i].dom());
+        }
+      }
+    }
+    return differs.isEmpty() ? null : differs.toString();
   }
 
   private static String domains(IntVar[][] v) {
@@ -436,6 +577,36 @@ class WakeUpFixpointTest {
           yield (x, b, r) ->
               new IfThenElse(c1.build(x, b, r), c2.build(x, b, r), c3.build(x, b, r));
         }
+      };
+    }
+
+    /** Two objects in the plane at (x[i], x[j]) and (x[k], x[l]), a unit square or an L each. */
+    Builder geost() {
+      int[] p = distinct(INTS, 4);
+      int[] q = distinct(BOOLS, 2);
+      return (x, b, r) -> {
+        List<Shape> shapes =
+            List.of(
+                new Shape(0, new int[] {0, 0}, new int[] {1, 1}),
+                new Shape(
+                    1,
+                    List.of(
+                        new Dbox(new int[] {0, 0}, new int[] {2, 1}),
+                        new Dbox(new int[] {0, 1}, new int[] {1, 1}))));
+        Store store = x[0].getStore();
+        List<GeostObject> objects = new ArrayList<>();
+        for (int o = 0; o < 2; o++) {
+          objects.add(
+              new GeostObject(
+                  o,
+                  new IntVar[] {x[p[2 * o]], x[p[2 * o + 1]]},
+                  b[q[o]],
+                  new IntVar(store, 0, 0),
+                  new IntVar(store, 1, 1),
+                  new IntVar(store, 1, 1)));
+        }
+        return new Geost(
+            objects, List.of(new NonOverlapping(objects, new int[] {0, 1, 2})), shapes);
       };
     }
 

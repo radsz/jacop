@@ -35,12 +35,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -83,7 +85,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class Alldistinct extends Constraint
-    implements Simplifiable,
+    implements Violation,
+        Simplifiable,
         UsesQueueVariable,
         Stateful,
         SatisfiedPresent,
@@ -103,7 +106,7 @@ public class Alldistinct extends Constraint
   static final int MAX_BIT_WORDS = 8;
 
   /** It specifies all variables which have to have different values. */
-  private final IntVar[] list;
+  final IntVar[] list;
 
   // Sorted union of the initial domains; value index a stands for values[a].
   private final int[] values;
@@ -1486,5 +1489,10 @@ public class Alldistinct extends Constraint
   @Override
   public Alldistinct copy(VarMap map) {
     return new Alldistinct(map.get(list));
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    return Violations.duplicates(list, value);
   }
 }

@@ -30,9 +30,11 @@
 
 package org.jacop.fz.constraints;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.XeqY;
@@ -55,6 +57,9 @@ class ChannelMap {
   // reifications of x = v that were not collected (for example bool_eq_reif).
   private final Set<Entry> collected = new HashSet<>();
 
+  // the collected pairs (x, v) of each Boolean b
+  private final Map<IntVar, List<Entry>> byBoolean = new HashMap<>();
+
   private record Entry(IntVar x, int v, IntVar b) {}
 
   final Support support;
@@ -70,7 +75,9 @@ class ChannelMap {
       // not collected, so the constraint is posted on its own
       return;
     }
-    collected.add(new Entry(x, v, b));
+    Entry entry = new Entry(x, v, b);
+    collected.add(entry);
+    byBoolean.computeIfAbsent(b, k -> new ArrayList<>()).add(entry);
 
     if (map != null) {
       if (map.get(v) != null) {
@@ -108,6 +115,36 @@ class ChannelMap {
    */
   public boolean handles(IntVar x, int v, IntVar b) {
     return size(x) > minSize && collected.contains(new Entry(x, v, b));
+  }
+
+  /**
+   * Returns the value v such that b implies x = v was collected, if there is one.
+   *
+   * @param b the boolean variable
+   * @param x the integer variable
+   * @return the value, or null if no such constraint was collected
+   */
+  public Integer valueImpliedBy(IntVar b, IntVar x) {
+    for (Entry e : byBoolean.getOrDefault(b, List.of())) {
+      if (e.x() == x) {
+        return e.v();
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Returns the integer variables x for which some b implies x = v was collected.
+   *
+   * @param b the boolean variable
+   * @return the variables, empty if there is none
+   */
+  public List<IntVar> variablesOf(IntVar b) {
+    List<IntVar> result = new ArrayList<>();
+    for (Entry e : byBoolean.getOrDefault(b, List.of())) {
+      result.add(e.x());
+    }
+    return result;
   }
 
   public int size(IntVar v) {

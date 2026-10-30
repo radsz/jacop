@@ -136,6 +136,21 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: transient literals released. */
   public long literalsReleased;
 
+  /**
+   * The solver variables in use above which a value removal with no literal of its own is kept out
+   * of the solver: a clause that would cite it cites its explanation instead. Each solver variable
+   * costs a few hundred bytes, and an alldiff over 4096 variables of 4096 values removes 8.4
+   * million values on one branch, more than a 3 GB heap holds. The system property {@code
+   * jacop.lcg.literalBudget} sets it; by default one variable per 1 KB of the maximum heap.
+   */
+  private long literalBudget =
+      Long.getLong("jacop.lcg.literalBudget", Runtime.getRuntime().maxMemory() / 1024);
+
+  /** Statistics: value removals kept out of the solver (see {@link #literalBudget}). */
+  public long deferredAtoms;
+
+  private final EntryList scratchEntries = new EntryList();
+
   /** Statistics: literals [x >= v] linked to their neighbours. */
   public long boundLiterals;
 
@@ -333,7 +348,8 @@ public final class LcgSolver implements ExternalPropagator {
   // -Djacop.lcg.coreRestore=false
   private static final boolean CORE_RESTORE =
       !"false".equals(System.getProperty("jacop.lcg.coreRestore"));
-  // the core phase gives its time to branch and bound when it has no solution by this share of
+  // the core phase gives its time to branch and bound when it has no solution of its own by this
+  // share of
   // its time; 0 turns it off. With the restore it scored 21.3 against 14.7 and 24.3 against 12.7 on
   // the Challenge sample in two pairings, and 21.8 against 22.2 and 22.9 against 21.1 on the
   // OR-Tools set; either alone lost.
@@ -525,13 +541,18 @@ public final class LcgSolver implements ExternalPropagator {
       implied = -lit;
     }
     if (e >= 0 && e < pushed) {
-      if (numImplied == impliedLits.length) {
-        impliedLits = Arrays.copyOf(impliedLits, 2 * numImplied);
-        impliedEntries = Arrays.copyOf(impliedEntries, 2 * numImplied);
-      }
-      impliedLits[numImplied] = implied;
-      impliedEntries[numImplied++] = e;
+      addImplied(implied, e);
     }
+  }
+
+  // a literal that the domains imply by a pushed entry, to push before the next atom
+  private void addImplied(int lit, int entry) {
+    if (numImplied == impliedLits.length) {
+      impliedLits = Arrays.copyOf(impliedLits, 2 * numImplied);
+      impliedEntries = Arrays.copyOf(impliedEntries, 2 * numImplied);
+    }
+    impliedLits[numImplied] = lit;
+    impliedEntries[numImplied++] = entry;
   }
 
   /**
@@ -677,6 +698,72 @@ public final class LcgSolver implements ExternalPropagator {
       structural.add(new int[] {lit, -geV, geNext});
     }
     equalityLiterals++;
+    if (deferredAtoms > 0 && sat.value(lit) == 0) {
+      // a deferred removal of v implies the new literal false, and no clause does
+      EntryList found = scratchEntries;
+      found.clear();
+      if (trail.excludedBefore(vars[i], v, pushed, found)
+          && found.size() > 0
+          && trail.kind(found.get(0)) == AtomicTrail.NE) {
+        addImplied(-lit, found.get(0));
+      }
+    }
+  }
+
+  /**
+   * Whether a trail entry about to be pushed is a value removal to keep out of the solver: it has
+   * no literal yet and the solver is over its {@link #literalBudget}.
+   */
+  private boolean defer(int entry) {
+    return trail.kind(entry) == AtomicTrail.NE
+        && RELEASE
+        && !sat.hasProof()
+        && sat.numVars() - numFree >= literalBudget
+        && eq[trail.id(trail.variable(entry))].get(trail.value(entry)) == LiteralMap.NONE;
+  }
+
+  /**
+   * Whether the solver has a trail entry's atom true. A value removal with no literal, deferred or
+   * not pushed yet, is not given one: the caller explains it instead.
+   */
+  private boolean inSolver(int entry) {
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      int d = eq[trail.id(trail.variable(entry))].get(trail.value(entry));
+      return d != LiteralMap.NONE && sat.value(-d) > 0;
+    }
+    return sat.value(atomLit(entry)) > 0;
+  }
+
+  /**
+   * Replaces the deferred value removals of a reason by their explanations, which are earlier on
+   * the trail, until every entry left has its atom in the solver. Returns the solver literal of the
+   * reason, which is {@code extra} unless an explanation brings one.
+   */
+  private int explainDeferred(EntryList reason, int extra) {
+    EntryList stack = scratchEntries;
+    stack.clear();
+    for (int k = 0; k < reason.size(); k++) {
+      stack.addFrom(reason, k);
+    }
+    reason.clear();
+    while (stack.size() > 0) {
+      int last = stack.size() - 1;
+      int f = stack.get(last);
+      if (trail.kind(f) != AtomicTrail.NE || inSolver(f)) {
+        reason.addFrom(stack, last);
+        stack.truncate(last);
+        continue;
+      }
+      stack.truncate(last);
+      int lit = explainEntry(f, stack);
+      if (lit != 0) {
+        if (extra != 0 && extra != lit) {
+          throw new IllegalStateException("a reason with two solver literals");
+        }
+        extra = lit;
+      }
+    }
+    return extra;
   }
 
   /** The DIMACS literal that is true when a trail entry's atom holds. */
@@ -745,6 +832,11 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int position = sat.trailPosition(lit);
     return position >= 0 && position < liftBefore;
+  }
+
+  /** Sets the {@link #literalBudget}; 0 keeps every value removal with no literal out. */
+  void setLiteralBudget(long budget) {
+    literalBudget = budget;
   }
 
   /**
@@ -820,9 +912,10 @@ public final class LcgSolver implements ExternalPropagator {
    * core-guided search takes at most its share of the time left (its budget of conflicts when there
    * is no deadline), and stops early when one call of the solver needs more than its limit of
    * conflicts: a sign that it no longer finds cores or solutions quickly. It also stops when it has
-   * no solution after a third of its time. Under a solution bound, every solution the core-guided
-   * search finds would have to improve, which makes its strata hard, so the bound comes only after
-   * it. Branch and bound then starts from the variables' activity before the core-guided search.
+   * no solution of its own after a third of its time. Under a solution bound, every solution the
+   * core-guided search finds would have to improve, which makes its strata hard, so the bound comes
+   * only after it. Branch and bound then starts from the variables' activity before the core-guided
+   * search.
    */
   // the most times the core-guided phase gets another share of the time
   private static final int MAX_CORE_EXTENSIONS = 8;
@@ -894,13 +987,17 @@ public final class LcgSolver implements ExternalPropagator {
     try {
       long full = sat.deadline();
       if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
-        // without a solution by this share of the phase, branch and bound gets the time
+        // without a solution of its own by this share of the phase, branch and bound gets the time
         long first = now + (long) (CORE_NO_SOLUTION * (full - now));
         sat.setDeadline(first);
         result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && best != null && System.nanoTime() >= first) {
-          sat.setDeadline(full);
-          result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && System.nanoTime() >= first) {
+          if (ownSolution()) {
+            sat.setDeadline(full);
+            result = coreSearch.run(phaseLimit, coreCallLimit);
+          } else {
+            coreSearch.noSolutionStops++;
+          }
         }
       } else {
         result = coreSearch.run(phaseLimit, coreCallLimit);
@@ -921,6 +1018,21 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setDeadline(deadline);
       sat.setConflictLimit(Long.MAX_VALUE);
     }
+  }
+
+  // -Djacop.lcg.coreAnySolution=true: the old test, any best solution, also one of branch and
+  // bound before the phase
+  private static final boolean CORE_ANY_SOLUTION =
+      "true".equals(System.getProperty("jacop.lcg.coreAnySolution"));
+
+  /**
+   * Whether the core-guided phase has a solution of its own, which lets it run past the share of
+   * its time that {@link #CORE_NO_SOLUTION} gives it without one. Solutions of branch and bound
+   * before the phase do not count: there nearly always is one, and city-position spent half of its
+   * time in cores that raised the bound to 435 against an optimum of 3,493.
+   */
+  private boolean ownSolution() {
+    return CORE_ANY_SOLUTION ? best != null : coreSearch.stratumSolutions > 0;
   }
 
   /**
@@ -1744,6 +1856,27 @@ public final class LcgSolver implements ExternalPropagator {
     sharedBound = bound;
   }
 
+  /**
+   * Gives values that activity branching prefers until the first solution of this solver, for
+   * example those of a solution found by local search.
+   *
+   * @param xs variables of the store
+   * @param values their values
+   */
+  public void setPhase(IntVar[] xs, int[] values) {
+    int[] p = new int[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      p[i] = vars[i] == null ? 0 : vars[i].min();
+    }
+    for (int k = 0; k < xs.length; k++) {
+      int i = index(xs[k]);
+      if (i >= 0) {
+        p[i] = values[k];
+      }
+    }
+    phase = p;
+  }
+
   /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
   public void stop() {
     sat.cancel();
@@ -1795,6 +1928,11 @@ public final class LcgSolver implements ExternalPropagator {
       }
       while (pushed < trail.size()) {
         int e = pushed;
+        if (defer(e)) {
+          deferredAtoms++;
+          pushed++;
+          continue;
+        }
         int lit = atomLit(e);
         if (sat.value(lit) > 0) {
           // a transient literal implies no linked one by a clause: the nearest is pushed too
@@ -1994,8 +2132,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       entryStamp[e] = seen;
       slack[e] = eSlack;
-      int lit = atomLit(e);
-      if (sat.value(lit) > 0) {
+      if (inSolver(e)) {
         inSolver.add(e);
       } else {
         int more = explainEntry(e, stack);
@@ -2095,6 +2232,9 @@ public final class LcgSolver implements ExternalPropagator {
     int extra;
     try {
       extra = explainEntry(e, reason);
+      if (deferredAtoms > 0) {
+        extra = explainDeferred(reason, extra);
+      }
     } finally {
       liftBefore = Integer.MAX_VALUE;
     }

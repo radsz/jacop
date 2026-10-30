@@ -61,12 +61,12 @@ public class MinSimple extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a variables between which a minimum value is being searched for. */
-  private final IntVar x1;
+  final IntVar x1;
 
-  private final IntVar x2;
+  final IntVar x2;
 
   /** It specifies variable min which stores the minimum value present in the list. */
-  private final IntVar min;
+  final IntVar min;
 
   /**
    * It constructs min constraint.
