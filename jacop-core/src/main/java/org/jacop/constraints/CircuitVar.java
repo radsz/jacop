@@ -30,7 +30,6 @@
 
 package org.jacop.constraints;
 
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.MutableVar;
 import org.jacop.core.MutableVarValue;
 import org.jacop.core.Store;
@@ -42,7 +41,6 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-@Slf4j
 class CircuitVar implements MutableVar {
 
   final int index;
@@ -50,12 +48,6 @@ class CircuitVar implements MutableVar {
   final Store store;
 
   CircuitVarValue value;
-
-  CircuitVar(Store store) {
-    value = new CircuitVarValue();
-    index = store.putMutableVar(this);
-    this.store = store;
-  }
 
   CircuitVar(Store store, int next, int previous) {
     CircuitVarValue val = new CircuitVarValue();
@@ -66,26 +58,10 @@ class CircuitVar implements MutableVar {
     this.store = store;
   }
 
-  int index() {
-    return index;
-  }
-
-  public MutableVarValue previous() {
-    return value.nextCircuitVarValue;
-  }
-
   public void removeLevel(int removeLevel) {
     if (value.stamp == removeLevel) {
       value = value.nextCircuitVarValue;
     }
-  }
-
-  public void setCurrent(MutableVarValue o) {
-    value = (CircuitVarValue) o;
-  }
-
-  int stamp() {
-    return value.stamp;
   }
 
   @Override

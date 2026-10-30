@@ -48,7 +48,6 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.Var;
 
 /**
@@ -815,23 +814,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     return !exitChildListener.leftChild(choice, consistent);
   }
 
-  private void logRightBranch(
-      boolean isVariableBranch, T fdv, int val, PrimitiveConstraint choice) {
-    if (!SwitchesPruningLogging.TRACE_SEARCH_TREE) {
-      return;
-    }
-    if (isVariableBranch) {
-      SwitchesPruningLogging.log(
-          true,
-          DepthFirstSearch.class,
-          "Store level: {}, Right branch: {} \\ {}",
-          new Object[] {depth, fdv, val});
-    } else {
-      SwitchesPruningLogging.log(
-          false, DepthFirstSearch.class, "Store level: {}, Right branch: {}", depth, choice);
-    }
-  }
-
   /** Executes right branch for constraint choice (Not(choice)), returns consistency result. */
   private boolean doRightBranchChoice(PrimitiveConstraint choice, int firstVariable) {
     if (ASSERTS_ENABLED && store.currentConstraint != null) {
@@ -940,7 +922,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
 
     store.removeLevel(depth);
-    logRightBranch(choice == null, fdv, val, choice);
     consistent = doRightBranch(choice, fdv, val, firstVariable);
     store.setLevel(--depth);
     depthExcludePaths--;

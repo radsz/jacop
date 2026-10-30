@@ -827,6 +827,23 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
+58. Dead code removed (about 3,300 lines, no change in behaviour). Classes
+    nothing used: IntervalBasedBacktrackableManager and
+    SimpleBacktrackableManager (the store always uses
+    TrailBacktrackableManager), SwitchesPruningLogging (no-op tracing
+    stubs), LengauerTarjan and SophisticatedLengauerTarjan, TableMill,
+    geost ShiftOrder and BoxDisplay (an AWT debug view behind a constant
+    false switch), AbstractArithmeticConstraint and AbstractXplusYeq.
+    Unused methods of the core interfaces: Domain.isNumeric(),
+    noConstraints(), noSearchConstraints() and searchConstraints(),
+    IntDomain.elementsSmallerThan(int), Var.afcValue(),
+    Var.sizeSearchConstraints(), the Function overloads of
+    Var.positionMapping and addPositionMapping, MutableVar.previous() and
+    setCurrent(), MutableVarValue.previous(),
+    BacktrackableManager.isRecognizedAsChanged(int), and in Store
+    throwFailException(Var), clearWatchedConstraint(),
+    countConstraint(int) and the field auxilaryVariables.
+
 Version 4.11
 =============
 

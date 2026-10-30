@@ -33,7 +33,6 @@ package org.jacop.core;
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import java.util.Arrays;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * Defines small dense domain based on bits within a long number.
@@ -41,7 +40,6 @@ import lombok.extern.slf4j.Slf4j;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class SmallDenseDomain extends IntDomain {
 
   /**
@@ -2140,12 +2138,6 @@ public class SmallDenseDomain extends IntDomain {
   public boolean isEmpty() {
 
     return bits == 0;
-  }
-
-  @Override
-  public boolean isNumeric() {
-
-    return true;
   }
 
   @Override

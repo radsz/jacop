@@ -200,8 +200,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
-  // sequence search
-  Search<T> finalSearchSeq;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -3017,8 +3015,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     result = false;
     optimization = solveKind > 0;
-
-    finalSearchSeq = listSeqSearches.getLast();
 
     long currentTime = timer.getCpuTime();
     initTime = currentTime - startCpu;

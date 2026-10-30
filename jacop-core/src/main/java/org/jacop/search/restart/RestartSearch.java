@@ -381,29 +381,6 @@ public class RestartSearch<T extends Var> {
     timeOut = System.currentTimeMillis() + timeout;
   }
 
-  @SuppressWarnings("unchecked")
-  void searchSingleSolution(DepthFirstSearch<T> label) {
-
-    DepthFirstSearch<T> s = label;
-    DepthFirstSearch<T> parentSearch = null;
-    do {
-      s.getSolutionListener().recordSolutions(false);
-      s.getSolutionListener().searchAll(false);
-
-      if (parentSearch != null) {
-        s.getSolutionListener().setParentSolutionListener(parentSearch.getSolutionListener());
-      }
-
-      parentSearch = s;
-      // find next search
-      if (s.childSearches == null) {
-        s = null;
-      } else {
-        s = (DepthFirstSearch<T>) s.childSearches[0];
-      }
-    } while (s != null);
-  }
-
   /**
    * Configures relax-and-reconstruct with the given variables and probability.
    *

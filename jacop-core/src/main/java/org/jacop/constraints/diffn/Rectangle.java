@@ -155,19 +155,8 @@ public class Rectangle {
     return est(dim) >= r.lct(dim) || r.est(dim) >= lct(dim);
   }
 
-  boolean noOverlap(Rectangle r) {
-    return noOverlap(r, 0) && noOverlap(r, 1);
-  }
-
   boolean possibleOverlap(Rectangle r) {
     return !noOverlap(r, 0) && !noOverlap(r, 1);
-  }
-
-  boolean instantiated() {
-    return origin[0].singleton()
-        && origin[1].singleton()
-        && length[0].singleton()
-        && length[1].singleton();
   }
 
   boolean instantiatedBefore(Store store) {

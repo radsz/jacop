@@ -65,10 +65,6 @@ class Diff2VarValue implements MutableVarValue {
     return val;
   }
 
-  public MutableVarValue previous() {
-    return previousDiff2VarValue;
-  }
-
   public void setPrevious(MutableVarValue n) {
     previousDiff2VarValue = (Diff2VarValue) n;
   }

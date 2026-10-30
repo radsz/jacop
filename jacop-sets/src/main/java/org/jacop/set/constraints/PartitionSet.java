@@ -33,7 +33,6 @@ package org.jacop.set.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import lombok.extern.slf4j.Slf4j;
@@ -71,9 +70,6 @@ public class PartitionSet extends Constraint implements Copyable<PartitionSet> {
 
   /** One-time work of the first consistency call. */
   final InitOnce init = new InitOnce();
-
-  LinkedHashSet<Integer> variableQueue = new LinkedHashSet<>();
-  Store store;
 
   /**
    * It constructs a Channel constraint.

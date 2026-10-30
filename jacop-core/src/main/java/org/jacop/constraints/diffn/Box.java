@@ -46,10 +46,6 @@ final class Box {
     this.index = index;
   }
 
-  int dimensions() {
-    return origin.length;
-  }
-
   /** Earliest start in dimension d. */
   long est(int d) {
     return origin[d].min();
@@ -96,15 +92,6 @@ final class Box {
   long minPositiveLength(int d) {
     IntVar l = length[d];
     return l.min() > 0 ? l.min() : l.domain.nextValue(0);
-  }
-
-  boolean singleton() {
-    for (int d = 0; d < origin.length; d++) {
-      if (!origin[d].singleton() || !length[d].singleton()) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /** True if all variables of the box were fixed before the given store level. */

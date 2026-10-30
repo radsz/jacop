@@ -41,7 +41,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
@@ -67,7 +66,6 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt>, Explainable {
 
   /*
