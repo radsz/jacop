@@ -1112,6 +1112,14 @@ Version 5.0 (unreleased)
     variable (Constraint.countsValueWatch, Var.constraintsWithWatches),
     which dom/wdeg, the failure-count selections and LNS read.
 
+75. The FlatZinc completion search, which labels the variables a search
+    on output variables leaves out, labels them in input order instead of
+    smallest domain first. It only checks that one assignment exists, so
+    the solutions are the same, but choosing by domain size scanned every
+    unfixed variable at every node: 70% of the run on freepizza, which
+    now runs up to 14x more nodes (pizza39 reaches 942033 in 20 s
+    instead of 972454).
+
 Version 4.11
 =============
 

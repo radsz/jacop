@@ -106,7 +106,6 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SequenceSelect;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
-import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMax;
 import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
@@ -3120,9 +3119,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       completion.setConsistencyListener(failStatistics);
     }
+    // Input order: the search only checks that one assignment exists, which any order finds, and
+    // comparing domain sizes cost a scan of every unfixed variable per node (70% of the run on
+    // freepizza, whose thousands of half-reified Booleans are left to it).
     SelectChoicePoint<IntVar> select =
-        new SimpleSelect<>(
-            rest.toArray(new IntVar[0]), new SmallestDomain<>(), new IndomainMin<>());
+        new SimpleSelect<>(rest.toArray(new IntVar[0]), null, new IndomainMin<>());
     completion.setSelectChoicePoint((SelectChoicePoint<T>) select);
     completion.setPrintInfo(false);
     // the completion search finds solutions now, so it prints them
