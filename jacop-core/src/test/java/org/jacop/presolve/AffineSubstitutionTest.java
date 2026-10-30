@@ -56,7 +56,9 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.AffineView;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainRandom;
@@ -133,6 +135,23 @@ class AffineSubstitutionTest {
   }
 
   @Test
+  void aViewPrunedByADomainReachingTheEndOfTheRangeStaysValid() {
+    // the preimage of MIN_INT..5 under u + 2 starts below MIN_INT; it used to be kept as such, and
+    // the complement taken by SmallDenseDomain.in with asserts on threw
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    AffineView v = new AffineView(store, "v", x, 1, 2);
+    store.setLevel(1);
+    v.domain.in(store.level, v, new IntervalDomain(IntDomain.MIN_INT, 5));
+    assertThat(x.max()).isEqualTo(3);
+    v.domain.in(store.level, v, new IntervalDomain(-4, IntDomain.MAX_INT));
+    assertThat(x.min()).isZero();
+    AffineView w = new AffineView(store, "w", x, -1, -2);
+    w.domain.in(store.level, w, new IntervalDomain(IntDomain.MIN_INT, -3));
+    assertThat(x.min()).isEqualTo(1);
+  }
+
+  @Test
   void anEqualityThatClosesACycleIsKeptUnlessImplied() {
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 0, 10);
@@ -145,9 +164,8 @@ class AffineSubstitutionTest {
 
     Derivation d = Presolver.of(store).keep(x, y, z).presolve();
 
-    // a spanning tree of the three offsets goes, with the third offset or x + z = 6 (whichever
-    // closes a cycle first); the equality that is not implied stays and fixes the class
-    assertThat(d.statistics().dropped()).isGreaterThanOrEqualTo(2);
+    // the third offset is implied and goes; x + z = 6, which closes a cycle that is not implied,
+    // stays, and as it has two members of the class they keep copies tied by equalities
     IntVar[] vars = {x, y, z};
     Set<List<Integer>> found = new HashSet<>();
     search(

@@ -621,9 +621,13 @@ public final class Derivation implements VarMap {
       live();
       return;
     }
+    int childConstraints = carried.size();
     if (affine != null) {
       try {
-        substitute(affine, carried, aliases);
+        // an equality that ties a member to its representative stands for a dropped definition
+        int tied = substitute(affine, carried, aliases);
+        dropped -= tied;
+        childConstraints += tied;
       } catch (FailException e) {
         outcome = Outcome.INFEASIBLE;
         child = null;
@@ -679,7 +683,7 @@ public final class Derivation implements VarMap {
             variables.size(),
             collected.size(),
             childVariables,
-            carried.size(),
+            childConstraints,
             fixed,
             dropped,
             simplified,
@@ -933,8 +937,10 @@ public final class Derivation implements VarMap {
    * expect two of its variables to change together, so a member that shares a constraint with
    * another variable of its class gets a copy of its own instead, tied to the representative's
    * counterpart by an equality.
+   *
+   * @return the number of equalities imposed.
    */
-  private void substitute(
+  private int substitute(
       AffineSubstitution affine, List<Constraint> carried, Map<Var, Var> aliases) {
     for (Var v : variables) {
       if (!affine.isRoot(v)) {
@@ -950,6 +956,7 @@ public final class Derivation implements VarMap {
     }
     Set<Var> shared = Collections.newSetFromMap(new IdentityHashMap<>());
     Map<Var, Var> seen = new IdentityHashMap<>();
+    int tied = 0;
     for (Constraint c : carried) {
       seen.clear();
       for (Var x : c.arguments()) {
@@ -971,6 +978,7 @@ public final class Derivation implements VarMap {
       if (shared.contains(v)) {
         IntVar own = (IntVar) v.copyTo(child);
         child.impose(equality(own, rel.a(), r, rel.b()));
+        tied++;
         copy = own;
       } else if (rel.identity()) {
         copy = r;
@@ -982,6 +990,7 @@ public final class Derivation implements VarMap {
       copies.put(v, copy);
       entries.put(v, new Entry.Kept(copy));
     }
+    return tied;
   }
 
   /** The constraint x = a*y + b. */

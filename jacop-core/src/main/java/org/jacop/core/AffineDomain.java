@@ -96,11 +96,11 @@ public final class AffineDomain extends IntDomain {
   }
 
   private static int clamp(long v) {
-    if (v < Integer.MIN_VALUE / 2) {
-      return Integer.MIN_VALUE / 2;
+    if (v < IntDomain.MIN_INT) {
+      return IntDomain.MIN_INT;
     }
-    if (v > Integer.MAX_VALUE / 2) {
-      return Integer.MAX_VALUE / 2;
+    if (v > IntDomain.MAX_INT) {
+      return IntDomain.MAX_INT;
     }
     return (int) v;
   }
@@ -170,8 +170,11 @@ public final class AffineDomain extends IntDomain {
       long hi = (long) i.max() + shift - b;
       long from = a > 0 ? Math.ceilDiv(lo, (long) a) : Math.ceilDiv(hi, (long) a);
       long to = a > 0 ? Math.floorDiv(hi, (long) a) : Math.floorDiv(lo, (long) a);
+      // values outside the range of domains are in no domain of the base
+      from = Math.max(from, IntDomain.MIN_INT);
+      to = Math.min(to, IntDomain.MAX_INT);
       if (from <= to) {
-        result.unionAdapt(clamp(from), clamp(to));
+        result.unionAdapt((int) from, (int) to);
       }
     }
     return result;
@@ -221,7 +224,10 @@ public final class AffineDomain extends IntDomain {
       return false;
     }
     long[] r = preimage(min, max);
-    return r[0] <= r[1] && base.domain.contains(clamp(r[0]), clamp(r[1]));
+    return r[0] <= r[1]
+        && r[0] >= IntDomain.MIN_INT
+        && r[1] <= IntDomain.MAX_INT
+        && base.domain.contains((int) r[0], (int) r[1]);
   }
 
   @Override
