@@ -769,11 +769,7 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       entryStamp[f] = seen;
-      lastOwn = true;
       int lit = explainEntry(f, stack);
-      if (!lastOwn) {
-        genericDeferred.add(trail.reason(f));
-      }
       if (lit != 0) {
         if (extra != 0 && extra != lit) {
           throw new IllegalStateException("a reason with two solver literals");
@@ -2018,9 +2014,6 @@ public final class LcgSolver implements ExternalPropagator {
    *
    * @return the solver literal that is part of the reason, or 0
    */
-  // whether the last explainEntry of an entry with a reason had the constraint's own explanation
-  private boolean lastOwn = true;
-
   // constraints that gave a deferred removal the generic reason: their removals are pushed again,
   // since a clause citing one cites every atom of their variables in its place
   private final Set<Constraint> genericDeferred =
@@ -2033,7 +2026,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int mark = out.size();
     boolean own = trail.explain(e, out);
-    lastOwn = own;
+    if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
+      genericDeferred.add(trail.reason(e));
+    }
     count(trail.reason(e), own, out.size() - mark, 0);
     measure(trail.reason(e), own, e, out, mark);
     if (checker != null) {
@@ -2162,12 +2157,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (inSolver(e)) {
         inSolver.add(e);
       } else {
-        boolean deferred = e < pushed && trail.kind(e) == AtomicTrail.NE;
-        lastOwn = true;
         int more = explainEntry(e, stack);
-        if (deferred && !lastOwn) {
-          genericDeferred.add(trail.reason(e));
-        }
         if (more != 0) {
           lits.add(-more);
         }
