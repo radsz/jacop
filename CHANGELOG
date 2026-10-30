@@ -1201,6 +1201,20 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+82. A FlatZinc variable declared with a bound beyond JaCoP's integer range
+    (-536,870,910..536,870,909) is narrowed to it, with one warning on
+    stderr; MiniZinc writes such computed bounds, for example
+    var 0..4722438400 for a product in 2022 arithmetic-target. Before, a
+    bound beyond 32 bits was a parser error and a bound between the range
+    and 32 bits (arithmetic-target 0..1687566400, connect, code-generator,
+    unit-commitment) gave a variable outside the range JaCoP supports.
+    After narrowing, a completed search is reported as optimal only when
+    the objective alone lost values, on its worse side, and is never
+    reported as unsatisfiable. A domain wholly outside the range is
+    rejected. All 3 failing arithmetic-target instances now run (60 s:
+    4108 reaches the optimum 7; 6872 and 8657 reach 8 and 9 with -f,
+    optimum 7); the two code-generator instances still prove their optimum.
+
 Version 4.11
 =============
 
