@@ -45,6 +45,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.util.VarIntMap;
 
 /**
@@ -60,7 +63,11 @@ import org.jacop.util.VarIntMap;
  */
 @Slf4j
 public class LexOrder extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, RemoveLevelLate, Copyable<LexOrder> {
+    implements UsesQueueVariable,
+        SatisfiedPresent,
+        RemoveLevelLate,
+        Copyable<LexOrder>,
+        Explainable {
 
   static final boolean DEBUG = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -534,6 +541,85 @@ public class LexOrder extends Constraint
 
     x[i].domain.inMax(store.level, x[i], y[i].max());
     y[i].domain.inMin(store.level, y[i], x[i].min());
+  }
+
+  /*
+   * Explanations for lazy clause generation, from bounds only. x[a] <= v holds when the positions
+   * before a cannot have x[j] < y[j] (x[j] >= m >= y[j]) and y[a] <= v, or y[a] <= v + 1 and the
+   * positions after a cannot make x smaller once x[a] = y[a]; y[a] >= v is the mirror image. A
+   * failure is a run of positions with x[j] >= y[j] that ends in x[k] > y[k], or runs to the end
+   * of a strict order.
+   */
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar v = trail.variable(entry);
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.NE) {
+      return false;
+    }
+    int value = trail.skippedBound(entry);
+    int mark = out.size();
+    for (int a = 0; a < n; a++) {
+      boolean onX = x[a] == v && kind == AtomicTrail.LE;
+      boolean onY = y[a] == v && kind == AtomicTrail.GE;
+      if (!onX && !onY) {
+        continue;
+      }
+      if (prefixAtLeast(trail, entry, a, out)) {
+        // the other variable of position a: y[a] <= value, or x[a] >= value
+        IntVar other = onX ? y[a] : x[a];
+        int bound = onX ? trail.maxBefore(other, entry) : trail.minBefore(other, entry);
+        if (onX ? bound <= value : bound >= value) {
+          trail.addBoundReaching(other, entry, !onX, value, out);
+          trail.addSkippedHoles(entry, value, out);
+          return true;
+        }
+        int strict = onX ? value + 1 : value - 1;
+        if ((onX ? bound <= strict : bound >= strict) && suffixAtLeast(trail, entry, a + 1, out)) {
+          trail.addBoundReaching(other, entry, !onX, strict, out);
+          trail.addSkippedHoles(entry, value, out);
+          return true;
+        }
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  // x[j] >= m >= y[j] for every j < a, cited
+  private boolean prefixAtLeast(AtomicTrail trail, int position, int a, EntryList out) {
+    for (int j = 0; j < a; j++) {
+      int m = trail.maxBefore(y[j], position);
+      if (trail.minBefore(x[j], position) < m) {
+        return false;
+      }
+      trail.addBoundReaching(x[j], position, true, m, out);
+      trail.addBoundReaching(y[j], position, false, m, out);
+    }
+    return true;
+  }
+
+  // from position from on, x cannot be lexicographically smaller (or equal, for a strict order)
+  private boolean suffixAtLeast(AtomicTrail trail, int position, int from, EntryList out) {
+    for (int k = from; k < n; k++) {
+      int lx = trail.minBefore(x[k], position);
+      int m = trail.maxBefore(y[k], position);
+      if (lx < m) {
+        return false;
+      }
+      trail.addBoundReaching(x[k], position, true, lx > m ? m + 1L : m, out);
+      trail.addBoundReaching(y[k], position, false, m, out);
+      if (lx > m) {
+        return true;
+      }
+    }
+    return lexLt;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return suffixAtLeast(trail, trail.size(), 0, out);
   }
 
   @Override

@@ -1876,6 +1876,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       perClass.append('\n');
     }
+    for (Map.Entry<String, long[]> e : lcg.minimalityStatistics().entrySet()) {
+      long[] n = e.getValue();
+      perClass
+          .append("%% lcg-min ")
+          .append(e.getKey())
+          .append(": sampled=")
+          .append(n[0])
+          .append(" atoms=")
+          .append(n[1])
+          .append(" needed=")
+          .append(n[2])
+          .append(" lifted=")
+          .append(n[3])
+          .append(" beyond=")
+          .append(n[4])
+          .append(" unchecked=")
+          .append(n[5])
+          .append(" liftable=")
+          .append(n[6])
+          .append('\n');
+    }
     IO.print(
         "%%%mzn-stat: lcgAtoms="
             + lcg.atomsPropagated
@@ -1885,6 +1906,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.atomLiteralsLearnt
             + "\n%%%mzn-stat: lcgLiteralsReleased="
             + lcg.literalsReleased
+            + "\n%%%mzn-stat: lcgLiftedLiterals="
+            + lcg.liftedLiterals
             + "\n%%%mzn-stat: lcgExplanations="
             + reasons
             + "\n%%%mzn-stat: lcgGenericShare="

@@ -115,7 +115,7 @@ public final class ExplanationChecker {
     checked++;
     try {
       for (int k = 0; k < reason.size(); k++) {
-        if (!copy.impose(reason.get(k))) {
+        if (!impose(copy, reason.get(k), reason.slack(k))) {
           return describe(c, entry, reason, "has an atom on a variable outside the constraint");
         }
       }
@@ -179,10 +179,31 @@ public final class ExplanationChecker {
     return null;
   }
 
+  // imposes an atom weakened by its slack, as the solver may cite it
+  private boolean impose(ScratchCopy copy, int entry, int slack) {
+    if (slack == 0) {
+      return copy.impose(entry);
+    }
+    IntVar y = copy.get(trail.variable(entry));
+    if (y == null) {
+      return false;
+    }
+    int v = trail.value(entry);
+    if (trail.kind(entry) == AtomicTrail.GE) {
+      y.domain.inMin(copy.store.level, y, v - slack);
+    } else {
+      y.domain.inMax(copy.store.level, y, v + slack);
+    }
+    return true;
+  }
+
   private String describe(Constraint c, int entry, EntryList reason, String problem) {
     StringBuilder result = new StringBuilder("the reason ");
     for (int k = 0; k < reason.size(); k++) {
       result.append(k == 0 ? "" : " ").append(trail.atomString(reason.get(k)));
+      if (reason.slack(k) != 0) {
+        result.append(" (slack ").append(reason.slack(k)).append(')');
+      }
     }
     result.append(entry < 0 ? " of the failure" : " of " + trail.atomString(entry));
     return result.append(' ').append(problem).append(", by ").append(c).toString();
