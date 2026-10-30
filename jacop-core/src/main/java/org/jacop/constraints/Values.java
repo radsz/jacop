@@ -47,6 +47,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.util.BipartiteGraphMatching;
 
 /**
@@ -56,7 +59,7 @@ import org.jacop.util.BipartiteGraphMatching;
  * @version 5.0
  */
 @Slf4j
-public class Values extends Constraint implements SatisfiedPresent, Copyable<Values> {
+public class Values extends Constraint implements SatisfiedPresent, Copyable<Values>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean DEBUG = false;
@@ -177,6 +180,18 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
    */
   public Values(List<? extends IntVar> list, IntVar count) {
     this(list.toArray(IntVar[]::new), count);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == Values.class
+        && new ValuesExplanation(trail, list, count).explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == Values.class
+        && new ValuesExplanation(trail, list, count).explainFailure(out);
   }
 
   @Override

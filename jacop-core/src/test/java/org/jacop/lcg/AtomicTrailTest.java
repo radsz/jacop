@@ -41,12 +41,15 @@ import java.util.function.Predicate;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XlteqY;
@@ -348,6 +351,37 @@ class AtomicTrailTest {
                   Arrays.copyOfRange(v, 3, 6)),
               fits,
               v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            newVar(s, "d", rnd),
+            new IntVar(s, "n", 1, 4)
+          };
+          return new Model(
+              new Values(Arrays.copyOf(v, 4), v[4]),
+              t -> Arrays.stream(t, 0, 4).distinct().count() == t[4],
+              v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
+          };
+          int counter = 1 + rnd.nextInt(2);
+          int value = rnd.nextInt(3) - 1;
+          return rnd.nextBoolean()
+              ? new Model(
+                  new AtMost(v, counter, value),
+                  t -> Arrays.stream(t).filter(w -> w == value).count() <= counter,
+                  v)
+              : new Model(
+                  new AtLeast(v, counter + 1, value),
+                  t -> Arrays.stream(t).filter(w -> w == value).count() > counter,
+                  v);
         });
     return m;
   }
@@ -1232,5 +1266,45 @@ class AtomicTrailTest {
       }
     }
     return false;
+  }
+
+  /**
+   * nvalue and at_most removals with reasons of their own: the variables fixed to other values
+   * (gfd-schedule had a million generic reasons of 64 atoms from these two constraints).
+   */
+  @Test
+  void nvalueAndAtMostRemovalsHaveTheirOwnReason() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 6);
+    }
+    IntVar n = new IntVar(store, "n", 0, 2);
+    Constraint values = new Values(x, n);
+    Constraint atMost = new AtMost(x, 1, 5);
+    store.impose(values);
+    store.impose(atMost);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    x[0].domain.in(store.level, x[0], 1, 1);
+    x[1].domain.in(store.level, x[1], 5, 5);
+    x[2].domain.inComplement(store.level, x[2], 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].dom().toString()).isEqualTo("1");
+    int explained = 0;
+    EntryList reason = new EntryList();
+    for (int e = 0; e < trail.size(); e++) {
+      Constraint c = trail.reason(e);
+      if (c == values || c == atMost) {
+        reason.clear();
+        assertThat(c instanceof Explainable own && own.explain(trail, e, reason))
+            .as("%s for %s", c, trail.atomString(e))
+            .isTrue();
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(6);
+    trail.detach();
   }
 }
