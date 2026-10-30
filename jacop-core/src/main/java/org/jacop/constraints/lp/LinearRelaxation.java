@@ -207,6 +207,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: cuts added. */
   public long cuts;
 
+  /** Statistics: clique cuts added. */
+  public long cliqueCuts;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -259,6 +262,10 @@ public class LinearRelaxation extends Constraint
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
+
+  // clique cuts over the conflicts of the 0/1 columns, in the same rounds
+  private static final boolean CLIQUE_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.cliqueCuts"));
   private static final double MAX_PARALLELISM = 0.9;
 
   // the cuts are made at the first solve only, before any search decision: they use the bounds of
@@ -1235,6 +1242,10 @@ public class LinearRelaxation extends Constraint
     }
     int original = rows();
     Set<List<Long>> seen = new HashSet<>();
+    CliqueCut conflicts =
+        CLIQUE_CUTS
+            ? CliqueCut.of(rowColumns, rowWeights, rowLo, rowHi, hasLo, hasHi, lo, hi)
+            : null;
     int status = DualSimplex.OPTIMAL;
     double[] value = new double[n];
     for (int round = 0; round < CUT_ROUNDS; round++) {
@@ -1263,6 +1274,11 @@ public class LinearRelaxation extends Constraint
         mir(aggregate(unit), value, lo, hi, found);
         unit[i] = 0;
       }
+      int mirs = found.size();
+      if (conflicts != null) {
+        conflicts.separate(value, found);
+      }
+      Set<MirCut> cliques = new HashSet<>(found.subList(mirs, found.size()));
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
       List<MirCut> chosen = new ArrayList<>();
       for (MirCut c : found) {
@@ -1290,17 +1306,21 @@ public class LinearRelaxation extends Constraint
       long pivots = lp.pivots();
       double before = lp.value(0);
       addCuts(chosen);
+      long chosenCliques = chosen.stream().filter(cliques::contains).count();
+      cliqueCuts += chosenCliques;
       long size = Math.max(1, lp.pivotWork());
       status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
         dropCuts(chosen.size(), kept, keptRows);
+        cliqueCuts -= chosenCliques;
         break;
       }
       if (status != DualSimplex.OPTIMAL) {
         if (status == DualSimplex.LIMIT) {
           dropCuts(chosen.size(), kept, keptRows);
+          cliqueCuts -= chosenCliques;
           status = DualSimplex.OPTIMAL;
         }
         break;
