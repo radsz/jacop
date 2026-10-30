@@ -34,11 +34,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -342,5 +344,125 @@ class LinearRelaxationTest {
                       }));
       return checked;
     }
+  }
+
+  /**
+   * Long rows split into block sums, as lazy clause generation splits them, and clauses given as
+   * extra rows: the relaxation substitutes the block sums back, so it has one row per original row
+   * and clause, and alone with the blocks it keeps exactly the solutions of the model.
+   */
+  @Test
+  void substitutesSplitSumsAndAddsExtraRows() {
+    for (int run = 0; run < RUNS / 10; run++) {
+      Random rnd = new Random(run);
+      Store plain = new Store();
+      Store split = new Store();
+      IntVar[] x = new IntVar[6];
+      IntVar[] y = new IntVar[6];
+      for (int i = 0; i < 6; i++) {
+        int min = -1 - rnd.nextInt(2);
+        int max = 1 + rnd.nextInt(2);
+        x[i] = new IntVar(plain, "x" + i, min, max);
+        y[i] = new IntVar(split, "x" + i, min, max);
+      }
+      IntVar[] b = new IntVar[3];
+      IntVar[] c = new IntVar[3];
+      for (int i = 0; i < 3; i++) {
+        b[i] = new IntVar(plain, "b" + i, 0, 1);
+        c[i] = new IntVar(split, "b" + i, 0, 1);
+      }
+      List<IntVar> sums = new ArrayList<>();
+      String[] relations = {"<=", ">=", "=="};
+      int rows = 2 + rnd.nextInt(2);
+      for (int r = 0; r < rows; r++) {
+        List<Integer> pool = new ArrayList<>(List.of(0, 1, 2, 3, 4, 5));
+        int k = 5 + rnd.nextInt(2);
+        int[] at = new int[k];
+        int[] w = new int[k];
+        for (int i = 0; i < k; i++) {
+          at[i] = pool.remove(rnd.nextInt(pool.size()));
+          w[i] = rnd.nextBoolean() ? 1 + rnd.nextInt(3) : -1 - rnd.nextInt(3);
+        }
+        String rel = relations[rnd.nextInt(relations.length)];
+        int rhs = rnd.nextInt(7) - 3;
+        IntVar[] xs = new IntVar[k];
+        for (int i = 0; i < k; i++) {
+          xs[i] = x[at[i]];
+        }
+        plain.impose(new LinearInt(xs, w, rel, rhs));
+        // blocks of two terms, each defining a sum, and the sum of the blocks
+        List<IntVar> top = new ArrayList<>();
+        for (int from = 0; from < k; from += 2) {
+          int to = Math.min(k, from + 2);
+          long min = 0;
+          long max = 0;
+          IntVar[] bv = new IntVar[to - from + 1];
+          int[] bw = new int[to - from + 1];
+          for (int i = from; i < to; i++) {
+            IntVar v = y[at[i]];
+            min += Math.min(w[i] * v.min(), w[i] * v.max());
+            max += Math.max(w[i] * v.min(), w[i] * v.max());
+            bv[i - from] = v;
+            bw[i - from] = w[i];
+          }
+          IntVar sum = new IntVar(split, (int) min, (int) max);
+          bv[to - from] = sum;
+          bw[to - from] = -1;
+          split.impose(new LinearInt(bv, bw, "==", 0));
+          top.add(sum);
+          sums.add(sum);
+        }
+        int[] ones = new int[top.size()];
+        Arrays.fill(ones, 1);
+        split.impose(new LinearInt(top.toArray(new IntVar[0]), ones, rel, rhs));
+      }
+      // clauses over the 0/1 variables and a sign of x0: in the plain store as constraints, for
+      // the split one only as rows of the relaxation
+      List<LinearForm> clauses = new ArrayList<>();
+      int clauseCount = 1 + rnd.nextInt(2);
+      for (int r = 0; r < clauseCount; r++) {
+        int neg = rnd.nextInt(3);
+        IntVar[] p = new IntVar[3 - neg];
+        IntVar[] q = new IntVar[neg];
+        IntVar[] pc = new IntVar[3 - neg];
+        IntVar[] qc = new IntVar[neg];
+        long[] cw = new long[3];
+        IntVar[] cv = new IntVar[3];
+        for (int i = 0; i < 3; i++) {
+          if (i < 3 - neg) {
+            p[i] = b[i];
+            pc[i] = c[i];
+            cw[i] = 1;
+          } else {
+            q[i - 3 + neg] = b[i];
+            qc[i - 3 + neg] = c[i];
+            cw[i] = -1;
+          }
+          cv[i] = c[i];
+        }
+        plain.impose(new BoolClause(p, q));
+        clauses.add(new LinearForm(cv, cw, 1L - neg, LinearForm.GE));
+      }
+      LinearRelaxation r = LinearRelaxation.of(split, null, false, clauses, new HashSet<>(sums));
+      assertThat(r).as("seed %d", run).isNotNull();
+      assertThat(r.rows()).as("seed %d", run).isEqualTo(rows + clauseCount);
+      split.impose(r);
+      assertThat(solutions(split, y, c)).as("seed %d", run).isEqualTo(solutions(plain, x, b));
+    }
+  }
+
+  // the number of solutions over the given variables
+  private static int solutions(Store store, IntVar[] x, IntVar[] b) {
+    if (!store.consistency()) {
+      return 0;
+    }
+    IntVar[] vars = Arrays.copyOf(x, x.length + b.length);
+    System.arraycopy(b, 0, vars, x.length, b.length);
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+    return search.getSolutionListener().solutionsNo();
   }
 }

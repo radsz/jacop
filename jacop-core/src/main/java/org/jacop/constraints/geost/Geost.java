@@ -1645,12 +1645,16 @@ public class Geost extends Constraint
   }
 
   /**
-   * The variable standing for an object's variable in a copy. Fixed variables are not in the scope
-   * of the constraint, so a map may have no counterpart for them; the copy then gets a constant.
+   * The variable standing for an object's variable in a copy. Variables fixed when the constraint
+   * was created are not in its scope, so a map has no counterpart for them; the copy then gets a
+   * constant. A variable of the scope is mapped even when it is fixed now: a copy made during
+   * search (an explanation replayed on a scratch copy over the initial domains) must not keep the
+   * current values.
    */
-  private static IntVar mapped(VarMap map, IntVar v) {
-    IntVar m = v.singleton() ? null : map.get(v);
-    return m != null ? m : new IntVar(map.target(), v.min(), v.max());
+  private IntVar mapped(VarMap map, IntVar v) {
+    return variableObjectMap.containsKey(v)
+        ? map.get(v)
+        : new IntVar(map.target(), v.min(), v.max());
   }
 
   /** A copy rebuilds the two kinds of external constraints the library provides. */

@@ -49,7 +49,8 @@ import org.junit.jupiter.api.Test;
  * In-process fuzzing of {@link CdclSolver}, run on demand (no Maven profile includes it). Every
  * answer is checked without a reference solver: a SAT answer by its model, an UNSAT answer by
  * checking its DRAT proof with {@link RupChecker}, and an UNSAT answer under assumptions by solving
- * the formula with the failed assumptions as units and checking that proof.
+ * the formula with the failed assumptions as units and checking that proof. The solver checks its
+ * propagation at every decision as well ({@link CdclSolver#setChecking}).
  *
  * <pre>
  * mvn -Pmin -pl jacop-sat test -Dtest=CdclFuzzTest -Dfuzz.runs=1000000 -Dfuzz.seed=1
@@ -157,6 +158,7 @@ class CdclFuzzTest {
   /** Solves with a DRAT proof and checks the answer; returns the answer. */
   private static int solveChecked(List<int[]> f, int vars, long seed) throws IOException {
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     ByteArrayOutputStream proof = new ByteArrayOutputStream();
     DratWriter drat = new DratWriter(proof);
     s.setProof(drat);
@@ -184,6 +186,7 @@ class CdclFuzzTest {
   private static void incremental(Random rnd, List<int[]> f, int vars, long seed)
       throws IOException {
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     s.setChronoLimit(chronoLimit(seed));
     if (seed % 2 == 0) {
       s.setReduceBase(10);

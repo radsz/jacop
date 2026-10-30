@@ -464,6 +464,37 @@ class WeightedSubcircuitsTest {
     }
   }
 
+  /**
+   * Pruning by the assignment bound fixed the last successors, but the tour costs and the cost were
+   * not revised again, so the search stopped with cost 14..15 and reported 14 as the optimum.
+   */
+  @Test
+  void costIsFixedWhenTheAssignmentBoundFixesTheLastSuccessors() {
+    int n = 4;
+    Instance in =
+        new Instance(
+            n,
+            1,
+            1,
+            wideNext(n),
+            new int[][] {{0, 1}, {1}, {1, 2}, {-1, 0, 1, 2}},
+            new int[][] {{4, 0, 2, 4}, {5, 2, 0, 4}, {2, 3, 1, 4}, {3, 0, 0, 5}},
+            new int[][] {{9, 10}},
+            range(-4000, 4000));
+    Variables v = post(in, true, 0);
+    assertTrue(v.store.consistency());
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertTrue(
+        search.labeling(
+            v.store,
+            new SimpleSelect<>(
+                Arrays.copyOf(v.all, 2 * n), new SmallestDomain<>(), new IndomainMin<>()),
+            v.cost));
+    // the only solution: tour 0 -> 2 -> 1 -> 0 of length 10, node 3 left out at cost 5
+    assertEquals(15, search.getCostValue());
+  }
+
   private static int[][] wideNext(int n) {
     int[][] next = new int[n][];
     for (int i = 0; i < n; i++) {

@@ -43,16 +43,61 @@ public final class EntryList {
   private int[] entries = new int[16];
   private int size;
 
+  // how much weaker than its entry's bound each position's atom may be; null while all are 0
+  private int[] slacks;
+
   /**
    * Adds an entry.
    *
    * @param entry the entry
    */
   public void add(int entry) {
+    addLifted(entry, 0);
+  }
+
+  /**
+   * Adds the entry of a bound together with how much weaker the bound may be: a reason holds with
+   * {@code x >= value - slack} in place of a {@code x >= value} entry, and with {@code x <= value +
+   * slack} in place of a {@code x <= value} one. The solver may cite such a weaker atom when it has
+   * a literal for it.
+   *
+   * @param entry the entry
+   * @param slack how much weaker the bound may be, at least 0
+   */
+  public void addLifted(int entry, int slack) {
     if (size == entries.length) {
       entries = Arrays.copyOf(entries, 2 * size);
+      if (slacks != null) {
+        slacks = Arrays.copyOf(slacks, 2 * size);
+      }
+    }
+    if (slack != 0 && slacks == null) {
+      slacks = new int[entries.length];
+    }
+    if (slacks != null) {
+      slacks[size] = slack;
     }
     entries[size++] = entry;
+  }
+
+  /**
+   * Adds the entry at a position of another list, with its slack.
+   *
+   * @param other the list
+   * @param position the position, below its size
+   */
+  public void addFrom(EntryList other, int position) {
+    addLifted(other.get(position), other.slack(position));
+  }
+
+  /**
+   * Returns how much weaker than its entry the atom at a position may be (see {@link #addLifted}).
+   *
+   * @param position the position, below {@link #size()}
+   * @return the slack, 0 when the atom is the entry's
+   */
+  public int slack(int position) {
+    return slacks == null ? 0 : slacks[position];
   }
 
   /**
@@ -102,11 +147,33 @@ public final class EntryList {
     if (size - from < 2) {
       return;
     }
+    if (slacks != null) {
+      sortUniqueLifted(from);
+      return;
+    }
     Arrays.sort(entries, from, size);
     int kept = from + 1;
     for (int k = from + 1; k < size; k++) {
       if (entries[k] != entries[kept - 1]) {
         entries[kept++] = entries[k];
+      }
+    }
+    size = kept;
+  }
+
+  // sorts entries with their slacks; a repeated entry keeps its smallest slack, the strongest atom
+  private void sortUniqueLifted(int from) {
+    long[] pairs = new long[size - from];
+    for (int k = from; k < size; k++) {
+      pairs[k - from] = ((long) entries[k] << 32) | (slacks[k] & 0xffffffffL);
+    }
+    Arrays.sort(pairs);
+    int kept = from;
+    for (long pair : pairs) {
+      int entry = (int) (pair >>> 32);
+      if (kept == from || entries[kept - 1] != entry) {
+        entries[kept] = entry;
+        slacks[kept++] = (int) pair;
       }
     }
     size = kept;
