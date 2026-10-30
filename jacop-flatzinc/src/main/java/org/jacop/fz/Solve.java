@@ -72,6 +72,7 @@ import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.lcg.LinearForm;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
@@ -462,7 +463,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     long start = timer.getCpuTime();
-    linearRelaxation = LinearRelaxation.of(store, objective, maximize);
+    // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
+    // linear constraints are split into block sums: the relaxation gets the clauses as rows and
+    // the blocks substituted back, so it has the rows of the model as without --lcg
+    List<LinearForm> clauses = new ArrayList<>();
+    if (options.lcg()) {
+      for (IntVar[][] clause : sat.collectedClauses()) {
+        clauses.add(clauseRow(clause[0], clause[1]));
+      }
+    }
+    linearRelaxation = LinearRelaxation.of(store, objective, maximize, clauses, splitSums());
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
@@ -474,6 +484,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  // the block sums of the split linear constraints that are still variables
+  private Set<IntVar> splitSums() {
+    Set<IntVar> sums = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : dictionary.splitSums()) {
+      if (v != null && !v.singleton()) {
+        sums.add(v);
+      }
+    }
+    return sums;
+  }
+
+  // the clause "some positive literal is 1 or some negative literal is 0" as the row
+  // sum(positive) - sum(negative) >= 1 - |negative|
+  private static LinearForm clauseRow(IntVar[] positive, IntVar[] negative) {
+    IntVar[] vars = new IntVar[positive.length + negative.length];
+    long[] weights = new long[vars.length];
+    for (int i = 0; i < positive.length; i++) {
+      vars[i] = positive[i];
+      weights[i] = 1;
+    }
+    for (int i = 0; i < negative.length; i++) {
+      vars[positive.length + i] = negative[i];
+      weights[positive.length + i] = -1;
+    }
+    return new LinearForm(vars, weights, 1L - negative.length, LinearForm.GE);
   }
 
   /** Prints the counts of the linear relaxation (--lp). */
