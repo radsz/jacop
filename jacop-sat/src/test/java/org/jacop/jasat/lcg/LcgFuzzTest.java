@@ -66,6 +66,7 @@ import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Distance;
@@ -87,6 +88,7 @@ import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
@@ -429,7 +431,7 @@ class LcgFuzzTest {
     // the globals added in 5.0 that have no explanation of their own, explained by replay
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(16)) {
+      return switch (rnd.nextInt(17)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -467,6 +469,7 @@ class LcgFuzzTest {
                 chain("dq", 3, 0, 2),
                 intVar("dc", 0, 2 + rnd.nextInt(5)),
                 intVar("dp", rnd.nextInt(5), 12));
+        case 15 -> new LexOrder(pick(x, 3), pick(x, 3), rnd.nextBoolean());
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -508,7 +511,10 @@ class LcgFuzzTest {
                 p, new int[] {1 + rnd.nextInt(2), -1, 2}, rnd.nextBoolean() ? "<=" : "!=", c + 2);
         case 11 -> new XplusYeqC(p[0], p[1], c + 2);
         case 12 -> new Member(pick(x, 3), p[0]);
-        case 13 -> new XeqC(bool(), rnd.nextInt(2));
+        case 13 ->
+            rnd.nextBoolean()
+                ? new XeqC(bool(), rnd.nextInt(2))
+                : new CountVar(pick(x, 3), p[0], p[1]);
         case 14 -> new Not(primitive(depth - 1));
         case 15 -> new Or(primitive(depth - 1), primitive(depth - 1));
         case 16 -> new And(primitive(depth - 1), primitive(depth - 1));

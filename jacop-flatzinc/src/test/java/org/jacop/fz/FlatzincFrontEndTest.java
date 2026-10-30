@@ -371,6 +371,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void allSolutionsAreReportedOnceWhenProbingFixesTheOutputVariables() throws IOException {
+    // Root probing of presolve fixes x (x = 1 forces y = 2 > x). With every output variable fixed
+    // the front end labelled every variable instead, so x = 2 was reported once for each
+    // assignment of z, b1 and b2, which are not output variables (hakank_kaprekars_constant2).
+    String fzn =
+        """
+        var 1..2: x:: output_var;
+        var 1..2: y;
+        var 1..3: z;
+        var bool: b1;
+        var bool: b2;
+        constraint int_ne(x,y);
+        constraint int_le(y,x);
+        constraint int_le_imp(z,1,b1);
+        constraint int_ge_imp(z,3,b2);
+        constraint bool_clause([b1,b2],[]);
+        solve :: int_search([x], input_order, indomain_min, complete) satisfy;
+        """;
+
+    assertEquals(List.of("x = 2;"), solveAllInOrder(fzn, "--presolve", "on"));
+    assertEquals(List.of("x = 2;"), solveAllInOrder(fzn, "--presolve", "off"));
+  }
+
+  @Test
   void twoImplicationsOfTheSameEqualityKeepTheirBooleansIndependent() throws IOException {
     // int_eq_imp(x,0,a) and int_eq_imp(x,0,b) were collected as one channel and a = b was posted,
     // as for reifications; with a false and the clause a \/ b the 2021 Challenge model
@@ -1502,6 +1526,7 @@ class FlatzincFrontEndTest {
       for (int i = 0; i < n; i++) {
         model.append("var 0..2: x%d;\n".formatted(i));
       }
+      model.append("var -1000..1000: s;\n");
       model.append("var -1000..1000: obj :: output_var;\n");
       for (int i = 0; i < n; i++) {
         model.append("constraint int_le(x%d, y%d);\n".formatted(i, i % 6));
@@ -1523,7 +1548,9 @@ class FlatzincFrontEndTest {
       }
       model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[0], xs, 20 + 3 * run));
       model.append("constraint int_lin_le([%s], [%s], %d);\n".formatted(ws[1], xs, 30 - run));
-      model.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(ws[2], xs));
+      // the objective is not a term of the long sum, which would then stay whole
+      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);\n".formatted(ws[2], xs));
+      model.append("constraint int_lin_eq([1,1,-1], [s,y0,obj], 0);\n");
       model.append(
           "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
               .formatted(run % 2 == 0 ? "minimize" : "maximize"));
@@ -2082,14 +2109,17 @@ class FlatzincFrontEndTest {
     return new TreeSet<>(solveAllInOrder(model));
   }
 
-  private List<String> solveAllInOrder(String model) throws IOException {
+  private List<String> solveAllInOrder(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
-      new Fz2jacop().callMain(new String[] {"-a", fzn.toString()});
+      List<String> args = new ArrayList<>(List.of("-a"));
+      args.addAll(Arrays.asList(options));
+      args.add(fzn.toString());
+      new Fz2jacop().callMain(args.toArray(new String[0]));
     } finally {
       System.setOut(originalOut);
     }
