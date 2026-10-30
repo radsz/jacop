@@ -542,7 +542,8 @@ public final class CdclSolver {
    *
    * @param lit a DIMACS literal
    * @return the literals it implies, in the order assigned; null when it leads to a conflict, so
-   *     its negation holds in every solution; empty when it is already true at the root
+   *     its negation holds in every solution; empty when it is already true at the root, or when
+   *     the deadline stops the propagation of the root
    */
   public int[] probe(int lit) {
     if (!ok) {
@@ -560,6 +561,12 @@ public final class CdclSolver {
       if (propagateAll() != NO_CONFLICT) {
         ok = false;
         return null;
+      }
+      if (outOfTime) {
+        // the root is not at its fixpoint: a decision now would take the rest of the root's
+        // consequences to its level, and they would be undone with it
+        outOfTime = false;
+        return new int[0];
       }
       if (vals[l] != 0) {
         return vals[l] > 0 ? new int[0] : null;
