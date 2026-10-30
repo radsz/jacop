@@ -43,9 +43,17 @@ import org.jacop.lcg.EntryList;
  * Explanations of a layered graph constraint by cuts. With the domains just before an entry, F is
  * the set of nodes reachable from level 0 up to the entry's level i and B the set of nodes from
  * which the last level is reachable down from level i + 1. A value v is gone from the i-th variable
- * when no edge of level i labelled v leads from F to B, and the reason is the removal of the labels
- * of the edges leaving F before level i and entering B after it. A failure is the last level
- * unreachable, explained by the edges leaving the reachable nodes.
+ * when no edge of level i labelled v leads from F to B: each such edge has its source outside F or
+ * its target outside B. The reason keeps those sources unreachable by the nearest cut: walking back
+ * from them, an edge into a node that must stay unreachable is cut by the removal of its label when
+ * its label is gone, and otherwise its source must stay unreachable too. The targets are kept away
+ * from the last level the same way, walking forward. Only the edges that lead to the explained ones
+ * are cited, not every edge leaving F (Gange, Stuckey and Szymanek, MDD propagators with
+ * explanation, Constraints 2011). The cut nearest to level i is not always the smallest: the walk
+ * may also go on through nodes that are unreachable anyway, to cut nearer level 0 (or the last
+ * level). Those two walks and the two ways to cut an edge cut on both sides give four reasons, and
+ * the shortest is kept. A failure is the last level unreachable, explained the same way from the
+ * last level back or from level 0 forward.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -203,9 +211,110 @@ final class LayeredGraphExplanation {
         out.add(h.getValue());
       }
     }
-    addForwardCut(forward, i, out);
-    addBackwardCut(backward, i + 1, out);
+    EntryList[] reasons = new EntryList[4];
+    for (int c = 0; c < 4; c++) {
+      reasons[c] = new EntryList();
+      addCut(forward, backward, i, lo, hi, own, c < 2, (c & 1) == 0, reasons[c]);
+    }
+    addShortest(reasons, out);
     return true;
+  }
+
+  // adds the one of the reasons with the fewest distinct entries
+  private static void addShortest(EntryList[] reasons, EntryList out) {
+    EntryList shortest = null;
+    for (EntryList r : reasons) {
+      r.sortUnique(0);
+      if (shortest == null || r.size() < shortest.size()) {
+        shortest = r;
+      }
+    }
+    for (int k = 0; k < shortest.size(); k++) {
+      out.add(shortest.get(k));
+    }
+  }
+
+  // the cuts that keep each edge of level i with a value in [lo, hi] off every path, by its source
+  // when that is unreachable (preferred when both are, if viaSource) or by its target; the cuts
+  // nearest to level i, or else those nearest to the ends
+  private void addCut(
+      boolean[][] forward,
+      boolean[][] backward,
+      int i,
+      int lo,
+      int hi,
+      Before own,
+      boolean viaSource,
+      boolean nearest,
+      EntryList out) {
+    boolean[] unreachable = new boolean[graph.levelNodes[i]];
+    boolean[] deadEnd = new boolean[graph.levelNodes[i + 1]];
+    for (int k = graph.levelStart[i]; k < graph.levelStart[i + 1]; k++) {
+      int v = graph.value[k];
+      if (v >= lo && v <= hi && own.contains(v)) {
+        boolean bySource = !forward[i][graph.source[k]];
+        if (bySource && (viaSource || backward[i + 1][graph.target[k]])) {
+          unreachable[graph.source[k]] = true;
+        } else {
+          deadEnd[graph.target[k]] = true;
+        }
+      }
+    }
+    addForwardCut(unreachable, i, nearest ? null : forward, out);
+    addBackwardCut(deadEnd, i + 1, nearest ? null : backward, out);
+  }
+
+  // the removals that keep the nodes of a level marked unreachable from level 0: walking back, an
+  // edge into a marked node is cut by its label's removal, or else its source is marked; with the
+  // forward reachability given, a source that is unreachable is marked even when the label is gone
+  private void addForwardCut(boolean[] unreachable, int level, boolean[][] forward, EntryList out) {
+    boolean[] marked = unreachable;
+    for (int l = level - 1; l >= 0; l--) {
+      boolean[] sources = new boolean[graph.levelNodes[l]];
+      boolean any = false;
+      Before d = before(list[l]);
+      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
+        if (marked[graph.target[k]]) {
+          if (d.contains(graph.value[k]) || forward != null && !forward[l][graph.source[k]]) {
+            sources[graph.source[k]] = true;
+            any = true;
+          } else {
+            d.addRemoval(graph.value[k], out);
+          }
+        }
+      }
+      if (!any) {
+        return;
+      }
+      marked = sources;
+    }
+  }
+
+  // the removals that keep the nodes of a level marked away from the last level: walking forward,
+  // an edge out of a marked node is cut by its label's removal, or else its target is marked; with
+  // the backward reachability given, a target that is a dead end is marked even when the label is
+  // gone
+  private void addBackwardCut(boolean[] deadEnd, int level, boolean[][] backward, EntryList out) {
+    boolean[] marked = deadEnd;
+    for (int l = level; l < graph.levels; l++) {
+      boolean[] targets = new boolean[graph.levelNodes[l + 1]];
+      boolean any = false;
+      Before d = before(list[l]);
+      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
+        if (marked[graph.source[k]]) {
+          if (d.contains(graph.value[k]) || backward != null && !backward[l + 1][graph.target[k]]) {
+            targets[graph.target[k]] = true;
+            any = true;
+          } else {
+            d.addRemoval(graph.value[k], out);
+          }
+        }
+      }
+      if (!any) {
+        return;
+      }
+      marked = targets;
+    }
   }
 
   /**
@@ -221,9 +330,20 @@ final class LayeredGraphExplanation {
         return false;
       }
     }
-    int mark = out.size();
-    addForwardCut(forward, graph.levels, out);
-    out.sortUnique(mark);
+    boolean[][] backward = backward(0);
+    boolean[] last = new boolean[graph.levelNodes[graph.levels]];
+    Arrays.fill(last, true);
+    boolean[] first = new boolean[graph.levelNodes[0]];
+    Arrays.fill(first, true);
+    EntryList[] reasons = new EntryList[4];
+    for (int c = 0; c < 4; c++) {
+      reasons[c] = new EntryList();
+    }
+    addForwardCut(last, graph.levels, null, reasons[0]);
+    addForwardCut(last, graph.levels, forward, reasons[1]);
+    addBackwardCut(first, 0, null, reasons[2]);
+    addBackwardCut(first, 0, backward, reasons[3]);
+    addShortest(reasons, out);
     return true;
   }
 
@@ -263,29 +383,5 @@ final class LayeredGraphExplanation {
       }
     }
     return reached;
-  }
-
-  // the removals of the labels of edges leaving the reached nodes before level upTo
-  private void addForwardCut(boolean[][] reached, int upTo, EntryList out) {
-    for (int l = 0; l < upTo; l++) {
-      Before d = before(list[l]);
-      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
-        if (reached[l][graph.source[k]] && !reached[l + 1][graph.target[k]]) {
-          d.addRemoval(graph.value[k], out);
-        }
-      }
-    }
-  }
-
-  // the removals of the labels of edges entering the reached nodes from level from on
-  private void addBackwardCut(boolean[][] reached, int from, EntryList out) {
-    for (int l = from; l < graph.levels; l++) {
-      Before d = before(list[l]);
-      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
-        if (!reached[l][graph.source[k]] && reached[l + 1][graph.target[k]]) {
-          d.addRemoval(graph.value[k], out);
-        }
-      }
-    }
   }
 }

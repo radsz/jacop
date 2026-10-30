@@ -535,12 +535,22 @@ public class LinearIntDom extends LinearInt {
           trail.atomsBefore((IntVar) v, entry, out);
         }
       }
-      if (kind == AtomicTrail.GE) {
-        trail.addLowerBound(y, entry, out);
-        trail.addSkippedHoles(entry, Integer.MIN_VALUE, out);
-      } else if (kind == AtomicTrail.LE) {
-        trail.addUpperBound(y, entry, out);
-        trail.addSkippedHoles(entry, Integer.MAX_VALUE, out);
+      if (kind != AtomicTrail.NE) {
+        // every value of y on the far side of the new bound is either unsupported by the other
+        // domains or a hole, and a hole may well have a support in them: the reason holds all
+        // the holes, not only those next to the bound (as for a bound computed by a propagator)
+        int v = trail.value(entry);
+        EntryList own = new EntryList();
+        trail.atomsBefore(y, entry, own);
+        for (int k = 0; k < own.size(); k++) {
+          int atom = own.get(k);
+          int atomKind = trail.kind(atom);
+          if (kind == AtomicTrail.GE
+              ? atomKind == AtomicTrail.GE || atomKind == AtomicTrail.NE && trail.value(atom) < v
+              : atomKind == AtomicTrail.LE || atomKind == AtomicTrail.NE && trail.value(atom) > v) {
+            out.add(atom);
+          }
+        }
       }
       return true;
     }

@@ -97,6 +97,11 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
    */
   public T getChoiceVariable(int index) {
 
+    if (searchVariables.length == 0) {
+      // no variables to label: the current node is a solution
+      return null;
+    }
+
     if (ASSERTS_ENABLED && index >= searchVariables.length) {
       throw new IllegalStateException("Assertion failed");
     }

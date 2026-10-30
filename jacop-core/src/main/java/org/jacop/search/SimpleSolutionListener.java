@@ -259,19 +259,14 @@ public class SimpleSolutionListener<T extends Var> implements SolutionListener<T
   @SuppressWarnings("unchecked")
   private void initializeVarsFromSelect(SelectChoicePoint<T> select) {
     Map<T, Integer> position = select.getVariablesMapping();
-    if (position.isEmpty()) {
-      vars = null;
-    } else {
-      T[] array = (T[]) Array.newInstance(Var.class, position.size());
-      vars = array;
-      for (Map.Entry<T, Integer> entry : position.entrySet()) {
-        vars[entry.getValue()] = entry.getKey();
-      }
+    // a search over no variables still finds a solution, an empty one
+    T[] array = (T[]) Array.newInstance(Var.class, position.size());
+    vars = array;
+    for (Map.Entry<T, Integer> entry : position.entrySet()) {
+      vars[entry.getValue()] = entry.getKey();
     }
-    if (vars != null) {
-      solutions = new Domain[1][vars.length];
-      parentSolutionNo = new int[1];
-    }
+    solutions = new Domain[1][vars.length];
+    parentSolutionNo = new int[1];
   }
 
   private boolean executeChildrenAndCheckLimit(Search<T> search, SelectChoicePoint<T> select) {
