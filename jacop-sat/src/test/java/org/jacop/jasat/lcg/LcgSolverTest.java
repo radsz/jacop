@@ -2741,6 +2741,70 @@ class LcgSolverTest {
   }
 
   /**
+   * Makespan problems whose tasks trade duration for resource use (d + r fixed per task), so that
+   * the cumulative prunes upper bounds of durations and resource uses. The optimum agrees with
+   * depth-first search, every explanation is checked, and the cumulative explains every bound it
+   * prunes itself.
+   */
+  @Test
+  void variableTasksAgreeWithSearch() {
+    Random rnd = new Random(13);
+    long reasons = 0;
+    long generic = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 8; instance++) {
+      int n = 5 + rnd.nextInt(3);
+      int horizon = 20;
+      int limit = 4 + rnd.nextInt(2);
+      int[] c = new int[n];
+      for (int i = 0; i < n; i++) {
+        c[i] = 3 + rnd.nextInt(4);
+      }
+      int[] optimum = new int[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] ends = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, 0, horizon);
+          durations[i] = new IntVar(store, "d" + i, 1, c[i] - 1);
+          resources[i] = new IntVar(store, "r" + i, 1, Math.min(limit, c[i] - 1));
+          ends[i] = new IntVar(store, "e" + i, 0, horizon);
+          store.impose(new XplusYeqC(durations[i], resources[i], c[i]));
+          store.impose(new XplusYeqZ(s[i], durations[i], ends[i]));
+        }
+        IntVar makespan = new IntVar(store, "makespan", 0, horizon);
+        store.impose(new Max(ends, makespan));
+        store.impose(new Cumulative(s, durations, resources, new IntVar(store, limit, limit)));
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          IntVar[] vars = new IntVar[2 * n];
+          System.arraycopy(durations, 0, vars, 0, n);
+          System.arraycopy(s, 0, vars, n, n);
+          assertThat(
+                  search.labeling(
+                      store, new SimpleSelect<>(vars, null, new IndomainMin<>()), makespan))
+              .isTrue();
+          optimum[0] = search.getCostValue();
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          assertThat(solver.minimize(makespan)).isEqualTo(CdclSolver.SAT);
+          optimum[1] = solver.value(makespan);
+          long[] counts = solver.explanationStatistics().get("Cumulative");
+          reasons += counts[0];
+          generic += counts[1];
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(reasons).isPositive();
+    assertThat(generic).as("generic reasons of %d", reasons).isZero();
+  }
+
+  /**
    * An equality, decided during search, between a variable of a million values and one of five
    * (liner-sf-repositioning fm3_5): the large variable takes only the bounds of the small one, not
    * a million holes, each a {@code !=} atom with its own literals.
@@ -3045,6 +3109,86 @@ class LcgSolverTest {
     assertThat(solver.value(obj)).isEqualTo(5);
     assertThat(solver.coreSearch().termCount()).isEqualTo(4);
     assertThat(solver.coreSearch().proved).isTrue();
+  }
+
+  @Test
+  void coreGuidedSearchJumpsOverHolesOfTheTerms() {
+    // cost variables of two values, 0 and 10, as jp-encoding's: a soft literal per level would
+    // need a core for each of the ten levels; one for the whole hole needs one
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      IntervalDomain dom = new IntervalDomain(0, 0);
+      dom.unionAdapt(10, 10);
+      x[i] = new IntVar(store, "x" + i, dom);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 40);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], obj}, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, ">=", 1));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3]}, new int[] {1, 1}, ">=", 1));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(20);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().cores).isLessThanOrEqualTo(2);
+  }
+
+  @Test
+  void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
+    // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
+    // objective over cost variables next to its definition: the y's bound obj by 6 at the root
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 10);
+    IntVar b = new IntVar(store, "b", 0, 10);
+    IntVar[] y = new IntVar[2];
+    for (int i = 0; i < 2; i++) {
+      IntervalDomain dom = new IntervalDomain(3, 3);
+      dom.unionAdapt(5, 5);
+      y[i] = new IntVar(store, "y" + i, dom);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    store.impose(new LinearInt(new IntVar[] {a, b, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {y[0], y[1], obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new XneqY(y[0], y[1]));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(8);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().cores).isLessThanOrEqualTo(1);
+  }
+
+  @Test
+  void coreGuidedSearchStratifiesByHalvingTheWeight() {
+    // sixteen distinct weights: a stratum per weight costs a solution each, halving the threshold
+    // gives five strata
+    Store store = new Store();
+    IntVar[] x = new IntVar[16];
+    int[] w = new int[17];
+    for (int i = 0; i < 16; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      w[i] = 100 + i;
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 2000);
+    IntVar[] terms = Arrays.copyOf(x, 17);
+    terms[16] = obj;
+    w[16] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    for (int i = 0; i < 16; i += 2) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(856);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().stratumSolutions).isLessThan(8);
   }
 
   /**

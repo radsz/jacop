@@ -51,9 +51,6 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
-  boolean imposed;
-  Store store;
-
   private final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
@@ -132,14 +129,11 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
   @Override
   public void impose(Store store) {
 
-    this.store = store;
     super.impose(store);
-    imposed = true;
   }
 
   @Override
   public void include(Store store) {
-    this.store = store;
     super.include(store);
   }
 

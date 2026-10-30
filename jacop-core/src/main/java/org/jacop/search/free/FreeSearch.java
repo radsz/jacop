@@ -136,6 +136,9 @@ public final class FreeSearch {
   /** The growth of the fail limit from one run to the next in {@link #withDefaults}. */
   public static final double DEFAULT_RESTART_BASE = 1.5;
 
+  /** The failures of a run that replays a solution found elsewhere. */
+  public static final long IMPORT_FAIL_LIMIT = 100;
+
   private final Store store;
   private final SelectChoicePoint<? extends Var> mainSelect;
   private final SelectChoicePoint<? extends Var> alternative;
@@ -156,6 +159,11 @@ public final class FreeSearch {
   private final List<SearchMonitor> monitors;
   private final Consumer<FreeSearch> solutionHandler;
   private final IntSupplier sharedBound;
+  // a better solution found elsewhere is replayed in a run of its own, with the bound at its value
+  private final SharedSolution sharedSolution;
+  private int importedObjective;
+  private boolean importing;
+  private long importRuns;
   private final boolean learnNogoods;
   private final int maxNogoods;
   private final int maxNogoodLength;
@@ -235,6 +243,7 @@ public final class FreeSearch {
     monitors = List.copyOf(builder.monitors);
     solutionHandler = builder.solutionHandler;
     sharedBound = cost == null ? null : builder.sharedBound;
+    importedObjective = maximize ? Integer.MIN_VALUE : Integer.MAX_VALUE;
     learnNogoods = builder.nogoods && restarts != null;
     maxNogoods = builder.maxNogoods;
     maxNogoodLength = builder.maxNogoodLength;
@@ -245,6 +254,9 @@ public final class FreeSearch {
     lnsFailLimit = builder.lnsFailLimit;
     probeShare = hook == null && cost != null && restarts != null ? builder.probeShare : 0;
     probeLimit = builder.probeFailLimit;
+    // the model's own runs fix their variables at the root of each run
+    sharedSolution =
+        hook == null && cost != null && restarts != null ? builder.sharedSolution : null;
   }
 
   /**
@@ -340,13 +352,15 @@ public final class FreeSearch {
       if (probeShare > 0 && !store.consistency()) {
         return true;
       }
-      probing = startProbe();
+      importing = startImport();
+      boolean importRun = importing;
+      probing = !importRun && startProbe();
       boolean probe = probing;
-      select = probe ? mainSelect : branchingOfRun();
+      select = probe || importRun ? mainSelect : branchingOfRun();
       // the time before the first solution is not shared with neighbourhoods, nor that of probes
-      boolean afterSolution = !probe && lns != null && lns.ready();
+      boolean afterSolution = !probe && !importRun && lns != null && lns.ready();
       boolean lnsRun = afterSolution && lnsNanos < lnsShare * searchNanos;
-      conditionalRun = !probe && (lnsRun || hook != null);
+      conditionalRun = !probe && (importRun || lnsRun || hook != null);
       long start = System.nanoTime();
       RunEnd end;
       if (conditionalRun) {
@@ -376,6 +390,13 @@ public final class FreeSearch {
       restartCount++;
       int depth = stackSize;
       unwind();
+      if (importRun) {
+        // like a probe, it is not a run of the restart policy nor of the heuristics
+        importing = false;
+        store.removeLevel(rootLevel + 1);
+        store.setLevel(rootLevel);
+        continue;
+      }
       if (probe) {
         // the nogoods of a probe hold only under its bound on the objective, and the monitors
         // count restarts of the regular runs (dom/wdeg flushes its weights every k of them)
@@ -401,6 +422,28 @@ public final class FreeSearch {
         }
       }
     }
+  }
+
+  /**
+   * Decides whether the next run replays a solution found elsewhere: one better than the best of
+   * this search and not replayed before. Its run looks for solutions as good as it, not better, so
+   * that the replayed solution becomes the best of this search.
+   */
+  private boolean startImport() {
+    if (sharedSolution == null) {
+      return false;
+    }
+    int shared = sharedSolution.objective();
+    if (shared == (maximize ? Integer.MIN_VALUE : Integer.MAX_VALUE)
+        || shared == importedObjective
+        || (solutions > 0 && (maximize ? shared <= lastCost : shared >= lastCost))) {
+      return false;
+    }
+    importedObjective = shared;
+    importRuns++;
+    hasBound = true;
+    bound = shared;
+    return true;
   }
 
   /**
@@ -490,7 +533,9 @@ public final class FreeSearch {
     }
     store.setLevel(rootLevel + 1);
     try {
-      if (lnsRun) {
+      if (importing) {
+        sharedSolution.impose(store);
+      } else if (lnsRun) {
         lnsRuns++;
         IntVar[] xs = lns.variables();
         for (int k : lns.neighbourhood()) {
@@ -647,6 +692,9 @@ public final class FreeSearch {
     if (probing) {
       return probeLimit;
     }
+    if (importing) {
+      return IMPORT_FAIL_LIMIT;
+    }
     return conditionalRun && hook == null ? lnsFailLimit : restarts.getFailLimit();
   }
 
@@ -787,7 +835,7 @@ public final class FreeSearch {
   /** Imposes the objective bound and propagates the current node. */
   private boolean propagate() {
     nodes++;
-    if (sharedBound != null) {
+    if (sharedBound != null && !importing) {
       importBound();
     }
     if (hasBound || probing) {
@@ -1028,6 +1076,15 @@ public final class FreeSearch {
   }
 
   /**
+   * Returns the number of runs that replayed a solution found elsewhere.
+   *
+   * @return the number of runs.
+   */
+  public long getImportRuns() {
+    return importRuns;
+  }
+
+  /**
    * Returns the number of runs in large neighbourhoods.
    *
    * @return the number of runs.
@@ -1075,6 +1132,7 @@ public final class FreeSearch {
     private final List<SearchMonitor> monitors = new ArrayList<>();
     private Consumer<FreeSearch> solutionHandler;
     private IntSupplier sharedBound;
+    private SharedSolution sharedSolution;
     private boolean nogoods;
     private int maxNogoods = RestartNoGoods.DEFAULT_MAX_NOGOODS;
     private int maxNogoodLength = RestartNoGoods.DEFAULT_MAX_LENGTH;
@@ -1350,6 +1408,22 @@ public final class FreeSearch {
      */
     public Builder sharedBound(IntSupplier bound) {
       this.sharedBound = bound;
+      return this;
+    }
+
+    /**
+     * For optimisation with restarts, replays a solution found outside this search when it is
+     * better than the best one of this search: a run of its own fixes the variables to their values
+     * in it and searches for at most {@value FreeSearch#IMPORT_FAIL_LIMIT} failures. The replayed
+     * solution then becomes the best of this search, from which its large neighbourhoods and the
+     * values of the last solution start. Usually given with {@link #sharedBound(IntSupplier)} for
+     * the same source.
+     *
+     * @param solution the best solution found elsewhere.
+     * @return this builder.
+     */
+    public Builder sharedSolution(SharedSolution solution) {
+      this.sharedSolution = solution;
       return this;
     }
 

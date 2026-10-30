@@ -1320,20 +1320,6 @@ public abstract class IntDomain extends Domain {
   }
 
   /**
-   * Returns the total number of constraints attached to this domain across all event types.
-   *
-   * @return the number of constraints attached to this domain.
-   */
-  public int noConstraints() {
-    return searchConstraintsToEvaluate
-        + modelConstraintsToEvaluate[GROUND]
-        + modelConstraintsToEvaluate[BOUND]
-        + modelConstraintsToEvaluate[ANY]
-        + modelConstraintsToEvaluate[MIN_EVENT]
-        + modelConstraintsToEvaluate[MAX_EVENT];
-  }
-
-  /**
    * Creates a copy of the modelConstraints array with the specified pruning event array replaced.
    *
    * @param pruningEvent the pruning event index
@@ -1725,27 +1711,6 @@ public abstract class IntDomain extends Domain {
     }
 
     return 0;
-  }
-
-  /**
-   * It returns the number of elements smaller than el.
-   *
-   * @param el the element from which counted elements must be smaller than.
-   * @return the number of elements which are smaller than the provided element el.
-   */
-  public int elementsSmallerThan(int el) {
-
-    int counter = -1;
-
-    int value = el - 1;
-
-    while (value != el) {
-      value = el;
-      el = previousValue(el);
-      counter++;
-    }
-
-    return counter;
   }
 
   /**

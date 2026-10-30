@@ -77,10 +77,6 @@ class IntRectangle {
     dim++;
   }
 
-  int dim() {
-    return dim;
-  }
-
   public boolean domOverlap(Rectangle rect) {
     boolean overlap = true;
     int min1;
@@ -102,14 +98,6 @@ class IntRectangle {
 
   boolean intervalOverlap(int min1, int max1, int min2, int max2) {
     return min1 < max2 && max1 > min2;
-  }
-
-  int length(int i) {
-    return lengths[i];
-  }
-
-  int origin(int i) {
-    return origins[i];
   }
 
   public boolean overlap(IntRectangle rect) {

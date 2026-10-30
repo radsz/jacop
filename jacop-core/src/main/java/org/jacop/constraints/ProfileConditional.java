@@ -206,10 +206,6 @@ class ProfileConditional extends ArrayList<ProfileItemCondition> {
     return i + 1;
   }
 
-  int max() {
-    return maxProfile;
-  }
-
   @Override
   public String toString() {
 

@@ -1,5 +1,5 @@
 /*
- * AbstractXplusYeq.java
+ * SharedSolution.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -28,33 +28,37 @@
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
 
-package org.jacop.constraints;
+package org.jacop.search.free;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.core.IntDomain;
+import org.jacop.core.FailException;
+import org.jacop.core.Store;
 
 /**
- * Abstract base for addition equality constraints (XplusCeqZ, XplusYeqC). Provides shared pruning
- * event configuration and common constraint patterns.
+ * A solution of the same model found outside a search, for example by another thread of a parallel
+ * portfolio. {@link FreeSearch} replays a better one in a short run of its own, so that its large
+ * neighbourhoods, phases and bound start from it.
  *
- * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @author Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractXplusYeq extends PrimitiveConstraint {
+public interface SharedSolution {
 
-  /** Shared ID counter for subclasses. */
-  protected static final AtomicInteger idNumber = new AtomicInteger(0);
+  /**
+   * Returns the objective value of the solution; {@link Integer#MAX_VALUE} when minimising ({@link
+   * Integer#MIN_VALUE} when maximising) as long as there is none. It is called from the thread of
+   * the search.
+   *
+   * @return the objective value of the solution.
+   */
+  int objective();
 
-  /** Checks for overflow in the constraint. */
-  protected abstract void checkForOverflow();
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.GROUND;
-  }
+  /**
+   * Fixes variables of the store to their values in the solution, at the store's current level,
+   * leaving out those whose value is not in their domain. The solution may be a better one than
+   * {@link #objective()} gave just before.
+   *
+   * @param store the store of the search.
+   * @throws FailException when fixing a variable fails.
+   */
+  void impose(Store store);
 }

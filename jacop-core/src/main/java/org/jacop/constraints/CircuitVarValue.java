@@ -62,10 +62,6 @@ class CircuitVarValue implements MutableVarValue {
     return val;
   }
 
-  public MutableVarValue previous() {
-    return nextCircuitVarValue;
-  }
-
   public void setPrevious(MutableVarValue nn) {
     nextCircuitVarValue = (CircuitVarValue) nn;
   }

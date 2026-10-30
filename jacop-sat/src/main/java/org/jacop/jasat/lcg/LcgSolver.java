@@ -378,6 +378,12 @@ public final class LcgSolver implements ExternalPropagator {
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
+    // after the first 1,000 conflicts in focused mode, stable mode for good: restarts are far
+    // rarer, and each costs the CP propagation back down. Under --lcg -f, on the 123 mznbench
+    // instances with at least 2,000 conflicts in 60 s, 23 better and 13 worse, 59 against 54 runs
+    // complete (three builds side by side); the other 126 instances barely reach stable mode
+    sat.setStableForGood(
+        Boolean.parseBoolean(System.getProperty("jacop.lcg.stableForGood", "true")));
     if (Boolean.getBoolean("jacop.lcg.check")) {
       checker = new ExplanationChecker(trail);
     }
@@ -857,9 +863,15 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
-   * deadline. A later run picks up where this one stopped. When extend is set, a run that ran out
-   * of its time while its lower bound, at its rate so far, would meet the best solution before the
-   * deadline gets another share of the time left.
+   * deadline. A later run picks up where this one stopped. When extend is set, a run that stopped
+   * while its lower bound, at its rate so far, would meet the best solution before the deadline
+   * gets another share of the time left. So does a run that stopped as too slow for the time left
+   * of its share once the run brought its lower bound half way to the best solution (jp-encoding
+   * data1000 stopped after 94 cores, 1,800 below the best solution and 2,800 above the bound the
+   * run started from, and is proved in 2 s more); further from it, branch and bound needs the time
+   * more (concert-hall-cap, 18,500 below and 3,500 above, lost its proof). A run that did not raise
+   * the bound is not extended (concert-hall-cap spent two extensions, half of the time left each,
+   * at one bound).
    */
   private int runCores(double share, long conflicts, boolean extend) {
     long deadline = sat.deadline();
@@ -890,9 +902,7 @@ public final class LcgSolver implements ExternalPropagator {
           extend
               && extension < MAX_CORE_EXTENSIONS
               && result == CdclSolver.UNKNOWN
-              && deadline != Long.MAX_VALUE
-              && System.nanoTime() >= sat.deadline()
-              && coreSearch.closing(deadline);
+              && extendCores(deadline);
           extension++) {
         now = System.nanoTime();
         sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
@@ -904,6 +914,17 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setDeadline(deadline);
       sat.setConflictLimit(Long.MAX_VALUE);
     }
+  }
+
+  /**
+   * Whether the core-guided run that just stopped gets another share of the time left before the
+   * given deadline, as {@link #runCores} describes.
+   */
+  private boolean extendCores(long deadline) {
+    if (deadline == Long.MAX_VALUE || !coreSearch.rose() || !coreSearch.closing(deadline)) {
+      return false;
+    }
+    return System.nanoTime() >= sat.deadline() || !coreSearch.exhausted() && coreSearch.halfWay();
   }
 
   /**
