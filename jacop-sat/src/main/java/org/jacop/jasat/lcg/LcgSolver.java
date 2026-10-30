@@ -358,6 +358,12 @@ public final class LcgSolver implements ExternalPropagator {
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
+    // after the first 1,000 conflicts in focused mode, stable mode for good: restarts are far
+    // rarer, and each costs the CP propagation back down. Under --lcg -f, on the 123 mznbench
+    // instances with at least 2,000 conflicts in 60 s, 23 better and 13 worse, 59 against 54 runs
+    // complete (three builds side by side); the other 126 instances barely reach stable mode
+    sat.setStableForGood(
+        Boolean.parseBoolean(System.getProperty("jacop.lcg.stableForGood", "true")));
     if (Boolean.getBoolean("jacop.lcg.check")) {
       checker = new ExplanationChecker(trail);
     }
