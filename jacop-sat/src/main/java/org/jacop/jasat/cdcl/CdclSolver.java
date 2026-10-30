@@ -128,6 +128,10 @@ public final class CdclSolver {
   private int trailSize;
   private int qhead;
   private int[] trailLim = new int[16];
+  // qhead when each level was opened: the external search may open a level before propagating
+  // (units asserted again by a backtrack), and those literals are propagated again after a
+  // backtrack to the level they were assigned at
+  private int[] qheadLim = new int[16];
   private int decisionLevel;
 
   // --- clauses
@@ -241,6 +245,13 @@ public final class CdclSolver {
   // learnt binary clauses, which live only in the watch lists, kept for inprocessing
   private int[] learntBinaries = new int[16];
   private int numLearntBinaries;
+  // clauses added or asserted above the level where they became unit: a watch is true (or
+  // asserted) at a higher level than the other, false, watch, so a backtrack between the two
+  // levels leaves them unit without a watch to visit; triples (reference, literal, literal), the
+  // literals only for a binary clause (reference BINARY), checked again after each backtrack
+  private int[] lowWatched = new int[24];
+  private int numLowWatched;
+  private boolean lowWatchedDue;
 
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
@@ -282,6 +293,8 @@ public final class CdclSolver {
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
   private DratWriter proof;
+  // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
+  private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
   /** Number of conflicts so far. */
   public long conflicts;
@@ -809,7 +822,9 @@ public final class CdclSolver {
   private void newDecisionLevel() {
     if (decisionLevel == trailLim.length) {
       trailLim = Arrays.copyOf(trailLim, 2 * trailLim.length);
+      qheadLim = Arrays.copyOf(qheadLim, trailLim.length);
     }
+    qheadLim[decisionLevel] = qhead;
     trailLim[decisionLevel++] = trailSize;
     if (notifying) {
       external.notifyNewDecisionLevel();
@@ -842,7 +857,7 @@ public final class CdclSolver {
       order.insert(v);
     }
     trailSize = kept;
-    qhead = start;
+    qhead = Math.min(start, qheadLim[target]);
     decisionLevel = target;
     if (rwasted > 0) {
       releaseReasons();
@@ -853,11 +868,19 @@ public final class CdclSolver {
     }
     lastAssumedLevel = Math.min(lastAssumedLevel, target);
     reassertUnits();
+    lowWatchedDue = numLowWatched > 0;
   }
 
   // ----------------------------------------------------------------------------- propagation
 
   private int propagate() {
+    if (lowWatchedDue) {
+      lowWatchedDue = false;
+      int c = propagateLowWatched();
+      if (c != NO_CONFLICT) {
+        return c;
+      }
+    }
     int conflict = NO_CONFLICT;
     final byte[] vals = this.vals;
     final int[] mem = this.mem;
@@ -962,6 +985,131 @@ public final class CdclSolver {
         return conflict;
       }
       watchSize[falseLit] = j;
+    }
+    return NO_CONFLICT;
+  }
+
+  /**
+   * Remembers a clause whose two watched literals a and b are one true and one false at a lower
+   * level: after a backtrack between the two levels it is unit, and no watch would visit it.
+   */
+  private void noteLowWatched(int ref, int a, int b) {
+    int t = vals[a] > 0 ? a : b;
+    int f = t == a ? b : a;
+    if (vals[t] <= 0 || vals[f] >= 0 || level[t >> 1] <= level[f >> 1]) {
+      return;
+    }
+    if (numLowWatched + 3 > lowWatched.length) {
+      lowWatched = Arrays.copyOf(lowWatched, 2 * lowWatched.length);
+    }
+    lowWatched[numLowWatched++] = ref;
+    lowWatched[numLowWatched++] = ref == BINARY ? a : -1;
+    lowWatched[numLowWatched++] = ref == BINARY ? b : -1;
+  }
+
+  /** As noteLowWatched for a clause of the arena, or a binary one given by its two literals. */
+  private void noteLowWatched(int ref, int[] c) {
+    if (ref >= 0) {
+      noteLowWatched(ref, mem[ref + HEADER], mem[ref + HEADER + 1]);
+    } else if (c.length == 2) {
+      noteLowWatched(BINARY, c[0], c[1]);
+    }
+  }
+
+  /**
+   * After a backtrack, visits the clauses of noteLowWatched: one that became unit asserts its
+   * literal, one whose false watch has a replacement is watched again, and one still at risk is
+   * kept.
+   *
+   * @return a conflict, or NO_CONFLICT
+   */
+  private int propagateLowWatched() {
+    int j = 0;
+    int conflict = NO_CONFLICT;
+    for (int i = 0; i < numLowWatched; i += 3) {
+      int ref = lowWatched[i];
+      int a = lowWatched[i + 1];
+      int b = lowWatched[i + 2];
+      if (conflict == NO_CONFLICT) {
+        if (ref >= 0) {
+          if ((mem[ref + META] & DELETED) != 0) {
+            continue;
+          }
+          conflict = visitLowWatched(ref);
+          a = mem[ref + HEADER];
+          b = mem[ref + HEADER + 1];
+        } else {
+          conflict = visitLowWatched(a, b);
+        }
+        if (conflict == NO_CONFLICT && !atRisk(a, b)) {
+          continue;
+        }
+      }
+      lowWatched[j++] = ref;
+      lowWatched[j++] = ref >= 0 ? -1 : a;
+      lowWatched[j++] = ref >= 0 ? -1 : b;
+    }
+    numLowWatched = j;
+    if (conflict != NO_CONFLICT) {
+      qhead = trailSize;
+    }
+    return conflict;
+  }
+
+  private boolean atRisk(int a, int b) {
+    int t = vals[a] > 0 ? a : b;
+    int f = t == a ? b : a;
+    return vals[t] > 0 && vals[f] < 0 && level[t >> 1] > level[f >> 1];
+  }
+
+  private int visitLowWatched(int a, int b) {
+    if (vals[a] < 0 && vals[b] < 0) {
+      conflictRef = BINARY_CONFLICT;
+      conflictLit0 = a;
+      conflictLit1 = b;
+      return BINARY_CONFLICT;
+    }
+    if (vals[a] < 0 && vals[b] == 0) {
+      assign(b, -2 - a);
+    } else if (vals[b] < 0 && vals[a] == 0) {
+      assign(a, -2 - b);
+    }
+    return NO_CONFLICT;
+  }
+
+  private int visitLowWatched(int ref) {
+    int lits = ref + HEADER;
+    int size = mem[ref + SIZE];
+    // both watches may be false: literals can be assigned between the backtrack and this visit
+    for (int w = 0; w < 2; w++) {
+      int falseLit = mem[lits + w];
+      if (vals[falseLit] >= 0) {
+        continue;
+      }
+      for (int k = 2; k < size; k++) {
+        int l = mem[lits + k];
+        if (vals[l] >= 0) {
+          mem[lits + w] = l;
+          mem[lits + k] = falseLit;
+          removeWatch(falseLit, ref);
+          addWatch(l, mem[lits + 1 - w], ref);
+          break;
+        }
+      }
+    }
+    int w0 = mem[lits];
+    int w1 = mem[lits + 1];
+    if (vals[w0] < 0 && vals[w1] < 0) {
+      conflictRef = ref;
+      return ref;
+    }
+    if (vals[w0] < 0) {
+      // the false watch second, as propagate keeps it
+      mem[lits] = w1;
+      mem[lits + 1] = w0;
+    }
+    if (vals[mem[lits]] == 0 && vals[mem[lits + 1]] < 0) {
+      assign(mem[lits], ref);
     }
     return NO_CONFLICT;
   }
@@ -1148,12 +1296,14 @@ public final class CdclSolver {
       if (n == 2) {
         addLearntBinary(c[0], c[1]);
         notifyKept(c, n);
+        noteLowWatched(BINARY, c[0], c[1]);
         r = -2 - c[1];
       } else if (n <= externalReasonKeep) {
         r = allocate(c, n, true, n);
         learnts = push(learnts, numLearnts++, r);
         attach(r);
         notifyKept(c, n);
+        noteLowWatched(r, c[0], c[1]);
       } else {
         r = pushReason(v, c, n);
       }
@@ -1685,6 +1835,16 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the position of a literal's variable on the trail.
+   *
+   * @param lit a DIMACS literal
+   * @return its position, or -1 when the variable is unassigned
+   */
+  public int trailPosition(int lit) {
+    return vals[toLit(lit)] == 0 ? -1 : trailPos[Math.abs(lit) - 1];
+  }
+
+  /**
    * Returns the number of assigned literals.
    *
    * @return the size of the trail
@@ -1715,6 +1875,9 @@ public final class CdclSolver {
       return false;
     }
     if (propagate() == NO_CONFLICT) {
+      if (checking) {
+        checkFixpoint();
+      }
       return true;
     }
     conflicts++;
@@ -1833,6 +1996,7 @@ public final class CdclSolver {
         bumpClause(ref);
       }
       assertIfUnit(c, ref);
+      noteLowWatched(ref, c);
     }
     if (conflicts >= nextReduce) {
       nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
@@ -1914,6 +2078,7 @@ public final class CdclSolver {
       return false;
     }
     assertIfUnit(c, ref);
+    noteLowWatched(ref, c);
     return true;
   }
 
@@ -2196,6 +2361,9 @@ public final class CdclSolver {
       if (decisionLevel == 0 && trailSize != simplifyAssigns && propagations >= simplifyProps) {
         simplifyDb();
       }
+      if (checking) {
+        checkFixpoint();
+      }
       int next = -1;
       while (decisionLevel < assumptions.length) {
         int a = assumptions[decisionLevel];
@@ -2394,10 +2562,12 @@ public final class CdclSolver {
     }
     int top = level[c[0] >> 1];
     if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
+      noteLowWatched(ref, c);
       return NO_CONFLICT;
     }
     if (vals[c[0]] == 0) {
       assign(c[0], ref == BINARY ? -2 - c[1] : ref);
+      noteLowWatched(ref, c);
       return NO_CONFLICT;
     }
     if (top == 0) {
@@ -2408,6 +2578,7 @@ public final class CdclSolver {
       // only c[0] is false at its level: it is implied one level lower
       backtrack(top - 1);
       assign(c[0], ref == BINARY ? -2 - c[1] : ref);
+      noteLowWatched(ref, c);
       return NO_CONFLICT;
     }
     backtrack(top);
@@ -3256,8 +3427,196 @@ public final class CdclSolver {
       }
       watchSize[lit] = j;
     }
+    int j = 0;
+    for (int i = 0; i < numLowWatched; i += 3) {
+      int ref = lowWatched[i];
+      if (ref < 0 || (mem[ref + META] & DELETED) == 0) {
+        lowWatched[j++] = ref < 0 ? ref : mem[ref + ACT];
+        lowWatched[j++] = lowWatched[i + 1];
+        lowWatched[j++] = lowWatched[i + 2];
+      }
+    }
+    numLowWatched = j;
     mem = to;
     memSize = top;
     wasted = 0;
+  }
+
+  // ---------------------------------------------------------------------------- self-check
+
+  /** Tests: checks the propagation invariants at every fixpoint (before a decision). */
+  void setChecking(boolean on) {
+    checking = on;
+  }
+
+  /**
+   * Checks, at a unit propagation fixpoint, that no clause is false or unit, that every attached
+   * clause is watched by its first two literals, and that every reason clause holds its literal
+   * first with the other literals false earlier on the trail and at no higher level.
+   *
+   * @throws IllegalStateException with the first violation found
+   */
+  void checkFixpoint() {
+    if (!ok || hasPending) {
+      return;
+    }
+    if (qhead != trailSize) {
+      throw new IllegalStateException("fixpoint with " + (trailSize - qhead) + " literals queued");
+    }
+    for (int i = 0; i < trailSize; i++) {
+      int lit = trail[i];
+      int v = lit >> 1;
+      if (vals[lit] <= 0 || vals[lit ^ 1] >= 0 || trailPos[v] != i) {
+        throw new IllegalStateException("trail entry " + i + " inconsistent: " + toDimacs(lit));
+      }
+      if (level[v] > decisionLevel) {
+        throw new IllegalStateException(toDimacs(lit) + " above the decision level");
+      }
+      int at = 0;
+      while (at < decisionLevel && trailLim[at] <= i) {
+        at++;
+      }
+      if (level[v] > at || (!chrono && level[v] != at)) {
+        throw new IllegalStateException(
+            toDimacs(lit) + " at level " + level[v] + " but in the trail of level " + at);
+      }
+      checkReason(lit, i);
+    }
+    int assigned = 0;
+    for (int v = 0; v < numVars; v++) {
+      if (vals[2 * v] != 0) {
+        assigned++;
+      }
+      if (vals[2 * v] != -vals[2 * v + 1]) {
+        throw new IllegalStateException("values of variable " + (v + 1) + " inconsistent");
+      }
+    }
+    if (assigned != trailSize) {
+      throw new IllegalStateException(assigned + " variables assigned, trail " + trailSize);
+    }
+    for (int pass = 0; pass < 2; pass++) {
+      int[] list = pass == 0 ? originals : learnts;
+      int n = pass == 0 ? numOriginals : numLearnts;
+      for (int i = 0; i < n; i++) {
+        int ref = list[i];
+        if ((mem[ref + META] & DELETED) != 0) {
+          continue;
+        }
+        checkWatched(ref);
+        checkClause(mem, ref + HEADER, mem[ref + SIZE], pass == 0 ? "original" : "learnt");
+      }
+    }
+    int[] pair = new int[2];
+    for (int l = 0; l < 2 * numVars; l++) {
+      for (int b = 0; b < binSize[l]; b++) {
+        pair[0] = l;
+        pair[1] = binWatches[l][b];
+        checkClause(pair, 0, 2, "binary");
+      }
+    }
+  }
+
+  private void checkWatched(int ref) {
+    for (int k = 0; k < 2; k++) {
+      int w = mem[ref + HEADER + k];
+      boolean found = false;
+      for (int i = 0; i < watchSize[w] && !found; i += 2) {
+        found = watches[w][i + 1] == ref;
+      }
+      if (!found) {
+        throw new IllegalStateException(
+            "clause "
+                + clauseText(mem, ref + HEADER, mem[ref + SIZE])
+                + " not watched by "
+                + toDimacs(w));
+      }
+    }
+  }
+
+  private void checkClause(int[] lits, int from, int size, String kind) {
+    int open = 0;
+    int unassigned = -1;
+    for (int k = from; k < from + size; k++) {
+      int l = lits[k];
+      if (eliminatedVar[l >> 1]) {
+        throw new IllegalStateException(
+            kind + " clause " + clauseText(lits, from, size) + " on an eliminated variable");
+      }
+      if (vals[l] > 0) {
+        return;
+      }
+      if (vals[l] == 0) {
+        open++;
+        unassigned = l;
+      }
+    }
+    if (open == 0) {
+      throw new IllegalStateException(
+          kind + " clause " + clauseText(lits, from, size) + " false at the fixpoint");
+    }
+    if (open == 1) {
+      throw new IllegalStateException(
+          kind
+              + " clause "
+              + clauseText(lits, from, size)
+              + " unit at the fixpoint (implies "
+              + toDimacs(unassigned)
+              + ", decision level "
+              + decisionLevel
+              + ")");
+    }
+  }
+
+  private void checkReason(int lit, int pos) {
+    int v = lit >> 1;
+    int r = reason[v];
+    if (r == NO_REASON || r == UNIT_REASON || r == EXTERNAL_REASON) {
+      return;
+    }
+    if (r < NO_REASON) {
+      int other = -2 - r;
+      boolean found = false;
+      for (int b = 0; b < binSize[lit] && !found; b++) {
+        found = binWatches[lit][b] == other;
+      }
+      if (!found) {
+        throw new IllegalStateException(
+            "binary reason " + toDimacs(lit) + " " + toDimacs(other) + " is not a clause");
+      }
+      checkAntecedent(lit, other, pos);
+      return;
+    }
+    int[] a = reasonArena(r);
+    int off = reasonOffset(r);
+    if (r >= STACK_REF ? a[off + META] != v : (a[off + META] & DELETED) != 0) {
+      throw new IllegalStateException("reason of " + toDimacs(lit) + " deleted");
+    }
+    if (a[off + HEADER] != lit) {
+      throw new IllegalStateException(
+          "reason "
+              + clauseText(a, off + HEADER, a[off + SIZE])
+              + " of "
+              + toDimacs(lit)
+              + " does not hold it first");
+    }
+    for (int k = 1; k < a[off + SIZE]; k++) {
+      checkAntecedent(lit, a[off + HEADER + k], pos);
+    }
+  }
+
+  private void checkAntecedent(int lit, int q, int pos) {
+    int u = q >> 1;
+    if (vals[q] >= 0 || trailPos[u] >= pos || level[u] > level[lit >> 1]) {
+      throw new IllegalStateException(
+          "reason of " + toDimacs(lit) + " has " + toDimacs(q) + " not false before it");
+    }
+  }
+
+  private static String clauseText(int[] lits, int from, int size) {
+    StringBuilder b = new StringBuilder("(");
+    for (int k = from; k < from + size; k++) {
+      b.append(k > from ? " " : "").append(toDimacs(lits[k]));
+    }
+    return b.append(')').toString();
   }
 }

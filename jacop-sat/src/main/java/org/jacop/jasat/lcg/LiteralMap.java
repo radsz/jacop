@@ -125,6 +125,56 @@ final class LiteralMap {
     return above < size ? literals[above] : NONE;
   }
 
+  /** Returns the smallest value at least v, or {@link Long#MAX_VALUE} when there is none. */
+  long ceilingValue(long v) {
+    if (byValue != null) {
+      long k = Math.max(v - min, 0);
+      if (k >= span) {
+        return Long.MAX_VALUE;
+      }
+      int w = (int) (k >>> 6);
+      long word = present[w] & (-1L << (k & 63));
+      while (word == 0) {
+        if (++w == present.length) {
+          return Long.MAX_VALUE;
+        }
+        word = present[w];
+      }
+      return (long) min + (w << 6) + Long.numberOfTrailingZeros(word);
+    }
+    if (v > Integer.MAX_VALUE) {
+      return Long.MAX_VALUE;
+    }
+    int k = Arrays.binarySearch(values, 0, size, (int) Math.max(v, Integer.MIN_VALUE));
+    k = k >= 0 ? k : -k - 1;
+    return k < size ? values[k] : Long.MAX_VALUE;
+  }
+
+  /** Returns the largest value at most v, or {@link Long#MIN_VALUE} when there is none. */
+  long floorValue(long v) {
+    if (byValue != null) {
+      long k = Math.min(v - min, span - 1);
+      if (k < 0) {
+        return Long.MIN_VALUE;
+      }
+      int w = (int) (k >>> 6);
+      long word = present[w] & (-1L >>> (63 - (k & 63)));
+      while (word == 0) {
+        if (--w < 0) {
+          return Long.MIN_VALUE;
+        }
+        word = present[w];
+      }
+      return (long) min + (w << 6) + 63 - Long.numberOfLeadingZeros(word);
+    }
+    if (v < Integer.MIN_VALUE) {
+      return Long.MIN_VALUE;
+    }
+    int k = Arrays.binarySearch(values, 0, size, (int) Math.min(v, Integer.MAX_VALUE));
+    int at = k >= 0 ? k : -k - 2;
+    return at >= 0 ? values[at] : Long.MIN_VALUE;
+  }
+
   /** Adds value v of the root domain, which must be absent, with its DIMACS variable (positive). */
   void put(int v, int literal) {
     if (byValue != null) {
