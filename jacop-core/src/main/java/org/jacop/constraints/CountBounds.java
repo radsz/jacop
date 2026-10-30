@@ -197,6 +197,6 @@ public class CountBounds extends AbstractCount
   @Override
   public long violation(ToIntFunction<IntVar> value) {
     int c = Violations.count(list, this.value, value);
-    return Math.max(0, lb - c) + Math.max(0, c - ub);
+    return Math.max(0L, (long) lb - c) + Math.max(0L, (long) c - ub);
   }
 }

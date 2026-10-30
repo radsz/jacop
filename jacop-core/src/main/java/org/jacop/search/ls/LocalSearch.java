@@ -1495,7 +1495,7 @@ public final class LocalSearch {
           bestVar = i;
           bestVal = v;
           ties = 1;
-        } else if (d == best && random.nextInt(++ties) == 0) {
+        } else if (Double.compare(d, best) == 0 && random.nextInt(++ties) == 0) {
           bestVar = i;
           bestVal = v;
         }
