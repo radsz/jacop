@@ -827,7 +827,23 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
-63. Presolve breaks value symmetries and orbitopes too (--presolve on|check,
+63. New decomposed constraint VectorBinpacking(bin, load, w, minBin) for
+    vector (multidimensional) bin packing: one Binpacking per dimension,
+    a Binpacking with cardinality rules on the surrogate dimension (the
+    sum of the dimensions scaled to a common capacity, Caprara and Toth
+    2001), and an Alldistinct on each clique of the conflict graph (items
+    that exceed the capacity of some dimension together, Gualandi and
+    Lombardi, CP 2013). The FlatZinc front end posts the surrogate
+    dimension for bin_packing constraints over the same bin variables, one
+    per dimension (-Dorg.jacop.fz.binPackingSurrogate=false turns it
+    off); the cliques are off by default
+    (-Dorg.jacop.fz.binPackingCliques=vector, or all, turns them on). On
+    75 random vector bin packing instances (30 s) the surrogate dimension
+    proved 62 optima instead of 49 with the model's search, 65 instead of
+    54 with free search and 59 instead of 44 with free search and --lcg;
+    the cliques proved no more.
+
+64. Presolve breaks value symmetries and orbitopes too (--presolve on|check,
     unless --symmetry off), in org.jacop.fz.SymmetryBreaking:
     - Value precedence. Integer variables whose values are only compared
       (int_eq/int_ne and x - y = 0 or != 0, all_different, all_equal,
@@ -857,7 +873,7 @@ Version 5.0 (unreleased)
     0.05 s on one model of each directory of jacop-benchmarks; value
     precedence fires on 38 of 1,926 and orbitopes on 101.
 
-64. Fewer SAT variables under --lcg. A value a constraint removes from
+65. Fewer SAT variables under --lcg. A value a constraint removes from
     inside a domain is now a transient [x = v] literal, released on
     backtracking unless a clause keeps it, as bound literals already were;
     before, each was linked to two new bound literals by four clauses.
@@ -873,7 +889,7 @@ Version 5.0 (unreleased)
     --lcg 19 better / 3 worse, --lcg -f 50 / 52 (two runs; noise level),
     with 15% fewer SAT variables at the median.
 
-65. Dead code removed (about 3,300 lines, no change in behaviour). Classes
+66. Dead code removed (about 3,300 lines, no change in behaviour). Classes
     nothing used: IntervalBasedBacktrackableManager and
     SimpleBacktrackableManager (the store always uses
     TrailBacktrackableManager), SwitchesPruningLogging (no-op tracing
