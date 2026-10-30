@@ -373,6 +373,41 @@ class AtomicTrailTest {
     return p == t[2];
   }
 
+  /**
+   * A start pushed past a compulsory part across a range whose values are all out already: the
+   * reason is the compulsory part, not one removal per value (carpet-cutting had cumulative reasons
+   * of 300 to 600 atoms this way).
+   */
+  @Test
+  void cumulativeStartAcrossRemovedValuesCitesTheCompulsoryPart() {
+    Store store = new Store();
+    IntVar s = new IntVar(store, "s", 0, 300);
+    IntVar b = new IntVar(store, "b", 50, 60);
+    IntVar one = new IntVar(store, 1, 1);
+    IntVar[] durations = {new IntVar(store, 10, 10), new IntVar(store, 60, 60)};
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new Cumulative(new IntVar[] {s, b}, durations, new IntVar[] {one, one}, one));
+    store.setLevel(store.level + 1);
+    s.domain.inMin(store.level, s, 51);
+    for (int v = 52; v <= 105; v++) {
+      s.domain.inComplement(store.level, s, v);
+    }
+    assertThat(store.consistency()).isTrue();
+    assertThat(s.min()).isEqualTo(110);
+    int entry = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == s && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 110) {
+        entry = e;
+      }
+    }
+    assertThat(entry).isNotNegative();
+    EntryList reason = new EntryList();
+    trail.explain(entry, reason);
+    reason.sortUnique(0);
+    assertThat(reason.size()).isLessThanOrEqualTo(2);
+    trail.detach();
+  }
+
   @Test
   void atomsRebuildDomainsAndReasonsAreSound() {
     Random rnd = new Random(7);

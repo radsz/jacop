@@ -806,6 +806,19 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
+62. Shorter Cumulative explanations under --lcg. Explaining a start bound
+    walks over the starts it removed; where those starts had been removed
+    already, it cited one removal per value, so on carpet-cutting some
+    reasons had 300 to 600 atoms. A compulsory part that rules out the
+    same starts is now cited instead when it takes fewer atoms. Energy
+    window reasons keep only the tasks the window's excess needs, each
+    with its start bounds lifted to the overlap it must have. carpet-
+    cutting test.20: 59 to 10 atoms per Cumulative reason (--lcg), 75 to
+    10 (--lcg -f). Paired runs against item 56 alone: --lcg 60 s 8 better
+    and 1 worse, --lcg -f 30 s with seeds 1 to 3 34 better and 11 worse,
+    with new proofs on rcpsp_08, smelt_3 and rcpsp-wet j60_36_8.
+    -Djacop.lcg.windowLift=false keeps the full window reasons.
+
 Version 4.11
 =============
 
