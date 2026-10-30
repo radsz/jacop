@@ -802,13 +802,16 @@ public class LinearRelaxation extends Constraint
       if (lambda == null) {
         return;
       }
-      LinearForm[] combined = combine(lambda);
-      for (LinearForm f : combined) {
-        if (f != null) {
-          propagate(store, f);
+      Aggregate g = aggregate(lambda);
+      if (g != null) {
+        for (LinearForm f : combine(g)) {
+          if (f != null) {
+            propagate(store, f);
+          }
         }
+        return;
       }
-      return;
+      // the combination overflows: try a smaller scale
     }
   }
 
@@ -1057,13 +1060,9 @@ public class LinearRelaxation extends Constraint
 
   /**
    * Returns the two inequalities of the combination {@code sum lambda_i a_i x}, each as {@code <=}
-   * (one of them may be null when a row lacks the side it needs), or null on overflow.
+   * (one of them may be null when a row lacks the side it needs).
    */
-  private LinearForm[] combine(long[] lambda) {
-    Aggregate g = aggregate(lambda);
-    if (g == null) {
-      return new LinearForm[0];
-    }
+  private LinearForm[] combine(Aggregate g) {
     long[] coef = g.coef();
     int size = 0;
     for (long c : coef) {

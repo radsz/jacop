@@ -105,20 +105,49 @@ public class NetworkFlow extends Constraint
   /**
    * The network as built, before any propagation changes the nodes and arcs: nodes by name and
    * balance, arcs by the positions of their nodes, cost, capacities and variables, and the handlers
-   * by the positions of their arcs.
+   * by the positions of their arcs. A class rather than a record, since it holds arrays.
    */
-  private record Definition(
-      String[] names,
-      int[] balances,
-      int[][] arcs,
-      IntVar[] flows,
-      IntVar[] weights,
-      Object[] handlers,
-      IntVar costVariable) {
+  private static final class Definition {
+    private final String[] names;
+    private final int[] balances;
+    private final int[][] arcs;
+    private final IntVar[] flows;
+    private final IntVar[] weights;
+    private final Object[] handlers;
+    private final IntVar costVariable;
+
+    private Definition(
+        String[] names,
+        int[] balances,
+        int[][] arcs,
+        IntVar[] flows,
+        IntVar[] weights,
+        Object[] handlers,
+        IntVar costVariable) {
+      this.names = names;
+      this.balances = balances;
+      this.arcs = arcs;
+      this.flows = flows;
+      this.weights = weights;
+      this.handlers = handlers;
+      this.costVariable = costVariable;
+    }
 
     /** A handler of the variable of a domain structure. */
-    record Structure(
-        IntVar variable, IntDomain[] domains, int[] arcs, DomainStructure.Behavior behavior) {}
+    private static final class Structure {
+      private final IntVar variable;
+      private final IntDomain[] domains;
+      private final int[] arcs;
+      private final DomainStructure.Behavior behavior;
+
+      private Structure(
+          IntVar variable, IntDomain[] domains, int[] arcs, DomainStructure.Behavior behavior) {
+        this.variable = variable;
+        this.domains = domains;
+        this.arcs = arcs;
+        this.behavior = behavior;
+      }
+    }
 
     static Definition of(
         List<Node> nodes, List<Arc> arcs, List<VarHandler> handlers, IntVar costVariable) {
@@ -200,13 +229,12 @@ public class NetworkFlow extends Constraint
       }
       for (Object handler : handlers) {
         if (handler instanceof Structure st) {
-          Arc[] structureArcs = new Arc[st.arcs().length];
+          Arc[] structureArcs = new Arc[st.arcs.length];
           for (int k = 0; k < structureArcs.length; k++) {
-            structureArcs[k] = built[st.arcs()[k]];
+            structureArcs[k] = built[st.arcs[k]];
           }
           builder.handlerList.add(
-              new DomainStructure(
-                  map.get(st.variable()), st.domains(), structureArcs, st.behavior()));
+              new DomainStructure(map.get(st.variable), st.domains, structureArcs, st.behavior));
         } else {
           builder.handlerList.add(built[(Integer) handler].companion);
         }
@@ -328,15 +356,15 @@ public class NetworkFlow extends Constraint
       explanationBuilt = true;
       if (definition != null && copies.isEmpty()) {
         boolean structures = false;
-        for (Object handler : definition.handlers()) {
+        for (Object handler : definition.handlers) {
           structures |= !(handler instanceof Integer);
         }
         explanation =
             NetworkFlowExplanation.of(
-                definition.balances(),
-                definition.arcs(),
-                definition.flows(),
-                definition.weights(),
+                definition.balances,
+                definition.arcs,
+                definition.flows,
+                definition.weights,
                 structures,
                 costVariable);
       }
