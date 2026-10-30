@@ -431,6 +431,38 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void linearDisequalityOfTwoVariablesWithOppositeUnitWeightsKeepsItsSign() throws IOException {
+    // int_lin_ne_reif/_imp([-1,1],[x,y],c,b) was posted as x - y != c, the sign of c lost when the
+    // variables were reordered by coefficient (fuzz model 700463: 170 solutions instead of 180)
+    for (String kind : List.of("reif", "imp")) {
+      for (int[] w : new int[][] {{-1, 1}, {1, -1}}) {
+        String fzn =
+            """
+            var 0..3: x:: output_var;
+            var 0..3: y:: output_var;
+            var bool: b:: output_var;
+            constraint int_lin_ne_%s([%d,%d],[x,y],2,b);
+            solve satisfy;
+            """
+                .formatted(kind, w[0], w[1]);
+        Set<String> expected = new TreeSet<>();
+        for (int x = 0; x <= 3; x++) {
+          for (int y = 0; y <= 3; y++) {
+            boolean ne = w[0] * x + w[1] * y != 2;
+            for (boolean b : new boolean[] {false, true}) {
+              if (kind.equals("reif") ? b == ne : !b || ne) {
+                expected.add("b = " + b + "; x = " + x + "; y = " + y + ";");
+              }
+            }
+          }
+        }
+        assertEquals(
+            expected, new TreeSet<>(solveAllInOrder(fzn)), kind + " " + Arrays.toString(w));
+      }
+    }
+  }
+
+  @Test
   void twoImplicationsOfTheSameEqualityKeepTheirBooleansIndependent() throws IOException {
     // int_eq_imp(x,0,a) and int_eq_imp(x,0,b) were collected as one channel and a = b was posted,
     // as for reifications; with a false and the clause a \/ b the 2021 Challenge model
