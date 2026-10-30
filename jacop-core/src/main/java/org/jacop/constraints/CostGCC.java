@@ -30,37 +30,39 @@
 
 package org.jacop.constraints;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import org.jacop.constraints.netflow.DomainStructure;
-import org.jacop.constraints.netflow.NetworkBuilder;
-import org.jacop.constraints.netflow.simplex.Arc;
-import org.jacop.constraints.netflow.simplex.Node;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
- * CostGCC constraint, the global cardinality constraint with a cost matrix (Régin, CP 1999; SICStus
- * Prolog {@code global_cardinality(Xs, Vals, [cost(C, M)])}): counters[j] is the number of
+ * CostGCC constraint, the global cardinality constraint with a cost matrix (SICStus Prolog {@code
+ * global_cardinality(Xs, Vals, [cost(C, M)])}, Régin, CP 1999): counters[j] is the number of
  * variables of list equal to offset + j, and cost is the sum of the costs of the values of the
  * variables, costs[i][j] being the cost of list[i] = offset + j. The variables take values in
  * offset..offset + m - 1, where m is the number of counters.
  *
- * <p>It is decomposed into a {@link org.jacop.constraints.netflow.NetworkFlow}: one unit of flow
- * from each variable to its value, at the cost of the value, and the flow of each value to the sink
- * is its counter. The minimum cost flow bounds the cost from below, and the reduced costs of the
- * arcs remove the values and narrow the counters that cannot be part of a flow within the upper
- * bound of the cost. Post it together with {@link GCC} for the propagation of the counters without
- * costs.
+ * <p>The cost is filtered by the assignment relaxation of {@link CostAlldifferent} where value j
+ * has as many columns as the upper bound of its counter: the minimum assignment, by the incremental
+ * Hungarian method of {@link CircuitCost}, bounds the cost from below and removes the values whose
+ * reduced cost exceeds the slack to the largest cost, and the maximum assignment does the same from
+ * above. The lower bounds of the counters are left out of the relaxation, so it is a minimum cost
+ * flow with capacities only. The counts are only checked once all variables are ground; post the
+ * constraint together with {@link GCC} or {@link GlobalCardinality} for the propagation of the
+ * counters.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
 @SuppressWarnings("checkstyle:AbbreviationAsWordInName") // GCC is standard terminology
-public class CostGCC extends DecomposedConstraint<Constraint> {
+public class CostGCC extends Constraint implements SatisfiedPresent, Copyable<CostGCC> {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The variables. */
   public final IntVar[] list;
@@ -77,7 +79,22 @@ public class CostGCC extends DecomposedConstraint<Constraint> {
   /** The value of the first counter and the first column of costs. */
   public final int offset;
 
-  private List<Constraint> decomposition;
+  private final int n;
+
+  private final int m;
+
+  // the columns of each value in the assignments
+  private final int[] copies;
+
+  private final CircuitCost.Assignment minAssignment;
+
+  private final CircuitCost.Assignment maxAssignment;
+
+  // the sums of the smallest and of the largest cost of each row, from the last call
+  private final long[] rows = new long[2];
+
+  // the last minimum assignment
+  private long assignmentBound = Long.MIN_VALUE;
 
   /**
    * It constructs a global cardinality constraint with a cost, whose values are numbered from the
@@ -129,76 +146,149 @@ public class CostGCC extends DecomposedConstraint<Constraint> {
       }
     }
 
+    this.numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
     this.counters = Arrays.copyOf(counters, m);
-    this.costs = new int[list.length][];
-    for (int i = 0; i < list.length; i++) {
+    this.n = list.length;
+    this.m = m;
+    this.costs = new int[n][];
+    for (int i = 0; i < n; i++) {
       this.costs[i] = Arrays.copyOf(costs[i], m);
     }
     this.cost = cost;
     this.offset = offset;
+    this.queueIndex = 2;
+
+    copies = new int[m];
+    for (int j = 0; j < m; j++) {
+      copies[j] = Math.max(0, Math.min(counters[j].max(), n));
+    }
+    minAssignment = new CircuitCost.Assignment(n, m, this.costs, false, copies);
+    maxAssignment = new CircuitCost.Assignment(n, m, this.costs, true, copies);
+
+    setScope(list, counters, new IntVar[] {cost});
   }
 
   @Override
-  public List<Constraint> decompose(Store store) {
-    if (decomposition == null) {
-      decomposition = new ArrayList<>();
-      int n = list.length;
-      int m = counters.length;
-      for (IntVar x : list) {
-        decomposition.add(new In(x, new IntervalDomain(offset, offset + m - 1)));
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    Integer event = getConsistencyPruningEventFromMap(v);
+    if (event != null) {
+      return event;
+    }
+    for (IntVar x : list) {
+      if (x == v) {
+        return IntDomain.ANY;
       }
-      NetworkBuilder net = new NetworkBuilder(cost);
-      Node[] variables = new Node[n];
-      for (int i = 0; i < n; i++) {
-        variables[i] = net.addNode(list[i].id(), 1);
-      }
-      Node[] values = new Node[m];
-      for (int j = 0; j < m; j++) {
-        values[j] = net.addNode(String.valueOf(offset + j), 0);
-      }
-      Node sink = net.addNode("sink", -n);
-      for (int i = 0; i < n; i++) {
-        IntVar x = list[i];
-        List<Arc> arcs = new ArrayList<>();
-        List<IntDomain> domains = new ArrayList<>();
+    }
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    for (IntVar x : list) {
+      x.domain.in(store.level, x, offset, offset + m - 1);
+    }
+
+    if (n > 0) {
+      do {
+        store.propagationHasOccurred = false;
         for (int j = 0; j < m; j++) {
-          if (x.domain.contains(offset + j)) {
-            arcs.add(net.addArc(variables[i], values[j], costs[i][j], 0, 1));
-            domains.add(new IntervalDomain(offset + j, offset + j));
-          }
+          int open = Math.max(0, Math.min(counters[j].max(), copies[j]));
+          minAssignment.setOpen(j, open);
+          maxAssignment.setOpen(j, open);
         }
-        net.handlerList.add(
-            new DomainStructure(x, domains.toArray(new IntDomain[0]), arcs.toArray(new Arc[0])));
-      }
-      for (int j = 0; j < m; j++) {
-        net.addArc(values[j], sink, 0, counters[j]);
-      }
-      decomposition.add(net.build());
+        CostBounds.rowSums(list, costs, offset, rows);
+        CostBounds.setMax(store, cost, rows[1]);
+        CostBounds.setMin(store, cost, rows[0]);
+        assignmentBound =
+            CostBounds.assignments(
+                store,
+                list,
+                offset,
+                cost,
+                minAssignment,
+                maxAssignment,
+                rows,
+                assignmentBound,
+                Long.MIN_VALUE);
+      } while (store.propagationHasOccurred);
+    } else {
+      cost.domain.in(store.level, cost, 0, 0);
     }
-    return decomposition;
+
+    if (allGround()) {
+      int[] count = counts();
+      for (int j = 0; j < m; j++) {
+        counters[j].domain.in(store.level, counters[j], count[j], count[j]);
+      }
+    }
+  }
+
+  private boolean allGround() {
+    for (IntVar x : list) {
+      if (!x.singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // the number of ground variables equal to each value
+  private int[] counts() {
+    int[] count = new int[m];
+    for (IntVar x : list) {
+      count[x.value() - offset]++;
+    }
+    return count;
   }
 
   @Override
-  public void imposeDecomposition(Store store) {
-    for (Constraint c : decompose(store)) {
-      store.impose(c);
+  public boolean satisfied() {
+    if (!cost.singleton() || !allGround()) {
+      return false;
     }
+    long sum = 0;
+    for (int i = 0; i < n; i++) {
+      int j = list[i].value() - offset;
+      if (j < 0 || j >= m) {
+        return false;
+      }
+      sum += costs[i][j];
+    }
+    int[] count = counts();
+    for (int j = 0; j < m; j++) {
+      if (!counters[j].singleton(count[j])) {
+        return false;
+      }
+    }
+    return sum == cost.value();
   }
 
   @Override
   public String toString() {
-    StringBuilder result = new StringBuilder("CostGCC([");
-    for (int i = 0; i < list.length; i++) {
-      result.append(list[i]);
-      if (i < list.length - 1) {
-        result.append(", ");
-      }
-    }
+    StringBuilder result = new StringBuilder(id());
+    result.append(" : CostGCC([");
+    appendArrayToString(result, list);
     result.append("], ");
     CostBounds.appendCosts(result, costs);
-    result.append(", ").append(Arrays.toString(counters)).append(", ").append(cost);
-    result.append(", ").append(offset).append(')');
+    result.append(", [");
+    appendArrayToString(result, counters);
+    result.append("], ").append(cost);
+    if (offset != 1) {
+      result.append(", ").append(offset);
+    }
+    result.append(')');
     return result.toString();
+  }
+
+  @Override
+  public CostGCC copy(VarMap map) {
+    return new CostGCC(map.get(list), costs, map.get(counters), map.get(cost), offset);
   }
 }

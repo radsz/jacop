@@ -49,10 +49,11 @@ import org.jacop.core.Var;
  * <p>The cost is filtered by the assignment relaxation, solved incrementally by the Hungarian
  * method (see {@link CircuitCost}): the minimum assignment bounds the cost from below and removes
  * every value whose reduced cost exceeds the slack between the bound and the largest cost, and the
- * maximum assignment does the same from above (Focacci, Lodi and Milano, CP 1999; Régin, CP 1999,
- * for the cost GCC). The values only need to be distinct once all variables are ground; post the
- * constraint together with {@link Alldistinct} or {@link Alldiff} on the same variables for the
- * structural propagation.
+ * maximum assignment does the same from above (Focacci, Lodi and Milano, CP 1999). The two
+ * assignments only run when the bound of the cost is tighter than the sums of the row minima and
+ * maxima. The values only need to be distinct once all variables are ground; post the constraint
+ * together with {@link Alldistinct} or {@link Alldiff} on the same variables for the structural
+ * propagation. {@link CostGCC} is the version with counters.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0

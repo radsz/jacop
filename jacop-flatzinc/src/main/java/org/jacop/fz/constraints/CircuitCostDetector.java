@@ -429,18 +429,12 @@ public class CircuitCostDetector implements ParserTreeConstants {
         case SUBCIRCUIT -> posted.add(new SubcircuitCost(c.x, sum.costs, sum.cost, c.offset));
         case CIRCUIT -> posted.add(new CircuitCost(c.x, sum.costs, sum.cost, c.offset));
         case ALLDIFFERENT -> posted.add(new CostAlldifferent(c.x, sum.costs, sum.cost, c.offset));
-        case GCC -> {
-          CostGCC gcc = new CostGCC(c.x, sum.costs, counters(c), sum.cost, c.offset);
-          if (support.options.debug()) {
-            FzConsole.println("% redundant " + gcc);
-          }
-          posted.addAll(gcc.decompose(support.store));
-        }
+        case GCC -> posted.add(new CostGCC(c.x, sum.costs, counters(c), sum.cost, c.offset));
       }
       for (Constraint cc : posted) {
         // redundant, so degree-based variable selections see the degrees of the model
         cc.setDegreeWeight(0);
-        if (support.options.debug() && (c.kind != Kind.GCC || cc == sum.link)) {
+        if (support.options.debug()) {
           FzConsole.println("% redundant " + cc);
         }
         support.delayedConstraints.add(cc);

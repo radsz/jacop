@@ -223,7 +223,7 @@ class CostAssignmentTest {
         }
         store.impose(new GlobalCardinality(x, values, counters));
       }
-      store.imposeDecomposition(new CostGCC(x, in.costs, counters, cost, in.offset));
+      store.impose(new CostGCC(x, in.costs, counters, cost, in.offset));
     } else {
       if (structural) {
         store.impose(new Alldistinct(x));
@@ -274,9 +274,7 @@ class CostAssignmentTest {
 
   private static void check(long seed, boolean gcc) {
     Random random = new Random(seed);
-    // the network flow of CostGCC checks its whole structure at every step when assertions are on
-    int instances = gcc ? Math.max(1, INSTANCES / 5) : INSTANCES;
-    for (int t = 0; t < instances; t++) {
+    for (int t = 0; t < INSTANCES; t++) {
       Instance in = randomInstance(random, gcc);
       TreeSet<String> expected = new TreeSet<>();
       for (int[] s : in.solutions()) {
