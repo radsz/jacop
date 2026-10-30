@@ -37,6 +37,9 @@ import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * AtLeast constraint implements the counting over number of occurrences of a given value in a list
@@ -45,7 +48,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AtLeast extends AbstractAtLeastMost implements Violation, Copyable<AtLeast> {
+public class AtLeast extends AbstractAtLeastMost
+    implements Violation, Copyable<AtLeast>, Explainable {
 
   /**
    * It constructs a AtLeast constraint.
@@ -96,6 +100,25 @@ public class AtLeast extends AbstractAtLeastMost implements Violation, Copyable<
     }
 
     updateState(numberEq, start);
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explains()
+        && new CountExplanation(trail, list, value, null, counter, list.length, entry)
+            .explain(entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explains()
+        && new CountExplanation(trail, list, value, null, counter, list.length, trail.size())
+            .explainFailure(out);
+  }
+
+  // imposed on its own: a reification explains its own atoms
+  private boolean explains() {
+    return getClass() == AtLeast.class && !reified;
   }
 
   @Override
