@@ -33,9 +33,11 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -45,7 +47,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 
-abstract class AbstractChannel extends Constraint implements SatisfiedPresent, Explainable {
+abstract class AbstractChannel extends Constraint
+    implements Violation, SatisfiedPresent, Explainable {
 
   final IntVar x;
   final int n;
@@ -424,5 +427,17 @@ abstract class AbstractChannel extends Constraint implements SatisfiedPresent, E
     public String toString() {
       return "[" + b + ", " + value + "]";
     }
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int xv = value.applyAsInt(x);
+    long violated = 0;
+    for (Item i : item) {
+      if (!itemSatisfied(value.applyAsInt(i.b()) == 1, xv == i.value())) {
+        violated++;
+      }
+    }
+    return violated;
   }
 }

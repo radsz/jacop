@@ -70,6 +70,32 @@ final class CardinalityExplanation {
 
   private static final int INFINITE = Integer.MAX_VALUE / 4;
 
+  /**
+   * The largest share of the time since a constraint's first explanation that its flow explanations
+   * may take ({@code -Djacop.lcg.flowShare}, 0.25 by default); beyond it the generic reason is
+   * given. On nmseq 300 (GCC over 300 variables and values) one explanation took 4 ms and the
+   * search reached 27 nodes in 60 s, against 90,000 with the generic reason.
+   */
+  static final double SHARE = Double.parseDouble(System.getProperty("jacop.lcg.flowShare", "0.25"));
+
+  // a constraint may explain this long before its share of the time applies; with 50 ms the early
+  // denials cost on-call-rostering 20s-200d up to 55 s against 3 s
+  private static final long GRACE = 500_000_000L;
+
+  /** The time one constraint has spent in its flow explanations, to keep it within its share. */
+  static final class Budget {
+    private long start;
+    private long nanos;
+
+    // whether the constraint may explain now
+    private boolean allows(long now) {
+      if (start == 0) {
+        start = now;
+      }
+      return nanos <= SHARE * (now - start) + GRACE;
+    }
+  }
+
   private final AtomicTrail trail;
   private final int position;
   private final IntVar[] list;
@@ -148,6 +174,7 @@ final class CardinalityExplanation {
    * @param fixedUp the fixed upper bound of each value, when counters is null
    * @param open whether the variables may take values that are not counted
    * @param rest the number of variables taking an uncounted value, or null when it is free
+   * @param budget the time the constraint has spent explaining
    */
   static final class Network {
     private final IntVar[] list;
@@ -157,6 +184,7 @@ final class CardinalityExplanation {
     private final int[] fixedUp;
     private final boolean open;
     private final IntVar rest;
+    private final Budget budget;
 
     Network(
         IntVar[] list,
@@ -165,7 +193,8 @@ final class CardinalityExplanation {
         int[] fixedLow,
         int[] fixedUp,
         boolean open,
-        IntVar rest) {
+        IntVar rest,
+        Budget budget) {
       this.list = list;
       this.values = values;
       this.counters = counters;
@@ -173,6 +202,7 @@ final class CardinalityExplanation {
       this.fixedUp = fixedUp;
       this.open = open;
       this.rest = rest;
+      this.budget = budget;
     }
 
     /**
@@ -182,18 +212,27 @@ final class CardinalityExplanation {
      * @param entry the entry
      * @param out where the reason entries are added
      * @return false when the entry is not of the network's variables, the network with the negation
-     *     of the entry is feasible, or it is too large
+     *     of the entry is feasible, it is too large, or the constraint has used its share of the
+     *     time
      */
     boolean explain(AtomicTrail trail, int entry, EntryList out) {
-      CardinalityExplanation e = explanation(trail, entry);
-      IntVar y = trail.variable(entry);
-      if (!e.occurs(y)) {
+      long now = System.nanoTime();
+      if (!budget.allows(now)) {
         return false;
       }
-      e.negated = y;
-      e.negatedKind = trail.kind(entry);
-      e.negatedValue = trail.value(entry);
-      return e.run(out);
+      try {
+        CardinalityExplanation e = explanation(trail, entry);
+        IntVar y = trail.variable(entry);
+        if (!e.occurs(y)) {
+          return false;
+        }
+        e.negated = y;
+        e.negatedKind = trail.kind(entry);
+        e.negatedValue = trail.value(entry);
+        return e.run(out);
+      } finally {
+        budget.nanos += System.nanoTime() - now;
+      }
     }
 
     /**
@@ -201,10 +240,19 @@ final class CardinalityExplanation {
      *
      * @param trail the trail
      * @param out where the reason entries are added
-     * @return false when the network is feasible, or too large
+     * @return false when the network is feasible, too large, or the constraint has used its share
+     *     of the time
      */
     boolean explainFailure(AtomicTrail trail, EntryList out) {
-      return explanation(trail, trail.size()).run(out);
+      long now = System.nanoTime();
+      if (!budget.allows(now)) {
+        return false;
+      }
+      try {
+        return explanation(trail, trail.size()).run(out);
+      } finally {
+        budget.nanos += System.nanoTime() - now;
+      }
     }
 
     private CardinalityExplanation explanation(AtomicTrail trail, int position) {

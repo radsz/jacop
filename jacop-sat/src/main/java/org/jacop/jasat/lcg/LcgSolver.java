@@ -1744,6 +1744,27 @@ public final class LcgSolver implements ExternalPropagator {
     sharedBound = bound;
   }
 
+  /**
+   * Gives values that activity branching prefers until the first solution of this solver, for
+   * example those of a solution found by local search.
+   *
+   * @param xs variables of the store
+   * @param values their values
+   */
+  public void setPhase(IntVar[] xs, int[] values) {
+    int[] p = new int[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      p[i] = vars[i] == null ? 0 : vars[i].min();
+    }
+    for (int k = 0; k < xs.length; k++) {
+      int i = index(xs[k]);
+      if (i >= 0) {
+        p[i] = values[k];
+      }
+    }
+    phase = p;
+  }
+
   /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
   public void stop() {
     sat.cancel();

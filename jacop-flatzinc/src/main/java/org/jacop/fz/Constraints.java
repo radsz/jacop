@@ -46,6 +46,7 @@ import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
+import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
@@ -131,12 +132,22 @@ public class Constraints implements ParserTreeConstants {
 
     support.objective = objective(astTree);
 
-    // disequalities that are part of a detected all-different constraint
+    // disequalities that are part of a detected all-different constraint, and the constraints of
+    // merged copies of partial function results
     Set<SimpleNode> replaced = Set.of();
+    if (PartialCopyDetector.enabled()) {
+      replaced = new PartialCopyDetector(support).detect(astTree);
+      dictionary.removeAliasFromSearch();
+    }
     if (AlldifferentDetector.enabled()) {
       AlldifferentDetector alldifferent = new AlldifferentDetector(support);
       alldifferent.detect(astTree);
-      replaced = alldifferent.replaced();
+      if (replaced.isEmpty()) {
+        replaced = alldifferent.replaced();
+      } else {
+        replaced = new HashSet<>(replaced);
+        replaced.addAll(alldifferent.replaced());
+      }
     }
 
     IncreasingDetector increasing = null;

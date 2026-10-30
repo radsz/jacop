@@ -149,6 +149,11 @@ import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -435,7 +440,7 @@ class LcgFuzzTest {
     // the globals added in 5.0 that have no explanation of their own, explained by replay
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(18)) {
+      return switch (rnd.nextInt(19)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -475,6 +480,7 @@ class LcgFuzzTest {
                 intVar("dp", rnd.nextInt(5), 12));
         case 15 -> new LexOrder(pick(x, 3), pick(x, 3), rnd.nextBoolean());
         case 16 -> network();
+        case 17 -> geost();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -501,6 +507,34 @@ class LcgFuzzTest {
       }
       net.setCostVariable(intVar("nf", 0, 4 + rnd.nextInt(10)));
       return new NetworkFlow(net);
+    }
+
+    // three objects in the plane, each a unit square or an L of three cells, the first at x
+    private Geost geost() {
+      List<Shape> shapes =
+          List.of(
+              new Shape(0, new int[] {0, 0}, new int[] {1, 1}),
+              new Shape(
+                  1,
+                  List.of(
+                      new Dbox(new int[] {0, 0}, new int[] {2, 1}),
+                      new Dbox(new int[] {0, 1}, new int[] {1, 1}))));
+      IntVar[] gx = chain("gx", 3, 0, 2);
+      gx[0] = x[rnd.nextInt(x.length)];
+      IntVar[] gy = chain("gy", 3, 0, 1 + rnd.nextInt(2));
+      IntVar[] kind = chain("gk", 3, 0, 1);
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 3; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                new IntVar[] {gx[i], gy[i]},
+                kind[i],
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      return new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1, 2})), shapes);
     }
 
     private int[][] costs(int n) {

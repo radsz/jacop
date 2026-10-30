@@ -765,11 +765,29 @@ public class LinearRelaxation extends Constraint
     return IntDomain.BOUND;
   }
 
+  // while suspended the relaxation only checks complete assignments
+  private boolean suspended;
+
+  /**
+   * Suspends or resumes solving the relaxation. While suspended, consistency only fails an
+   * assignment of every variable that breaks a row, and leaves the simplex and the schedule of
+   * solves as they are, so that propagation outside the search (local search, for example) does not
+   * spend the work the search gets.
+   *
+   * @param suspend true to suspend, false to resume.
+   */
+  public void suspend(boolean suspend) {
+    suspended = suspend;
+  }
+
   @Override
   public void consistency(Store store) {
     // the simplex may skip a node, round its multipliers to nothing, or fix the last variables by
     // its own pruning without being run again; an assignment that breaks a row must still fail
     checkGround();
+    if (suspended) {
+      return;
+    }
     credit = Math.min(credit + WORK_PER_CALL, WORK);
     if (++tick < period || credit < 0 || stalled >= IDLE_RUNS) {
       return;
@@ -901,13 +919,16 @@ public class LinearRelaxation extends Constraint
       if (lambda == null) {
         return;
       }
-      LinearForm[] combined = combine(lambda);
-      for (LinearForm f : combined) {
-        if (f != null) {
-          propagate(store, f);
+      Aggregate g = aggregate(lambda);
+      if (g != null) {
+        for (LinearForm f : combine(g)) {
+          if (f != null) {
+            propagate(store, f);
+          }
         }
+        return;
       }
-      return;
+      // the combination overflows: try a smaller scale
     }
   }
 
@@ -1156,13 +1177,9 @@ public class LinearRelaxation extends Constraint
 
   /**
    * Returns the two inequalities of the combination {@code sum lambda_i a_i x}, each as {@code <=}
-   * (one of them may be null when a row lacks the side it needs), or null on overflow.
+   * (one of them may be null when a row lacks the side it needs).
    */
-  private LinearForm[] combine(long[] lambda) {
-    Aggregate g = aggregate(lambda);
-    if (g == null) {
-      return new LinearForm[0];
-    }
+  private LinearForm[] combine(Aggregate g) {
     long[] coef = g.coef();
     int size = 0;
     for (long c : coef) {
