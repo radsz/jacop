@@ -143,6 +143,12 @@ public final class CoreSearch {
   /** Statistics: solutions found under the assumptions. */
   public long stratumSolutions;
 
+  /**
+   * Statistics: times the phase gave its time to branch and bound because it had no solution of its
+   * own after a third of its time.
+   */
+  public long noSolutionStops;
+
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
