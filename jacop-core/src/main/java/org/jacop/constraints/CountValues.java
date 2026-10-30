@@ -197,6 +197,9 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
     return true;
   }
 
+  // the time spent in flow explanations of this constraint
+  private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
+
   // the flow network over the values in increasing order, the rest counted by counterRest
   private CardinalityExplanation.Network network() {
     IntVar[] sortedCounter = new IntVar[sortedValues.length];
@@ -204,7 +207,7 @@ public class CountValues extends AbstractCountValues implements Copyable<CountVa
       sortedCounter[k] = counter[indexOfSorted[k]];
     }
     return new CardinalityExplanation.Network(
-        list, sortedValues, sortedCounter, null, null, true, counterRest);
+        list, sortedValues, sortedCounter, null, null, true, counterRest, budget);
   }
 
   @Override
