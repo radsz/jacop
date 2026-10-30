@@ -36,9 +36,13 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -412,7 +416,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
     }
     Path file = null;
     try {
-      file = Files.createTempFile("jacop-goal", ".fzn");
+      file = temporaryFile();
       Files.writeString(file, model(p), StandardCharsets.ISO_8859_1);
       Phase phase = new Phase(solutions);
       int status;
@@ -442,6 +446,22 @@ final class Goals implements MultiObjective.Subsolver<String> {
         }
       }
     }
+  }
+
+  /**
+   * A new temporary file that only the user can read and write (where the file system has POSIX
+   * permissions), since it holds the model.
+   */
+  private static Path temporaryFile() throws IOException {
+    if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
+      return Files.createTempFile(
+          "jacop-goal",
+          ".fzn",
+          PosixFilePermissions.asFileAttribute(
+              EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)));
+    }
+    // on Windows the temporary directory belongs to the user
+    return Files.createTempFile("jacop-goal", ".fzn");
   }
 
   /**
