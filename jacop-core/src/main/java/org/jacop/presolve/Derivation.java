@@ -132,8 +132,11 @@ public final class Derivation implements VarMap {
    * @param rounds rounds run.
    * @param fixed variables fixed.
    * @param tightened domains narrowed without fixing the variable.
+   * @param dominated pairs of variables where one dominates the other (dominated columns).
+   * @param dominanceClauses clauses imposed for those pairs.
    */
-  public record DualStatistics(int rounds, int fixed, int tightened) {}
+  public record DualStatistics(
+      int rounds, int fixed, int tightened, int dominated, int dominanceClauses) {}
 
   /**
    * What the SAT preprocessing of the clauses did (rule 9).
@@ -454,7 +457,13 @@ public final class Derivation implements VarMap {
       return;
     } finally {
       if (dual != null) {
-        dualStatistics = new DualStatistics(dual.rounds(), dual.fixed(), dual.tightened());
+        dualStatistics =
+            new DualStatistics(
+                dual.rounds(),
+                dual.fixed(),
+                dual.tightened(),
+                dual.dominated(),
+                dual.dominanceClauses());
       }
     }
     variables = variables(parent);

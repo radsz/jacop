@@ -132,6 +132,7 @@ final class DualReductions implements Rule {
   private int rounds;
   private int fixed;
   private int tightened;
+  private DominatedColumns columns;
 
   /**
    * Prepares dual reductions.
@@ -173,10 +174,51 @@ final class DualReductions implements Rule {
     return tightened;
   }
 
+  /**
+   * Returns the number of dominated pairs found; see {@link DominatedColumns}.
+   *
+   * @return the number.
+   */
+  int dominated() {
+    return columns == null ? 0 : columns.pairs();
+  }
+
+  /**
+   * Returns the number of clauses imposed for dominated pairs.
+   *
+   * @return the number.
+   */
+  int dominanceClauses() {
+    return columns == null ? 0 : columns.imposed();
+  }
+
   @Override
   public void apply(Context context) {
     rounds++;
-    apply(context.store(), context.level(), context.constraints());
+    boolean changed = apply(context.store(), context.level(), context.constraints());
+    // dominated columns once, on the first round that leaves the dual reductions nothing to do
+    if (!changed && columns == null && DominatedColumns.ENABLED) {
+      dominatedColumns(context);
+    }
+  }
+
+  private void dominatedColumns(Context context) {
+    List<Constraint> live = new ArrayList<>();
+    for (Constraint c : context.constraints()) {
+      if (!(c instanceof SatisfiedPresent s && s.satisfied())) {
+        live.add(c);
+      }
+    }
+    List<IntVar> candidates = new ArrayList<>();
+    for (Var v : Derivation.variables(context.store())) {
+      if (v instanceof IntVar iv && !iv.singleton() && !exempt.contains(v) && v != objective) {
+        candidates.add(iv);
+      }
+    }
+    Constraint definition = objectiveDefinition(live);
+    LinearForm relaxed = definition == null ? null : relaxed(Locks.form(definition));
+    columns = new DominatedColumns(live, definition, relaxed, candidates);
+    columns.apply(context, Math.max(1000, candidates.size()));
   }
 
   /**
