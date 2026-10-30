@@ -718,7 +718,19 @@ Version 5.0 (unreleased)
     org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
     2.5% faster on mznbench.
 
-54. LCG explanations of Regular (and the other layered graph constraints)
+54. JaSAT misses no unit propagation when CP drives it. Under --lcg and
+    -sat, a clause added during search, a learnt clause asserted by the
+    external search, or a propagator's reason kept as a clause could have
+    its true watch above its false watch's level; after a backtrack between
+    the two levels it was unit and never visited (under --lcg even at level
+    0). Under -sat, units asserted again by a backtrack lost their
+    implications once the next level was opened. CdclSolver.setChecking
+    (-Djacop.jasat.check=true) now checks at every fixpoint that no clause
+    is false or unit and that every reason is valid. On 125 mznbench
+    instances (60 s) --lcg solves 68 instead of 67 and --lcg -f 77 as
+    before, with no measurable cost.
+
+55. LCG explanations of Regular (and the other layered graph constraints)
     cite only the edges that lead to the removed values: the nearest cut
     or the cut nearest the ends of the graph, whichever is shorter
     (Gange, Stuckey and Szymanek, Constraints 2011), instead of every
@@ -730,7 +742,7 @@ Version 5.0 (unreleased)
     constraint class how many atoms propagation needs and how many could
     be weaker.
 
-45. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
+56. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
     bound weaker than any trail atom when the solver already has a true
     literal for it, set before the explained one. On mznbench (249,
     60 s, paired) --lcg is better on 15 instances and worse on 6
@@ -739,7 +751,7 @@ Version 5.0 (unreleased)
     -Djacop.lcg.liftLiterals=false turns it off; %%%mzn-stat
     lcgLiftedLiterals counts the literals cited.
 
-55. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
+57. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
     explain their own pruning under --lcg instead of the generic or
     replayed reason. IncreasingSum cites the bounds of the order and the
     sum, LexOrder the bounds of the prefix that is forced equal or

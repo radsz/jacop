@@ -119,6 +119,7 @@ class CdclSolverTest {
       int vars = 3 + rnd.nextInt(10);
       List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       for (int[] c : f) {
         s.addClause(c);
@@ -139,6 +140,7 @@ class CdclSolverTest {
       int vars = 4 + rnd.nextInt(8);
       List<int[]> f = randomFormula(rnd, vars, vars + rnd.nextInt(3 * vars), 3);
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       for (int[] c : f) {
         s.addClause(c);
@@ -182,6 +184,7 @@ class CdclSolverTest {
       int vars = 5 + rnd.nextInt(7);
       List<int[]> f = new ArrayList<>();
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       for (int step = 0; step < 6; step++) {
         for (int[] c : randomFormula(rnd, vars, 2 + rnd.nextInt(vars), 3)) {
           f.add(c);
@@ -228,6 +231,7 @@ class CdclSolverTest {
   @Test
   void conflictLimitStopsTheSearch() {
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     pigeonhole(s, 10);
     s.setConflictLimit(100);
     assertEquals(CdclSolver.UNKNOWN, s.solve());
@@ -238,6 +242,7 @@ class CdclSolverTest {
     // The deadline was checked only on conflicts and on the solver's own decisions, so a search
     // driven by the external propagator's decisions ran past it.
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     int vars = 5000;
     s.ensureVars(vars);
     s.connect(
@@ -301,6 +306,7 @@ class CdclSolverTest {
   void readsDimacsAndWritesDrat() throws IOException {
     String cnf = "c example\np cnf 3 4\n1 2 0\n-1 2 0\n1 -2 0\n-1 -2 0\n";
     CdclSolver s = new CdclSolver();
+    s.setChecking(true);
     ByteArrayOutputStream proof = new ByteArrayOutputStream();
     DratWriter drat = new DratWriter(proof);
     s.setProof(drat);
@@ -408,6 +414,9 @@ class CdclSolverTest {
     int[] clause;
     final Map<Integer, int[]> reasons = new HashMap<>();
     int calls;
+    // lazy: skips some propagations (found again at a later level, so reasons reach lower levels)
+    // and gives theory clauses as clauses at random times, also satisfied or unit ones
+    boolean lazy;
 
     TheoryPropagator(CdclSolver s, List<int[]> theory, int vars, Random rnd) {
       this.s = s;
@@ -478,6 +487,9 @@ class CdclSolverTest {
     @Override
     public int propagate() {
       checkView();
+      if (lazy && rnd.nextInt(3) == 0) {
+        return 0;
+      }
       for (int[] c : theory) {
         int unassigned = 0;
         int open = 0;
@@ -513,6 +525,9 @@ class CdclSolverTest {
         clause = null;
         return c;
       }
+      if (lazy && !theory.isEmpty() && rnd.nextInt(4) == 0) {
+        return theory.get(rnd.nextInt(theory.size()));
+      }
       for (int[] c : theory) {
         boolean open = false;
         for (int l : c) {
@@ -528,11 +543,25 @@ class CdclSolverTest {
 
   @Test
   void externalPropagatorAgreesWithBruteForce() {
-    Random rnd = new Random(13);
+    externalPropagatorAgreesWithBruteForce(false);
+  }
+
+  /**
+   * A lazy propagator: its clauses and reasons can be unit at a lower level than the current one,
+   * and must still propagate after a backtrack to that level (checked at every decision).
+   */
+  @Test
+  void lazyExternalPropagatorAgreesWithBruteForce() {
+    externalPropagatorAgreesWithBruteForce(true);
+  }
+
+  private static void externalPropagatorAgreesWithBruteForce(boolean lazy) {
+    Random rnd = new Random(lazy ? 17 : 13);
     for (int run = 0; run < 3000; run++) {
       int vars = 3 + rnd.nextInt(10);
       List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       s.setChronoLimit(0);
       if (run % 2 == 0) {
@@ -549,6 +578,7 @@ class CdclSolverTest {
         }
       }
       TheoryPropagator p = new TheoryPropagator(s, theory, vars, rnd);
+      p.lazy = lazy;
       s.connect(p);
       for (int v = 1; v <= vars; v++) {
         s.observe(v);
@@ -569,6 +599,7 @@ class CdclSolverTest {
       int vars = 3 + rnd.nextInt(10);
       List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
       CdclSolver s = new CdclSolver();
+      s.setChecking(true);
       s.ensureVars(vars);
       List<int[]> late = new ArrayList<>();
       for (int[] c : f) {
@@ -590,6 +621,75 @@ class CdclSolverTest {
         assertTrue(satisfies(f, value), "model of run " + run);
       }
     }
+  }
+
+  /** Decides 1..n true, each at its own level, under the external search. */
+  private static CdclSolver decidedInOrder(int n) {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.ensureVars(n);
+    for (int v = 1; v <= n; v++) {
+      s.newLevel();
+      s.assume(v);
+      assertTrue(s.propagateUnits());
+    }
+    return s;
+  }
+
+  @Test
+  void clauseAddedSatisfiedAboveItsUnitLevelPropagatesAfterBacktrack() {
+    CdclSolver s = decidedInOrder(6);
+    // satisfied by 6 (level 6), false at levels 2 and 4: unit at level 4
+    assertTrue(s.addClauseLive(new int[] {-4, -2, 6}, 3));
+    s.backtrackTo(4);
+    assertTrue(s.propagateUnits());
+    assertEquals(1, s.value(6));
+  }
+
+  @Test
+  void binaryAddedUnitAboveItsUnitLevelPropagatesAfterBacktrack() {
+    CdclSolver s = decidedInOrder(4);
+    // unit at level 2, asserted at level 4
+    assertTrue(s.addClauseLive(new int[] {-2, 5}, 2));
+    assertTrue(s.propagateUnits());
+    assertEquals(1, s.value(5));
+    s.backtrackTo(3);
+    assertTrue(s.propagateUnits());
+    assertEquals(1, s.value(5));
+  }
+
+  @Test
+  void clauseRevisitedAfterBacktrackWithBothWatchesFalseIsNotAConflict() {
+    CdclSolver s = decidedInOrder(6);
+    // watched by 6 (true at level 6) and -4 (false at level 4); -2 false at level 2
+    assertTrue(s.addClauseLive(new int[] {-4, -2, 6}, 3));
+    s.backtrackTo(1);
+    // both watches false before the next propagation; -2 is free, so the clause is unit
+    assertTrue(s.addClauseLive(new int[] {-6}, 1));
+    assertTrue(s.addClauseLive(new int[] {4}, 1));
+    assertTrue(s.propagateUnits());
+    assertEquals(-1, s.value(2));
+  }
+
+  @Test
+  void unitAssertedAgainByBacktrackPropagatesAtLevelZero() {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.ensureVars(3);
+    s.addClause(5, -3);
+    s.newLevel();
+    s.assume(1);
+    assertTrue(s.propagateUnits());
+    assertTrue(s.addClauseLive(new int[] {-5}, 1));
+    assertTrue(s.propagateUnits());
+    // the unit is assigned again at level 0 and propagated only after the next level is opened
+    s.backtrackTo(0);
+    s.newLevel();
+    s.assume(2);
+    assertTrue(s.propagateUnits());
+    s.backtrackTo(0);
+    assertTrue(s.propagateUnits());
+    assertEquals(-1, s.value(3));
   }
 
   @Test
