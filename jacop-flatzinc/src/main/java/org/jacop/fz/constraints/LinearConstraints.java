@@ -365,9 +365,9 @@ class LinearConstraints implements ParserTreeConstants {
     } else if (p1.length == 1 && p1[0] == -1) {
       handleSingleVarNe(p2[0], -p3, p4, isReified);
     } else if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
-      handleTwoVarNe(p2[0], p2[1], p3, p4, isReified, false);
+      handleTwoVarNe(p2[0], p2[1], p3, p4, isReified);
     } else if (p1.length == 2 && p1[0] == -1 && p1[1] == 1) {
-      handleTwoVarNe(p2[1], p2[0], p3, p4, isReified, true);
+      handleTwoVarNe(p2[1], p2[0], p3, p4, isReified);
     } else if (p1.length == 2 && p1[0] == 1 && p1[1] == 1) {
       poseReifiedOrImplied(new Not(new XplusYeqC(p2[0], p2[1], p3)), p4, isReified);
     } else if (p1.length == 2 && p1[0] == -1 && p1[1] == -1) {
@@ -1117,17 +1117,15 @@ class LinearConstraints implements ParserTreeConstants {
   }
 
   /**
-   * Handles the two-variable NE case: x - y != c or y - x != c.
+   * Handles the two-variable NE case x - y != c; the caller orders the variables by coefficient.
    *
    * @param x first variable
    * @param y second variable
    * @param c constant value
    * @param boolVar boolean variable for reification/implication
    * @param isReified true for reified, false for implied
-   * @param swapped true if coefficients are swapped (y - x), false if (x - y)
    */
-  private void handleTwoVarNe(
-      IntVar x, IntVar y, int c, IntVar boolVar, boolean isReified, boolean swapped) {
+  private void handleTwoVarNe(IntVar x, IntVar y, int c, IntVar boolVar, boolean isReified) {
     if (c == 0) {
       if (isReified && binaryVar(x) && binaryVar(y)) {
         // (x != y) <=> b == x xor y = b
@@ -1140,9 +1138,7 @@ class LinearConstraints implements ParserTreeConstants {
         poseReifiedOrImplied(new XneqY(x, y), boolVar, isReified);
       }
     } else {
-      IntVar first = swapped ? y : x;
-      IntVar second = swapped ? x : y;
-      poseReifiedOrImplied(new Not(new XplusCeqZ(second, c, first)), boolVar, isReified);
+      poseReifiedOrImplied(new Not(new XplusCeqZ(y, c, x)), boolVar, isReified);
     }
   }
 

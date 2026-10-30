@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -428,6 +429,240 @@ class FlatzincFrontEndTest {
     List<String> all = List.of("s = 1..1;", "s = 1..2;", "s = 2..2;", "s = {};");
     assertEquals(new TreeSet<>(all), new TreeSet<>(solveAllInOrder(fzn, "--presolve", "on")));
     assertEquals(new TreeSet<>(all), new TreeSet<>(solveAllInOrder(fzn, "--presolve", "off")));
+  }
+
+  @Test
+  void linearDisequalityOfTwoVariablesWithOppositeUnitWeightsKeepsItsSign() throws IOException {
+    // int_lin_ne_reif/_imp([-1,1],[x,y],c,b) was posted as x - y != c, the sign of c lost when the
+    // variables were reordered by coefficient (fuzz model 700463: 170 solutions instead of 180)
+    for (String kind : List.of("reif", "imp")) {
+      for (int[] w : new int[][] {{-1, 1}, {1, -1}}) {
+        String fzn =
+            """
+            var 0..3: x:: output_var;
+            var 0..3: y:: output_var;
+            var bool: b:: output_var;
+            constraint int_lin_ne_%s([%d,%d],[x,y],2,b);
+            solve satisfy;
+            """
+                .formatted(kind, w[0], w[1]);
+        Set<String> expected = new TreeSet<>();
+        for (int x = 0; x <= 3; x++) {
+          for (int y = 0; y <= 3; y++) {
+            boolean ne = w[0] * x + w[1] * y != 2;
+            for (boolean b : new boolean[] {false, true}) {
+              if (kind.equals("reif") ? b == ne : !b || ne) {
+                expected.add("b = " + b + "; x = " + x + "; y = " + y + ";");
+              }
+            }
+          }
+        }
+        assertEquals(
+            expected, new TreeSet<>(solveAllInOrder(fzn)), kind + " " + Arrays.toString(w));
+      }
+    }
+  }
+
+  // The front end maps each builtin to one of many special cases (by weights, constants, aliasing
+  // and annotations); a slip in one of them, such as the sign of int_lin_ne_imp([-1,1],...), only
+  // shows on the inputs that reach it. Random small calls of each builtin, under several option
+  // sets, must give exactly the solutions of enumeration.
+  @Test
+  void builtinsAgreeWithEnumeration() throws IOException {
+    int trials = Integer.getInteger("builtins.trials", 300);
+    String[][] options = {{}, {"--presolve", "on"}, {"--lcg"}, {"-sat"}};
+    Random rnd = new Random(20261030);
+    List<Builtin> calls = new ArrayList<>();
+    // every comparison of one or two unit-weight terms, the shapes with their own special cases
+    int[][] unitWeights = {{1}, {-1}, {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+    for (String op : new String[] {"eq", "ne", "le", "lt"}) {
+      for (String kind : new String[] {"", "_reif", "_imp"}) {
+        for (int[] w : unitWeights) {
+          calls.add(randomBuiltin(rnd, "int_lin_" + op + kind, w));
+        }
+      }
+    }
+    for (int t = 0; t < trials; t++) {
+      calls.add(randomBuiltin(rnd, null, null));
+    }
+    for (int t = 0; t < calls.size(); t++) {
+      Builtin b = calls.get(t);
+      String[] opts = options[t % options.length];
+      Set<String> found = new TreeSet<>(solveAllInOrder(b.fzn, opts));
+      found.remove("=====UNSATISFIABLE=====");
+      assertEquals(b.expected, found, b.fzn + String.join(" ", opts));
+    }
+  }
+
+  private record Builtin(String fzn, Set<String> expected) {}
+
+  /**
+   * A random call of a random builtin, or of the given int_lin_* builtin with the given weights.
+   */
+  private static Builtin randomBuiltin(Random rnd, String linear, int[] weights) {
+    String[] cmp = {"eq", "ne", "le", "lt"};
+    String[] kinds = {"", "_reif", "_imp"};
+    String op = cmp[rnd.nextInt(cmp.length)];
+    String kind = kinds[rnd.nextInt(kinds.length)];
+    int k;
+    int[] w;
+    String name;
+    boolean bools = false;
+    switch (linear != null ? -1 : rnd.nextInt(4)) {
+      case -1 -> {
+        k = weights.length;
+        w = weights;
+        name = linear;
+        op = linear.split("_")[2];
+        kind = linear.substring(("int_lin_" + op).length());
+      }
+      case 0 -> {
+        // int_lin_*: weights of both unit signs and larger, with a repeated variable at times
+        k = 1 + rnd.nextInt(4);
+        w = new int[k];
+        for (int i = 0; i < k; i++) {
+          w[i] = rnd.nextBoolean() ? (rnd.nextBoolean() ? 1 : -1) : rnd.nextInt(7) - 3;
+          w[i] = w[i] == 0 ? 2 : w[i];
+        }
+        name = "int_lin_" + op + kind;
+      }
+      case 1 -> {
+        k = 2;
+        w = new int[] {1, -1};
+        name = "int_" + op + kind;
+      }
+      case 2 -> {
+        k = 2;
+        w = new int[] {1, -1};
+        bools = true;
+        name = "bool_" + op + kind;
+      }
+      default -> {
+        String[] ar = {"int_plus", "int_times", "int_div", "int_mod", "int_min", "int_max"};
+        name = ar[rnd.nextInt(ar.length)];
+        k = 3;
+        w = null;
+        kind = "";
+      }
+    }
+    int c = rnd.nextInt(9) - 4;
+    int[] lo = new int[k];
+    int[] hi = new int[k];
+    int[] var = new int[k];
+    for (int i = 0; i < k; i++) {
+      lo[i] = bools ? 0 : rnd.nextInt(7) - 3;
+      hi[i] = bools ? 1 : lo[i] + rnd.nextInt(4);
+      var[i] = i > 0 && rnd.nextInt(5) == 0 ? var[rnd.nextInt(i)] : i;
+    }
+    StringBuilder fzn = new StringBuilder();
+    StringJoiner args = new StringJoiner(",");
+    for (int i = 0; i < k; i++) {
+      if (var[i] == i) {
+        fzn.append(bools ? "var bool" : "var " + lo[i] + ".." + hi[i]).append(": x").append(i);
+        fzn.append(":: output_var;\n");
+      }
+      args.add("x" + var[i]);
+    }
+    boolean reif = !kind.isEmpty();
+    if (reif) {
+      fzn.append("var bool: b:: output_var;\n");
+    }
+    String call;
+    if (name.startsWith("int_lin_")) {
+      StringJoiner ws = new StringJoiner(",");
+      for (int x : w) {
+        ws.add(Integer.toString(x));
+      }
+      call = name + "([" + ws + "],[" + args + "]," + c + (reif ? ",b" : "") + ")";
+    } else {
+      call = name + "(" + args + (reif ? ",b" : "") + ")";
+    }
+    fzn.append("constraint ").append(call).append(";\nsolve satisfy;\n");
+
+    Set<String> expected = new TreeSet<>();
+    int[] v = new int[k];
+    int[] value = new int[k];
+    String fName = name;
+    String fKind = kind;
+    String fOp = op;
+    boolean fBools = bools;
+    enumerateBuiltin(
+        0,
+        v,
+        lo,
+        hi,
+        var,
+        () -> {
+          for (int i = 0; i < k; i++) {
+            value[i] = v[var[i]];
+          }
+          Boolean holds;
+          if (fName.startsWith("int_lin_") || w != null) {
+            int s = 0;
+            for (int i = 0; i < k; i++) {
+              s += w[i] * value[i];
+            }
+            int rhs = fName.startsWith("int_lin_") ? c : 0;
+            holds =
+                switch (fOp) {
+                  case "eq" -> s == rhs;
+                  case "ne" -> s != rhs;
+                  case "le" -> s <= rhs;
+                  default -> s < rhs;
+                };
+          } else {
+            int x = value[0];
+            int y = value[1];
+            int z = value[2];
+            holds =
+                switch (fName) {
+                  case "int_plus" -> x + y == z;
+                  case "int_times" -> x * y == z;
+                  case "int_div" -> y != 0 && x / y == z;
+                  case "int_mod" -> y != 0 && x % y == z;
+                  case "int_min" -> Math.min(x, y) == z;
+                  default -> Math.max(x, y) == z;
+                };
+          }
+          StringJoiner sol = new StringJoiner(" ");
+          for (int i = 0; i < k; i++) {
+            if (var[i] == i) {
+              sol.add(
+                  "x"
+                      + i
+                      + " = "
+                      + (fBools ? Boolean.toString(v[i] == 1) : Integer.toString(v[i]))
+                      + ";");
+            }
+          }
+          if (fKind.isEmpty()) {
+            if (holds) {
+              expected.add(sol.toString());
+            }
+          } else {
+            for (boolean b : new boolean[] {false, true}) {
+              if (fKind.equals("_reif") ? b == holds : !b || holds) {
+                expected.add("b = " + b + "; " + sol);
+              }
+            }
+          }
+        });
+    return new Builtin(fzn.toString(), expected);
+  }
+
+  private static void enumerateBuiltin(
+      int i, int[] v, int[] lo, int[] hi, int[] var, Runnable check) {
+    if (i == v.length) {
+      check.run();
+      return;
+    }
+    if (var[i] != i) {
+      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+      return;
+    }
+    for (v[i] = lo[i]; v[i] <= hi[i]; v[i]++) {
+      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+    }
   }
 
   @Test
@@ -1520,6 +1755,46 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgExplainsEachDeferredRemovalOnce() {
+    // a magic sequence over a literal budget of 0, so no value removal is pushed to the solver:
+    // a reason expanded each deferred removal at every citation, and the counts cite each other's
+    // removals, which took exponential time (over a minute for 80 counts)
+    int n = 80;
+    StringBuilder model = new StringBuilder();
+    model.append("predicate jacop_count(array [int] of var int: x, int: y, var int: c);\n");
+    StringJoiner xs = new StringJoiner(",");
+    for (int i = 0; i < n; i++) {
+      model.append("var 0..").append(n).append(": x").append(i).append(" :: output_var;\n");
+      xs.add("x" + i);
+    }
+    model.append("array [1..").append(n).append("] of var int: xs = [").append(xs).append("];\n");
+    for (int i = 0; i < n; i++) {
+      model.append("constraint jacop_count(xs, ").append(i).append(", x").append(i).append(");\n");
+    }
+    model.append("solve satisfy;\n");
+    System.setProperty("jacop.lcg.literalBudget", "0");
+    try {
+      String out =
+          assertTimeoutPreemptively(Duration.ofSeconds(30), () -> run(model.toString(), "--lcg"))[
+              0];
+      int[] x = new int[n];
+      Matcher m = Pattern.compile("x(\\d+) = (\\d+);").matcher(out);
+      int found = 0;
+      while (m.find()) {
+        x[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
+        found++;
+      }
+      assertEquals(n, found, out);
+      for (int i = 0; i < n; i++) {
+        int value = i;
+        assertEquals(x[i], Arrays.stream(x).filter(v -> v == value).count(), out);
+      }
+    } finally {
+      System.clearProperty("jacop.lcg.literalBudget");
+    }
+  }
+
+  @Test
   void lcgSolvesOptimisationWithClauses() throws IOException {
     // --lcg: bool_clause and array_bool_or go to JaSAT as clauses, the rest propagates as
     // constraints; every improving solution is printed, then the optimum.
@@ -2140,6 +2415,77 @@ class FlatzincFrontEndTest {
     vars.append("var -1000..1000: obj :: output_var;\n");
     constraints.append("constraint int_lin_eq([%s,-1], [%s,obj], 0);\n".formatted(weights, terms));
     return vars + constraints.toString() + "solve minimize obj;\n";
+  }
+
+  @Test
+  void lcgIsOnByDefault() {
+    // the test suites run with -Djacop.lcg=off; fzn-jacop runs without it
+    String lcg = System.clearProperty("jacop.lcg");
+    try {
+      Options defaults = new Options(new String[] {"-s", "model.fzn"});
+      assertTrue(defaults.lcg());
+      assertTrue(new Options(new String[] {"-f", "model.fzn"}).lcg());
+
+      assertFalse(new Options(new String[] {"--lcg", "off", "model.fzn"}).lcg());
+      assertTrue(new Options(new String[] {"--lcg", "model.fzn"}).lcg());
+      assertTrue(new Options(new String[] {"--lcg", "on", "-f", "model.fzn"}).lcg());
+      // -sat is CP with a SAT solver for the Boolean constraints, not LCG, unless --lcg is given
+      assertFalse(new Options(new String[] {"-sat", "model.fzn"}).lcg());
+      assertTrue(new Options(new String[] {"-sat", "--lcg", "model.fzn"}).lcg());
+
+      // a model loaded for the API keeps its constraints in the loaded store
+      Options loaded = new Options(new String[] {"model.fzn"});
+      loaded.doNotRunSearch();
+      assertFalse(loaded.lcg());
+      Options asked = new Options(new String[] {"--lcg", "model.fzn"});
+      asked.doNotRunSearch();
+      assertTrue(asked.lcg());
+    } finally {
+      restoreProperty("jacop.lcg", lcg);
+    }
+  }
+
+  @Test
+  void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
+    // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
+    // message, and the Boolean constraints are not turned into clauses
+    String floats =
+        """
+        var 0.0..2.0: f:: output_var;
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        constraint bool_xor(a,b,true);
+        constraint float_lin_le([1.0],[f],1.5);
+        solve maximize f;
+        """;
+    String sat =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        constraint bool_xor(a,b,true);
+        solve satisfy;
+        """;
+    String lcg = System.clearProperty("jacop.lcg");
+    try {
+      String[] out = run(floats, "--precision", "0.5");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertTrue(out[0].contains("=========="), out[0]);
+      out = run(sat, "-a");
+      assertFalse(out[0].contains("--lcg ignored"), out[0]);
+      assertEquals(2, out[0].split("----------", -1).length - 1, out[0]);
+      // asked for, LCG is still reported as ignored
+      assertTrue(run(sat, "-a", "--lcg")[0].contains("--lcg ignored"));
+    } finally {
+      restoreProperty("jacop.lcg", lcg);
+    }
+  }
+
+  private static void restoreProperty(String name, String value) {
+    if (value == null) {
+      System.clearProperty(name);
+    } else {
+      System.setProperty(name, value);
+    }
   }
 
   private String[] run(String model, String... options) throws IOException {

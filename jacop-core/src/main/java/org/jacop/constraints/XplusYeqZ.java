@@ -81,13 +81,19 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
       return;
     }
 
+    // under lazy clause generation each value removed inside a domain is an atom, a literal of its
+    // own: copying the holes of z into y when x is fixed made 280k SAT variables in 30 s on
+    // CELAR6-SUB4 (frequency differences) and cut the conflict rate threefold, so the pruning keeps
+    // to the bounds there, as in TimetableSweep.removeStarts
+    final boolean shifts = store.domainChangeRecorder == null;
+
     do {
 
       store.propagationHasOccurred = false;
 
       // with x (or y) fixed the two shifts make y and z equal up to the shift, which is a fixpoint
       // unless the first variable shifted only keeps its bounds
-      if (x.singleton()) {
+      if (shifts && x.singleton()) {
 
         y.domain.inShiftFast(store.level, y, z.domain, -x.value());
         z.domain.inShiftFast(store.level, z, y.domain, x.value());
@@ -95,7 +101,7 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
           return;
         }
 
-      } else if (y.singleton()) {
+      } else if (shifts && y.singleton()) {
 
         x.domain.inShiftFast(store.level, x, z.domain, -y.value());
         z.domain.inShiftFast(store.level, z, x.dom(), y.value());

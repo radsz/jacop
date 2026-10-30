@@ -398,8 +398,12 @@ public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC>, 
   /** Reads the counter bounds and takes out the variables that are already assigned. */
   private void readCounterBounds() {
     for (int i = 0; i < ySize; i++) {
-      yMin[i] = counters[i].min();
+      // a count is never negative; the matching passes rely on 0 <= yMin <= yMax
+      yMin[i] = Math.max(counters[i].min(), 0);
       yMax[i] = counters[i].max();
+      if (yMax[i] < 0) {
+        throw Store.failException;
+      }
     }
     Arrays.fill(singletons, 0);
     for (int k = stampValue; k < xSize; k++) {
