@@ -1037,6 +1037,26 @@ Version 5.0 (unreleased)
    tree halves and a node is about 15% cheaper; backache_train4 and
    colic_train4 are now proved within 20 minutes.
 
+68. New constraint MultiCumulative(starts, durations, heights, limits):
+    several cumulative resources used by the same tasks with fixed
+    durations, heights[r][i] being the use of resource r by task i (the
+    cumulative resources of SICStus multi_cumulative). One time-table sweep
+    keeps a profile per resource, so the task events are sorted once and
+    the constraint wakes once per change instead of once per resource; it
+    prunes what one time-table cumulative per resource prunes. The FlatZinc
+    front end merges the cumulative constraints with fixed durations and
+    resource uses that share tasks (a start variable that is not fixed,
+    with the same duration) into one MultiCumulative; each of them keeps
+    its energy and edge-finding rules (Cumulative.doTimeTable(false)) and
+    runs them in the next queue. Not under --lcg, where each cumulative
+    explains its own time table, nor with --presolve, whose cumulative
+    reductions read each resource as one constraint;
+    -Dorg.jacop.fz.multiCumulative=false turns it off. On the 47 MiniZinc Challenge instances it applies to (rcpsp,
+    racp, rcpsp-wet, cyclic-rcpsp, mspsp, smelt, aircraft-disassembly,
+    ihtc), 60 s: +7.4% nodes per second with the model search (3 better
+    objectives, 1 faster proof, none worse) and +6.4% with -f (results
+    within run-to-run noise).
+
 Version 4.11
 =============
 
