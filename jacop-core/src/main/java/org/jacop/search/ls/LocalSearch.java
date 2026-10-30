@@ -562,7 +562,7 @@ public final class LocalSearch {
     }
     checkedCount = c - linearCount - measuredCount;
     if (cost != null) {
-      costIndex = index.get(cost);
+      costIndex = indexOf(cost);
       boundRow = c;
       scope[c] = new int[] {costIndex};
       coef[c] = new long[] {1};
@@ -630,12 +630,21 @@ public final class LocalSearch {
     return true;
   }
 
+  // the position of a variable of the model; every argument of an evaluated constraint has one
+  private int indexOf(Var v) {
+    Integer i = index.get(v);
+    if (i == null) {
+      throw new IllegalStateException(v + " is not a variable of local search");
+    }
+    return i;
+  }
+
   private int[] scopeOf(Constraint c) {
     Set<Var> args = c.arguments();
     int[] s = new int[args.size()];
     int k = 0;
     for (Var v : args) {
-      s[k++] = index.get(v);
+      s[k++] = indexOf(v);
     }
     return s;
   }
@@ -1072,7 +1081,7 @@ public final class LocalSearch {
               ? new BooleanVar(scratch, x.min(), x.max())
               : new IntVar(scratch, x.dom().cloneLight());
       map.put(x, y);
-      s.add(index.get(x));
+      s.add(indexOf(x));
       ys.add(y);
     }
     VarMap varMap =
@@ -1092,8 +1101,12 @@ public final class LocalSearch {
             return (V) y;
           }
         };
+    Store target = scratch;
+    if (target == null) {
+      return false;
+    }
     try {
-      scratch.impose(((Copyable<?>) c).copy(varMap));
+      target.impose(((Copyable<?>) c).copy(varMap));
     } catch (RuntimeException e) {
       return false;
     }

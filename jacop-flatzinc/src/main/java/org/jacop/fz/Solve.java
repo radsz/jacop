@@ -1713,12 +1713,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       searchVars.defaultVars();
       ls = runLocalSearch(costVar, searchVars, worker, true);
     }
-    IntVar[] hinted = ls == null ? null : hintedVariables();
-    int[] hintValues = ls == null ? null : ls.getSolution(hinted);
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     if (ls != null) {
-      lcg.setPhase(hinted, hintValues);
+      IntVar[] hinted = hintedVariables();
+      int[] hintValues = ls.getSolution(hinted);
+      if (hintValues != null) {
+        lcg.setPhase(hinted, hintValues);
+      }
       if (costVar == null) {
         // the solution of local search, printed already, is the answer
         lcgStatus = CdclSolver.SAT;
@@ -2149,6 +2151,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     IntVar[] hinted = hintedVariables();
     int[] values = localSearch.getSolution(hinted);
+    if (values == null) {
+      return;
+    }
     for (IndomainLastSolution saver : phaseSavers) {
       saver.hint(hinted, values);
     }
