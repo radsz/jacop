@@ -1717,6 +1717,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcg.onSolution(this::printSolution);
     boolean free = options.freeSearch();
+    if (free && costVar == null && !LcgSolver.FULL_FIXPOINT_SET) {
+      // satisfaction under free search returns to the clauses after each pruning: with the full
+      // fixpoint (#317) nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s. Over 250
+      // instances and two seeds (60 s), the satisfaction models that differed on both seeds all
+      // did better without it (5 of 5), and the optimisation models with it (11 of 18)
+      lcg.setFullFixpoint(false);
+    }
     // under free search, runs that take turns at restarts: the annotation (or dom/wdeg without
     // one), the SAT solver's own decisions on literals with phase false, as in CP-SAT's default
     // search, and activity branching. The literals alone close the gap to CP-SAT on city-position
@@ -1995,6 +2002,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.wideVariables
             + "\n%%%mzn-stat: lcgBooleansFirst="
             + lcg.booleansFirst()
+            + "\n%%%mzn-stat: lcgFullFixpoint="
+            + lcg.fullFixpoint()
             + "\n%%%mzn-stat: lcgLateVariables="
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="

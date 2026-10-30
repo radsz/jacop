@@ -1657,6 +1657,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
+    // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        constraint int_lin_le([1,1], [x,y], 4);
+        constraint int_ne(x, y);
+        %s;
+        """;
+    String sat = run(model.formatted("solve satisfy"), "--lcg", "-f", "-s")[0];
+    assertTrue(sat.contains("%%%mzn-stat: lcgFullFixpoint=false\n"), sat);
+    String opt = run(model.formatted("solve maximize x"), "--lcg", "-f", "-s")[0];
+    assertTrue(opt.contains("%%%mzn-stat: lcgFullFixpoint=true\n"), opt);
+    assertTrue(opt.contains("x = 3;"), opt);
+    // the annotation, followed without -f, keeps the full fixpoint
+    String fixed =
+        run(
+            model.formatted("solve :: int_search([x,y],input_order,indomain_min,complete) satisfy"),
+            "--lcg",
+            "-s")[0];
+    assertTrue(fixed.contains("%%%mzn-stat: lcgFullFixpoint=true\n"), fixed);
+  }
+
+  @Test
   void lcgFreeSearchBranchesOnBlockSumsLast() throws IOException {
     // --lcg splits a sum of 60 terms into block sums of about 8 terms: they follow from the terms,
     // as defined variables do, so free search branches on them last (develop-5.0 branched on them
