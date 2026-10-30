@@ -941,6 +941,19 @@ Version 5.0 (unreleased)
     22 instead of 20, and the 130 generated colouring, bin packing and
     identical-machine instances are level (83 to 82 solved).
 
+63. NetworkFlow explains its pruning under --lcg instead of the generic
+    reason (networks with constant arc costs). The cost bound and the
+    arc bounds come from the duals of a minimum cost flow over the
+    bounds before the explained atom, which certify that every flow
+    costs at least sum_a min(rc l, rc u) - sum_v p b; a reason cites
+    the arc bounds this needs, weakened within the slack. Feasibility
+    pruning is explained by the cut that the flow search stops at, and
+    the cost's upper bound by the fixed flows. On mapping, reasons fall
+    from 23 to 5 atoms and generic ones to 0. Paired 60 s runs on the
+    30 instances with jacop_networkflow: --lcg better on 7 and worse
+    on none (mesh2x2_mp3 3.1 s to 1.6 s), --lcg -f better on 8 and
+    worse on 1 (mesh2x2_mp3 4.4 s to 1.6 s).
+
 Version 4.11
 =============
 

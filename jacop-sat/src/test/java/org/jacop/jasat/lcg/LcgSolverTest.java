@@ -95,6 +95,9 @@ import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.NetworkFlow;
+import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
@@ -1263,6 +1266,97 @@ class LcgSolverTest {
   // (a, b) before (c, d) lexicographically
   private static boolean lexBefore(int a, int b, int c, int d, boolean strict) {
     return a < c || a == c && (strict ? b < d : b <= d);
+  }
+
+  /**
+   * {@link NetworkFlow} explains its cost pruning by the duals of a minimum cost flow and its
+   * feasibility pruning by a cut: the answers agree with brute force, every reason is checked, and
+   * on flows without holes few are generic or replayed.
+   */
+  @Test
+  void networkFlowExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(61);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long other = 0;
+    // arcs s->a, s->b, a->t, b->t, a->b on x0..x4, the cost on x5
+    int[][] arcs = {{0, 1}, {0, 2}, {1, 3}, {2, 3}, {1, 2}};
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      // flows over intervals: the flow bounds explain the pruning, holes would not
+      for (int i = 0; i < n - 1; i++) {
+        x[i] = new IntVar(store, "x" + i, rnd.nextInt(2) - 1, 2 + rnd.nextInt(3));
+      }
+      x[n - 1] = new IntVar(store, "cost", 0, 4 + rnd.nextInt(12));
+      int supply = 1 + rnd.nextInt(4);
+      int[] weight = new int[arcs.length];
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] node = {
+        net.addNode("s", supply),
+        net.addNode("a", 0),
+        net.addNode("b", 0),
+        net.addNode("t", -supply)
+      };
+      for (int k = 0; k < arcs.length; k++) {
+        weight[k] = rnd.nextInt(4);
+        net.addArc(node[arcs[k][0]], node[arcs[k][1]], weight[k], x[k]);
+      }
+      net.setCostVariable(x[n - 1]);
+      List<Relation> relations = new ArrayList<>();
+      relations.add(
+          new Relation(
+              new NetworkFlow(net),
+              t -> {
+                long cost = 0;
+                for (int k = 0; k < arcs.length; k++) {
+                  cost += (long) weight[k] * t[k];
+                }
+                return t[0] + t[1] == supply
+                    && t[2] + t[4] == t[0]
+                    && t[3] == t[1] + t[4]
+                    && cost == t[5];
+              }));
+      for (int c = rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("NetworkFlow");
+      if (counts != null) {
+        long notOwn = counts[1] + counts[4] + counts[6] + counts[7];
+        own += counts[0] + counts[3] - notOwn;
+        other += notOwn;
+      }
+    }
+    System.out.printf(
+        "network flow: %d sat, %d unsat, %d own and %d generic or replayed explanations%n",
+        sat, unsat, own, other);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(10 * other);
   }
 
   /**
