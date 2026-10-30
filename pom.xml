@@ -223,6 +223,8 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/MirCutTest.java</include>
+                                <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -360,6 +362,8 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/MirCutTest.java</include>
+                                <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -498,6 +502,8 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/MirCutTest.java</include>
+                                <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -636,6 +642,8 @@ setup to run configuration. -->
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
+                                <include>**/MirCutTest.java</include>
+                                <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>

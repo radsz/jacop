@@ -298,6 +298,53 @@ class LinearRelaxationTest {
     assertThat(x2.min()).isLessThanOrEqualTo(-2);
   }
 
+  // the rows of Max (m >= x_i) tie the objective to the linear constraint: the root bound is 12 / 3
+  @Test
+  void readsTheRowsOfConstraintsThatAreNotLinear() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar m = new IntVar(store, "m", 0, 10);
+    store.impose(new LinearInt(x, new int[] {1, 1, 1}, ">=", 13));
+    store.impose(new org.jacop.constraints.Max(x, m));
+    LinearRelaxation r = LinearRelaxation.of(store, m, false);
+    assertThat(r).isNotNull();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.rootBound).isCloseTo(13.0 / 3, org.assertj.core.data.Offset.offset(1e-6));
+    // the bound is rounded up by the propagation of the combination
+    assertThat(m.min()).isEqualTo(5);
+  }
+
+  @Test
+  void keepsEverySolutionWithOnlyRowsOfConstraintsThatAreNotLinear() {
+    // no linear relation at all: the first solve has no row, and its size was a division by zero
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new org.jacop.constraints.Reified(new org.jacop.constraints.XltC(x, 2), b));
+    store.impose(new org.jacop.constraints.Reified(new org.jacop.constraints.XltY(x, y), c));
+    LinearRelaxation r = LinearRelaxation.of(store, null, false);
+    assertThat(r).isNotNull();
+    assertThat(r.rows()).isZero();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    org.jacop.search.DepthFirstSearch<IntVar> search = new org.jacop.search.DepthFirstSearch<>();
+    org.jacop.search.SelectChoicePoint<IntVar> select =
+        new org.jacop.search.InputOrderSelect<>(
+            store, new IntVar[] {x, y, b, c}, new org.jacop.search.IndomainMin<>());
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, select)).isTrue();
+    // b and c follow from x and y
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(16);
+  }
+
   @Test
   void rejectsAnAssignmentItsOwnPruningFixed() {
     lazyClauseGeneration(5_901_220L, new TreeMap<>(), LinearRelaxation.Simplex.DENSE);
