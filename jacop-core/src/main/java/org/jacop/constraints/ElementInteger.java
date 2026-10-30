@@ -97,13 +97,13 @@ public class ElementInteger extends AbstractElement
   private final boolean checkDuplicates;
 
   /** It specifies variable value within an element constraint list[index-indexOffset] = value. */
-  private final IntVar value;
+  final IntVar value;
 
   /**
    * It specifies list of variables within an element constraint list[index-indexOffset] = value.
    * The list is addressed by positive integers ({@code >=1}) if indexOffset is equal to 0.
    */
-  private final int[] list;
+  final int[] list;
 
   /**
    * It specifies for each value what are the possible values of the index variable (it takes into

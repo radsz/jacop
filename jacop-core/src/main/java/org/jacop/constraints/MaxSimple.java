@@ -61,12 +61,12 @@ public class MaxSimple extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies a variables between which a maximum value is being searched for. */
-  private final IntVar x1;
+  final IntVar x1;
 
-  private final IntVar x2;
+  final IntVar x2;
 
   /** It specifies variable max which stores the maximum value present in the list. */
-  private final IntVar max;
+  final IntVar max;
 
   /**
    * It constructs max constraint.
