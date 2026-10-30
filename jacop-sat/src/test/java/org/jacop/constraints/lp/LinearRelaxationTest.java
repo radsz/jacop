@@ -293,6 +293,26 @@ class LinearRelaxationTest {
     assertThat(x2.min()).isLessThanOrEqualTo(-2);
   }
 
+  // the rows of Max (m >= x_i) tie the objective to the linear constraint: the root bound is 12 / 3
+  @Test
+  void readsTheRowsOfConstraintsThatAreNotLinear() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar m = new IntVar(store, "m", 0, 10);
+    store.impose(new LinearInt(x, new int[] {1, 1, 1}, ">=", 13));
+    store.impose(new org.jacop.constraints.Max(x, m));
+    LinearRelaxation r = LinearRelaxation.of(store, m, false);
+    assertThat(r).isNotNull();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.rootBound).isCloseTo(13.0 / 3, org.assertj.core.data.Offset.offset(1e-6));
+    // the bound is rounded up by the propagation of the combination
+    assertThat(m.min()).isEqualTo(5);
+  }
+
   @Test
   void rejectsAnAssignmentItsOwnPruningFixed() {
     lazyClauseGeneration(5_901_220L, new TreeMap<>());

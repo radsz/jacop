@@ -103,7 +103,7 @@ public class Alldistinct extends Constraint
   static final int MAX_BIT_WORDS = 8;
 
   /** It specifies all variables which have to have different values. */
-  private final IntVar[] list;
+  final IntVar[] list;
 
   // Sorted union of the initial domains; value index a stands for values[a].
   private final int[] values;
