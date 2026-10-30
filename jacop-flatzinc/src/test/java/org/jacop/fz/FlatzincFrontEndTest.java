@@ -413,6 +413,24 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void presolveDoesNotEliminateABooleanDefinedBySetMembership() throws IOException {
+    // b occurs only in set_in_reif(1,s,b), so variable elimination took the reification as its
+    // definition; the postsolve copies only integer variables and failed on s with a
+    // ClassCastException (submultisetsum, superset_package_deps)
+    String fzn =
+        """
+        var set of 1..2: s:: output_var;
+        var bool: b;
+        constraint set_in_reif(1,s,b);
+        solve satisfy;
+        """;
+
+    List<String> all = List.of("s = 1..1;", "s = 1..2;", "s = 2..2;", "s = {};");
+    assertEquals(new TreeSet<>(all), new TreeSet<>(solveAllInOrder(fzn, "--presolve", "on")));
+    assertEquals(new TreeSet<>(all), new TreeSet<>(solveAllInOrder(fzn, "--presolve", "off")));
+  }
+
+  @Test
   void twoImplicationsOfTheSameEqualityKeepTheirBooleansIndependent() throws IOException {
     // int_eq_imp(x,0,a) and int_eq_imp(x,0,b) were collected as one channel and a = b was posted,
     // as for reifications; with a false and the clause a \/ b the 2021 Challenge model
