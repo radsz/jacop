@@ -749,6 +749,15 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void optionValueMayFollowAnEqualsSign() {
+    // --lp=off was taken for an unknown option and ignored, so the relaxation stayed on
+    Options opt = new Options(new String[] {"--lp=off", "-t", "50", "--restart=luby", "model.fzn"});
+    assertTrue(!opt.lp());
+    assertEquals("model.fzn", opt.getFileName());
+    assertTrue(new Options(new String[] {"--lp", "on", "model.fzn"}).lp());
+  }
+
+  @Test
   void allSolutionsOptionPrintsImprovingSolutionsOfRestartSearch() throws IOException {
     // For optimization -a asks for the intermediate solutions; it was rejected together with
     // restart search, where it is only meaningless for satisfaction problems.

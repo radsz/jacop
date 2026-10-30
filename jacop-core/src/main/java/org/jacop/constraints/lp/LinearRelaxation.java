@@ -138,7 +138,7 @@ public class LinearRelaxation extends Constraint
   // the relaxation is solved at one call in period; the period doubles after IDLE_RUNS solves that
   // deduce nothing, up to MAX_PERIOD, and halves after one that deduces something
   private static final int IDLE_RUNS = Integer.getInteger("org.jacop.lp.idle", 32);
-  private static final int MAX_PERIOD = Integer.getInteger("org.jacop.lp.maxPeriod", 64);
+  private static final int MAX_PERIOD = Integer.getInteger("org.jacop.lp.maxPeriod", 4096);
   private int period = 1;
   private int tick;
   private int idle;
