@@ -50,7 +50,6 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.SwitchesPruningLogging;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.util.BipartiteGraphMatching;
@@ -72,8 +71,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * should have their weight increased.
    */
   protected static final boolean IS_INCREASE_WEIGHT_ENABLED = true;
-
-  protected boolean traceEnabled = SwitchesPruningLogging.TRACE_CONSTRAINT;
 
   /**
    * It specifies the number id for a given constraint. All constraints within the same type have
@@ -209,14 +206,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   static int toInt(final float f) {
-    if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
-      return (int) f;
-    } else {
-      throw new ArithmeticException("Overflow occurred " + f);
-    }
-  }
-
-  static int toInt(final double f) {
     if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
       return (int) f;
     } else {

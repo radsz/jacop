@@ -651,16 +651,6 @@ public class BoundSetDomain extends SetDomain {
   }
 
   /**
-   * A set is never numeric.
-   *
-   * @return false
-   */
-  @Override
-  public boolean isNumeric() {
-    return false;
-  }
-
-  /**
    * A set is not sparse.
    *
    * @return false

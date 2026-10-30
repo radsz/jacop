@@ -61,10 +61,6 @@ class DisjointCondVarValue implements MutableVarValue {
     return val;
   }
 
-  public MutableVarValue previous() {
-    return previousDisjointCondVarValue;
-  }
-
   public void setPrevious(MutableVarValue n) {
     previousDisjointCondVarValue = (DisjointCondVarValue) n;
   }

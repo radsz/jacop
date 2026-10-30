@@ -190,11 +190,6 @@ class ThetaLambdaTree extends Tree {
     updateThetaTree(parent(i));
   }
 
-  void disableNode(int i) {
-    clearNode(i);
-    updateThetaTree(parent(i));
-  }
-
   void moveToLambda(int i) {
     ThetaLambdaNode node = tree[i];
     node.eLambda = node.e;
@@ -251,18 +246,6 @@ class ThetaLambdaTree extends Tree {
     }
 
     return plus(envAlpha, eBeta);
-  }
-
-  IntVar getCapacity() {
-    return c;
-  }
-
-  void setCapacity(IntVar capacity) {
-    c = capacity;
-  }
-
-  ThetaLambdaNode leaf(int i) {
-    return tree[leafIndex(i)];
   }
 
   private boolean isLeaf(int i) {

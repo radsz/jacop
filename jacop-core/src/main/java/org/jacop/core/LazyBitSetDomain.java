@@ -1249,11 +1249,6 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
   }
 
   @Override
-  public boolean isNumeric() {
-    return true;
-  }
-
-  @Override
   public int getRandomValue() {
     return intervals().getRandomValue();
   }

@@ -160,6 +160,7 @@ import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.binpacking.VectorBinpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
@@ -454,6 +455,31 @@ class SingleConstraintTest extends TestHelper {
             Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
 
     assertThat(noOfSolutions).isEqualTo(27);
+  }
+
+  // Sizes (w, 80 - w) in bins of capacity (100, 100): every item takes 80 of the 200 of the summed
+  // dimension, so no bin holds three items and seven items need four bins. Each dimension alone
+  // fits them in three bins; only the surrogate dimension of VectorBinpacking sees it at the root.
+  @Test
+  void testVectorBinpackingSurrogateDimension() {
+    int[] first = {10, 20, 30, 40, 50, 60, 70};
+    int[][] w = {first, Arrays.stream(first).map(v -> 80 - v).toArray()};
+    int[][] capacity = {{100, 100, 100}, {100, 100, 100}};
+
+    Store perDimension = new Store();
+    IntVar[] bins = getIntVars(perDimension, "x", 7, 3);
+    IntVar[][] load = {
+      getIntVars(perDimension, "a", 3, 101), getIntVars(perDimension, "b", 3, 101)
+    };
+    for (int d = 0; d < 2; d++) {
+      perDimension.impose(new Binpacking(bins, load[d], w[d]));
+    }
+    assertThat(perDimension.consistency()).isTrue();
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 7, 3);
+    new VectorBinpacking(store, x, capacity, w, 0).imposeDecomposition(store);
+    assertThat(store.consistency()).isFalse();
   }
 
   // Items of weight zero were dropped from the constraint, so their bin variables could take

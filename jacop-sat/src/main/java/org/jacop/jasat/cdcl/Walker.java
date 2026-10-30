@@ -50,7 +50,6 @@ final class Walker {
 
   private final int[] lits;
   private final int[] start;
-  private final int numClauses;
   private final int[][] occ;
   private final int[] occSize;
   private final byte[] sign;
@@ -77,7 +76,6 @@ final class Walker {
   Walker(int numVars, int[] lits, int[] start, int numClauses, byte[] phases, long seed) {
     this.lits = lits;
     this.start = start;
-    this.numClauses = numClauses;
     random = new SplittableRandom(seed);
     sign = Arrays.copyOf(phases, numVars);
     occSize = new int[2 * numVars];

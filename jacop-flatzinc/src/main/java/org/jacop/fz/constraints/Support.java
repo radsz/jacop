@@ -126,6 +126,7 @@ public class Support implements ParserTreeConstants {
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
   final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
+  final BinPackingCliqueDetector binPackingCliques = new BinPackingCliqueDetector(this);
   // unary resources found by the disjunctive clique detection: starts and durations
   final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
@@ -746,6 +747,11 @@ public class Support implements ParserTreeConstants {
         }
       }
     }
+  }
+
+  /** Posts the conflict cliques of the bin packing constraints over the same bins. */
+  public void detectBinPackingCliques() {
+    binPackingCliques.detect();
   }
 
   /** Imposes all delayed constraints. */

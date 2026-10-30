@@ -32,7 +32,6 @@ package org.jacop.constraints.geost;
 
 import static org.jacop.core.Store.ASSERTS_ENABLED;
 
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -52,12 +51,6 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ObstacleObjectFrame extends InternalConstraint {
-
-  static final boolean DISPLAY_FRAME = false;
-
-  // Non-static: set from instance method computeFrame; shared-display concerns are handled
-  // externally.
-  BoxDisplay display;
 
   /** It specifies the geost constraint to which this internal constraint belongs to. */
   final Geost geost;
@@ -181,7 +174,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
       return;
     }
 
-    ensureDisplayReady();
     Dbox domain = Dbox.newBox(obstacle.dimension);
     boolean[] holesExistRef = new boolean[1];
     Dbox boundingBox = computeIntersectionBoundingBox(domain, holesExistRef);
@@ -202,12 +194,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
       updateFrameWithHoles(domain);
     }
 
-    if (DISPLAY_FRAME) {
-      for (Dbox framePiece : frame) {
-        display.display2dBox(framePiece, Color.red);
-      }
-    }
-
     if (!frame.isEmpty()) {
       Dbox.boundingBox(frame).copyInto(frameBoundingBox);
     }
@@ -221,19 +207,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-  }
-
-  private void ensureDisplayReady() {
-    if (!DISPLAY_FRAME) {
-      return;
-    }
-    if (display == null) {
-      display = new BoxDisplay(5, obstacle.toString());
-    } else {
-      display.eraseAll();
-      display.setTitle(obstacle.toString());
-      display.drawGrid(Color.lightGray);
     }
   }
 
@@ -297,9 +270,6 @@ public class ObstacleObjectFrame extends InternalConstraint {
       domain.origin[i] = domain.origin[i] * 4 - 1;
       domain.length[i] = domain.length[i] * 4 + 2;
     }
-    if (DISPLAY_FRAME) {
-      displayShapesAndHolesForFrame(domain);
-    }
     domain.subtractAll(extendedHoles, frame);
     rescaleFramePieces();
     for (Dbox b : extendedHoles) {
@@ -308,45 +278,11 @@ public class ObstacleObjectFrame extends InternalConstraint {
     Dbox.dispatchBox(domain);
   }
 
-  private void displayShapesAndHolesForFrame(Dbox domain) {
-    ValueEnumeration vals2 = obstacle.shapeId.domain.valueEnumeration();
-    while (vals2.hasMoreElements()) {
-      int sid = vals2.nextElement();
-      Shape shape = geost.getShape(sid);
-      for (Dbox sp : shape.holes()) {
-        display.display2dBox(sp, Color.orange);
-      }
-      for (Dbox b : shape.boxes) {
-        display.display2dBox(b, Color.black);
-      }
-      Collection<Dbox> rescaledBoxes = new ArrayList<>(shape.boxes.size());
-      for (Dbox b : shape.boxes) {
-        int dim = b.origin.length;
-        Dbox scaled = Dbox.newBox(dim);
-        for (int i = 0; i < dim; i++) {
-          scaled.origin[i] = b.origin[i] * 4;
-          scaled.length[i] = b.length[i] * 4;
-        }
-        rescaledBoxes.add(scaled);
-      }
-      for (Dbox sb : rescaledBoxes) {
-        display.display2dBox(sb, Color.magenta);
-      }
-    }
-    for (Dbox sp : extendedHoles) {
-      display.display2dBox(sp, Color.blue);
-    }
-    display.display2dBox(domain, Color.green);
-  }
-
   private void rescaleFramePieces() {
     ListIterator<Dbox> iterator = frame.listIterator();
     int dim = obstacle.dimension;
     while (iterator.hasNext()) {
       Dbox piece = iterator.next();
-      if (DISPLAY_FRAME) {
-        display.display2dBox(piece, Color.gray);
-      }
       boolean valid = true;
       for (int i = 0; valid && i < dim; i++) {
         if (piece.length[i] == 1) {

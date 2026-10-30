@@ -45,9 +45,6 @@ import org.jacop.constraints.Constraint;
  */
 class BoundDomain extends IntDomain {
 
-  /** It predefines empty domain so there is no need to constantly create it when needed. */
-  public static final BoundDomain emptyDomain = new BoundDomain();
-
   /** The minimal value of the domain. */
   public int minBound;
 
@@ -278,25 +275,6 @@ class BoundDomain extends IntDomain {
   public boolean contains(int min, int max) {
 
     return minBound <= min && max <= maxBound;
-  }
-
-  /**
-   * It divides the domain by a given constant.
-   *
-   * @param div the constant by which the domain should be divided.
-   * @return the domain obtained by dividing this domain by a given constant.
-   */
-  public IntDomain divide(int div) {
-    return new BoundDomain(div(minBound, div), maxBound / div);
-  }
-
-  private int div(int a, int b) {
-    int div;
-    int rem;
-
-    div = a / b;
-    rem = a % b;
-    return rem > 0 ? div + 1 : div;
   }
 
   @Override
@@ -770,11 +748,6 @@ class BoundDomain extends IntDomain {
   public boolean isIntersecting(int min, int max) {
 
     return !isEmpty() && min <= this.maxBound && max >= this.minBound;
-  }
-
-  @Override
-  public boolean isNumeric() {
-    return true;
   }
 
   @Override

@@ -88,22 +88,10 @@ class BoundsVar implements MutableVar {
     this.store = store;
   }
 
-  int index() {
-    return index;
-  }
-
-  public MutableVarValue previous() {
-    return value.previousBoundsVarValue;
-  }
-
   public void removeLevel(int removeLevel) {
     if (value.stamp == removeLevel) {
       value = value.previousBoundsVarValue;
     }
-  }
-
-  public void setCurrent(MutableVarValue o) {
-    value = (BoundsVarValue) o;
   }
 
   int stamp() {

@@ -125,6 +125,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.binpacking.VectorBinpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
@@ -363,6 +364,12 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "BinpackingTight",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingTight),
+        Arguments.of(
+            "VectorBinpacking",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::vectorBinpacking),
+        Arguments.of(
+            "VectorBinpackingCapacity",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::vectorBinpackingCapacity),
         Arguments.of(
             "BinpackingCardinality",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::binpackingCardinality),
@@ -2936,6 +2943,73 @@ class GlobalConstraintBruteForceTest {
 
   private static int[] range(int lo, int hi) {
     return java.util.stream.IntStream.rangeClosed(lo, hi).toArray();
+  }
+
+  /** Two dimensions; the loads of both dimensions are variables. */
+  private static Instance vectorBinpacking(Random random) {
+    int items = 2 + random.nextInt(4);
+    int bins = 2;
+    int[][] weights = {randomInts(random, items, 0, 4), randomInts(random, items, 0, 4)};
+    return new Instance(
+        append(domains(random, items, 1, bins), domains(random, 2 * bins, 0, 6)),
+        (store, x) -> {
+          IntVar[][] load = {
+            Arrays.copyOfRange(x, items, items + bins),
+            Arrays.copyOfRange(x, items + bins, items + 2 * bins)
+          };
+          new VectorBinpacking(Arrays.copyOfRange(x, 0, items), load, weights, 1)
+              .imposeDecomposition(store);
+        },
+        x -> {
+          for (int d = 0; d < 2; d++) {
+            int[] load = new int[bins];
+            for (int i = 0; i < items; i++) {
+              load[x[i] - 1] += weights[d][i];
+            }
+            for (int b = 0; b < bins; b++) {
+              if (load[b] != x[items + d * bins + b]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        "weights=" + Arrays.deepToString(weights));
+  }
+
+  /**
+   * Fixed capacities and large items in up to three dimensions, so the conflict graph has cliques
+   * of items that no single dimension sees.
+   */
+  private static Instance vectorBinpackingCapacity(Random random) {
+    int items = 3 + random.nextInt(5);
+    int bins = 2 + random.nextInt(3);
+    int dims = 2 + random.nextInt(2);
+    int[][] weights = new int[dims][];
+    int[][] capacity = new int[dims][];
+    for (int d = 0; d < dims; d++) {
+      weights[d] = randomInts(random, items, 0, 6);
+      capacity[d] = randomInts(random, bins, 4, 9);
+    }
+    return new Instance(
+        domains(random, items, 0, bins - 1),
+        (store, x) ->
+            new VectorBinpacking(store, x, capacity, weights, 0).imposeDecomposition(store),
+        x -> {
+          for (int d = 0; d < dims; d++) {
+            int[] load = new int[bins];
+            for (int i = 0; i < items; i++) {
+              load[x[i]] += weights[d][i];
+            }
+            for (int b = 0; b < bins; b++) {
+              if (load[b] > capacity[d][b]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        "weights=" + Arrays.deepToString(weights) + " capacity=" + Arrays.deepToString(capacity));
   }
 
   private static Instance knapsack(Random random) {

@@ -282,7 +282,14 @@ class BoolConstraints implements ParserTreeConstants {
   }
 
   void gen_bool2int(SimpleNode node) {
-    // bool2int is a no-op in this encoding; no constraint to generate.
+    // the integer variable is an alias of the Boolean one, so there is usually nothing to post;
+    // a second bool2int of the same integer variable joins two Booleans, which the alias table
+    // cannot hold, so their equality is posted
+    IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    if (b != x) {
+      support.pose(new XeqY(b, x));
+    }
   }
 
   void clause_generation(SimpleNode node) {

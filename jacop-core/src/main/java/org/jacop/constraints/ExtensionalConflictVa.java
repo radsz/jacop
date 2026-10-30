@@ -53,10 +53,6 @@ import org.jacop.core.Var;
 public class ExtensionalConflictVa extends AbstractExtensionalVa {
 
   static final boolean DEBUG_ALL = false;
-  static boolean debugAllLocal = DEBUG_ALL;
-
-  static final boolean DEBUG_PRUNING = false;
-  static boolean debugPruning = DEBUG_PRUNING;
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -64,7 +60,6 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   final int[] tuple;
 
   int numberTuples;
-  Store store;
 
   int[][][] lastofsequence;
   int[][][] supports;
@@ -342,7 +337,6 @@ public class ExtensionalConflictVa extends AbstractExtensionalVa {
   public void impose(Store store) {
 
     super.impose(store);
-    this.store = store;
 
     filterAndIndexTuples(store);
 

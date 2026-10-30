@@ -38,7 +38,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
-import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
@@ -56,7 +55,6 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-@Slf4j
 public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);

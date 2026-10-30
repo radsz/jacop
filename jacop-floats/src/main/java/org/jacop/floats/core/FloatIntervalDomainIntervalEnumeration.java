@@ -43,7 +43,6 @@ public class FloatIntervalDomainIntervalEnumeration extends FloatIntervalEnumera
 
   final FloatIntervalDomain domain;
   final int maxIntervalNo;
-  FloatInterval i;
   int intervalNo = -1;
 
   /**

@@ -200,8 +200,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   DepthFirstSearch<T>[] finalSearch;
   // labels the variables a search on output variables leaves out
   DepthFirstSearch<T> completionSearch;
-  // sequence search
-  Search<T> finalSearchSeq;
   // Values for search created from flatzinc
   DepthFirstSearch<T> flatzincDfs;
   SelectChoicePoint<T> flatzincVariableSelection;
@@ -341,7 +339,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     long start = timer.getCpuTime();
     SymmetryBreaking.Outcome o =
-        new SymmetryBreaking(store, dictionary).run(astTree, objective, order, budget * 1_000_000L);
+        new SymmetryBreaking(store, dictionary)
+            .run(
+                astTree,
+                objective,
+                !satisfy && getKind(kind.getKind()) == 1,
+                order,
+                budget * 1_000_000L);
     long time = timer.getCpuTime() - start;
     if (!store.consistency()) {
       throw Store.failException;
@@ -356,6 +360,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + o.generators()
               + "\n%%%mzn-stat: symmetryConstraints="
               + o.constraints()
+              + "\n%%%mzn-stat: symmetryValuePrecedences="
+              + o.precedences()
+              + "\n%%%mzn-stat: symmetryOrbitopes="
+              + o.orbitopes()
               + "\n%%%mzn-stat: symmetrySearchComplete="
               + o.complete()
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
@@ -536,6 +544,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
             + r.prunings
+            + "\n%%%mzn-stat: lpRootBound="
+            + r.rootBound
+            + "\n%%%mzn-stat: lpCuts="
+            + r.cuts
+            + "\n%%%mzn-stat: lpCutBound="
+            + r.cutBound
             + "\n%%%mzn-stat-end");
   }
 
@@ -1949,6 +1963,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.literalsReleased
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
+            + "\n%%%mzn-stat: lcgBoundLiterals="
+            + lcg.boundLiterals
+            + "\n%%%mzn-stat: lcgEqualityLiterals="
+            + lcg.equalityLiterals
+            + "\n%%%mzn-stat: lcgTransientLiterals="
+            + lcg.transientLiterals
+            + "\n%%%mzn-stat: lcgAuxiliaryVariables="
+            + lcg.auxiliaryVariables
+            + "\n%%%mzn-stat: lcgSatVariables="
+            + lcg.sat().numVars()
+            + "\n%%%mzn-stat: lcgSatConflicts="
+            + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgSatPropagations="
+            + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
             + reasons
             + "\n%%%mzn-stat: lcgGenericShare="
@@ -3011,8 +3039,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     result = false;
     optimization = solveKind > 0;
-
-    finalSearchSeq = listSeqSearches.getLast();
 
     long currentTime = timer.getCpuTime();
     initTime = currentTime - startCpu;
