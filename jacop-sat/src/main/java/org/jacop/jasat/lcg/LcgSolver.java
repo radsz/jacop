@@ -136,6 +136,21 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: transient literals released. */
   public long literalsReleased;
 
+  /**
+   * The solver variables in use above which a value removal with no literal of its own is kept out
+   * of the solver: a clause that would cite it cites its explanation instead. Each solver variable
+   * costs a few hundred bytes, and an alldiff over 4096 variables of 4096 values removes 8.4
+   * million values on one branch, more than a 3 GB heap holds. The system property {@code
+   * jacop.lcg.literalBudget} sets it; by default one variable per 1 KB of the maximum heap.
+   */
+  private long literalBudget =
+      Long.getLong("jacop.lcg.literalBudget", Runtime.getRuntime().maxMemory() / 1024);
+
+  /** Statistics: value removals kept out of the solver (see {@link #literalBudget}). */
+  public long deferredAtoms;
+
+  private final EntryList scratchEntries = new EntryList();
+
   /** Statistics: literals [x >= v] linked to their neighbours. */
   public long boundLiterals;
 
@@ -526,13 +541,18 @@ public final class LcgSolver implements ExternalPropagator {
       implied = -lit;
     }
     if (e >= 0 && e < pushed) {
-      if (numImplied == impliedLits.length) {
-        impliedLits = Arrays.copyOf(impliedLits, 2 * numImplied);
-        impliedEntries = Arrays.copyOf(impliedEntries, 2 * numImplied);
-      }
-      impliedLits[numImplied] = implied;
-      impliedEntries[numImplied++] = e;
+      addImplied(implied, e);
     }
+  }
+
+  // a literal that the domains imply by a pushed entry, to push before the next atom
+  private void addImplied(int lit, int entry) {
+    if (numImplied == impliedLits.length) {
+      impliedLits = Arrays.copyOf(impliedLits, 2 * numImplied);
+      impliedEntries = Arrays.copyOf(impliedEntries, 2 * numImplied);
+    }
+    impliedLits[numImplied] = lit;
+    impliedEntries[numImplied++] = entry;
   }
 
   /**
@@ -678,6 +698,72 @@ public final class LcgSolver implements ExternalPropagator {
       structural.add(new int[] {lit, -geV, geNext});
     }
     equalityLiterals++;
+    if (deferredAtoms > 0 && sat.value(lit) == 0) {
+      // a deferred removal of v implies the new literal false, and no clause does
+      EntryList found = scratchEntries;
+      found.clear();
+      if (trail.excludedBefore(vars[i], v, pushed, found)
+          && found.size() > 0
+          && trail.kind(found.get(0)) == AtomicTrail.NE) {
+        addImplied(-lit, found.get(0));
+      }
+    }
+  }
+
+  /**
+   * Whether a trail entry about to be pushed is a value removal to keep out of the solver: it has
+   * no literal yet and the solver is over its {@link #literalBudget}.
+   */
+  private boolean defer(int entry) {
+    return trail.kind(entry) == AtomicTrail.NE
+        && RELEASE
+        && !sat.hasProof()
+        && sat.numVars() - numFree >= literalBudget
+        && eq[trail.id(trail.variable(entry))].get(trail.value(entry)) == LiteralMap.NONE;
+  }
+
+  /**
+   * Whether the solver has a trail entry's atom true. A value removal with no literal, deferred or
+   * not pushed yet, is not given one: the caller explains it instead.
+   */
+  private boolean inSolver(int entry) {
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      int d = eq[trail.id(trail.variable(entry))].get(trail.value(entry));
+      return d != LiteralMap.NONE && sat.value(-d) > 0;
+    }
+    return sat.value(atomLit(entry)) > 0;
+  }
+
+  /**
+   * Replaces the deferred value removals of a reason by their explanations, which are earlier on
+   * the trail, until every entry left has its atom in the solver. Returns the solver literal of the
+   * reason, which is {@code extra} unless an explanation brings one.
+   */
+  private int explainDeferred(EntryList reason, int extra) {
+    EntryList stack = scratchEntries;
+    stack.clear();
+    for (int k = 0; k < reason.size(); k++) {
+      stack.addFrom(reason, k);
+    }
+    reason.clear();
+    while (stack.size() > 0) {
+      int last = stack.size() - 1;
+      int f = stack.get(last);
+      if (trail.kind(f) != AtomicTrail.NE || inSolver(f)) {
+        reason.addFrom(stack, last);
+        stack.truncate(last);
+        continue;
+      }
+      stack.truncate(last);
+      int lit = explainEntry(f, stack);
+      if (lit != 0) {
+        if (extra != 0 && extra != lit) {
+          throw new IllegalStateException("a reason with two solver literals");
+        }
+        extra = lit;
+      }
+    }
+    return extra;
   }
 
   /** The DIMACS literal that is true when a trail entry's atom holds. */
@@ -746,6 +832,11 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int position = sat.trailPosition(lit);
     return position >= 0 && position < liftBefore;
+  }
+
+  /** Sets the {@link #literalBudget}; 0 keeps every value removal with no literal out. */
+  void setLiteralBudget(long budget) {
+    literalBudget = budget;
   }
 
   /**
@@ -1837,6 +1928,11 @@ public final class LcgSolver implements ExternalPropagator {
       }
       while (pushed < trail.size()) {
         int e = pushed;
+        if (defer(e)) {
+          deferredAtoms++;
+          pushed++;
+          continue;
+        }
         int lit = atomLit(e);
         if (sat.value(lit) > 0) {
           // a transient literal implies no linked one by a clause: the nearest is pushed too
@@ -2036,8 +2132,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       entryStamp[e] = seen;
       slack[e] = eSlack;
-      int lit = atomLit(e);
-      if (sat.value(lit) > 0) {
+      if (inSolver(e)) {
         inSolver.add(e);
       } else {
         int more = explainEntry(e, stack);
@@ -2137,6 +2232,9 @@ public final class LcgSolver implements ExternalPropagator {
     int extra;
     try {
       extra = explainEntry(e, reason);
+      if (deferredAtoms > 0) {
+        extra = explainDeferred(reason, extra);
+      }
     } finally {
       liftBefore = Integer.MAX_VALUE;
     }
