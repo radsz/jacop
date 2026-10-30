@@ -235,6 +235,11 @@ public class LinearRelaxation extends Constraint
 
   // the rows of the constraints that are not linear relations, added at the first solve
   private List<LinearForm> extraForms = new ArrayList<>();
+  // the rows of the other constraints once kept: the prunings found with them stay explained by
+  // them, so a copy keeps them even after they are dropped here
+  private List<LinearForm> keptExtraForms = List.of();
+  // a copy keeps the rows of the other constraints that its original kept, whatever its own solve
+  private boolean keepExtra;
   private int[][] extraColumns = new int[0][];
   private long[][] extraWeights = new long[0][];
   private long[] extraSide = new long[0];
@@ -1428,9 +1433,11 @@ public class LinearRelaxation extends Constraint
                   && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
       keep = raised || k <= SMALL_EXTRA;
     }
+    keep |= keepExtra;
     extraColumns = new int[0][];
     extraWeights = new long[0][];
     if (keep) {
+      keptExtraForms = extraForms;
       extraRows = k;
       beforeExtra = lp;
       baseRows = m;
@@ -1635,13 +1642,14 @@ public class LinearRelaxation extends Constraint
       copies.add(new LinearForm(map.get(f.vars()), f.weights(), f.c(), f.relation()));
     }
     List<LinearForm> extraCopies = new ArrayList<>();
-    for (LinearForm f : extraForms) {
+    for (LinearForm f : keptExtraForms.isEmpty() ? extraForms : keptExtraForms) {
       extraCopies.add(new LinearForm(map.get(f.vars()), f.weights(), f.c(), f.relation()));
     }
     LinearRelaxation c =
         new LinearRelaxation(
             copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
     c.pivotLimit = pivotLimit;
+    c.keepExtra = !keptExtraForms.isEmpty();
     return c;
   }
 

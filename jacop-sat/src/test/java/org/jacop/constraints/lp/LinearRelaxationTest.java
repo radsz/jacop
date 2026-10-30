@@ -34,17 +34,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.LinearInt;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
@@ -542,6 +545,71 @@ class LinearRelaxationTest {
     assertThat(store.consistency()).isTrue();
     assertThat(cost.min()).isEqualTo(3);
     assertThat(r.rows()).isEqualTo(2);
+  }
+
+  /**
+   * A copy keeps the extra rows its original kept. The copy decided again at its own first solve,
+   * and over other domains (the LCG checker copies over the reason of a pruning) the same rows no
+   * longer raised the bound and were dropped: the pruning the original had found with them looked
+   * unsound (p1f/15 under --lcg -f, "wrong explanation ... by LinearRelaxation").
+   */
+  @Test
+  void copyKeepsTheExtraRowsItsOriginalKept() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 5);
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 30);
+    IntVar[] row = {x[0], x[1], x[2], x[3], cost};
+    store.impose(new LinearInt(row, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, ">=", 3));
+    // more extra rows than are kept for being few: one raises the bound, the rest do not
+    List<LinearForm> extra = new ArrayList<>();
+    extra.add(new LinearForm(x, new long[] {1, 1, 1, 1}, 12, LinearForm.GE));
+    IntVar[] b = new IntVar[40];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    for (int i = 0; i < 150; i++) {
+      IntVar[] v = {b[i % b.length], b[(i * 7 + 1) % b.length]};
+      extra.add(new LinearForm(v, new long[] {1, 1}, 1, LinearForm.GE));
+    }
+    LinearRelaxation r = LinearRelaxation.of(store, cost, false, extra, Set.of());
+    assertThat(r).isNotNull();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(cost.min()).isEqualTo(12);
+    int rows = r.rows();
+    assertThat(rows).isEqualTo(2 + extra.size());
+
+    // a copy over domains on which the extra rows do not raise the bound
+    Store other = new Store();
+    Map<Var, Var> copies = new HashMap<>();
+    for (IntVar v : x) {
+      copies.put(v, new IntVar(other, v.id(), 3, 3));
+    }
+    copies.put(cost, new IntVar(other, "cost", 0, 30));
+    for (IntVar v : b) {
+      copies.put(v, new IntVar(other, v.id(), 0, 1));
+    }
+    LinearRelaxation copy =
+        r.copy(
+            new VarMap() {
+              @Override
+              public Store target() {
+                return other;
+              }
+
+              @Override
+              @SuppressWarnings("unchecked")
+              public <V extends Var> V get(V v) {
+                return (V) copies.get(v);
+              }
+            });
+    other.impose(copy);
+    assertThat(other.consistency()).isTrue();
+    assertThat(copy.rows()).isEqualTo(rows);
   }
 
   // the number of solutions over the given variables
