@@ -1050,7 +1050,10 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       int lb = vars[objective].min(); // after solve the domains are those of level 0
-      if (lowerBoundShare > 0 && best != null && lb < best[objective]) {
+      // before the first solution too: a tight bound can be much easier than none
+      // (parity-learning 52_26_6.3: errors <= 1 is solved in 2 s, errors <= 6 not in 60 s)
+      int ub = best != null ? best[objective] : vars[objective].max();
+      if (lowerBoundShare > 0 && lb < ub) {
         int lit = -geLit(objective, lb + 1); // objective <= lb
         limit = sat.conflicts + (long) (budget * lowerBoundShare);
         sat.setConflictLimit(limit);
