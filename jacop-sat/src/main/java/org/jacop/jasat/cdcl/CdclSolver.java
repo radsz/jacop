@@ -278,6 +278,9 @@ public final class CdclSolver {
   // the propagator is told about levels and assignments (only in the search of solve())
   private boolean notifying;
   private int[] queuedExternal;
+  // learnt clauses up to this size and LBD go to the propagator's notifyLearnt (0: none)
+  private int exportSize;
+  private int exportLbd;
   // variables observed after they were assigned, notified at the next propagation
   private int[] lateObserved = new int[4];
   private int numLateObserved;
@@ -692,6 +695,18 @@ public final class CdclSolver {
    */
   public void setExternalReasonKeep(int size) {
     externalReasonKeep = Math.max(2, size);
+  }
+
+  /**
+   * Passes each clause learnt from now on that has at most the given size and LBD to the external
+   * propagator's {@link ExternalPropagator#notifyLearnt}, for other solvers to import.
+   *
+   * @param size the largest clause passed; 0 turns it off
+   * @param lbd the largest LBD passed
+   */
+  public void setLearntExport(int size, int lbd) {
+    exportSize = Math.max(0, size);
+    exportLbd = lbd;
   }
 
   /**
@@ -2534,6 +2549,12 @@ public final class CdclSolver {
       }
       int implied = -1;
       if (c == null) {
+        c = external.importedClause();
+        if (c != null) {
+          implied = IMPORTED;
+        }
+      }
+      if (c == null) {
         int lit = external.propagate();
         while (lit != 0 && vals[toLit(lit)] > 0) {
           lit = external.propagate();
@@ -2562,6 +2583,9 @@ public final class CdclSolver {
    *
    * @return a conflict, with at least two literals at the (new) current level, or NO_CONFLICT
    */
+  // the implied literal of addExternal for a clause learnt elsewhere, added as a learnt clause
+  private static final int IMPORTED = -2;
+
   private int addExternal(int[] dimacs, int implied) {
     int[] c = new int[dimacs.length];
     for (int i = 0; i < c.length; i++) {
@@ -2614,12 +2638,12 @@ public final class CdclSolver {
     orderForWatches(c);
     int ref = BINARY;
     if (size == 2) {
-      if (implied >= 0) {
+      if (implied >= 0 || implied == IMPORTED) {
         addLearntBinary(c[0], c[1]);
       } else {
         addOriginalBinary(c[0], c[1]);
       }
-    } else if (implied >= 0) {
+    } else if (implied >= 0 || implied == IMPORTED) {
       ref = allocate(c, size, true, size);
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
@@ -2905,6 +2929,13 @@ public final class CdclSolver {
       attach(ref);
       bumpClause(ref);
       assignAt(learnt[0], ref, level[learnt[1] >> 1]);
+    }
+    if (learntSize <= exportSize && lbd <= exportLbd && external != null) {
+      int[] dimacs = new int[learntSize];
+      for (int i = 0; i < learntSize; i++) {
+        dimacs[i] = toDimacs(learnt[i]);
+      }
+      external.notifyLearnt(dimacs, lbd);
     }
     lbdSum += lbd;
     emaFastBeta *= 1 - 0.03;

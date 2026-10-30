@@ -92,6 +92,16 @@ public interface ExternalPropagator {
   default void notifyKeptLiteral(int lit) {}
 
   /**
+   * A clause just learnt by conflict analysis that is short and of low LBD, for other solvers to
+   * import; called only after {@link CdclSolver#setLearntExport} turned it on. The array is the
+   * propagator's to keep.
+   *
+   * @param clause the clause in DIMACS literals
+   * @param lbd its literal block distance
+   */
+  default void notifyLearnt(int[] clause, int lbd) {}
+
+  /**
    * Shortens a clause just learnt by conflict analysis by removing literals that imply another
    * literal of the clause, an implication only the propagator knows (semantic minimisation). The
    * first literal, the one the clause asserts, stays first and is never removed.
@@ -184,6 +194,16 @@ public interface ExternalPropagator {
    * @return the clause, or null when there is none
    */
   default int[] externalClause() {
+    return null;
+  }
+
+  /**
+   * Returns a clause learnt elsewhere to add as a learnt clause, which the solver may delete later;
+   * asked for once {@link #externalClause} has none.
+   *
+   * @return the clause in DIMACS literals, or null when there is none
+   */
+  default int[] importedClause() {
     return null;
   }
 }

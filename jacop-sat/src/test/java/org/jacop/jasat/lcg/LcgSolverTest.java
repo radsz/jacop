@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import org.jacop.constraints.AbsXeqY;
@@ -3541,6 +3542,94 @@ class LcgSolverTest {
       runs += solver.lnsRuns;
     }
     assertThat(runs).isPositive();
+  }
+
+  /**
+   * A solver of makespan problems stops after a few conflicts; a second one, of the same problem in
+   * its own store, takes its learnt clauses (of any size and LBD, to share many), its root bounds
+   * and its best cost as the bound, as portfolio threads do. Neither finds a solution better than
+   * the optimum of depth-first search, and the better of their solutions is optimal.
+   */
+  @Test
+  void sharedClausesKeepTheOptimum() {
+    Random rnd = new Random(31);
+    long imported = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 4; instance++) {
+      int n = 6 + rnd.nextInt(3);
+      int[] d = new int[n];
+      int[] r = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(4);
+        r[i] = 1 + rnd.nextInt(3);
+      }
+      int limit = 3 + rnd.nextInt(2);
+      IntVar[][] starts = new IntVar[3][];
+      IntVar[] makespans = new IntVar[3];
+      Store[] stores = new Store[3];
+      for (int k = 0; k < 3; k++) {
+        stores[k] = new Store();
+        starts[k] = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        IntVar[] ends = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          starts[k][i] = new IntVar(stores[k], "s" + i, 0, 20 - d[i]);
+          ends[i] = new IntVar(stores[k], "e" + i, d[i], 20);
+          stores[k].impose(new XplusCeqZ(starts[k][i], d[i], ends[i]));
+          durations[i] = new IntVar(stores[k], d[i], d[i]);
+          resources[i] = new IntVar(stores[k], r[i], r[i]);
+        }
+        makespans[k] = new IntVar(stores[k], "makespan", 0, 20);
+        stores[k].impose(new Max(ends, makespans[k]));
+        stores[k].impose(
+            new Cumulative(starts[k], durations, resources, new IntVar(stores[k], limit, limit)));
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(
+              search.labeling(
+                  stores[0],
+                  new SimpleSelect<>(starts[0], null, new IndomainMin<>()),
+                  makespans[0]))
+          .isTrue();
+      int optimum = search.getCostValue();
+
+      // the first solver stops after a few conflicts, the second takes its clauses and its best
+      // solution's cost as the bound, as a portfolio thread does from another one
+      SharedClauses pool = new SharedClauses();
+      AtomicInteger bound = new AtomicInteger(Integer.MAX_VALUE);
+      int[] found = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE};
+      int[] results = new int[3];
+      for (int k = 1; k < 3; k++) {
+        int w = k;
+        LcgSolver solver = new LcgSolver(stores[k]);
+        solver.setChecking(true);
+        solver.setSharedClauses(pool, IntVar::id, 64, 64);
+        solver.setSharedBound(bound::get);
+        solver.onSolution(
+            () -> {
+              int cost = makespans[w].value();
+              found[w] = Math.min(found[w], cost);
+              bound.accumulateAndGet(cost, Math::min);
+            });
+        if (k == 1) {
+          solver.sat().setConflictLimit(5 + rnd.nextInt(60));
+        }
+        results[k] = solver.minimize(makespans[k]);
+        if (k == 2) {
+          imported += solver.clausesImported;
+        }
+      }
+      for (int k = 1; k < 3; k++) {
+        assertThat(found[k])
+            .as("instance %d, solver %d", instance, k)
+            .isGreaterThanOrEqualTo(optimum);
+      }
+      // the second solver ends its search: the better of the two solutions is optimal
+      assertThat(results[2]).as("instance %d", instance).isNotEqualTo(CdclSolver.UNKNOWN);
+      assertThat(bound.get()).as("instance %d", instance).isEqualTo(optimum);
+    }
+    assertThat(imported).isPositive();
   }
 
   @Test

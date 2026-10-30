@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.function.IntSupplier;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
@@ -397,6 +398,31 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Runs in large neighbourhoods that improved the best solution. */
   public long lnsImproved;
+
+  // clauses shared with solvers of the same model in other threads (null: none)
+  private SharedClauses shared;
+  private int sharedSource;
+  // per variable its number in the shared clauses (-1: not shared), and the reverse
+  private int[] sharedId;
+  private int[] sharedLocal;
+  // the root bounds last published
+  private int[] publishedMin;
+  private int[] publishedMax;
+  private int sharedRead;
+  private final List<int[]> exportBatch = new ArrayList<>();
+  private final ArrayDeque<int[]> imports = new ArrayDeque<>();
+
+  /** Learnt clauses given to the solvers of other threads. */
+  public long clausesExported;
+
+  /** Root bounds given to the solvers of other threads, as unit clauses. */
+  public long boundsExported;
+
+  /** Clauses of other threads' solvers added to this one. */
+  public long clausesImported;
+
+  /** Clauses of other threads' solvers left out: satisfied at the root or on missing literals. */
+  public long clausesSkipped;
 
   /**
    * Builds the solver for the constraints imposed in a store. The store is propagated first; its
@@ -902,6 +928,7 @@ public final class LcgSolver implements ExternalPropagator {
       return CdclSolver.UNSAT;
     }
     solution = null;
+    exchangeShared();
     // clauses propagate between constraints: each consistency() returns after a pruning constraint
     store.setReturnAfterPruning(!fullFixpoint);
     int result;
@@ -912,6 +939,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     // the solver leaves its last assignment without notifying; the store goes back to the root
     notifyBacktrack(0);
+    exchangeShared();
     return result;
   }
 
@@ -1809,6 +1837,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (restartPresolve > 0 && store.level == baseLevel) {
       presolveAtRestart();
     }
+    exchangeShared();
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {
@@ -2080,6 +2109,167 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     phase = p;
+  }
+
+  /**
+   * Shares clauses with the solvers of the same model in other threads: learnt clauses of at most
+   * the given size and LBD over atoms of named variables, and the root bounds of those variables,
+   * go out at restarts, when those of the other solvers come in. The model's constraints must be
+   * implied by the model all solvers share (no symmetry breaking), and the shared bound must be the
+   * cost of a solution all of them know of; see {@link SharedClauses}.
+   *
+   * @param pool the clauses of all solvers
+   * @param name the name of a variable in the model, or null for a variable of this store only
+   * @param size the largest learnt clause shared
+   * @param lbd the largest LBD of a learnt clause shared
+   */
+  public void setSharedClauses(
+      SharedClauses pool, Function<IntVar, String> name, int size, int lbd) {
+    if (pool == null || sat.hasProof()) {
+      return;
+    }
+    shared = pool;
+    sharedSource = pool.newSource();
+    sharedId = new int[vars.length];
+    publishedMin = new int[vars.length];
+    publishedMax = new int[vars.length];
+    int top = -1;
+    for (int i = 0; i < vars.length; i++) {
+      sharedId[i] = -1;
+      if (vars[i] != null && !root[i].singleton()) {
+        String n = name.apply(vars[i]);
+        if (n != null) {
+          sharedId[i] = pool.id(n);
+          top = Math.max(top, sharedId[i]);
+          publishedMin[i] = root[i].min();
+          publishedMax[i] = root[i].max();
+        }
+      }
+    }
+    sharedLocal = new int[top + 1];
+    Arrays.fill(sharedLocal, -1);
+    for (int i = 0; i < vars.length; i++) {
+      if (sharedId[i] >= 0) {
+        sharedLocal[sharedId[i]] = i;
+      }
+    }
+    sat.setLearntExport(size, lbd);
+  }
+
+  @Override
+  public void notifyLearnt(int[] clause, int lbd) {
+    if (shared == null) {
+      return;
+    }
+    int[] c = new int[2 + 3 * clause.length];
+    c[0] = sharedSource;
+    c[1] = lbd;
+    for (int k = 0; k < clause.length; k++) {
+      int d = Math.abs(clause[k]);
+      int i = d < litVar.length ? litVar[d] : -1;
+      if (i < 0 || sharedId[i] < 0) {
+        return; // an auxiliary literal or a variable of this store only
+      }
+      c[2 + 3 * k] = sharedId[i];
+      c[3 + 3 * k] = litKind[d] + (clause[k] < 0 ? SharedClauses.NEGATED : 0);
+      c[4 + 3 * k] = litValue[d];
+    }
+    exportBatch.add(c);
+    clausesExported++;
+  }
+
+  @Override
+  public int[] importedClause() {
+    return imports.poll();
+  }
+
+  /** At the root: gives out the new learnt clauses and root bounds, takes in the others'. */
+  private void exchangeShared() {
+    if (shared == null || failed) {
+      return;
+    }
+    for (int i = 0; i < sharedId.length; i++) {
+      if (sharedId[i] < 0) {
+        continue;
+      }
+      IntVar x = vars[i];
+      if (x.min() > publishedMin[i]) {
+        publishedMin[i] = x.min();
+        exportBatch.add(new int[] {sharedSource, 1, sharedId[i], SharedClauses.GE, x.min()});
+        boundsExported++;
+      }
+      if (x.max() < publishedMax[i]) {
+        publishedMax[i] = x.max();
+        exportBatch.add(
+            new int[] {
+              sharedSource, 1, sharedId[i], SharedClauses.GE + SharedClauses.NEGATED, x.max() + 1
+            });
+        boundsExported++;
+      }
+    }
+    if (!exportBatch.isEmpty()) {
+      shared.publish(exportBatch);
+      exportBatch.clear();
+    }
+    List<int[]> in = new ArrayList<>();
+    sharedRead = shared.read(sharedRead, sharedSource, in);
+    for (int[] c : in) {
+      int[] clause = localClause(c);
+      if (clause == null) {
+        clausesSkipped++;
+      } else {
+        imports.add(clause);
+        clausesImported++;
+      }
+    }
+  }
+
+  /**
+   * A shared clause in this solver's literals, without the atoms false at the root; null when an
+   * atom is true at the root, a variable is not in this store, or a literal of a clause of two or
+   * more atoms does not exist here (new literals cost more than the clause saves).
+   */
+  private int[] localClause(int[] c) {
+    int n = (c.length - 2) / 3;
+    int[] clause = new int[n];
+    int size = 0;
+    for (int k = 0; k < n; k++) {
+      int id = c[2 + 3 * k];
+      int i = id < sharedLocal.length ? sharedLocal[id] : -1;
+      if (i < 0) {
+        return null;
+      }
+      boolean negated = c[3 + 3 * k] >= SharedClauses.NEGATED;
+      int kind = c[3 + 3 * k] % SharedClauses.NEGATED;
+      int v = c[4 + 3 * k];
+      IntDomain r = root[i];
+      boolean atRootTrue;
+      boolean atRootFalse;
+      if (kind == SharedClauses.GE) {
+        atRootTrue = v <= r.min();
+        atRootFalse = v > r.max();
+      } else {
+        atRootFalse = !r.contains(v);
+        atRootTrue = r.singleton(v);
+      }
+      if (atRootTrue || atRootFalse) {
+        if (atRootTrue != negated) {
+          return null; // the clause holds at the root
+        }
+        continue;
+      }
+      int d = (kind == SharedClauses.GE ? ge : eq)[i].get(v);
+      if (d == LiteralMap.NONE) {
+        if (n > 1) {
+          return null;
+        }
+        d = kind == SharedClauses.GE ? geVar(i, v) : eqVar(i, v);
+      } else {
+        keep(d);
+      }
+      clause[size++] = negated ? -d : d;
+    }
+    return Arrays.copyOf(clause, size);
   }
 
   /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */

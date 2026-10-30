@@ -1804,6 +1804,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (worker != null) {
       worker.onStop(lcg::stop);
+      shareClauses(worker);
     }
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
@@ -2140,8 +2141,46 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().semanticUips
             + coreStatistics()
             + lnsStatistics(lcg.lns())
+            + sharingStatistics(lcg)
             + "\n%%%mzn-stat-end\n"
             + perClass);
+  }
+
+  /**
+   * Shares short learnt clauses and root bounds with the portfolio's other LCG threads, which solve
+   * the same model; not after presolve, whose store has variables of its own and whose symmetry
+   * breaking the model does not imply. {@code --free-config share-clauses=<size>} sets the largest
+   * clause shared (default 8, 0 turns sharing off), {@code share-lbd=<lbd>} its largest LBD
+   * (default 2).
+   */
+  private void shareClauses(Portfolio.Worker worker) {
+    int size = Integer.parseInt(options.freeConfig("share-clauses", "8"));
+    if (presolve != null || size <= 0) {
+      return;
+    }
+    int lbd = Integer.parseInt(options.freeConfig("share-lbd", "2"));
+    Map<IntVar, String> names = new IdentityHashMap<>();
+    for (String name : dictionary.variableTable.keySet()) {
+      IntVar x = dictionary.getVariable(name);
+      if (x != null) {
+        names.putIfAbsent(x, name);
+      }
+    }
+    lcg.setSharedClauses(worker.sharedClauses(), names::get, size, lbd);
+  }
+
+  private static String sharingStatistics(LcgSolver lcg) {
+    if (lcg.clausesExported + lcg.boundsExported + lcg.clausesImported + lcg.clausesSkipped == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lcgClausesExported="
+        + lcg.clausesExported
+        + "\n%%%mzn-stat: lcgBoundsExported="
+        + lcg.boundsExported
+        + "\n%%%mzn-stat: lcgClausesImported="
+        + lcg.clausesImported
+        + "\n%%%mzn-stat: lcgClausesSkipped="
+        + lcg.clausesSkipped;
   }
 
   private String coreStatistics() {

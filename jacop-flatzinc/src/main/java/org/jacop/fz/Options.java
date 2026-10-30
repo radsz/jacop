@@ -199,6 +199,9 @@ public class Options {
                 activity (off); turns changes between the two at each restart),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
+                learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
+                at restarts; share-clauses=0 = off),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
                 blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
