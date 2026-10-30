@@ -182,7 +182,7 @@ public class Options {
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),
                 lns=0|1 (adaptive large neighbourhood search for optimisation, default 1),
                 lns-share=<share> (propagations of neighbourhood runs per propagation of the other
-                runs, conflicts with --lcg; default 1, 3 with --lcg), lns-fails=<failures> (one neighbourhood run, default 100),
+                runs, default 0.8; with --lcg time per unit of time, default 3), lns-fails=<failures> (one neighbourhood run, default 100),
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
