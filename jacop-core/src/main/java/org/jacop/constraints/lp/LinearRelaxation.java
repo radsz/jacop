@@ -34,6 +34,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -80,15 +82,19 @@ public class LinearRelaxation extends Constraint
   // the scales tried for the multipliers, the largest first
   private static final long[] SCALES = {1L << 24, 1L << 16, 1L << 8, 1};
 
+  // the scale of the rows of the basis inverse the Gomory cuts come from
+  private static final long GOMORY_SCALE = 1L << 20;
+
   private final IntVar[] x;
-  private final int[][] rowColumns;
-  private final long[][] rowWeights;
-  private final long[] rowLo;
-  private final long[] rowHi;
-  private final boolean[] hasLo;
-  private final boolean[] hasHi;
+  // the rows, the cuts last
+  private int[][] rowColumns;
+  private long[][] rowWeights;
+  private long[] rowLo;
+  private long[] rowHi;
+  private boolean[] hasLo;
+  private boolean[] hasHi;
   private final IntVar objective;
-  private final DualSimplex lp;
+  private DualSimplex lp;
 
   // the rows as given, and the sense of the objective, for copies
   private final List<LinearForm> forms = new ArrayList<>();
@@ -110,6 +116,10 @@ public class LinearRelaxation extends Constraint
   private static final long MAX_TABLEAU = Long.getLong("org.jacop.lp.maxTableau", 4_000_000L);
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
+
+  // the most pivots of the first solve, which has the root budget instead of the pivot limit: a
+  // root LP that stops at the limit gives neither a bound nor cuts
+  private static final int ROOT_PIVOTS = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
 
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
   // its pivots update, a solve that only tightens bounds a PRUNE_DISCOUNT-th of them, and a solve
@@ -146,6 +156,27 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: propagations stopped at the pivot limit. */
   public long limits;
+
+  /** Statistics: the objective bound of the first optimal solve, or NaN. */
+  public double rootBound = Double.NaN;
+
+  /** Statistics: the objective bound of the first optimal solve after the cuts, or NaN. */
+  public double cutBound = Double.NaN;
+
+  /** Statistics: cuts added. */
+  public long cuts;
+
+  // MIR cuts at the root: rounds, cuts per round, and the share of the rows they may add
+  private static final boolean CUTS_ENABLED =
+      !"false".equals(System.getProperty("org.jacop.lp.cuts"));
+  private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
+  private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
+  private static final int MAX_SOURCES = 100;
+  private static final double MAX_PARALLELISM = 0.9;
+
+  // the cuts are made at the first solve only, before any search decision: they use the bounds of
+  // that moment, which hold for the whole search
+  private boolean cutsTried;
 
   /**
    * Creates the relaxation of linear forms.
@@ -464,10 +495,15 @@ public class LinearRelaxation extends Constraint
     long failed = failures;
     long pruned = prunings;
     long pivots = lp.totalPivots;
+    boolean first = calls == 0;
     try {
       solveAndPropagate(store);
     } finally {
       long cost = (lp.totalPivots - pivots + 1) * ((long) rows() * (rows() + x.length));
+      if (first) {
+        // the root solve and its cuts may take up to their own budget; they spend the credit only
+        cost = Math.min(cost, WORK);
+      }
       // back off while the relaxation finds nothing, come back as soon as it does
       if (failures > failed) {
         idle = 0;
@@ -530,7 +566,21 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = (long) rows() * (rows() + x.length);
-    int status = lp.solve((int) Math.clamp((calls == 1 ? ROOT_WORK : WORK) / size, 5, pivotLimit));
+    int status =
+        lp.solve(
+            calls == 1
+                ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
+                : (int) Math.clamp(WORK / size, 5, pivotLimit));
+    // the first solve happens in the root propagation, before search makes a decision (also in
+    // the free search, which propagates its root a level up, and under lazy clause generation)
+    if (status == DualSimplex.OPTIMAL
+        && objective != null
+        && CUTS_ENABLED
+        && !cutsTried
+        && calls == 1) {
+      cutsTried = true;
+      status = cutRounds();
+    }
     if (status == DualSimplex.LIMIT) {
       limits++;
       stalled++;
@@ -542,6 +592,9 @@ public class LinearRelaxation extends Constraint
       infeasible++;
       y = lp.farkas();
     } else if (objective != null) {
+      if (Double.isNaN(rootBound)) {
+        rootBound = lp.value(0);
+      }
       y = lp.duals();
     } else {
       return;
@@ -552,9 +605,6 @@ public class LinearRelaxation extends Constraint
         return;
       }
       LinearForm[] combined = combine(lambda);
-      if (combined == null) {
-        continue;
-      }
       for (LinearForm f : combined) {
         if (f != null) {
           propagate(store, f);
@@ -581,10 +631,47 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
-   * Returns the two inequalities of the combination {@code sum lambda_i a_i x}, each as {@code <=}
-   * (one of them may be null when a row lacks the side it needs), or null on overflow.
+   * The combination {@code sum lambda_i a_i x} of the rows, by column, with its two sides: {@code
+   * <= upper} when every row has the side its multiplier needs, and {@code >= lower} likewise.
    */
-  private LinearForm[] combine(long[] lambda) {
+  private static final class Aggregate {
+    private final long[] coef;
+    private final long upper;
+    private final boolean hasUpper;
+    private final long lower;
+    private final boolean hasLower;
+
+    Aggregate(long[] coef, long upper, boolean hasUpper, long lower, boolean hasLower) {
+      this.coef = coef;
+      this.upper = upper;
+      this.hasUpper = hasUpper;
+      this.lower = lower;
+      this.hasLower = hasLower;
+    }
+
+    long[] coef() {
+      return coef;
+    }
+
+    long upper() {
+      return upper;
+    }
+
+    boolean hasUpper() {
+      return hasUpper;
+    }
+
+    long lower() {
+      return lower;
+    }
+
+    boolean hasLower() {
+      return hasLower;
+    }
+  }
+
+  // the combination of the rows by lambda, exact; null on overflow
+  private Aggregate aggregate(long[] lambda) {
     long[] coef = new long[x.length];
     long upper = 0; // sum lambda_i a_i x <= upper
     long lower = 0; // sum lambda_i a_i x >= lower
@@ -615,6 +702,19 @@ public class LinearRelaxation extends Constraint
     } catch (ArithmeticException overflow) {
       return null;
     }
+    return new Aggregate(coef, upper, hasUpper, lower, hasLower);
+  }
+
+  /**
+   * Returns the two inequalities of the combination {@code sum lambda_i a_i x}, each as {@code <=}
+   * (one of them may be null when a row lacks the side it needs), or null on overflow.
+   */
+  private LinearForm[] combine(long[] lambda) {
+    Aggregate g = aggregate(lambda);
+    if (g == null) {
+      return new LinearForm[0];
+    }
+    long[] coef = g.coef();
     int size = 0;
     for (long c : coef) {
       size += c != 0 ? 1 : 0;
@@ -633,9 +733,197 @@ public class LinearRelaxation extends Constraint
       }
     }
     return new LinearForm[] {
-      hasUpper ? new LinearForm(vars, w, upper, LinearForm.LE) : null,
-      hasLower ? new LinearForm(vars, neg, -lower, LinearForm.LE) : null
+      g.hasUpper() ? new LinearForm(vars, w, g.upper(), LinearForm.LE) : null,
+      g.hasLower() ? new LinearForm(vars, neg, -g.lower(), LinearForm.LE) : null
     };
+  }
+
+  /**
+   * Rounds of MIR cuts at the root, each followed by a re-solve from the same basis. The cuts come
+   * from the rows of the tableau of the basic columns with fractional values (Gomory mixed-integer
+   * cuts, made exact: the row of the basis inverse is scaled and rounded into an integer
+   * combination of the rows, and the MIR is taken of that combination) and from the rows
+   * themselves. They use the bounds of the root, so they hold for the whole search, and they are
+   * propagated and explained like the other rows.
+   *
+   * @return the status of the last solve
+   */
+  private int cutRounds() {
+    rootBound = lp.value(0);
+    int n = x.length;
+    long[] lo = new long[n];
+    long[] hi = new long[n];
+    for (int j = 0; j < n; j++) {
+      lo[j] = x[j].min();
+      hi[j] = x[j].max();
+    }
+    int original = rows();
+    Set<List<Long>> seen = new HashSet<>();
+    int status = DualSimplex.OPTIMAL;
+    double[] value = new double[n];
+    for (int round = 0; round < CUT_ROUNDS; round++) {
+      for (int j = 0; j < n; j++) {
+        value[j] = lp.value(j);
+      }
+      List<MirCut> found = new ArrayList<>();
+      List<Integer> sources = new ArrayList<>();
+      for (int j = 0; j < n; j++) {
+        double f = value[j] - Math.floor(value[j]);
+        if (lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
+          sources.add(j);
+        }
+      }
+      sources.sort(
+          Comparator.comparingDouble(j -> Math.abs(value[j] - Math.floor(value[j]) - 0.5)));
+      for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
+        long[] lambda = scaled(lp.inverseRow(lp.basicRow(j)), GOMORY_SCALE);
+        if (lambda != null) {
+          mir(aggregate(lambda), value, lo, hi, found);
+        }
+      }
+      long[] unit = new long[rows()];
+      for (int i = 0; i < original; i++) {
+        unit[i] = 1;
+        mir(aggregate(unit), value, lo, hi, found);
+        unit[i] = 0;
+      }
+      found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+      List<MirCut> chosen = new ArrayList<>();
+      for (MirCut c : found) {
+        long m = (long) rows() + chosen.size() + 1;
+        if (chosen.size() >= CUTS_PER_ROUND || m * (m + n) > MAX_TABLEAU) {
+          break;
+        }
+        List<Long> key = new ArrayList<>();
+        for (int k = 0; k < c.columns.length; k++) {
+          key.add((long) c.columns[k]);
+          key.add(c.weights[k]);
+        }
+        key.add(c.rhs);
+        if (!seen.contains(key) && orthogonal(c, chosen)) {
+          seen.add(key);
+          chosen.add(c);
+        }
+      }
+      if (chosen.isEmpty()) {
+        break;
+      }
+      DualSimplex kept = lp.copy();
+      long pivots = lp.totalPivots;
+      double before = lp.value(0);
+      addCuts(chosen);
+      long size = (long) rows() * (rows() + n);
+      status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
+      if (status == DualSimplex.OPTIMAL
+          && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
+        // cuts that do not move the bound only make each solve dearer: back to the LP before them
+        dropCuts(chosen.size(), kept, lp.totalPivots - pivots);
+        break;
+      }
+      if (status != DualSimplex.OPTIMAL) {
+        if (status == DualSimplex.LIMIT) {
+          dropCuts(chosen.size(), kept, lp.totalPivots - pivots);
+          status = DualSimplex.OPTIMAL;
+        }
+        break;
+      }
+    }
+    if (status == DualSimplex.OPTIMAL) {
+      cutBound = lp.value(0);
+    }
+    return status;
+  }
+
+  // whether the cut is far enough from parallel to each of the cuts chosen
+  private static boolean orthogonal(MirCut c, List<MirCut> chosen) {
+    for (MirCut o : chosen) {
+      double dot = 0;
+      int p = 0;
+      int q = 0;
+      while (p < c.columns.length && q < o.columns.length) {
+        if (c.columns[p] == o.columns[q]) {
+          dot += (double) c.weights[p] * o.weights[q];
+          p++;
+          q++;
+        } else if (c.columns[p] < o.columns[q]) {
+          p++;
+        } else {
+          q++;
+        }
+      }
+      if (Math.abs(dot) > MAX_PARALLELISM * c.norm * o.norm) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static void mir(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    if (g == null) {
+      return;
+    }
+    if (g.hasUpper()) {
+      MirCut c = MirCut.of(g.coef(), g.upper(), value, lo, hi);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+    if (g.hasLower()) {
+      long[] neg = new long[g.coef().length];
+      for (int j = 0; j < neg.length; j++) {
+        if (g.coef()[j] == Long.MIN_VALUE || g.lower() == Long.MIN_VALUE) {
+          return;
+        }
+        neg[j] = -g.coef()[j];
+      }
+      MirCut c = MirCut.of(neg, -g.lower(), value, lo, hi);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+  }
+
+  // removes the last k rows, the cuts of the last round, and goes back to the simplex before them
+  private void dropCuts(int k, DualSimplex kept, long pivots) {
+    int m = rows() - k;
+    rowColumns = Arrays.copyOf(rowColumns, m);
+    rowWeights = Arrays.copyOf(rowWeights, m);
+    rowLo = Arrays.copyOf(rowLo, m);
+    rowHi = Arrays.copyOf(rowHi, m);
+    hasLo = Arrays.copyOf(hasLo, m);
+    hasHi = Arrays.copyOf(hasHi, m);
+    kept.totalPivots += pivots;
+    lp = kept;
+    cuts -= k;
+  }
+
+  // appends the cuts as rows sum w x <= rhs, to the rows and to the simplex
+  private void addCuts(List<MirCut> chosen) {
+    int m = rows();
+    int k = chosen.size();
+    rowColumns = Arrays.copyOf(rowColumns, m + k);
+    rowWeights = Arrays.copyOf(rowWeights, m + k);
+    rowLo = Arrays.copyOf(rowLo, m + k);
+    rowHi = Arrays.copyOf(rowHi, m + k);
+    hasLo = Arrays.copyOf(hasLo, m + k);
+    hasHi = Arrays.copyOf(hasHi, m + k);
+    double[][] a = new double[k][x.length];
+    double[] lo = new double[k];
+    double[] hi = new double[k];
+    for (int q = 0; q < k; q++) {
+      MirCut c = chosen.get(q);
+      rowColumns[m + q] = c.columns;
+      rowWeights[m + q] = c.weights;
+      rowHi[m + q] = c.rhs;
+      hasHi[m + q] = true;
+      for (int t = 0; t < c.columns.length; t++) {
+        a[q][c.columns[t]] = (double) c.weights[t];
+      }
+      lo[q] = Double.NEGATIVE_INFINITY;
+      hi[q] = (double) c.rhs;
+    }
+    lp.addRows(a, lo, hi);
+    cuts += k;
   }
 
   // bounds propagation of sum w x <= c, exact; nothing on overflow
@@ -658,7 +946,12 @@ public class LinearRelaxation extends Constraint
       failures++;
       throw Store.failException;
     }
-    long room = c - smallest;
+    long room;
+    try {
+      room = Math.subtractExact(c, smallest);
+    } catch (ArithmeticException overflow) {
+      return; // the slack is larger than any bound it could tighten
+    }
     for (int k = 0; k < vars.length; k++) {
       long wk = w[k];
       // wk * v <= least[k] + room

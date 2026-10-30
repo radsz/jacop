@@ -731,7 +731,28 @@ Version 5.0 (unreleased)
     org.jacop.util.VarIntMap). Search is unchanged; free search (-f) is about
     2.5% faster on mznbench.
 
-56. Under --lcg, Cumulative explains two more kinds of pruning itself
+56. The linear relaxation (--lp) adds cutting planes at its first solve,
+    in the root propagation: up to 5 rounds of mixed-integer rounding
+    (MIR) cuts, from the rows of the basis inverse of the basic columns
+    with fractional values (Gomory mixed-integer cuts) and from the rows
+    themselves. Each cut is the MIR of an integer combination of the
+    rows, computed exactly in long arithmetic with the bounds of that
+    moment, so it holds for the whole search and is explained under
+    --lcg like the other rows; the floating-point simplex only proposes
+    it. DualSimplex adds the rows and keeps its basis. A round that does
+    not move the bound is dropped again; -Dorg.jacop.lp.cuts=false turns
+    cuts off. The first solve may take 20,000 pivots
+    (-Dorg.jacop.lp.rootPivots) instead of 500, within the root work
+    budget. Fixes an overflow in the propagation of a combination of rows
+    whose slack exceeded a long, which pruned values of solutions. On 46
+    of the 422 vs-ortools instances that the change touches (20 s), proofs
+    go from 24 to 29 (default), 23 to 28 (--lcg) and 25 to 30 (-f), with
+    no proof lost: trucking 06, 07, 09 and 11 are proved in 1-5 s (06,
+    07 and 11 also under --lcg), and the cuts lift the root bound of
+    trucking 09 from 596 to the optimum 871.
+    New statistics lpRootBound, lpCuts, lpCutBound.
+
+57. Under --lcg, Cumulative explains two more kinds of pruning itself
     instead of with the generic reason. Time-table disjunctive reasoning
     (on by default in the FlatZinc front end) pushes a task j past a task
     i that every placement of j would overlap where the compulsory parts
@@ -750,7 +771,7 @@ Version 5.0 (unreleased)
     turns the pair reasons off. Scripts and runs: osolpro
     benchmarks/cumulative-explanations.
 
-57. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
+58. Under --lcg, JaSAT stays in stable mode (Luby restarts) once its
     first focused phase of 1,000 conflicts is over, instead of
     alternating the two modes. Restarts become far rarer, and each one
     costs the CP propagation back down from level 0. Paired runs, 60 s,
@@ -759,7 +780,7 @@ Version 5.0 (unreleased)
     1 worse. The other 126 instances barely reach stable mode.
     -Djacop.lcg.stableForGood=false restores the alternation.
 
-58. JaSAT misses no unit propagation when CP drives it. Under --lcg and
+59. JaSAT misses no unit propagation when CP drives it. Under --lcg and
     -sat, a clause added during search, a learnt clause asserted by the
     external search, or a propagator's reason kept as a clause could have
     its true watch above its false watch's level; after a backtrack between
@@ -771,7 +792,7 @@ Version 5.0 (unreleased)
     instances (60 s) --lcg solves 68 instead of 67 and --lcg -f 77 as
     before, with no measurable cost.
 
-59. LCG explanations of Regular (and the other layered graph constraints)
+60. LCG explanations of Regular (and the other layered graph constraints)
     cite only the edges that lead to the removed values: the nearest cut
     or the cut nearest the ends of the graph, whichever is shorter
     (Gange, Stuckey and Szymanek, Constraints 2011), instead of every
@@ -783,7 +804,7 @@ Version 5.0 (unreleased)
     constraint class how many atoms propagation needs and how many could
     be weaker.
 
-60. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
+61. Lifted LCG explanations (linear, cumulative, subcircuit) may cite a
     bound weaker than any trail atom when the solver already has a true
     literal for it, set before the explained one. On mznbench (249,
     60 s, paired) --lcg is better on 15 instances and worse on 6
@@ -792,7 +813,7 @@ Version 5.0 (unreleased)
     -Djacop.lcg.liftLiterals=false turns it off; %%%mzn-stat
     lcgLiftedLiterals counts the literals cited.
 
-61. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
+62. IncreasingSum, LexOrder and CountVar (also under Reified and Implies)
     explain their own pruning under --lcg instead of the generic or
     replayed reason. IncreasingSum cites the bounds of the order and the
     sum, LexOrder the bounds of the prefix that is forced equal or
