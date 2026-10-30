@@ -449,10 +449,10 @@ final class Goals implements MultiObjective.Subsolver<String> {
   }
 
   /**
-   * A new temporary file that only the user can read and write (where the file system has POSIX
-   * permissions), since it holds the model.
+   * A new temporary file for a subproblem: in the temporary directory readable and writable by its
+   * owner only where the file system has POSIX permissions, otherwise next to the model.
    */
-  private static Path temporaryFile() throws IOException {
+  private Path temporaryFile() throws IOException {
     if (FileSystems.getDefault().supportedFileAttributeViews().contains("posix")) {
       return Files.createTempFile(
           "jacop-goal",
@@ -460,8 +460,10 @@ final class Goals implements MultiObjective.Subsolver<String> {
           PosixFilePermissions.asFileAttribute(
               EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)));
     }
-    // on Windows the temporary directory belongs to the user
-    return Files.createTempFile("jacop-goal", ".fzn");
+    // without POSIX permissions (Windows) the file goes next to the model, not in a shared
+    // directory
+    Path dir = Path.of(options.getFileName()).toAbsolutePath().getParent();
+    return Files.createTempFile(dir, "jacop-goal", ".fzn");
   }
 
   /**
