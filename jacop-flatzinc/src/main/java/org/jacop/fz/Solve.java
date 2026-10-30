@@ -564,6 +564,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpBaseBound="
+            + r.baseBound
+            + "\n%%%mzn-stat: lpExtraRows="
+            + r.extraRows
+            + "\n%%%mzn-stat: lpExtraDropped="
+            + r.extraDropped
             + "\n%%%mzn-stat-end");
   }
 
@@ -2023,6 +2029,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.atomLiteralsLearnt
             + "\n%%%mzn-stat: lcgLiteralsReleased="
             + lcg.literalsReleased
+            + "\n%%%mzn-stat: lcgDeferredAtoms="
+            + lcg.deferredAtoms
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
             + "\n%%%mzn-stat: lcgBoundLiterals="
@@ -2092,6 +2100,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.amoGroups
         + "\n%%%mzn-stat: lcgCoreAmoBound="
         + core.amoBound
+        + "\n%%%mzn-stat: lcgCoreNoSolutionStops="
+        + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }

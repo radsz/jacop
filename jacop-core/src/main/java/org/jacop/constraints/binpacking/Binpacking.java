@@ -138,6 +138,13 @@ public class Binpacking extends Constraint
 
   private final int[] counts;
 
+  /**
+   * Whether the explanations cover the cardinality rules; -Djacop.lcg.binpackingCounts=false leaves
+   * them to the generic reason.
+   */
+  private static final boolean COUNT_EXPLANATIONS =
+      !"false".equals(System.getProperty("jacop.lcg.binpackingCounts"));
+
   /** The explanations for lazy clause generation, created when first needed. */
   private BinpackingExplanation explanation;
 
@@ -1552,6 +1559,26 @@ public class Binpacking extends Constraint
               binMap,
               zeroWeightBins,
               minBinNumber);
+      boolean counted = card != null;
+      if ((counted || cardinalityReasoning) && COUNT_EXPLANATIONS) {
+        int m = load.length;
+        boolean groups = m >= 3 && !(counted && (!unitItems || zeroWeightBins.length > 0));
+        int longest =
+            (int)
+                Math.min(
+                    m - 1L,
+                    Math.max(1L, (long) GROUP_WORK_LIMIT / Math.max(1L, (long) item.length * m)));
+        int[] ones = new int[item.length];
+        Arrays.fill(ones, 1);
+        explanation.counting(
+            card,
+            counted ? itemCount : ones,
+            counted ? zeroWeightBins : new IntVar[0],
+            counted ? zeroWeightCount : new int[0],
+            counted ? totalCount : item.length,
+            !counted || unitItems,
+            groups ? longest : 1);
+      }
     }
     return explanation;
   }
