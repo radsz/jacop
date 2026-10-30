@@ -3111,6 +3111,86 @@ class LcgSolverTest {
     assertThat(solver.coreSearch().proved).isTrue();
   }
 
+  @Test
+  void coreGuidedSearchJumpsOverHolesOfTheTerms() {
+    // cost variables of two values, 0 and 10, as jp-encoding's: a soft literal per level would
+    // need a core for each of the ten levels; one for the whole hole needs one
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      IntervalDomain dom = new IntervalDomain(0, 0);
+      dom.unionAdapt(10, 10);
+      x[i] = new IntVar(store, "x" + i, dom);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 40);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], obj}, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, ">=", 1));
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3]}, new int[] {1, 1}, ">=", 1));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(20);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().cores).isLessThanOrEqualTo(2);
+  }
+
+  @Test
+  void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
+    // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
+    // objective over cost variables next to its definition: the y's bound obj by 6 at the root
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 10);
+    IntVar b = new IntVar(store, "b", 0, 10);
+    IntVar[] y = new IntVar[2];
+    for (int i = 0; i < 2; i++) {
+      IntervalDomain dom = new IntervalDomain(3, 3);
+      dom.unionAdapt(5, 5);
+      y[i] = new IntVar(store, "y" + i, dom);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    store.impose(new LinearInt(new IntVar[] {a, b, obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {y[0], y[1], obj}, new int[] {1, 1, -1}, "==", 0));
+    store.impose(new XneqY(y[0], y[1]));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(8);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().cores).isLessThanOrEqualTo(1);
+  }
+
+  @Test
+  void coreGuidedSearchStratifiesByHalvingTheWeight() {
+    // sixteen distinct weights: a stratum per weight costs a solution each, halving the threshold
+    // gives five strata
+    Store store = new Store();
+    IntVar[] x = new IntVar[16];
+    int[] w = new int[17];
+    for (int i = 0; i < 16; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      w[i] = 100 + i;
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 2000);
+    IntVar[] terms = Arrays.copyOf(x, 17);
+    terms[16] = obj;
+    w[16] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    for (int i = 0; i < 16; i += 2) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(856);
+    assertThat(solver.coreSearch().proved).isTrue();
+    assertThat(solver.coreSearch().stratumSolutions).isLessThan(8);
+  }
+
   /**
    * Builds a random model with a weighted sum objective and minimises it: by depth-first search
    * (mode -1) or by LCG with core-guided search (modes 0 to 3). Returns the optimum, or null when

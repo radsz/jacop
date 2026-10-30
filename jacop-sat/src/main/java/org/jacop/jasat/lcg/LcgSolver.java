@@ -802,9 +802,15 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
-   * deadline. A later run picks up where this one stopped. When extend is set, a run that ran out
-   * of its time while its lower bound, at its rate so far, would meet the best solution before the
-   * deadline gets another share of the time left.
+   * deadline. A later run picks up where this one stopped. When extend is set, a run that stopped
+   * while its lower bound, at its rate so far, would meet the best solution before the deadline
+   * gets another share of the time left. So does a run that stopped as too slow for the time left
+   * of its share once the run brought its lower bound half way to the best solution (jp-encoding
+   * data1000 stopped after 94 cores, 1,800 below the best solution and 2,800 above the bound the
+   * run started from, and is proved in 2 s more); further from it, branch and bound needs the time
+   * more (concert-hall-cap, 18,500 below and 3,500 above, lost its proof). A run that did not raise
+   * the bound is not extended (concert-hall-cap spent two extensions, half of the time left each,
+   * at one bound).
    */
   private int runCores(double share, long conflicts, boolean extend) {
     long deadline = sat.deadline();
@@ -835,9 +841,7 @@ public final class LcgSolver implements ExternalPropagator {
           extend
               && extension < MAX_CORE_EXTENSIONS
               && result == CdclSolver.UNKNOWN
-              && deadline != Long.MAX_VALUE
-              && System.nanoTime() >= sat.deadline()
-              && coreSearch.closing(deadline);
+              && extendCores(deadline);
           extension++) {
         now = System.nanoTime();
         sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
@@ -849,6 +853,17 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setDeadline(deadline);
       sat.setConflictLimit(Long.MAX_VALUE);
     }
+  }
+
+  /**
+   * Whether the core-guided run that just stopped gets another share of the time left before the
+   * given deadline, as {@link #runCores} describes.
+   */
+  private boolean extendCores(long deadline) {
+    if (deadline == Long.MAX_VALUE || !coreSearch.rose() || !coreSearch.closing(deadline)) {
+      return false;
+    }
+    return System.nanoTime() >= sat.deadline() || !coreSearch.exhausted() && coreSearch.halfWay();
   }
 
   /**
