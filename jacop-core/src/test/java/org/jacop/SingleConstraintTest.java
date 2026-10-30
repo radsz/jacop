@@ -4823,6 +4823,31 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(81);
   }
 
+  // A counter whose domain is all negative had its bounds taken as the capacity of its value, and
+  // the matching then found no variable to move out of that value (an IllegalStateException under
+  // jacop.asserts.enabled, a corrupt matching without it) instead of failing.
+  @Test
+  void gccFailsOnACounterWithANegativeDomain() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", -2, -1)};
+    store.impose(new GCC(x, counters));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void gccKeepsTheSolutionsWhenCountersHaveNegativeMinimums() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "c0", -1, 2), new IntVar(store, "c1", -2, 2)};
+    store.impose(new GCC(x, counters));
+
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(4);
+  }
+
   @Test
   void testAmongVar() {
 
