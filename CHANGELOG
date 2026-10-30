@@ -1134,7 +1134,28 @@ Version 5.0 (unreleased)
     in 46 s with -Xmx3G, with --lcg and with --lcg -f; below the budget
     nothing changes.
 
-78. The linear relaxation (--lp) costs less in search. The dense dual
+78. New constraint OrBoolWatched(list, result, negated): result is the
+    disjunction of 0/1 variables (or its negation), propagated with value
+    watches as the two watched literals of a clause, so a variable fixed
+    to 0 that is not watched does not wake it. The FlatZinc front end
+    posts int_lin_le_reif(sum(x) <= 0, b) over 8 or more Booleans with it
+    instead of Not(OrBoolVector) (not under --lcg;
+    -Dorg.jacop.fz.orBoolWatchMin sets the length). It visits the same
+    search tree; on pattern-set-mining the default search runs 1.6-3.9x
+    more nodes per second and proves ionosphere in 35 s. A constraint
+    that watches values can now count as a constraint of the watched
+    variable (Constraint.countsValueWatch, Var.constraintsWithWatches),
+    which dom/wdeg, the failure-count selections and LNS read.
+
+79. The FlatZinc completion search, which labels the variables a search
+    on output variables leaves out, labels them in input order instead of
+    smallest domain first. It only checks that one assignment exists, so
+    the solutions are the same, but choosing by domain size scanned every
+    unfixed variable at every node: 70% of the run on freepizza, which
+    now runs up to 14x more nodes (pizza39 reaches 942033 in 20 s
+    instead of 972454).
+
+80. The linear relaxation (--lp) costs less in search. The dense dual
     simplex reads its dual values from the reduced costs of the slack
     columns instead of a product over the whole basis, and updates the
     basic values four rows at a time in the same order. The search stays
@@ -1144,7 +1165,7 @@ Version 5.0 (unreleased)
     Options given as --name=value, such as --lp=off, are read as
     --name value; before, they were ignored as unknown options.
 
-79. Under --lcg, CumulativeUnary (MiniZinc disjunctive) explains a
+81. Under --lcg, CumulativeUnary (MiniZinc disjunctive) explains a
     failure that only its unary rules detect: a task that detectable
     precedences, edge finding or not-first push past its latest start.
     These failures got the generic reason, every start bound of the
@@ -1154,7 +1175,7 @@ Version 5.0 (unreleased)
     gets 5 better results and 1 worse (med04 2,960 to 2,643, evilshop
     js-setf3-10 now proved optimal), --lcg -f 7 better and 1 worse.
 
-80. Under --lcg, nvalue (Values), at_most and at_least explain their
+82. Under --lcg, nvalue (Values), at_most and at_least explain their
     pruning and failures instead of giving the generic reason. Values
     cites variables with pairwise disjoint intervals, or the different
     values of the fixed variables and variables whose domains miss them,
@@ -1167,7 +1188,6 @@ Version 5.0 (unreleased)
     9.8 s with --lcg -f. On the 51 benchmark instances with nvalue,
     at_most, at_least or count, two paired 30 s runs: --lcg 5 better
     and 4 worse, --lcg -f 8 better and 3 worse.
-=======
 
 Version 4.11
 =============

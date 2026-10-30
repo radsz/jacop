@@ -39,6 +39,7 @@ import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.OrBoolVector;
+import org.jacop.constraints.OrBoolWatched;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sum;
@@ -76,6 +77,9 @@ import org.jacop.satwrapper.SatTranslation;
  * @author Krzysztof Kuchcinski
  */
 class LinearConstraints implements ParserTreeConstants {
+
+  /** The shortest list of a reified all-zero sum posted as {@link OrBoolWatched}. */
+  static final int ORBOOL_WATCH_MIN = Integer.getInteger("org.jacop.fz.orBoolWatchMin", 8);
 
   final Store store;
   final Support support;
@@ -377,6 +381,21 @@ class LinearConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Long lists use the watched form, which is not woken by each variable fixed to 0; it has no
+   * explanation for lazy clause generation, so --lcg keeps Not(OrBoolVector).
+   */
+  private void poseAllZeroReif(IntVar[] x, IntVar b) {
+    if (!support.options.lcg()
+        && store.level == 0
+        && x.length >= ORBOOL_WATCH_MIN
+        && Arrays.stream(x).noneMatch(v -> v == b)) {
+      support.pose(new OrBoolWatched(x, b, true));
+    } else {
+      support.pose(new Not(new OrBoolVector(x, b)));
+    }
+  }
+
   private void intLinReifLe(int[] p1, IntVar[] p2, int p3, IntVar p4, boolean isReified) {
     if (p1.length == 2 && p1[0] == 1 && p1[1] == -1) {
       handleIntLinReifLeTwoVarsOneMinusOne(p2[0], p2[1], p3, p4, isReified, false);
@@ -401,7 +420,7 @@ class LinearConstraints implements ParserTreeConstants {
         if (support.options.useSat()) {
           sat.generateAllZeroReif(support.unique(p2), p4);
         } else {
-          support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
+          poseAllZeroReif(support.unique(p2), p4);
         }
       } else {
         // This case doesn't exist in _imp version
@@ -423,7 +442,7 @@ class LinearConstraints implements ParserTreeConstants {
           if (support.options.useSat()) {
             sat.generateAllZeroReif(support.unique(p2), p4);
           } else {
-            support.pose(new Not(new OrBoolVector(support.unique(p2), p4)));
+            poseAllZeroReif(support.unique(p2), p4);
           }
         } else {
           poseReifiedOrImplied(new SumBool(p2, "<=", t), p4, isReified);
