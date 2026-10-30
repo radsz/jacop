@@ -194,6 +194,7 @@ setup to run configuration. -->
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
+                                <costassignment.instances>300</costassignment.instances>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
@@ -257,6 +258,7 @@ setup to run configuration. -->
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/CostAssignmentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -274,6 +276,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
@@ -398,6 +401,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/CostAssignmentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -410,6 +414,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
@@ -530,6 +535,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/CostAssignmentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -542,6 +548,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
@@ -661,6 +668,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/CostAssignmentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -673,6 +681,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>

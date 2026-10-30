@@ -974,6 +974,25 @@ Version 5.0 (unreleased)
     them all. Pareto points are printed as they are proven, followed by
     ========== when the front is complete. Float goals are not supported.
 
+68. New constraints CostAlldifferent(x, costs, cost, offset) and
+    CostGCC(x, costs, counters, cost, offset): all-different and global
+    cardinality with a cost matrix (SICStus all_different/2 and
+    global_cardinality/3 with cost(C, M)), cost = sum(i)(costs[i][x[i]]).
+    Both use the incremental Hungarian method of CircuitCost, now for
+    more values than variables and, for CostGCC, one column per allowed
+    copy of a value (counter upper bounds; lower bounds are left out of
+    the relaxation). The minimum and maximum assignments bound the cost
+    and remove values by reduced costs. The FlatZinc front end posts
+    CostAlldifferent as a redundant constraint on all_different and
+    inverse with cost = sum(i)(d[i, x[i]]), also when the sum has other
+    terms (a new variable for the cost part and a linear constraint);
+    -Dorg.jacop.fz.costAlldifferent=false turns it off. CostGCC is posted
+    only with -Dorg.jacop.fz.costGcc=true: on the Challenge models with
+    such a GCC (chessboard, blocks-world, evm-super-compilation) it cost
+    more time than it saved. On kidney-exchange (60 s) it proves one more
+    instance and halves the time of another; rel2onto and seat-moving
+    are unchanged.
+
 Version 4.11
 =============
 
