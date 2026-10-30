@@ -1189,6 +1189,18 @@ Version 5.0 (unreleased)
     at_most, at_least or count, two paired 30 s runs: --lcg 5 better
     and 4 worse, --lcg -f 8 better and 3 worse.
 
+81. Under --lcg, a linear bound that moves past a hole of its variable's
+    initial domain wider than 4,096 values keeps its own reason. The
+    explanation checked every integer between the bound the reason
+    implies and the recorded one, and gave the generic reason past
+    4,096; it now walks only the values of the initial domain. Variables
+    over sparse values (the cubes of routing-flexible, liner-sf
+    repositioning) hit this: routing_GCM_0006 had 110,000 generic linear
+    reasons at 20 s and liner-sf tp7_0 37,000 of 187 atoms on average,
+    and both have none. On 20 liner-sf, routing-flexible and java-routing
+    instances, 30 s, two paired runs: --lcg 3 better and none worse
+    (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
+
 Version 4.11
 =============
 

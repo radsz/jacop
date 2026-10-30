@@ -31,6 +31,7 @@
 package org.jacop.lcg;
 
 import java.util.Arrays;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
@@ -159,18 +160,16 @@ public final class LinearExplanation {
       // the implied bound of y: an upper bound when kind is LE, a lower bound when GE
       long bound =
           kind == AtomicTrail.LE ? Math.floorDiv(rest, weight) : -Math.floorDiv(-rest, weight);
-      if (kind == AtomicTrail.LE ? bound > a : bound < a) {
-        if (Math.abs(Math.subtractExact(bound, a)) > 4096) {
-          return false;
-        }
-        for (long u = Math.min(a, bound); u <= Math.max(a, bound); u++) {
-          if (u != a
-              && (kind == AtomicTrail.LE ? u > a : u < a)
-              && !trail.excludedBefore(y, (int) u, entry, out)) {
-            out.truncate(mark);
-            return false;
-          }
-        }
+      if ((kind == AtomicTrail.LE ? bound > a : bound < a)
+          && !holesBetween(
+              trail,
+              entry,
+              y,
+              kind == AtomicTrail.LE ? a + 1 : bound,
+              kind == AtomicTrail.LE ? bound : a - 1,
+              out)) {
+        out.truncate(mark);
+        return false;
       }
       // the value next to the bound reached, which the other bounds must keep out
       long beyond =
@@ -188,6 +187,40 @@ public final class LinearExplanation {
       out.truncate(mark);
       return false;
     }
+  }
+
+  /**
+   * Adds the removals of the values of from..to that y had in its root domain, which a bound
+   * skipped; false when one of them was still in y's domain before the entry, or there are more
+   * than 4096. The holes of the root domain need no atom, so a variable over sparse values (cubes)
+   * skips wide ranges.
+   */
+  private static boolean holesBetween(
+      AtomicTrail trail, int entry, IntVar y, long from, long to, EntryList out) {
+    IntDomain root = trail.rootDomain(y);
+    long last = Math.min(to, root.max());
+    long u = Math.max(from, root.min());
+    if (u > last) {
+      return true;
+    }
+    if (!root.contains((int) u)) {
+      int next = root.nextValue((int) u);
+      if (next <= u) {
+        return true;
+      }
+      u = next;
+    }
+    for (int checked = 0; u <= last; checked++) {
+      if (checked >= 4096 || !trail.excludedBefore(y, (int) u, entry, out)) {
+        return false;
+      }
+      int next = root.nextValue((int) u);
+      if (next <= u) {
+        break;
+      }
+      u = next;
+    }
+    return true;
   }
 
   /**
