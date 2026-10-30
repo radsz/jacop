@@ -137,6 +137,39 @@ final class UnaryExplanation {
     return true;
   }
 
+  /**
+   * Explains a failure of the resource by a task that a rule pushes past its latest start (or, in
+   * the reversed time line, before its earliest start): the rule's reason and that bound.
+   *
+   * @param trail the trail
+   * @param out where the reason is added
+   * @return false when no rule explains a failure; out may then hold entries to drop
+   */
+  boolean explainFailure(AtomicTrail trail, EntryList out) {
+    int position = trail.size();
+    for (int j = 0; j < tasks.length; j++) {
+      for (boolean lower : new boolean[] {true, false}) {
+        if (!load(trail, position, j, lower)) {
+          continue;
+        }
+        // j would start after its latest start in this time line
+        long last = (long) lct[j] - dur[j];
+        long v = last + 1;
+        numBest = Integer.MAX_VALUE;
+        bestV = v;
+        detectable(j, v);
+        edgeFinding(j, v);
+        notFirst(j, v);
+        if (numBest != Integer.MAX_VALUE) {
+          cite(trail, position, j, lower, out);
+          startAtMost(trail, position, j, lower, last, out);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   // reads the tasks just before the entry; false when j or the limit do not allow the rules
   private boolean load(AtomicTrail trail, int entry, int j, boolean lower) {
     int n = tasks.length;

@@ -56,7 +56,9 @@ import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -1138,5 +1140,97 @@ class AtomicTrailTest {
       }
     }
     throw new IllegalStateException(x + " is not in the model");
+  }
+
+  /**
+   * Unary resources whose start windows, set at one level, leave no schedule. The time table and
+   * the energy of windows miss some of these failures, which went to the generic reason; the unary
+   * rules explain them by a task they push past its latest start. Every failure has an explanation
+   * of its own, and no schedule fits the bounds it cites.
+   */
+  @Test
+  void unaryFailuresHaveTheirOwnSoundExplanation() {
+    Random rnd = new Random(5);
+    int failures = 0;
+    for (int it = 0; it < 20000; it++) {
+      int n = 3 + rnd.nextInt(3);
+      int[] d = new int[n];
+      int[] lo = new int[n];
+      int[] hi = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(5);
+        lo[i] = rnd.nextInt(10);
+        hi[i] = lo[i] + rnd.nextInt(6);
+      }
+      Store store = new Store();
+      IntVar[] s = new IntVar[n];
+      IntVar[] durations = new IntVar[n];
+      IntVar[] resources = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, 0, 20);
+        durations[i] = new IntVar(store, d[i], d[i]);
+        resources[i] = new IntVar(store, 1, 1);
+      }
+      CumulativeUnary unary = new CumulativeUnary(s, durations, resources, new IntVar(store, 1, 1));
+      store.impose(unary);
+      assertThat(store.consistency()).isTrue();
+      AtomicTrail trail = new AtomicTrail(store);
+      store.setLevel(store.level + 1);
+      boolean consistent;
+      try {
+        for (int i = 0; i < n; i++) {
+          s[i].domain.in(store.level, s[i], lo[i], hi[i]);
+        }
+        consistent = store.consistency();
+      } catch (FailException e) {
+        consistent = false;
+      }
+      if (consistent || store.recentlyFailedConstraint != unary) {
+        trail.detach();
+        continue;
+      }
+      failures++;
+      EntryList reason = new EntryList();
+      assertThat(unary.explainFailure(trail, reason)).as("instance %d", it).isTrue();
+      // the bounds cited, from the starts' initial domains 0..20
+      int[] min = new int[n];
+      int[] max = new int[n];
+      Arrays.fill(max, 20);
+      for (int k = 0; k < reason.size(); k++) {
+        int e = reason.get(k);
+        for (int i = 0; i < n; i++) {
+          if (trail.variable(e) == s[i]) {
+            if (trail.kind(e) == AtomicTrail.GE) {
+              min[i] = Math.max(min[i], trail.value(e));
+            } else if (trail.kind(e) == AtomicTrail.LE) {
+              max[i] = Math.min(max[i], trail.value(e));
+            }
+          }
+        }
+      }
+      assertThat(schedules(min, max, d, new int[n], 0)).as("instance %d", it).isFalse();
+      trail.detach();
+    }
+    assertThat(failures).isGreaterThan(100);
+  }
+
+  // whether the tasks fit on one machine with starts within [min, max]
+  private static boolean schedules(int[] min, int[] max, int[] d, int[] start, int i) {
+    if (i == d.length) {
+      return true;
+    }
+    for (int t = min[i]; t <= max[i]; t++) {
+      boolean free = true;
+      for (int k = 0; k < i && free; k++) {
+        free = t + d[i] <= start[k] || start[k] + d[k] <= t;
+      }
+      if (free) {
+        start[i] = t;
+        if (schedules(min, max, d, start, i + 1)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }
