@@ -827,7 +827,23 @@ Version 5.0 (unreleased)
     to 4) and better on 4 of 8 amaze instances (amaze 2012-03-15 39 s
     to 1.4 s).
 
-58. Dead code removed (about 3,300 lines, no change in behaviour). Classes
+63. Fewer SAT variables under --lcg. A value a constraint removes from
+    inside a domain is now a transient [x = v] literal, released on
+    backtracking unless a clause keeps it, as bound literals already were;
+    before, each was linked to two new bound literals by four clauses.
+    CumulativeUnary's time table no longer cuts holes into start domains
+    under --lcg (the sweep of CumulativeBasic already did not): jobshop
+    swv07 made 357k SAT variables in 20 s, now 48k. Annotation decisions
+    x = min and x = max are taken as [x <= min] and [x >= max], without
+    the [x = v] literal, and the annotation's variable selection starts
+    from the position it reached at the decision level instead of the
+    first variable. New statistics lcgBoundLiterals, lcgEqualityLiterals,
+    lcgTransientLiterals, lcgAuxiliaryVariables, lcgSatVariables,
+    lcgSatConflicts and lcgSatPropagations. Paired runs on mznbench, 30 s:
+    --lcg 19 better / 3 worse, --lcg -f 50 / 52 (two runs; noise level),
+    with 15% fewer SAT variables at the median.
+
+64. Dead code removed (about 3,300 lines, no change in behaviour). Classes
     nothing used: IntervalBasedBacktrackableManager and
     SimpleBacktrackableManager (the store always uses
     TrailBacktrackableManager), SwitchesPruningLogging (no-op tracing

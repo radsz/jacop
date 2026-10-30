@@ -129,6 +129,18 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: transient literals released. */
   public long literalsReleased;
 
+  /** Statistics: literals [x >= v] linked to their neighbours. */
+  public long boundLiterals;
+
+  /** Statistics: literals [x = v]. */
+  public long equalityLiterals;
+
+  /** Statistics: transient literals, created to push an atom and released unless kept. */
+  public long transientLiterals;
+
+  /** Statistics: solver variables that are not atoms, such as outputs of encodings. */
+  public long auxiliaryVariables;
+
   // per DIMACS variable: its variable's trail id, kind and value
   private int[] litVar = new int[16];
   private byte[] litKind = new byte[16];
@@ -288,6 +300,14 @@ public final class LcgSolver implements ExternalPropagator {
   // the model's search annotation: used in every run, or in every other run when free
   private SelectChoicePoint<? extends Var> annotation;
   private boolean freeSearch;
+  // the annotation's index (see SelectChoicePoint#getIndex) after its decisions, with the decision
+  // level each was taken at: its variables before the index are fixed while that level stands, so
+  // the next decision starts there instead of scanning the fixed variables again. ANNOTATION_DONE
+  // marks a level where it had fixed all its variables
+  private int[] annotationIndex = new int[16];
+  private int[] annotationLevel = new int[16];
+  private int numAnnotationIndices;
+  private static final int ANNOTATION_DONE = -1;
   private boolean annotationRun;
 
   private double lowerBoundShare;
@@ -446,6 +466,7 @@ public final class LcgSolver implements ExternalPropagator {
   /** A new solver variable that is not an atom, such as an output of a cardinality encoding. */
   int newAuxiliary() {
     int d = sat.newVariables(1);
+    auxiliaryVariables++;
     if (d >= litVar.length) {
       int n = 2 * d;
       litVar = Arrays.copyOf(litVar, n);
@@ -477,6 +498,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void link(int i, int v, int lit) {
     transientLit[lit] = false;
+    boundLiterals++;
     int below = linked[i].lower(v);
     int above = linked[i].higher(v);
     if (below != LiteralMap.NONE) {
@@ -519,21 +541,30 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int lit = newLiteral(i, GE_KIND, v);
     ge[i].put(v, lit);
+    addTransient(lit);
+    return lit;
+  }
+
+  private void addTransient(int lit) {
     transientLit[lit] = true;
+    transientLiterals++;
     if (numTransients == transients.length) {
       transients = Arrays.copyOf(transients, 2 * numTransients);
       transientLevel = Arrays.copyOf(transientLevel, 2 * numTransients);
     }
     transients[numTransients] = lit;
     transientLevel[numTransients++] = sat.decisionLevel();
-    return lit;
   }
 
   /** Links a transient literal that now occurs in a clause. */
   private void keep(int lit) {
     int d = Math.abs(lit);
     if (d < transientLit.length && transientLit[d]) {
-      link(litVar[d], litValue[d], d);
+      if (litKind[d] == EQ_KIND) {
+        linkEq(litVar[d], litValue[d], d);
+      } else {
+        link(litVar[d], litValue[d], d);
+      }
     }
   }
 
@@ -545,7 +576,7 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       transientLit[d] = false;
-      ge[litVar[d]].remove(litValue[d]);
+      (litKind[d] == EQ_KIND ? eq : ge)[litVar[d]].remove(litValue[d]);
       sat.retire(d);
       if (numFree == free.length) {
         free = Arrays.copyOf(free, 2 * numFree);
@@ -560,7 +591,7 @@ public final class LcgSolver implements ExternalPropagator {
    * transient, or 0.
    */
   private int linkedNeighbour(int entry, int lit) {
-    if (!transientLit[Math.abs(lit)]) {
+    if (!transientLit[Math.abs(lit)] || trail.kind(entry) == AtomicTrail.NE) {
       return 0;
     }
     int i = trail.id(trail.variable(entry));
@@ -585,9 +616,40 @@ public final class LcgSolver implements ExternalPropagator {
   private int eqVar(int i, int v) {
     int d = eq[i].get(v);
     if (d != LiteralMap.NONE) {
+      if (transientLit[d]) {
+        linkEq(i, v, d);
+      }
       return d;
     }
     int lit = newLiteral(i, EQ_KIND, v);
+    eq[i].put(v, lit);
+    linkEq(i, v, lit);
+    return lit;
+  }
+
+  /**
+   * The variable of [x = v] for a [x != v] trail entry: an existing one, or a transient one, in no
+   * clause and not linked to [x >= v] and [x >= v + 1] until it occurs in a clause. Each value a
+   * constraint removes from inside a domain is such an atom, and linking each made two bound
+   * literals and four clauses for it.
+   */
+  private int eqEntryVar(int i, int v) {
+    int d = eq[i].get(v);
+    if (d != LiteralMap.NONE) {
+      return d;
+    }
+    if (!RELEASE || sat.hasProof()) {
+      return eqVar(i, v);
+    }
+    int lit = newLiteral(i, EQ_KIND, v);
+    eq[i].put(v, lit);
+    addTransient(lit);
+    return lit;
+  }
+
+  /** Links [x = v] to [x >= v] and [x >= v + 1] by clauses. */
+  private void linkEq(int i, int v, int lit) {
+    transientLit[lit] = false;
     boolean atMin = v == root[i].min();
     boolean atMax = v == root[i].max();
     int geV = atMin ? 0 : geVar(i, v);
@@ -607,8 +669,7 @@ public final class LcgSolver implements ExternalPropagator {
     } else {
       structural.add(new int[] {lit, -geV, geNext});
     }
-    eq[i].put(v, lit);
-    return lit;
+    equalityLiterals++;
   }
 
   /** The DIMACS literal that is true when a trail entry's atom holds. */
@@ -618,7 +679,7 @@ public final class LcgSolver implements ExternalPropagator {
     return switch (trail.kind(entry)) {
       case AtomicTrail.GE -> geEntryLit(i, v);
       case AtomicTrail.LE -> -geEntryLit(i, v + 1);
-      default -> -eqVar(i, v);
+      default -> -eqEntryVar(i, v);
     };
   }
 
@@ -1393,6 +1454,9 @@ public final class LcgSolver implements ExternalPropagator {
       int v = popped[--numPopped];
       heapOf(v).insert(v);
     }
+    while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
+      numAnnotationIndices--;
+    }
     numPending = 0;
     failed = false;
     pushed = Math.min(pushed, trail.size());
@@ -2133,7 +2197,7 @@ public final class LcgSolver implements ExternalPropagator {
     IntVar x = vars[i];
     searchDecisions++;
     if (phase != null && x.domain.contains(phase[i])) {
-      return eqVar(i, phase[i]);
+      return assignLit(i, phase[i]);
     }
     return switch (valueChoice) {
       case "max" -> geLit(i, x.max());
@@ -2182,11 +2246,28 @@ public final class LcgSolver implements ExternalPropagator {
    * chooses something that is not an atom of the store's integer variables.
    */
   private int annotationDecision() {
-    Var v = annotation.getChoiceVariable(0);
+    int from = numAnnotationIndices > 0 ? annotationIndex[numAnnotationIndices - 1] : 0;
+    if (from == ANNOTATION_DONE) {
+      return 0;
+    }
+    Var v = annotation.getChoiceVariable(from);
+    PrimitiveConstraint c = v == null ? annotation.getChoiceConstraint(from) : null;
+    if (numAnnotationIndices > 0
+        && annotationLevel[numAnnotationIndices - 1] == sat.decisionLevel()) {
+      numAnnotationIndices--; // a later index at the same level replaces it
+    }
+    if (numAnnotationIndices == annotationIndex.length) {
+      int n = Math.max(16, 2 * numAnnotationIndices);
+      annotationIndex = Arrays.copyOf(annotationIndex, n);
+      annotationLevel = Arrays.copyOf(annotationLevel, n);
+    }
+    annotationIndex[numAnnotationIndices] =
+        v != null || c != null ? annotation.getIndex() : ANNOTATION_DONE;
+    annotationLevel[numAnnotationIndices++] = sat.decisionLevel();
     if (v instanceof Mirrored m) {
       // the left branch on a set variable's element is that the element is in the set
       int i = idOf(m.decisionVariable(annotation.getChoiceValue()));
-      return i < 0 ? 0 : eqVar(i, 1);
+      return i < 0 ? 0 : assignLit(i, 1);
     }
     if (v != null) {
       int i = idOf(v);
@@ -2194,9 +2275,8 @@ public final class LcgSolver implements ExternalPropagator {
         return 0;
       }
       int value = annotation.getChoiceValue();
-      return vars[i].domain.contains(value) ? eqVar(i, value) : 0;
+      return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
     }
-    PrimitiveConstraint c = annotation.getChoiceConstraint(0);
     if (!(c instanceof LinearExplainable l)) {
       return 0;
     }
@@ -2227,6 +2307,22 @@ public final class LcgSolver implements ExternalPropagator {
       case LinearForm.EQ -> d.contains(b) ? eqVar(i, b) : 0;
       default -> d.contains(b) ? -eqVar(i, b) : 0;
     };
+  }
+
+  /**
+   * The decision that x = v, for v in the domain of an unfixed x: [x <= v] when v is its smallest
+   * value and [x >= v] when v is its largest, which fix x as [x = v] would without creating that
+   * literal and its clauses, else [x = v].
+   */
+  private int assignLit(int i, int v) {
+    IntDomain d = vars[i].domain;
+    if (v == d.min()) {
+      return -geLit(i, v + 1);
+    }
+    if (v == d.max()) {
+      return geLit(i, v);
+    }
+    return eqVar(i, v);
   }
 
   private int idOf(Var v) {
