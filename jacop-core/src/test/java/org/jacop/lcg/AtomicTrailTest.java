@@ -1307,4 +1307,35 @@ class AtomicTrailTest {
     assertThat(explained).isGreaterThanOrEqualTo(6);
     trail.detach();
   }
+
+  /**
+   * A bound of a variable over sparse values (cubes, as in routing-flexible) moves past a root hole
+   * wider than 4096 values: the linear reason needs no atom for the hole and stays its own (it was
+   * the generic reason).
+   */
+  @Test
+  void linearBoundAcrossAWideRootHoleHasItsOwnReason() {
+    Store store = new Store();
+    IntervalDomain cubes = new IntervalDomain();
+    for (int k = 0; k <= 100; k++) {
+      cubes.unionAdapt(k * k * k, k * k * k);
+    }
+    IntVar x = new IntVar(store, "x", cubes);
+    IntVar z = new IntVar(store, "z", 0, 100);
+    LinearInt sum = new LinearInt(new IntVar[] {x, z}, new int[] {1, 1}, "<=", 1_000_010);
+    store.impose(sum);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    z.domain.inMin(store.level, z, 20);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.max()).isEqualTo(99 * 99 * 99);
+    int entry = trail.lastEntry(x, trail.size());
+    assertThat(trail.reason(entry)).isSameAs(sum);
+    EntryList reason = new EntryList();
+    assertThat(sum.explain(trail, entry, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(trail.variable(reason.get(0))).isSameAs(z);
+    trail.detach();
+  }
 }
