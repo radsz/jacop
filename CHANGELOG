@@ -919,6 +919,19 @@ Version 5.0 (unreleased)
     throwFailException(Var), clearWatchedConstraint(),
     countConstraint(int) and the field auxilaryVariables.
 
+68. The FlatZinc front end merges the copies MiniZinc makes of the result
+   of a partial function used in a reified context (to_enum, an array
+   access whose index may be out of range): each call site gets a fresh
+   z with b -> z = x, c -> z = k and not b -> c. Copies with the same x,
+   b and k become one variable and their three constraints are dropped;
+   -Dorg.jacop.fz.partialCopies=false turns this off. A clause whose
+   literals are all b <-> (x = v) or b -> (x = v) on one variable x now
+   also restricts x to those values when the model is loaded (leaf \/
+   unused written as (x = 10) \/ (x = 11) gives x in 10..11). On the
+   MiniZinc Challenge 2020 minimal-decision-sets instances the search
+   tree halves and a node is about 15% cheaper; backache_train4 and
+   colic_train4 are now proved within 20 minutes.
+
 Version 4.11
 =============
 

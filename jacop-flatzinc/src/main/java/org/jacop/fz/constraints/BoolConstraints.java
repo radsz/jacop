@@ -26,6 +26,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.List;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
@@ -41,7 +42,9 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusYgtC;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ParserTreeConstants;
@@ -306,12 +309,57 @@ class BoolConstraints implements ParserTreeConstants {
       return;
     }
 
+    if (!reified && !implied && a2.length == 0) {
+      restrictToClauseValues(a1);
+    }
+
     if (support.options.useSat() && !implied) {
       poseSatClause(node, a1, a2);
       return;
     }
 
     clauseGenerationCp(node, a1, a2);
+  }
+
+  /**
+   * A clause b1 \/ ... \/ bn whose literals all imply x = v1, ..., x = vn for one variable x
+   * (int_eq_reif or int_eq_imp) restricts x to {v1, ..., vn}, for example leaf \/ unused written as
+   * (x = 10) \/ (x = 11). The clause on its own only fails once x takes another value.
+   */
+  private void restrictToClauseValues(IntVar[] a1) {
+    if (a1.length < 2) {
+      return;
+    }
+    for (IntVar x : candidateVariables(a1[0])) {
+      IntDomain values = new IntervalDomain();
+      boolean all = true;
+      for (IntVar b : a1) {
+        if (b.max() == 0) {
+          continue;
+        }
+        Integer v = impliedValue(b, x);
+        if (v == null) {
+          all = false;
+          break;
+        }
+        values.unionAdapt(v, v);
+      }
+      if (all) {
+        x.domain.in(store.level, x, values);
+        return;
+      }
+    }
+  }
+
+  private List<IntVar> candidateVariables(IntVar b) {
+    List<IntVar> result = new ArrayList<>(support.reif.variablesOf(b));
+    result.addAll(support.imply.variablesOf(b));
+    return result;
+  }
+
+  private Integer impliedValue(IntVar b, IntVar x) {
+    Integer v = support.reif.valueImpliedBy(b, x);
+    return v != null ? v : support.imply.valueImpliedBy(b, x);
   }
 
   private boolean clauseHasSameVarInBothSides(IntVar[] a1, IntVar[] a2) {
