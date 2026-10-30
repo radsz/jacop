@@ -130,8 +130,6 @@ public class Constraints implements ParserTreeConstants {
 
     sat.setDebug(debug);
 
-    support.objective = objective(astTree);
-
     // disequalities that are part of a detected all-different constraint, and the constraints of
     // merged copies of partial function results
     Set<SimpleNode> replaced = Set.of();
@@ -238,28 +236,6 @@ public class Constraints implements ParserTreeConstants {
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
     }
-  }
-
-  // the variable the solve item minimises or maximises, or null
-  private IntVar objective(SimpleNode astTree) {
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTMODELEND
-          && node.jjtGetChild(0) instanceof ASTSolveItem item
-          && item.jjtGetChild(item.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind
-          && kind.jjtGetNumChildren() > 0
-          && kind.jjtGetChild(0) instanceof ASTSolveExpr expr) {
-        return switch (expr.getType()) {
-          case 0 -> dictionary.getVariable(expr.getIdent());
-          case 1 -> {
-            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
-            yield a == null ? null : a[expr.getIndex()];
-          }
-          default -> null;
-        };
-      }
-    }
-    return null;
   }
 
   void generateConstraint(SimpleNode constraintWithAnnotations) throws Throwable {

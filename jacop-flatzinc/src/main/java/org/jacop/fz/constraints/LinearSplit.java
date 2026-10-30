@@ -64,32 +64,25 @@ final class LinearSplit {
   /**
    * Returns the constraint that replaces c, after imposing its blocks, or null when c is not split:
    * limit is 0, c is not a sum, a weighted sum or a pseudo-Boolean constraint, its relation is
-   * {@code !=}, it has at most {@code limit} terms, it has the objective as a term, or a block sum
-   * does not fit an integer domain.
+   * {@code !=}, it has at most {@code limit} terms, or a block sum does not fit an integer domain.
    *
-   * <p>The objective's definition stays whole, so that objective presolve, the linear relaxation
-   * and core-guided search see the objective's own terms. Split, smelt_5 took 20 to 47 s instead of
-   * 5 s, and cutstock type04_TEST9 found no solution in 60 s.
+   * <p>The objective's definition is split too. Kept whole, on-call-rostering 20s-200d took 25 to
+   * 54 s instead of 2 to 4 s on 5 of 6 seeds, and 2DBinPacking Class6_60_3 was proved on none of 6
+   * seeds instead of 3; only cutstock type04_TEST9 found its first solution more often (6 of 6
+   * seeds against 3).
    *
    * @param store the store the blocks are imposed in
    * @param c the constraint
    * @param limit the most terms a constraint keeps
-   * @param objective the variable of the solve item, or null
    * @param defined receives the variable of each block sum, which its block defines
    * @return the sum of the blocks with c's relation and right-hand side, or null
    */
-  static Constraint split(
-      Store store, Constraint c, int limit, IntVar objective, Consumer<IntVar> defined) {
+  static Constraint split(Store store, Constraint c, int limit, Consumer<IntVar> defined) {
     LinearForm f = form(c);
     if (limit <= 0 || f == null || f.relation() == LinearForm.NE || f.vars().length <= limit) {
       return null;
     }
     IntVar[] x = f.vars();
-    for (IntVar xi : x) {
-      if (xi == objective) {
-        return null;
-      }
-    }
     long[] w = f.weights();
     int n = x.length;
     if (f.c() < IntDomain.MIN_INT || f.c() > IntDomain.MAX_INT) {
