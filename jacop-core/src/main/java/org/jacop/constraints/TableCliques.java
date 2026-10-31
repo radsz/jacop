@@ -84,7 +84,23 @@ public final class TableCliques {
    * @param x the two variables
    * @param tuples the allowed tuples, each of length 2
    */
-  public record Table(IntVar[] x, int[][] tuples) {}
+  public record Table(IntVar[] x, int[][] tuples) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Table t && Arrays.equals(x, t.x) && Arrays.deepEquals(tuples, t.tuples);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(x) + Arrays.deepHashCode(tuples);
+    }
+
+    @Override
+    public String toString() {
+      return "Table" + Arrays.toString(x) + Arrays.deepToString(tuples);
+    }
+  }
 
   /** The rows and the number of new Booleans. */
   public record Result(List<LinearForm> rows, int booleans) {}

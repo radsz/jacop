@@ -983,7 +983,7 @@ public class LinearRelaxation extends Constraint
       return;
     }
     stalled = 0;
-    if (keepSolutions && status == DualSimplex.OPTIMAL) {
+    if (keepSolutions && status == LpSolver.OPTIMAL) {
       int n = lp.columns();
       if (solution.length != n) {
         solution = new double[n];
@@ -1017,7 +1017,7 @@ public class LinearRelaxation extends Constraint
             propagate(store, f);
           }
         }
-        if (status != DualSimplex.INFEASIBLE) {
+        if (status != LpSolver.INFEASIBLE) {
           return;
         }
         // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
