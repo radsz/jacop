@@ -959,7 +959,10 @@ public class LinearRelaxation extends Constraint
         calls == 1
             ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
-    int status = simplex == Simplex.LAZY ? solveLazily(limit) : lp.solve(limit);
+    int status =
+        simplex == Simplex.LAZY
+            ? solveLazily(limit)
+            : calls == 1 ? rootSolve(lp, limit, rootWork()) : lp.solve(limit);
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
     if (calls == 1 && extraColumns.length > 0) {
@@ -1112,6 +1115,44 @@ public class LinearRelaxation extends Constraint
       sum += Math.abs((double) w[k]) * b;
     }
     return sum < limit;
+  }
+
+  // the work budget of a root solve of the sparse simplex: its pivots cost far more than the
+  // estimate made before the first one (latin-squares-lp 20: 40,000 estimated, 390,000 spent, so
+  // 20,000 root pivots took 14 s where the dense simplex had no relaxation at all), so its budget
+  // is
+  // counted as work spent; optimisation gets four times the budget of satisfaction, whose
+  // relaxation can only find infeasibility
+  private static final long SPARSE_ROOT_WORK =
+      Long.getLong("org.jacop.lp.sparseRootWork", 4_000_000_000L);
+
+  private long rootWork() {
+    return objective == null ? ROOT_WORK : SPARSE_ROOT_WORK;
+  }
+
+  /**
+   * A root solve: the dense simplex in one call of at most the given pivots; the sparse one in
+   * chunks, until it is done, the pivots run out, or its work passes the budget.
+   */
+  private int rootSolve(LpSolver s, int pivots, long work) {
+    if (!(s instanceof SparseDualSimplex)) {
+      return s.solve(pivots);
+    }
+    long startPivots = s.pivots();
+    long startWork = s.work();
+    while (true) {
+      long left = pivots - (s.pivots() - startPivots);
+      long spent = s.work() - startWork;
+      if (left <= 0 || spent >= work) {
+        return LpSolver.LIMIT;
+      }
+      long size = Math.max(1, s.pivotWork());
+      int chunk = (int) Math.clamp((work - spent) / size, 5, Math.min(left, 500));
+      int status = s.solve(chunk);
+      if (status != LpSolver.LIMIT) {
+        return status;
+      }
+    }
   }
 
   // multipliers of the rows of the simplex as multipliers of the rows of the relaxation
@@ -1467,7 +1508,11 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
+      status =
+          rootSolve(
+              lp,
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
@@ -1596,7 +1641,7 @@ public class LinearRelaxation extends Constraint
       full.setBounds(j, x[j].min(), x[j].max());
     }
     long size = Math.max(1, full.pivotWork());
-    int withExtra = full.solve(Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS));
+    int withExtra = rootSolve(full, Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
     boolean keep;
     if (withExtra == DualSimplex.INFEASIBLE) {
       keep = true;
