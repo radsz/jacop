@@ -394,6 +394,10 @@ final class SparseDualSimplex implements LpSolver {
       unitRowOfInverse(r, rho);
       pivotRow();
       int q = enteringColumn(toLower, toLower ? lo[p] - beta[r] : beta[r] - hi[p]);
+      if (q == RatioTest.NUMERIC) {
+        clearTouched();
+        return LIMIT;
+      }
       if (q < 0) {
         infeasibleRow = r;
         clearTouched();

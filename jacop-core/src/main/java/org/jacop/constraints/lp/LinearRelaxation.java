@@ -98,8 +98,16 @@ public class LinearRelaxation extends Constraint
     LAZY
   }
 
-  // the scales tried for the multipliers, the largest first
-  private static final long[] SCALES = {1L << 24, 1L << 16, 1L << 8, 1};
+  // whether the multipliers are cleaned before they are combined (certificate(), scaled()); off,
+  // the scales are those before the cleaning
+  private static final boolean CLEAN = !"false".equals(System.getProperty("org.jacop.lp.clean"));
+
+  // the scales tried for the multipliers, the largest first: rounding at 2^24 loses a few units of
+  // bound when the objective has coefficients in the thousands (rel2onto, train), 2^32 keeps them
+  private static final long[] SCALES =
+      CLEAN
+          ? new long[] {1L << 32, 1L << 24, 1L << 16, 1L << 8, 1}
+          : new long[] {1L << 24, 1L << 16, 1L << 8, 1};
 
   // the scale of the rows of the basis inverse the Gomory cuts come from
   private static final long GOMORY_SCALE = 1L << 20;
@@ -550,6 +558,44 @@ public class LinearRelaxation extends Constraint
     if (!substituted.isEmpty()) {
       forms = substitute(forms, substituted, objective);
     }
+    if (LINEARIZE) {
+      relaxed.addAll(Linearizations.encodings(constraints));
+    }
+    // the rows of the other constraints; rows over a variable that was substituted away are left
+    // out
+    List<LinearForm> candidates = new ArrayList<>();
+    for (LinearForm f : relaxed) {
+      if (f.relation() != LinearForm.NE
+          && f.vars().length >= 2
+          && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
+        candidates.add(f);
+      }
+    }
+    if (simplex == Simplex.DENSE && SPARSE_ROWS >= 0) {
+      // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
+      // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
+      // larger ones, also those over the dense size cap, which would get no relaxation at all
+      List<LinearForm> further = new ArrayList<>();
+      boolean whole = fitsSimplex(forms, candidates, Simplex.DENSE, further);
+      if (!whole || forms.size() + further.size() >= SPARSE_ROWS) {
+        simplex = Simplex.SPARSE;
+      }
+    }
+    if (tooLarge(forms, simplex)) {
+      return null;
+    }
+    List<LinearForm> further = new ArrayList<>();
+    fitsSimplex(forms, candidates, simplex, further);
+    LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
+    return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
+  // when the dense one is asked for; -1 keeps the dense one whatever the size
+  private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // whether the given rows alone are over the size cap of the simplex
+  private static boolean tooLarge(List<LinearForm> forms, Simplex simplex) {
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
     long rows = 0;
     long nonzeros = 0;
@@ -561,21 +607,36 @@ public class LinearRelaxation extends Constraint
       if (simplex == Simplex.DENSE
           ? rows * (rows + vars.size() + 1) > MAX_TABLEAU
           : nonzeros > MAX_NONZEROS) {
-        return null;
+        return true;
       }
     }
-    if (LINEARIZE) {
-      relaxed.addAll(Linearizations.encodings(constraints));
+    return false;
+  }
+
+  /**
+   * Fills further with the candidate rows the simplex takes after the given rows, in order, until
+   * its size cap.
+   *
+   * @return true when the given rows and every candidate fit; false when the given rows are over
+   *     the cap (further stays empty) or some candidates were left out
+   */
+  private static boolean fitsSimplex(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      Simplex simplex,
+      List<LinearForm> further) {
+    if (tooLarge(forms, simplex)) {
+      return false;
     }
-    // the rows of the other constraints, as many as the simplex takes; rows over a variable that
-    // was substituted away are left out
-    List<LinearForm> further = new ArrayList<>();
-    for (LinearForm f : relaxed) {
-      if (f.relation() == LinearForm.NE
-          || f.vars().length < 2
-          || Arrays.stream(f.vars()).anyMatch(substituted::contains)) {
-        continue;
-      }
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    long rows = 0;
+    long nonzeros = 0;
+    for (LinearForm f : forms) {
+      vars.addAll(Arrays.asList(f.vars()));
+      rows++;
+      nonzeros += f.vars().length;
+    }
+    for (LinearForm f : candidates) {
       int added = 0;
       for (IntVar v : f.vars()) {
         added += vars.contains(v) ? 0 : 1;
@@ -583,15 +644,14 @@ public class LinearRelaxation extends Constraint
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS) {
-        break;
+        return false;
       }
       further.add(f);
       vars.addAll(Arrays.asList(f.vars()));
       rows++;
       nonzeros += f.vars().length;
     }
-    LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
-    return r.rows() + r.extraColumns.length < 2 ? null : r;
+    return true;
   }
 
   /**
@@ -925,22 +985,123 @@ public class LinearRelaxation extends Constraint
     } else {
       return;
     }
-    for (long scale : SCALES) {
-      long[] lambda = scaled(y, scale);
+    for (int s = 0; s < SCALES.length; s++) {
+      long[] lambda = scaled(y, SCALES[s]);
       if (lambda == null) {
         return;
       }
-      Aggregate g = aggregate(lambda);
-      if (g != null) {
-        for (LinearForm f : combine(g)) {
+      LinearForm[] forms = certificate(lambda);
+      if (forms == null) {
+        continue; // the combination overflows: try a smaller scale
+      }
+      boolean fits = true;
+      for (LinearForm f : forms) {
+        fits &= f == null || fits(f);
+      }
+      if (fits || s == SCALES.length - 1) {
+        for (LinearForm f : forms) {
           if (f != null) {
             propagate(store, f);
           }
         }
         return;
       }
-      // the combination overflows: try a smaller scale
+      // the bounds reasoning on the form would overflow: try a smaller scale
     }
+  }
+
+  /**
+   * The two inequalities of the combination of the rows by lambda, cleaned (Neumaier and
+   * Shcherbina): a multiplier whose row lacks the side its sign needs is dropped from that
+   * inequality instead of losing the inequality, and each inequality is divided by the greatest
+   * common divisor of its weights with its side rounded down, which holds as every column is an
+   * integer. Null when a combination overflows.
+   */
+  private LinearForm[] certificate(long[] lambda) {
+    Aggregate g = aggregate(lambda);
+    if (g == null) {
+      return null;
+    }
+    if (!CLEAN) {
+      return combine(g);
+    }
+    LinearForm[] forms = combine(g);
+    if (forms.length == 0) {
+      return forms;
+    }
+    if (!g.hasUpper()) {
+      Aggregate u = aggregate(sided(lambda, true));
+      if (u == null) {
+        return null;
+      }
+      LinearForm[] c = combine(u);
+      forms[0] = c.length > 0 ? c[0] : null;
+    }
+    if (!g.hasLower()) {
+      Aggregate l = aggregate(sided(lambda, false));
+      if (l == null) {
+        return null;
+      }
+      LinearForm[] c = combine(l);
+      forms[1] = c.length > 1 ? c[1] : null;
+    }
+    for (int k = 0; k < forms.length; k++) {
+      forms[k] = forms[k] == null ? null : divided(forms[k]);
+    }
+    return forms;
+  }
+
+  // lambda without the multipliers whose row lacks the side the upper (or lower) inequality needs
+  private long[] sided(long[] lambda, boolean upper) {
+    long[] l = lambda.clone();
+    for (int i = 0; i < l.length; i++) {
+      if (l[i] != 0 && !((l[i] > 0) == upper ? hasHi[i] : hasLo[i])) {
+        l[i] = 0;
+      }
+    }
+    return l;
+  }
+
+  // sum w x <= c divided by the gcd g of the weights: sum (w / g) x <= floor(c / g)
+  private static LinearForm divided(LinearForm f) {
+    long g = 0;
+    for (long w : f.weights()) {
+      g = gcd(g, Math.abs(w));
+      if (g == 1) {
+        return f;
+      }
+    }
+    if (g <= 1) {
+      return f;
+    }
+    long[] w = new long[f.weights().length];
+    for (int k = 0; k < w.length; k++) {
+      w[k] = f.weights()[k] / g;
+    }
+    return new LinearForm(f.vars(), w, Math.floorDiv(f.c(), g), LinearForm.LE);
+  }
+
+  private static long gcd(long a, long b) {
+    while (b != 0) {
+      long t = a % b;
+      a = b;
+      b = t;
+    }
+    return a;
+  }
+
+  // whether the bounds reasoning on sum w x <= c stays within a long with room to spare: the sum
+  // of |w| times the largest bound, and |c|, below 2^61
+  private static boolean fits(LinearForm f) {
+    final double limit = 0x1p61;
+    double sum = Math.abs((double) f.c());
+    IntVar[] vars = f.vars();
+    long[] w = f.weights();
+    for (int k = 0; k < vars.length; k++) {
+      double b = Math.max(Math.abs((double) vars[k].min()), Math.abs((double) vars[k].max()));
+      sum += Math.abs((double) w[k]) * b;
+    }
+    return sum < limit;
   }
 
   // multipliers of the rows of the simplex as multipliers of the rows of the relaxation
@@ -1095,7 +1256,10 @@ public class LinearRelaxation extends Constraint
     inactive = inactive2;
   }
 
-  // y scaled so that its largest entry is about scale, rounded; null when y is zero
+  // y scaled so that its largest entry is about scale, rounded; null when y is zero. With the
+  // certificate cleaning on, entries below 1e-12 of the largest are noise of the simplex (its cost
+  // perturbation and eta file) and are zeroed, so that a large scale does not turn them into
+  // multipliers of rows without the side they need
   private static long[] scaled(double[] y, long scale) {
     double largest = 0;
     for (double v : y) {
@@ -1104,9 +1268,10 @@ public class LinearRelaxation extends Constraint
     if (largest == 0 || Double.isNaN(largest) || Double.isInfinite(largest)) {
       return null;
     }
+    double tiny = CLEAN ? largest * 1e-12 : 0;
     long[] lambda = new long[y.length];
     for (int i = 0; i < y.length; i++) {
-      lambda[i] = Math.round(y[i] / largest * scale);
+      lambda[i] = Math.abs(y[i]) < tiny ? 0 : Math.round(y[i] / largest * scale);
     }
     return lambda;
   }
