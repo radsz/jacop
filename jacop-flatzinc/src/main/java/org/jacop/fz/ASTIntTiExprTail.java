@@ -7,6 +7,9 @@ public class ASTIntTiExprTail extends SimpleNode {
   // type 0=int; 1=interval; 2=list; 3=range set
   int type = -1;
   int low, high;
+  // the declared bounds when they reached beyond JaCoP's integer range and were narrowed, or null
+  String clamped;
+  boolean lowClamped, highClamped;
 
   public ASTIntTiExprTail(int id) {
     super(id);
@@ -27,6 +30,28 @@ public class ASTIntTiExprTail extends SimpleNode {
   public void setLowHigh(int l, int h) {
     low = l;
     high = h;
+  }
+
+  public void setClamped(String declared, boolean low, boolean high) {
+    clamped = declared;
+    lowClamped = low;
+    highClamped = high;
+  }
+
+  public boolean lowClamped() {
+    return lowClamped;
+  }
+
+  public boolean highClamped() {
+    return highClamped;
+  }
+
+  /**
+   * Returns the declared bounds when they reached beyond JaCoP's integer range and were narrowed to
+   * it, or null.
+   */
+  public String getClamped() {
+    return clamped;
   }
 
   public int getLow() {
