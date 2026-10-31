@@ -1201,6 +1201,20 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+82. Under --lcg, an experimental cut-based conflict analysis, off by
+    default: -Djacop.lcg.linear=learn. When a linear constraint fails,
+    it is combined with the linear constraints behind its latest bounds,
+    eliminating one variable at a time, until the sum is asserting; the
+    sum is then posted as a learnt linear constraint (up to
+    -Djacop.lcg.linearTerms=200 terms) next to the learnt clause.
+    -Djacop.lcg.linear=stats only counts the outcomes (%% lcg-linear with
+    -s). On the 249 mznbench instances only about 2.5% of failures end in
+    such a sum. With 30 terms at most, 30 s: golomb_09 and ghoulomb
+    4-9-10 prove 1.7x faster with 2.5x fewer conflicts, bus_scheduling r4
+    takes 9.8 s instead of 17 s under --lcg and is proved under --lcg -f;
+    over the whole set, --lcg 15 better and 6 worse, --lcg -f 13 better
+    and 33 worse, mostly on instances where it never learns (noise).
+
 Version 4.11
 =============
 
