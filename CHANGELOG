@@ -1403,7 +1403,25 @@ Version 5.0 (unreleased)
     pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
     No MiniZinc Challenge instance 2008-2026 reaches Geost.
 
-96. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
+96. Portfolio (-p) settings are chosen from data. Each setting was run
+    alone on 240 hard instances (osolpro benchmarks/portfolio-configs) and
+    the threads after the first now follow the greedy best order for both
+    -f (--lcg on -f) and no options (--lcg on): LCG with literal branching,
+    free search with CHS and Luby restarts, the annotation without LCG,
+    the annotation with LCG, then the rest. A setting that would run the
+    same search as an earlier thread is skipped: objective-only options
+    (lcg-core, lcg-lb, lns, probe) on a satisfaction model and share-*
+    options do not count, so lcg-bb no longer repeats lcg on satisfaction
+    models. The LCG core-guided phase stops when its lower bound meets the
+    bound shared by the portfolio, and hardens with it; before, it used
+    only its own best solution. -f -p 4, 60 s, 169 hard instances, two
+    rounds that run both builds on each instance in turn: 99 solved
+    instead of 95 and 101 instead of 92, 61 and 59 instances better
+    against 25 and 26 worse, proofs about 26% faster. Routing and large
+    scheduling models reach somewhat worse objectives, since plain -f
+    without LCG is no longer among the first four threads.
+
+97. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
     failures, restarts, peakDepth, variables, propagators, propagations,
     nogoods, initTime, solveTime, objective, solutions) and now peakMem,
     the peak memory of the JVM in Mbytes. The statistics of JaCoP's own
@@ -1414,7 +1432,7 @@ Version 5.0 (unreleased)
     configuration declares --search-statistics. A malformed
     "%%%%mzn-stat: restarts" line of -v output is fixed.
 
-97. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
+98. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
     decision level of the SAT search (assumption levels included), and
     restarts, the SAT solver's restarts (as lcgRestarts). Before, both
     were always 0.
