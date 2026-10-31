@@ -30,6 +30,10 @@
 
 package org.jacop.fz;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -53,6 +57,8 @@ import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
+import org.jacop.jasat.lcg.LcgSolver;
+import org.jacop.lcg.AtomicTrail;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
@@ -123,131 +129,148 @@ public class Constraints implements ParserTreeConstants {
       // presolve has preprocessed them; Solve posts them
       sat.collectClauses();
     }
-
-    if (support.options.debug()) {
-      FzConsole.println(
-          "% bool constraints = "
-              + boolClauses
-              + " of "
-              + (noConstraints - bool2Int)
-              + " p = "
-              + (float) boolClauses / (float) (noConstraints - bool2Int));
+    if (options.proof() != null && options.lcg()) {
+      // the constraints propagate as they are imposed; the proof derives their changes from the
+      // domains the model states
+      dictionary.rootTrail = new AtomicTrail(store);
+      store.recentlyFailedConstraint = null;
     }
+    try {
 
-    if ((float) boolClauses / (float) (noConstraints - bool2Int) >= satThreshold) {
-      support.options.setSat();
-    }
-
-    sat.setDebug(debug);
-
-    // disequalities that are part of a detected all-different constraint, and the constraints of
-    // merged copies of partial function results
-    Set<SimpleNode> replaced = Set.of();
-    if (PartialCopyDetector.enabled()) {
-      replaced = new PartialCopyDetector(support).detect(astTree);
-      dictionary.removeAliasFromSearch();
-    }
-    if (AlldifferentDetector.enabled()) {
-      AlldifferentDetector alldifferent = new AlldifferentDetector(support);
-      alldifferent.detect(astTree);
-      if (replaced.isEmpty()) {
-        replaced = alldifferent.replaced();
-      } else {
-        replaced = new HashSet<>(replaced);
-        replaced.addAll(alldifferent.replaced());
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% bool constraints = "
+                + boolClauses
+                + " of "
+                + (noConstraints - bool2Int)
+                + " p = "
+                + (float) boolClauses / (float) (noConstraints - bool2Int));
       }
-    }
 
-    if (MinOfSumsDetector.enabled()) {
-      MinOfSumsDetector minOfSums = new MinOfSumsDetector(support);
-      Set<SimpleNode> merged = minOfSums.detect(astTree);
-      if (!merged.isEmpty()) {
-        replaced = new HashSet<>(replaced);
-        replaced.addAll(merged);
-        dictionary.removeFromDefaultSearch(minOfSums.removed());
-        dictionary.unusedVariables.addAll(minOfSums.removed());
+      if ((float) boolClauses / (float) (noConstraints - bool2Int) >= satThreshold) {
+        support.options.setSat();
       }
-    }
 
-    IncreasingDetector increasing = null;
-    if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
-      increasing = new IncreasingDetector(support);
-      increasing.scan(astTree);
-      if (IncreasingDetector.nvalueEnabled()) {
-        Set<SimpleNode> nvalues = increasing.replaceNValues();
-        if (!nvalues.isEmpty()) {
+      sat.setDebug(debug);
+
+      // disequalities that are part of a detected all-different constraint, and the constraints of
+      // merged copies of partial function results
+      Set<SimpleNode> replaced = Set.of();
+      if (PartialCopyDetector.enabled()) {
+        replaced = new PartialCopyDetector(support).detect(astTree);
+        dictionary.removeAliasFromSearch();
+      }
+      if (AlldifferentDetector.enabled()) {
+        AlldifferentDetector alldifferent = new AlldifferentDetector(support);
+        alldifferent.detect(astTree);
+        if (replaced.isEmpty()) {
+          replaced = alldifferent.replaced();
+        } else {
           replaced = new HashSet<>(replaced);
-          replaced.addAll(nvalues);
+          replaced.addAll(alldifferent.replaced());
         }
       }
-    }
 
-    int n = astTree.jjtGetNumChildren();
+      if (MinOfSumsDetector.enabled()) {
+        MinOfSumsDetector minOfSums = new MinOfSumsDetector(support);
+        Set<SimpleNode> merged = minOfSums.detect(astTree);
+        if (!merged.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(merged);
+          dictionary.removeFromDefaultSearch(minOfSums.removed());
+          dictionary.unusedVariables.addAll(minOfSums.removed());
+        }
+      }
 
-    for (int i = 0; i < n; i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      // go for ConstraintItems
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-
-        int k = node.jjtGetNumChildren();
-        for (int j = 0; j < k; j++) {
-          if (support.options.timeOutPassed()) {
-            throw new ModelTimeOut();
-          }
-          SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
-          if (!replaced.contains(snode.jjtGetChild(0))) {
-            generateConstraint(snode);
+      IncreasingDetector increasing = null;
+      if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
+        increasing = new IncreasingDetector(support);
+        increasing.scan(astTree);
+        if (IncreasingDetector.nvalueEnabled()) {
+          Set<SimpleNode> nvalues = increasing.replaceNValues();
+          if (!nvalues.isEmpty()) {
+            replaced = new HashSet<>(replaced);
+            replaced.addAll(nvalues);
           }
         }
       }
-    }
 
-    cf.poseCounts();
-    cf.poseDiffnProjections();
+      int n = astTree.jjtGetNumChildren();
 
-    if (CircuitCostDetector.enabled()) {
-      new CircuitCostDetector(support).detect(astTree);
-    }
+      for (int i = 0; i < n; i++) {
+        SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+        // go for ConstraintItems
+        if (node.getId() == JJTCONSTRAINTITEMS) {
 
-    if (DisjunctiveCliqueDetector.enabled()) {
-      new DisjunctiveCliqueDetector(support).detect(astTree);
-    }
+          int k = node.jjtGetNumChildren();
+          for (int j = 0; j < k; j++) {
+            if (support.options.timeOutPassed()) {
+              throw new ModelTimeOut();
+            }
+            SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
+            if (!replaced.contains(snode.jjtGetChild(0))) {
+              generateConstraint(snode);
+            }
+          }
+        }
+      }
 
-    // energy precedence when enabled, and the reservoirs
-    new PrecedenceDetector(support).detect(astTree);
-    if (WeightedCompletionDetector.enabled()) {
-      new WeightedCompletionDetector(support).detect(astTree);
-    }
+      cf.poseCounts();
+      cf.poseDiffnProjections();
 
-    if (CardinalityDetector.enabled()) {
-      new CardinalityDetector(support).detect(astTree);
-    }
+      if (CircuitCostDetector.enabled()) {
+        new CircuitCostDetector(support).detect(astTree);
+      }
 
-    if (increasing != null && IncreasingDetector.sumEnabled()) {
-      increasing.postSums();
-    }
+      if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
+        // the unary resources it adds explain by rules a proof's unit propagation does not reach
+        new DisjunctiveCliqueDetector(support).detect(astTree);
+      }
 
-    if (BalanceDetector.enabled()) {
-      new BalanceDetector(support).detect(astTree);
-    }
+      // energy precedence when enabled, and the reservoirs
+      new PrecedenceDetector(support).detect(astTree);
+      // the weighted completion bound it adds is redundant, and --proof does not encode it
+      if (WeightedCompletionDetector.enabled() && options.proof() == null) {
+        new WeightedCompletionDetector(support).detect(astTree);
+      }
 
-    if (StockingCostDetector.enabled()) {
-      new StockingCostDetector(support).detect(astTree);
-    }
+      if (CardinalityDetector.enabled()) {
+        new CardinalityDetector(support).detect(astTree);
+      }
 
-    if (KnapsackDetector.enabled()) {
-      new KnapsackDetector(support).detect(astTree);
-    }
+      if (increasing != null && IncreasingDetector.sumEnabled()) {
+        increasing.postSums();
+      }
 
-    support.detectBinPackingCliques();
+      if (BalanceDetector.enabled()) {
+        new BalanceDetector(support).detect(astTree);
+      }
 
-    support.poseDelayedConstraints();
+      // the stocking cost it adds is redundant, and --proof does not encode it
+      if (StockingCostDetector.enabled() && options.proof() == null) {
+        new StockingCostDetector(support).detect(astTree);
+      }
 
-    // to be sure that all constraints queues are empty and the
-    // model is consistent; it can happen that search will not
-    // find out inconsistency if all variables are ground
-    if (!store.consistency()) {
-      throw Store.failException;
+      if (KnapsackDetector.enabled()) {
+        new KnapsackDetector(support).detect(astTree);
+      }
+
+      support.detectBinPackingCliques();
+
+      support.poseDelayedConstraints();
+
+      // to be sure that all constraints queues are empty and the
+      // model is consistent; it can happen that search will not
+      // find out inconsistency if all variables are ground
+      if (!store.consistency()) {
+        throw Store.failException;
+      }
+    } catch (FailException e) {
+      // a constraint failed as it propagated (a domain the translation emptied has no reason)
+      if (dictionary.rootTrail != null && store.recentlyFailedConstraint != null) {
+        proveRootFailure(support.options.proof());
+      }
+      throw e;
     }
 
     if (LinearRelaxationCheck.enabled() && new LinearRelaxationCheck(support).infeasible(astTree)) {
@@ -433,5 +456,17 @@ public class Constraints implements ParserTreeConstants {
       }
     }
     return false;
+  }
+
+  // --proof: the model fails at the root, which the proof derives
+  private void proveRootFailure(String prefix) {
+    try (OutputStream model = new FileOutputStream(prefix + ".opb");
+        OutputStream proof = new FileOutputStream(prefix + ".pbp")) {
+      LcgSolver.proveRootFailure(store, dictionary.rootTrail, model, proof);
+      dictionary.rootTrail = null;
+      dictionary.rootFailureProved = true;
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 }

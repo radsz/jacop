@@ -416,6 +416,20 @@ class AtomicTrailTest {
    * of 300 to 600 atoms this way).
    */
   @Test
+  void rootDomainOfAVariableCreatedLaterGrowsTheArrays() {
+    // root[slot(x)] read the array before slot(x) grew it: an index out of bounds
+    Store store = new Store();
+    new IntVar(store, "a", 0, 1);
+    AtomicTrail trail = new AtomicTrail(store);
+    IntVar late = null;
+    for (int i = 0; i < 20; i++) {
+      late = new IntVar(store, "v" + i, i, i + 3);
+    }
+    assertThat(trail.rootDomain(late).max()).isEqualTo(22);
+    assertThat(trail.lateVariables()).isEqualTo(1);
+  }
+
+  @Test
   void cumulativeStartAcrossRemovedValuesCitesTheCompulsoryPart() {
     Store store = new Store();
     IntVar s = new IntVar(store, "s", 0, 300);

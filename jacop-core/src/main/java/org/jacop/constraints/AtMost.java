@@ -40,6 +40,9 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * AtMost constraint implements the counting over number of occurrences of a given value in a list
@@ -49,7 +52,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class AtMost extends AbstractAtLeastMost
-    implements Violation, Copyable<AtMost>, Explainable {
+    implements Violation, Copyable<AtMost>, Explainable, PbEncodable {
 
   /**
    * It constructs a AtMost constraint.
@@ -197,5 +200,14 @@ public class AtMost extends AbstractAtLeastMost
   @Override
   public long violation(ToIntFunction<IntVar> value) {
     return Math.max(0, Violations.count(list, this.value, value) - counter);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != AtMost.class) {
+      return false;
+    }
+    PbModel.count(model, list, value, new IntVar[0], LinearForm.LE, counter);
+    return true;
   }
 }

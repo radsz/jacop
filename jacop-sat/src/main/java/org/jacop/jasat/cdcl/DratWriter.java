@@ -43,7 +43,7 @@ import java.io.UncheckedIOException;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public final class DratWriter implements AutoCloseable {
+public final class DratWriter implements ProofOutput, AutoCloseable {
 
   private final OutputStream out;
   private final byte[] digits = new byte[12];
@@ -57,11 +57,13 @@ public final class DratWriter implements AutoCloseable {
     this.out = new BufferedOutputStream(out, 1 << 16);
   }
 
-  void add(int[] lits, int from, int n) {
+  @Override
+  public void add(int[] lits, int from, int n) {
     line(lits, from, n);
   }
 
-  void delete(int[] lits, int from, int n) {
+  @Override
+  public void delete(int[] lits, int from, int n) {
     write('d');
     write(' ');
     line(lits, from, n);

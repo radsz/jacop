@@ -30,7 +30,13 @@
 
 package org.jacop.lcg;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * Explanations of {@code list[index - offset - 1] = value} over a list of constants: an atom of the
@@ -43,6 +49,41 @@ import org.jacop.core.IntVar;
 public final class ElementExplanation {
 
   private ElementExplanation() {}
+
+  /**
+   * Writes list[index - offset] = value as clauses over value literals: a position implies its
+   * constant, a value of the value variable needs one of its positions, and the index is one of the
+   * positions. Unit propagation on them removes what the element propagators remove, so every
+   * explanation of this class, and the generic reason, follows from them.
+   *
+   * @param model the model
+   * @param index the index variable
+   * @param list the constants
+   * @param value the value variable, not the index
+   * @param offset the index offset
+   */
+  public static void encode(PbModel model, IntVar index, int[] list, IntVar value, int offset) {
+    Map<Integer, List<String>> positions = new HashMap<>();
+    String[] any = new String[list.length];
+    for (int j = 0; j < list.length; j++) {
+      String at = model.equalTo(index, j + 1 + offset);
+      any[j] = at;
+      model.clause(PbModel.not(at), model.equalTo(value, list[j]));
+      positions.computeIfAbsent(list[j], k -> new ArrayList<>()).add(at);
+    }
+    model.clause(any);
+    IntDomain d = model.domain(value);
+    for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+      int u = e.nextElement();
+      List<String> at = positions.getOrDefault(u, List.of());
+      String[] c = new String[at.size() + 1];
+      c[0] = PbModel.not(model.equalTo(value, u));
+      for (int k = 0; k < at.size(); k++) {
+        c[k + 1] = at.get(k);
+      }
+      model.clause(c);
+    }
+  }
 
   /**
    * Adds to {@code out} the reason of an entry of the index or the value.

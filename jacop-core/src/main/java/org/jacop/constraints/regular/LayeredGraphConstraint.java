@@ -30,7 +30,10 @@
 
 package org.jacop.constraints.regular;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.jacop.api.Stateful;
@@ -41,10 +44,13 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Generalized arc consistency for a layered graph: a directed acyclic graph with one layer of edges
@@ -75,7 +81,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public abstract class LayeredGraphConstraint extends Constraint
-    implements UsesQueueVariable, Stateful, Explainable {
+    implements UsesQueueVariable, Stateful, Explainable, PbEncodable {
 
   /** Array of the variables of the graph levels. */
   public final IntVar[] list;
@@ -494,6 +500,104 @@ public abstract class LayeredGraphConstraint extends Constraint
     LayeredGraphExplanation.Graph graph = explanationGraph();
     return graph != null
         && new LayeredGraphExplanation(trail, list, graph, trail.size()).explainFailure(out);
+  }
+
+  /**
+   * Writes the graph with a literal per node and per edge: an edge implies its two nodes and its
+   * value, a node needs an incoming and an outgoing edge, and each value of a variable needs an
+   * edge of its level labelled with it. Unit propagation on them removes every edge that is on no
+   * path, which is domain consistency. Only a deterministic graph with one source is written, so
+   * that the values of a solution fix every literal by unit propagation.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (description != null && description.levelNodes[0] == 0) {
+      // no path is left over the domains the graph was built from: the constraint fails
+      model.clause();
+      return true;
+    }
+    if (description == null || description.levelNodes[0] != 1) {
+      return false;
+    }
+    int levels = list.length;
+    int[] edge = description.edges;
+    int numEdges = description.size;
+    long[] first = new long[levels + 1];
+    for (int level = 0; level < levels; level++) {
+      first[level + 1] = first[level] + description.levelNodes[level];
+    }
+    Map<Long, Integer> next = new HashMap<>();
+    for (int e = 0; e < numEdges; e++) {
+      long key = (first[edge[4 * e]] + edge[4 * e + 1]) << 32 | (edge[4 * e + 2] & 0xFFFFFFFFL);
+      Integer target = next.putIfAbsent(key, edge[4 * e + 3]);
+      if (target != null && target != edge[4 * e + 3]) {
+        return false;
+      }
+    }
+    String[][] node = new String[levels + 1][];
+    List<List<List<String>>> in = new ArrayList<>();
+    List<List<List<String>>> out = new ArrayList<>();
+    for (int level = 0; level <= levels; level++) {
+      int nodes = description.levelNodes[level];
+      node[level] = new String[nodes];
+      in.add(new ArrayList<>());
+      out.add(new ArrayList<>());
+      for (int k = 0; k < nodes; k++) {
+        node[level][k] = level == 0 ? "1" : model.auxiliary();
+        in.get(level).add(new ArrayList<>());
+        out.get(level).add(new ArrayList<>());
+      }
+    }
+    List<Map<Integer, List<String>>> labelled = new ArrayList<>();
+    for (int level = 0; level < levels; level++) {
+      labelled.add(new HashMap<>());
+    }
+    for (int e = 0; e < numEdges; e++) {
+      int level = edge[4 * e];
+      int source = edge[4 * e + 1];
+      int value = edge[4 * e + 2];
+      int target = edge[4 * e + 3];
+      String equal = model.equalTo(list[level], value);
+      if ("0".equals(equal)) {
+        continue;
+      }
+      String lit = model.auxiliary();
+      model.clause(PbModel.not(lit), node[level][source]);
+      model.clause(PbModel.not(lit), node[level + 1][target]);
+      model.clause(PbModel.not(lit), equal);
+      out.get(level).get(source).add(lit);
+      in.get(level + 1).get(target).add(lit);
+      labelled.get(level).computeIfAbsent(value, v -> new ArrayList<>()).add(lit);
+    }
+    for (int level = 0; level <= levels; level++) {
+      for (int k = 0; k < node[level].length; k++) {
+        if (level < levels) {
+          model.clause(implied(node[level][k], out.get(level).get(k)));
+        }
+        if (level > 0) {
+          model.clause(implied(node[level][k], in.get(level).get(k)));
+        }
+      }
+    }
+    for (int level = 0; level < levels; level++) {
+      for (ValueEnumeration e = model.domain(list[level]).valueEnumeration();
+          e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        String equal = model.equalTo(list[level], v);
+        model.clause(implied(equal, labelled.get(level).getOrDefault(v, List.of())));
+      }
+    }
+    return true;
+  }
+
+  /** The clause that a literal implies one of some literals. */
+  private static String[] implied(String literal, List<String> some) {
+    String[] c = new String[some.size() + 1];
+    c[0] = PbModel.not(literal);
+    for (int k = 0; k < some.size(); k++) {
+      c[k + 1] = some.get(k);
+    }
+    return c;
   }
 
   private LayeredGraphExplanation.Graph explanationGraph() {

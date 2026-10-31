@@ -45,6 +45,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -58,6 +59,12 @@ import org.jacop.set.core.SetVar;
 public class Tables {
 
   public final Map<IntVar, IntVar> aliasTable = new LinkedHashMap<>();
+
+  /** Under --proof, the trail of the root propagation, which the proof derives; null otherwise. */
+  AtomicTrail rootTrail;
+
+  /** Whether --proof wrote the proof that the root propagation fails. */
+  boolean rootFailureProved;
 
   /** The Boolean variables that integer variables are aliases of (the values of aliasTable). */
   private final Set<IntVar> aliasTargets = new HashSet<>();
