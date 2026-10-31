@@ -637,41 +637,7 @@ public final class LcgSolver implements ExternalPropagator {
     int n = variables.length;
     IntDomain[] dom = new IntDomain[n];
     StringBuilder[] literals = new StringBuilder[n];
-    for (int j = 0; j < n; j++) {
-      dom[j] = root[variables[j]];
-      literals[j] = new StringBuilder();
-    }
-    // the hypotheses, and the clause literals of each variable that negate them
-    for (int k = from; k < atoms.size(); k++) {
-      int e = atoms.get(k);
-      Integer j = lines.position().get(trail.id(trail.variable(e)));
-      if (j != null) {
-        String atom = proofAtom(e, atoms.slack(k));
-        int v = (int) trail.value(e);
-        dom[j] =
-            switch (trail.kind(e)) {
-              case AtomicTrail.GE -> dom[j].intersect(v - atoms.slack(k), dom[j].max());
-              case AtomicTrail.LE -> dom[j].intersect(dom[j].min(), v + atoms.slack(k));
-              default -> dom[j].subtract(v);
-            };
-        if (!"1".equals(atom)) {
-          literals[j].append(" 1 ").append(atom.startsWith("~") ? atom.substring(1) : "~" + atom);
-        }
-      }
-    }
-    if (entry >= 0) {
-      Integer j = lines.position().get(trail.id(trail.variable(entry)));
-      if (j != null) {
-        int v = (int) trail.value(entry);
-        dom[j] =
-            switch (trail.kind(entry)) {
-              case AtomicTrail.GE -> dom[j].intersect(dom[j].min(), v - 1);
-              case AtomicTrail.LE -> dom[j].intersect(v + 1, dom[j].max());
-              default -> dom[j].intersect(v, v);
-            };
-        literals[j].append(" 1 ").append(proofAtom(entry, 0));
-      }
-    }
+    hypotheses(lines.position(), variables, atoms, from, entry, dom, literals);
     // the restricted variables first, where the matching most likely fails
     Integer[] order = new Integer[n];
     for (int j = 0; j < n; j++) {
@@ -731,6 +697,165 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+  }
+
+  /**
+   * Restricts the root domains of some variables by the hypotheses of a clause: the atoms of a
+   * reason and the negated atom it explains.
+   *
+   * @param position the position of each trail index among the variables
+   * @param variables the trail indexes of the variables
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   * @param dom filled with the domain of each variable under the hypotheses
+   * @param literals filled with the clause literals of each variable, each preceded by " 1 "
+   * @return whether a hypothesis removes a value inside the bounds
+   */
+  private boolean hypotheses(
+      Map<Integer, Integer> position,
+      int[] variables,
+      EntryList atoms,
+      int from,
+      int entry,
+      IntDomain[] dom,
+      StringBuilder[] literals) {
+    for (int j = 0; j < variables.length; j++) {
+      dom[j] = root[variables[j]];
+      literals[j] = new StringBuilder();
+    }
+    boolean hole = false;
+    for (int k = from; k < atoms.size(); k++) {
+      int e = atoms.get(k);
+      Integer j = position.get(trail.id(trail.variable(e)));
+      if (j != null) {
+        String atom = proofAtom(e, atoms.slack(k));
+        int v = (int) trail.value(e);
+        dom[j] =
+            switch (trail.kind(e)) {
+              case AtomicTrail.GE -> dom[j].intersect(v - atoms.slack(k), dom[j].max());
+              case AtomicTrail.LE -> dom[j].intersect(dom[j].min(), v + atoms.slack(k));
+              default -> dom[j].subtract(v);
+            };
+        hole |= trail.kind(e) == AtomicTrail.NE;
+        if (!"1".equals(atom)) {
+          literals[j].append(" 1 ").append(atom.startsWith("~") ? atom.substring(1) : "~" + atom);
+        }
+      }
+    }
+    if (entry >= 0) {
+      Integer j = position.get(trail.id(trail.variable(entry)));
+      if (j != null) {
+        int v = (int) trail.value(entry);
+        dom[j] =
+            switch (trail.kind(entry)) {
+              case AtomicTrail.GE -> dom[j].intersect(dom[j].min(), v - 1);
+              case AtomicTrail.LE -> dom[j].intersect(v + 1, dom[j].max());
+              default -> dom[j].intersect(v, v);
+            };
+        literals[j].append(" 1 ").append(proofAtom(entry, 0));
+      }
+    }
+    return hole;
+  }
+
+  /**
+   * Writes the bounds that a linear constraint implies under the hypotheses of a clause, when a
+   * hypothesis removes a value inside the bounds. Unit propagation over the order literals of a
+   * linear line derives a bound, but not the bound past a removed value: the clause "hypotheses
+   * imply x &gt;= v" is a rup step, and the one with v moved past the removed values after it.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofLinearBounds(Constraint c, EntryList atoms, int from, int entry) {
+    LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
+    if (f == null || f.relation() == LinearForm.NE) {
+      return;
+    }
+    int n = f.vars().length;
+    int[] variables = new int[n];
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int j = 0; j < n; j++) {
+      variables[j] = trail.id(f.vars()[j]);
+      if (position.put(variables[j], j) != null) {
+        return;
+      }
+    }
+    IntDomain[] dom = new IntDomain[n];
+    StringBuilder[] literals = new StringBuilder[n];
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)) {
+      return;
+    }
+    StringBuilder clause = new StringBuilder();
+    for (StringBuilder l : literals) {
+      clause.append(l);
+    }
+    long[] w = f.weights();
+    for (int round = 0, changed = 1; changed > 0 && round < 4 * n; round++) {
+      changed = 0;
+      for (int k = 0; k < n; k++) {
+        // the bounds of w[k] * x[k] that the other terms leave, for sum <= c and sum >= c
+        long smallest = 0;
+        long largest = 0;
+        for (int j = 0; j < n; j++) {
+          if (j != k) {
+            smallest += Math.min(w[j] * dom[j].min(), w[j] * dom[j].max());
+            largest += Math.max(w[j] * dom[j].min(), w[j] * dom[j].max());
+          }
+        }
+        long lo = Long.MIN_VALUE;
+        long hi = Long.MAX_VALUE;
+        if (f.relation() != LinearForm.GE) {
+          // w x <= c - smallest
+          long r = f.c() - smallest;
+          if (w[k] > 0) {
+            hi = Math.floorDiv(r, w[k]);
+          } else {
+            lo = -Math.floorDiv(r, -w[k]);
+          }
+        }
+        if (f.relation() != LinearForm.LE) {
+          // w x >= c - largest
+          long r = f.c() - largest;
+          if (w[k] > 0) {
+            lo = Math.max(lo, -Math.floorDiv(-r, w[k]));
+          } else {
+            hi = Math.min(hi, Math.floorDiv(-r, -w[k]));
+          }
+        }
+        IntDomain d = dom[k];
+        if (lo > d.min()) {
+          changed += proofBound(variables[k], clause, (int) Math.min(lo, d.max() + 1L), true);
+        }
+        if (hi < d.max()) {
+          changed += proofBound(variables[k], clause, (int) Math.max(hi, d.min() - 1L), false);
+        }
+        dom[k] = d.intersect((int) Math.max(lo, d.min()), (int) Math.min(hi, d.max()));
+        if (dom[k].isEmpty()) {
+          return;
+        }
+        if (dom[k].min() > Math.max(lo, d.min())) {
+          proofBound(variables[k], clause, dom[k].min(), true);
+        }
+        if (dom[k].max() < Math.min(hi, d.max())) {
+          proofBound(variables[k], clause, dom[k].max(), false);
+        }
+      }
+    }
+  }
+
+  // writes "clause or x >= v" (or x <= v); returns 1, or 0 when the bound is outside the root
+  private int proofBound(int i, CharSequence clause, int v, boolean lower) {
+    IntDomain d = root[i];
+    if (lower ? v <= d.min() || v > d.max() : v >= d.max() || v < d.min()) {
+      return 0;
+    }
+    String bound = lower ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v + 1);
+    proof.lemma("rup 1 " + bound + clause + " >= 1 ;\n");
+    return 1;
   }
 
   // Kuhn's augmenting path from variable j; visited collects the values tried
@@ -2456,6 +2581,7 @@ public final class LcgSolver implements ExternalPropagator {
         }
         if (proof != null) {
           proofPigeonhole(store.recentlyFailedConstraint, atoms, 0, -1);
+          proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
@@ -2490,6 +2616,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (proof != null) {
       proofPigeonhole(trail.reason(e), out, mark, e);
+      proofLinearBounds(trail.reason(e), out, mark, e);
     }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
       genericDeferred.add(trail.reason(e));

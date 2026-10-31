@@ -53,9 +53,13 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
@@ -63,6 +67,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.search.IndomainMax;
+import org.jacop.search.SimpleSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -374,6 +380,33 @@ class VeriPbProofTest {
       assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
       assertThat(checker.conclusion).isEqualTo("BOUNDS -44 -44");
     }
+  }
+
+  @Test
+  void sumOverARemovedValueIsProved() {
+    // x + y = z fails when x and z are fixed together and y must take the value b removed. Its
+    // explanation, x >= -3, x <= -3, z <= 1, y >= 3, y != 4, was no rup step: unit propagation
+    // over the order literals of the sum gives no y >= 4 (any of y >= 4, 5, 6 would do) without
+    // the lemma that the hypotheses imply y >= 4
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, -1);
+    IntVar y = new IntVar(store, "y", 2, 6);
+    IntVar z = new IntVar(store, "z", 1, 3);
+    BooleanVar b = new BooleanVar(store, "b");
+    BooleanVar c = new BooleanVar(store, "c");
+    BooleanVar d = new BooleanVar(store, "d");
+    store.impose(new XplusYeqZ(x, y, z));
+    store.impose(new Reified(new XneqC(y, 4), b));
+    store.impose(new Reified(new XgteqC(y, 3), d));
+    store.impose(new Reified(new XeqC(x, -3), c));
+    store.impose(new Reified(new XeqC(z, 1), c));
+    LcgSolver lcg = withProof(store);
+    lcg.setAnnotation(new SimpleSelect<>(new IntVar[] {b, d, c}, null, new IndomainMax<>()), false);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("SAT");
   }
 
   @Test

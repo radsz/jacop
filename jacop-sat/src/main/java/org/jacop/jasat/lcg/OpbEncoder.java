@@ -218,7 +218,7 @@ final class OpbEncoder implements PbModel {
     }
   }
 
-  private static LinearForm form(Constraint c) {
+  static LinearForm form(Constraint c) {
     if (c instanceof LinearInt l) {
       return l.linearRelation();
     }
