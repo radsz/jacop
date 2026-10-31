@@ -142,6 +142,8 @@ final class TimeLimitWatchdog {
     try {
       Thread.sleep(delayMillis);
     } catch (InterruptedException _) {
+      // cancelled: the run ended on its own
+      Thread.currentThread().interrupt();
       return;
     }
     synchronized (out) {
