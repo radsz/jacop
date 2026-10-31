@@ -57,6 +57,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.LinearReasons;
 
 /**
  * The linear relaxation of the linear constraints of a store, solved by a dual simplex during
@@ -83,7 +84,7 @@ import org.jacop.lcg.LinearForm;
  * @version 5.0
  */
 public class LinearRelaxation extends Constraint
-    implements Explainable, Stateful, Copyable<LinearRelaxation> {
+    implements Explainable, LinearReasons, Stateful, Copyable<LinearRelaxation> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1628,6 +1629,22 @@ public class LinearRelaxation extends Constraint
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return failureForm != null && failureForm.explainFailure(trail, out);
+  }
+
+  @Override
+  public LinearForm failureForm() {
+    return failureForm;
+  }
+
+  @Override
+  public List<LinearForm> reasonForms(IntVar x) {
+    List<LinearForm> forms = new ArrayList<>();
+    for (int k = deducedVar.size() - 1; k >= 0; k--) {
+      if (deducedVar.get(k) == x) {
+        forms.add(deducedForm.get(k));
+      }
+    }
+    return forms;
   }
 
   @Override
