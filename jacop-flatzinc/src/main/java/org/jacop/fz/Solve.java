@@ -289,7 +289,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
-        if (opt.presolve() != Options.Presolve.OFF && opt.symmetry()) {
+        if (opt.symmetry()) {
           breakSymmetries(astTree, solveItem, opt);
         }
         search(solveItem, table, opt);
@@ -299,9 +299,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Breaks the variable symmetries of the model with lex-leader constraints in the loaded store,
-   * before presolve derives the store to search. Symmetry breaking loses solutions, so it is not
-   * done when a satisfaction problem asks for more than one solution; it keeps the optimum, since
-   * the objective variable is kept by every symmetry.
+   * before presolve, if any, derives the store to search. Symmetry breaking loses solutions, so it
+   * is not done when a satisfaction problem asks for more than one solution; it keeps the optimum,
+   * since the objective variable is kept by every symmetry.
    */
   private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
     ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
@@ -348,6 +348,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     SymmetryBreaking.Outcome o =
         new SymmetryBreaking(store, dictionary)
+            .keepLargest(largestFirst(item))
+            .freeSearch(opt.freeSearch())
             .run(
                 astTree,
                 objective,
@@ -377,6 +379,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  /** Whether the first value choice of the search annotation tries the largest values first. */
+  private static boolean largestFirst(SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e
+        && e.getIdent() != null
+        && e.getIdent().startsWith("indomain")) {
+      return e.getIdent().equals("indomain_max") || e.getIdent().equals("indomain_reverse_split");
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      SimpleNode child = (SimpleNode) node.jjtGetChild(i);
+      if (containsIndomain(child)) {
+        return largestFirst(child);
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsIndomain(SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e
+        && e.getIdent() != null
+        && e.getIdent().startsWith("indomain")) {
+      return true;
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (containsIndomain((SimpleNode) node.jjtGetChild(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** The variables named in an annotation, in order. */
@@ -413,6 +445,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     options = opt;
     dictionary = table;
     output = table;
+    solveSideComponents(node);
     ObjectivePresolve objective = objectiveRule(node);
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node, objective);
@@ -946,6 +979,54 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return rule;
   }
 
+  /**
+   * Solves and fixes, before search, the independent components the objective does not depend on
+   * (--components); see {@link Components}. Like the dual reductions it keeps one solution and
+   * every optimum, so it stays off for several-solution satisfaction search and with on_restart,
+   * and for an objective that is not an integer variable.
+   */
+  private void solveSideComponents(ASTSolveItem node) {
+    if (!options.components() || dictionary.onRestart != null) {
+      return;
+    }
+    ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(node.jjtGetNumChildren() - 1);
+    int k = getKind(kind.getKind());
+    IntVar cost = null;
+    if (k == 0) {
+      if (options.getAll() || options.getNumberSolutions() > 1) {
+        return;
+      }
+    } else {
+      cost = objectiveVariable((ASTSolveExpr) kind.jjtGetChild(0));
+      if (cost == null) {
+        return;
+      }
+    }
+    if (!store.consistency()) {
+      throw Store.failException;
+    }
+    long budget = Long.getLong("jacop.components.budget", 2000);
+    // a component is searched in the order of the search annotations, then in the store's
+    List<Var> order = new ArrayList<>();
+    for (int i = 0; i < node.jjtGetNumChildren() - 1; i++) {
+      annotationVariables((SimpleNode) node.jjtGetChild(i), order);
+    }
+    Components.Outcome o = Components.solveSide(store, sat.collectedClauses(), cost, order, budget);
+    if (options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: components="
+              + o.components()
+              + "\n%%%mzn-stat: componentsSolved="
+              + o.solved()
+              + "\n%%%mzn-stat: componentsFixed="
+              + o.fixed()
+              + "\n%%%mzn-stat: componentsTimedOut="
+              + o.timedOut()
+              + "\n%%%mzn-stat: componentsTime="
+              + o.millis());
+    }
+  }
+
   /** The integer variable of the objective, without creating one for a constant. */
   private IntVar objectiveVariable(ASTSolveExpr node) {
     if (node.getType() == 0) {
@@ -1026,9 +1107,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Switches presolve's dual reductions on when the search wants one solution or an optimum: they
    * keep both but not every solution, so they stay off for all solutions of a satisfaction problem
    * (-a, -n), and with a float or constant objective. With -a an optimisation prints improving
-   * solutions only, which they keep. They stay off with on_restart too, whose built-ins fix
-   * variables from outside the store, and leave alone the variables of the clauses kept for the SAT
-   * solver, which are posted after presolve.
+   * solutions only, which they keep; the dominated columns may remove some of them, so they stay
+   * off with -a. They stay off with on_restart too, whose built-ins fix variables from outside the
+   * store, and leave alone the variables of the clauses kept for the SAT solver, which are posted
+   * after presolve.
    */
   private void dualReductions(Presolver presolver, ASTSolveItem node) {
     if (!options.presolveDual() || dictionary.onRestart != null) {
@@ -1061,7 +1143,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return;
       }
     }
-    presolver.dualReductions(objective, k != 2);
+    presolver.dualReductions(objective, k != 2).dominatedColumns(!options.getAll());
     for (IntVar[][] clause : sat.collectedClauses()) {
       presolver.exempt(clause[0]);
       presolver.exempt(clause[1]);
@@ -1160,6 +1242,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveDualRounds=").append(dual.rounds()).append('\n');
       s.append("%%%mzn-stat: presolveDualFixed=").append(dual.fixed()).append('\n');
       s.append("%%%mzn-stat: presolveDualTightened=").append(dual.tightened()).append('\n');
+      s.append("%%%mzn-stat: presolveDominated=").append(dual.dominated()).append('\n');
+      s.append("%%%mzn-stat: presolveDominanceClauses=")
+          .append(dual.dominanceClauses())
+          .append('\n');
     }
     Derivation.ClauseStatistics cs = d.clauseStatistics();
     if (cs != null && cs.clauses() > 0) {

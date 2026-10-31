@@ -202,6 +202,18 @@ public final class Presolver {
   }
 
   /**
+   * Switches the dominated columns of the dual reductions on or off; see {@link
+   * Derivation.Builder#dominatedColumns(boolean)}.
+   *
+   * @param on true to look for dominated columns when the dual reductions are on.
+   * @return this presolver.
+   */
+  public Presolver dominatedColumns(boolean on) {
+    builder.dominatedColumns(on);
+    return this;
+  }
+
+  /**
    * Sets the most rounds of rules; see {@link Derivation.Builder#rounds(int)}.
    *
    * @param max the most rounds, at least 1.

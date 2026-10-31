@@ -2628,6 +2628,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void symmetryIsBrokenByDefaultWithoutPresolve() {
+    // the test suites run with -Djacop.symmetry=presolve; fzn-jacop runs without it
+    String symmetry = System.clearProperty("jacop.symmetry");
+    try {
+      assertTrue(new Options(new String[] {"model.fzn"}).symmetry());
+      assertTrue(new Options(new String[] {"--presolve", "on", "model.fzn"}).symmetry());
+      assertFalse(new Options(new String[] {"--symmetry", "off", "model.fzn"}).symmetry());
+
+      // a model loaded for the API keeps the constraints of the model only
+      Options loaded = new Options(new String[] {"model.fzn"});
+      loaded.doNotRunSearch();
+      assertFalse(loaded.symmetry());
+      Options asked = new Options(new String[] {"--symmetry", "on", "model.fzn"});
+      asked.doNotRunSearch();
+      assertTrue(asked.symmetry());
+
+      System.setProperty("jacop.symmetry", "presolve");
+      assertFalse(new Options(new String[] {"model.fzn"}).symmetry());
+      assertTrue(new Options(new String[] {"--presolve", "on", "model.fzn"}).symmetry());
+      assertTrue(new Options(new String[] {"--symmetry", "on", "model.fzn"}).symmetry());
+    } finally {
+      restoreProperty("jacop.symmetry", symmetry);
+    }
+  }
+
+  @Test
   void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
     // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
     // message, and the Boolean constraints are not turned into clauses

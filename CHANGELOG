@@ -1452,7 +1452,32 @@ Version 5.0 (unreleased)
     restarts, the SAT solver's restarts (as lcgRestarts). Before, both
     were always 0.
 
-98. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+100. The FlatZinc front end solves the independent parts of a model that
+    the objective does not depend on (for a satisfaction model, every
+    part but the largest) once at the root, and fixes them. Each part
+    gets a depth-first search in annotation order with a 2 s budget
+    (-Djacop.components.budget, in ms); a part without a solution makes
+    the model infeasible, and a part that runs out of time is left to
+    the main search. It is skipped with -a, with -n > 1 for satisfaction
+    and with on_restart. --components off turns it off. Constraints
+    that watch only some of their variables (long Boolean sums, clauses)
+    link all their variables. 92 of the 1,781 MiniZinc Challenge
+    instances split into several parts; on the 109 checked, 60 s: same
+    statuses, ghoulomb 3-7-20 and 3-8-20 prove their optimum in 2 s
+    instead of 15 s, 3-10-20 in 15 s instead of 38 s, 2013 4-9-20 in
+    4 s instead of 17 s, and cable_tree_wiring R046 ends at its optimum
+    143,534 instead of 284,142; other objectives move by noise.
+
+101. Presolve dual reductions also find dominated columns: if raising x
+    by one and lowering y by one keeps every constraint and the
+    objective, the clause x = max(x) or y = min(y) is added (x >= y for
+    0-1 variables). It is left out with -a, since it can remove some of
+    the improving solutions printed on the way to the optimum (the
+    optimum stays). -Djacop.presolve.domcol=false turns it off. It fires
+    on 37 Challenge instances (train, table-layout, connect,
+    unit-commitment, wmsmc-int) and is neutral on them at 60 s.
+
+102. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
     search: <prefix>.opb is the model as pseudo-Boolean constraints over
     the order encoding of the domains the FlatZinc translation gives the
     variables, before the constraints propagate, and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
@@ -1482,7 +1507,7 @@ Version 5.0 (unreleased)
     the translation) or by a constraint that cannot be encoded narrow the
     model's domains instead. The FlatZinc translation is not certified.
 
-100. LCG explanations of GCC, GlobalCardinality and CountValues first try
+103. LCG explanations of GCC, GlobalCardinality and CountValues first try
      counting reasons: a counter's upper bound from the variables that
      exclude its value or from the lower bounds of the other counters, a
      counter's lower bound from the variables fixed to its value, and a
@@ -1497,6 +1522,28 @@ Version 5.0 (unreleased)
      --lcg -f solves 140 instead of 136; on the 17 instances with these
      constraints 22 better / 6 worse over 5 runs (fillomino 7x7_0 solved,
      league 15.4 s to 8.8 s).
+
+104. fzn-jacop breaks symmetries by default, also without --presolve:
+    lex-leader constraints for variable symmetries, lex chains for
+    interchangeable columns and value precedence for interchangeable
+    values, as --presolve on did (--symmetry off turns it off). It is
+    left out for all solutions of satisfaction problems and for models
+    loaded with FlatzincLoader. When the search annotation tries the
+    largest values first (indomain_max, indomain_reverse_split), the
+    lex-leader keeps the largest solution of each orbit, so the search
+    meets it first. Free search (-f) leaves value precedence out of
+    models that minimize the largest load of a bin packing (P||Cmax),
+    where it multiplied the failures of --lcg -f (pcmax n41-m7-s18:
+    30,015 to 214; 20 instances, 30 s: 16 to 19 proved). The second
+    given to symmetry detection now also
+    bounds reading the model and building its graphs, which took up to
+    7.5 s on groupsplitter and ma-path-finding. The FlatZinc test suites
+    run with -Djacop.symmetry=presolve, which keeps the old behaviour.
+    Symmetry constraints are posted on 431 of the 1,781 MiniZinc
+    Challenge instances (2008-2025); detection takes at most 1 s,
+    median 0.1 s. On the 376 of them not solved in 2 s, 30 s: fixed
+    search solves 141 -> 145, -f 189 -> 194; on 140 generated colouring,
+    bin packing and scheduling models 81 -> 91 and 87 -> 95.
 
 Version 4.11
 =============
