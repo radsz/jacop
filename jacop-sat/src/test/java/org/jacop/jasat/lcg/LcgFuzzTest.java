@@ -146,6 +146,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
@@ -438,10 +439,10 @@ class LcgFuzzTest {
       return new HybridTable(v, tuples, rnd.nextBoolean());
     }
 
-    // the globals added in 5.0 that have no explanation of their own, explained by replay
+    // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(20)) {
+      return switch (rnd.nextInt(21)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -488,6 +489,16 @@ class LcgFuzzTest {
           yield new ConditionalSelect(
               Arrays.copyOf(c, v.length), v, rnd.nextBoolean() ? one() : p[0]);
         }
+        case 19 ->
+            new Cumulatives(
+                p,
+                chain("cd", 3, 0, 2),
+                pick(x, 3),
+                pick(x, 3),
+                new IntVar[] {one(), intVar("cb", -1, 2)},
+                rnd.nextBoolean(),
+                1,
+                rnd.nextBoolean() ? null : pick(b, 3));
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
