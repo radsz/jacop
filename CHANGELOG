@@ -1314,7 +1314,19 @@ Version 5.0 (unreleased)
     4108 reaches the optimum 7; 6872 and 8657 reach 8 and 9 with -f,
     optimum 7); the two code-generator instances still prove their optimum.
 
-91. Presolve rules have timing classes, as in SCIP: fast (the
+91. Free search without lazy clause generation (--lcg off -f) chooses, for
+    optimisation, the value of a variable with up to 64 values by trying
+    each one and taking the one that leaves the best bound on the
+    objective, as local search chooses its moves; ties keep the value of
+    the last solution. The probes take at most a quarter of the time, so
+    proofs of optimality are slowed by at most that much. --free-config
+    value-impact=<n> (0 = off) and value-impact-time=<share>. Against the
+    adaptive LNS of #322 on 119 instances (60 s): primal integral 21%
+    lower, 21 better and 16 worse final objectives (gbac UD5 280 against
+    6585; Yuck reaches 977, CP-SAT 372). Measured against Yuck and
+    Atlantis in osolpro benchmarks/lns-ls.
+
+92. Presolve rules have timing classes, as in SCIP: fast (the
     propagation-like rules), medium (at-most-one, redundant constraints,
     cumulative reductions) and exhaustive (probing, tabling, implied
     constraints). A round runs the costlier class only after a round of
@@ -1339,7 +1351,7 @@ Version 5.0 (unreleased)
     neutral there (158 solved, Borda 363.4). Presolve stays off by
     default.
 
-92. New constraint Cumulatives (org.jacop.constraints.cumulative), the
+93. New constraint Cumulatives (org.jacop.constraints.cumulative), the
     cumulatives of Beldiceanu and Carlsson: tasks with variable starts,
     durations, heights and machines, a bound per machine that is an
     upper or a lower limit on the load wherever a task runs, heights

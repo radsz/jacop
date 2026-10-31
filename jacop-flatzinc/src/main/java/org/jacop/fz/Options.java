@@ -169,6 +169,9 @@ public class Options {
                 nogoods=0|1 (nogoods from restarts, default 1),
                 impact=<n> (bound-impact values for optimisation, on domains up to n values; 0 = off),
                 impact-until=first|always, impact-every=<k> (probe in the first run and every k-th),
+                value-impact=<n> (optimisation: values chosen by their bound on the objective,
+                ties to the last solution, on domains up to n values; default 64, 0 = off),
+                value-impact-time=<share> (most of the time spent on those probes, default 0.25),
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-branching=alternate|auto|literals|activity (with --lcg: alternate (default)
