@@ -2507,8 +2507,9 @@ class GlobalConstraints implements ParserTreeConstants {
 
   /**
    * Whether if_then_else on integers is posed as {@link ConditionalSelect}, which bounds the result
-   * by the branches still possible ({@code -Dorg.jacop.fz.conditionalSelect}, true by default), instead
-   * of IfThenElse/Conditional over equalities, which wait until the selected branch is known.
+   * by the branches still possible ({@code -Dorg.jacop.fz.conditionalSelect}, true by default),
+   * instead of IfThenElse/Conditional over equalities, which wait until the selected branch is
+   * known.
    */
   static final boolean CONDITIONAL_SELECT =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.conditionalSelect", "true"));
