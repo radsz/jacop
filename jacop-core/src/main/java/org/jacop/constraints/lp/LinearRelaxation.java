@@ -178,6 +178,13 @@ public class LinearRelaxation extends Constraint
   // so a relaxation that finds little costs a bounded share of the search
   private static final long WORK_PER_CALL = Long.getLong("org.jacop.lp.workPerCall", 4096L);
   private static final long PRUNE_DISCOUNT = Long.getLong("org.jacop.lp.pruneDiscount", 16L);
+
+  // the work of the sparse simplex in search counted against the credit, in units of a dense
+  // tableau entry. A unit of the sparse simplex's work takes 1-1.8 ns and a dense tableau entry
+  // 0.45-0.57 ns (Challenge: triangular n11, unit-commitment, roster-shifts-bool), but a factor of
+  // 3 slowed the LP proofs (roster-shifts-bool s200_e50_c8 16 -> 32 s, harmony canon 28 -> 49 s)
+  // more than it helped elsewhere (triangular n11 LP time 56 -> 30 of 60 s), so it stays 1
+  private static final long SPARSE_COST = Long.getLong("org.jacop.lp.sparseCost", 1L);
   private long credit = WORK;
 
   // the solves in a row stopped at the pivot limit; after IDLE_RUNS of them the simplex is taken to
@@ -880,7 +887,7 @@ public class LinearRelaxation extends Constraint
       long cost =
           simplex == Simplex.DENSE
               ? (pivots() - pivots + 1) * lp.pivotWork()
-              : Math.max(0, lp.work() - work) + lp.pivotWork() + scanned;
+              : SPARSE_COST * (Math.max(0, lp.work() - work) + lp.pivotWork() + scanned);
       scanned = 0;
       if (first) {
         // the root solve and its cuts may take up to their own budget; they spend the credit only
