@@ -115,7 +115,7 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
 
   @Override
   public int getChoiceValue() {
-    return fromLp ? value : fallback.getChoiceValue();
+    return fromLp || fallback == null ? value : fallback.getChoiceValue();
   }
 
   @Override
