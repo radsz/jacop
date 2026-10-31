@@ -1161,6 +1161,9 @@ setup to run configuration. -->
                         <!-- the FlatZinc tests' expected outputs were recorded without LCG,
                              which fzn-jacop runs by default; tests that need it ask for it -->
                         <jacop.lcg>off</jacop.lcg>
+                        <!-- and without the default symmetry breaking (presolve-off runs); with
+                             presolve the tests break symmetries as before -->
+                        <jacop.symmetry>presolve</jacop.symmetry>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>

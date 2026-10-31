@@ -289,7 +289,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
-        if (opt.presolve() != Options.Presolve.OFF && opt.symmetry()) {
+        if (opt.symmetry()) {
           breakSymmetries(astTree, solveItem, opt);
         }
         search(solveItem, table, opt);
@@ -299,9 +299,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Breaks the variable symmetries of the model with lex-leader constraints in the loaded store,
-   * before presolve derives the store to search. Symmetry breaking loses solutions, so it is not
-   * done when a satisfaction problem asks for more than one solution; it keeps the optimum, since
-   * the objective variable is kept by every symmetry.
+   * before presolve, if any, derives the store to search. Symmetry breaking loses solutions, so it
+   * is not done when a satisfaction problem asks for more than one solution; it keeps the optimum,
+   * since the objective variable is kept by every symmetry.
    */
   private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
     ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
@@ -348,6 +348,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     SymmetryBreaking.Outcome o =
         new SymmetryBreaking(store, dictionary)
+            .keepLargest(largestFirst(item))
+            .freeSearch(opt.freeSearch())
             .run(
                 astTree,
                 objective,
@@ -377,6 +379,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  /** Whether the first value choice of the search annotation tries the largest values first. */
+  private static boolean largestFirst(SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e
+        && e.getIdent() != null
+        && e.getIdent().startsWith("indomain")) {
+      return e.getIdent().equals("indomain_max") || e.getIdent().equals("indomain_reverse_split");
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      SimpleNode child = (SimpleNode) node.jjtGetChild(i);
+      if (containsIndomain(child)) {
+        return largestFirst(child);
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsIndomain(SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e
+        && e.getIdent() != null
+        && e.getIdent().startsWith("indomain")) {
+      return true;
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (containsIndomain((SimpleNode) node.jjtGetChild(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** The variables named in an annotation, in order. */

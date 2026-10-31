@@ -1482,6 +1482,28 @@ Version 5.0 (unreleased)
     the translation) or by a constraint that cannot be encoded narrow the
     model's domains instead. The FlatZinc translation is not certified.
 
+100. fzn-jacop breaks symmetries by default, also without --presolve:
+    lex-leader constraints for variable symmetries, lex chains for
+    interchangeable columns and value precedence for interchangeable
+    values, as --presolve on did (--symmetry off turns it off). It is
+    left out for all solutions of satisfaction problems and for models
+    loaded with FlatzincLoader. When the search annotation tries the
+    largest values first (indomain_max, indomain_reverse_split), the
+    lex-leader keeps the largest solution of each orbit, so the search
+    meets it first. Free search (-f) leaves value precedence out of
+    models that minimize the largest load of a bin packing (P||Cmax),
+    where it multiplied the failures of --lcg -f (pcmax n41-m7-s18:
+    30,015 to 214; 20 instances, 30 s: 16 to 19 proved). The second
+    given to symmetry detection now also
+    bounds reading the model and building its graphs, which took up to
+    7.5 s on groupsplitter and ma-path-finding. The FlatZinc test suites
+    run with -Djacop.symmetry=presolve, which keeps the old behaviour.
+    Symmetry constraints are posted on 431 of the 1,781 MiniZinc
+    Challenge instances (2008-2025); detection takes at most 1 s,
+    median 0.1 s. On the 376 of them not solved in 2 s, 30 s: fixed
+    search solves 141 -> 145, -f 189 -> 194; on 140 generated colouring,
+    bin packing and scheduling models 81 -> 91 and 87 -> 95.
+
 Version 4.11
 =============
 
