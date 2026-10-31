@@ -1999,6 +1999,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       perClass.append('\n');
     }
+    if (!lcg.linearStatistics().isEmpty()) {
+      perClass.append("%% lcg-linear");
+      for (Map.Entry<String, Long> e : lcg.linearStatistics().entrySet()) {
+        perClass.append(' ').append(e.getKey()).append('=').append(e.getValue());
+      }
+      perClass.append('\n');
+    }
     for (Map.Entry<String, long[]> e : lcg.minimalityStatistics().entrySet()) {
       long[] n = e.getValue();
       perClass
