@@ -2670,6 +2670,30 @@ class FlatzincFrontEndTest {
     assertEquals(4, out[0].split("----------", -1).length - 1, out[0]);
     String[] fast = run(model, "-s", "--presolve", "on", "--presolve-level", "fast");
     assertFalse(fast[0].contains("%%%mzn-stat: presolveRounds=0"), fast[0]);
+
+    // without rounds the objective rule still runs: exactly one of the costs 5, 3, 7 is paid
+    String objective =
+        """
+        var bool: c1;
+        var bool: c2;
+        var bool: c3;
+        var 1..3: x:: output_var;
+        var 0..1: b1;
+        var 0..1: b2;
+        var 0..1: b3;
+        var 0..15: obj:: output_var;
+        constraint int_eq_reif(x,1,c1);
+        constraint int_eq_reif(x,2,c2);
+        constraint int_eq_reif(x,3,c3);
+        constraint bool2int(c1,b1);
+        constraint bool2int(c2,b2);
+        constraint bool2int(c3,b3);
+        constraint int_lin_eq([5,3,7,-1],[b1,b2,b3,obj],0);
+        solve minimize obj;
+        """;
+    out = run(objective, "-s", "--presolve", "check", "--presolve-level", "aliases");
+    assertTrue(out[0].contains("%%%mzn-stat: presolveObjectiveShifted=1"), out[0]);
+    assertTrue(out[0].contains("obj = 3;"), out[0]);
   }
 
   private String[] run(String model, String... options) throws IOException {

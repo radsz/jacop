@@ -407,6 +407,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     output = table;
     ObjectivePresolve objective = objectiveRule(node);
     if (opt.presolve() != Options.Presolve.OFF) {
+      if (!opt.presolveRuleRounds() && objective != null && store.consistency()) {
+        // with no rounds of rules the objective rule is imposed before presolve, as without it
+        imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
+        objective = null;
+      }
       presolve(node, objective);
       if (sat.collecting() && !opt.lcg()) {
         postClausesToSat();
