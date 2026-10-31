@@ -1201,6 +1201,21 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+82. FlatZinc if_then_else on integers is posed as the new constraint
+    ConditionalSelect(b, x, y): y = x[k] for the first k with b[k] = 1.
+    It keeps y within the bounds of the branches that can still be
+    selected, rules out a branch that cannot give y its value and selects
+    the only branch left, with its own LCG explanations. IfThenElse and
+    Conditional over equalities, posted before, gave y no bound until the
+    selecting condition was fixed. median-string (MiniZinc Challenge 2019)
+    p2_10_8-0 is proved in 6 s instead of 38 s with -f, and with the
+    model's search p2_2_20-2 and p2_4_20-0 are proved in 34 s and 38 s
+    (not in 120 s, and in 113 s). On 62 Challenge instances with
+    if_then_else, 60 s: with the model's search 12 objectives better and 3
+    worse; with -f 8 proofs faster, and on two seeds 6 objectives better
+    and 9 worse (ptv pax_period_20_1c, cgt and stripboard the largest).
+    -Dorg.jacop.fz.conditionalSelect=false restores the old posting.
+
 Version 4.11
 =============
 
