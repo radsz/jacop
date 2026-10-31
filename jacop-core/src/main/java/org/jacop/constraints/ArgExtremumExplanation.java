@@ -31,6 +31,7 @@
 
 package org.jacop.constraints;
 
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -240,11 +241,22 @@ final class ArgExtremumExplanation {
    */
   private int firstKept(IntVar x, int v, int step, EntryList out) {
     int end = step > 0 ? high(x) : low(x);
-    for (int count = 0; step > 0 ? v <= end : v >= end; v += step, count++) {
-      if (count == VALUE_LIMIT) {
+    IntDomain root = trail.rootDomain(x);
+    // values outside the initial domain need no atom, so they are skipped without counting
+    boolean up = (step > 0) == max;
+    for (int count = 0; step > 0 ? v <= end : v >= end; v += step) {
+      int actual = max ? v : -v;
+      if (!root.contains(actual)) {
+        int nextRoot = up ? root.nextValue(actual) : root.previousValue(actual);
+        if (nextRoot == actual) {
+          break;
+        }
+        v = (max ? nextRoot : -nextRoot) - step;
+        continue;
+      }
+      if (count++ == VALUE_LIMIT) {
         return step > 0 ? Integer.MIN_VALUE : Integer.MAX_VALUE;
       }
-      int actual = max ? v : -v;
       if (!trail.excludedBefore(x, actual, position, out)) {
         return v;
       }

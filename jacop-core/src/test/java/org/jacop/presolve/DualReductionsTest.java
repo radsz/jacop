@@ -113,6 +113,7 @@ class DualReductionsTest {
   void randomModelsKeepASolutionAndTheOptimum() {
     Random random = new Random(20261027);
     int reduced = 0;
+    int dominated = 0;
     for (int trial = 0; trial < TRIALS; trial++) {
       Model model = randomModel(random);
       Set<List<Integer>> expected = solveDirectly(model);
@@ -129,8 +130,51 @@ class DualReductionsTest {
       if (statistics != null && statistics.fixed() + statistics.tightened() > 0) {
         reduced++;
       }
+      if (statistics != null && statistics.dominanceClauses() > 0) {
+        dominated++;
+      }
     }
     assertThat(reduced).isGreaterThan(TRIALS / 4);
+    assertThat(dominated).isGreaterThan(TRIALS / 50);
+  }
+
+  @Test
+  void aDominatedColumnGetsAnImplication() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 3);
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    // x covers whatever y covers and costs less, so some optimum has y <= x
+    store.impose(new LinearInt(new IntVar[] {x, y, z}, new int[] {1, 1, 1}, ">=", 2));
+    store.impose(new LinearInt(new IntVar[] {x, y}, new int[] {2, 1}, ">=", 1));
+    store.impose(new LinearInt(new IntVar[] {x, y, z, cost}, new int[] {3, 5, 4, -1}, "==", 0));
+
+    Derivation derivation =
+        Presolver.of(store).keep(x, y, z, cost).dualReductions(cost, true).presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    assertThat(derivation.dualStatistics().dominanceClauses()).isPositive();
+    Store child = derivation.child();
+    IntVar[] c = derivation.counterparts(new IntVar[] {x, y});
+    child.impose(new XgteqC(c[1], 1));
+    assertThat(child.consistency()).isTrue();
+    assertThat(c[0].value()).isEqualTo(1);
+  }
+
+  @Test
+  void equalColumnsGetOneImplicationOnly() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    // x and y dominate each other; both clauses would leave only x = y
+    store.impose(new LinearInt(new IntVar[] {x, y}, new int[] {1, 1}, "==", 1));
+
+    Derivation derivation = Presolver.of(store).dualReductions(null, true).presolve();
+
+    assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    assertThat(derivation.dualStatistics().dominated()).isEqualTo(2);
+    assertThat(derivation.dualStatistics().dominanceClauses()).isEqualTo(1);
   }
 
   @Test

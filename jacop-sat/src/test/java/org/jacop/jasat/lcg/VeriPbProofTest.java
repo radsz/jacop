@@ -46,6 +46,7 @@ import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -58,10 +59,12 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
@@ -628,6 +631,145 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void clauseFalseAtTheRootIsRefuted() {
+    // the clause's only literal is false at the root; the proof refutes it by unit propagation
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    BooleanVar b = new BooleanVar(store, "b", 0, 0);
+    IntVar obj = new IntVar(store, "obj", 0, 10);
+    store.impose(new LinearInt(new IntVar[] {x, obj}, new int[] {2, -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    lcg.addClause(new IntVar[] {b}, new IntVar[0]);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
+  // five rectangles in a 6 x 4 box, found by search; with each "before" literal as a linear line
+  // over the order literals, a reason that moves a bound through it is not a rup step
+  @Test
+  void nooverlapPackingIsProved() {
+    int[][] sides = {{2, 3}, {1, 3}, {2, 3}, {1, 3}, {2, 1}};
+    Store store = new Store();
+    IntVar[][] r = new IntVar[sides.length][];
+    for (int i = 0; i < sides.length; i++) {
+      int lx = sides[i][0];
+      int ly = sides[i][1];
+      r[i] =
+          new IntVar[] {
+            new IntVar(store, "x" + i, 0, 6 - lx),
+            new IntVar(store, "y" + i, 0, 4 - ly),
+            new IntVar(store, "lx" + i, lx, lx),
+            new IntVar(store, "ly" + i, ly, ly)
+          };
+    }
+    store.impose(new Nooverlap(r, true).pairwiseOnly());
+    assertThat(withProof(store).solve()).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("SAT");
+  }
+
+  // rectangles of lengths 0..2 in a strip of height 2, the width they need minimised
+  @Test
+  void nooverlapOfVariableLengthsIsProved() {
+    Store store = new Store();
+    int n = 4;
+    IntVar width = new IntVar(store, "w", 0, 8);
+    IntVar[][] r = new IntVar[n][];
+    IntVar[] area = new IntVar[n + 1];
+    int[] a = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      IntVar x = new IntVar(store, "x" + i, 0, 6);
+      IntVar lx = new IntVar(store, "lx" + i, 0, 2);
+      r[i] =
+          new IntVar[] {x, new IntVar(store, "y" + i, 0, 1), lx, new IntVar(store, "ly" + i, 1, 2)};
+      store.impose(new LinearInt(new IntVar[] {x, lx, width}, new int[] {1, 1, -1}, "<=", 0));
+      // the lengths in x add up to at least 5
+      area[i] = lx;
+      a[i] = 1;
+    }
+    area[n] = new IntVar(store, "five", 5, 5);
+    a[n] = -1;
+    store.impose(new LinearInt(area, a, ">=", 0));
+    store.impose(new Nooverlap(r, false).pairwiseOnly());
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(width)).isEqualTo(CdclSolver.SAT);
+    // two rows: lengths 2 + 1 and 2, so width 3; a rectangle of length 2 in y fills both rows
+    assertThat(lcg.value(width)).isEqualTo(3);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 3 3");
+  }
+
+  @Test
+  void multiplicationIsProved() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -6, 6);
+    IntVar y = new IntVar(store, "y", -6, 6);
+    IntVar z = new IntVar(store, "z", 6, 6);
+    IntVar obj = new IntVar(store, "obj", -12, 12);
+    store.impose(new XmulYeqZ(x, y, z));
+    store.impose(new LinearInt(new IntVar[] {x, y, obj}, new int[] {1, 1, -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(-7);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -7 -7");
+  }
+
+  // list[index] = value over variables with holes; the optimum is checked by enumeration
+  @Test
+  void elementOfVariablesIsProved() {
+    Store store = new Store();
+    int n = 4;
+    IntVar[] list = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      list[i] = new IntVar(store, "x" + i, 0, 4);
+      list[i].domain.inComplement(0, list[i], i);
+    }
+    IntVar index = new IntVar(store, "i", 1, n);
+    IntVar value = new IntVar(store, "v", 2, 4);
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    store.impose(new ElementVariableFast(index, list, value));
+    store.impose(new Alldiff(list));
+    int[] w = {3, -2, 1, 2, -3, -1};
+    IntVar[] terms = {list[0], list[1], list[2], list[3], value, index, obj};
+    store.impose(new LinearInt(terms, new int[] {w[0], w[1], w[2], w[3], w[4], w[5], -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    int best = Integer.MAX_VALUE;
+    for (int t = 0; t < 625 * n; t++) {
+      int[] v = {t % 5, t / 5 % 5, t / 25 % 5, t / 125 % 5};
+      int i = t / 625;
+      boolean ok = v[i] >= 2;
+      for (int a = 0; a < n && ok; a++) {
+        ok = v[a] != a;
+        for (int b = a + 1; b < n && ok; b++) {
+          ok = v[a] != v[b];
+        }
+      }
+      if (ok) {
+        best =
+            Math.min(
+                best,
+                w[0] * v[0]
+                    + w[1] * v[1]
+                    + w[2] * v[2]
+                    + w[3] * v[3]
+                    + w[4] * v[i]
+                    + w[5] * (i + 1));
+      }
+    }
+    assertThat(lcg.value(obj)).isEqualTo(best);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
   }
 
   @Test

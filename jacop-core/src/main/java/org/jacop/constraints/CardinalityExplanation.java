@@ -70,6 +70,13 @@ final class CardinalityExplanation {
 
   private static final int INFINITE = Integer.MAX_VALUE / 4;
 
+  // counting reasons before the flow network, unless -Djacop.lcg.cardinalityCounts=false
+  // the most values a bound may move past for its counting reason
+  private static final int RANGE_LIMIT = 64;
+
+  private static final boolean FAST =
+      !"false".equals(System.getProperty("jacop.lcg.cardinalityCounts"));
+
   /**
    * The largest share of the time since a constraint's first explanation that its flow explanations
    * may take ({@code -Djacop.lcg.flowShare}, 0.25 by default); beyond it the generic reason is
@@ -216,6 +223,9 @@ final class CardinalityExplanation {
      *     time
      */
     boolean explain(AtomicTrail trail, int entry, EntryList out) {
+      if (FAST && counting(trail, entry, out)) {
+        return true;
+      }
       long now = System.nanoTime();
       if (!budget.allows(now)) {
         return false;
@@ -244,6 +254,17 @@ final class CardinalityExplanation {
      *     of the time
      */
     boolean explainFailure(AtomicTrail trail, EntryList out) {
+      if (FAST) {
+        int position = trail.size();
+        for (int j = 0; j < values.length; j++) {
+          int bound = upper(trail, j, position);
+          if (bound < list.length && fixedTo(trail, values[j], position, null, bound + 1, null)) {
+            fixedTo(trail, values[j], position, null, bound + 1, out);
+            addCounterBound(trail, j, position, bound, out);
+            return true;
+          }
+        }
+      }
       long now = System.nanoTime();
       if (!budget.allows(now)) {
         return false;
@@ -253,6 +274,165 @@ final class CardinalityExplanation {
       } finally {
         budget.nanos += System.nanoTime() - now;
       }
+    }
+
+    /*
+     * Counting reasons, tried before the flow network: a value removed from a variable, or a
+     * failure, because other variables fixed to it reach its upper bound; a counter's lower bound
+     * from the variables fixed to its value. They cite only those variables' bounds and the
+     * counter's, and cost a pass over the variables.
+     */
+    private boolean counting(AtomicTrail trail, int entry, EntryList out) {
+      int position = entry;
+      IntVar y = trail.variable(entry);
+      int kind = trail.kind(entry);
+      int value = trail.value(entry);
+      if (counters != null) {
+        for (int j = 0; j < counters.length; j++) {
+          if (counters[j] != y) {
+            continue;
+          }
+          if (kind == AtomicTrail.GE && fixedTo(trail, values[j], position, null, value, null)) {
+            fixedTo(trail, values[j], position, null, value, out);
+            return true;
+          }
+          if (kind == AtomicTrail.LE
+              && excludedFromOthers(trail, values[j], position, value, out)) {
+            return true;
+          }
+        }
+      }
+      if (kind == AtomicTrail.NE || !occursInList(y)) {
+        return kind == AtomicTrail.NE
+            && occursInList(y)
+            && saturated(trail, y, value, position, out);
+      }
+      // a bound moved past values that are holes or saturated
+      int mark = out.size();
+      boolean lower = kind == AtomicTrail.GE;
+      int from = lower ? trail.minBefore(y, position) : value + 1;
+      int to = lower ? value - 1 : trail.maxBefore(y, position);
+      if ((long) to - from >= RANGE_LIMIT) {
+        return false;
+      }
+      for (int v = from; v <= to; v++) {
+        if (!trail.excludedBefore(y, v, position, out)
+            && !(Arrays.binarySearch(values, v) < 0
+                ? !open
+                : saturated(trail, y, v, position, out))) {
+          out.truncate(mark);
+          return false;
+        }
+      }
+      if (lower) {
+        trail.addLowerBound(y, position, out);
+      } else {
+        trail.addUpperBound(y, position, out);
+      }
+      return true;
+    }
+
+    // whether v is taken by as many variables other than y as its count allows; adds their bounds
+    private boolean saturated(AtomicTrail trail, IntVar y, int v, int position, EntryList out) {
+      int j = Arrays.binarySearch(values, v);
+      if (j < 0) {
+        return false;
+      }
+      int bound = upper(trail, j, position);
+      if (bound >= list.length || !fixedTo(trail, v, position, y, bound, null)) {
+        return false;
+      }
+      fixedTo(trail, v, position, y, bound, out);
+      addCounterBound(trail, j, position, bound, out);
+      return true;
+    }
+
+    /*
+     * Whether every variable taking a counted value, the lower bounds of the other counters leave at
+     * most k variables for value j; adds those lower bounds.
+     */
+    private boolean takenByOthers(AtomicTrail trail, int j, int position, int k, EntryList out) {
+      if (open && rest == null) {
+        return false;
+      }
+      long others = 0;
+      for (int i = 0; i < counters.length; i++) {
+        if (i != j) {
+          others += Math.max(trail.minBefore(counters[i], position), 0);
+        }
+      }
+      if (rest != null) {
+        others += Math.max(trail.minBefore(rest, position), 0);
+      }
+      long room = others - (list.length - k);
+      if (room < 0) {
+        return false;
+      }
+      for (int i = 0; i <= counters.length; i++) {
+        IntVar c = i < counters.length ? counters[i] : rest;
+        int bound = c == null || i == j ? 0 : trail.minBefore(c, position);
+        if (bound > 0) {
+          // weaker by at most the bound, so the counter still counts what it gives up
+          room -= trail.addBoundWithin(c, position, true, Math.min(room, bound), out);
+        }
+      }
+      return true;
+    }
+
+    // whether at most k variables may take v before the position; adds the exclusions of the others
+    private boolean excludedFromOthers(
+        AtomicTrail trail, int v, int position, int k, EntryList out) {
+      int mark = out.size();
+      int possible = 0;
+      for (IntVar z : list) {
+        if (!trail.excludedBefore(z, v, position, out) && ++possible > k) {
+          out.truncate(mark);
+          return false;
+        }
+      }
+      return true;
+    }
+
+    private boolean occursInList(IntVar y) {
+      for (IntVar x : list) {
+        if (x == y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // the upper bound of value j's count before the position
+    private int upper(AtomicTrail trail, int j, int position) {
+      int bound = counters == null ? fixedUp[j] : trail.maxBefore(counters[j], position);
+      return Math.max(bound, 0);
+    }
+
+    // the counter's upper bound, weakened as far as it still is at most the bound
+    private void addCounterBound(AtomicTrail trail, int j, int position, int bound, EntryList out) {
+      if (counters != null) {
+        trail.addBoundReaching(counters[j], position, false, bound, out);
+      }
+    }
+
+    /*
+     * Whether at least k variables other than skip are fixed to v before the position; with out,
+     * the bounds of the first k of them are added.
+     */
+    private boolean fixedTo(
+        AtomicTrail trail, int v, int position, IntVar skip, int k, EntryList out) {
+      int found = 0;
+      for (int i = 0; i < list.length && found < k; i++) {
+        IntVar z = list[i];
+        if (z != skip && trail.minBefore(z, position) == v && trail.maxBefore(z, position) == v) {
+          found++;
+          if (out != null) {
+            trail.addLowerBound(z, position, out);
+            trail.addUpperBound(z, position, out);
+          }
+        }
+      }
+      return found >= k;
     }
 
     private CardinalityExplanation explanation(AtomicTrail trail, int position) {

@@ -116,6 +116,7 @@ import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
@@ -1000,7 +1001,10 @@ class GlobalConstraints implements ParserTreeConstants {
       System.arraycopy(v, 4 * i, r[i], 0, 4);
     }
 
-    support.pose(new Diffn(r, false));
+    support.pose(
+        support.options.proof() != null
+            ? new Nooverlap(r, false).pairwiseOnly()
+            : new Diffn(r, false));
   }
 
   void gen_jacop_diff2_strict(SimpleNode node) {
@@ -1009,9 +1013,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(true).build());
+    support.pose(diffn(x, y, lx, ly, true));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  // under --proof the pairwise rule alone, which unit propagation over its encoding reaches; the
+  // profile and area rules of Diffn it does not
+  private Constraint diffn(IntVar[] x, IntVar[] y, IntVar[] lx, IntVar[] ly, boolean strict) {
+    if (support.options.proof() != null) {
+      return new Nooverlap(x, y, lx, ly, strict).pairwiseOnly();
+    }
+    return Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(strict).build();
   }
 
   void gen_jacop_list_diff2(SimpleNode node) {
@@ -1020,8 +1032,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
+    support.pose(diffn(x, y, lx, ly, false));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
   }
 
