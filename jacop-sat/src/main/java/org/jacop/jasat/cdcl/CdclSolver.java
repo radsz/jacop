@@ -295,7 +295,7 @@ public final class CdclSolver {
   private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
-  private DratWriter proof;
+  private ProofOutput proof;
   // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
   private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
@@ -310,6 +310,12 @@ public final class CdclSolver {
 
   /** Number of restarts so far. */
   public long restarts;
+
+  /**
+   * Statistics: the deepest decision level the search opened, assumption levels included. Probing
+   * and clause vivification open levels of their own; they do not count.
+   */
+  public int peakDecisionLevel;
 
   /** Number of learnt clause database reductions so far. */
   public long reductions;
@@ -710,11 +716,12 @@ public final class CdclSolver {
   }
 
   /**
-   * Writes a DRAT proof of every derived and deleted clause. Set it before adding clauses.
+   * Writes a proof of every derived and deleted clause, such as a {@link DratWriter}. Set it before
+   * adding clauses.
    *
    * @param writer the proof output, or null for none
    */
-  public void setProof(DratWriter writer) {
+  public void setProof(ProofOutput writer) {
     proof = writer;
   }
 
@@ -733,7 +740,13 @@ public final class CdclSolver {
     return dimacs > 0 ? 2 * (dimacs - 1) : 2 * (-dimacs - 1) + 1;
   }
 
-  static int toDimacs(int lit) {
+  /**
+   * Returns the DIMACS literal of an internal literal, as a {@link ProofOutput} gets them.
+   *
+   * @param lit the internal literal
+   * @return its DIMACS literal
+   */
+  public static int toDimacs(int lit) {
     return (lit & 1) == 0 ? (lit >> 1) + 1 : -((lit >> 1) + 1);
   }
 
@@ -850,6 +863,14 @@ public final class CdclSolver {
     }
   }
 
+  /** Opens a decision level of the search and records the peak depth. */
+  private void newSearchLevel() {
+    newDecisionLevel();
+    if (decisionLevel > peakDecisionLevel) {
+      peakDecisionLevel = decisionLevel;
+    }
+  }
+
   private void backtrack(int target) {
     if (decisionLevel <= target) {
       return;
@@ -871,6 +892,9 @@ public final class CdclSolver {
       if (r >= STACK_REF) {
         rwasted += HEADER + rstack[r - STACK_REF + SIZE];
         reason[v] = NO_REASON;
+        if (proof != null) {
+          proof.delete(rstack, r - STACK_REF + HEADER, rstack[r - STACK_REF + SIZE]);
+        }
       }
       savedSign[v] = (byte) (lit & 1);
       order.insert(v);
@@ -1307,6 +1331,9 @@ public final class CdclSolver {
       if (n == 0 || c[n - 1] != c[i]) {
         c[n++] = c[i];
       }
+    }
+    if (proof != null) {
+      proof.add(c, 0, n);
     }
     if (n == 1) {
       r = UNIT_REASON;
@@ -1822,7 +1849,7 @@ public final class CdclSolver {
   /** Opens a new decision level. */
   public void newLevel() {
     useExternally();
-    newDecisionLevel();
+    newSearchLevel();
   }
 
   /**
@@ -1851,6 +1878,16 @@ public final class CdclSolver {
     }
     lastAssumedLevel = decisionLevel;
     assign(l, NO_REASON);
+  }
+
+  /**
+   * Returns the decision level of an assigned literal.
+   *
+   * @param lit a DIMACS literal whose variable is assigned
+   * @return the level it was assigned at
+   */
+  public int levelOf(int lit) {
+    return level[Math.abs(lit) - 1];
   }
 
   /**
@@ -2412,7 +2449,7 @@ public final class CdclSolver {
       while (decisionLevel < assumptions.length) {
         int a = assumptions[decisionLevel];
         if (vals[a] > 0) {
-          newDecisionLevel();
+          newSearchLevel();
         } else if (vals[a] < 0) {
           analyzeFinal(a ^ 1);
           return UNSAT;
@@ -2449,7 +2486,7 @@ public final class CdclSolver {
           && (interrupted || System.nanoTime() > deadline)) {
         return UNKNOWN;
       }
-      newDecisionLevel();
+      newSearchLevel();
       assign(next, NO_REASON);
     }
   }
@@ -2520,6 +2557,10 @@ public final class CdclSolver {
         implied = toLit(lit);
         if (vals[implied] == 0) {
           assign(implied, EXTERNAL_REASON);
+          if (proof != null && decisionLevel == 0) {
+            // conflict analysis never asks for the reasons of root facts, which a proof needs
+            reasonRef(implied >> 1);
+          }
           continue;
         }
         c = external.reason(lit);
@@ -3383,6 +3424,10 @@ public final class CdclSolver {
             int v = mem[ref + HEADER] >> 1;
             if (reason[v] == ref) {
               reason[v] = NO_REASON;
+              if (proof != null && vals[mem[ref + HEADER]] > 0 && level[v] == 0) {
+                // the root fact outlives its reason in the proof as well
+                proof.add(mem, ref + HEADER, 1);
+              }
             }
             deleteClause(ref);
             break;

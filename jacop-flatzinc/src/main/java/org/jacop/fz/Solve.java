@@ -30,7 +30,13 @@
 
 package org.jacop.fz;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -207,6 +213,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   int solveKind = -1;
   FailConstraintsStatistics failStatistics;
   int numberSolutions;
+  // set with the first solution, for the check of LCG's speed on its own thread
+  private volatile boolean solutionFound;
   // relax and reconstruct
   IntVar[] relaxVars;
   int probability;
@@ -350,7 +358,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!store.consistency()) {
       throw Store.failException;
     }
-    if (opt.getStatistics()) {
+    if (opt.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: symmetryTime="
               + time / 1_000_000_000.0
@@ -489,7 +497,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
-    if (options.getStatistics()) {
+    if (options.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: lpTime="
               + (timer.getCpuTime() - start) / 1_000_000_000.0
@@ -529,7 +537,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Prints the counts of the linear relaxation (--lp). */
   private void printLinearRelaxationStatistics() {
     LinearRelaxation r = linearRelaxation;
-    if (r == null || !options.getStatistics()) {
+    if (r == null || !options.searchStatistics()) {
       return;
     }
     IO.println(
@@ -647,7 +655,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       objectiveMinimized = presolve.minimize();
     }
     // under presolve the rule runs every round until it imposes the equation
-    if (options.getStatistics()
+    if (options.searchStatistics()
         && (!reformulation.isEmpty() || options.presolve() == Options.Presolve.OFF)) {
       IO.println(
           "%%%mzn-stat: presolveObjectiveTime="
@@ -791,7 +799,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
-    if (options.getStatistics()) {
+    if (options.searchStatistics()) {
       printPresolveStatistics(d, tabling, implied.imposed(), time, cumulative);
     }
     switch (d.outcome()) {
@@ -1715,6 +1723,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     String unsupported = lcgUnsupported(costVar);
     if (unsupported != null) {
       IO.println("%% --lcg ignored: " + unsupported);
+      if (options.proof() != null) {
+        IO.println("%% --proof ignored: it needs --lcg");
+      }
+      if (dictionary.rootTrail != null) {
+        dictionary.rootTrail.detach();
+        dictionary.rootTrail = null;
+      }
       postCollectedClauses();
       return false;
     }
@@ -1781,6 +1796,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    if (options.proof() != null) {
+      try {
+        lcg.setProof(
+            new FileOutputStream(options.proof() + ".opb"),
+            new FileOutputStream(options.proof() + ".pbp"));
+        if (dictionary.rootTrail != null) {
+          lcg.setRootTrail(dictionary.rootTrail);
+          dictionary.rootTrail = null;
+        }
+      } catch (FileNotFoundException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
     lcg.setRestartPresolve(options.presolveRestart());
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
@@ -1917,9 +1945,115 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.getTimeOut() > 0) {
       lcg.sat().setDeadline(System.nanoTime() + options.getTimeOut() * 1_000_000L);
     }
+    Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    if (slowCheck != null) {
+      slowCheck.interrupt();
+    }
+    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && options.getRemainingTimeOut() > 0) {
+      return continueWithoutLcg(costVar);
+    }
     return numberSolutions > 0;
   }
+
+  // set when LCG free search was stopped for making too few conflicts
+  private volatile boolean lcgSlow;
+  // the LCG solver free search took over from, for the statistics
+  private LcgSolver slowLcg;
+  private long lcgStart;
+
+  /**
+   * Starts the check of LCG free search's speed: at a share of the time limit (lcg-slow-at), a
+   * search with fewer conflicts per second than lcg-slow-rate is stopped, and {@link
+   * #continueWithoutLcg} goes on without learning. On ptv each dive of LCG assigns about 2,000
+   * passengers for one conflict, and CountValues rescans its list on each change: about 3 conflicts
+   * a second, so the first branch-and-bound run never ends and neighbourhood search never starts.
+   * Free search without learning restarts on failures and runs neighbourhoods from the start.
+   *
+   * <p>On the 59 instances of the free-search kit (mznbench and lost-free) still running after 6 of
+   * 60 s, the switch at 100 conflicts/s won 16 and lost 12 comparisons with two runs of LCG, at 300
+   * won 28 and lost 15; the losses were mostly proofs LCG completes later (rcpsp 08, network,
+   * minimal-decision-sets australian) and cutstock's first solution, the wins tdtsp (19,800 to
+   * 12,800), cvrp, flexible-jobshop, crosswords, largescheduling and celar. Below 50 conflicts/s
+   * and with a solution, 12 switch: 7 end better than both runs of LCG, 3 worse (cargo challenge08
+   * and 16, jobshop swv07) and 2 equal.
+   *
+   * @return the thread of the check, or null when it is off
+   */
+  private Thread slowLcgCheck(Var costVar) {
+    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "50"));
+    double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
+    if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
+      return null;
+    }
+    lcgStart = System.nanoTime();
+    long wait = (long) (at * options.getRemainingTimeOut());
+    LcgSolver solver = lcg;
+    if (wait <= 0) {
+      // lcg-slow-at=0: free search without learning from the start, after LCG's root propagation
+      lcgSlow = true;
+      solver.stop();
+      return null;
+    }
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                Thread.sleep(wait);
+                // LCG gives way only with a solution to hand over: without one, the check is
+                // made again until LCG has one or is no longer slow. cutstock type16 TEST9
+                // found its first solution with LCG at 37 s and none without
+                while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
+                  if (solutionFound) {
+                    lcgSlow = true;
+                    solver.stop();
+                    return;
+                  }
+                  Thread.sleep(500);
+                }
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
+  }
+
+  /**
+   * Goes on with free search without learning after LCG free search was stopped as too slow. The
+   * store is back at the root, with what the solver fixed there. Free search starts from the best
+   * solution of LCG, with its values first, and must improve on it.
+   */
+  private boolean continueWithoutLcg(Var costVar) {
+    slowLcg = lcg;
+    lcg = null;
+    slowLcg.release();
+    postCollectedClauses();
+    if (numberSolutions > 0) {
+      List<IntVar> hinted = new ArrayList<>();
+      List<Integer> values = new ArrayList<>();
+      for (IntVar x : hintedVariables()) {
+        if (slowLcg.hasValue(x)) {
+          hinted.add(x);
+          values.add(slowLcg.value(x));
+        }
+      }
+      lcgHinted = hinted.toArray(new IntVar[0]);
+      lcgHint = values.stream().mapToInt(Integer::intValue).toArray();
+    }
+    if (options.debug()) {
+      IO.println(
+          "%% LCG stopped after "
+              + slowLcg.sat().conflicts
+              + " conflicts in "
+              + String.format(Locale.ROOT, "%.1f", (System.nanoTime() - lcgStart) / 1e9)
+              + " s; free search without learning");
+    }
+    return executeFreeSearch(costVar) || numberSolutions > 0;
+  }
+
+  // the best solution of LCG free search before it gave way to free search without learning
+  private IntVar[] lcgHinted;
+  private int[] lcgHint;
 
   // the start variables lcgDefaultSelect gave to set times, for the statistics
   private int setTimesStarts;
@@ -1994,13 +2128,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printResultStatus(interrupted, numberSolutions > 0, !complete, complete && !interrupted);
     if (options.getStatistics()) {
       printStatisticsOutput(
-          (int) lcg.sat().decisions, (int) lcg.sat().conflicts, 0, numberSolutions);
+          (int) lcg.sat().decisions,
+          (int) lcg.sat().conflicts,
+          lcg.sat().peakDecisionLevel,
+          numberSolutions);
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
         int value = lcgLastCost;
         IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
       }
-      printLcgExplanationStatistics();
+      if (options.searchStatistics()) {
+        printLcgExplanationStatistics();
+      }
     }
   }
 
@@ -2475,6 +2614,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!allSolutions && !onRestart && !phaseSavers.isEmpty()) {
       localSearchPhase(costVar, searchVars, worker, builder);
     }
+    if (lcgHint != null) {
+      for (IndomainLastSolution saver : phaseSavers) {
+        saver.hint(lcgHinted, lcgHint);
+      }
+      builder.mainBranchingFirst(true);
+    }
     if (options.getTimeOut() > 0) {
       builder.timeLimit(Duration.ofMillis(options.getRemainingTimeOut()));
     }
@@ -2485,7 +2630,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("probe", "0.05")),
           Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
-    if (costVar != null && localSearch != null && localSearch.getSolutions() > 0) {
+    if (costVar != null && slowLcg != null && numberSolutions > 0) {
+      // free search improves on the best solution of LCG
+      int lcgCost = lcgLastCost;
+      builder.sharedBound(() -> lcgCost);
+    } else if (costVar != null && localSearch != null && localSearch.getSolutions() > 0) {
       // free search improves on the best solution of local search
       int lsCost = localSearch.getCostValue();
       builder.sharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
@@ -2905,10 +3054,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean complete =
           freeSearchStatus == FreeSearch.Status.OPTIMAL
               || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
-      // a solution of local search counts: free search then only looked for a better one
+      // a solution of local search or of LCG counts: free search then only looked for a better one
       printResultStatus(
           interrupted,
-          freeSearch.getSolutions() > 0 || localSearch != null && localSearch.getSolutions() > 0,
+          freeSearch.getSolutions() > 0
+              || localSearch != null && localSearch.getSolutions() > 0
+              || slowLcg != null && numberSolutions > 0,
           freeSearch.limitReached(),
           complete && !interrupted);
       if (options.getStatistics()) {
@@ -2917,6 +3068,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             (int) freeSearch.getFailures(),
             freeSearch.getMaxDepth(),
             (int) freeSearch.getSolutions());
+        if (slowLcg != null) {
+          // the conflicts of LCG free search before it gave way
+          IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
+        }
       }
       return;
     }
@@ -3492,6 +3647,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (freeSearch != null) {
       restarts = freeSearch.getRestarts();
     }
+    if (lcg != null) {
+      restarts = lcg.sat().restarts;
+    }
 
     IO.println(
         "%%%mzn-stat: variables="
@@ -3520,22 +3678,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + (freeSearch != null && freeSearch.getNogoods() > 0
                 ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
                 : "")
-            + (freeSearch != null && freeSearch.getProbes() > 0
-                ? "\n%%%mzn-stat: objectiveProbes="
-                    + nf.format(freeSearch.getProbes())
-                    + "\n%%%mzn-stat: objectiveProbesRefuted="
-                    + nf.format(freeSearch.getProbesRefuted())
-                    + "\n%%%mzn-stat: objectiveProbeFailures="
-                    + nf.format(freeSearch.getProbeFailures())
-                : "")
-            + lnsStatistics(freeLns)
-            + localSearchStatistics()
+            + peakMemory()
+            + (options.searchStatistics() ? searchStatistics() : "")
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {
       String s = "% " + failStatistics.toString();
       IO.println(s.replace("\n", "\n% "));
     }
+  }
+
+  /** The peak memory of the JVM's heap and non-heap pools, in Mbytes, as the standard peakMem. */
+  private String peakMemory() {
+    long bytes = 0;
+    for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
+      MemoryUsage peak = pool.getPeakUsage();
+      if (peak != null) {
+        bytes += peak.getUsed();
+      }
+    }
+    return "\n%%%mzn-stat: peakMem=" + nf.format(bytes / (1024.0 * 1024.0));
+  }
+
+  /** The statistics of free search, LNS and local search beyond the standard ones. */
+  private String searchStatistics() {
+    return (freeSearch != null && freeSearch.getProbes() > 0
+            ? "\n%%%mzn-stat: objectiveProbes="
+                + nf.format(freeSearch.getProbes())
+                + "\n%%%mzn-stat: objectiveProbesRefuted="
+                + nf.format(freeSearch.getProbesRefuted())
+                + "\n%%%mzn-stat: objectiveProbeFailures="
+                + nf.format(freeSearch.getProbeFailures())
+            : "")
+        + lnsStatistics(freeLns)
+        + localSearchStatistics();
   }
 
   /**
@@ -3850,6 +4026,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
+    solutionFound = true;
     if (lcg != null && costVariable instanceof IntVar cost && cost.singleton()) {
       lcgLastCost = cost.value();
     }
@@ -3953,14 +4130,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     appendCostLineToBuffer(printBuffer);
     double cpuTime = getSearchTime_ms();
     printBuffer.append("%%%mzn-stat: nodes=").append(nf.format(nodes)).append("\n");
-    printBuffer
-        .append("%%%mzn-stat: nodesPerSecond=")
-        .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
-        .append("\n");
-    if (restartCalculator != null) {
-      printBuffer.append("%%%%mzn-stat: restarts=").append(nf.format(rs.restarts()));
+    if (options.searchStatistics()) {
+      printBuffer
+          .append("%%%mzn-stat: nodesPerSecond=")
+          .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
+          .append("\n");
     }
-    printBuffer.append("\n%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");
+    if (restartCalculator != null) {
+      printBuffer.append("%%%mzn-stat: restarts=").append(nf.format(rs.restarts())).append("\n");
+    }
+    printBuffer.append("%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");
     printBuffer.append("%%%mzn-stat-end\n");
   }
 

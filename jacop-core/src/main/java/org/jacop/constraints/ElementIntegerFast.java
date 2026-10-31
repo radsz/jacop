@@ -48,6 +48,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.ElementExplanation;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * ElementIntegerFast constraint defines a relation list[index - indexOffset] = value. This version
@@ -63,7 +65,11 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class ElementIntegerFast extends AbstractElement
-    implements Simplifiable, SatisfiedPresent, Copyable<ElementIntegerFast>, Explainable {
+    implements Simplifiable,
+        SatisfiedPresent,
+        Copyable<ElementIntegerFast>,
+        Explainable,
+        PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -308,6 +314,15 @@ public class ElementIntegerFast extends AbstractElement
     return getClass() == ElementIntegerFast.class
         && index != value
         && ElementExplanation.explain(trail, entry, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ElementIntegerFast.class || index == value) {
+      return false;
+    }
+    ElementExplanation.encode(model, index, list, value, indexOffset);
+    return true;
   }
 
   @Override

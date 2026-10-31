@@ -85,6 +85,8 @@ import org.jacop.lcg.ConflictRows;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ReifiedExplanation;
 import org.jacop.lcg.ValueIndicator;
 import org.jacop.satwrapper.SatTranslation;
@@ -851,8 +853,10 @@ public class Support implements ParserTreeConstants {
    * false turns it off.
    */
   void poseOverlappingAlldiffs() {
+    // --proof leaves out this redundant constraint, which it does not encode
     if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
-        || alldifferentLists.size() < 2) {
+        || alldifferentLists.size() < 2
+        || options.proof() != null) {
       return;
     }
     // fixed variables (often one constant object shared by many lists) are left out: the
@@ -1203,7 +1207,12 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x = c, reified with b or implied by b. */
   final class FzXeqC extends Constraint
-      implements Violation, Copyable<FzXeqC>, Explainable, ValueIndicator, ConflictRows {
+      implements Violation,
+          Copyable<FzXeqC>,
+          Explainable,
+          ValueIndicator,
+          PbEncodable,
+          ConflictRows {
 
     final IntVar x;
     final int c;
@@ -1218,6 +1227,16 @@ public class Support implements ParserTreeConstants {
       this.b = b;
       this.isReified = isReified;
       this.numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
+    }
+
+    @Override
+    public boolean encode(PbModel model) {
+      if (x == b) {
+        return false;
+      }
+      model.reified(
+          b, new LinearForm(new IntVar[] {x}, new long[] {1}, c, LinearForm.EQ), isReified);
+      return true;
     }
 
     @Override
@@ -1306,7 +1325,8 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x != c, reified with b or implied by b. */
-  final class FzXneqC extends Constraint implements Violation, Copyable<FzXneqC>, Explainable {
+  final class FzXneqC extends Constraint
+      implements Violation, Copyable<FzXneqC>, Explainable, PbEncodable {
 
     final IntVar x;
     final int c;
@@ -1321,6 +1341,16 @@ public class Support implements ParserTreeConstants {
       this.b = b;
       this.isReified = isReified;
       this.numberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
+    }
+
+    @Override
+    public boolean encode(PbModel model) {
+      if (x == b) {
+        return false;
+      }
+      model.reified(
+          b, new LinearForm(new IntVar[] {x}, new long[] {1}, c, LinearForm.NE), isReified);
+      return true;
     }
 
     @Override
@@ -1389,7 +1419,7 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x = y, reified with b or implied by b. */
   final class FzXeqY extends Constraint
-      implements Violation, Copyable<FzXeqY>, Explainable, ConflictRows {
+      implements Violation, Copyable<FzXeqY>, Explainable, PbEncodable, ConflictRows {
 
     final IntVar x;
     final IntVar y;
@@ -1450,6 +1480,16 @@ public class Support implements ParserTreeConstants {
           && ReifiedExplanation.explainFailure(trail, b, nested(), isReified, out);
     }
 
+    @Override
+    public boolean encode(PbModel model) {
+      if (x == b || y == b || x == y) {
+        return false;
+      }
+      model.reified(
+          b, new LinearForm(new IntVar[] {x, y}, new long[] {1, -1}, 0, LinearForm.EQ), isReified);
+      return true;
+    }
+
     private XeqY nested() {
       if (lcgNested == null) {
         lcgNested = new XeqY(x, y);
@@ -1483,7 +1523,7 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint b implies x, for 0/1 variables. */
-  final class FzIfThenBool extends Constraint implements Copyable<FzIfThenBool> {
+  final class FzIfThenBool extends Constraint implements Copyable<FzIfThenBool>, PbEncodable {
 
     final IntVar b;
     final IntVar x;
@@ -1494,6 +1534,12 @@ public class Support implements ParserTreeConstants {
       this.b = b;
       this.x = x;
       this.numberId = n7.incrementAndGet();
+    }
+
+    @Override
+    public boolean encode(PbModel model) {
+      model.clause(new IntVar[] {x}, new IntVar[] {b});
+      return true;
     }
 
     @Override

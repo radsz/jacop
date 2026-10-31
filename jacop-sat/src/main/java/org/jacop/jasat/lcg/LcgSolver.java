@@ -31,12 +31,17 @@
 
 package org.jacop.jasat.lcg;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,7 +55,9 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
@@ -407,6 +414,9 @@ public final class LcgSolver implements ExternalPropagator {
   public LcgSolver(Store store) {
     this.store = store;
     rootFailed = !store.consistency();
+    if (rootFailed) {
+      failedAtRoot = store.recentlyFailedConstraint;
+    }
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
     if (liftLiterals) {
@@ -484,6 +494,784 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     sat.connect(this);
+  }
+
+  // --------------------------------------------------------------------------------- proof
+
+  // the VeriPB proof and where its OPB model goes, or null
+  private VeriPbProof proof;
+  private OutputStream proofModel;
+  private boolean proofStarted;
+
+  // the trail of the propagation before the solver, whose changes the proof derives, or null
+  private AtomicTrail rootTrail;
+  // the constraint whose propagation failed at the root, and whether the proof derived the failure
+  private Constraint failedAtRoot;
+  private boolean rootRefuted;
+  // the trail and the domains the proof steps read: the solver's trail and its root domains, and
+  // while the root propagation is logged, the root trail and the domains it has reached
+  private AtomicTrail proofTrail;
+  private IntDomain[] proofDomains;
+  // the lines of the cardinality constraints of the proof model
+  private Map<Constraint, OpbEncoder.CardinalityLines> proofCardinality = Map.of();
+  // the clauses of addClause, for the OPB model
+  private final List<IntVar[][]> proofClauses = new ArrayList<>();
+
+  /**
+   * The most terms the OPB model of a proof may have; the system property {@code
+   * jacop.lcg.proofTerms} sets it.
+   */
+  private static final long PROOF_TERMS = Long.getLong("jacop.lcg.proofTerms", 20_000_000L);
+
+  /** Whether the proof names the constraint behind each explanation in a comment, for debugging. */
+  private static final boolean PROOF_TRACE = Boolean.getBoolean("jacop.lcg.proofTrace");
+
+  /**
+   * Writes a VeriPB proof of the search ({@link VeriPbProof}) and the OPB model it is checked
+   * against ({@link OpbEncoder}): the model as the store holds it when the search starts, so its
+   * root propagation and the translation to the store are not checked. Under a proof, minimisation
+   * is plain branch and bound: core-guided search, lower-bound runs, neighbourhood runs and a
+   * shared bound, which assume what the proof cannot state, are off. Set it right after the solver
+   * is built; {@link #solve} and {@link #minimize} write the model when they start and the
+   * conclusion when they end, and close both outputs.
+   *
+   * @param model where the OPB model goes
+   * @param out where the proof goes
+   */
+  public void setProof(OutputStream model, OutputStream out) {
+    proofModel = model;
+    proof = new VeriPbProof(out, this::proofName);
+    sat.setProof(proof);
+  }
+
+  /**
+   * Derives the root propagation in the proof: the OPB model is stated over the domains a trail had
+   * when it was attached to the store, before the propagation, and the proof derives each change
+   * the trail recorded at the root as a unit. Changes without a reason, or by a constraint the
+   * model cannot state, narrow the model's domains instead. The trail is detached here; attach it
+   * after the model's constraints are imposed, before the store propagates them.
+   *
+   * @param rootTrail the trail of the root propagation
+   */
+  public void setRootTrail(AtomicTrail rootTrail) {
+    rootTrail.detach();
+    this.rootTrail = rootTrail;
+  }
+
+  /**
+   * Writes the proof that the propagation of a store at the root fails: the OPB model over the
+   * domains the root trail was attached with, the changes of the propagation as units, and the
+   * failure of the constraint that failed.
+   *
+   * @param store the store, whose propagation has just failed
+   * @param rootTrail the trail of the propagation
+   * @param model where the OPB model goes
+   * @param out where the proof goes
+   */
+  public static void proveRootFailure(
+      Store store, AtomicTrail rootTrail, OutputStream model, OutputStream out) {
+    Constraint failed = store.recentlyFailedConstraint;
+    store.clearChanged();
+    LcgSolver solver = new LcgSolver(store);
+    solver.setRootTrail(rootTrail);
+    solver.setProof(model, out);
+    solver.rootFailed = true;
+    solver.failedAtRoot = failed;
+    solver.finishProof(CdclSolver.UNSAT, false);
+  }
+
+  /**
+   * Returns the proof writer, for its statistics.
+   *
+   * @return the proof, or null
+   */
+  public VeriPbProof proof() {
+    return proof;
+  }
+
+  // the OPB name of a solver variable
+  private String proofName(int dimacsVar) {
+    int i = litVar[dimacsVar];
+    if (i < 0) {
+      throw new IllegalStateException("an auxiliary variable in a proof");
+    }
+    return litKind[dimacsVar] == GE_KIND
+        ? OpbEncoder.ge(i, litValue[dimacsVar])
+        : OpbEncoder.eq(i, litValue[dimacsVar]);
+  }
+
+  /** Writes the OPB model and starts the proof, once. */
+  private void startProof() {
+    if (proof == null || proofStarted) {
+      return;
+    }
+    proofStarted = true;
+    proofTrail = trail;
+    proofDomains = root;
+    Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
+    constraints.addAll(store.watchedLiteralConstraints());
+    IntDomain[] domains = root;
+    List<Integer> derived = new ArrayList<>();
+    int axioms = 0;
+    int late = 0;
+    if (rootTrail != null) {
+      late = rootTrail.lateVariables();
+      domains = new IntDomain[vars.length];
+      for (int i = 0; i < vars.length; i++) {
+        domains[i] = vars[i] == null ? null : rootTrail.rootDomain(vars[i]);
+      }
+      Map<Constraint, Boolean> encodable = new IdentityHashMap<>();
+      for (Constraint c : constraints) {
+        encodable.put(c, true);
+      }
+      List<Integer> axiomEntries = new ArrayList<>();
+      OpbEncoder probe = new OpbEncoder(vars, root, trail::id, PROOF_TERMS);
+      for (int e = 0; e < rootTrail.size() && rootTrail.level(e) <= baseLevel; e++) {
+        int i = trail.id(rootTrail.variable(e));
+        Constraint c = rootTrail.reason(e);
+        if (i >= vars.length || vars[i] == null) {
+          continue;
+        }
+        if (c != null && encodable.computeIfAbsent(c, probe::encodes)) {
+          constraints.add(c);
+          derived.add(e);
+        } else {
+          axiomEntries.add(e);
+        }
+      }
+      if (failedAtRoot != null && !encodable.computeIfAbsent(failedAtRoot, probe::encodes)) {
+        failedAtRoot = null;
+      } else if (failedAtRoot != null) {
+        constraints.add(failedAtRoot);
+      }
+      // the changes the proof cannot derive narrow the domains of the model
+      for (int e : axiomEntries) {
+        int i = trail.id(rootTrail.variable(e));
+        int v = rootTrail.value(e);
+        domains[i] =
+            switch (rootTrail.kind(e)) {
+              case AtomicTrail.GE -> domains[i].intersect(v, domains[i].max());
+              case AtomicTrail.LE -> domains[i].intersect(domains[i].min(), v);
+              default -> domains[i].subtract(v);
+            };
+        axioms++;
+      }
+    }
+    StringBuilder names = new StringBuilder();
+    OpbEncoder model;
+    String tooLarge = null;
+    try {
+      long values = 0;
+      for (int i = 0; i < vars.length && rootTrail != null; i++) {
+        values += vars[i] == null ? 0 : (long) domains[i].max() - domains[i].min() + 1;
+      }
+      // the order and value lines of a domain cost about 8 terms per value
+      if (8 * values > PROOF_TERMS) {
+        throw new OpbEncoder.TooLarge("its domains have " + values + " values");
+      }
+      model = proofModel(domains, constraints, names);
+    } catch (OpbEncoder.TooLarge e) {
+      if (rootTrail == null) {
+        throw e;
+      }
+      // the domains the model states are too wide: it is stated after root propagation instead
+      tooLarge = e.getMessage();
+      rootTrail = null;
+      failedAtRoot = null;
+      domains = root;
+      names.setLength(0);
+      constraints = new LinkedHashSet<>(store.getConstraints());
+      constraints.addAll(store.watchedLiteralConstraints());
+      model = proofModel(domains, constraints, names);
+    }
+    String objectiveLine = objective >= 0 ? model.objective(vars[objective]) : null;
+    try {
+      model.write(proofModel, objectiveLine, names);
+      proofModel.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    proof.start(model.numConstraints());
+    if (rootTrail != null) {
+      proofRoot(domains, derived, axioms, late);
+    } else if (tooLarge != null) {
+      proof.comment("root propagation not derived: over the domains before it, " + tooLarge);
+    }
+    if (rootFailed) {
+      // the store failed at the root, which the proof does not derive
+      proof.comment("the store failed at the root");
+    }
+  }
+
+  /** Encodes the constraints over the domains, and names the variables in comments. */
+  private OpbEncoder proofModel(
+      IntDomain[] domains, Set<Constraint> constraints, StringBuilder names) {
+    OpbEncoder model = new OpbEncoder(vars, domains, trail::id, PROOF_TERMS);
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] != null && !domains[i].singleton()) {
+        names.append("* x").append(i).append(" is ").append(vars[i].id()).append(' ');
+        names.append(domains[i]).append('\n');
+      }
+    }
+    model.variables();
+    for (Constraint c : constraints) {
+      model.constraint(c);
+    }
+    for (IntVar[][] clause : proofClauses) {
+      model.clause(clause[0], clause[1]);
+    }
+    proofCardinality = model.cardinalityLines();
+    if (!model.unsupported().isEmpty()) {
+      throw new UnsupportedOperationException(
+          "proof logging does not support " + String.join(", ", model.unsupported()));
+    }
+    return model;
+  }
+
+  /**
+   * Derives the changes of the root propagation, in their order, each as a unit from the units
+   * before it: unit propagation over the reason's encoding gives it, as it gives an explanation in
+   * the search, with the steps of {@link #proofCardinality} and {@link #proofLinearBounds}.
+   */
+  private void proofRoot(IntDomain[] domains, List<Integer> derived, int axioms, int late) {
+    proof.comment(
+        derived.size()
+            + " root changes derived, "
+            + axioms
+            + " taken into the model's domains, "
+            + late
+            + " variables stated after their first change");
+    IntDomain[] reached = domains.clone();
+    proofTrail = rootTrail;
+    proofDomains = reached;
+    EntryList none = new EntryList();
+    for (int e : derived) {
+      int i = trail.id(rootTrail.variable(e));
+      int v = rootTrail.value(e);
+      IntDomain d = reached[i];
+      IntDomain next =
+          switch (rootTrail.kind(e)) {
+            case AtomicTrail.GE -> d.intersect(v, d.max());
+            case AtomicTrail.LE -> d.intersect(d.min(), v);
+            default -> d.subtract(v);
+          };
+      if (next.getSize() == d.getSize()) {
+        continue;
+      }
+      Constraint c = rootTrail.reason(e);
+      proofCardinality(c, none, 0, e);
+      proofLinearBounds(c, none, 0, e);
+      proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
+      reached[i] = next;
+    }
+    if (rootFailed && failedAtRoot != null) {
+      proofCardinality(failedAtRoot, none, 0, -1);
+      proofLinearBounds(failedAtRoot, none, 0, -1);
+      rootRefuted = true;
+    }
+    proofTrail = trail;
+    proofDomains = root;
+  }
+
+  /**
+   * Logs the explanation of an atom the solver does not have, which a conflict clause replaces by
+   * its reason: unit propagation over the model derives the atom from its reason, but not the
+   * conflict clause from the atoms of the reasons, since a bound of an integer is several order
+   * literals. The lemma {@code reason -> atom} is the step between.
+   */
+  private void proofLemma(int entry, EntryList reason, int from, int extra) {
+    String atom = proofAtom(entry, 0);
+    if ("1".equals(atom)) {
+      return;
+    }
+    StringBuilder s = new StringBuilder("rup 1 ").append(atom);
+    for (int k = from; k < reason.size(); k++) {
+      String r = proofAtom(reason.get(k), reason.slack(k));
+      if (!"1".equals(r)) {
+        s.append(" 1 ").append(r.startsWith("~") ? r.substring(1) : "~" + r);
+      }
+    }
+    if (extra != 0) {
+      String name = proofName(Math.abs(extra));
+      s.append(" 1 ").append(extra > 0 ? "~" + name : name);
+    }
+    proof.lemma(s.append(" >= 1 ;\n"));
+  }
+
+  /**
+   * Writes the steps that make a reason or a failure of a cardinality constraint (all different or
+   * global cardinality) a rup step. Under its hypotheses, the atoms of the reason and the negated
+   * atom, the flow network source to variables (each exactly 1), variables to their values left,
+   * values to sink (the bounds of their counters) has no feasible flow, and a minimum cut A of it
+   * is violated: the lower bounds into A exceed the capacities out of A. Without the source and the
+   * sink in A, the variables S of A have fewer places than there are of them: the clauses "each of
+   * S takes one of its values left" added to the upper lines of the values of A are false under the
+   * hypotheses. With both, the values W outside A need more variables than can take them: the lower
+   * lines of W added to the at-most-one lines of the variables outside A are false.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofCardinality(Constraint c, EntryList atoms, int from, int entry) {
+    OpbEncoder.CardinalityLines lines = proofCardinality.get(c);
+    if (lines == null || !proofStarted) {
+      return;
+    }
+    int[] variables = lines.variables;
+    int[] values = lines.values;
+    int n = variables.length;
+    int m = values.length;
+    IntDomain[] dom = new IntDomain[n];
+    StringBuilder[] literals = new StringBuilder[n];
+    hypotheses(lines.position, variables, atoms, from, entry, dom, literals);
+    int[] counters = lines.counters;
+    IntDomain[] count = new IntDomain[m];
+    for (int k = 0; k < m; k++) {
+      count[k] =
+          counters[k] < 0
+              ? new IntervalDomain(lines.low[k], lines.up[k])
+              : proofDomains[counters[k]];
+    }
+    if (!lines.counterPosition.isEmpty()) {
+      int[] freeCounter = new int[m];
+      Arrays.fill(freeCounter, -1);
+      lines.counterPosition.forEach((i, k) -> freeCounter[k] = i);
+      IntDomain[] restricted = new IntDomain[m];
+      StringBuilder[] counterLiterals = new StringBuilder[m];
+      int[] ids = new int[m];
+      for (int k = 0; k < m; k++) {
+        ids[k] = freeCounter[k] < 0 ? counters[k] : freeCounter[k];
+      }
+      hypotheses(lines.counterPosition, ids, atoms, from, entry, restricted, counterLiterals);
+      for (int k = 0; k < m; k++) {
+        if (freeCounter[k] >= 0) {
+          count[k] = restricted[k];
+        }
+      }
+    }
+    Map<Integer, Integer> valueIndex = new HashMap<>();
+    for (int k = 0; k < m; k++) {
+      valueIndex.put(values[k], k);
+    }
+    // the values not counted by an open constraint are free: any number of variables take them
+    Map<Integer, Integer> freeValues = new HashMap<>();
+    for (int j = 0; j < n && !lines.closed; j++) {
+      for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (!valueIndex.containsKey(v)) {
+          freeValues.putIfAbsent(v, n + m + 2 + freeValues.size());
+        }
+      }
+    }
+    // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
+    int source = n + m + 2 + freeValues.size();
+    int sink = source + 1;
+    Flow flow = new Flow(sink + 1);
+    for (int j = 0; j < n; j++) {
+      flow.add(0, 2 + j, 1, 1);
+      for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        Integer k = valueIndex.get(v);
+        Integer node = freeValues.get(v);
+        if (k != null) {
+          flow.add(2 + j, 2 + n + k, 0, 1);
+        } else if (node != null) {
+          flow.add(2 + j, node, 0, 1);
+        }
+      }
+    }
+    for (int node : freeValues.values()) {
+      flow.add(node, 1, 0, n);
+    }
+    for (int k = 0; k < m; k++) {
+      if (count[k].isEmpty()) {
+        return;
+      }
+      int lo = Math.max(0, count[k].min());
+      int hi = Math.min(n, count[k].max());
+      if (lo > hi) {
+        return;
+      }
+      flow.add(2 + n + k, 1, lo, hi);
+    }
+    flow.add(1, 0, 0, n + 1);
+    boolean[] cut = flow.violatedCut(source, sink);
+    if (cut == null) {
+      return;
+    }
+    StringBuilder pol = new StringBuilder();
+    int operands = 0;
+    if (!cut[0] && !cut[1]) {
+      for (int k = 0; k < m; k++) {
+        if (cut[2 + n + k]) {
+          String operand = lines.upper[k] > 0 ? Long.toString(lines.upper[k]) : null;
+          for (int j = 0; operand == null && j < n; j++) {
+            // a value only one variable can take: the axiom ~[x = v] >= 0 stands for its line
+            if (cut[2 + j]
+                && !proofDomains[variables[j]].singleton()
+                && proofDomains[variables[j]].contains(values[k])) {
+              operand = "~" + OpbEncoder.eq(variables[j], values[k]);
+            }
+          }
+          if (operand != null) {
+            pol.append(operands++ == 0 ? "" : " ").append(operand).append(operands > 1 ? " +" : "");
+          }
+        }
+      }
+      for (int j = 0; j < n; j++) {
+        int i = variables[j];
+        if (!cut[2 + j] || proofDomains[i].singleton()) {
+          continue;
+        }
+        StringBuilder takes = new StringBuilder("rup");
+        for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+          takes.append(" 1 ").append(OpbEncoder.eq(i, e.nextElement()));
+        }
+        long id = proof.lemma(takes.append(literals[j]).append(" >= 1 ;\n"));
+        pol.append(operands++ == 0 ? "" : " ").append(id).append(operands > 1 ? " +" : "");
+      }
+    } else if (cut[0] && cut[1]) {
+      for (int k = 0; k < m; k++) {
+        if (!cut[2 + n + k] && lines.lower[k] > 0) {
+          pol.append(operands++ == 0 ? "" : " ").append(lines.lower[k]);
+          pol.append(operands > 1 ? " +" : "");
+        }
+      }
+      for (int j = 0; j < n; j++) {
+        if (!cut[2 + j] && lines.atMostOne[j] > 0) {
+          pol.append(operands++ == 0 ? "" : " ").append(lines.atMostOne[j]);
+          pol.append(operands > 1 ? " +" : "");
+        }
+      }
+    }
+    if (operands >= 2) {
+      proof.pol(pol);
+    }
+  }
+
+  /**
+   * A flow network with lower bounds on its arcs, for the cuts of {@link #proofCardinality}: an arc
+   * u to v with bounds l..h becomes one of capacity h - l, with l moved to arcs from the source of
+   * the lower bounds to v and from u to their sink.
+   */
+  private static final class Flow {
+    private final int[] head;
+    private int[] to = new int[64];
+    private int[] capacity = new int[64];
+    private int[] next = new int[64];
+    private int arcs;
+    private final int[] excess;
+
+    Flow(int nodes) {
+      head = new int[nodes];
+      Arrays.fill(head, -1);
+      excess = new int[nodes];
+    }
+
+    void add(int u, int v, int lower, int upper) {
+      arc(u, v, upper - lower);
+      excess[v] += lower;
+      excess[u] -= lower;
+    }
+
+    private void arc(int u, int v, int c) {
+      if (arcs + 2 > to.length) {
+        to = Arrays.copyOf(to, 2 * to.length);
+        capacity = Arrays.copyOf(capacity, 2 * capacity.length);
+        next = Arrays.copyOf(next, 2 * next.length);
+      }
+      // the arc and its reverse, at a and a + 1 (a ^ 1 finds one from the other)
+      int a = arcs;
+      to[a] = v;
+      capacity[a] = c;
+      next[a] = head[u];
+      head[u] = a;
+      to[a + 1] = u;
+      capacity[a + 1] = 0;
+      next[a + 1] = head[v];
+      head[v] = a + 1;
+      arcs += 2;
+    }
+
+    /**
+     * Returns the nodes of a violated cut, reachable from the source of the lower bounds once the
+     * flow is maximal, or null when a feasible flow exists.
+     */
+    boolean[] violatedCut(int source, int sink) {
+      int demand = 0;
+      for (int v = 0; v < source; v++) {
+        if (excess[v] > 0) {
+          arc(source, v, excess[v]);
+          demand += excess[v];
+        } else if (excess[v] < 0) {
+          arc(v, sink, -excess[v]);
+        }
+      }
+      int total = 0;
+      boolean[] seen = new boolean[head.length];
+      while (true) {
+        Arrays.fill(seen, false);
+        int pushed = augment(source, sink, Integer.MAX_VALUE, seen);
+        if (pushed == 0) {
+          break;
+        }
+        total += pushed;
+      }
+      if (total == demand) {
+        return null;
+      }
+      // seen holds the nodes the last, failed search reached: those reachable in the residual graph
+      return Arrays.copyOf(seen, source);
+    }
+
+    private int augment(int u, int sink, int limit, boolean[] seen) {
+      if (u == sink) {
+        return limit;
+      }
+      seen[u] = true;
+      for (int a = head[u]; a >= 0; a = next[a]) {
+        if (capacity[a] > 0 && !seen[to[a]]) {
+          int pushed = augment(to[a], sink, Math.min(limit, capacity[a]), seen);
+          if (pushed > 0) {
+            capacity[a] -= pushed;
+            capacity[a ^ 1] += pushed;
+            return pushed;
+          }
+        }
+      }
+      return 0;
+    }
+  }
+
+  /**
+   * Restricts the root domains of some variables by the hypotheses of a clause: the atoms of a
+   * reason and the negated atom it explains.
+   *
+   * @param position the position of each trail index among the variables
+   * @param variables the trail indexes of the variables
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   * @param dom filled with the domain of each variable under the hypotheses
+   * @param literals filled with the clause literals of each variable, each preceded by " 1 "
+   * @return whether a hypothesis removes a value inside the bounds
+   */
+  private boolean hypotheses(
+      Map<Integer, Integer> position,
+      int[] variables,
+      EntryList atoms,
+      int from,
+      int entry,
+      IntDomain[] dom,
+      StringBuilder[] literals) {
+    for (int j = 0; j < variables.length; j++) {
+      dom[j] = proofDomains[variables[j]];
+      literals[j] = new StringBuilder();
+    }
+    boolean hole = false;
+    for (int j = 0; j < variables.length && proofTrail != trail; j++) {
+      // while the root propagation is logged, the values it removed are holes too
+      hole |= dom[j].getSize() < (long) dom[j].max() - dom[j].min() + 1;
+    }
+    for (int k = from; k < atoms.size(); k++) {
+      int e = atoms.get(k);
+      Integer j = position.get(trail.id(proofTrail.variable(e)));
+      if (j != null) {
+        String atom = proofAtom(e, atoms.slack(k));
+        int v = proofTrail.value(e);
+        dom[j] =
+            switch (proofTrail.kind(e)) {
+              case AtomicTrail.GE -> dom[j].intersect(v - atoms.slack(k), dom[j].max());
+              case AtomicTrail.LE -> dom[j].intersect(dom[j].min(), v + atoms.slack(k));
+              default -> dom[j].subtract(v);
+            };
+        hole |= proofTrail.kind(e) == AtomicTrail.NE;
+        if (!"1".equals(atom)) {
+          literals[j].append(" 1 ").append(atom.startsWith("~") ? atom.substring(1) : "~" + atom);
+        }
+      }
+    }
+    if (entry >= 0) {
+      Integer j = position.get(trail.id(proofTrail.variable(entry)));
+      if (j != null) {
+        int v = proofTrail.value(entry);
+        dom[j] =
+            switch (proofTrail.kind(entry)) {
+              case AtomicTrail.GE -> dom[j].intersect(dom[j].min(), v - 1);
+              case AtomicTrail.LE -> dom[j].intersect(v + 1, dom[j].max());
+              default -> dom[j].intersect(v, v);
+            };
+        literals[j].append(" 1 ").append(proofAtom(entry, 0));
+      }
+    }
+    return hole;
+  }
+
+  /**
+   * Writes the bounds that a linear constraint implies under the hypotheses of a clause, when a
+   * hypothesis removes a value inside the bounds. Unit propagation over the order literals of a
+   * linear line derives a bound, but not the bound past a removed value: the clause "hypotheses
+   * imply x &gt;= v" is a rup step, and the one with v moved past the removed values after it.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofLinearBounds(Constraint c, EntryList atoms, int from, int entry) {
+    LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
+    if (f == null || f.relation() == LinearForm.NE) {
+      return;
+    }
+    int n = f.vars().length;
+    int[] variables = new int[n];
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int j = 0; j < n; j++) {
+      variables[j] = trail.id(f.vars()[j]);
+      if (position.put(variables[j], j) != null) {
+        return;
+      }
+    }
+    IntDomain[] dom = new IntDomain[n];
+    StringBuilder[] literals = new StringBuilder[n];
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)) {
+      return;
+    }
+    StringBuilder clause = new StringBuilder();
+    for (StringBuilder l : literals) {
+      clause.append(l);
+    }
+    long[] w = f.weights();
+    int changed = 1;
+    for (int round = 0; changed > 0 && round < 4 * n; round++) {
+      changed = 0;
+      for (int k = 0; k < n; k++) {
+        if (w[k] == 0) {
+          continue;
+        }
+        // the bounds of w[k] * x[k] that the other terms leave, for sum <= c and sum >= c
+        long smallest = 0;
+        long largest = 0;
+        for (int j = 0; j < n; j++) {
+          if (j != k) {
+            smallest += Math.min(w[j] * dom[j].min(), w[j] * dom[j].max());
+            largest += Math.max(w[j] * dom[j].min(), w[j] * dom[j].max());
+          }
+        }
+        long lo = Long.MIN_VALUE;
+        long hi = Long.MAX_VALUE;
+        if (f.relation() != LinearForm.GE) {
+          // w x <= c - smallest
+          long r = f.c() - smallest;
+          if (w[k] > 0) {
+            hi = Math.floorDiv(r, w[k]);
+          } else {
+            lo = -Math.floorDiv(r, -w[k]);
+          }
+        }
+        if (f.relation() != LinearForm.LE) {
+          // w x >= c - largest
+          long r = f.c() - largest;
+          if (w[k] > 0) {
+            lo = Math.max(lo, -Math.floorDiv(-r, w[k]));
+          } else {
+            hi = Math.min(hi, Math.floorDiv(-r, -w[k]));
+          }
+        }
+        IntDomain d = dom[k];
+        if (lo > d.min()) {
+          changed += proofBound(variables[k], clause, (int) Math.min(lo, d.max() + 1L), true);
+        }
+        if (hi < d.max()) {
+          changed += proofBound(variables[k], clause, (int) Math.max(hi, d.min() - 1L), false);
+        }
+        dom[k] = d.intersect((int) Math.max(lo, d.min()), (int) Math.min(hi, d.max()));
+        if (dom[k].isEmpty()) {
+          return;
+        }
+        if (dom[k].min() > Math.max(lo, d.min())) {
+          proofBound(variables[k], clause, dom[k].min(), true);
+        }
+        if (dom[k].max() < Math.min(hi, d.max())) {
+          proofBound(variables[k], clause, dom[k].max(), false);
+        }
+      }
+    }
+  }
+
+  // writes "clause or x >= v" (or x <= v); returns 1, or 0 when the bound is outside the root
+  private int proofBound(int i, CharSequence clause, int v, boolean lower) {
+    IntDomain d = proofDomains[i];
+    if (lower ? v <= d.min() || v > d.max() : v >= d.max() || v < d.min()) {
+      return 0;
+    }
+    String bound = lower ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v + 1);
+    proof.lemma("rup 1 " + bound + clause + " >= 1 ;\n");
+    return 1;
+  }
+
+  /** The OPB literal of a trail entry's atom weakened by slack, or "1" when the root has it. */
+  private String proofAtom(int entry, int slack) {
+    int i = trail.id(proofTrail.variable(entry));
+    long v = proofTrail.value(entry);
+    return switch (proofTrail.kind(entry)) {
+      case AtomicTrail.GE ->
+          v - slack <= proofDomains[i].min() ? "1" : OpbEncoder.ge(i, (int) (v - slack));
+      case AtomicTrail.LE ->
+          v + slack >= proofDomains[i].max() ? "1" : "~" + OpbEncoder.ge(i, (int) (v + slack + 1));
+      default -> proofDomains[i].contains((int) v) ? "~" + OpbEncoder.eq(i, (int) v) : "1";
+    };
+  }
+
+  /** Logs a solution of the store's domains: the order literals true in it. */
+  private void logSolution() {
+    List<String> lits = new ArrayList<>();
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == null || root[i].singleton()) {
+        continue;
+      }
+      int value = solution[i];
+      for (int v = root[i].min() + 1; v <= root[i].max(); v++) {
+        lits.add(v <= value ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v));
+      }
+    }
+    proof.solution(lits, objective >= 0);
+  }
+
+  /** Writes the conclusion of a search and closes the proof. */
+  private void finishProof(int result, boolean optimising) {
+    if (proof == null) {
+      return;
+    }
+    startProof();
+    if (rootRefuted) {
+      // unit propagation over the derived units and the failed constraint gives the contradiction
+      if (optimising) {
+        proof.concludeBounds("INF", "INF");
+      } else {
+        proof.concludeUnsatisfiable();
+      }
+    } else if (rootFailed || result == CdclSolver.UNKNOWN) {
+      proof.concludeNothing();
+    } else if (!optimising) {
+      if (result == CdclSolver.SAT) {
+        proof.concludeSatisfiable();
+      } else {
+        proof.concludeUnsatisfiable();
+      }
+    } else if (best == null) {
+      proof.concludeBounds("INF", "INF");
+    } else {
+      String value = Integer.toString(best[objective]);
+      proof.concludeBounds(value, value);
+    }
+    try {
+      proof.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
   }
 
   // ------------------------------------------------------------------------------- literals
@@ -894,10 +1682,15 @@ public final class LcgSolver implements ExternalPropagator {
    * @return {@link CdclSolver#SAT}, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
    */
   public int solve() {
-    return solve(new int[0]);
+    int result = solve(new int[0]);
+    if (objective < 0) {
+      finishProof(result, false);
+    }
+    return result;
   }
 
   private int solve(int... assumed) {
+    startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
     }
@@ -927,7 +1720,7 @@ public final class LcgSolver implements ExternalPropagator {
   public int minimize(IntVar objective) {
     this.objective = trail.id(objective);
     best = null;
-    coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
+    coreSearch = coreShare > 0 && proof == null ? CoreSearch.of(this, objective) : null;
     int result;
     try {
       if (coreSearch != null) {
@@ -940,6 +1733,12 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setConflictLimit(Long.MAX_VALUE);
     }
     solution = best;
+    if (proof != null) {
+      int id = this.objective;
+      this.objective = trail.id(objective);
+      finishProof(result, true);
+      this.objective = id;
+    }
     if (result == CdclSolver.UNKNOWN && !sharedBoundUnreachable) {
       return CdclSolver.UNKNOWN;
     }
@@ -998,7 +1797,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Whether runs of branch and bound alternate with lower-bound or neighbourhood runs. */
   private boolean interleaved() {
-    return lowerBoundShare > 0 || lns != null;
+    return proof == null && (lowerBoundShare > 0 || lns != null);
   }
 
   /**
@@ -1244,6 +2043,21 @@ public final class LcgSolver implements ExternalPropagator {
   /** The objective's value in the best solution so far, or {@link Long#MAX_VALUE}. */
   long bestObjective() {
     return best == null ? Long.MAX_VALUE : best[objective];
+  }
+
+  /**
+   * The objective value that a solution must beat: that of the best solution, here or found
+   * elsewhere and given by {@link #setSharedBound}; {@link Long#MAX_VALUE} while there is none.
+   */
+  long boundObjective() {
+    long bound = bestObjective();
+    if (sharedBound != null) {
+      int shared = sharedBound.getAsInt();
+      if (shared != Integer.MAX_VALUE) {
+        bound = Math.min(bound, shared);
+      }
+    }
+    return bound;
   }
 
   /**
@@ -1512,6 +2326,9 @@ public final class LcgSolver implements ExternalPropagator {
    * @param negative variables of which one may be 0
    */
   public void addClause(IntVar[] positive, IntVar[] negative) {
+    if (proof != null) {
+      proofClauses.add(new IntVar[][] {positive.clone(), negative.clone()});
+    }
     List<Integer> clause = new ArrayList<>();
     for (int sign = 1; sign >= -1; sign -= 2) {
       for (IntVar x : sign > 0 ? positive : negative) {
@@ -1635,7 +2452,17 @@ public final class LcgSolver implements ExternalPropagator {
     while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
       numAnnotationIndices--;
     }
-    numPending = 0;
+    // a notified literal at or below the level stays assigned, and the solver does not notify it
+    // again: it is applied at the next propagation (the root's, when a probe stopped at the
+    // deadline)
+    int kept = 0;
+    for (int k = 0; k < numPending; k++) {
+      int lit = pending[k];
+      if (sat.value(lit) != 0 && sat.levelOf(lit) <= level) {
+        pending[kept++] = lit;
+      }
+    }
+    numPending = kept;
     failed = false;
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
@@ -1646,7 +2473,11 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void learnLinear(LinearForm f) {
-    if (f == null || !"learn".equals(linearMode) || learntSeen.size() >= linearLimit) {
+    // a learnt sum is a cutting-plane derivation, which a proof of rup steps cannot state
+    if (f == null
+        || !"learn".equals(linearMode)
+        || proof != null
+        || learntSeen.size() >= linearLimit) {
       return;
     }
     // the sum of the terms' largest magnitudes must fit in a long, with room
@@ -2057,6 +2888,25 @@ public final class LcgSolver implements ExternalPropagator {
     phase = p;
   }
 
+  /**
+   * Hands the store back for search without learning: its changes are no longer recorded. The
+   * solver cannot solve again afterwards; its best solution stays readable.
+   */
+  public void release() {
+    trail.detach();
+  }
+
+  /**
+   * Tells whether the best solution has a value for x: there is one, and x existed when the solver
+   * was built.
+   *
+   * @param x the variable
+   * @return true when {@link #value} gives x's value
+   */
+  public boolean hasValue(IntVar x) {
+    return solution != null && trail.id(x) < solution.length;
+  }
+
   /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
   public void stop() {
     sat.cancel();
@@ -2064,7 +2914,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public int[] externalClause() {
-    if (structural.isEmpty() && sharedBound != null && objective >= 0 && !coreMode) {
+    if (structural.isEmpty()
+        && sharedBound != null
+        && proof == null
+        && objective >= 0
+        && !coreMode) {
       importBound();
     }
     return structural.poll();
@@ -2167,6 +3021,13 @@ public final class LcgSolver implements ExternalPropagator {
           learnLinear(linear.analyse(store.recentlyFailedConstraint, store.level));
         }
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        if (PROOF_TRACE && proof != null) {
+          proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
+        }
+        if (proof != null) {
+          proofCardinality(store.recentlyFailedConstraint, atoms, 0, -1);
+          proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
+        }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
@@ -2195,6 +3056,13 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int mark = out.size();
     boolean own = trail.explain(e, out);
+    if (PROOF_TRACE && proof != null) {
+      proof.comment((own ? "reason " : "generic reason ") + trail.reason(e));
+    }
+    if (proof != null) {
+      proofCardinality(trail.reason(e), out, mark, e);
+      proofLinearBounds(trail.reason(e), out, mark, e);
+    }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
       genericDeferred.add(trail.reason(e));
     }
@@ -2326,9 +3194,13 @@ public final class LcgSolver implements ExternalPropagator {
       if (inSolver(e)) {
         inSolver.add(e);
       } else {
+        int mark = stack.size();
         int more = explainEntry(e, stack);
         if (more != 0) {
           lits.add(-more);
+        }
+        if (proof != null) {
+          proofLemma(e, stack, mark, more);
         }
       }
     }
@@ -2735,6 +3607,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     // under core-guided search a solution need not improve on the best one
     boolean improving = objective < 0 || best == null || solution[objective] < best[objective];
+    if (proof != null && improving) {
+      logSolution();
+    }
     if (onSolution != null && improving) {
       onSolution.run();
     }

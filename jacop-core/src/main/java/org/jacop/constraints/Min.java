@@ -46,6 +46,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.MaxExplanation;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Min constraint implements the minimum/2 constraint. It provides the minimum varable from all FD
@@ -55,7 +57,7 @@ import org.jacop.lcg.MaxExplanation;
  * @version 5.0
  */
 public class Min extends AbstractMinMax
-    implements Functional, Violation, Simplifiable, Copyable<Min>, Explainable {
+    implements Functional, Violation, Simplifiable, Copyable<Min>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -218,5 +220,31 @@ public class Min extends AbstractMinMax
       min = Math.min(min, value.applyAsInt(v));
     }
     return min;
+  }
+
+  // [x < v] -> [min < v] for each x, and [min < v] -> one [x < v], for every threshold v
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Min.class) {
+      return false;
+    }
+    int lo = model.domain(target).min();
+    int hi = model.domain(target).max();
+    for (IntVar x : list) {
+      lo = Math.min(lo, model.domain(x).min());
+      hi = Math.max(hi, model.domain(x).max());
+    }
+    for (int v = lo + 1; v <= hi; v++) {
+      String t = model.atLeast(target, v);
+      String[] some = new String[list.length + 1];
+      some[0] = t;
+      for (int i = 0; i < list.length; i++) {
+        String a = model.atLeast(list[i], v);
+        model.clause(a, PbModel.not(t));
+        some[i + 1] = PbModel.not(a);
+      }
+      model.clause(some);
+    }
+    return true;
   }
 }

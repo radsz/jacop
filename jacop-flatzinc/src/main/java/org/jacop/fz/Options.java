@@ -59,6 +59,7 @@ public class Options {
   boolean all;
   boolean verbose;
   boolean statistics;
+  boolean searchStatistics;
   boolean freeSearch;
   boolean freeSearchWithoutAnnotation = true;
   boolean newFreeSearchEngine = true;
@@ -84,6 +85,8 @@ public class Options {
   // whether --lcg was given; without it, LCG is left out for models it does not support
   boolean lcgGiven;
   boolean lp = true;
+  // --proof: the path prefix of the VeriPB proof (.pbp) and its OPB model (.opb), or null
+  String proof;
   LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.DENSE;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
@@ -156,6 +159,10 @@ public class Options {
             -t <value>, --time-out <value>
                 <value> - time in milisecond.
             -s, --statistics
+                Print the standard FlatZinc statistics (nodes, failures, restarts, peakDepth, ...).
+            --search-statistics
+                As -s, and also the statistics of JaCoP's own components (lcg*, presolve*, lp*,
+                lns*, ls*, symmetry*, probe*, portfolio*, ...). -debug together with -s does the same.
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
@@ -184,6 +191,11 @@ public class Options {
                 and auto),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
+                lcg-slow-rate=<conflicts per second> (with --lcg and an objective: LCG
+                that makes fewer conflicts per second by lcg-slow-at, and has a solution,
+                gives way to free search without learning, default 50; 0 = off),
+                lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
+                checked, default 0.1),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
@@ -223,6 +235,12 @@ public class Options {
                 the annotation (see lcg-branching of --free-config). On by default ("--lcg off"
                 turns it off); left out by default for models with float variables, for
                 satisfaction problems asking for more than one solution (-a, -n), and with -sat.
+            --proof <prefix> with --lcg (turned on), write a VeriPB 3 proof of the search to
+                <prefix>.pbp and the OPB model it is checked against to <prefix>.opb
+                (veripb <prefix>.opb <prefix>.pbp); one thread, branch and bound without
+                core-guided, lower-bound and neighbourhood runs, --lp off, bounds consistency
+                (as -b). The model is the store
+                at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default, the dense simplex), "off",
@@ -316,6 +334,7 @@ public class Options {
       case "-a", "--all-solutions", "--all" -> i = handleAllSolutions(i);
       case "-t", "--time-out" -> i = handleTimeOut(args, i);
       case "-s", "--statistics" -> i = handleStatistics(i);
+      case "--search-statistics", "-searchStatistics" -> i = handleSearchStatistics(i);
       case "-f", "--free-search" -> i = handleFreeSearch(i);
       case "--free-engine" -> i = handleFreeEngine(args, i);
       case "--free-config" -> i = handleFreeConfig(args, i);
@@ -323,6 +342,7 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(args, i);
       case "--lp" -> i = handleLp(args, i);
+      case "--proof" -> i = handleProof(args, i);
       case "-p", "--parallel" -> i = handleParallel(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
@@ -381,6 +401,12 @@ public class Options {
     return i + 1;
   }
 
+  private int handleSearchStatistics(int i) {
+    statistics = true;
+    searchStatistics = true;
+    return i + 1;
+  }
+
   private int handleFreeSearch(int i) {
     freeSearch = true;
     return i + 1;
@@ -415,6 +441,13 @@ public class Options {
         System.err.println("%% Free search setting " + setting + " not understood; ignored");
       }
     }
+    return i + 1;
+  }
+
+  private int handleProof(String[] args, int i) {
+    proof = args[++i];
+    lcg = true;
+    lcgGiven = true;
     return i + 1;
   }
 
@@ -788,6 +821,17 @@ public class Options {
   }
 
   /**
+   * It returns true if the statistics of JaCoP's own components (LCG, presolve, LP, LNS, local
+   * search, symmetry, probing, portfolio) are printed as well as the standard FlatZinc ones: with
+   * --search-statistics, or with -s and -debug.
+   *
+   * @return true if the extra statistics are printed, false otherwise.
+   */
+  public boolean searchStatistics() {
+    return statistics && (searchStatistics || debug);
+  }
+
+  /**
    * It returns time out set for the search.
    *
    * @return the value of the timeOut (in seconds), 0 if no time-out was set.
@@ -860,7 +904,8 @@ public class Options {
    * @return true if bound consistency prefered, false otherwise (defult).
    */
   public boolean getBoundConsistency() {
-    return boundConsistency;
+    // a proof states each explanation by unit propagation, which derives bounds, not domains
+    return boundConsistency || proof != null;
   }
 
   /**
@@ -917,7 +962,18 @@ public class Options {
    * @return false when --lp off was given
    */
   public boolean lp() {
-    return lp;
+    // LP deductions combine rows, which a proof's unit propagation does not derive
+    return lp && proof == null;
+  }
+
+  /**
+   * The path prefix of the VeriPB proof that --proof asks for: the proof goes to prefix.pbp and the
+   * OPB model it is checked against to prefix.opb.
+   *
+   * @return the prefix, or null without --proof
+   */
+  public String proof() {
+    return proof;
   }
 
   /**
@@ -935,7 +991,7 @@ public class Options {
    * @return the number of threads
    */
   public int threads() {
-    return threads;
+    return proof == null ? threads : 1;
   }
 
   /** The portfolio thread this model is solved in, or null outside a portfolio. */
