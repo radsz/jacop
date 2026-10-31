@@ -1189,7 +1189,7 @@ Version 5.0 (unreleased)
     at_most, at_least or count, two paired 30 s runs: --lcg 5 better
     and 4 worse, --lcg -f 8 better and 3 worse.
 
-81. Under --lcg, a linear bound that moves past a hole of its variable's
+83. Under --lcg, a linear bound that moves past a hole of its variable's
     initial domain wider than 4,096 values keeps its own reason. The
     explanation checked every integer between the bound the reason
     implies and the recorded one, and gave the generic reason past
@@ -1201,7 +1201,28 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
-82. A FlatZinc variable declared with a bound beyond JaCoP's integer range
+84. New constraint MinOfSums(x, y, m): m = min(x[i] + y[i]), a term
+    being x[i] alone where y[i] is null, with the bounds pruning of the
+    decomposition z[i] = x[i] + y[i], m = min(z) and its own explanations
+    under --lcg. The FlatZinc front end merges a sum z = x + y (int_lin_eq
+    [1, 1, -1]) into the minimum (jacop_minimum, int_min) that is its only
+    use, when z is not output, not in the solve item and its domain holds
+    every value of x + y; -Dorg.jacop.fz.minOfSums=false turns this off.
+    The shortest-path model of road-cons has one such sum for every pair
+    of edges (130,000 of 138,000 variables on road_26), and every change
+    of a sum woke both constraints. With --lcg off the search tree is the
+    same and road_26 explores 1,350 instead of 207 nodes/s (Gecode 6.4.0
+    372 on the same machine). Under --lcg, LcgSolver.setUnusedVariables
+    keeps the merged sums out of branching. On the 10 road-cons
+    instances, 60 s, default options: road_11 (above1hour) proves its
+    optimum 5,020 in 17 s, road_33 and road_9 prove theirs 3.5 and 7
+    times faster, and the other 7 end better (road_25 16,675 instead of
+    22,133, road_26 2,027,861 instead of 22,018,497); with -f road_25
+    reaches its optimum 15,453 in 20 s. Min, Max and XplusYeqZ (bounds
+    case) read the bounds kept on IntVar and only call the domain when a
+    bound changes, +7 to +11% on road-cons before the merge.
+
+85. A FlatZinc variable declared with a bound beyond JaCoP's integer range
     (-536,870,910..536,870,909) is narrowed to it, with one warning on
     stderr; MiniZinc writes such computed bounds, for example
     var 0..4722438400 for a product in 2022 arithmetic-target. Before, a

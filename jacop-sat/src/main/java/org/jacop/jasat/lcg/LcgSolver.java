@@ -313,6 +313,8 @@ public final class LcgSolver implements ExternalPropagator {
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private boolean[] late;
+  // variables that no constraint uses: never branched on, at their least value in a solution
+  private boolean[] unused;
   private double activityInc = 1;
   private long activityConflicts;
   // variables taken off the heap because they were fixed, with the decision level at the time
@@ -441,6 +443,7 @@ public final class LcgSolver implements ExternalPropagator {
     wide.grow(n, activity);
     lateHeap.grow(n, activity);
     late = new boolean[n];
+    unused = new boolean[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
@@ -2316,7 +2319,7 @@ public final class LcgSolver implements ExternalPropagator {
     int best = -1;
     int bestSize = Integer.MAX_VALUE;
     for (int i = 0; i < vars.length; i++) {
-      if (vars[i] != null && !vars[i].singleton() && vars[i].getSize() < bestSize) {
+      if (vars[i] != null && !unused[i] && !vars[i].singleton() && vars[i].getSize() < bestSize) {
         best = i;
         bestSize = vars[i].getSize();
       }
@@ -2392,6 +2395,27 @@ public final class LcgSolver implements ExternalPropagator {
       case "split" -> -geLit(i, x.min() + (x.max() - x.min()) / 2 + 1);
       default -> -geLit(i, x.min() + 1);
     };
+  }
+
+  /**
+   * Sets the variables that no constraint uses, such as the variables a reformulation of the model
+   * replaced: they are never branched on, and a solution gives them their least value. Set them
+   * before solving, and impose no constraint on them afterwards.
+   *
+   * @param vs the unused variables
+   */
+  public void setUnusedVariables(Iterable<? extends Var> vs) {
+    for (Var v : vs) {
+      int i = idOf(v);
+      if (i >= 0 && !unused[i]) {
+        unused[i] = true;
+        for (VarHeap h : new VarHeap[] {heap, wide, lateHeap}) {
+          if (h.contains(i)) {
+            h.remove(i);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -2530,6 +2554,10 @@ public final class LcgSolver implements ExternalPropagator {
     solution = new int[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] != null) {
+        if (unused[i] && !vars[i].singleton()) {
+          solution[i] = vars[i].min();
+          continue;
+        }
         if (!vars[i].singleton()) {
           throw new IllegalStateException(vars[i] + " is not fixed in a model");
         }

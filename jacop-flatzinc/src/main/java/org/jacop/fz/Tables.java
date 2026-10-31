@@ -90,6 +90,9 @@ public class Tables {
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
 
+  // variables that no constraint uses any more, such as the sums merged into a minimum
+  final ArrayList<Var> unusedVariables = new ArrayList<>();
+
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
   // IntVar zero, one;
@@ -329,6 +332,7 @@ public class Tables {
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
+    t.unusedVariables.addAll(map.get(unusedVariables));
     t.splitSums.addAll(map.get(splitSums));
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
