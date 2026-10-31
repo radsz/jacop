@@ -32,9 +32,12 @@ package org.jacop.constraints.cumulative;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -51,6 +54,9 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * CumulativeBasic implements the cumulative constraint using time tabling algorithm.
@@ -60,7 +66,7 @@ import org.jacop.lcg.Explainable;
  */
 @Slf4j
 public class CumulativeBasic extends Constraint
-    implements Simplifiable, Copyable<CumulativeBasic>, Explainable, Violation {
+    implements Simplifiable, Copyable<CumulativeBasic>, Explainable, Violation, PbEncodable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -378,6 +384,67 @@ public class CumulativeBasic extends Constraint
   public CumulativeBasic copy(VarMap map) {
     IntVar[][] t = taskVariables(map);
     return new CumulativeBasic(t[0], t[1], t[2], map.get(limit));
+  }
+
+  /**
+   * Writes the time-indexed encoding: a literal [s <= t < s + d] for each task and each time point
+   * t it may cover, equal to [s >= t - d + 1] - [s >= t + 1], and at each time point the resource
+   * uses of the tasks covering it summed to at most the limit. Unit propagation over it is the time
+   * table, which every explanation of this class states. Only tasks of fixed duration and resource
+   * use are encoded; the subclasses, whose rules unit propagation does not reach, are not.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != CumulativeBasic.class) {
+      return false;
+    }
+    // time point -> the literals of the tasks that may cover it, and their resource uses
+    TreeMap<Integer, List<String>> covering = new TreeMap<>();
+    Map<Integer, List<Long>> uses = new HashMap<>();
+    for (TaskView task : taskNormal) {
+      IntDomain dd = model.domain(task.dur);
+      IntDomain rd = model.domain(task.res);
+      if (!dd.singleton() || !rd.singleton()) {
+        return false;
+      }
+      int d = dd.value();
+      int r = rd.value();
+      if (d == 0 || r == 0) {
+        continue;
+      }
+      IntDomain sd = model.domain(task.start);
+      for (long t = sd.min(); t <= (long) sd.max() + d - 1; t++) {
+        String from = model.atLeast(task.start, (int) (t - d + 1));
+        String after = model.atLeast(task.start, (int) (t + 1));
+        String covers;
+        if ("0".equals(from) || "1".equals(after)) {
+          continue;
+        } else if ("0".equals(after)) {
+          covers = from;
+        } else if ("1".equals(from)) {
+          covers = PbModel.not(after);
+        } else {
+          covers = model.auxiliary();
+          model.sum(
+              new String[] {covers, from, after},
+              new long[] {1, -1, 1},
+              new IntVar[0],
+              new long[0],
+              LinearForm.EQ,
+              0);
+        }
+        covering.computeIfAbsent((int) t, k -> new ArrayList<>()).add(covers);
+        uses.computeIfAbsent((int) t, k -> new ArrayList<>()).add((long) r);
+      }
+    }
+    IntVar[] cap = {limit};
+    long[] minus = {-1};
+    for (var e : covering.entrySet()) {
+      List<String> l = e.getValue();
+      long[] a = uses.get(e.getKey()).stream().mapToLong(Long::longValue).toArray();
+      model.sum(l.toArray(new String[0]), a, cap, minus, LinearForm.LE, 0);
+    }
+    return true;
   }
 
   /**

@@ -853,8 +853,10 @@ public class Support implements ParserTreeConstants {
    * false turns it off.
    */
   void poseOverlappingAlldiffs() {
+    // --proof leaves out this redundant constraint, which it does not encode
     if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
-        || alldifferentLists.size() < 2) {
+        || alldifferentLists.size() < 2
+        || options.proof() != null) {
       return;
     }
     // fixed variables (often one constant object shared by many lists) are left out: the

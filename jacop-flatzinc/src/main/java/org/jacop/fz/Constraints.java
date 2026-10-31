@@ -222,13 +222,15 @@ public class Constraints implements ParserTreeConstants {
         new CircuitCostDetector(support).detect(astTree);
       }
 
-      if (DisjunctiveCliqueDetector.enabled()) {
+      if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
+        // the unary resources it adds explain by rules a proof's unit propagation does not reach
         new DisjunctiveCliqueDetector(support).detect(astTree);
       }
 
       // energy precedence when enabled, and the reservoirs
       new PrecedenceDetector(support).detect(astTree);
-      if (WeightedCompletionDetector.enabled()) {
+      // the weighted completion bound it adds is redundant, and --proof does not encode it
+      if (WeightedCompletionDetector.enabled() && options.proof() == null) {
         new WeightedCompletionDetector(support).detect(astTree);
       }
 
@@ -244,7 +246,8 @@ public class Constraints implements ParserTreeConstants {
         new BalanceDetector(support).detect(astTree);
       }
 
-      if (StockingCostDetector.enabled()) {
+      // the stocking cost it adds is redundant, and --proof does not encode it
+      if (StockingCostDetector.enabled() && options.proof() == null) {
         new StockingCostDetector(support).detect(astTree);
       }
 

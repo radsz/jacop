@@ -61,6 +61,7 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
@@ -412,6 +413,61 @@ class VeriPbProofTest {
     assertThat(checker.check(opb(), pbp)).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS 26 26");
     assertThat(pbp).contains("\npol ");
+  }
+
+  // the shortest makespan of five tasks on a resource of capacity 3, by the time-indexed encoding
+  // of the time table
+  @Test
+  void cumulativeMakespanIsProved() {
+    int[] d = {3, 2, 2, 1, 2};
+    int[] r = {2, 1, 2, 1, 2};
+    int horizon = 8;
+    Store store = new Store();
+    IntVar[] s = new IntVar[d.length];
+    IntVar[] dur = new IntVar[d.length];
+    IntVar[] res = new IntVar[d.length];
+    IntVar obj = new IntVar(store, "obj", 0, horizon + 3);
+    for (int i = 0; i < d.length; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, horizon);
+      dur[i] = new IntVar(store, "d" + i, d[i], d[i]);
+      res[i] = new IntVar(store, "r" + i, r[i], r[i]);
+      store.impose(new LinearInt(new IntVar[] {s[i], obj}, new int[] {1, -1}, "<=", -d[i]));
+    }
+    store.impose(new CumulativeBasic(s, dur, res, new IntVar(store, "cap", 3, 3)));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(shortestMakespan(d, r, 3, horizon));
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + lcg.value(obj) + " " + lcg.value(obj));
+  }
+
+  // the shortest makespan over every start from 0 to horizon of each task
+  private static int shortestMakespan(int[] d, int[] r, int capacity, int horizon) {
+    int n = d.length;
+    int[] start = new int[n];
+    int best = Integer.MAX_VALUE;
+    for (long k = 0; k < Math.pow(horizon + 1, n); k++) {
+      long rest = k;
+      int end = 0;
+      for (int i = 0; i < n; i++) {
+        start[i] = (int) (rest % (horizon + 1));
+        rest /= horizon + 1;
+        end = Math.max(end, start[i] + d[i]);
+      }
+      boolean fits = true;
+      for (int t = 0; t < end && fits; t++) {
+        int load = 0;
+        for (int i = 0; i < n; i++) {
+          load += start[i] <= t && t < start[i] + d[i] ? r[i] : 0;
+        }
+        fits = load <= capacity;
+      }
+      if (fits) {
+        best = Math.min(best, end);
+      }
+    }
+    return best;
   }
 
   @Test
