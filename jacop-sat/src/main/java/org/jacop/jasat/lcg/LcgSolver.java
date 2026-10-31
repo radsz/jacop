@@ -435,6 +435,7 @@ public final class LcgSolver implements ExternalPropagator {
       linear =
           new LinearConflict(
               trail,
+              store,
               e -> e < cause.length && cause[e] != 0 ? sat.reasonKind(cause[e]) : 6,
               Boolean.parseBoolean(System.getProperty("jacop.lcg.linearKept", "true"))
                   ? this::linearOrigin
@@ -2416,9 +2417,7 @@ public final class LcgSolver implements ExternalPropagator {
       return r;
     }
     int e = propagated[Math.abs(lit)];
-    if (linear != null
-        && trail.reason(e) != null
-        && LinearConflict.formOf(trail.reason(e)) != null) {
+    if (linear != null && linear.usable(trail.reason(e))) {
       noteOrigin(lit, trail.reason(e));
     }
     EntryList reason = reasonEntries;
