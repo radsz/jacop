@@ -6,7 +6,7 @@ Goal: make JaCoP a state-of-the-art constraint programming solver. These priorit
 
 1. **Fix open correctness bugs first, backed by a good test bench.**
    This is the most immediate priority. Every fix comes with tests that would have caught the bug, and the test bench has to be trustworthy enough to rely on for everything that follows. Known items include #71 (`network_flow_cost` missing solutions), #78 (NPE in `NoGood`), #47 and #64 (asserts used instead of `FailException`), and the failures listed in `doc/minizinc/jacop-minizinc-support.md`.
-   *Status:* #30, #46, #47, #64, #71 and #78 are fixed in `develop-5.0` (PR #81), as are the table memory blow-up, the FlatZinc front end dropping reifications, `bin_packing_capa` bin numbering, `jacop_sequence` with gapped value sets, and three `Cumulative`/`CumulativeOptional` bugs. Still open from the MiniZinc suite: the nested `seq_search` NPE and the `tuple_if_then_else` stack overflow.
+   *Status:* #30, #46, #47, #64, #71 and #78 are fixed in `develop-5.0` (PR #81), as are the table memory blow-up, the FlatZinc front end dropping reifications, `bin_packing_capa` bin numbering, `jacop_sequence` with gapped value sets, and three `Cumulative`/`CumulativeOptional` bugs. The two other MiniZinc-suite failures, the nested `seq_search` NPE and the `tuple_if_then_else` stack overflow, are fixed too (PR #105).
 
 2. **Support the latest MiniZinc release.**
    Follow the MiniZinc standard: the FlatZinc format, the solver configuration (`org.jacop.msc`), the standard library's `fzn_*` hooks and redefinitions, and its parameter naming. See `doc/minizinc/jacop-minizinc-support.md`.
