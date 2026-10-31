@@ -34,6 +34,8 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -123,6 +125,12 @@ final class AlldiffExplanation {
       out.truncate(mark);
       return false;
     }
+    int bounded = out.size();
+    if (byFixedVariables(trail, entry, list, y, lo, hi, root, except, out)) {
+      out.sortUnique(mark);
+      return true;
+    }
+    out.truncate(bounded);
     AlldiffExplanation e = new AlldiffExplanation(trail, entry);
     if (!e.build(list, y, except)) {
       out.truncate(mark);
@@ -148,6 +156,44 @@ final class AlldiffExplanation {
     }
     e.addReason(out);
     out.sortUnique(mark);
+    return true;
+  }
+
+  /**
+   * The common case without the value graph: each removed value is the value of another variable
+   * already fixed to it, so the Hall set of that value is the variable alone and its bounds are the
+   * reason. The graph costs the size of all the variables' domains, the scan only their bounds.
+   */
+  private static boolean byFixedVariables(
+      AtomicTrail trail,
+      int entry,
+      IntVar[] list,
+      IntVar y,
+      int lo,
+      int hi,
+      IntDomain root,
+      IntDomain except,
+      EntryList out) {
+    for (int w = lo; w <= hi; w++) {
+      if (!root.contains(w) || trail.excludedBefore(y, w, entry, out)) {
+        continue;
+      }
+      if (except.contains(w)) {
+        return false;
+      }
+      IntVar fixed = null;
+      for (IntVar z : list) {
+        if (z != y && trail.minBefore(z, entry) == w && trail.maxBefore(z, entry) == w) {
+          fixed = z;
+          break;
+        }
+      }
+      if (fixed == null) {
+        return false;
+      }
+      trail.addLowerBound(fixed, entry, out);
+      trail.addUpperBound(fixed, entry, out);
+    }
     return true;
   }
 
@@ -247,16 +293,21 @@ final class AlldiffExplanation {
       for (int f : holeEntries[k]) {
         isHole[trail.value(f) - base] = true;
       }
-      IntDomain root = trail.rootDomain(vars[k]);
-      for (int v = min[k]; v <= max[k]; v++) {
-        if (!isHole[v - base] && root.contains(v)) {
-          if (e == edges.length) {
-            if (e >= EDGE_LIMIT) {
-              return false;
+      // the root domain's intervals, so that a sparse domain costs its size and not its span
+      for (IntervalEnumeration en = trail.rootDomain(vars[k]).intervalEnumeration();
+          en.hasMoreElements(); ) {
+        Interval i = en.nextElement();
+        int to = Math.min(i.max(), max[k]);
+        for (int v = Math.max(i.min(), min[k]); v <= to; v++) {
+          if (!isHole[v - base]) {
+            if (e == edges.length) {
+              if (e >= EDGE_LIMIT) {
+                return false;
+              }
+              edges = Arrays.copyOf(edges, 2 * e);
             }
-            edges = Arrays.copyOf(edges, 2 * e);
+            edges[e++] = v - base;
           }
-          edges[e++] = v - base;
         }
       }
       for (int f : holeEntries[k]) {

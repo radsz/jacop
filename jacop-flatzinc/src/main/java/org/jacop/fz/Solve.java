@@ -1741,6 +1741,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
+    lcg.setUnusedVariables(dictionary.unusedVariables);
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2742,7 +2743,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%% =====INTERRUPTED=====");
       return;
     }
-    if (isComplete && relaxedSearchComplete()) {
+    if (isComplete && relaxedSearchComplete() && !dictionary.domainsClamped()) {
       IO.println("=====UNSATISFIABLE=====");
       writeUnsatToOutputFile();
       return;
@@ -2766,7 +2767,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (interrupted) {
       return;
     }
-    if (isComplete && !timeoutOccurred && isSearchComplete() && relaxedSearchComplete()) {
+    if (isComplete
+        && !timeoutOccurred
+        && isSearchComplete()
+        && relaxedSearchComplete()
+        && !dictionary.domainsClamped()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -2779,7 +2784,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && isComplete
         && !timeoutOccurred
         && isSearchComplete()
-        && relaxedSearchComplete()) {
+        && relaxedSearchComplete()
+        && clampedDomainsKeepOptimum()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -2792,6 +2798,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean relaxedSearchComplete() {
     return relaxVars == null && dictionary.onRestart == null || rs == null || rs.complete();
+  }
+
+  /**
+   * A declared domain narrowed to JaCoP's integer range cuts values off the search; the optimum
+   * found is still the optimum of the model when only the objective was cut, on its worse side.
+   */
+  private boolean clampedDomainsKeepOptimum() {
+    return !dictionary.domainsClamped()
+        || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize);
   }
 
   private boolean isSearchComplete() {
@@ -3164,7 +3179,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
       if (!store.consistency()) {
-        IO.println("=====UNSATISFIABLE=====");
+        IO.println(dictionary.domainsClamped() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
         throw new TrivialSolution();
       }
     }
@@ -3174,7 +3189,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       helperSolutionPrinter(lastSolution.toString());
     }
 
-    if (options.getAll() || costVariable != null) {
+    if ((options.getAll() || costVariable != null)
+        && (costVariable != null ? clampedDomainsKeepOptimum() : !dictionary.domainsClamped())) {
       IO.println(SEPARATOR_LINE);
     }
 
