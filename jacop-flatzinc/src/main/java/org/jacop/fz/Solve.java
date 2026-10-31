@@ -206,8 +206,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   Var flatzincCost;
   int solveKind = -1;
   FailConstraintsStatistics failStatistics;
-  // volatile: the check of LCG's speed reads it from its own thread
-  volatile int numberSolutions;
+  int numberSolutions;
+  // set with the first solution, for the check of LCG's speed on its own thread
+  private volatile boolean solutionFound;
   // relax and reconstruct
   IntVar[] relaxVars;
   int probability;
@@ -1979,15 +1980,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     // made again until LCG has one or is no longer slow. cutstock type16 TEST9
                     // found its first solution with LCG at 37 s and none without
                     while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
-                      if (numberSolutions > 0) {
+                      if (solutionFound) {
                         lcgSlow = true;
                         solver.stop();
                         return;
                       }
                       Thread.sleep(500);
                     }
-                  } catch (InterruptedException _) {
+                  } catch (InterruptedException e) {
                     // LCG search ended first
+                    Thread.currentThread().interrupt();
                   }
                 });
     return check;
@@ -3975,6 +3977,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
+    solutionFound = true;
     if (lcg != null && costVariable instanceof IntVar cost && cost.singleton()) {
       lcgLastCost = cost.value();
     }
