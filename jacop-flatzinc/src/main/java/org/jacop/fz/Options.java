@@ -198,9 +198,9 @@ public class Options {
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
-                violated constraints, default 1000), ls-moves=walk|fj (walk: a step moves a
-                variable of one violated constraint, the default; fj: feasibility jump, the best
-                jump of a sample of variables, all violated constraints weigh more at a minimum)
+                violated constraints, default 1000), ls-moves=fj|walk (fj, the default:
+                feasibility jump, the best jump of a sample of variables, all violated constraints
+                weigh more at a minimum; walk: a step moves a variable of one violated constraint)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

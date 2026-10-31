@@ -1201,6 +1201,21 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+83. Local search (--free-config ls=<share>, off by default) makes
+    feasibility jump moves (Luteberget and Sartor, 2023): each variable
+    of a violated constraint has a jump value, the value that most
+    lowers the weighted violation of all its constraints, tried at the
+    bounds, next to its value and where each linear row starts or stops
+    being violated; a step makes the best jump of a sample of variables,
+    and at a minimum every violated constraint weighs more. Jumps are
+    cached until one of the variable's constraints changes.
+    LocalSearch.Builder.jump(true) selects them; ls-moves=walk restores
+    the moves of one violated constraint per step. On 105 instances with
+    a slow or no first solution, 30 s, local search itself finds a
+    solution on 23 instances instead of 17 with -f --lcg off and on 17
+    instead of 15 with --lcg -f (cutstock, cyclic-rcpsp, largescheduling
+    and magicseq only with jumps).
+
 Version 4.11
 =============
 
