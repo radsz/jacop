@@ -748,10 +748,15 @@ class FlatzincFrontEndTest {
     return fzn.toString();
   }
 
-  /** The search statistics of a run with -s, without the times. */
+  /** The search statistics of a run with -s, without the times and the memory. */
   private static String searchStatistics(String out) {
     return out.lines()
-        .filter(l -> l.startsWith("%%%mzn-stat: ") && !l.contains("Time=") && !l.contains("time="))
+        .filter(
+            l ->
+                l.startsWith("%%%mzn-stat: ")
+                    && !l.contains("Time=")
+                    && !l.contains("time=")
+                    && !l.contains("peakMem="))
         .collect(Collectors.joining("\n"));
   }
 
@@ -1976,7 +1981,7 @@ class FlatzincFrontEndTest {
         constraint int_ne(x, y);
         solve maximize x;
         """;
-    String out = run(model, "--lcg", "-s")[0];
+    String out = run(model, "--lcg", "--search-statistics")[0];
     assertTrue(out.contains("x = 5;"), out);
     assertTrue(out.strip().contains("=========="), out);
     assertTrue(out.contains("lcgExplanations"), out);
@@ -2106,7 +2111,13 @@ class FlatzincFrontEndTest {
         solve minimize obj;
         """);
     String out =
-        run(model.toString(), "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
+        run(
+            model.toString(),
+            "--lcg",
+            "-f",
+            "--search-statistics",
+            "--free-config",
+            "lcg-branching=activity")[0];
     assertTrue(out.strip().contains("=========="), out);
     assertTrue(out.contains("%%%mzn-stat: lcgLateDecisions=0\n"), out);
     assertTrue(out.contains("%%%mzn-stat: objective="), out);
@@ -2124,9 +2135,9 @@ class FlatzincFrontEndTest {
         constraint int_ne(x, y);
         %s;
         """;
-    String sat = run(model.formatted("solve satisfy"), "--lcg", "-f", "-s")[0];
+    String sat = run(model.formatted("solve satisfy"), "--lcg", "-f", "--search-statistics")[0];
     assertTrue(sat.contains("%%%mzn-stat: lcgFullFixpoint=false\n"), sat);
-    String opt = run(model.formatted("solve maximize x"), "--lcg", "-f", "-s")[0];
+    String opt = run(model.formatted("solve maximize x"), "--lcg", "-f", "--search-statistics")[0];
     assertTrue(opt.contains("%%%mzn-stat: lcgFullFixpoint=true\n"), opt);
     assertTrue(opt.contains("x = 3;"), opt);
     // the annotation, followed without -f, keeps the full fixpoint
@@ -2134,7 +2145,7 @@ class FlatzincFrontEndTest {
         run(
             model.formatted("solve :: int_search([x,y],input_order,indomain_min,complete) satisfy"),
             "--lcg",
-            "-s")[0];
+            "--search-statistics")[0];
     assertTrue(fixed.contains("%%%mzn-stat: lcgFullFixpoint=true\n"), fixed);
   }
 
@@ -2162,7 +2173,13 @@ class FlatzincFrontEndTest {
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
     String out =
-        run(model.toString(), "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
+        run(
+            model.toString(),
+            "--lcg",
+            "-f",
+            "--search-statistics",
+            "--free-config",
+            "lcg-branching=activity")[0];
     assertTrue(out.strip().contains("=========="), out);
     String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
     // obj, the objective, and the block sums of the two long constraints
@@ -2254,8 +2271,8 @@ class FlatzincFrontEndTest {
                     String.join(",", Collections.nCopies(starts.size(), "1"))));
       }
       model.append("solve minimize obj;\n");
-      String lcg = run(model.toString(), "--lcg", "-f", "-s")[0];
-      String dfs = run(model.toString(), "-s", "--default-search", "input")[0];
+      String lcg = run(model.toString(), "--lcg", "-f", "--search-statistics")[0];
+      String dfs = run(model.toString(), "--search-statistics", "--default-search", "input")[0];
       assertTrue(lcg.contains("=========="), lcg);
       assertTrue(dfs.contains("=========="), dfs);
       assertEquals(lastObjective(dfs), lastObjective(lcg), lcg);
@@ -2302,7 +2319,9 @@ class FlatzincFrontEndTest {
         constraint bool_clause([c], []);
         solve minimize obj;
         """;
-    String out = run(model, "--lcg", "-f", "-s", "--free-config", "lcg-branching=activity")[0];
+    String out =
+        run(model, "--lcg", "-f", "--search-statistics", "--free-config", "lcg-branching=activity")[
+            0];
     assertTrue(out.strip().contains("=========="), out);
     assertTrue(out.contains("%%%mzn-stat: objective=3\n"), out);
     assertTrue(out.contains("%%%mzn-stat: lcgLateVariables=1\n"), out);
@@ -2323,7 +2342,7 @@ class FlatzincFrontEndTest {
         constraint int_lin_eq([1, -1000000, -1], [x, b, cost], -1000000);
         solve minimize cost;
         """;
-    String out = run(model, "--lcg", "-s")[0];
+    String out = run(model, "--lcg", "--search-statistics")[0];
     String last = out.substring(out.lastIndexOf("x = "));
     assertTrue(last.startsWith("x = 250000;"), out);
     // literals created only to push a bound are released on backtrack: count the live ones
@@ -2381,7 +2400,7 @@ class FlatzincFrontEndTest {
             model.toString(),
             "--lcg",
             "-f",
-            "-s",
+            "--search-statistics",
             "-t",
             "1000",
             "--free-config",
