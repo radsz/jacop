@@ -1403,6 +1403,22 @@ Version 5.0 (unreleased)
     pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
     No MiniZinc Challenge instance 2008-2026 reaches Geost.
 
+96. LCG explanations of GCC, GlobalCardinality and CountValues first try
+    counting reasons: a counter's upper bound from the variables that
+    exclude its value or from the lower bounds of the other counters, a
+    counter's lower bound from the variables fixed to its value, and a
+    value removed (or a bound moved past values) because other variables
+    fixed to it reach its counter's bound. Only when none applies is the
+    flow network built, which has a time share and gave the generic
+    reason beyond it (93 % of GCC reasons on fillomino 7x7_0).
+    -Djacop.lcg.cardinalityCounts=false turns them off. ArgMax and ArgMin
+    reasons skip values outside the initial domain, where a bound across
+    a wide hole gave the generic reason (47 % on tower). On the wide
+    benchmark set (220 instances, 60 s) --lcg is 10 better / 6 worse and
+    --lcg -f solves 140 instead of 136; on the 17 instances with these
+    constraints 22 better / 6 worse over 5 runs (fillomino 7x7_0 solved,
+    league 15.4 s to 8.8 s).
+
 Version 4.11
 =============
 
