@@ -41,6 +41,9 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * CountBounds constraint implements the counting over number of occurrences of a given value in a
@@ -51,7 +54,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class CountBounds extends AbstractCount
-    implements Violation, Copyable<CountBounds>, Explainable {
+    implements Violation, Copyable<CountBounds>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -198,5 +201,15 @@ public class CountBounds extends AbstractCount
   public long violation(ToIntFunction<IntVar> value) {
     int c = Violations.count(list, this.value, value);
     return Math.max(0L, (long) lb - c) + Math.max(0L, (long) c - ub);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != CountBounds.class) {
+      return false;
+    }
+    PbModel.count(model, list, value, new IntVar[0], LinearForm.GE, lb);
+    PbModel.count(model, list, value, new IntVar[0], LinearForm.LE, ub);
+    return true;
   }
 }

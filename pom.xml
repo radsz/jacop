@@ -229,6 +229,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -316,6 +317,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
+                                <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -373,6 +375,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -466,6 +469,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
+                                <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -518,6 +522,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -611,6 +616,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
+                                <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -663,6 +669,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>

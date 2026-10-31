@@ -119,7 +119,9 @@ public class PrecedenceDetector implements ParserTreeConstants {
       int max = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
       support.delayedConstraints.add(new Reservoir(times, changes, 0, min, max, f, t, l));
     }
-    if (!enabled() || f.length == 0 || cumulatives.isEmpty()) {
+    // --proof leaves out this redundant reasoning, whose rules a proof's unit propagation does not
+    // reach
+    if (!enabled() || f.length == 0 || cumulatives.isEmpty() || support.options.proof() != null) {
       return;
     }
     int posted = 0;

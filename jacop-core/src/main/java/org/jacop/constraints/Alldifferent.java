@@ -58,6 +58,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.util.BipartiteGraphMatching;
 
 /**
@@ -74,7 +76,8 @@ public class Alldifferent extends Constraint
         UsesQueueVariable,
         SatisfiedPresent,
         Copyable<Alldifferent>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -461,6 +464,20 @@ public class Alldifferent extends Constraint
   IntDomain explainedExceptions() {
     Class<?> type = getClass();
     return type == Alldifferent.class || type == Alldiff.class ? new IntervalDomain() : null;
+  }
+
+  /**
+   * Writes the constraint as one at-most-one line per value; the solver derives the pigeonhole
+   * steps its Hall set explanations need.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Alldifferent.class && getClass() != Alldiff.class
+        || new HashSet<>(Arrays.asList(list)).size() != list.length) {
+      return false;
+    }
+    model.allDifferent(list);
+    return true;
   }
 
   @Override

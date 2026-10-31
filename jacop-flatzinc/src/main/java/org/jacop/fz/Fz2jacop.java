@@ -145,6 +145,13 @@ public class Fz2jacop {
     } catch (FailException _) {
       handleFailException(opt, parser);
       status = 0;
+    } catch (UnsupportedOperationException e) {
+      if (opt.proof() == null) {
+        throw e;
+      }
+      // a model that --proof cannot write: no answer rather than one without its proof
+      IO.println("%% --proof: " + e.getMessage());
+      IO.println("=====UNKNOWN=====");
     } catch (ArithmeticException e) {
       handleArithmeticException(e);
     } catch (IllegalArgumentException e) {
@@ -179,6 +186,10 @@ public class Fz2jacop {
       IO.println("=====UNKNOWN=====");
     } else {
       IO.println("=====UNSATISFIABLE=====");
+    }
+    if (opt.proof() != null && !parser.getTables().rootFailureProved) {
+      // the model failed while it was translated, before the propagation the proof derives
+      IO.println("%% --proof: no proof written, the model fails while it is translated");
     }
     if (!opt.getOutputFilename().isEmpty() && !parser.getTables().domainsClamped()) {
       try {

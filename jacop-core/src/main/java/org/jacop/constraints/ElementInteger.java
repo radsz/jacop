@@ -54,6 +54,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.ElementExplanation;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * ElementInteger constraint defines a relation list[index - indexOffset] = value.
@@ -74,7 +76,8 @@ public class ElementInteger extends AbstractElement
         UsesQueueVariable,
         SatisfiedPresent,
         Copyable<ElementInteger>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   /**
    * It specifies the size of index domain from which the values supported by the index are
@@ -537,6 +540,15 @@ public class ElementInteger extends AbstractElement
     return getClass() == ElementInteger.class
         && index != value
         && ElementExplanation.explain(trail, entry, index, list, value, indexOffset, out);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ElementInteger.class || index == value) {
+      return false;
+    }
+    ElementExplanation.encode(model, index, list, value, indexOffset);
+    return true;
   }
 
   @Override

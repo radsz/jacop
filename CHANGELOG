@@ -1403,7 +1403,22 @@ Version 5.0 (unreleased)
     pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
     No MiniZinc Challenge instance 2008-2026 reaches Geost.
 
-96. Portfolio (-p) settings are chosen from data. Each setting was run
+96. With --lcg and an objective, free search (-f) gives way to free search
+    without learning when LCG is too slow: if, at a tenth of the time
+    limit or later, LCG has made fewer than 50 conflicts per second and
+    has a solution, it stops, the model's clauses are posted to the store
+    and free search continues from the LCG solution (phase hints) with
+    its cost as the bound. --free-config lcg-slow-rate=<conflicts per
+    second> (0 turns it off) and lcg-slow-at=<share of the time limit>
+    set the rule; the statistic lcgSlowConflicts reports a switch. On the
+    59 Challenge instances that -f has not finished at 6 s (60 s), 12
+    switch: 7 end better than both runs without the rule (tdtsp 20_26
+    19,830 to 12,995, cvrp B-n45-k5 2,084 to 1,587), 3 worse (cargo 08
+    and 16, jobshop swv07) and 2 equal. ptv 1c goes from 2,941 to 1,666,
+    ptv 5a from 270 to 60, cgt_12 from 1 to -129,352 and cgt_3 from
+    19,722 to -147,892.
+    
+97. Portfolio (-p) settings are chosen from data. Each setting was run
     alone on 240 hard instances (osolpro benchmarks/portfolio-configs) and
     the threads after the first now follow the greedy best order for both
     -f (--lcg on -f) and no options (--lcg on): LCG with literal branching,
@@ -1421,7 +1436,7 @@ Version 5.0 (unreleased)
     scheduling models reach somewhat worse objectives, since plain -f
     without LCG is no longer among the first four threads.
 
-97. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
+98. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
     failures, restarts, peakDepth, variables, propagators, propagations,
     nogoods, initTime, solveTime, objective, solutions) and now peakMem,
     the peak memory of the JVM in Mbytes. The statistics of JaCoP's own
@@ -1432,12 +1447,12 @@ Version 5.0 (unreleased)
     configuration declares --search-statistics. A malformed
     "%%%%mzn-stat: restarts" line of -v output is fixed.
 
-98. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
+99. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
     decision level of the SAT search (assumption levels included), and
     restarts, the SAT solver's restarts (as lcgRestarts). Before, both
     were always 0.
 
-99. The FlatZinc front end solves the independent parts of a model that
+100. The FlatZinc front end solves the independent parts of a model that
     the objective does not depend on (for a satisfaction model, every
     part but the largest) once at the root, and fixes them. Each part
     gets a depth-first search in annotation order with a 2 s budget
@@ -1453,7 +1468,7 @@ Version 5.0 (unreleased)
     4 s instead of 17 s, and cable_tree_wiring R046 ends at its optimum
     143,534 instead of 284,142; other objectives move by noise.
 
-100. Presolve dual reductions also find dominated columns: if raising x
+101. Presolve dual reductions also find dominated columns: if raising x
     by one and lowering y by one keeps every constraint and the
     objective, the clause x = max(x) or y = min(y) is added (x >= y for
     0-1 variables). It is left out with -a, since it can remove some of
@@ -1461,6 +1476,36 @@ Version 5.0 (unreleased)
     optimum stays). -Djacop.presolve.domcol=false turns it off. It fires
     on 37 Challenge instances (train, table-layout, connect,
     unit-commitment, wmsmc-int) and is neutral on them at 60 s.
+
+102. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+    search: <prefix>.opb is the model as pseudo-Boolean constraints over
+    the order encoding of the domains the FlatZinc translation gives the
+    variables, before the constraints propagate, and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
+    reasons, pol steps for the flow reasons of cardinality constraints,
+    soli for improving solutions, deletions, and a conclusion UNSAT, SAT
+    or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
+    It is off by default, implies --lcg, one thread, bounds consistency
+    and no LP, and runs no core-guided phase and learns no linear sums.
+    Linear constraints (LinearInt, LinearBool and the linear forms of LCG
+    explanations), their reifications, equalities with constants,
+    ChannelReif, ChannelImply, clauses, element over constants, Count,
+    AtMost, AtLeast, CountBounds, Max, Min, tables, regular and MDD
+    constraints, Alldifferent, Alldiff, Alldistinct, GCC, CountValues and
+    CountValuesBounds are encoded (the flow reasons of the last six by a
+    pol step over a violated cut of their flow network), as are
+    b -> x + c <= z and the time table of CumulativeBasic, with fixed or
+    variable durations and resource uses (a time-indexed encoding); under
+    --proof every cumulative is posted as CumulativeBasic, and the
+    redundant constraints the front end adds (unary resources, energy
+    precedence, weighted completion, stocking cost, overlapping all
+    different) are left out;
+    for another constraint, or a
+    model over 4*10^8 characters, fzn-jacop prints "%% --proof: ..." and
+    =====UNKNOWN=====. The proof derives each change of the root
+    propagation as a unit from its reason, and a failure of the root
+    propagation as UNSAT; changes without a reason (domains narrowed by
+    the translation) or by a constraint that cannot be encoded narrow the
+    model's domains instead. The FlatZinc translation is not certified.
 
 Version 4.11
 =============
