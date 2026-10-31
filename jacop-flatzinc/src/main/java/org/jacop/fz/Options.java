@@ -189,6 +189,11 @@ public class Options {
                 and auto),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
+                lcg-slow-rate=<conflicts per second> (with --lcg and an objective: LCG
+                that makes fewer conflicts per second by lcg-slow-at, and has a solution,
+                gives way to free search without learning, default 50; 0 = off),
+                lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
+                checked, default 0.1),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
