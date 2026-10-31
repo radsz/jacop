@@ -838,10 +838,11 @@ public final class LcgSolver implements ExternalPropagator {
       for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
         int v = e.nextElement();
         Integer k = valueIndex.get(v);
+        Integer node = free.get(v);
         if (k != null) {
           flow.add(2 + j, 2 + n + k, 0, 1);
-        } else if (free.containsKey(v)) {
-          flow.add(2 + j, free.get(v), 0, 1);
+        } else if (node != null) {
+          flow.add(2 + j, node, 0, 1);
         }
       }
     }

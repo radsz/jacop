@@ -478,7 +478,7 @@ final class OpbEncoder implements PbModel {
     int k = 0;
     for (Map.Entry<Integer, StringBuilder> t : terms.entrySet()) {
       values[k] = t.getKey();
-      int c = count.get(t.getKey());
+      int c = count.getOrDefault(t.getKey(), 0);
       if (c >= 2) {
         line(t.getValue() + ">= " + (c - 1));
         upper[k] = numConstraints;
