@@ -49,6 +49,8 @@ import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
@@ -79,8 +81,10 @@ import org.jacop.fz.SimpleNode;
 import org.jacop.fz.Tables;
 import org.jacop.fz.VariablesParameters;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ConflictRows;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.ReifiedExplanation;
 import org.jacop.lcg.ValueIndicator;
 import org.jacop.satwrapper.SatTranslation;
@@ -1199,7 +1203,7 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x = c, reified with b or implied by b. */
   final class FzXeqC extends Constraint
-      implements Violation, Copyable<FzXeqC>, Explainable, ValueIndicator {
+      implements Violation, Copyable<FzXeqC>, Explainable, ValueIndicator, ConflictRows {
 
     final IntVar x;
     final int c;
@@ -1234,6 +1238,12 @@ public class Support implements ParserTreeConstants {
     @Override
     public void consistency(final Store store) {
       propagateFzXeqC(store, x, c, b, isReified, this::removeConstraint);
+    }
+
+    // b -> x = c (x != c when b is false is not linear)
+    @Override
+    public List<LinearForm> conflictRows() {
+      return Linearizations.of(new Implies(b, new XeqC(x, c)));
     }
 
     @Override
@@ -1378,7 +1388,8 @@ public class Support implements ParserTreeConstants {
   }
 
   /** The constraint x = y, reified with b or implied by b. */
-  final class FzXeqY extends Constraint implements Violation, Copyable<FzXeqY>, Explainable {
+  final class FzXeqY extends Constraint
+      implements Violation, Copyable<FzXeqY>, Explainable, ConflictRows {
 
     final IntVar x;
     final IntVar y;
@@ -1398,6 +1409,12 @@ public class Support implements ParserTreeConstants {
     @Override
     public void consistency(final Store store) {
       propagateFzXeqY(store, x, y, b, isReified, this::removeConstraint);
+    }
+
+    // b -> x = y (x != y when b is false is not linear)
+    @Override
+    public List<LinearForm> conflictRows() {
+      return Linearizations.of(new Implies(b, new XeqY(x, y)));
     }
 
     @Override

@@ -156,8 +156,9 @@ final class DiffnExplanation {
    * Adds to {@code out} the bounds of every origin and length just before a trail position. The
    * pruning rules of {@link Nooverlap} and {@link Diffn} read only these bounds (compulsory parts,
    * profiles, areas) and remove whole intervals, so the bounds explain any of their prunings and
-   * failures. It replaces the generic reason, which also lists every hole of every origin: with
-   * wide origin domains that is thousands of atoms per explanation.
+   * failures, with the holes a pruned bound moved past (the caller adds those). It replaces the
+   * generic reason, which also lists every hole of every origin: with wide origin domains that is
+   * thousands of atoms per explanation.
    *
    * @param trail the trail
    * @param position the trail position (an entry index, or {@link AtomicTrail#size()} for now)

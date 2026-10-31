@@ -229,6 +229,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -372,6 +373,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -516,6 +518,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
@@ -660,6 +663,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
                                 <include>**/ExampleBasedTest.java</include>
