@@ -115,9 +115,23 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
         // lines below,
         // comment three lines after uncommented lines and checkForOverlow in the constructor
 
-        x.domain.in(store.level, x, z.min() - y.max(), z.max() - y.min());
-        y.domain.in(store.level, y, z.min() - x.max(), z.max() - x.min());
-        z.domain.in(store.level, z, x.min() + y.min(), x.max() + y.max());
+        // the bounds kept on the variables tell whether a bound changes, so a domain is only read
+        // when it is pruned; on road-cons most calls prune nothing
+        int lo = z.min() - y.max();
+        int hi = z.max() - y.min();
+        if (lo > x.min() || hi < x.max()) {
+          x.domain.in(store.level, x, lo, hi);
+        }
+        lo = z.min() - x.max();
+        hi = z.max() - x.min();
+        if (lo > y.min() || hi < y.max()) {
+          y.domain.in(store.level, y, lo, hi);
+        }
+        lo = x.min() + y.min();
+        hi = x.max() + y.max();
+        if (lo > z.min() || hi < z.max()) {
+          z.domain.in(store.level, z, lo, hi);
+        }
       }
 
     } while (store.propagationHasOccurred);

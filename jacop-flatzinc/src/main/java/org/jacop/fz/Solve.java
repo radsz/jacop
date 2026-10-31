@@ -1741,6 +1741,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
+    lcg.setUnusedVariables(dictionary.unusedVariables);
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
