@@ -78,6 +78,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XlteqC;
@@ -95,6 +96,7 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
@@ -433,6 +435,61 @@ class LcgSolverTest {
       proved++;
     }
     assertThat(proved).isGreaterThan(300);
+  }
+
+  /**
+   * Presolving the root again at every restart that learnt a root fact, which leaves out the
+   * constraints the root satisfies, keeps the optimum: random weighted sums over a permutation with
+   * random side constraints, solved with and without it.
+   */
+  @Test
+  void restartPresolveKeepsTheOptimum() {
+    Random rnd = new Random(29);
+    long represolves = 0;
+    for (int instance = 0; instance < 20; instance++) {
+      long seed = rnd.nextLong();
+      int[] optimum = new int[2];
+      int[] status = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 9;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, n - 1);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 4; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(7) - 3;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(10)));
+        }
+        IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = r.nextInt(41) - 20;
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setRestartPresolve(run == 0 ? 0 : 1e-9);
+        status[run] = solver.minimize(cost);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(cost);
+        }
+        if (run == 1) {
+          represolves += solver.represolves;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(represolves).isGreaterThan(0);
   }
 
   // the smallest weighted sum over the assignments of x that satisfy the relations
@@ -3159,6 +3216,81 @@ class LcgSolverTest {
    * default search, with objective lower-bound search, and following the start-time annotation as
    * fixed search and as free search. Conflict analysis stops at semantic UIPs on some of them.
    */
+  /**
+   * Cumulatives over two machines, with upper or lower bounds, negative heights and optional tasks:
+   * LCG with the explanation checker on finds the same least sum of starts as depth-first search.
+   * Without optional tasks its reasons are all its own.
+   */
+  @Test
+  void cumulativesAgreeWithSearch() {
+    Random rnd = new Random(17);
+    long own = 0;
+    for (int instance = 0; instance < 40; instance++) {
+      int n = 4 + rnd.nextInt(3);
+      boolean upper = rnd.nextBoolean();
+      boolean optional = rnd.nextInt(3) == 0;
+      int[] d = new int[n];
+      int[] r = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(3);
+        r[i] = rnd.nextInt(5) - (upper ? 1 : 2);
+      }
+      int[] bound = {rnd.nextInt(3) - (upper ? 0 : 1), rnd.nextInt(3) - (upper ? 0 : 1)};
+      Integer[] optimum = new Integer[2];
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] s = new IntVar[n];
+        IntVar[] m = new IntVar[n];
+        IntVar[] p = optional ? new IntVar[n] : null;
+        IntVar[] dur = new IntVar[n];
+        IntVar[] res = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          s[i] = new IntVar(store, "s" + i, 0, 6);
+          m[i] = new IntVar(store, "m" + i, 1, 2);
+          dur[i] = new IntVar(store, d[i], d[i]);
+          res[i] = new IntVar(store, r[i], r[i]);
+          if (optional) {
+            p[i] = new IntVar(store, "p" + i, i == 0 ? 1 : 0, 1);
+          }
+        }
+        IntVar[] b = {new IntVar(store, bound[0], bound[0]), new IntVar(store, bound[1], bound[1])};
+        store.impose(new Cumulatives(s, dur, res, m, b, upper, 1, p));
+        IntVar cost = new IntVar(store, "cost", 0, 6 * n);
+        store.impose(new SumInt(s, "==", cost));
+        IntVar[] all = optional ? concat(concat(m, p), s) : concat(m, s);
+        if (mode == 0) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          if (search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()), cost)) {
+            optimum[0] = search.getCostValue();
+          }
+        } else {
+          LcgSolver solver = new LcgSolver(store);
+          solver.setChecking(true);
+          if (solver.minimize(cost) == CdclSolver.SAT) {
+            optimum[1] = solver.value(cost);
+          }
+          long[] stats = solver.explanationStatistics().get("Cumulatives");
+          if (stats != null) {
+            // only an optional task that no machine can take is set absent by the generic reason
+            if (!optional) {
+              assertThat(stats[1] + stats[4]).as("instance %d generic", instance).isZero();
+            }
+            own += stats[0];
+          }
+        }
+      }
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(own).isPositive();
+  }
+
+  private static IntVar[] concat(IntVar[] a, IntVar[] b) {
+    IntVar[] c = Arrays.copyOf(a, a.length + b.length);
+    System.arraycopy(b, 0, c, a.length, b.length);
+    return c;
+  }
+
   @Test
   void makespanAgreesWithSearch() {
     Random rnd = new Random(9);
