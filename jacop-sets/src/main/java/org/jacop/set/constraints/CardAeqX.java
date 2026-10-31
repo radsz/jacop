@@ -39,6 +39,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -48,7 +51,8 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 3.1
  */
-public class CardAeqX extends Constraint implements SatisfiedPresent, Copyable<CardAeqX> {
+public class CardAeqX extends Constraint
+    implements SatisfiedPresent, Copyable<CardAeqX>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -136,6 +140,23 @@ public class CardAeqX extends Constraint implements SatisfiedPresent, Copyable<C
   @Override
   public int getDefaultConsistencyPruningEvent() {
     throw new IllegalStateException("Not implemented as more precise variant exists.");
+  }
+
+  // the cardinality rules are those of the set's mirror, with the cardinality variable as well
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    SetMirror m = a.lcgMirror();
+    return getClass() == CardAeqX.class
+        && m != null
+        && m.explainCardinalityEqual(trail, entry, cardinality, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    SetMirror m = a.lcgMirror();
+    return getClass() == CardAeqX.class
+        && m != null
+        && m.explainCardinalityEqualFailure(trail, cardinality, out);
   }
 
   @Override
