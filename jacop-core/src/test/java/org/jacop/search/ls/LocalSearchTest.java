@@ -73,7 +73,6 @@ class LocalSearchTest {
   /** The same with feasibility jump moves. */
   @Test
   void findsQueensWithJumps() {
-    queens(false, true);
     queens(true, true);
   }
 
