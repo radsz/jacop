@@ -136,6 +136,28 @@ public interface PbModel {
   void allDifferent(IntVar[] x);
 
   /**
+   * Adds that counters[k] of the variables take values[k] (between low[k] and up[k] when
+   * counters[k] is null), and that they take counted values only when closed. The solver writes the
+   * counting steps that the flow explanations of such a constraint need.
+   *
+   * @param x the counted variables, all different objects
+   * @param values the counted values, increasing
+   * @param counters the counter of each value, none of them among x, or null entries
+   * @param low the lower bound of each value without a counter, or null
+   * @param up the upper bound of each value without a counter, or null
+   * @param closed whether the variables take counted values only
+   * @param rest the number of variables taking no counted value, or null
+   */
+  void cardinality(
+      IntVar[] x,
+      int[] values,
+      IntVar[] counters,
+      int[] low,
+      int[] up,
+      boolean closed,
+      IntVar rest);
+
+  /**
    * Adds {@code (number of x[i] = value) - sum y[j] relation c}: the counting constraints.
    *
    * @param model the model

@@ -46,6 +46,7 @@ import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
@@ -380,6 +381,36 @@ class VeriPbProofTest {
       assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
       assertThat(checker.conclusion).isEqualTo("BOUNDS -44 -44");
     }
+  }
+
+  @Test
+  void globalCardinalityOptimumIsProved() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 4);
+    }
+    IntVar[] counters = new IntVar[4];
+    for (int v = 0; v < counters.length; v++) {
+      counters[v] = new IntVar(store, "c" + (v + 1), v == 3 ? 1 : 0, 2);
+    }
+    store.impose(new GCC(x, counters));
+    IntVar obj = new IntVar(store, "obj", 0, 100);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], x[4], x[5], obj},
+            new int[] {5, 4, 3, 2, 1, 1, -1},
+            "==",
+            0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // 1 1 2 2 3 4
+    assertThat(lcg.value(obj)).isEqualTo(26);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 26 26");
+    assertThat(pbp).contains("\npol ");
   }
 
   @Test

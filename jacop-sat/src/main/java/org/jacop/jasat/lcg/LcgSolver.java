@@ -54,6 +54,7 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
@@ -497,8 +498,8 @@ public final class LcgSolver implements ExternalPropagator {
   private OutputStream proofModel;
   private boolean proofStarted;
 
-  // the at-most-one lines of the all different constraints of the proof model
-  private Map<Constraint, OpbEncoder.AllDifferentLines> proofAllDifferent = Map.of();
+  // the lines of the cardinality constraints of the proof model
+  private Map<Constraint, OpbEncoder.CardinalityLines> proofCardinality = Map.of();
   // the clauses of addClause, for the OPB model
   private final List<IntVar[][]> proofClauses = new ArrayList<>();
 
@@ -572,7 +573,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (IntVar[][] clause : proofClauses) {
       model.clause(clause[0], clause[1]);
     }
-    proofAllDifferent = model.allDifferentLines();
+    proofCardinality = model.cardinalityLines();
     if (!model.unsupported().isEmpty()) {
       throw new UnsupportedOperationException(
           "proof logging does not support " + String.join(", ", model.unsupported()));
@@ -617,85 +618,243 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Writes the steps that make a reason or a failure of an all different constraint a rup step.
-   * Under its hypotheses, the atoms of the reason and the negated atom, some of the variables have
-   * fewer values left than there are of them: the variables that the search for a matching visits
-   * when it fails to match one more. The sum of the at-most-one lines of their values and of the
-   * clauses "each of them takes one of its values" is false under the hypotheses.
+   * Writes the steps that make a reason or a failure of a cardinality constraint (all different or
+   * global cardinality) a rup step. Under its hypotheses, the atoms of the reason and the negated
+   * atom, the flow network source to variables (each exactly 1), variables to their values left,
+   * values to sink (the bounds of their counters) has no feasible flow, and a minimum cut A of it
+   * is violated: the lower bounds into A exceed the capacities out of A. Without the source and the
+   * sink in A, the variables S of A have fewer places than there are of them: the clauses "each of
+   * S takes one of its values left" added to the upper lines of the values of A are false under the
+   * hypotheses. With both, the values W outside A need more variables than can take them: the lower
+   * lines of W added to the at-most-one lines of the variables outside A are false.
    *
    * @param c the constraint
    * @param atoms the atoms of the reason, from position from
    * @param from the first atom of the reason
    * @param entry the entry explained, or -1 for a failure
    */
-  private void proofPigeonhole(Constraint c, EntryList atoms, int from, int entry) {
-    OpbEncoder.AllDifferentLines lines = proofAllDifferent.get(c);
+  private void proofCardinality(Constraint c, EntryList atoms, int from, int entry) {
+    OpbEncoder.CardinalityLines lines = proofCardinality.get(c);
     if (lines == null || !proofStarted) {
       return;
     }
     int[] variables = lines.variables();
+    int[] values = lines.values();
     int n = variables.length;
+    int m = values.length;
     IntDomain[] dom = new IntDomain[n];
     StringBuilder[] literals = new StringBuilder[n];
     hypotheses(lines.position(), variables, atoms, from, entry, dom, literals);
-    // the restricted variables first, where the matching most likely fails
-    Integer[] order = new Integer[n];
-    for (int j = 0; j < n; j++) {
-      order[j] = j;
+    int[] counters = lines.counters();
+    IntDomain[] count = new IntDomain[m];
+    for (int k = 0; k < m; k++) {
+      count[k] =
+          counters[k] < 0 ? new IntervalDomain(lines.low()[k], lines.up()[k]) : root[counters[k]];
     }
-    Arrays.sort(order, (a, b) -> Integer.compare(dom[a].getSize(), dom[b].getSize()));
-    Map<Integer, Integer> owner = new HashMap<>();
-    Set<Integer> visited = new HashSet<>();
-    int unmatched = -1;
-    for (int j : order) {
-      visited.clear();
-      if (!match(j, dom, owner, visited)) {
-        unmatched = j;
-        break;
+    if (!lines.counterPosition().isEmpty()) {
+      int[] free = new int[m];
+      Arrays.fill(free, -1);
+      lines.counterPosition().forEach((i, k) -> free[k] = i);
+      IntDomain[] restricted = new IntDomain[m];
+      StringBuilder[] unused = new StringBuilder[m];
+      int[] ids = new int[m];
+      for (int k = 0; k < m; k++) {
+        ids[k] = free[k] < 0 ? counters[k] : free[k];
+      }
+      hypotheses(lines.counterPosition(), ids, atoms, from, entry, restricted, unused);
+      for (int k = 0; k < m; k++) {
+        if (free[k] >= 0) {
+          count[k] = restricted[k];
+        }
       }
     }
-    if (unmatched < 0) {
-      return;
+    Map<Integer, Integer> valueIndex = new HashMap<>();
+    for (int k = 0; k < m; k++) {
+      valueIndex.put(values[k], k);
     }
-    // the variables visited: the unmatched one and the owners of the values visited
-    List<Integer> set = new ArrayList<>();
-    set.add(unmatched);
-    for (int v : visited) {
-      set.add(owner.get(v));
+    // the values not counted by an open constraint are free: any number of variables take them
+    Map<Integer, Integer> free = new HashMap<>();
+    for (int j = 0; j < n && !lines.closed(); j++) {
+      for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (!valueIndex.containsKey(v)) {
+          free.putIfAbsent(v, n + m + 2 + free.size());
+        }
+      }
+    }
+    // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
+    int source = n + m + 2 + free.size();
+    int sink = source + 1;
+    Flow flow = new Flow(sink + 1);
+    for (int j = 0; j < n; j++) {
+      flow.add(0, 2 + j, 1, 1);
+      for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        Integer k = valueIndex.get(v);
+        if (k != null) {
+          flow.add(2 + j, 2 + n + k, 0, 1);
+        } else if (free.containsKey(v)) {
+          flow.add(2 + j, free.get(v), 0, 1);
+        }
+      }
+    }
+    for (int node : free.values()) {
+      flow.add(node, 1, 0, n);
+    }
+    for (int k = 0; k < m; k++) {
+      if (count[k].isEmpty()) {
+        return;
+      }
+      int lo = Math.max(0, count[k].min());
+      int hi = Math.min(n, count[k].max());
+      if (lo > hi) {
+        return;
+      }
+      flow.add(2 + n + k, 1, lo, hi);
+    }
+    flow.add(1, 0, 0, n + 1);
+    boolean[] cut = flow.violatedCut(source, sink);
+    if (cut == null) {
+      return;
     }
     StringBuilder pol = new StringBuilder();
     int operands = 0;
-    for (int v : visited) {
-      Long line = lines.lines().get(v);
-      String operand = null;
-      if (line != null) {
-        operand = Long.toString(line);
-      } else {
-        // a value only one variable can take: the axiom ~[x = v] >= 0 stands for its line
-        for (int j : set) {
-          if (!root[variables[j]].singleton() && root[variables[j]].contains(v)) {
-            operand = "~" + OpbEncoder.eq(variables[j], v);
+    if (!cut[0] && !cut[1]) {
+      for (int k = 0; k < m; k++) {
+        if (cut[2 + n + k]) {
+          String operand = lines.upper()[k] > 0 ? Long.toString(lines.upper()[k]) : null;
+          for (int j = 0; operand == null && j < n; j++) {
+            // a value only one variable can take: the axiom ~[x = v] >= 0 stands for its line
+            if (cut[2 + j]
+                && !root[variables[j]].singleton()
+                && root[variables[j]].contains(values[k])) {
+              operand = "~" + OpbEncoder.eq(variables[j], values[k]);
+            }
+          }
+          if (operand != null) {
+            pol.append(operands++ == 0 ? "" : " ").append(operand).append(operands > 1 ? " +" : "");
           }
         }
       }
-      if (operand != null) {
-        pol.append(operands++ == 0 ? "" : " ").append(operand).append(operands > 1 ? " +" : "");
+      for (int j = 0; j < n; j++) {
+        int i = variables[j];
+        if (!cut[2 + j] || root[i].singleton()) {
+          continue;
+        }
+        StringBuilder takes = new StringBuilder("rup");
+        for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+          takes.append(" 1 ").append(OpbEncoder.eq(i, e.nextElement()));
+        }
+        long id = proof.lemma(takes.append(literals[j]).append(" >= 1 ;\n"));
+        pol.append(operands++ == 0 ? "" : " ").append(id).append(operands > 1 ? " +" : "");
       }
-    }
-    for (int j : set) {
-      int i = variables[j];
-      if (root[i].singleton()) {
-        continue;
+    } else if (cut[0] && cut[1]) {
+      for (int k = 0; k < m; k++) {
+        if (!cut[2 + n + k] && lines.lower()[k] > 0) {
+          pol.append(operands++ == 0 ? "" : " ").append(lines.lower()[k]);
+          pol.append(operands > 1 ? " +" : "");
+        }
       }
-      StringBuilder takes = new StringBuilder("rup");
-      for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
-        takes.append(" 1 ").append(OpbEncoder.eq(i, e.nextElement()));
+      for (int j = 0; j < n; j++) {
+        if (!cut[2 + j] && lines.atMostOne()[j] > 0) {
+          pol.append(operands++ == 0 ? "" : " ").append(lines.atMostOne()[j]);
+          pol.append(operands > 1 ? " +" : "");
+        }
       }
-      long id = proof.lemma(takes.append(literals[j]).append(" >= 1 ;\n"));
-      pol.append(operands++ == 0 ? "" : " ").append(id).append(operands > 1 ? " +" : "");
     }
     if (operands >= 2) {
       proof.pol(pol);
+    }
+  }
+
+  /**
+   * A flow network with lower bounds on its arcs, for the cuts of {@link #proofCardinality}: an arc
+   * u to v with bounds l..h becomes one of capacity h - l, with l moved to arcs from the source of
+   * the lower bounds to v and from u to their sink.
+   */
+  private static final class Flow {
+    private final int[] head;
+    private int[] to = new int[64];
+    private int[] capacity = new int[64];
+    private int[] next = new int[64];
+    private int arcs;
+    private final int[] excess;
+
+    Flow(int nodes) {
+      head = new int[nodes];
+      Arrays.fill(head, -1);
+      excess = new int[nodes];
+    }
+
+    void add(int u, int v, int lower, int upper) {
+      arc(u, v, upper - lower);
+      excess[v] += lower;
+      excess[u] -= lower;
+    }
+
+    private void arc(int u, int v, int c) {
+      if (arcs + 2 > to.length) {
+        to = Arrays.copyOf(to, 2 * to.length);
+        capacity = Arrays.copyOf(capacity, 2 * capacity.length);
+        next = Arrays.copyOf(next, 2 * next.length);
+      }
+      to[arcs] = v;
+      capacity[arcs] = c;
+      next[arcs] = head[u];
+      head[u] = arcs++;
+      to[arcs] = u;
+      capacity[arcs] = 0;
+      next[arcs] = head[v];
+      head[v] = arcs++;
+    }
+
+    /**
+     * Returns the nodes of a violated cut, reachable from the source of the lower bounds once the
+     * flow is maximal, or null when a feasible flow exists.
+     */
+    boolean[] violatedCut(int source, int sink) {
+      int demand = 0;
+      for (int v = 0; v < source; v++) {
+        if (excess[v] > 0) {
+          arc(source, v, excess[v]);
+          demand += excess[v];
+        } else if (excess[v] < 0) {
+          arc(v, sink, -excess[v]);
+        }
+      }
+      int total = 0;
+      boolean[] seen = new boolean[head.length];
+      while (true) {
+        Arrays.fill(seen, false);
+        int pushed = augment(source, sink, Integer.MAX_VALUE, seen);
+        if (pushed == 0) {
+          break;
+        }
+        total += pushed;
+      }
+      if (total == demand) {
+        return null;
+      }
+      // seen holds the nodes the last, failed search reached: those reachable in the residual graph
+      return Arrays.copyOf(seen, source);
+    }
+
+    private int augment(int u, int sink, int limit, boolean[] seen) {
+      if (u == sink) {
+        return limit;
+      }
+      seen[u] = true;
+      for (int a = head[u]; a >= 0; a = next[a]) {
+        if (capacity[a] > 0 && !seen[to[a]]) {
+          int pushed = augment(to[a], sink, Math.min(limit, capacity[a]), seen);
+          if (pushed > 0) {
+            capacity[a] -= pushed;
+            capacity[a ^ 1] += pushed;
+            return pushed;
+          }
+        }
+      }
+      return 0;
     }
   }
 
@@ -797,6 +956,9 @@ public final class LcgSolver implements ExternalPropagator {
     for (int round = 0, changed = 1; changed > 0 && round < 4 * n; round++) {
       changed = 0;
       for (int k = 0; k < n; k++) {
+        if (w[k] == 0) {
+          continue;
+        }
         // the bounds of w[k] * x[k] that the other terms leave, for sum <= c and sum >= c
         long smallest = 0;
         long largest = 0;
@@ -856,22 +1018,6 @@ public final class LcgSolver implements ExternalPropagator {
     String bound = lower ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v + 1);
     proof.lemma("rup 1 " + bound + clause + " >= 1 ;\n");
     return 1;
-  }
-
-  // Kuhn's augmenting path from variable j; visited collects the values tried
-  private static boolean match(
-      int j, IntDomain[] dom, Map<Integer, Integer> owner, Set<Integer> visited) {
-    for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
-      int v = e.nextElement();
-      if (visited.add(v)) {
-        Integer o = owner.get(v);
-        if (o == null || match(o, dom, owner, visited)) {
-          owner.put(v, j);
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   /** The OPB literal of a trail entry's atom weakened by slack, or "1" when the root has it. */
@@ -2580,7 +2726,7 @@ public final class LcgSolver implements ExternalPropagator {
           proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
         }
         if (proof != null) {
-          proofPigeonhole(store.recentlyFailedConstraint, atoms, 0, -1);
+          proofCardinality(store.recentlyFailedConstraint, atoms, 0, -1);
           proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
@@ -2615,7 +2761,7 @@ public final class LcgSolver implements ExternalPropagator {
       proof.comment((own ? "reason " : "generic reason ") + trail.reason(e));
     }
     if (proof != null) {
-      proofPigeonhole(trail.reason(e), out, mark, e);
+      proofCardinality(trail.reason(e), out, mark, e);
       proofLinearBounds(trail.reason(e), out, mark, e);
     }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {

@@ -31,7 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
@@ -43,6 +45,8 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * CountValues constraint implements the counting over numbers of occurrences of a given vector of
@@ -52,7 +56,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class CountValues extends AbstractCountValues
-    implements Violation, Copyable<CountValues>, Explainable {
+    implements Violation, Copyable<CountValues>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -214,6 +218,26 @@ public class CountValues extends AbstractCountValues
     }
     return new CardinalityExplanation.Network(
         list, sortedValues, sortedCounter, null, null, true, counterRest, budget);
+  }
+
+  /**
+   * Writes a count line per value; the solver derives the cuts its flow explanations need. The
+   * variables taking no counted value are counted by the rest counter.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    Set<IntVar> distinct = new HashSet<>(Arrays.asList(list));
+    if (getClass() != CountValues.class || distinct.size() != list.length) {
+      return false;
+    }
+    for (IntVar c : extendedCounter) {
+      // a counter among the variables, or two counters of one variable, would mix their bounds
+      if (!c.singleton() && !distinct.add(c)) {
+        return false;
+      }
+    }
+    model.cardinality(list, values, counter, null, null, false, counterRest);
+    return true;
   }
 
   @Override

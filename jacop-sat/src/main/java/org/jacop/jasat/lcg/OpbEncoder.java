@@ -35,7 +35,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -91,16 +93,38 @@ final class OpbEncoder implements PbModel {
   private final List<String> guard = new ArrayList<>();
 
   /**
-   * The at-most-one line of each value of an all different constraint.
+   * The lines of a cardinality constraint (all different or global cardinality), by which the
+   * solver derives its flow reasons: for each counted value the upper line {@code sum [x_j = v] -
+   * count <= 0} and the lower line {@code sum [x_j = v] - count >= 0}, and for each variable the
+   * line that it takes at most one value. A line not written is 0.
    *
-   * @param variables the indexes of its variables
+   * @param variables the indexes of the counted variables
    * @param position the position of each index in variables
-   * @param lines the line of each value two or more of the variables can take
+   * @param values the counted values, increasing
+   * @param counters the index of the counter of each value, or -1 for constant bounds
+   * @param low the lower bound of each value without a counter
+   * @param up the upper bound of each value without a counter
+   * @param closed whether the variables take counted values only; otherwise the other values are
+   *     free
+   * @param counterPosition the position of each counter index in counters
+   * @param upper the upper line of each value
+   * @param lower the lower line of each value
+   * @param atMostOne the at-most-one line of each variable
    */
-  record AllDifferentLines(
-      int[] variables, Map<Integer, Integer> position, Map<Integer, Long> lines) {}
+  record CardinalityLines(
+      int[] variables,
+      Map<Integer, Integer> position,
+      int[] values,
+      int[] counters,
+      int[] low,
+      int[] up,
+      boolean closed,
+      Map<Integer, Integer> counterPosition,
+      long[] upper,
+      long[] lower,
+      long[] atMostOne) {}
 
-  private final Map<Constraint, AllDifferentLines> allDifferent = new IdentityHashMap<>();
+  private final Map<Constraint, CardinalityLines> cardinality = new IdentityHashMap<>();
 
   // the constraint being written
   private Constraint current;
@@ -438,24 +462,134 @@ final class OpbEncoder implements PbModel {
         }
       }
     }
-    Map<Integer, Long> lines = new HashMap<>();
+    int[] values = new int[terms.size()];
+    long[] upper = new long[values.length];
+    int k = 0;
     for (Map.Entry<Integer, StringBuilder> t : terms.entrySet()) {
+      values[k] = t.getKey();
       int c = count.get(t.getKey());
       if (c >= 2) {
         line(t.getValue() + ">= " + (c - 1));
-        lines.put(t.getKey(), numConstraints);
+        upper[k] = numConstraints;
+      }
+      k++;
+    }
+    int[] counters = new int[values.length];
+    Arrays.fill(counters, -1);
+    int[] up = new int[values.length];
+    Arrays.fill(up, 1);
+    cardinality.put(
+        current,
+        new CardinalityLines(
+            variables,
+            position,
+            values,
+            counters,
+            new int[values.length],
+            up,
+            true,
+            Map.of(),
+            upper,
+            new long[values.length],
+            new long[x.length]));
+  }
+
+  @Override
+  public void cardinality(
+      IntVar[] x,
+      int[] values,
+      IntVar[] counters,
+      int[] low,
+      int[] up,
+      boolean closed,
+      IntVar rest) {
+    if (!guard.isEmpty()) {
+      throw new IllegalStateException("a cardinality constraint under a guard");
+    }
+    int[] variables = new int[x.length];
+    Map<Integer, Integer> position = new HashMap<>();
+    Set<Integer> counted = new HashSet<>();
+    for (int v : values) {
+      counted.add(v);
+    }
+    long[] atMostOne = new long[x.length];
+    for (int j = 0; j < x.length; j++) {
+      int i = id.applyAsInt(x[j]);
+      variables[j] = i;
+      position.put(i, j);
+      IntDomain d = root[i];
+      grow(d.getSize());
+      List<String> literals = new ArrayList<>();
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (counted.contains(v) || !closed) {
+          literals.add(equal(x[j], v));
+        } else {
+          // the variables take counted values only
+          clause(PbModel.not(equal(x[j], v)));
+        }
+      }
+      if (literals.size() >= 2) {
+        // implied by the definitions of the value literals; a lower bound reason needs it
+        long[] ones = new long[literals.size()];
+        Arrays.fill(ones, 1);
+        sum(literals.toArray(String[]::new), ones, new IntVar[0], new long[0], LinearForm.LE, 1);
+        atMostOne[j] = numConstraints;
       }
     }
-    allDifferent.put(current, new AllDifferentLines(variables, position, lines));
+    int[] counterIds = new int[values.length];
+    Map<Integer, Integer> counterPosition = new HashMap<>();
+    long[] upper = new long[values.length];
+    long[] lower = new long[values.length];
+    for (int k = 0; k < values.length; k++) {
+      if (counters[k] == null) {
+        counterIds[k] = -1;
+        PbModel.count(this, x, values[k], new IntVar[0], LinearForm.GE, low[k]);
+        lower[k] = numConstraints;
+        PbModel.count(this, x, values[k], new IntVar[0], LinearForm.LE, up[k]);
+        upper[k] = numConstraints;
+        continue;
+      }
+      counterIds[k] = id.applyAsInt(counters[k]);
+      if (!root[counterIds[k]].singleton()) {
+        counterPosition.put(counterIds[k], k);
+      }
+      // sum [x_j = v] - count >= 0, then <= 0
+      PbModel.count(this, x, values[k], new IntVar[] {counters[k]}, LinearForm.EQ, 0);
+      lower[k] = numConstraints - 1;
+      upper[k] = numConstraints;
+    }
+    if (rest != null) {
+      // the variables taking no counted value: rest + sum counters = n
+      IntVar[] all = Arrays.copyOf(counters, counters.length + 1);
+      all[counters.length] = rest;
+      long[] ones = new long[all.length];
+      Arrays.fill(ones, 1);
+      sum(new String[0], new long[0], all, ones, LinearForm.EQ, x.length);
+    }
+    cardinality.put(
+        current,
+        new CardinalityLines(
+            variables,
+            position,
+            values,
+            counterIds,
+            low,
+            up,
+            closed,
+            counterPosition,
+            upper,
+            lower,
+            atMostOne));
   }
 
   /**
-   * Returns the lines of the all different constraints written.
+   * Returns the lines of the cardinality constraints written.
    *
    * @return the lines of each constraint
    */
-  Map<Constraint, AllDifferentLines> allDifferentLines() {
-    return allDifferent;
+  Map<Constraint, CardinalityLines> cardinalityLines() {
+    return cardinality;
   }
 
   @Override

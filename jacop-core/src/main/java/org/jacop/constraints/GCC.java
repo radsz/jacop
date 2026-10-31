@@ -52,6 +52,9 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * GCC constraint counts the number of occurences of given values in x variables. The counters are
@@ -69,7 +72,8 @@ import org.jacop.lcg.Explainable;
  */
 @SuppressWarnings(
     "checkstyle:AbbreviationAsWordInName") // GCC is standard constraint programming terminology
-public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC>, Explainable {
+public class GCC extends Constraint
+    implements SatisfiedPresent, Copyable<GCC>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -530,6 +534,32 @@ public class GCC extends Constraint implements SatisfiedPresent, Copyable<GCC>, 
   private CardinalityExplanation.Network network() {
     return new CardinalityExplanation.Network(
         x, domainHash, counters, null, null, false, null, budget);
+  }
+
+  /**
+   * Writes a count line per counted value and that the variables take counted values only; the
+   * solver derives the cuts its flow explanations need. The counters of values no variable takes
+   * are 0.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    Set<IntVar> distinct = new HashSet<>(Arrays.asList(x));
+    if (getClass() != GCC.class || distinct.size() != xSize || domainHash == null) {
+      return false;
+    }
+    for (IntVar c : counters) {
+      // a counter among the variables, or two counters of one variable, would mix their bounds
+      if (!c.singleton() && !distinct.add(c)) {
+        return false;
+      }
+    }
+    model.cardinality(x, domainHash, counters, null, null, true, null);
+    if (zeroCounters != null) {
+      for (IntVar c : zeroCounters) {
+        model.sum(new String[0], new long[0], new IntVar[] {c}, new long[] {1}, LinearForm.EQ, 0);
+      }
+    }
+    return true;
   }
 
   @Override
