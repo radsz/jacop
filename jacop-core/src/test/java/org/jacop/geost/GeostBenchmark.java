@@ -37,6 +37,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -330,6 +331,61 @@ public final class GeostBenchmark {
         name, time ? 1 : 2, shapes, objects, List.of(new NonOverlap(range(0, n - 1), dims)), area);
   }
 
+  /**
+   * Pallet loading: n identical a x b boxes that may be rotated, in a w x h pallet. All boxes are
+   * interchangeable.
+   */
+  static GeostInstance pallet(int a, int c, int w, int h, int n) {
+    List<List<Box>> shapes = new ArrayList<>();
+    shapes.add(List.of(new Box(new int[] {0, 0}, new int[] {a, c})));
+    shapes.add(List.of(new Box(new int[] {0, 0}, new int[] {c, a})));
+    int lo = Math.min(a, c);
+    List<Obj> objects = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      objects.add(
+          GeostInstanceGenerator.spatial(
+              i, new int[][] {range(0, w - lo), range(0, h - lo)}, new int[] {0, 1}));
+    }
+    Area area = new Area(new Box(new int[] {0, 0}, new int[] {w, h}), List.of());
+    return new GeostInstance(
+        "pallet" + a + "x" + c + "-" + w + "x" + h + "-" + n,
+        2,
+        shapes,
+        objects,
+        List.of(new NonOverlap(range(0, n - 1), new int[] {0, 1, 2})),
+        area);
+  }
+
+  /** n identical bricks of the given sides in every orientation, in a c x c x c container. */
+  static GeostInstance bricks(int[] sides, int c, int n) {
+    List<List<Box>> shapes = new ArrayList<>();
+    Set<List<Integer>> seen = new HashSet<>();
+    int[][] perms = {{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}};
+    for (int[] p : perms) {
+      int[] l = {sides[p[0]], sides[p[1]], sides[p[2]]};
+      if (seen.add(List.of(l[0], l[1], l[2]))) {
+        shapes.add(List.of(new Box(new int[] {0, 0, 0}, l)));
+      }
+    }
+    int lo = Arrays.stream(sides).min().getAsInt();
+    List<Obj> objects = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      objects.add(
+          GeostInstanceGenerator.spatial(
+              i,
+              new int[][] {range(0, c - lo), range(0, c - lo), range(0, c - lo)},
+              range(0, shapes.size() - 1)));
+    }
+    Area area = new Area(new Box(new int[] {0, 0, 0}, new int[] {c, c, c}), List.of());
+    return new GeostInstance(
+        "bricks" + sides[0] + sides[1] + sides[2] + "-" + c + "-" + n,
+        3,
+        shapes,
+        objects,
+        List.of(new NonOverlap(range(0, n - 1), new int[] {0, 1, 2, 3})),
+        area);
+  }
+
   // ---------------------------------------------------------------------------------------------
 
   /**
@@ -400,6 +456,18 @@ public final class GeostBenchmark {
       b.add(new Bench("jobs12-" + t, jobs("j", 6, 12, 5, 8, time), false, -1));
       b.add(new Bench("jobs16-" + t, jobs("j", 7, 16, 6, 9, time), false, -1));
     }
+    // interchangeable objects: pallet loading (rectangles that may be rotated) and bricks in every
+    // orientation, at counts near the largest that fit; pallet2x5-12x9-11 is too large by area
+    b.add(new Bench("pallet2x3-7x7-8", pallet(2, 3, 7, 7, 8), false, -1));
+    b.add(new Bench("pallet3x5-11x11-8", pallet(3, 5, 11, 11, 8), false, -1));
+    b.add(new Bench("pallet3x4-10x10-8", pallet(3, 4, 10, 10, 8), false, -1));
+    b.add(new Bench("pallet2x5-12x9-10", pallet(2, 5, 12, 9, 10), false, -1));
+    b.add(new Bench("pallet2x5-12x9-11", pallet(2, 5, 12, 9, 11), false, 0));
+    b.add(new Bench("pallet2x5-11x11-12", pallet(2, 5, 11, 11, 12), false, -1));
+    b.add(new Bench("pallet3x5-13x13-11", pallet(3, 5, 13, 13, 11), false, -1));
+    b.add(new Bench("bricks122-3-6", bricks(new int[] {1, 2, 2}, 3, 6), false, -1));
+    b.add(new Bench("bricks123-4-10", bricks(new int[] {1, 2, 3}, 4, 10), false, -1));
+    b.add(new Bench("bricks123-5-20", bricks(new int[] {1, 2, 3}, 5, 20), false, -1));
     return b;
   }
 
@@ -407,6 +475,11 @@ public final class GeostBenchmark {
   static Map<String, BiFunction<GeostInstance, Store, Posted>> models(GeostInstance g) {
     Map<String, BiFunction<GeostInstance, Store, Posted>> m = new LinkedHashMap<>();
     m.put("geost", (i, s) -> i.postGeost(s, false));
+    m.put("geost-novolume", (i, s) -> i.postGeostWith(s, false, false));
+    if (!g.interchangeableGroups().isEmpty()) {
+      // breaks the symmetry of interchangeable objects: fewer solutions, the same satisfiability
+      m.put("geost-lex", (i, s) -> i.postGeostWith(s, true, true));
+    }
     if (g.diffnExpressible()) {
       m.put(
           "diffn",
@@ -489,7 +562,7 @@ public final class GeostBenchmark {
     }
     boolean ok = wrong[0] == 0;
     String note = wrong[0] == 0 ? "" : wrong[0] + " wrong solutions";
-    if (bench.expected() >= 0 && !status.equals("LIMIT")) {
+    if (bench.expected() >= 0 && !status.equals("LIMIT") && !(bench.all() && isLex(model))) {
       long expected = bench.expected();
       boolean match = bench.all() ? solutions == expected : (solutions > 0) == (expected > 0);
       if (!match) {
@@ -507,6 +580,11 @@ public final class GeostBenchmark {
         millis,
         ok,
         note.trim());
+  }
+
+  /** A model that breaks symmetries finds fewer solutions than the others. */
+  static boolean isLex(String model) {
+    return model.endsWith("-lex");
   }
 
   public static void main(String[] args) throws IOException {
@@ -559,7 +637,7 @@ public final class GeostBenchmark {
             best = run;
           }
         }
-        if (!best.status().equals("LIMIT")) {
+        if (!best.status().equals("LIMIT") && !(b.all() && isLex(m.getKey()))) {
           counts.put(
               m.getKey(),
               best.status().equals("ALL") ? best.solutions() : best.solutions() > 0 ? 1L : 0L);

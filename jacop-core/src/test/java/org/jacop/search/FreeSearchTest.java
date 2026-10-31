@@ -52,6 +52,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqC;
@@ -815,6 +816,65 @@ class FreeSearchTest {
     // larger domains than the limit use the wrapped heuristic
     assertEquals(
         0, new IndomainBoundImpact(store, cost, false, 2, new IndomainMin<>()).indomain(y));
+  }
+
+  @Test
+  void boundImpactBreaksTiesByTheFallbackAndBoundsItsTime() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar cost = new IntVar(store, "cost", -100, 100);
+    // x does not change the bound: every value ties
+    store.impose(new XeqY(y, cost));
+    assertTrue(store.consistency());
+    assertEquals(
+        1, new IndomainBoundImpact(store, cost, false, 10, new IndomainMax<>()).indomain(x));
+    assertEquals(
+        3,
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMax<>())
+            .tiesToFallback()
+            .indomain(x));
+    // with no share of the time, only the first choice probes
+    IndomainBoundImpact bounded =
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMax<>()).timeShare(0);
+    assertEquals(1, bounded.indomain(x));
+    assertEquals(3, bounded.getProbes());
+    assertEquals(3, bounded.indomain(x));
+    assertEquals(3, bounded.getProbes());
+  }
+
+  @Test
+  void boundImpactOverPhaseSavingKeepsTheOptimum() {
+    Random rnd = new Random(11);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      Model model = new Model(instance);
+      IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+      IndomainBoundImpact impact =
+          new IndomainBoundImpact(model.store, model.cost, false, 5, phase)
+              .tiesToFallback()
+              .timeShare(0.25);
+      DomWdeg domWdeg = new DomWdeg(concat(model), impact);
+      FreeSearch search =
+          FreeSearch.builder(model.store, domWdeg)
+              .monitor(phase)
+              .monitor(impact)
+              .monitor(domWdeg)
+              .restarts(new LubyCalculator(2))
+              .restartOnSolution(true)
+              .nogoodsFromRestarts(true)
+              .onSolution(s -> model.checkSolution())
+              .minimize(model.cost)
+              .build();
+      Status status = search.solve();
+      if (reference[0] == 0) {
+        assertEquals(Status.UNSATISFIABLE, status);
+      } else {
+        assertEquals(Status.OPTIMAL, status, instance.toString());
+        assertEquals(reference[1], search.getCostValue());
+      }
+    }
   }
 
   @Test

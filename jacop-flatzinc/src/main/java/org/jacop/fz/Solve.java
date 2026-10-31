@@ -733,11 +733,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .keep(keptVariables(node))
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
+            .timing(options.presolveLevel())
+            // a copy that simplifies nothing only changes the search; checking mode needs the copy
+            .inPlace(
+                options.presolve() != Options.Presolve.CHECK
+                    && !"off".equals(System.getProperty("jacop.presolve.inPlace")))
+            .abortFactor(options.presolveAbort())
+            .budget(presolveBudget())
             .probing(options.probe(), options.probeBudget())
             // the LCG solver explains with the trail of each variable, which a view does not have;
             // the property jacop.presolve.affine (on, aliases or off) is for measuring rule 2
             .affine(!"off".equals(affine))
-            .views(!options.lcg() && !"aliases".equals(affine));
+            .views(!options.lcg() && !"aliases".equals(affine))
+            // under LCG a variable for part of a sum shortens the explanations, so rule 8 does not
+            // substitute; the property jacop.presolve.doubletons (on, off) changes the default
+            .doubletons(
+                "on"
+                    .equals(
+                        System.getProperty(
+                            "jacop.presolve.doubletons", options.lcg() ? "off" : "on")));
     if (objective != null) {
       // a rule, imposed in the first round in which there is an equation: the domains narrowed by
       // earlier rounds can complete a value encoding
@@ -802,6 +816,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         presolve = d;
       }
     }
+  }
+
+  /**
+   * The time the rounds of presolve rules may take: --presolve-time, or a twentieth of the time
+   * left, or unlimited without a time limit.
+   */
+  private long presolveBudget() {
+    if (options.presolveTime() >= 0) {
+      return options.presolveTime();
+    }
+    long left = options.getRemainingTimeOut();
+    return left > 0 ? Math.max(left / 20, 1) : Long.MAX_VALUE / 1_000_000L;
   }
 
   /**
@@ -1089,6 +1115,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         .append(d.outcome().name().toLowerCase(Locale.ROOT))
         .append('\n');
     s.append("%%%mzn-stat: presolveRounds=").append(d.rounds()).append('\n');
+    int[] byTiming = d.timingRounds();
+    s.append("%%%mzn-stat: presolveRoundsFast=").append(byTiming[0]).append('\n');
+    s.append("%%%mzn-stat: presolveRoundsMedium=").append(byTiming[1]).append('\n');
+    s.append("%%%mzn-stat: presolveRoundsExhaustive=").append(byTiming[2]).append('\n');
     Derivation.Statistics st = d.statistics();
     if (st != null) {
       s.append("%%%mzn-stat: presolveVariablesBefore=").append(st.parentVariables()).append('\n');
@@ -1134,6 +1164,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       s.append("%%%mzn-stat: presolveClauseStrengthened=").append(cs.strengthened()).append('\n');
       s.append("%%%mzn-stat: presolveClauseBlocked=").append(cs.blocked()).append('\n');
     }
+    d.timings()
+        .forEach(
+            (phase, t) ->
+                s.append("%%%mzn-stat: presolveTime")
+                    .append(Character.toUpperCase(phase.charAt(0)))
+                    .append(phase, 1, phase.length())
+                    .append('=')
+                    .append(t / 1_000_000_000.0)
+                    .append('\n'));
     d.reductions()
         .forEach(
             (rule, n) ->
@@ -1742,6 +1781,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    lcg.setRestartPresolve(options.presolveRestart());
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2062,6 +2102,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(reasons == 0 ? 0 : (double) atoms / reasons)
             + "\n%%%mzn-stat: lcgRestarts="
             + lcg.sat().restarts
+            + "\n%%%mzn-stat: lcgRepresolves="
+            + lcg.represolves
+            + "\n%%%mzn-stat: lcgRepresolveEntailed="
+            + lcg.represolveEntailed
             + "\n%%%mzn-stat: lcgAnnotationDecisions="
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
@@ -2517,6 +2561,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       phaseSavers.add(saving);
       monitors.add(saving);
       values = saving;
+    }
+    int valueImpact = Integer.parseInt(options.freeConfig("value-impact", "64"));
+    if (valueImpact > 0 && costVariable instanceof IntVar cost) {
+      // values are chosen by what they cost, as the moves of local search are, and ties keep the
+      // value of the last solution; probing takes at most a share of the time, so that proofs of
+      // optimality are not slowed much
+      IndomainBoundImpact byCost =
+          new IndomainBoundImpact(store, cost, false, valueImpact, values)
+              .tiesToFallback()
+              .timeShare(Double.parseDouble(options.freeConfig("value-impact-time", "0.25")));
+      monitors.add(byCost);
+      values = byCost;
     }
     if ("afc".equals(heuristic)) {
       if (ints.length > 0) {
