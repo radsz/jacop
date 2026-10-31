@@ -216,6 +216,12 @@ public class LinearRelaxation extends Constraint
   // the number of energy cuts among the cuts of the last call of separateCuts
   private long lastEnergyChosen;
 
+  // the number of clique cuts among the cuts of the last call of separateCuts
+  private long lastCliquesChosen;
+
+  /** Statistics: clique cuts added. */
+  public long cliqueCuts;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -278,6 +284,9 @@ public class LinearRelaxation extends Constraint
 
   // the resources of the model whose tasks have fixed durations and usages
   private List<Resource> resources = List.of();
+  // clique cuts over the conflicts of the 0/1 columns, in the same rounds
+  private static final boolean CLIQUE_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.cliqueCuts"));
   private static final double MAX_PARALLELISM = 0.9;
 
   // the cuts are made at the first solve only, before any search decision: they use the bounds of
@@ -1390,10 +1399,15 @@ public class LinearRelaxation extends Constraint
     int original = rows();
     Set<List<Long>> seen = new HashSet<>();
     List<EnergyCut> energy = energySeparators(n, lo);
+    CliqueCut conflicts =
+        CLIQUE_CUTS
+            ? CliqueCut.of(rowColumns, rowWeights, rowLo, rowHi, hasLo, hasHi, lo, hi)
+            : null;
     int status = DualSimplex.OPTIMAL;
     for (int round = 0; round < CUT_ROUNDS; round++) {
-      List<MirCut> chosen = separateCuts(lo, hi, original, seen, energy);
+      List<MirCut> chosen = separateCuts(lo, hi, original, seen, energy, conflicts);
       long chosenEnergy = lastEnergyChosen;
+      long chosenCliques = lastCliquesChosen;
       if (chosen.isEmpty()) {
         break;
       }
@@ -1403,6 +1417,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       energyCuts += chosenEnergy;
+      cliqueCuts += chosenCliques;
       long size = Math.max(1, lp.pivotWork());
       status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
       if (status == DualSimplex.OPTIMAL
@@ -1410,12 +1425,14 @@ public class LinearRelaxation extends Constraint
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
         dropCuts(chosen.size(), kept, keptRows);
         energyCuts -= chosenEnergy;
+        cliqueCuts -= chosenCliques;
         break;
       }
       if (status != DualSimplex.OPTIMAL) {
         if (status == DualSimplex.LIMIT) {
           dropCuts(chosen.size(), kept, keptRows);
           energyCuts -= chosenEnergy;
+          cliqueCuts -= chosenCliques;
           status = DualSimplex.OPTIMAL;
         }
         break;
@@ -1436,10 +1453,16 @@ public class LinearRelaxation extends Constraint
    * @param original the number of rows that are not cuts
    * @param seen the cuts chosen in earlier rounds, as keys; the cuts chosen are added
    * @param energy the energy separators, whose cuts compete with the MIR cuts
+   * @param conflicts the clique separator, or null
    * @return the cuts chosen, most efficacious first
    */
   private List<MirCut> separateCuts(
-      long[] lo, long[] hi, int original, Set<List<Long>> seen, List<EnergyCut> energy) {
+      long[] lo,
+      long[] hi,
+      int original,
+      Set<List<Long>> seen,
+      List<EnergyCut> energy,
+      CliqueCut conflicts) {
     int n = lp.columns();
     double[] value = new double[n];
     for (int j = 0; j < n; j++) {
@@ -1471,6 +1494,11 @@ public class LinearRelaxation extends Constraint
       e.separate(value, found);
     }
     Set<MirCut> energyFound = new HashSet<>(found.subList(mirs, found.size()));
+    int beforeCliques = found.size();
+    if (conflicts != null) {
+      conflicts.separate(value, found);
+    }
+    Set<MirCut> cliques = new HashSet<>(found.subList(beforeCliques, found.size()));
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();
     for (MirCut c : found) {
@@ -1491,6 +1519,7 @@ public class LinearRelaxation extends Constraint
       }
     }
     lastEnergyChosen = chosen.stream().filter(energyFound::contains).count();
+    lastCliquesChosen = chosen.stream().filter(cliques::contains).count();
     return chosen;
   }
 

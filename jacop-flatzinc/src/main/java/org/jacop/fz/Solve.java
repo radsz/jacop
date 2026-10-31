@@ -565,6 +565,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.restartSolves
             + "\n%%%mzn-stat: lpEnergyCuts="
             + r.energyCuts
+            + "\n%%%mzn-stat: lpCliqueCuts="
+            + r.cliqueCuts
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
             + "\n%%%mzn-stat: lpBaseBound="
