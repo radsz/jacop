@@ -2057,6 +2057,25 @@ public final class LcgSolver implements ExternalPropagator {
     phase = p;
   }
 
+  /**
+   * Hands the store back for search without learning: its changes are no longer recorded. The
+   * solver cannot solve again afterwards; its best solution stays readable.
+   */
+  public void release() {
+    trail.detach();
+  }
+
+  /**
+   * Tells whether the best solution has a value for x: there is one, and x existed when the solver
+   * was built.
+   *
+   * @param x the variable
+   * @return true when {@link #value} gives x's value
+   */
+  public boolean hasValue(IntVar x) {
+    return solution != null && trail.id(x) < solution.length;
+  }
+
   /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
   public void stop() {
     sat.cancel();

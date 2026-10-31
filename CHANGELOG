@@ -1403,6 +1403,21 @@ Version 5.0 (unreleased)
     pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
     No MiniZinc Challenge instance 2008-2026 reaches Geost.
 
+96. With --lcg and an objective, free search (-f) gives way to free search
+    without learning when LCG is too slow: if, at a tenth of the time
+    limit or later, LCG has made fewer than 50 conflicts per second and
+    has a solution, it stops, the model's clauses are posted to the store
+    and free search continues from the LCG solution (phase hints) with
+    its cost as the bound. --free-config lcg-slow-rate=<conflicts per
+    second> (0 turns it off) and lcg-slow-at=<share of the time limit>
+    set the rule; the statistic lcgSlowConflicts reports a switch. On the
+    59 Challenge instances that -f has not finished at 6 s (60 s), 12
+    switch: 7 end better than both runs without the rule (tdtsp 20_26
+    19,830 to 12,995, cvrp B-n45-k5 2,084 to 1,587), 3 worse (cargo 08
+    and 16, jobshop swv07) and 2 equal. ptv 1c goes from 2,941 to 1,666,
+    ptv 5a from 270 to 60, cgt_12 from 1 to -129,352 and cgt_3 from
+    19,722 to -147,892.
+
 Version 4.11
 =============
 
