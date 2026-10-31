@@ -1510,7 +1510,14 @@ Version 5.0 (unreleased)
     the translation) or by a constraint that cannot be encoded narrow the
     model's domains instead. The FlatZinc translation is not certified.
 
-103. LCG explanations of GCC, GlobalCardinality and CountValues first try
+103. FlatZinc regular with a set alphabet (jacop_regular_set) read the
+    next states of its transition table shifted by the smallest symbol
+    instead of by 1. With an alphabet such as 0..1 it crashed with an
+    ArrayIndexOutOfBoundsException; with one from 2 it could map
+    transitions to the wrong state and report UNSAT for satisfiable
+    models. Alphabets from 1 (the usual case) were not affected.
+
+104. LCG explanations of GCC, GlobalCardinality and CountValues first try
      counting reasons: a counter's upper bound from the variables that
      exclude its value or from the lower bounds of the other counters, a
      counter's lower bound from the variables fixed to its value, and a
@@ -1526,7 +1533,7 @@ Version 5.0 (unreleased)
      constraints 22 better / 6 worse over 5 runs (fillomino 7x7_0 solved,
      league 15.4 s to 8.8 s).
 
-104. fzn-jacop breaks symmetries by default, also without --presolve:
+105. fzn-jacop breaks symmetries by default, also without --presolve:
     lex-leader constraints for variable symmetries, lex chains for
     interchangeable columns and value precedence for interchangeable
     values, as --presolve on did (--symmetry off turns it off). It is
