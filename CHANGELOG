@@ -1545,6 +1545,20 @@ Version 5.0 (unreleased)
     search solves 141 -> 145, -f 189 -> 194; on 140 generated colouring,
     bin packing and scheduling models 81 -> 91 and 87 -> 95.
 
+105. LCG explanations of set constraints. What a set's domain derives
+     after a set operation changes it (a cardinality bound, an element
+     forced in or out by a cardinality bound, a cardinality failure) is
+     explained by the operation from the elements its relation forces,
+     instead of the generic reason. set_card (CardAeqX) explains by the
+     set's cardinality rules with the cardinality variable, and
+     array_set_element (ElementSet) by the elements or the cardinality
+     that exclude an index and by the indexes left. The generic share of
+     these constraints on monomatch, vaccine, gt-sort and valve-network
+     falls to 0 (valve-network: 99.8 % of ElementSet reasons). On the 8
+     wide-set instances with set constraints (60 s, 3 seeds per mode)
+     --lcg is 6 better / 2 worse (monomatch n_5 solved in 4 s, which
+     timed out; gt-sort 131 to 127) and --lcg -f 7 / 6.
+
 Version 4.11
 =============
 
