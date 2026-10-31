@@ -571,21 +571,22 @@ public class LinearRelaxation extends Constraint
         candidates.add(f);
       }
     }
-    if (simplex == Simplex.DENSE && SPARSE_ROWS >= 0) {
+    boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
+    if (auto && (forms.size() >= SPARSE_ROWS || tooLarge(forms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
-      List<LinearForm> further = new ArrayList<>();
-      boolean whole = fitsSimplex(forms, candidates, Simplex.DENSE, further);
-      if (!whole || forms.size() + further.size() >= SPARSE_ROWS) {
-        simplex = Simplex.SPARSE;
-      }
+      simplex = Simplex.SPARSE;
     }
     if (tooLarge(forms, simplex)) {
       return null;
     }
     List<LinearForm> further = new ArrayList<>();
-    fitsSimplex(forms, candidates, simplex, further);
+    // the further rows are tried at the first solve over every column; on the sparse simplex
+    // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
+    // trial stays in proportion to the relaxation (a trial over every candidate of a large model
+    // can take a minute and then drop them all)
+    fitsSimplex(forms, candidates, simplex, auto, further);
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
@@ -624,6 +625,7 @@ public class LinearRelaxation extends Constraint
       List<LinearForm> forms,
       List<LinearForm> candidates,
       Simplex simplex,
+      boolean denseCap,
       List<LinearForm> further) {
     if (tooLarge(forms, simplex)) {
       return false;
@@ -643,7 +645,8 @@ public class LinearRelaxation extends Constraint
       }
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
-          : nonzeros + f.vars().length > MAX_NONZEROS) {
+          : nonzeros + f.vars().length > MAX_NONZEROS
+              || denseCap && further.size() >= 2L * forms.size() + SPARSE_ROWS) {
         return false;
       }
       further.add(f);
