@@ -1293,6 +1293,18 @@ Version 5.0 (unreleased)
     4108 reaches the optimum 7; 6872 and 8657 reach 8 and 9 with -f,
     optimum 7); the two code-generator instances still prove their optimum.
 
+90. Free search without lazy clause generation (--lcg off -f) chooses, for
+    optimisation, the value of a variable with up to 64 values by trying
+    each one and taking the one that leaves the best bound on the
+    objective, as local search chooses its moves; ties keep the value of
+    the last solution. The probes take at most a quarter of the time, so
+    proofs of optimality are slowed by at most that much. --free-config
+    value-impact=<n> (0 = off) and value-impact-time=<share>. Against the
+    adaptive LNS of #322 on 119 instances (60 s): primal integral 21%
+    lower, 21 better and 16 worse final objectives (gbac UD5 280 against
+    6585; Yuck reaches 977, CP-SAT 372). Measured against Yuck and
+    Atlantis in osolpro benchmarks/lns-ls.
+
 Version 4.11
 =============
 
