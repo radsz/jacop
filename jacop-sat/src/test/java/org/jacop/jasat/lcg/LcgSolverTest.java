@@ -437,6 +437,61 @@ class LcgSolverTest {
     assertThat(proved).isGreaterThan(300);
   }
 
+  /**
+   * Presolving the root again at every restart that learnt a root fact, which leaves out the
+   * constraints the root satisfies, keeps the optimum: random weighted sums over a permutation with
+   * random side constraints, solved with and without it.
+   */
+  @Test
+  void restartPresolveKeepsTheOptimum() {
+    Random rnd = new Random(29);
+    long represolves = 0;
+    for (int instance = 0; instance < 20; instance++) {
+      long seed = rnd.nextLong();
+      int[] optimum = new int[2];
+      int[] status = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 9;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, n - 1);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 4; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(7) - 3;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(10)));
+        }
+        IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = r.nextInt(41) - 20;
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setRestartPresolve(run == 0 ? 0 : 1e-9);
+        status[run] = solver.minimize(cost);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(cost);
+        }
+        if (run == 1) {
+          represolves += solver.represolves;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(represolves).isGreaterThan(0);
+  }
+
   // the smallest weighted sum over the assignments of x that satisfy the relations
   private static long minimum(IntVar[] x, List<Relation> relations, int[] w, int[] t, int i) {
     if (i == x.length) {
@@ -3911,5 +3966,27 @@ class LcgSolverTest {
       stats[2] += solver.coreSearch().hardened;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
+  }
+
+  /**
+   * A probe whose root propagation stops at the deadline backtracks to the root while root literals
+   * it notified are not applied yet. They stay assigned and are not notified again, so they must
+   * still reach the domains; ma-path-finding under -f threw "is not fixed in a model" when the core
+   * phase found every literal assigned and a variable open.
+   */
+  @Test
+  void rootLiteralsNotifiedBeforeABacktrackToTheRootReachTheDomains() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new XneqY(x, y));
+    LcgSolver lcg = new LcgSolver(store);
+    int lit = lcg.geLiteral(lcg.index(x), 1);
+    assertThat(lcg.solver().addClause(lit)).isTrue(); // [x >= 1] at the root
+    lcg.notifyAssignment(lit, true);
+    lcg.notifyBacktrack(0);
+    lcg.propagate(); // applies the pending literals, then gives the first atom they imply
+    assertThat(x.min()).isEqualTo(1);
+    assertThat(y.max()).isZero();
   }
 }

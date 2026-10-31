@@ -311,6 +311,12 @@ public final class CdclSolver {
   /** Number of restarts so far. */
   public long restarts;
 
+  /**
+   * Statistics: the deepest decision level the search opened, assumption levels included. Probing
+   * and clause vivification open levels of their own; they do not count.
+   */
+  public int peakDecisionLevel;
+
   /** Number of learnt clause database reductions so far. */
   public long reductions;
 
@@ -382,6 +388,16 @@ public final class CdclSolver {
       order.insert(v);
     }
     numVars = n;
+  }
+
+  /**
+   * Returns the number of literals assigned at decision level 0: the root facts, which learnt units
+   * add to during search.
+   *
+   * @return the number of root literals.
+   */
+  public int rootAssignments() {
+    return decisionLevel == 0 ? trailSize : trailLim[0];
   }
 
   /**
@@ -837,6 +853,14 @@ public final class CdclSolver {
     trailLim[decisionLevel++] = trailSize;
     if (notifying) {
       external.notifyNewDecisionLevel();
+    }
+  }
+
+  /** Opens a decision level of the search and records the peak depth. */
+  private void newSearchLevel() {
+    newDecisionLevel();
+    if (decisionLevel > peakDecisionLevel) {
+      peakDecisionLevel = decisionLevel;
     }
   }
 
@@ -1812,7 +1836,7 @@ public final class CdclSolver {
   /** Opens a new decision level. */
   public void newLevel() {
     useExternally();
-    newDecisionLevel();
+    newSearchLevel();
   }
 
   /**
@@ -1841,6 +1865,16 @@ public final class CdclSolver {
     }
     lastAssumedLevel = decisionLevel;
     assign(l, NO_REASON);
+  }
+
+  /**
+   * Returns the decision level of an assigned literal.
+   *
+   * @param lit a DIMACS literal whose variable is assigned
+   * @return the level it was assigned at
+   */
+  public int levelOf(int lit) {
+    return level[Math.abs(lit) - 1];
   }
 
   /**
@@ -2402,7 +2436,7 @@ public final class CdclSolver {
       while (decisionLevel < assumptions.length) {
         int a = assumptions[decisionLevel];
         if (vals[a] > 0) {
-          newDecisionLevel();
+          newSearchLevel();
         } else if (vals[a] < 0) {
           analyzeFinal(a ^ 1);
           return UNSAT;
@@ -2439,7 +2473,7 @@ public final class CdclSolver {
           && (interrupted || System.nanoTime() > deadline)) {
         return UNKNOWN;
       }
-      newDecisionLevel();
+      newSearchLevel();
       assign(next, NO_REASON);
     }
   }

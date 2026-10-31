@@ -58,6 +58,11 @@ public final class ProbingRule implements Rule {
   }
 
   @Override
+  public Timing timing() {
+    return Timing.EXHAUSTIVE;
+  }
+
+  @Override
   public void apply(Context context) {
     if (mode == Probing.Mode.OFF || result.exhausted()) {
       return;
