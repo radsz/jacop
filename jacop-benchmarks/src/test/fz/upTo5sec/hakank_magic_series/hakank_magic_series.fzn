@@ -1,0 +1,14 @@
+
+predicate jacop_alldiff(array [int] of var int: x);
+predicate jacop_increasing(array [int] of var int: x);
+array [1..5] of int: X_INTRODUCED_25_ = [2,2,2,2,2];
+var 1..25: X_INTRODUCED_16_;
+var 1..25: X_INTRODUCED_17_;
+var 1..25: X_INTRODUCED_18_;
+var 1..25: X_INTRODUCED_19_;
+var 1..25: X_INTRODUCED_20_;
+array [1..5] of var int: x:: output_array([1..5]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_];
+constraint int_lin_eq(X_INTRODUCED_25_,[X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_],130);
+constraint jacop_alldiff(x);
+constraint jacop_increasing(x);
+solve :: seq_search([int_search(x,input_order,indomain_min,complete),int_search(x,input_order,indomain_min,complete)]) satisfy;

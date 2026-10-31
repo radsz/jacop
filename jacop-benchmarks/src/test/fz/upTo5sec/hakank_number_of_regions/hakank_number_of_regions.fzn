@@ -1,0 +1,18 @@
+
+predicate jacop_disjoint(var set of int: s1,var set of int: s2);
+predicate jacop_alldiff(array [int] of var int: x);
+var 1..7: X_INTRODUCED_17_;
+var 1..7: X_INTRODUCED_18_;
+var 1..7: X_INTRODUCED_19_;
+var 1..7: X_INTRODUCED_20_;
+var 1..7: X_INTRODUCED_21_;
+var 1..7: X_INTRODUCED_22_;
+array [1..7] of var int: x:: output_array([1..7]) = [1,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_];
+constraint jacop_disjoint({1,5,6,7},2..4);
+constraint jacop_disjoint({1,2,6},{3,4,5,7});
+constraint jacop_disjoint({1,2,3,7},4..6);
+constraint jacop_alldiff(x);
+constraint int_lin_eq([1,1,1,-1,-1,-1],[X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_],-1);
+constraint int_lin_eq([1,1,-1,-1,-1,-1],[X_INTRODUCED_17_,X_INTRODUCED_21_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_22_],-1);
+constraint int_lin_eq([1,1,1,-1,-1,-1],[X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_22_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_],-1);
+solve :: int_search(x,smallest,indomain_min,complete) satisfy;

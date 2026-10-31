@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_and", "array_bool_or", "array_var_int_element", "bool_clause", "bool_xor", "int_eq_reif", "int_le_reif", "int_lin_eq", "int_lin_eq_reif", "int_lin_ne", "jacop_count", "jacop_cumulative", "jacop_nvalue"],
+  "constraintFamilies": ["boolean", "comparison", "counting", "cumulative", "element", "linear"],
+  "domains": []
+}

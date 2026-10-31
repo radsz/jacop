@@ -1,0 +1,26 @@
+
+predicate jacop_count_var(array [int] of var int: x,var int: y,var int: c);
+predicate jacop_atmost(array [int] of var int: x,int: y,int: c);
+predicate jacop_atleast(array [int] of var int: x,int: v,int: n);
+predicate jacop_count_values_bounds(array [int] of var int: x,array [int] of int: cover,array [int] of int: lbound,array [int] of int: ubound);
+predicate jacop_count_reif(array [int] of var int: x,int: y,var int: c,var bool: b);
+predicate jacop_atmost_reif(array [int] of var int: x,int: v,int: n,var bool: b);
+array [1..3] of int: X_INTRODUCED_22_ = [3,2,3];
+array [1..3] of int: X_INTRODUCED_23_ = [1,0,0];
+array [1..3] of int: X_INTRODUCED_24_ = [1,2,3];
+var 1..3: X_INTRODUCED_16_;
+var 1..3: X_INTRODUCED_17_;
+var 1..3: X_INTRODUCED_18_;
+var 1..3: X_INTRODUCED_19_;
+var 2..4: nvar:: output_var;
+var 1..3: val:: output_var;
+var bool: two_threes:: is_defined_var:: output_var;
+var bool: few_ones:: is_defined_var:: output_var;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_];
+constraint jacop_count_var(x,val,nvar);
+constraint jacop_atmost(x,2,2);
+constraint jacop_atleast(x,1,1);
+constraint jacop_count_values_bounds(x,X_INTRODUCED_24_,X_INTRODUCED_23_,X_INTRODUCED_22_);
+constraint jacop_count_reif(x,3,2,two_threes):: defines_var(two_threes);
+constraint jacop_atmost_reif(x,1,1,few_ones):: defines_var(few_ones);
+solve  satisfy;

@@ -1,0 +1,250 @@
+/*
+ * Min.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
+import org.jacop.api.Copyable;
+import org.jacop.api.Functional;
+import org.jacop.api.Simplifiable;
+import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.MaxExplanation;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
+
+/**
+ * Min constraint implements the minimum/2 constraint. It provides the minimum varable from all FD
+ * varaibles on the list.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class Min extends AbstractMinMax
+    implements Functional, Violation, Simplifiable, Copyable<Min>, Explainable, PbEncodable {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies variable min, which stores the minimum value within the whole list. */
+  private final IntVar min;
+
+  /**
+   * It constructs min constraint.
+   *
+   * @param min variable denoting the minimal value
+   * @param list the array of variables for which the minimal value is imposed.
+   */
+  public Min(IntVar[] list, IntVar min) {
+
+    super(idNumber, list, min);
+    this.min = min;
+  }
+
+  /**
+   * It constructs min constraint.
+   *
+   * @param min variable denoting the minimal value
+   * @param list the array of variables for which the minimal value is imposed.
+   */
+  public Min(List<? extends IntVar> list, IntVar min) {
+    this(list.toArray(IntVar[]::new), min);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    int start = position.value();
+
+    do {
+
+      store.propagationHasOccurred = false;
+      IntVar v;
+
+      int minValue = IntDomain.MAX_INT;
+      int maxValue = IntDomain.MAX_INT;
+
+      int minMin = min.min();
+      int maxMin = min.max();
+      for (int i = start; i < l; i++) {
+        v = list[i];
+
+        int varMin = v.min();
+        int varMax = v.max();
+
+        if (varMin > maxMin) {
+          swap(start, i);
+          start++;
+        } else if (varMin < minMin) {
+          v.domain.inMin(store.level, v, minMin);
+        }
+
+        minValue = Math.min(minValue, varMin);
+        maxValue = Math.min(maxValue, varMax);
+      }
+
+      if (minValue > min.min() || maxValue < min.max()) {
+        min.domain.in(store.level, min, minValue, maxValue);
+      }
+
+      if (start == l) { // all variables have their min value greater than max value of min variable
+        throw Store.failException;
+      }
+
+      if (start
+          == list.length
+              - 1) { // one variable on the list is minimal; its is max < min of all other variables
+        list[start].domain.in(store.level, list[start], min.dom());
+
+        if (min.singleton()) {
+          removeConstraint();
+        }
+      }
+    } while (store.propagationHasOccurred);
+
+    position.update(start);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    if (!min.singleton()) {
+      return false;
+    }
+
+    int minValue = min.max();
+    int i = 0;
+    boolean eq = false;
+
+    while (i < list.length) {
+      if (list[i].min() < minValue) {
+        return false;
+      }
+      if (!eq && list[i].singleton() && list[i].value() == minValue) {
+        eq = true;
+      }
+      i++;
+    }
+
+    return eq;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder result = new StringBuilder(id());
+
+    result.append(" : min( [ ");
+    appendArrayToString(result, list);
+    result.append("], ").append(this.min);
+    result.append(")");
+
+    return result.toString();
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != Min.class) {
+      return Optional.empty();
+    }
+    return GlobalSimplification.extremum(list, min, false, l -> new Min(l, min));
+  }
+
+  @Override
+  public Min copy(VarMap map) {
+    return new Min(map.get(list), map.get(min));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == Min.class && MaxExplanation.explain(trail, entry, list, min, false, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == Min.class && MaxExplanation.explainFailure(trail, list, min, false, out);
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    long min = Long.MAX_VALUE;
+    for (IntVar v : list) {
+      min = Math.min(min, value.applyAsInt(v));
+    }
+    return Math.abs(min - value.applyAsInt(target));
+  }
+
+  @Override
+  public IntVar functionalResult() {
+    return min;
+  }
+
+  @Override
+  public int functionalValue(ToIntFunction<IntVar> value) {
+    int min = Integer.MAX_VALUE;
+    for (IntVar v : list) {
+      min = Math.min(min, value.applyAsInt(v));
+    }
+    return min;
+  }
+
+  // [x < v] -> [min < v] for each x, and [min < v] -> one [x < v], for every threshold v
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Min.class) {
+      return false;
+    }
+    int lo = model.domain(target).min();
+    int hi = model.domain(target).max();
+    for (IntVar x : list) {
+      lo = Math.min(lo, model.domain(x).min());
+      hi = Math.max(hi, model.domain(x).max());
+    }
+    for (int v = lo + 1; v <= hi; v++) {
+      String t = model.atLeast(target, v);
+      String[] some = new String[list.length + 1];
+      some[0] = t;
+      for (int i = 0; i < list.length; i++) {
+        String a = model.atLeast(list[i], v);
+        model.clause(a, PbModel.not(t));
+        some[i + 1] = PbModel.not(a);
+      }
+      model.clause(some);
+    }
+    return true;
+  }
+}

@@ -1,0 +1,178 @@
+/*
+ * MaxSimple.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Simplifiable;
+import org.jacop.api.VarMap;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.MaxExplanation;
+
+/**
+ * MaxSimple constraint implements the Maximum/2 constraint. It provides the maximum variable from
+ * all variables on the list.
+ *
+ * <p>max(x1, x2) = max.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class MaxSimple extends Constraint
+    implements Simplifiable, SatisfiedPresent, Copyable<MaxSimple>, Explainable {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It specifies a variables between which a maximum value is being searched for. */
+  final IntVar x1;
+
+  final IntVar x2;
+
+  /** It specifies variable max which stores the maximum value present in the list. */
+  final IntVar max;
+
+  /**
+   * It constructs max constraint.
+   *
+   * @param max variable denoting the maximum value
+   * @param x1 first variable for which a maximum value is imposed.
+   * @param x2 second variable for which a maximum value is imposed.
+   */
+  public MaxSimple(IntVar x1, IntVar x2, IntVar max) {
+
+    checkInputForNullness(new String[] {"x1", "x2", "max"}, new Object[] {x1, x2, max});
+
+    this.numberId = idNumber.incrementAndGet();
+    this.max = max;
+    this.x1 = x1;
+    this.x2 = x2;
+
+    this.queueIndex = 1;
+
+    setScope(x1, x2, max);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      int maxMax = max.max();
+
+      x1.domain.inMax(store.level, x1, maxMax);
+      x2.domain.inMax(store.level, x2, maxMax);
+
+      int minValue = Math.max(x1.min(), x2.min());
+      int maxValue = Math.max(x1.max(), x2.max());
+
+      max.domain.in(store.level, max, minValue, maxValue);
+
+      if (x1.max() < max.min()) {
+        x2.domain.in(store.level, x2, max.dom());
+      }
+      if (x2.max() < max.min()) {
+        x1.domain.in(store.level, x1, max.dom());
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    // once one of x1 and x2 is below max, the other takes the domain of max, so a value
+    // removed inside the domain of max must wake the constraint as well
+    if (v == max
+        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))) {
+      return IntDomain.ANY;
+    }
+    return super.getConsistencyPruningEvent(v);
+  }
+
+  @Override
+  public boolean satisfied() {
+
+    if (!max.singleton()) {
+      return false;
+    }
+    int maxVal = max.value();
+
+    return x1.max() <= maxVal
+        && x2.max() <= maxVal
+        && (x1.singleton(maxVal) || x2.singleton(maxVal));
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : maxSimple(" + x1 + ", " + x2 + ", " + max + ")";
+  }
+
+  @Override
+  public Optional<List<Constraint>> simplify() {
+    if (getClass() != MaxSimple.class) {
+      return Optional.empty();
+    }
+    return GlobalSimplification.extremum(new IntVar[] {x1, x2}, max, true, null);
+  }
+
+  @Override
+  public MaxSimple copy(VarMap map) {
+    return new MaxSimple(map.get(x1), map.get(x2), map.get(max));
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == MaxSimple.class
+        && MaxExplanation.explain(trail, entry, new IntVar[] {x1, x2}, max, true, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == MaxSimple.class
+        && MaxExplanation.explainFailure(trail, new IntVar[] {x1, x2}, max, true, out);
+  }
+}

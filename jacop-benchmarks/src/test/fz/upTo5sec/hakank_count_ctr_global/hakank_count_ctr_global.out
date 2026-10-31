@@ -1,0 +1,433 @@
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 1, 2]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 1, 3]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 2, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 2, 2]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 2, 2]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 2, 3]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 3, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 1, 3, 2]);
+----------
+nvar = 2;
+val = 1;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [1, 1, 3, 3]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [1, 1, 3, 3]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 1, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 1, 2]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 1, 2]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 1, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 2, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 2, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [1, 2, 2, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 2, 3, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [1, 2, 3, 2]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [1, 2, 3, 3]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 3, 1, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 3, 1, 2]);
+----------
+nvar = 2;
+val = 1;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [1, 3, 1, 3]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [1, 3, 1, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [1, 3, 2, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [1, 3, 2, 2]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [1, 3, 2, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [1, 3, 3, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [1, 3, 3, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [1, 3, 3, 2]);
+----------
+nvar = 3;
+val = 3;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [1, 3, 3, 3]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 1, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 1, 2]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 1, 2]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 1, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 2, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 2, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [2, 1, 2, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 1, 3, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [2, 1, 3, 2]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [2, 1, 3, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 2, 1, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 2, 1, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [2, 2, 1, 3]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [2, 2, 3, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [2, 3, 1, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [2, 3, 1, 2]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [2, 3, 1, 3]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [2, 3, 2, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [2, 3, 3, 1]);
+----------
+nvar = 3;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [3, 1, 1, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [3, 1, 1, 2]);
+----------
+nvar = 2;
+val = 1;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [3, 1, 1, 3]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [3, 1, 1, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [3, 1, 2, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [3, 1, 2, 2]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [3, 1, 2, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [3, 1, 3, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [3, 1, 3, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [3, 1, 3, 2]);
+----------
+nvar = 3;
+val = 3;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [3, 1, 3, 3]);
+----------
+nvar = 2;
+val = 1;
+two_threes = false;
+few_ones = false;
+x = array1d(1..4, [3, 2, 1, 1]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [3, 2, 1, 2]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [3, 2, 1, 3]);
+----------
+nvar = 2;
+val = 2;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [3, 2, 2, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [3, 2, 3, 1]);
+----------
+nvar = 2;
+val = 1;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [3, 3, 1, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = false;
+x = array1d(1..4, [3, 3, 1, 1]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [3, 3, 1, 2]);
+----------
+nvar = 3;
+val = 3;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [3, 3, 1, 3]);
+----------
+nvar = 2;
+val = 3;
+two_threes = true;
+few_ones = true;
+x = array1d(1..4, [3, 3, 2, 1]);
+----------
+nvar = 3;
+val = 3;
+two_threes = false;
+few_ones = true;
+x = array1d(1..4, [3, 3, 3, 1]);
+----------
+==========

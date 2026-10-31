@@ -1,0 +1,6 @@
+output ["x = \n",let {array [int] of string: X_INTRODUCED_113_ = [], array [int] of string: X_INTRODUCED_114_ = [], array [int,int] of string: X_INTRODUCED_115_ = [(X_INTRODUCED_111_, X_INTRODUCED_112_) : showDzn(x[X_INTRODUCED_111_,X_INTRODUCED_112_]) | X_INTRODUCED_111_ in index_set_1of2(x), X_INTRODUCED_112_ in index_set_2of2(x)]} in (show2d_indexed(X_INTRODUCED_113_,X_INTRODUCED_114_,X_INTRODUCED_115_)),";\n","c = ",showDzn(c),";\n"];
+int: E = 5;
+array [1..E] of int: c;
+int: D = 7;
+array [1..35] of int: X_INTRODUCED_16_;
+array [1..E,1..D] of int: x = array2d(1..5,1..7,X_INTRODUCED_16_);

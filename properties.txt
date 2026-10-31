@@ -7,8 +7,9 @@ Java specific:
 ==============
 - max_edge_find_size: use edge finder in the cumulative constraints if
   it contains less tasks than this number; default 100. This applies
-  to Cumulative constraint only, CumulativeUnary uses edge finding
-  always.
+  to Cumulative constraint only; CumulativeUnary runs its unary rules
+  (detectable precedences, not-first/not-last, edge finding) for any
+  number of tasks.
 
 - sub_circuit_scc_pruning: use pruning method based on strongly
   connected components; default true (one of sub_circuit_* must be true).
@@ -26,6 +27,38 @@ flatzinc compiler specific:
   flatzinc compiler pairwaise task disjunction constraints for all
   pairs of tasks that have sum of resource capacities greater than the
   cumulative capacity bound; default=false
+
+- fz_cumulative_ef: use edge finding in cumulative constraints
+  (up to max_edge_find_size tasks); default=false, since time-table
+  edge finding with time-table disjunctive reasoning solved more
+  cumulative benchmarks without it
+
+- fz_cumulative_quad_ef: use the quadratic edge finding instead of
+  the O(kn log n) one; by default chosen from the number of tasks and
+  of distinct resource uses, always quadratic for variable tasks
+
+- fz_cumulative_ttef: use time-table edge finding in cumulative
+  constraints; default=true
+
+- fz_cumulative_ttdr: use time-table disjunctive reasoning in
+  cumulative constraints; default=true
+
+- fz_cumulative_adaptive: skip time-table edge finding and time-table
+  disjunctive reasoning in cumulative constraints while they prune
+  nothing, running them less often the longer they stay idle;
+  default=true
+
+- fz_cumulative_overload: use the overload check in cumulative
+  constraints when edge finding is off; default=true
+
+- fz_cumulative_optional_overload: use the overload check and edge
+  finding that make optional tasks absent; default=true for
+  cumulative with optional tasks and false for disjunctive with
+  optional tasks
+
+- fz_cumulative_variable_basic: post CumulativeBasic (time-tabling
+  only), as before, for cumulative constraints with variable
+  durations or resource uses; default=false
 
 - fz_system_timer: if =true use System.nonoTime instead of ManagementFactory
   timer for threads, otherwise use thread time.

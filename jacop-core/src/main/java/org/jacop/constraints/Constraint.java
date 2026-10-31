@@ -1,0 +1,927 @@
+/*
+ * Constraint.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import static java.util.stream.Collectors.joining;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import org.jacop.api.RemoveLevelLate;
+import org.jacop.api.Stateful;
+import org.jacop.api.UsesQueueVariable;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.jacop.util.BipartiteGraphMatching;
+
+/**
+ * Standard unified interface/abstract class for all constraints.
+ *
+ * <p>Defines how to construct a constraint, impose, check satisfiability, notSatisfiability,
+ * enforce consistency.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public abstract class Constraint extends DecomposedConstraint<Constraint> {
+
+  /**
+   * It specifies if upon the failure of the constraint, all variables in the constraint scope
+   * should have their weight increased.
+   */
+  protected static final boolean IS_INCREASE_WEIGHT_ENABLED = true;
+
+  /**
+   * It specifies the number id for a given constraint. All constraints within the same type have
+   * unique number ids.
+   */
+  protected int numberId;
+
+  protected Set<PrimitiveConstraint> constraintScope;
+
+  /** It specifies the event which must occur in order for the consistency function to be called. */
+  protected Map<Var, Integer> consistencyPruningEvents;
+
+  /** It specifies the events which must occur for notConsistency() method being executed. */
+  protected Map<Var, Integer> notConsistencyPruningEvents;
+
+  /**
+   * It specifies if the constraint consistency function can be prematurely terminated through other
+   * than FailureException exception.
+   */
+  protected boolean earlyTerminationOk;
+
+  /**
+   * It specifies if the constraint consistency function requires consistency function executed in
+   * one atomic step. A constraint can specify that if any other pruning events are initiated by
+   * outside entity then the constraint may not work correctly if the execution is continued, but it
+   * will work well if consistency() function is restarted.
+   */
+  protected boolean atomicExecution = true;
+
+  /** It specifies a set of variables that in the scope of this constraint. */
+  protected Set<Var> scope;
+
+  Var watchedVariableGrounded;
+  /*
+   * Handling of AFC (accumulated failure count) for constraints
+   *
+   */
+  double afcWeight = 1.0d;
+
+  /** How many constraints this one counts as in the static degree of each of its variables. */
+  private int degreeWeight = 1;
+
+  /** For each constraint class, whether it overrides {@link #queueVariable(int, Var)}. */
+  private static final ClassValue<Boolean> OVERRIDES_QUEUE_VARIABLE =
+      new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(Class<?> type) {
+          try {
+            return type.getMethod("queueVariable", int.class, Var.class).getDeclaringClass()
+                != Constraint.class;
+          } catch (NoSuchMethodException e) {
+            throw new IllegalStateException(e);
+          }
+        }
+      };
+
+  /** Whether this constraint's class overrides {@link #queueVariable(int, Var)}. */
+  private final boolean overridesQueueVariable = OVERRIDES_QUEUE_VARIABLE.get(getClass());
+
+  /** The set {@link #scopeArray} was built from. */
+  private Set<Var> scopeArraySource;
+
+  /** The variables of {@link #scopeArraySource}, for iterating without an iterator. */
+  private Var[] scopeArray;
+
+  private static final int NOT_ENTAILED = Integer.MAX_VALUE;
+
+  /** The store level at which the constraint was marked as entailed, or NOT_ENTAILED. */
+  private int entailedAt = NOT_ENTAILED;
+
+  /** The constraint has not had a consistency call since it was imposed. */
+  public static final int NOT_RUN = -1;
+
+  /**
+   * The level of the constraint's first consistency call was removed. Before the next call the
+   * store queues the constraint's variables again, as imposing it did.
+   */
+  public static final int RUN_UNDONE = -2;
+
+  /** The store level of the first consistency call, or NOT_RUN or RUN_UNDONE. */
+  private int firstRunAt = NOT_RUN;
+
+  private long consistencyCalls;
+
+  /** The store whose propagation queues {@link #queueMembership} refers to. */
+  private Store queueOwner;
+
+  /** Bit i is set while this constraint waits in propagation queue i of {@link #queueOwner}. */
+  private int queueMembership;
+
+  /**
+   * Constructs a constraint with the specified variable arrays as its scope.
+   *
+   * @param vars arrays of variables forming the constraint scope.
+   */
+  protected Constraint(Var[]... vars) {
+    setScope(vars);
+  }
+
+  /**
+   * Constructs a constraint with the scope defined by a stream of variables.
+   *
+   * @param vars stream of variables forming the constraint scope.
+   */
+  protected Constraint(Stream<Var> vars) {
+    setScope(vars);
+  }
+
+  /**
+   * Constructs a constraint with scope derived from the given primitive constraints.
+   *
+   * @param constraints primitive constraints whose variable scopes define this constraint's scope.
+   */
+  protected Constraint(PrimitiveConstraint[] constraints) {
+    setScope(constraints);
+  }
+
+  /**
+   * Constructs a constraint with scope defined by the given set of variables.
+   *
+   * @param set the set of variables forming the constraint scope.
+   */
+  protected Constraint(Set<? extends Var> set) {
+    setScope(set);
+  }
+
+  /**
+   * Converts an integer array to a formatted string representation.
+   *
+   * @param array the integer array to convert.
+   * @return a string representation of the array in the format "[v1, v2, ...]".
+   */
+  public static String intArrayToString(int[] array) {
+    return Arrays.stream(array).mapToObj(Integer::toString).collect(joining(", ", "[", "]"));
+  }
+
+  static int toInt(final float f) {
+    if (f >= Integer.MIN_VALUE && f <= Integer.MAX_VALUE) {
+      return (int) f;
+    } else {
+      throw new ArithmeticException("Overflow occurred " + f);
+    }
+  }
+
+  static long toLong(final double f) {
+    if (f >= Long.MIN_VALUE && f <= Long.MAX_VALUE) {
+      return (long) f;
+    } else {
+      throw new ArithmeticException("Overflow occurred " + f);
+    }
+  }
+
+  /**
+   * Safely converts a long value to an int, clamping to Integer.MAX_VALUE or Integer.MIN_VALUE on
+   * overflow.
+   *
+   * @param value the long value to convert.
+   * @return the int representation, clamped to integer bounds if necessary.
+   */
+  public static int long2int(long value) {
+    if (value > Integer.MAX_VALUE) {
+      return Integer.MAX_VALUE;
+    } else if (value < Integer.MIN_VALUE) {
+      return Integer.MIN_VALUE;
+    } else {
+      return (int) value;
+    }
+  }
+
+  /**
+   * It returns the variables in a scope of the constraint.
+   *
+   * @return variables in a scope of the constraint.
+   */
+  public Set<Var> arguments() {
+    return scope;
+  }
+
+  protected void setScope(Var... variables) {
+    this.scope = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(variables)));
+  }
+
+  /**
+   * Sets the constraint scope from multiple variable arrays.
+   *
+   * @param variables arrays of variables to include in the scope.
+   */
+  protected void setScope(Var[]... variables) {
+    setScope(Arrays.stream(variables).flatMap(Arrays::stream));
+  }
+
+  /**
+   * Sets the constraint scope from a stream of variables.
+   *
+   * @param scope stream of variables to include in the scope.
+   */
+  protected void setScope(Stream<Var> scope) {
+    setScope(scope.toArray(Var[]::new));
+  }
+
+  /**
+   * Sets the constraint scope from the variable scopes of the given primitive constraints.
+   *
+   * @param constraints primitive constraints whose variable scopes define this constraint's scope.
+   */
+  protected void setScope(PrimitiveConstraint[] constraints) {
+    setScope(Arrays.stream(constraints).map(Constraint::arguments).flatMap(Collection::stream));
+  }
+
+  /**
+   * Sets the constraint scope from a set of variables.
+   *
+   * @param set the set of variables to include in the scope.
+   */
+  protected void setScope(Set<? extends Var> set) {
+    setScope(set.toArray(new Var[0]));
+  }
+
+  protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
+    this.constraintScope =
+        Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(primitiveConstraints)));
+  }
+
+  /**
+   * It is a (most probably incomplete) consistency function which removes the values from variables
+   * domains. Only values which do not have any support in a solution space are removed.
+   *
+   * @param store constraint store within which the constraint consistency is being checked.
+   */
+  public abstract void consistency(Store store);
+
+  /**
+   * It retrieves the pruning event which causes reevaluation of the constraint.
+   *
+   * @param v variable for which pruning event is retrieved
+   * @return it returns the int code of the pruning event (GROUND, BOUND, ANY, NONE)
+   */
+  public int getConsistencyPruningEvent(Var v) {
+
+    // If consistency function mode
+    if (consistencyPruningEvents != null) {
+      Integer possibleEvent = consistencyPruningEvents.get(v);
+      if (possibleEvent != null) {
+        return possibleEvent;
+      }
+    }
+
+    if (constraintScope != null && !constraintScope.isEmpty()) {
+
+      int eventAcross =
+          constraintScope.stream()
+              .filter(i -> i.arguments().contains(v))
+              .mapToInt(i -> i.getNestedPruningEvent(v, true))
+              .max()
+              .orElse(Integer.MIN_VALUE);
+
+      if (eventAcross != Integer.MIN_VALUE) {
+        return eventAcross;
+      }
+    }
+
+    return getDefaultConsistencyPruningEvent();
+  }
+
+  /**
+   * It returns the event with which this constraint is attached to a variable when it is imposed.
+   * It is the consistency pruning event, narrowed by {@link #getBoundPruningEvent(Var)} when that
+   * event is BOUND, the variable is an integer variable, and neither an event set for the variable
+   * nor the nested constraints decide it.
+   *
+   * @param v variable for which the event is computed.
+   * @return the pruning event used to attach this constraint to v.
+   */
+  protected int getSubscriptionPruningEvent(Var v) {
+    int event = getConsistencyPruningEvent(v);
+    if (event != IntDomain.BOUND
+        || !(v instanceof IntVar)
+        || consistencyPruningEvents != null && consistencyPruningEvents.containsKey(v)
+        || constraintScope != null && !constraintScope.isEmpty()) {
+      return event;
+    }
+    return getBoundPruningEvent(v);
+  }
+
+  /**
+   * It returns the bound of v whose change can make consistency() prune, for a variable that the
+   * constraint watches with the BOUND event. A constraint which reads only the minimum of v in
+   * consistency() returns {@link IntDomain#MIN_EVENT}, one which reads only its maximum returns
+   * {@link IntDomain#MAX_EVENT}, and it is then not woken when only the other bound of v changes. A
+   * change of that other bound can still make the constraint satisfied, which is then noticed
+   * later. The nested and negated uses of a constraint always watch both bounds.
+   *
+   * @param v variable for which the event is computed.
+   * @return BOUND, MIN_EVENT or MAX_EVENT; BOUND by default.
+   */
+  public int getBoundPruningEvent(Var v) {
+    return IntDomain.BOUND;
+  }
+
+  /**
+   * It returns the default pruning event used for consistency checking when no specific event is
+   * defined for a variable.
+   *
+   * @return the int code of the default pruning event.
+   */
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  /**
+   * Helper method to get consistency pruning event from the map if present.
+   *
+   * @param v variable for which pruning event is retrieved
+   * @return the pruning event from the map, or null if not found
+   */
+  protected Integer getConsistencyPruningEventFromMap(Var v) {
+    if (consistencyPruningEvents != null) {
+      return consistencyPruningEvents.get(v);
+    }
+    return null;
+  }
+
+  /**
+   * Helper method to get notConsistency pruning event from the map if present.
+   *
+   * @param v variable for which pruning event is retrieved
+   * @return the pruning event from the map, or null if not found
+   */
+  protected Integer getNotConsistencyPruningEventFromMap(Var v) {
+    if (notConsistencyPruningEvents != null) {
+      return notConsistencyPruningEvents.get(v);
+    }
+    return null;
+  }
+
+  /**
+   * It gives the id string of a constraint.
+   *
+   * @return string id of the constraint.
+   */
+  public String id() {
+    String constraintType = this.getClass().getSimpleName();
+    if (constraintType.isEmpty()) {
+      constraintType = this.getClass().getName() + "#";
+    }
+    return constraintType + numberId;
+  }
+
+  /**
+   * Returns the propagation queues of a store in which this constraint is waiting, one bit per
+   * queue. It is maintained by {@link org.jacop.core.ConstraintQueue}.
+   *
+   * @param store the store whose queues are asked about.
+   * @return bit i is set if the constraint is in queue i of the store.
+   */
+  public final int queueMembership(Store store) {
+    return store == queueOwner ? queueMembership : 0;
+  }
+
+  /**
+   * Records the propagation queues of a store in which this constraint is waiting. It is called
+   * only by {@link org.jacop.core.ConstraintQueue}.
+   *
+   * @param store the store whose queues are recorded.
+   * @param membership bit i is set if the constraint is in queue i of the store.
+   */
+  public final void setQueueMembership(Store store, int membership) {
+    queueOwner = store;
+    queueMembership = membership;
+  }
+
+  /**
+   * Checks whether the constraint was marked as entailed by {@link #removeConstraint()} at the
+   * current level of the search or at an earlier one. The store does not wake such a constraint.
+   *
+   * @return true if the constraint is entailed.
+   */
+  public final boolean isEntailed() {
+    return entailedAt != NOT_ENTAILED;
+  }
+
+  /**
+   * Returns the store level at which the constraint was marked as entailed.
+   *
+   * @return the level, or Integer.MAX_VALUE if the constraint is not entailed.
+   */
+  public final int entailedAt() {
+    return entailedAt;
+  }
+
+  /**
+   * Sets the store level at which the constraint is entailed; only the store calls it, when marking
+   * the constraint and when backtracking below that level.
+   *
+   * @param level the level, or Integer.MAX_VALUE to clear the mark.
+   */
+  public final void setEntailedAt(int level) {
+    entailedAt = level;
+  }
+
+  /**
+   * Returns the store level of the constraint's first consistency call.
+   *
+   * @return the level, or {@link #NOT_RUN} or {@link #RUN_UNDONE}.
+   */
+  public final int firstRunAt() {
+    return firstRunAt;
+  }
+
+  /**
+   * Sets the store level of the constraint's first consistency call; only the store calls it, when
+   * it makes the call and when it removes that level.
+   *
+   * @param level the level, or {@link #RUN_UNDONE}.
+   */
+  public final void setFirstRunAt(int level) {
+    firstRunAt = level;
+  }
+
+  /**
+   * Returns the number of consistency calls the store made for the constraint, as {@link
+   * Store#numberConsistencyCalls} counts them over all constraints.
+   *
+   * @return the number of calls.
+   */
+  public final long consistencyCalls() {
+    return consistencyCalls;
+  }
+
+  /** Counts a consistency call of the store for the constraint; only the store calls it. */
+  public final void countConsistencyCall() {
+    consistencyCalls++;
+  }
+
+  /**
+   * It imposes the constraint and adjusts the queue index.
+   *
+   * @param store the constraint store to which the constraint is imposed to.
+   * @param queueIndex the index of the queue in the store it is assigned to.
+   */
+  public void impose(Store store, int queueIndex) {
+
+    if (queueIndex >= store.queueNo) {
+      throw new IllegalArgumentException("Constraint queue number larger than permitted by store.");
+    }
+
+    this.queueIndex = queueIndex;
+
+    impose(store);
+  }
+
+  /**
+   * It imposes the constraint in a given store.
+   *
+   * @param store the constraint store to which the constraint is imposed to.
+   */
+  public void impose(Store store) {
+
+    arguments().forEach(i -> i.putModelConstraint(this, getSubscriptionPruningEvent(i)));
+    store.addChanged(this);
+    store.countConstraint();
+    if (constraintScope != null) {
+      constraintScope.forEach(i -> i.include(store));
+    }
+    if (this instanceof UsesQueueVariable) {
+      arguments().forEach(i -> queueVariable(store.level, i));
+    }
+
+    if (constraintScope != null) {
+      Set<RemoveLevelLate> fixpoint = computeFixpoint(this, new LinkedHashSet<>());
+      fixpoint.forEach(store::registerRemoveLevelLateListener);
+    }
+
+    if (this instanceof RemoveLevelLate late) {
+      store.registerRemoveLevelLateListener(late);
+    }
+
+    if (this instanceof Stateful c && c.isStateful()) {
+      store.registerRemoveLevelListener(c);
+    }
+  }
+
+  /**
+   * This is a function called to indicate which variable in a scope of constraint has changed. It
+   * also indicates a store level at which the change has occurred.
+   *
+   * @param level the level of the store at which the change has occurred.
+   * @param v variable which has changed.
+   */
+  public void queueVariable(final int level, final Var v) {}
+
+  /**
+   * It is called when a variable this constraint watches with {@link Store#watchValue(Var, int,
+   * Constraint, int)} gets the watched value.
+   *
+   * @param level the level of the store at which the variable got the value.
+   * @param v the variable.
+   * @param tag the tag of the watch.
+   * @return true if the constraint has to be queued for a consistency call.
+   */
+  public boolean valueWatchFired(int level, Var v, int tag) {
+    return true;
+  }
+
+  /**
+   * Tells whether a watch of this constraint ({@link Store#watchValue(Var, int, Constraint, int)})
+   * makes it a constraint of the watched variable for the variable selections and neighbourhoods
+   * that read the constraints of a variable ({@link Var#watchingConstraints()}), as an attached
+   * constraint is. A constraint that is not attached to the variables it watches returns true for
+   * one watch per variable, while it propagates.
+   *
+   * @param value the watched value.
+   * @param tag the tag of the watch.
+   * @return true if the watch counts the constraint as one of the variable.
+   */
+  public boolean countsValueWatch(int value, int tag) {
+    return false;
+  }
+
+  /**
+   * Tells whether {@link #queueVariable(int, Var)} does anything for this constraint, that is,
+   * whether its class overrides it. The store skips the call for constraints that do not.
+   *
+   * @return true if the constraint's class overrides queueVariable.
+   */
+  public final boolean overridesQueueVariable() {
+    return overridesQueueVariable;
+  }
+
+  private Set<RemoveLevelLate> computeFixpoint(Constraint c, Set<RemoveLevelLate> fixpoint) {
+    if (c instanceof RemoveLevelLate late) {
+      fixpoint.add(late);
+    }
+    if (c.constraintScope != null) {
+      c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
+    }
+    return fixpoint;
+  }
+
+  /**
+   * It removes the constraint, as it is entailed. At the root level the constraint is removed from
+   * all its variables; during search it is marked as entailed at the current level instead.
+   */
+  public void removeConstraint() {
+    Var[] scope = scopeArray();
+    if (scope.length == 0) {
+      return;
+    }
+    Store store = scope[0].getStore();
+    // During search the constraint is only marked, and the store skips it until it backtracks
+    // below this level. Detaching it from every variable would copy their domains at this level.
+    if (store.level > 0) {
+      store.markEntailed(this);
+      return;
+    }
+    // Stream version is not used due to large performance overhead.
+    for (Var v : scope) {
+      if (!v.singleton()) {
+        v.removeConstraint(this);
+      }
+    }
+  }
+
+  /**
+   * Returns the variables of {@link #arguments()} as an array, in the set's iteration order. The
+   * array is rebuilt only when {@code arguments()} returns a different set, since iterating a small
+   * {@code HashSet} walks all its buckets and this runs every time a constraint is entailed.
+   *
+   * @return the variables in the scope of the constraint.
+   */
+  private Var[] scopeArray() {
+    Set<Var> current = arguments();
+    if (current != scopeArraySource) {
+      scopeArray = current.toArray(new Var[0]);
+      scopeArraySource = current;
+    }
+    return scopeArray;
+  }
+
+  /**
+   * Sets the watched variable used as a quick check for groundedness.
+   *
+   * @param v the variable to watch for grounding.
+   */
+  public void setWatchedVariableGrounded(Var v) {
+    watchedVariableGrounded = v;
+  }
+
+  /**
+   * Checks whether the watched variable is grounded (singleton) or no watched variable is set.
+   *
+   * @return true if no watched variable is set or the watched variable is a singleton.
+   */
+  public boolean watchedVariableGrounded() {
+    return watchedVariableGrounded == null || watchedVariableGrounded.singleton();
+  }
+
+  /**
+   * It checks if the constraint has all variables in its scope grounded (singletons).
+   *
+   * @return true if all variables in constraint scope are singletons, false otherwise.
+   */
+  public boolean grounded() {
+
+    if (!watchedVariableGrounded()) {
+      return false;
+    }
+
+    Optional<Var> stillNotGrounded = arguments().stream().filter(i -> !i.singleton()).findFirst();
+
+    if (stillNotGrounded.isPresent()) {
+      setWatchedVariableGrounded(stillNotGrounded.get());
+      return false;
+    } else {
+      return true;
+    }
+  }
+
+  /**
+   * It checks if provided variables are grounded (singletons).
+   *
+   * @param vars variables to be checked if they are grounded.
+   * @return true if all variables in constraint scope are singletons, false otherwise.
+   */
+  public boolean grounded(Var[] vars) {
+    return Arrays.stream(vars).filter(i -> !i.singleton()).findFirst().isEmpty();
+  }
+
+  /** It produces a string representation of a constraint state. */
+  @Override
+  public String toString() {
+    return arguments().stream().map(Object::toString).collect(joining(", ", id() + "(", ")"));
+  }
+
+  /**
+   * It specifies a constraint which if imposed by search will enhance propagation of this
+   * constraint.
+   *
+   * @return Constraint enhancing propagation of this constraint.
+   */
+  public Constraint getGuideConstraint() {
+    return null;
+  }
+
+  /**
+   * This function provides a variable which assigned a value returned by will enhance propagation
+   * of this constraint.
+   *
+   * @return Variable which is a base of enhancing constraint.
+   */
+  public Var getGuideVariable() {
+    return null;
+  }
+
+  /**
+   * This function provides a value which if assigned to a variable returned by getGuideVariable()
+   * will enhance propagation of this constraint.
+   *
+   * @return Value which is a base of enhancing constraint.
+   */
+  public int getGuideValue() {
+    return Integer.MAX_VALUE;
+  }
+
+  /** It increases the weight of the variables in the constraint scope. */
+  public void increaseWeight() {
+
+    if (IS_INCREASE_WEIGHT_ENABLED) {
+      arguments().forEach(v -> v.weight++);
+    }
+  }
+
+  /**
+   * It allows to customize the event for a given variable which causes the re-execution of the
+   * consistency method for a constraint.
+   *
+   * @param v variable for which the events are customized.
+   * @param pruningEvent the event which must occur to trigger execution of the consistency method.
+   */
+  public void setConsistencyPruningEvent(final Var v, final int pruningEvent) {
+
+    if (consistencyPruningEvents == null) {
+      consistencyPruningEvents = new HashMap<>();
+    }
+    consistencyPruningEvents.put(v, pruningEvent);
+  }
+
+  /**
+   * It returns the number of variables within a constraint scope.
+   *
+   * @return number of variables in the constraint scope.
+   */
+  public int numberArgs() {
+    return scope.size();
+  }
+
+  @Override
+  public void imposeDecomposition(Store store) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public List<Constraint> decompose(final Store store) {
+    throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Returns the accumulated failure count (AFC) weight of this constraint.
+   *
+   * @return the current AFC weight.
+   */
+  public double afc() {
+    return afcWeight;
+  }
+
+  /**
+   * Adds the given increment to the accumulated failure count (AFC) weight of this constraint.
+   *
+   * <p>The store decays the weights of all constraints lazily: instead of multiplying every weight
+   * by the decay factor at each failure, it divides the increment by it, so the ratios between
+   * weights are those of the decayed counts.
+   *
+   * @param increment the amount added to the weight, the store's current AFC increment.
+   */
+  public void updateAfc(double increment) {
+    afcWeight += increment;
+  }
+
+  /**
+   * Multiplies the accumulated failure count (AFC) weight of this constraint by the given factor;
+   * the store uses it to rescale all weights before they overflow.
+   *
+   * @param factor the factor applied to the weight.
+   */
+  public void scaleAfc(double factor) {
+    afcWeight *= factor;
+  }
+
+  /**
+   * Returns how many constraints this one counts as in the static degree of each variable it is
+   * attached to, {@link Var#sizeConstraintsOriginal()}. It is 1 unless set otherwise.
+   *
+   * @return the degree weight.
+   */
+  public int degreeWeight() {
+    return degreeWeight;
+  }
+
+  /**
+   * Sets how many constraints this one counts as in the static degree of each variable it is
+   * attached to, {@link Var#sizeConstraintsOriginal()}, which degree-based variable selections such
+   * as {@link org.jacop.search.MostConstrainedStatic} read. A constraint that a reformulation adds
+   * in place of others can keep the degrees of the model: a redundant constraint gets 0, and so
+   * does a replacement whose variables are credited for the constraints it replaced with {@link
+   * Var#adjustDegree(int)}. It must be set before the constraint is imposed.
+   *
+   * @param weight the degree weight, 0 or more.
+   * @return this constraint.
+   */
+  public Constraint setDegreeWeight(int weight) {
+    if (weight < 0) {
+      throw new IllegalArgumentException("A degree weight is 0 or more, not " + weight);
+    }
+    degreeWeight = weight;
+    return this;
+  }
+
+  /** It is executed after the constraint has failed. It allows to clean some data structures. */
+  public void cleanAfterFailure() {}
+
+  /**
+   * Appends the string representation of each element in the array to the StringBuilder, separated
+   * by commas.
+   *
+   * @param sb the StringBuilder to append to.
+   * @param array the array of objects to append.
+   */
+  protected static void appendArrayToString(StringBuilder sb, Object[] array) {
+    for (int i = 0; i < array.length; i++) {
+      sb.append(array[i]);
+      if (i < array.length - 1) {
+        sb.append(", ");
+      }
+    }
+  }
+
+  /**
+   * Computes the maximum bipartite matching between the given variables and their domain values
+   * using the Hopcroft-Karp algorithm.
+   *
+   * @param vs the array of integer variables.
+   * @return the size of the maximum matching.
+   */
+  protected static int computeMaxBipartiteMatching(IntVar[] vs) {
+    Map<Integer, Integer> valueMap = new HashMap<>();
+    int valueIndex = 0;
+
+    int[][] adj = new int[vs.length + 1][];
+    adj[0] = new int[0];
+
+    for (int i = 0; i < vs.length; i++) {
+      IntVar v = vs[i];
+
+      adj[i + 1] = new int[v.dom().getSize()];
+      int j = 0;
+      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        int el = e.nextElement();
+        Integer elIndex = valueMap.get(el);
+        if (elIndex == null) {
+          valueMap.put(el, valueIndex);
+          adj[i + 1][j] = valueIndex + 1;
+          valueIndex++;
+        } else {
+          adj[i + 1][j] = elIndex + 1;
+        }
+        j++;
+      }
+    }
+
+    BipartiteGraphMatching matcher = new BipartiteGraphMatching(adj, vs.length, valueMap.size());
+    return matcher.hopcroftKarp();
+  }
+
+  /**
+   * Checks whether the variables cannot be satisfied by a complete matching, i.e., the maximum
+   * bipartite matching is smaller than the number of variables.
+   *
+   * @param vs the array of integer variables.
+   * @return true if the maximum matching is less than the number of variables.
+   */
+  protected static boolean notSatisfiedByMatching(IntVar[] vs) {
+    return computeMaxBipartiteMatching(vs) < vs.length;
+  }
+
+  /**
+   * Verifies that the sum {@code a + b - c} does not overflow {@code int} arithmetic. Each
+   * component is given as a [min, max] range so that both the lower and upper bounds of the
+   * expression are checked. An {@link ArithmeticException} is thrown if overflow is detected.
+   *
+   * @param aminValue minimum of the first addend.
+   * @param amaxValue maximum of the first addend.
+   * @param bminValue minimum of the second addend.
+   * @param bmaxValue maximum of the second addend.
+   * @param cminValue minimum of the subtrahend.
+   * @param cmaxValue maximum of the subtrahend.
+   */
+  protected static void checkSumOverflow(
+      int aminValue, int amaxValue, int bminValue, int bmaxValue, int cminValue, int cmaxValue) {
+    int sumMin = Math.addExact(aminValue, bminValue);
+    int sumMax = Math.addExact(amaxValue, bmaxValue);
+    Math.subtractExact(sumMin, cmaxValue);
+    Math.subtractExact(sumMax, cminValue);
+  }
+}

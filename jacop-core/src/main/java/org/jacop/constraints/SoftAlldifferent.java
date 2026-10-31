@@ -1,0 +1,207 @@
+/*
+ * SoftAlldifferent.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+
+/**
+ * This class provides soft-alldifferent constraint by decomposing it either into a network flow
+ * constraint or a set of primitive constraints.
+ *
+ * @author Robin Steiger and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class SoftAlldifferent extends DecomposedConstraint<Constraint> {
+
+  private final IntVar[] xVars;
+  private final IntVar costVar;
+  private final ViolationMeasure violationMeasure;
+  private List<Constraint> decomposition;
+
+  /**
+   * Constructs a soft alldifferent constraint that allows violations with an associated cost.
+   *
+   * @param xvars the variables that should preferably take different values
+   * @param costVar the variable representing the total cost of violations
+   * @param violationMeasure the measure used to compute violation cost
+   */
+  public SoftAlldifferent(IntVar[] xvars, IntVar costVar, ViolationMeasure violationMeasure) {
+
+    checkInputForNullness("xVars", xvars);
+    checkInputForNullness(
+        new String[] {"costVar", "violationMeasure"}, new Object[] {costVar, violationMeasure});
+
+    this.xVars = Arrays.copyOf(xvars, xvars.length);
+    this.costVar = costVar;
+    this.violationMeasure = violationMeasure;
+  }
+
+  /**
+   * Provides a primitive decomposition of the soft alldifferent constraint using basic constraints.
+   * Creates reified equality constraints for each pair of variables to count violations.
+   *
+   * @param store the constraint store
+   * @return list of constraints representing the primitive decomposition
+   */
+  public List<Constraint> primitiveDecomposition(Store store) {
+    if (decomposition == null) {
+      decomposition = buildDecompositionBasedConstraints(store);
+      return decomposition;
+    }
+    return buildDecompositionBasedConstraints(store);
+  }
+
+  private List<Constraint> buildDecompositionBasedConstraints(Store store) {
+    if (violationMeasure != ViolationMeasure.DECOMPOSITION_BASED) {
+      throw new UnsupportedOperationException("Unsupported violation measure " + violationMeasure);
+    }
+    int n = xVars.length;
+    List<IntVar> costs = new ArrayList<>(n * (n - 1));
+    List<Constraint> result = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < i; j++) {
+        IntVar v = new BooleanVar(store);
+        costs.add(v);
+        result.add(new Reified(new XeqY(xVars[i], xVars[j]), v));
+      }
+    }
+    result.add(new SumInt(costs, "==", costVar));
+    return result;
+  }
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    if (decomposition == null || decomposition.size() > 1) {
+
+      decomposition = new ArrayList<>();
+
+      // compute union of all domains
+      IntDomain all = new IntervalDomain();
+      for (IntVar v : xVars) {
+        all.addDom(v.domain);
+      }
+
+      // create values
+      int d = all.getSize();
+      IntDomain[] doms = new IntDomain[d];
+      ValueEnumeration it = all.valueEnumeration();
+      for (int i = 0; it.hasMoreElements(); i++) {
+        int value = it.nextElement();
+        doms[i] = new IntervalDomain(value, value);
+      }
+
+      // create constraint
+      decomposition.add(new SoftAlldiffBuilder(doms, violationMeasure).build());
+    }
+
+    return decomposition;
+  }
+
+  @Override
+  public void imposeDecomposition(Store store) {
+
+    if (decomposition == null) {
+      decomposition = decompose(store);
+    }
+
+    for (Constraint c : decomposition) {
+      store.impose(c);
+    }
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder();
+
+    result.append(" : SoftAlldifferent([");
+
+    for (int i = 0; i < xVars.length; i++) {
+      result.append(xVars[i]);
+      if (i < xVars.length - 1) {
+        result.append(", ");
+      }
+    }
+    result.append("], ").append(costVar).append(", ").append(violationMeasure).append(")");
+
+    return result.toString();
+  }
+
+  /** Internal builder class for constructing a network flow representation of soft alldifferent. */
+  private class SoftAlldiffBuilder extends NetworkBuilder {
+
+    /**
+     * Constructs the network flow graph for soft alldifferent constraint.
+     *
+     * @param doms the domains for value nodes
+     * @param vm the violation measure to use
+     */
+    private SoftAlldiffBuilder(IntDomain[] doms, ViolationMeasure vm) {
+
+      super(costVar);
+
+      int n = xVars.length;
+      int m = doms.length;
+      Node[] d = valueGraph(xVars, doms)[1];
+      Node t = addNode("sink", -n);
+
+      connectValuesToSink(d, t, n, m, vm);
+    }
+
+    private void connectValuesToSink(Node[] d, Node t, int n, int m, ViolationMeasure vm) {
+      if (vm == ViolationMeasure.VARIABLE_BASED) {
+        for (int j = 0; j < m; j++) {
+          addArc(d[j], t, 0, 1);
+          addArc(d[j], t, 1);
+        }
+      } else if (vm == ViolationMeasure.DECOMPOSITION_BASED) {
+        for (int j = 0; j < m; j++) {
+          for (int cost = 0; cost < n; cost++) {
+            addArc(d[j], t, cost, 0, 1);
+          }
+        }
+      } else {
+        throw new UnsupportedOperationException("Unknown violation measure : " + vm);
+      }
+    }
+  }
+}

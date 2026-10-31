@@ -1,0 +1,4 @@
+source: hakank/minizinc/subsets_100.mzn
+mode: fixed (satisfaction)
+verified: JaCoP, Gecode 6.3.0 and Chuffed 0.13.2 find the same first solution
+feasibility: 1 JaCoP solution(s) accepted by gecode as data

@@ -1,0 +1,8760 @@
+/*
+ * SingleConstraintTest.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.io.StringReader;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.VarMap;
+import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongVar;
+import org.jacop.constraints.And;
+import org.jacop.constraints.AndBoolVector;
+import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMin;
+import org.jacop.constraints.Assignment;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Circuit;
+import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.CountBounds;
+import org.jacop.constraints.CountValues;
+import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.CountVar;
+import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Diff2;
+import org.jacop.constraints.Disjoint;
+import org.jacop.constraints.DisjointConditional;
+import org.jacop.constraints.Distance;
+import org.jacop.constraints.ElementBool;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.EqBool;
+import org.jacop.constraints.ExtensionalConflictVa;
+import org.jacop.constraints.GCC;
+import org.jacop.constraints.IfThen;
+import org.jacop.constraints.IfThenBool;
+import org.jacop.constraints.IfThenElse;
+import org.jacop.constraints.IfThenElseBool;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.In;
+import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingNValue;
+import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.Lex;
+import org.jacop.constraints.LexChain;
+import org.jacop.constraints.LinearBool;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Member;
+import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.NoGood;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.Or;
+import org.jacop.constraints.OrBoolVector;
+import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.Sequence;
+import org.jacop.constraints.SoftAlldifferent;
+import org.jacop.constraints.SoftGCC;
+import org.jacop.constraints.Spread;
+import org.jacop.constraints.Stretch;
+import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.Sum;
+import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.Values;
+import org.jacop.constraints.ViolationMeasure;
+import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XexpYeqZ;
+import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XgteqY;
+import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmodYeqZ;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqC;
+import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.Xor;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusCneqZ;
+import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
+import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.binpacking.VectorBinpacking;
+import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.Nooverlap;
+import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.ExternalConstraint;
+import org.jacop.constraints.geost.Geost;
+import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.NonOverlapping;
+import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.Reachable;
+import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.netflow.NetworkBuilder;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.constraints.regular.CostRegular;
+import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.constraints.table.Restriction;
+import org.jacop.constraints.table.SimpleTable;
+import org.jacop.constraints.table.Table;
+import org.jacop.core.BooleanVar;
+import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.SmallDenseDomain;
+import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
+import org.jacop.lcg.LinearForm;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMax;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.IndomainRandom;
+import org.jacop.search.InputOrderSelect;
+import org.jacop.search.RandomSelect;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SplitSelect;
+import org.jacop.util.DominatorTree;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
+import org.jacop.util.fsm.RegularExpressionParser;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+
+/**
+ * It is performing testing based on simple problems containing only one constraint.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+@ExtendWith(SingleConstraintTest.TestWatcherExtension.class)
+@Slf4j
+class SingleConstraintTest extends TestHelper {
+
+  @Test
+  void testAnonymousConstraint() {
+
+    Function<IntVar[], Constraint> listXeqY =
+        (IntVar[] list) ->
+            new Constraint(list) {
+
+              @Override
+              public void consistency(Store store) {
+
+                do {
+
+                  store.propagationHasOccurred = false;
+
+                  for (int i = 0; i < list.length - 1; i++) {
+
+                    IntVar x = list[i];
+                    IntVar y = list[i + 1];
+
+                    x.domain.in(store.level, x, y.domain);
+                    y.domain.in(store.level, y, x.domain);
+                  }
+
+                } while (store.propagationHasOccurred);
+              }
+            };
+
+    Store store = new Store();
+
+    int xLength = 3;
+    int xSize = 2;
+    IntVar[] x = getIntVars(store, "vars", xLength, xSize);
+
+    store.impose(listXeqY.apply(x));
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  @Test
+  void testOverlappingAlldiffFailsWhenTheOwnVariablesCannotShare() {
+
+    // x in 1..2 and z in 3..4 cannot share a value, so x, w1, w2, w3 and z need five of four
+    // values;
+    // each alldifferent apart is domain consistent
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar w1 = new IntVar(store, "w1", 1, 4);
+    IntVar w2 = new IntVar(store, "w2", 1, 4);
+    IntVar w3 = new IntVar(store, "w3", 1, 4);
+    IntVar z = new IntVar(store, "z", 3, 4);
+    IntVar[] s = {x, w1, w2, w3};
+    IntVar[] t = {w1, w2, w3, z};
+
+    store.impose(new Alldistinct(s));
+    store.impose(new Alldistinct(t));
+    assertThat(store.consistency()).isTrue();
+
+    store.impose(new OverlappingAlldiff(s, t));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testOverlappingAlldiffPrunesWhatTwoAlldistinctsMiss() {
+
+    // w1 and w2 take two of 1..3 and x and z both take the third, which must be 2
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 3);
+    IntVar w1 = new IntVar(store, "w1", 1, 3);
+    IntVar w2 = new IntVar(store, "w2", 1, 3);
+    IntVar z = new IntVar(store, "z", 1, 2);
+    IntVar[] s = {x, w1, w2};
+    IntVar[] t = {w1, w2, z};
+
+    store.impose(new Alldistinct(s));
+    store.impose(new Alldistinct(t));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.getSize()).isEqualTo(2);
+
+    store.impose(new OverlappingAlldiff(s, t));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.value()).isEqualTo(2);
+    assertThat(z.value()).isEqualTo(2);
+    assertThat(w1.dom().contains(2)).isFalse();
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, w1, w2, z})).isEqualTo(2);
+  }
+
+  @Test
+  void testNegatedIfThen() {
+
+    Store store = new Store();
+
+    int xLength = 3;
+    int xSize = 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    IfThen ifThen = new IfThen(new XneqY(x[0], x[1]), new XeqY(x[1], x[2]));
+
+    Not not = new Not(ifThen);
+    store.impose(not);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  @Test
+  void testInvalidTable() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+
+    assertThatThrownBy(() -> new Table(x, tuples)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidSimpleTable() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+
+    assertThatThrownBy(() -> new SimpleTable(x, tuples))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testSimpleTable() {
+
+    Store store = new Store();
+
+    int xLength = 3;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
+
+    SimpleTable c = new SimpleTable(x, tuples);
+    store.impose(c);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(6);
+  }
+
+  @Test
+  void testBinpacking() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 3;
+    IntVar[] items = getIntVars(store, "item", xLength, xSize);
+    int[] itemSize = {1, 2, 1, 2};
+    IntVar[] binLoad = getIntVars(store, "binLoad", xSize, 4);
+    Binpacking c = new Binpacking(items, binLoad, itemSize, 0);
+    store.impose(c);
+
+    store.print();
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    assertThat(noOfSolutions).isEqualTo(42);
+  }
+
+  // Among ignored events on the count variable, so when the count variable was also in the list
+  // its value was never counted and wrong solutions were accepted, e.g. x = [3, 3, 1] with
+  // n = x[2] and K = {1}. Such models are now rejected.
+  @Test
+  void testAmongRejectsCountVariableInList() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 1, 3), new IntVar(store, "x2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new Among(x, new IntervalDomain(1, 1), x[2]))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // AmongVar gave wrong solutions and removed supported values when x, y and n shared variables,
+  // e.g. x = [a], y = [n, b, c] removed a supported value of a. Such models are now rejected.
+  @Test
+  void testAmongVarRejectsSharedVariables() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 3);
+    IntVar n = new IntVar(store, "n", 0, 3);
+
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a}, new IntVar[] {n, b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, b}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new AmongVar(new IntVar[] {a, n}, new IntVar[] {b}, n))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Bins numbered from a negative value: the lower bound pruning indexed a BitSet by bin number
+  // and threw NegativeArraySizeException or IndexOutOfBoundsException.
+  @Test
+  void testBinpackingNegativeBinNumbers() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", -4, -2),
+      new IntVar(store, "i1", -4, -2),
+      new IntVar(store, "i2", -4, -2)
+    };
+    IntVar[] binLoad = getIntVars(store, "binLoad", 3, 7);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 1}, -4));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    assertThat(noOfSolutions).isEqualTo(27);
+  }
+
+  // Sizes (w, 80 - w) in bins of capacity (100, 100): every item takes 80 of the 200 of the summed
+  // dimension, so no bin holds three items and seven items need four bins. Each dimension alone
+  // fits them in three bins; only the surrogate dimension of VectorBinpacking sees it at the root.
+  @Test
+  void testVectorBinpackingSurrogateDimension() {
+    int[] first = {10, 20, 30, 40, 50, 60, 70};
+    int[][] w = {first, Arrays.stream(first).map(v -> 80 - v).toArray()};
+    int[][] capacity = {{100, 100, 100}, {100, 100, 100}};
+
+    Store perDimension = new Store();
+    IntVar[] bins = getIntVars(perDimension, "x", 7, 3);
+    IntVar[][] load = {
+      getIntVars(perDimension, "a", 3, 101), getIntVars(perDimension, "b", 3, 101)
+    };
+    for (int d = 0; d < 2; d++) {
+      perDimension.impose(new Binpacking(bins, load[d], w[d]));
+    }
+    assertThat(perDimension.consistency()).isTrue();
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 7, 3);
+    new VectorBinpacking(store, x, capacity, w, 0).imposeDecomposition(store);
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Items of weight zero were dropped from the constraint, so their bin variables could take
+  // values outside the bins (MiniZinc bin_packing_capa and bin_packing_load require every item
+  // to be in one of the bins).
+  @Test
+  void testBinpackingZeroWeightItemInExistingBin() {
+
+    Store store = new Store();
+    IntVar[] items = {new IntVar(store, "i0", 0, 3), new IntVar(store, "i1", 0, 3)};
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 3);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 2}, 1));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // i0 in {1, 2}, i1 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  // The constructor without minBin computes the first bin from items of non-zero weight, but it
+  // started from the first item even when its weight was zero, shifting all bins.
+  @Test
+  void testBinpackingDefaultMinBinIgnoresZeroWeightItems() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "i0", 0, 2), new IntVar(store, "i1", 1, 2), new IntVar(store, "i2", 2, 2)
+    };
+    IntVar[] binLoad = {new IntVar(store, "l1", 0, 0), new IntVar(store, "l2", 4, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 3, 1}));
+
+    int noOfSolutions =
+        noOfAllSolutions(
+            store,
+            Stream.concat(Arrays.stream(items), Arrays.stream(binLoad)).toArray(IntVar[]::new));
+
+    // bins are 1 and 2: i1 = i2 = 2, i0 in {1, 2}
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  // The total weight of all items exceeded Integer.MAX_VALUE and overflowed, so the constraint
+  // failed on a satisfiable problem.
+  @Test
+  void testBinpackingTotalWeightAboveIntRange() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 5);
+    IntVar[] binLoad = new IntVar[5];
+    for (int i = 0; i < binLoad.length; i++) {
+      binLoad[i] = new IntVar(store, "binLoad" + i, 0, IntDomain.MAX_INT);
+    }
+    int[] w = new int[5];
+    Arrays.fill(w, 500_000_000);
+    store.impose(new Binpacking(items, binLoad, w, 0));
+
+    // one item per bin
+    assertThat(noOfAllSolutions(store, items)).isEqualTo(120);
+  }
+
+  // Changes made by Binpacking itself are not queued again by the store, and bins affected by its
+  // own pruning were not processed again. Here the propagator fixed item 0 to bin 3 and removed
+  // bin 3 from item 2, but did not process bin 1 again, whose load can then be at most 10.
+  @Test
+  void testBinpackingReachesFixpoint() {
+
+    Store store = new Store();
+    int[][] binDomains = {{1, 3}, {0, 1, 2}, {0, 2, 3}, {0, 1, 2}, {0, 1, 2}, {3}, {1}};
+    IntVar[] items = new IntVar[binDomains.length];
+    for (int i = 0; i < items.length; i++) {
+      items[i] = new IntVar(store, "item" + i);
+      for (int v : binDomains[i]) {
+        items[i].addDom(v, v);
+      }
+    }
+    IntVar[] binLoad = {
+      new IntVar(store, "l0"),
+      new IntVar(store, "l1", 1, 11),
+      new IntVar(store, "l2", 0, 11),
+      new IntVar(store, "l3", 9, 11)
+    };
+    binLoad[0].addDom(0, 2);
+    binLoad[0].addDom(6, 11);
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 1, 3, 5, 8, 5, 1}, 0));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].value()).isEqualTo(3);
+    assertThat(binLoad[3].value()).isEqualTo(10);
+    assertThat(binLoad[1].max()).isEqualTo(10);
+  }
+
+  // Bins of capacity 9 hold 3, 2, 6 and 6, so their free space is 6, 7, 3 and 3: the items 5, 5
+  // and 4 cannot all be packed. The bin-count lower bound used capacity 9 and padded only bins
+  // with items (reduction R0), and was switched off once every bin was used; with the largest free
+  // space as capacity (reduction RMin) it detects the failure.
+  @Test
+  void testBinpackingLowerBoundWithAllBinsUsed() {
+
+    Store store = new Store();
+    IntVar[] items = new IntVar[9];
+    for (int i = 0; i < 4; i++) {
+      items[i] = new IntVar(store, "f" + i, i, i);
+    }
+    for (int i = 4; i < 9; i++) {
+      items[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar[] binLoad = getIntVars(store, "binLoad", 4, 10);
+    store.impose(new Binpacking(items, binLoad, new int[] {3, 2, 6, 6, 5, 1, 2, 4, 5}, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Items 6, 4, 4, 2 and 2 fill two bins of capacity 9 exactly, which even sizes cannot do. L2
+  // gives two bins; the dual feasible function f_CCM1 with lambda = 2 maps the sizes to 6, 4, 4, 2,
+  // 2 and the capacity to 8, so three bins are needed.
+  @Test
+  void testBinpackingDualFeasibleFunctionBound() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 5, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    store.impose(new Binpacking(items, binLoad, new int[] {2, 6, 4, 2, 4}, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Bins 0 and 1 hold 4 and 5 and have 5 free; the three items of size 6 must go to bins 2 and 3.
+  // With capacity 10 the virtual items are 5, 5, 0 and 0 and every bound allows four bins.
+  // Reduction RMax adds 1 to the capacity and to the virtual items, which become 6, 6, 1 and 1:
+  // five items larger than half of 11 need five bins.
+  @Test
+  void testBinpackingLowerBoundReductionRMax() {
+
+    Store store = new Store();
+    int[] w = {4, 6, 1, 6, 2, 4, 5, 6};
+    IntVar[] items = getIntVars(store, "item", w.length, 4);
+    items[5] = new IntVar(store, "fixed0", 0, 0);
+    items[6] = new IntVar(store, "fixed1", 1, 1);
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 0, 9),
+      new IntVar(store, "l1", 0, 10),
+      new IntVar(store, "l2", 0, 10),
+      new IntVar(store, "l3", 0, 10)
+    };
+    store.impose(new Binpacking(items, binLoad, w, 0));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Bins 0 and 1 take at most 3, so each holds at most one of the items 2, 2, 2 and 3; bin 2 gets
+  // at least two items and a load of at least 2 + 2. The load coherence and NoSum give only 3.
+  @Test
+  void testBinpackingCardinalityFromLoads() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 4, 3);
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 0, 3), new IntVar(store, "l1", 0, 3), new IntVar(store, "l2", 0, 9)
+    };
+    store.impose(
+        new Binpacking(items, binLoad, new int[] {2, 2, 2, 3}, 0).cardinalityReasoning(true));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(binLoad[2].min()).isEqualTo(4);
+  }
+
+  // Bin 0 holds at least two items and at most 5, so the item of size 5 cannot go there: the
+  // lightest other item makes 6 ("too big", Derval, Régin and Schaus 2018).
+  @Test
+  void testBinpackingCardinalityTooBig() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 4, 2);
+    IntVar[] binLoad = {new IntVar(store, "l0", 0, 5), new IntVar(store, "l1", 0, 10)};
+    IntVar[] card = {new IntVar(store, "c0", 2, 4), new IntVar(store, "c1", 0, 4)};
+    store.impose(new Binpacking(items, binLoad, new int[] {5, 3, 1, 1}, 0, card));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[0].singleton(1)).isTrue();
+  }
+
+  // Bins 0 and 1 hold at least 2 + 1 of the six items, so bins 2 and 3 together hold at most 3,
+  // and items 2, 3 and 5 can only go there. Item 4 is out of bin 2 although each bin alone could
+  // still take it: bin 2 has room for one more item and bin 3 is not full either.
+  @Test
+  void testBinpackingGroupOfBinsIsFull() {
+
+    Store store = new Store();
+    IntVar[] items = {
+      new IntVar(store, "x0", 0, 1),
+      new IntVar(store, "x1", 0, 0),
+      new IntVar(store, "x2", 2, 3),
+      new IntVar(store, "x3", 2, 3),
+      new IntVar(store, "x4", 0, 2),
+      new IntVar(store, "x5", 2, 3)
+    };
+    IntVar[] binLoad = {
+      new IntVar(store, "l0", 5, 7),
+      new IntVar(store, "l1", 2, 5),
+      new IntVar(store, "l2", 1, 4),
+      new IntVar(store, "l3", 2, 5)
+    };
+    IntVar[] card = {
+      new IntVar(store, "c0", 2, 3),
+      new IntVar(store, "c1", 1, 2),
+      new IntVar(store, "c2", 1, 2),
+      new IntVar(store, "c3", 2, 2)
+    };
+    store.impose(new Binpacking(items, binLoad, new int[] {2, 3, 1, 4, 3, 2}, 0, card));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(items[4].max()).isEqualTo(1);
+  }
+
+  // The items of weight 0 are counted too: three items and two bins of at most one item each.
+  @Test
+  void testBinpackingCardinalityCountsZeroWeights() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 3, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    IntVar[] card = getIntVars(store, "card", 2, 2);
+    store.impose(new Binpacking(items, binLoad, new int[] {0, 4, 0}, 0, card));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testBinpackingCardinalityRejectsSharedVariable() {
+
+    Store store = new Store();
+    IntVar[] items = getIntVars(store, "item", 3, 2);
+    IntVar[] binLoad = getIntVars(store, "binLoad", 2, 10);
+    IntVar[] card = {binLoad[0], new IntVar(store, "c1", 0, 3)};
+
+    assertThatThrownBy(() -> new Binpacking(items, binLoad, new int[] {1, 2, 3}, 0, card))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testCheckForInputDuplicationSkippsingSingletons2() {
+
+    Store store = new Store();
+    int xLength = 4;
+    IntVar[] list = getIntVars(store, "list", xLength, 2);
+    IntVar dubleton = new IntVar(store, "dubleton", 2, 3);
+    IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
+    parameters[xLength] = dubleton;
+    parameters[xLength + 1] = dubleton;
+
+    Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
+
+    assertThat(dubletons).hasSize(1);
+  }
+
+  @Test
+  void testCheckForInputDuplicationSkippsingSingletons1() {
+
+    Store store = new Store();
+    int xLength = 4;
+    IntVar[] list = getIntVars(store, "list", xLength, 2);
+    IntVar dubleton = new IntVar(store, "dubleton", 2, 2);
+    IntVar[] parameters = Arrays.copyOf(list, xLength + 2);
+    parameters[xLength] = dubleton;
+    parameters[xLength + 1] = dubleton;
+
+    Set<Var> dubletons = DecomposedConstraint.getDubletonsSkipSingletons(parameters);
+
+    assertThat(dubletons).isEmpty();
+  }
+
+  @Test
+  void testSubcircuit() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 5;
+    IntVar[] list = getIntVars(store, "list", xLength, xSize);
+    Subcircuit c = new Subcircuit(list);
+    store.impose(c);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, list);
+
+    assertThat(noOfSolutions).isEqualTo(21);
+  }
+
+  @Test
+  void testInvalidSubcircuit() {
+
+    Store store = new Store();
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    list[list.length - 1] = list[0];
+    assertThatThrownBy(() -> new Subcircuit(list)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Subcircuit picks the dominance root at random; the choice must come from a fixed seed so the
+  // same model explores the same search tree on every run.
+  @Test
+  void testSubcircuitSearchIsReproducible() {
+
+    Set<Integer> failures = new HashSet<>();
+    for (int run = 0; run < 4; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[8];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, x.length);
+      }
+      store.impose(new Subcircuit(x));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.setPrintInfo(false);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+      // 1 + sum over k = 2..8 of C(8, k) * (k - 1)! subcircuits
+      assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(16_065);
+      failures.add(search.getWrongDecisions());
+    }
+    assertThat(failures).hasSize(1);
+  }
+
+  // x is a subcircuit when x[i] = i + 1 marks node i as outside the circuit and the other nodes
+  // follow x as successors around exactly one cycle (no cycle at all is allowed too).
+  private static boolean isSubcircuit(int[] x) {
+    int n = x.length;
+    int start = -1;
+    int inCircuit = 0;
+    for (int i = 0; i < n; i++) {
+      if (x[i] < 1 || x[i] > n) {
+        return false;
+      }
+      if (x[i] != i + 1) {
+        start = i;
+        inCircuit++;
+      }
+    }
+    if (inCircuit == 0) {
+      return true;
+    }
+    int length = 0;
+    int node = start;
+    do {
+      node = x[node] - 1;
+      length++;
+    } while (node != start && length <= n);
+    return node == start && length == inCircuit;
+  }
+
+  // Domains mix values inside 1..n with values outside it, so the first propagation also has to
+  // trim the list to 1..n.
+  private static IntVar[] randomSubcircuitVars(Store store, int n, Random random) {
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = randomSubsetVar(store, "x" + (i + 1), random.nextInt(4) == 0 ? 0 : 1, n, random);
+      if (random.nextInt(8) == 0) {
+        x[i].addDom(n + 1, n + 1);
+      }
+    }
+    return x;
+  }
+
+  // Subcircuit is not idempotent on purpose: dominator pruning pauses after calls that find
+  // nothing. So the walk checks that no solution is lost, and not the fixpoint.
+  @Test
+  void subcircuitKeepsSupports() {
+    Random random = new Random(31);
+    for (int run = 0; run < 3000; run++) {
+      Store store = new Store();
+      IntVar[] x = randomSubcircuitVars(store, 1 + random.nextInt(6), random);
+      String instance = "run " + run + " subcircuit " + domainsOf(x);
+      store.impose(new Subcircuit(x));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          x,
+          vs -> bruteForce(vs, SingleConstraintTest::isSubcircuit),
+          () -> domainsOf(x),
+          random);
+    }
+  }
+
+  // Nodes 3, 4 and 5 must be on the circuit, so nodes 1 and 2 stay out. Their component is found
+  // inside the search that starts at node 1, and the component pruning used to leave it unchecked.
+  @Test
+  void subcircuitKeepsNodesOutsideTheCircuitComponentOut() {
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 1, 3);
+    IntVar x2 = new IntVar(store, "x2", 1, 2);
+    IntVar x3 = new IntVar(store, "x3", 4, 5);
+    IntVar x4 = new IntVar(store, "x4", 3, 3);
+    x4.addDom(5, 5);
+    IntVar x5 = new IntVar(store, "x5", 3, 4);
+    // only the component pruning, dominator pruning would find this too
+    System.setProperty("sub_circuit_dominance_pruning", "false");
+    try {
+      store.impose(new Subcircuit(new IntVar[] {x1, x2, x3, x4, x5}));
+    } finally {
+      System.clearProperty("sub_circuit_dominance_pruning");
+    }
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.singleton(1)).as("%s", x1).isTrue();
+    assertThat(x2.singleton(2)).as("%s", x2).isTrue();
+  }
+
+  @Test
+  void subcircuitFindsExactlyTheBruteForceSolutions() {
+    Random random = new Random(37);
+    for (int run = 0; run < 1500; run++) {
+      Store store = new Store();
+      IntVar[] x = randomSubcircuitVars(store, 1 + random.nextInt(6), random);
+      String instance = "run " + run + " subcircuit " + domainsOf(x);
+      Set<String> expected =
+          bruteForce(x, SingleConstraintTest::isSubcircuit).stream()
+              .map(Arrays::toString)
+              .collect(Collectors.toSet());
+      store.impose(new Subcircuit(x));
+
+      Set<String> found = new HashSet<>();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(Search<IntVar> s, SelectChoicePoint<IntVar> sel) {
+              int[] solution = Arrays.stream(x).mapToInt(IntVar::value).toArray();
+              assertThat(isSubcircuit(solution))
+                  .as(instance + " " + Arrays.toString(solution))
+                  .isTrue();
+              found.add(Arrays.toString(solution));
+              return super.executeAfterSolution(s, sel);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(run)));
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  // a dominates b iff b cannot be reached from the root once a is removed (a != root)
+  @Test
+  void dominatorTreeMatchesReachability() {
+    Random random = new Random(41);
+    for (int run = 0; run < 500; run++) {
+      int n = 1 + random.nextInt(9);
+      boolean[][] arc = new boolean[n][n];
+      DominatorTree tree = new DominatorTree(n);
+      for (int u = 0; u < n; u++) {
+        for (int v = 0; v < n; v++) {
+          if (random.nextInt(4) == 0) {
+            arc[u][v] = true;
+            tree.addArc(u, v);
+          }
+        }
+      }
+      int root = random.nextInt(n);
+      boolean allReached = reached(arc, root, -1).cardinality() == n;
+      assertThat(tree.compute(root)).as("run " + run).isEqualTo(allReached);
+      if (!allReached) {
+        continue;
+      }
+      for (int a = 0; a < n; a++) {
+        BitSet withoutA = a == root ? new BitSet() : reached(arc, root, a);
+        for (int b = 0; b < n; b++) {
+          boolean expected = a == b || !withoutA.get(b);
+          assertThat(tree.dominates(a, b))
+              .as("run " + run + " " + a + " dom " + b)
+              .isEqualTo(expected);
+        }
+      }
+    }
+  }
+
+  private static BitSet reached(boolean[][] arc, int root, int removed) {
+    BitSet seen = new BitSet();
+    if (root == removed) {
+      return seen;
+    }
+    Deque<Integer> todo = new ArrayDeque<>();
+    seen.set(root);
+    todo.push(root);
+    while (!todo.isEmpty()) {
+      int u = todo.pop();
+      for (int v = 0; v < arc.length; v++) {
+        if (arc[u][v] && v != removed && !seen.get(v)) {
+          seen.set(v);
+          todo.push(v);
+        }
+      }
+    }
+    return seen;
+  }
+
+  @Test
+  void testSeededRandomIsReproducible() {
+
+    try {
+      Store.setSeed(17);
+      int[] first = IntStream.range(0, 20).map(i -> Store.getRandom().nextInt(1000)).toArray();
+      Store.setSeed(17);
+      int[] second = IntStream.range(0, 20).map(i -> Store.getRandom().nextInt(1000)).toArray();
+      assertThat(second).containsExactly(first);
+
+      IndomainRandom<IntVar> a = new IndomainRandom<>(5);
+      IndomainRandom<IntVar> b = new IndomainRandom<>(5);
+      Store store = new Store();
+      IntVar v = new IntVar(store, "v", 0, 1000);
+      for (int i = 0; i < 20; i++) {
+        assertThat(b.indomain(v)).isEqualTo(a.indomain(v));
+      }
+    } finally {
+      Store.resetSeed();
+    }
+  }
+
+  @Test
+  void testInvalidStretch() {
+    IntVar[] list = null;
+    assertThatThrownBy(() -> new Stretch(null, null, null, list))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretch() {
+
+    Store store = new Store();
+
+    int[] values = {1, 2};
+    int[] min = {1, 2};
+    int[] max = {2, 3};
+    int xLength = 4;
+    int xSize = 4;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    Stretch stretch = new Stretch(values, min, max, x);
+
+    store.imposeDecomposition(stretch);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(5);
+  }
+
+  @Test
+  void testInvalidElementVariable() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar[] list = null;
+    assertThatThrownBy(() -> new ElementVariable(x, list, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidAmong3() {
+
+    Store store = new Store();
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    list[list.length - 1] = null;
+    assertThatThrownBy(() -> new Among(list, new IntervalDomain(1, 2), null))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidAmong2() {
+
+    Store store = new Store();
+
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    assertThatThrownBy(() -> new Among(list, new IntervalDomain(1, 2), null))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidAmong1() {
+
+    Store store = new Store();
+
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    assertThatThrownBy(() -> new Among(list, null, min))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidMin2() {
+
+    Store store = new Store();
+
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = getIntVars(store, "list", 3, 3);
+    list[list.length - 1] = null;
+    assertThatThrownBy(() -> new Min(list, min)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidMin1() {
+
+    Store store = new Store();
+
+    IntVar min = new IntVar(store, "x", 0, 4);
+    IntVar[] list = null;
+
+    assertThatThrownBy(() -> new Min(list, min)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testInvalidAbs() {
+
+    Store store = new Store();
+
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = null;
+
+    assertThatThrownBy(() -> new AbsXeqY(x, y)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void absXeqYBoundConsistencyReachesFixpoint() {
+    // When pruning x left only non-negative values, y kept the lower bound 0, and the constraint
+    // was not run again. In all_interval this left |1| = {0..1} and gave non-solutions.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x");
+    x.addDom(-3, -3);
+    x.addDom(1, 2);
+    x.addDom(4, 5);
+    IntVar y = new IntVar(store, "y");
+    y.addDom(0, 0);
+    y.addDom(2, 2);
+    y.addDom(6, 7);
+
+    store.impose(new AbsXeqY(x, y));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton(2)).as("x = %s", x.dom()).isTrue();
+    assertThat(y.singleton(2)).as("y = %s", y.dom()).isTrue();
+  }
+
+  @Test
+  void distanceIsNeverNegative() {
+    // |x - y| = z: the value -2 of z has no support, but the propagator only imposed z >= 0 when
+    // a flag that was never initialised to true was set.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, 2);
+    IntVar y = new IntVar(store, "y", -4, 3);
+    IntVar z = new IntVar(store, "z", -2, 7);
+    store.impose(new Distance(x, y, z));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(0);
+  }
+
+  @Test
+  void xmulYeqZPrunesFactorWhenOtherFactorSpansZero() {
+    // x * y = -11 with y in -3..2: over the reals x = -11 / y is at least 11 / 3 for y < 0 and at
+    // most -5.5 for y > 0, so only x = 4 is left in -3..4; y = -11 / 4 is no integer, so it fails.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 4);
+    IntVar y = new IntVar(store, "y", -3, 2);
+    IntVar z = new IntVar(store, "z", -11, -11);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    // with z = -8, x in -3..4 and y in -3..2: y < 0 gives x >= 8 / 3, y > 0 gives x <= -4
+    store = new Store();
+    x = new IntVar(store, "x", -3, 4);
+    y = new IntVar(store, "y", -3, 2);
+    z = new IntVar(store, "z", -8, -8);
+    store.impose(new XmulYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("4");
+    assertThat(y.dom().toString()).isEqualTo("-2");
+  }
+
+  @Test
+  void absXeqYPrunesOnlyUnsupportedValuesAndReachesFixpoint() {
+    Random random = new Random(7);
+    for (int run = 0; run < 2000; run++) {
+      boolean domainConsistency = run % 2 == 0;
+      Store store = new Store();
+      IntVar x = randomSubsetVar(store, "x", -5, 5, random);
+      IntVar y = randomSubsetVar(store, "y", -2, 6, random);
+      int[] xValues = valuesOf(x);
+      int[] yValues = valuesOf(y);
+      AbsXeqY abs = new AbsXeqY(x, y, domainConsistency);
+      store.impose(abs);
+
+      boolean supported = false;
+      for (int v : xValues) {
+        supported |= y.domain.contains(Math.abs(v));
+      }
+      boolean consistent = store.consistency();
+      String instance =
+          "run " + run + " x " + Arrays.toString(xValues) + " y " + Arrays.toString(yValues);
+      if (!supported) {
+        // bounds propagation may miss a failure that the search finds later
+        continue;
+      }
+      assertThat(consistent).as(instance).isTrue();
+      for (int v : xValues) {
+        if (Arrays.stream(yValues).anyMatch(w -> w == Math.abs(v))) {
+          assertThat(x.domain.contains(v)).as(instance).isTrue();
+          assertThat(y.domain.contains(Math.abs(v))).as(instance).isTrue();
+        }
+      }
+      String afterPropagation = x.dom() + " " + y.dom();
+      store.setLevel(store.level + 1);
+      abs.consistency(store);
+      assertThat(x.dom() + " " + y.dom()).as(instance).isEqualTo(afterPropagation);
+    }
+  }
+
+  @Test
+  void linearIntDomWakesUpOnHoleRemoval() {
+    // LinearIntDom is domain consistent but inherited the BOUND pruning event of LinearInt, so
+    // removing an inner value of a variable did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 2, 4);
+    IntVar z = new IntVar(store, "z", 5, 13);
+    // x + 4 * y - z = 4, so z = 4 * y - 3
+    store.impose(new LinearIntDom(new IntVar[] {x, y, z}, new int[] {1, 4, -1}, "==", 4));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{5, 9, 13}");
+
+    store.setLevel(store.level + 1);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(z.dom().toString()).isEqualTo("{5, 13}");
+  }
+
+  @Test
+  void xmodYeqZWakesUpOnHoleRemoval() {
+    // With y ground XmodYeqZ filters x with the holes of z, but it inherited the BOUND pruning
+    // event of AbstractXopYeqZ, so removing an inner value of z did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 5, 5);
+    IntVar z = new IntVar(store, "z", 0, 4);
+    store.impose(new XmodYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{1..5}");
+
+    store.setLevel(store.level + 1);
+    z.domain.inComplement(store.level, z, 1);
+    assertThat(store.consistency()).isTrue();
+
+    // 1 mod 5 = 1 is no longer in z
+    assertThat(x.dom().toString()).isEqualTo("{2..5}");
+  }
+
+  @Test
+  void xexpYeqZWakesUpOnHoleRemoval() {
+    // XexpYeqZ keeps only supported values but inherited the BOUND pruning event of
+    // AbstractXopYeqZ, so removing an inner value of z did not re-run it.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 4);
+    IntVar y = new IntVar(store, "y", 2, 2);
+    IntVar z = new IntVar(store, "z", 4, 16);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{4, 9, 16}");
+
+    store.setLevel(store.level + 1);
+    z.domain.inComplement(store.level, z, 9);
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x.dom().toString()).isEqualTo("{2, 4}");
+  }
+
+  @Test
+  void xexpYeqZKeepsNegativePowers() {
+    // computeZi returned -1 to mean "no value", so every negative power such as (-2)^3 or
+    // (-1)^-1 was dropped. A negative exponent truncates towards zero, as in Gecode.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 3);
+    IntVar y = new IntVar(store, "y", -3, 3);
+    IntVar z = new IntVar(store, "z", -30, 30);
+    store.impose(new XexpYeqZ(x, y, z));
+
+    int expected = 0;
+    for (int xi = -3; xi <= 3; xi++) {
+      for (int yi = -3; yi <= 3; yi++) {
+        if (xi != 0 || yi >= 0) {
+          long zi = (long) Math.pow(xi, yi);
+          if (zi >= -30 && zi <= 30) {
+            expected++;
+          }
+        }
+      }
+    }
+    assertThat(expected).isEqualTo(46);
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y, z})).isEqualTo(expected);
+  }
+
+  @Test
+  void circuitAndSubcircuitSolutionCountsMatchBruteForce() {
+    Random random = new Random(5);
+    for (int trial = 0; trial < 300; trial++) {
+      int n = 2 + random.nextInt(5);
+      int[][] domains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        domains[i] =
+            random.ints(1, n + 1).limit(1 + random.nextInt(n)).distinct().sorted().toArray();
+      }
+      for (boolean sub : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        store.impose(sub ? new Subcircuit(x) : new Circuit(x));
+        int expected = circuitSolutions(domains, new int[n], 0, sub);
+        int actual = store.consistency() ? noOfAllSolutions(store, x) : 0;
+        assertThat(actual)
+            .as("trial %d, subcircuit %b, domains %s", trial, sub, Arrays.deepToString(domains))
+            .isEqualTo(expected);
+      }
+    }
+  }
+
+  @Test
+  void circuitWithOffsetMatchesBruteForceAndShiftedCircuit() {
+    // Circuit numbered from an offset must have the solutions of the 1-based circuit on values
+    // shifted by 1 - offset, and prune the same at the root.
+    Random random = new Random(11);
+    for (int trial = 0; trial < 500; trial++) {
+      int n = 2 + random.nextInt(5);
+      int offset = random.nextInt(7) - 3;
+      int[][] domains = new int[n][]; // 1-based, with values outside 1..n
+      for (int i = 0; i < n; i++) {
+        domains[i] =
+            random.ints(0, n + 2).limit(1 + random.nextInt(n)).distinct().sorted().toArray();
+      }
+      int[][] inRange = new int[n][];
+      for (int i = 0; i < n; i++) {
+        inRange[i] = Arrays.stream(domains[i]).filter(v -> v >= 1 && v <= n).toArray();
+      }
+      int expected = circuitSolutions(inRange, new int[n], 0, false);
+      String[] pruned = new String[2];
+      for (int shifted = 0; shifted < 2; shifted++) {
+        int base = shifted == 0 ? offset : 1;
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v - 1 + base, v - 1 + base);
+          }
+        }
+        store.impose(shifted == 0 ? new Circuit(x, offset) : new Circuit(x));
+        boolean consistent = store.consistency();
+        // root domains in the 1-based numbering
+        StringBuilder after = new StringBuilder();
+        for (IntVar v : x) {
+          after.append(consistent ? shift(v.dom(), 1 - base) : "fail").append(' ');
+        }
+        pruned[shifted] = after.toString();
+        int actual = consistent ? noOfAllSolutions(store, x) : 0;
+        assertThat(actual)
+            .as("trial %d, offset %d, domains %s", trial, base, Arrays.deepToString(domains))
+            .isEqualTo(expected);
+      }
+      assertThat(pruned[0])
+          .as("trial %d, offset %d, domains %s", trial, offset, Arrays.deepToString(domains))
+          .isEqualTo(pruned[1]);
+    }
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    assertThatThrownBy(() -> new Circuit(x, IntDomain.MAX_INT))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  private static String shift(IntDomain dom, int by) {
+    IntervalDomain result = new IntervalDomain();
+    for (ValueEnumeration e = dom.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement() + by;
+      result.unionAdapt(v, v);
+    }
+    return result.toString();
+  }
+
+  private static int circuitSolutions(int[][] domains, int[] values, int i, boolean sub) {
+    int n = values.length;
+    if (i == n) {
+      boolean[] seen = new boolean[n];
+      int inCycle = 0;
+      int start = -1;
+      for (int j = 0; j < n; j++) {
+        if (seen[values[j] - 1]) {
+          return 0;
+        }
+        seen[values[j] - 1] = true;
+        if (values[j] != j + 1) {
+          inCycle++;
+          start = j;
+        }
+      }
+      if (!sub && inCycle < n) {
+        return 0;
+      }
+      if (start < 0) {
+        return 1;
+      }
+      int length = 0;
+      int j = start;
+      do {
+        j = values[j] - 1;
+        length++;
+      } while (j != start);
+      return length == inCycle ? 1 : 0;
+    }
+    int count = 0;
+    for (int v : domains[i]) {
+      values[i] = v;
+      count += circuitSolutions(domains, values, i + 1, sub);
+    }
+    return count;
+  }
+
+  @Test
+  void circuitWakesUpOnHoleRemoval() {
+    // Circuit inherited the BOUND pruning event of Alldiff, so removing an inner value did not
+    // re-run it. Here no variable can take 3 any more, so node 3 has no predecessor.
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    x[0] = new IntVar(store, "x0", 2, 4);
+    x[1] = new IntVar(store, "x1");
+    x[1].addDom(1, 1);
+    x[1].addDom(4, 4);
+    x[2] = new IntVar(store, "x2");
+    x[2].addDom(1, 2);
+    x[2].addDom(4, 4);
+    x[3] = new IntVar(store, "x3", 1, 2);
+    store.impose(new Circuit(x));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x[0].domain.inComplement(store.level, x[0], 3);
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void assignmentRejectsArraysOfDifferentLength() {
+    // a shorter ds threw ArrayIndexOutOfBoundsException, a longer one NullPointerException later
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 0, 1), new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    assertThatThrownBy(() -> new Assignment(x, d)).isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Assignment(d, x)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void assignmentPropagatesVariablesSharedByBothArraysInBothRoles() {
+    // A variable occurring in both xs and ds was only propagated as an x when its domain changed,
+    // so it pruned less than the same model with a separate copy joined by XeqY.
+    Random random = new Random(3);
+    for (int trial = 0; trial < 400; trial++) {
+      int n = 2 + random.nextInt(4);
+      int[][] domains = new int[2 * n][];
+      for (int i = 0; i < 2 * n; i++) {
+        domains[i] =
+            random.ints(0, n).limit(1 + random.nextInt(n + 1)).distinct().sorted().toArray();
+      }
+      int[] shared = new int[n]; // ds[j] is xs[shared[j]] when shared[j] >= 0
+      for (int j = 0; j < n; j++) {
+        shared[j] = random.nextInt(3) == 0 ? random.nextInt(n) : -1;
+      }
+      String[] result = new String[2];
+      for (int copy = 0; copy < 2; copy++) {
+        Store store = new Store();
+        IntVar[] v = new IntVar[2 * n];
+        for (int i = 0; i < 2 * n; i++) {
+          v[i] = new IntVar(store, "v" + i);
+          for (int value : domains[i]) {
+            v[i].addDom(value, value);
+          }
+        }
+        IntVar[] xs = Arrays.copyOfRange(v, 0, n);
+        IntVar[] ds = Arrays.copyOfRange(v, n, 2 * n);
+        for (int j = 0; j < n; j++) {
+          if (shared[j] >= 0) {
+            if (copy == 0) {
+              ds[j] = xs[shared[j]];
+            } else {
+              ds[j] = new IntVar(store, "copy" + j, 0, n - 1);
+              store.impose(new XeqY(ds[j], xs[shared[j]]));
+            }
+          }
+        }
+        store.impose(new Assignment(xs, ds));
+        boolean consistent = store.consistency();
+        // compare the variables that both models have: xs and the ds that are not shared
+        StringBuilder domainsAfter = new StringBuilder();
+        for (int i = 0; i < 2 * n; i++) {
+          if (i < n || shared[i - n] < 0) {
+            domainsAfter.append(v[i].dom()).append(' ');
+          }
+        }
+        result[copy] = consistent ? domainsAfter.toString() : "fail";
+      }
+      if (!result[1].equals("fail")) {
+        assertThat(result[0])
+            .as(
+                "trial %d, shared %s, domains %s",
+                trial, Arrays.toString(shared), Arrays.deepToString(domains))
+            .isEqualTo(result[1]);
+      }
+    }
+  }
+
+  @Test
+  void circuitFailsWhenGraphIsNotStronglyConnected() {
+    // No successor domain contains 1 (first graph), or nodes 3..6 never lead back to 1 or 2
+    // (second graph), so no Hamiltonian circuit exists. The SCC check only failed when the DFS
+    // from node 1 had not yet visited all nodes at the moment it closed a component; here the
+    // component without node 1 is closed after all nodes have been visited.
+    int[][][] graphs = {
+      {{2, 3}, {3, 4, 5}, {2, 4, 5}, {2, 3, 5}, {2, 3, 4}},
+      {{2}, {1, 3}, {4, 5, 6}, {3, 5, 6}, {3, 4, 6}, {3, 4, 5}}
+    };
+    for (int[][] graph : graphs) {
+      assertThat(circuitSolutions(graph, new int[graph.length], 0, false)).isZero();
+      Store store = new Store();
+      IntVar[] x = new IntVar[graph.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + (i + 1));
+        for (int v : graph[i]) {
+          x[i].addDom(v, v);
+        }
+      }
+      store.impose(new Circuit(x));
+      assertThat(store.consistency()).as(Arrays.deepToString(graph)).isFalse();
+    }
+  }
+
+  @Test
+  void circuitOnLargeGraphDoesNotOverflowTheStack() throws InterruptedException {
+    // The SCC check was a recursive DFS, one Java frame per node, and threw StackOverflowError
+    // for circuits of a few ten thousand nodes with the default thread stack. Every node i may go
+    // to i - 1 or i + 1 (cyclic). Run on a thread with a 512 KB stack, since tests use -Xss100m.
+    int n = 100_000;
+    boolean[] result = new boolean[1];
+    Throwable[] error = new Throwable[1];
+    Thread thread =
+        new Thread(
+            null,
+            () -> {
+              try {
+                Store store = new Store();
+                IntVar[] x = new IntVar[n];
+                for (int i = 0; i < n; i++) {
+                  x[i] = new IntVar(store, "x" + i);
+                  x[i].addDom((i + 1) % n + 1, (i + 1) % n + 1);
+                  x[i].addDom((i + n - 1) % n + 1, (i + n - 1) % n + 1);
+                }
+                store.impose(new Circuit(x));
+                result[0] = store.consistency();
+              } catch (Throwable t) {
+                error[0] = t;
+              }
+            },
+            "small-stack",
+            512 * 1024);
+    thread.start();
+    thread.join();
+    assertThat(error[0]).isNull();
+    assertThat(result[0]).isTrue();
+  }
+
+  @Test
+  void minSimpleReachesFixpoint() {
+    // Intersecting x2 with min.dom() lowered x2.max, but min.max was not recomputed in the same
+    // call and the constraint is not re-run for its own changes, leaving min = 0 unsupported.
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 1, 1);
+    IntVar x2 = new IntVar(store, "x2");
+    x2.addDom(-4, -2);
+    x2.addDom(1, 1);
+    x2.addDom(5, 6);
+    IntVar min = new IntVar(store, "min");
+    min.addDom(-4, -2);
+    min.addDom(0, 0);
+    min.addDom(5, 5);
+
+    store.impose(new MinSimple(x1, x2, min));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(min.dom().toString()).isEqualTo("{-4..-2}");
+    assertThat(x2.dom().toString()).isEqualTo("{-4..-2}");
+  }
+
+  @Test
+  void minAndMaxSimpleKeepSupportsAndReachFixpoint() {
+    Random random = new Random(11);
+    for (int run = 0; run < 2000; run++) {
+      boolean minimum = run % 2 == 0;
+      Store store = new Store();
+      IntVar x1 = randomSubsetVar(store, "x1", -4, 6, random);
+      IntVar x2 = randomSubsetVar(store, "x2", -4, 6, random);
+      IntVar r = randomSubsetVar(store, "r", -4, 6, random);
+      int[] x1Values = valuesOf(x1);
+      int[] x2Values = valuesOf(x2);
+      int[] rValues = valuesOf(r);
+      Constraint c = minimum ? new MinSimple(x1, x2, r) : new MaxSimple(x1, x2, r);
+      store.impose(c);
+
+      Set<Integer> x1Support = new HashSet<>();
+      Set<Integer> x2Support = new HashSet<>();
+      Set<Integer> rSupport = new HashSet<>();
+      for (int a : x1Values) {
+        for (int b : x2Values) {
+          int v = minimum ? Math.min(a, b) : Math.max(a, b);
+          if (Arrays.stream(rValues).anyMatch(w -> w == v)) {
+            x1Support.add(a);
+            x2Support.add(b);
+            rSupport.add(v);
+          }
+        }
+      }
+      String instance =
+          (minimum ? "min" : "max")
+              + " run "
+              + run
+              + " x1 "
+              + Arrays.toString(x1Values)
+              + " x2 "
+              + Arrays.toString(x2Values)
+              + " r "
+              + Arrays.toString(rValues);
+      boolean consistent = store.consistency();
+      if (rSupport.isEmpty()) {
+        continue;
+      }
+      assertThat(consistent).as(instance).isTrue();
+      x1Support.forEach(v -> assertThat(x1.domain.contains(v)).as(instance).isTrue());
+      x2Support.forEach(v -> assertThat(x2.domain.contains(v)).as(instance).isTrue());
+      rSupport.forEach(v -> assertThat(r.domain.contains(v)).as(instance).isTrue());
+
+      String afterPropagation = x1.dom() + " " + x2.dom() + " " + r.dom();
+      store.setLevel(store.level + 1);
+      c.consistency(store);
+      assertThat(x1.dom() + " " + x2.dom() + " " + r.dom())
+          .as(instance)
+          .isEqualTo(afterPropagation);
+    }
+  }
+
+  @Test
+  void testRegularPrunesAllUnsupportedValues() {
+
+    // Words of length 2 accepted by the automaton; with x1 = 1 only x0 = 3 has a support. The
+    // pruning loop of Regular removes values from a domain while enumerating it, and the
+    // enumeration stopped after the first removed value, so x0 = 4 stayed.
+    FsmState[] s = new FsmState[4];
+    Fsm fsm = new Fsm();
+    for (int i = 0; i < s.length; i++) {
+      s[i] = new FsmState();
+      fsm.allStates.add(s[i]);
+    }
+    fsm.initState = s[0];
+    fsm.finalStates.add(s[2]);
+    IntervalDomain oneOrFour = new IntervalDomain(1, 1);
+    oneOrFour.unionAdapt(4, 4);
+    s[0].addTransition(new FsmTransition(oneOrFour, s[0]));
+    s[0].addTransition(new FsmTransition(new IntervalDomain(3, 3), s[2]));
+    s[0].addTransition(new FsmTransition(new IntervalDomain(2, 2), s[3]));
+    s[2].addTransition(new FsmTransition(new IntervalDomain(1, 1), s[2]));
+    s[3].addTransition(new FsmTransition(new IntervalDomain(3, 3), s[2]));
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 4);
+    IntVar x1 = new IntVar(store, "x1", 1, 4);
+    store.impose(new Regular(fsm, new IntVar[] {x0, x1}));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    x1.domain.inComplement(1, x1, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.value()).isEqualTo(1);
+    assertThat(x0.singleton()).isTrue();
+    assertThat(x0.value()).isEqualTo(3);
+  }
+
+  // On graphs large enough for Regular to remove nodes a level at a time and to compact its
+  // adjacency arrays, its domains must equal those of its decomposition into a chain of ternary
+  // tables, which is domain consistent too because the chain is Berge-acyclic. Both stores take the
+  // same random dives and backtrack out of them again and again.
+  @Test
+  void testRegularMatchesDecompositionOnLargeGraphs() {
+
+    Random random = new Random(11);
+    for (int trial = 0; trial < 6; trial++) {
+      int n = 40 + random.nextInt(30);
+      int states = 120 + random.nextInt(60);
+      Fsm fsm = new Fsm();
+      FsmState[] s = new FsmState[states];
+      for (int q = 0; q < states; q++) {
+        s[q] = new FsmState();
+        fsm.allStates.add(s[q]);
+      }
+      fsm.initState = s[0];
+      for (int q = 0; q < states; q++) {
+        if (random.nextInt(4) > 0) {
+          fsm.finalStates.add(s[q]);
+        }
+        for (int c = 0; c < 4; c++) {
+          Set<Integer> successors = new HashSet<>();
+          for (int k = random.nextInt(3); k >= 0; k--) {
+            successors.add(random.nextInt(states));
+          }
+          for (int next : successors) {
+            s[q].addTransition(new FsmTransition(new IntervalDomain(c, c), s[next]));
+          }
+        }
+      }
+
+      Store regularStore = new Store();
+      Store tableStore = new Store();
+      IntVar[] x = new IntVar[n];
+      IntVar[] y = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(regularStore, "x" + i, 0, 3);
+        y[i] = new IntVar(tableStore, "x" + i, 0, 3);
+      }
+      regularStore.impose(new Regular(fsm, x));
+      new Regular(fsm, y).imposeDecomposition(tableStore);
+      String instance = "trial " + trial;
+      assertThat(regularStore.consistency()).as(instance).isEqualTo(tableStore.consistency());
+      assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+
+      // Level 1 fixes most of the variables, so most edges are removed below it. Every
+      // value left is in an accepted word, so any choice is consistent.
+      regularStore.setLevel(1);
+      tableStore.setLevel(1);
+      for (int i = 0; i < 3 * n / 4; i++) {
+        int[] values = valuesOf(x[i]);
+        int value = values[random.nextInt(values.length)];
+        x[i].domain.in(1, x[i], value, value);
+        y[i].domain.in(1, y[i], value, value);
+        assertThat(regularStore.consistency()).as(instance).isTrue();
+        assertThat(tableStore.consistency()).as(instance).isTrue();
+      }
+      assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+
+      for (int dive = 0; dive < 200; dive++) {
+        int base = regularStore.level;
+        String atBase = Arrays.toString(x);
+        boolean consistent = true;
+        while (consistent) {
+          List<Integer> free =
+              IntStream.range(0, n).filter(i -> !x[i].singleton()).boxed().toList();
+          if (free.isEmpty()) {
+            break;
+          }
+          int i = free.get(random.nextInt(free.size()));
+          int[] values = valuesOf(x[i]);
+          int value = values[random.nextInt(values.length)];
+          regularStore.setLevel(regularStore.level + 1);
+          tableStore.setLevel(tableStore.level + 1);
+          if (random.nextInt(5) == 0) {
+            x[i].domain.in(regularStore.level, x[i], value, value);
+            y[i].domain.in(tableStore.level, y[i], value, value);
+          } else {
+            x[i].domain.inComplement(regularStore.level, x[i], value);
+            y[i].domain.inComplement(tableStore.level, y[i], value);
+          }
+          consistent = regularStore.consistency();
+          assertThat(consistent).as(instance).isEqualTo(tableStore.consistency());
+          if (consistent) {
+            assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+          }
+        }
+        // Backtrack to a random level below level 2, so that many dives share the subtree of
+        // level 2, and sometimes to level 1, which removes that subtree.
+        int deepest = regularStore.level;
+        int target =
+            deepest < 2 || random.nextInt(40) == 0
+                ? Math.min(1, deepest)
+                : 2 + random.nextInt(deepest - 1);
+        while (regularStore.level > target) {
+          regularStore.removeLevel(regularStore.level);
+          regularStore.setLevel(regularStore.level - 1);
+          tableStore.removeLevel(tableStore.level);
+          tableStore.setLevel(tableStore.level - 1);
+        }
+        assertThat(Arrays.toString(x)).as(instance).isEqualTo(Arrays.toString(y));
+        if (target == base) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(atBase);
+        }
+      }
+    }
+  }
+
+  // Regular on random (possibly non-deterministic) automata must keep every domain equal to the
+  // values that appear in some accepted word, after each pruning step of a dive and after
+  // backtracking out of it, and must fail exactly when no accepted word remains.
+  @Test
+  void testRegularIsDomainConsistentAcrossBacktracking() {
+
+    Random random = new Random(7);
+    for (int trial = 0; trial < 400; trial++) {
+      int n = 1 + random.nextInt(6);
+      int states = 1 + random.nextInt(5);
+      // transitions[q][c] is the set of successors of state q on value c (bit mask).
+      int[][] transitions = new int[states][4];
+      FsmState[] s = new FsmState[states];
+      Fsm fsm = new Fsm();
+      for (int q = 0; q < states; q++) {
+        s[q] = new FsmState();
+        fsm.allStates.add(s[q]);
+      }
+      fsm.initState = s[0];
+      boolean[] accepting = new boolean[states];
+      for (int q = 0; q < states; q++) {
+        accepting[q] = random.nextInt(3) > 0;
+        if (accepting[q]) {
+          fsm.finalStates.add(s[q]);
+        }
+        for (int t = random.nextInt(2 * states + 3); t > 0; t--) {
+          int c = random.nextInt(4);
+          int next = random.nextInt(states);
+          if ((transitions[q][c] & (1 << next)) == 0) {
+            transitions[q][c] |= 1 << next;
+            s[q].addTransition(new FsmTransition(new IntervalDomain(c, c), s[next]));
+          }
+        }
+      }
+      Predicate<int[]> accepts =
+          word -> {
+            int current = 1;
+            for (int c : word) {
+              int next = 0;
+              for (int q = 0; q < states; q++) {
+                if ((current & (1 << q)) != 0) {
+                  next |= transitions[q][c];
+                }
+              }
+              current = next;
+            }
+            for (int q = 0; q < states; q++) {
+              if ((current & (1 << q)) != 0 && accepting[q]) {
+                return true;
+              }
+            }
+            return false;
+          };
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+        if (random.nextInt(4) == 0) {
+          x[i].domain.inComplement(0, x[i], random.nextInt(4));
+        }
+      }
+      String instance = "trial " + trial + " " + Arrays.deepToString(transitions);
+      store.impose(new Regular(fsm, x));
+
+      List<String> domainsAtLevel = new ArrayList<>();
+      boolean consistent = store.consistency();
+      assertRegularDomainConsistent(x, accepts, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.add(Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        IntVar v = free.get(random.nextInt(free.size()));
+        int[] values = valuesOf(v);
+        store.setLevel(store.level + 1);
+        v.domain.inComplement(store.level, v, values[random.nextInt(values.length)]);
+        consistent = store.consistency();
+        assertRegularDomainConsistent(x, accepts, consistent, instance);
+      }
+      // Backtrack level by level; domains must come back and propagation must still be correct.
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (store.level < domainsAtLevel.size()) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (!free.isEmpty() && random.nextBoolean()) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          store.setLevel(store.level + 1);
+          v.domain.in(store.level, v, v.min(), v.min());
+          assertRegularDomainConsistent(x, accepts, store.consistency(), instance);
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          if (store.level < domainsAtLevel.size()) {
+            assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+          }
+        }
+      }
+    }
+  }
+
+  private static void assertRegularDomainConsistent(
+      IntVar[] x, Predicate<int[]> accepts, boolean consistent, String instance) {
+    if (!consistent) {
+      assertThat(bruteForce(x, accepts)).as(instance + " failed with solutions").isEmpty();
+      return;
+    }
+    List<int[]> solutions = bruteForce(x, accepts);
+    assertThat(solutions).as(instance + " no solution " + Arrays.toString(x)).isNotEmpty();
+    for (int i = 0; i < x.length; i++) {
+      int position = i;
+      int[] supported = solutions.stream().mapToInt(w -> w[position]).distinct().sorted().toArray();
+      assertThat(valuesOf(x[i])).as(instance + " " + Arrays.toString(x)).containsExactly(supported);
+    }
+  }
+
+  // Alldistinct must keep exactly the values that appear in some solution (domain consistency)
+  // after every propagation of a dive, also when several domains change between two calls, after
+  // backtracking (the matching is reused), and for dense, interval and sparse value sets.
+  @Test
+  void testAlldistinctIsDomainConsistentAcrossBacktracking() {
+
+    Random random = new Random(23);
+    Predicate<int[]> distinct = a -> Arrays.stream(a).distinct().count() == a.length;
+    for (int trial = 0; trial < 2000; trial++) {
+      int n = 1 + random.nextInt(6);
+      int m = n + random.nextInt(3);
+      int kind = trial % 3;
+      // kind 0: SmallDenseDomain, 1: IntervalDomain, 2: IntervalDomain with sparse values
+      int[] base = IntStream.range(0, m).map(k -> kind == 2 ? 100_000 * k - 7 : k - 2).toArray();
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = kind == 0 ? new SmallDenseDomain() : new IntervalDomain();
+        for (int k = 0; k < m; k++) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(base[k], base[k]);
+          }
+        }
+        if (dom.isEmpty()) {
+          int k = random.nextInt(m);
+          dom.unionAdapt(base[k], base[k]);
+        }
+        x[i] = new IntVar(store, "x" + i, dom);
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldistinct(x));
+
+      // imposition raises the level before the first propagation
+      Map<Integer, String> domainsAtLevel = new HashMap<>();
+      boolean consistent = store.consistency();
+      assertRegularDomainConsistent(x, distinct, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.put(store.level, Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(2); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          if (random.nextInt(3) == 0) {
+            v.domain.in(store.level, v, value, value);
+          } else {
+            v.domain.inComplement(store.level, v, value);
+          }
+        }
+        consistent = store.consistency();
+        assertRegularDomainConsistent(x, distinct, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (domainsAtLevel.containsKey(store.level)) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (!free.isEmpty() && random.nextBoolean()) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          store.setLevel(store.level + 1);
+          v.domain.in(store.level, v, v.max(), v.max());
+          assertRegularDomainConsistent(x, distinct, store.consistency(), instance);
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          if (domainsAtLevel.containsKey(store.level)) {
+            assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+          }
+        }
+      }
+    }
+  }
+
+  // Alldistinct keeps its graph in bit sets over value offsets when the union of initial domains
+  // spans at most 512 values, in bit sets over value indexes when it has at most 512 values, and in
+  // adjacency lists otherwise. In each representation, with domains spread over several words and
+  // mixed domain types, the remaining values after every propagation of a dive must be exactly the
+  // values that take part in a matching (domain consistency), and backtracking must restore them.
+  @Test
+  void testAlldistinctIsDomainConsistentInEveryRepresentation() {
+
+    Random random = new Random(31);
+    for (int trial = 0; trial < 1600; trial++) {
+      int kind = trial % 4;
+      int n = 2 + random.nextInt(7);
+      int m = n + random.nextInt(4);
+      // kind 0: one word, 1: offsets over several words, 2: sparse indexes, 3: adjacency lists
+      int span = kind == 0 ? 64 : kind == 1 ? 65 + random.nextInt(448) : 1_000_000;
+      int origin = random.nextInt(201) - 100;
+      int[] pool = random.ints(origin, origin + span).distinct().limit(m).sorted().toArray();
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = new IntervalDomain();
+        for (int value : pool) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(value, value);
+          }
+        }
+        if (kind == 3 && i < 2) {
+          // wide variables make the union larger than 512 values
+          random.ints(origin, origin + 3000).limit(600).forEach(v -> dom.unionAdapt(v, v));
+        }
+        if (dom.isEmpty()) {
+          int value = pool[random.nextInt(m)];
+          dom.unionAdapt(value, value);
+        }
+        if (dom.max() - dom.min() < 64 && random.nextBoolean()) {
+          SmallDenseDomain small = new SmallDenseDomain();
+          small.unionAdapt(dom);
+          x[i] = new IntVar(store, "x" + i, small);
+        } else {
+          x[i] = new IntVar(store, "x" + i, dom);
+        }
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldistinct(x));
+
+      Map<Integer, String> domainsAtLevel = new HashMap<>();
+      boolean consistent = store.consistency();
+      assertAlldistinctDomainConsistent(x, consistent, instance);
+      while (consistent) {
+        domainsAtLevel.put(store.level, Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(3); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          switch (random.nextInt(4)) {
+            case 0 -> v.domain.in(store.level, v, value, value);
+            case 1 -> v.domain.in(store.level, v, value, v.max());
+            default -> v.domain.inComplement(store.level, v, value);
+          }
+        }
+        consistent = store.consistency();
+        assertAlldistinctDomainConsistent(x, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (domainsAtLevel.containsKey(store.level)) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+      }
+    }
+  }
+
+  // The values of each variable which take part in a matching of all variables to distinct values
+  // (computed by augmenting paths, so domains may be large), or null if there is no such matching.
+  private static int[][] alldistinctSupports(IntVar[] x) {
+    int n = x.length;
+    int[][] domains = new int[n][];
+    for (int i = 0; i < n; i++) {
+      domains[i] = valuesOf(x[i]);
+    }
+    int[][] supports = new int[n][];
+    for (int i = 0; i < n; i++) {
+      int variable = i;
+      supports[i] =
+          Arrays.stream(domains[i]).filter(v -> matchingExists(domains, variable, v)).toArray();
+      if (supports[i].length == 0) {
+        return null;
+      }
+    }
+    return supports;
+  }
+
+  private static boolean matchingExists(int[][] domains, int fixed, int fixedValue) {
+    Map<Integer, Integer> holder = new HashMap<>();
+    holder.put(fixedValue, fixed);
+    for (int i = 0; i < domains.length; i++) {
+      if (i != fixed && !augmentMatching(domains, i, fixed, fixedValue, holder, new HashSet<>())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean augmentMatching(
+      int[][] domains,
+      int i,
+      int fixed,
+      int fixedValue,
+      Map<Integer, Integer> holder,
+      Set<Integer> visited) {
+    for (int v : domains[i]) {
+      if (v != fixedValue && visited.add(v)) {
+        Integer j = holder.get(v);
+        if (j == null || augmentMatching(domains, j, fixed, fixedValue, holder, visited)) {
+          holder.put(v, i);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static void assertAlldistinctDomainConsistent(
+      IntVar[] x, boolean consistent, String instance) {
+    if (!consistent) {
+      assertThat(alldistinctSupports(x)).as(instance + " failed with solutions").isNull();
+      return;
+    }
+    int[][] supports = alldistinctSupports(x);
+    assertThat(supports).as(instance + " no solution " + Arrays.toString(x)).isNotNull();
+    for (int i = 0; i < x.length; i++) {
+      assertThat(valuesOf(x[i]))
+          .as(instance + " " + Arrays.toString(x))
+          .containsExactly(supports[i]);
+    }
+  }
+
+  // Alldiff must be bounds(Z) consistent: after propagation the minimum and the maximum of every
+  // variable take part in an all different assignment where every variable ranges over the interval
+  // between its bounds. It must also never remove a solution, along random dives and after
+  // backtracking.
+  @Test
+  void testAlldiffIsBoundsConsistentAcrossBacktracking() {
+
+    Random random = new Random(29);
+    for (int trial = 0; trial < 500; trial++) {
+      int n = 1 + random.nextInt(6);
+      int m = n + random.nextInt(3);
+      boolean dense = trial % 2 == 0;
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntDomain dom = dense ? new SmallDenseDomain() : new IntervalDomain();
+        for (int k = 0; k < m; k++) {
+          if (random.nextInt(3) > 0) {
+            dom.unionAdapt(k, k);
+          }
+        }
+        if (dom.isEmpty()) {
+          int k = random.nextInt(m);
+          dom.unionAdapt(k, k);
+        }
+        x[i] = new IntVar(store, "x" + i, dom);
+      }
+      String instance = "trial " + trial + " " + Arrays.toString(x);
+      store.impose(new Alldiff(x));
+
+      List<int[]> solutions = bruteForce(x, SingleConstraintTest::allDifferent);
+      boolean consistent = store.consistency();
+      assertAlldiffBoundsConsistent(x, solutions, consistent, instance);
+      while (consistent) {
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        store.setLevel(store.level + 1);
+        for (int change = 1 + random.nextInt(2); change > 0; change--) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          if (v.singleton()) {
+            continue;
+          }
+          int[] values = valuesOf(v);
+          int value = values[random.nextInt(values.length)];
+          if (random.nextInt(3) == 0) {
+            v.domain.in(store.level, v, value, value);
+          } else {
+            v.domain.inComplement(store.level, v, value);
+          }
+        }
+        solutions = bruteForce(x, SingleConstraintTest::allDifferent);
+        consistent = store.consistency();
+        assertAlldiffBoundsConsistent(x, solutions, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (!free.isEmpty() && random.nextBoolean()) {
+          IntVar v = free.get(random.nextInt(free.size()));
+          store.setLevel(store.level + 1);
+          v.domain.in(store.level, v, v.max(), v.max());
+          solutions = bruteForce(x, SingleConstraintTest::allDifferent);
+          assertAlldiffBoundsConsistent(x, solutions, store.consistency(), instance);
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        }
+      }
+    }
+  }
+
+  private static boolean allDifferent(int[] a) {
+    return Arrays.stream(a).distinct().count() == a.length;
+  }
+
+  private static void assertAlldiffBoundsConsistent(
+      IntVar[] x, List<int[]> solutionsBefore, boolean consistent, String instance) {
+    String state = instance + " " + Arrays.toString(x);
+    if (!consistent) {
+      assertThat(solutionsBefore).as(state + " failed with solutions").isEmpty();
+      return;
+    }
+    for (int[] solution : solutionsBefore) {
+      for (int i = 0; i < x.length; i++) {
+        assertThat(x[i].domain.contains(solution[i]))
+            .as(state + " keeps solution " + Arrays.toString(solution))
+            .isTrue();
+      }
+    }
+    IntVar[] relaxed = new IntVar[x.length];
+    Store relaxedStore = new Store();
+    for (int i = 0; i < x.length; i++) {
+      relaxed[i] = new IntVar(relaxedStore, x[i].min(), x[i].max());
+    }
+    List<int[]> relaxedSolutions = bruteForce(relaxed, SingleConstraintTest::allDifferent);
+    for (int i = 0; i < x.length; i++) {
+      int position = i;
+      assertThat(relaxedSolutions.stream().anyMatch(w -> w[position] == x[position].min()))
+          .as(state + " min of x" + i + " supported")
+          .isTrue();
+      assertThat(relaxedSolutions.stream().anyMatch(w -> w[position] == x[position].max()))
+          .as(state + " max of x" + i + " supported")
+          .isTrue();
+    }
+  }
+
+  @Test
+  void testValueEnumerationContinuesAfterDomainChange() {
+
+    // Remove the value just returned and the next one, as Regular does while it prunes.
+    for (IntDomain domain : new IntDomain[] {new IntervalDomain(), new SmallDenseDomain()}) {
+      for (int v : new int[] {1, 3, 5}) {
+        domain.unionAdapt(v, v);
+      }
+      List<Integer> values = new ArrayList<>();
+      for (ValueEnumeration e = domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        values.add(v);
+        if (v == 1) {
+          domain.subtractAdapt(1);
+          domain.subtractAdapt(3);
+          e.domainHasChanged();
+        }
+      }
+      assertThat(values).as(domain.getClass().getSimpleName()).containsExactly(1, 5);
+    }
+  }
+
+  // LinearBool keeps the bounds of the sum in trailed counters updated when a 0/1 variable is
+  // fixed, so
+  // counting all solutions by search checks that the sums are restored on backtracking; repeated
+  // variables, variables fixed before imposing and both kinds of right hand side are covered.
+  @Test
+  void testLinearBoolCountsMatchBruteForce() {
+
+    Random random = new Random(41);
+    String[] relations = {"==", "<=", ">="};
+    for (int trial = 0; trial < 1500; trial++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(5);
+      IntVar[] distinct = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        distinct[i] =
+            random.nextBoolean()
+                ? new BooleanVar(store, "b" + i)
+                : new IntVar(store, "b" + i, 0, 1);
+        if (random.nextInt(6) == 0) {
+          distinct[i].domain.in(store.level, distinct[i], random.nextInt(2), 1);
+        }
+      }
+      // a few positions repeat an earlier variable, so that the weights are merged
+      int m = n + random.nextInt(3);
+      IntVar[] b = new IntVar[m];
+      int[] w = new int[m];
+      for (int i = 0; i < m; i++) {
+        b[i] = i < n ? distinct[i] : distinct[random.nextInt(n)];
+        w[i] = (1 + random.nextInt(6)) * (random.nextBoolean() ? 1 : -1);
+      }
+      String rel = relations[random.nextInt(relations.length)];
+      boolean constant = random.nextBoolean();
+      int c = random.nextInt(15) - 7;
+      IntVar z = new IntVar(store, "z");
+      for (int v = -10; v <= 14; v++) {
+        if (random.nextInt(3) > 0) {
+          z.addDom(v, v);
+        }
+      }
+      if (z.getSize() == 0) {
+        z.addDom(0, 0);
+      }
+      IntVar[] all =
+          constant
+              ? distinct
+              : Stream.concat(Arrays.stream(distinct), Stream.of(z)).toArray(IntVar[]::new);
+      Predicate<int[]> holds =
+          a -> {
+            long sum = 0;
+            for (int i = 0; i < m; i++) {
+              sum += (long) w[i] * a[Arrays.asList(distinct).indexOf(b[i])];
+            }
+            long rhs = constant ? c : a[n];
+            return switch (rel) {
+              case "==" -> sum == rhs;
+              case "<=" -> sum <= rhs;
+              default -> sum >= rhs;
+            };
+          };
+      int expected = bruteForce(all, holds).size();
+
+      LinearBool linear = constant ? new LinearBool(b, w, rel, c) : new LinearBool(b, w, rel, z);
+      // half of the constraints with a constant use watched propagation, despite their length
+      boolean watched = constant && random.nextBoolean();
+      if (watched) {
+        linear.setWatchMinLength(0);
+      }
+      store.impose(linear);
+      assertThat(linear.isWatched()).isEqualTo(watched);
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d: %s %s %s", trial, Arrays.toString(w), rel, constant ? c : z)
+          .isEqualTo(expected);
+    }
+  }
+
+  // Several overlapping LinearBool constraints with constant right hand sides, all using watched
+  // propagation, against brute force. Counting all solutions backtracks over every watch move; a
+  // second run with the counter propagation and the same search must visit the same number of
+  // nodes, since both reach the same bounds consistent fixpoint.
+  @Test
+  void testWatchedLinearBoolSystemsMatchBruteForce() {
+
+    Random random = new Random(43);
+    String[] relations = {"==", "<=", ">="};
+    for (int trial = 0; trial < 600; trial++) {
+      int n = 5 + random.nextInt(9);
+      int constraints = 1 + random.nextInt(4);
+      int[][] scopes = new int[constraints][];
+      int[][] weights = new int[constraints][];
+      String[] rels = new String[constraints];
+      int[] rhs = new int[constraints];
+      for (int k = 0; k < constraints; k++) {
+        int m = 3 + random.nextInt(n + 2);
+        scopes[k] = new int[m];
+        weights[k] = new int[m];
+        int big = random.nextInt(3) == 0 ? 20 : 4;
+        long positive = 0;
+        long negative = 0;
+        for (int i = 0; i < m; i++) {
+          scopes[k][i] = random.nextInt(n);
+          weights[k][i] =
+              (1 + random.nextInt(random.nextInt(4) == 0 ? big : 4))
+                  * (random.nextInt(4) == 0 ? -1 : 1);
+          if (weights[k][i] > 0) {
+            positive += weights[k][i];
+          } else {
+            negative += weights[k][i];
+          }
+        }
+        rels[k] = relations[random.nextInt(relations.length)];
+        rhs[k] = (int) (negative + random.nextInt((int) (positive - negative) + 1));
+      }
+      // most equalities hold for some assignment, so that the search goes deep on both sides
+      int[] witness = random.ints(n, 0, 2).toArray();
+      for (int k = 0; k < constraints; k++) {
+        if (rels[k].equals("==") && random.nextInt(4) > 0) {
+          rhs[k] = 0;
+          for (int i = 0; i < scopes[k].length; i++) {
+            rhs[k] += weights[k][i] * witness[scopes[k][i]];
+          }
+        }
+      }
+      int[] fixedBefore = new int[n];
+      for (int i = 0; i < n; i++) {
+        fixedBefore[i] = random.nextInt(8) == 0 ? random.nextInt(2) : -1;
+      }
+      int seed = random.nextInt();
+
+      long[] nodes = new long[2];
+      int[] counts = new int[2];
+      int expected = -1;
+      for (int mode = 0; mode < 2; mode++) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = i % 2 == 0 ? new BooleanVar(store, "b" + i) : new IntVar(store, "b" + i, 0, 1);
+          if (fixedBefore[i] >= 0) {
+            x[i].domain.in(store.level, x[i], fixedBefore[i], fixedBefore[i]);
+          }
+        }
+        if (mode == 0) {
+          expected =
+              bruteForce(
+                      x,
+                      a -> {
+                        for (int k = 0; k < constraints; k++) {
+                          long sum = 0;
+                          for (int i = 0; i < scopes[k].length; i++) {
+                            sum += (long) weights[k][i] * a[scopes[k][i]];
+                          }
+                          boolean holds =
+                              switch (rels[k]) {
+                                case "==" -> sum == rhs[k];
+                                case "<=" -> sum <= rhs[k];
+                                default -> sum >= rhs[k];
+                              };
+                          if (!holds) {
+                            return false;
+                          }
+                        }
+                        return true;
+                      })
+                  .size();
+        }
+        for (int k = 0; k < constraints; k++) {
+          IntVar[] scope = Arrays.stream(scopes[k]).mapToObj(i -> x[i]).toArray(IntVar[]::new);
+          LinearBool linear = new LinearBool(scope, weights[k], rels[k], rhs[k]);
+          linear.setWatchMinLength(mode == 0 ? 0 : Integer.MAX_VALUE);
+          store.impose(linear);
+          assertThat(linear.isWatched()).isEqualTo(mode == 0);
+        }
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        boolean found =
+            search.labeling(store, new SimpleSelect<>(x, null, new IndomainRandom<>(seed)));
+        counts[mode] = found ? search.getSolutionListener().solutionsNo() : 0;
+        nodes[mode] = search.getNodes();
+      }
+      String description =
+          "trial "
+              + trial
+              + ": "
+              + IntStream.range(0, constraints)
+                  .mapToObj(
+                      k ->
+                          Arrays.toString(scopes[k])
+                              + Arrays.toString(weights[k])
+                              + rels[k]
+                              + rhs[k])
+                  .collect(Collectors.joining(", "))
+              + " fixed "
+              + Arrays.toString(fixedBefore);
+      assertThat(counts[0]).as(description).isEqualTo(expected);
+      assertThat(counts[1]).as(description).isEqualTo(expected);
+      assertThat(nodes[0]).as(description).isEqualTo(nodes[1]);
+    }
+  }
+
+  // The watches of a watched LinearBool are kept on backtracking, while the prefix and its slack
+  // are restored. A random walk that goes down by decisions and jumps back by several levels at a
+  // time checks that the watched constraint prunes the same domains as the counters at every node.
+  @Test
+  void testWatchedLinearBoolPrunesAsCountersAfterBacktracking() {
+
+    Random random = new Random(47);
+    String[] relations = {"==", "<=", ">="};
+    for (int trial = 0; trial < 200; trial++) {
+      int n = 20 + random.nextInt(30);
+      int constraints = 1 + random.nextInt(3);
+      int[][] scopes = new int[constraints][];
+      int[][] weights = new int[constraints][];
+      String[] rels = new String[constraints];
+      int[] rhs = new int[constraints];
+      for (int k = 0; k < constraints; k++) {
+        int m = n / 2 + random.nextInt(n / 2 + 1);
+        scopes[k] = random.ints(m, 0, n).toArray();
+        weights[k] = new int[m];
+        long positive = 0;
+        long negative = 0;
+        for (int i = 0; i < m; i++) {
+          weights[k][i] =
+              (1 + random.nextInt(random.nextInt(4) == 0 ? 30 : 5))
+                  * (random.nextInt(4) == 0 ? -1 : 1);
+          if (weights[k][i] > 0) {
+            positive += weights[k][i];
+          } else {
+            negative += weights[k][i];
+          }
+        }
+        rels[k] = relations[random.nextInt(relations.length)];
+        // close to one end of the range, so that both sides propagate early in a dive
+        long range = positive - negative;
+        rhs[k] =
+            (int)
+                (random.nextBoolean()
+                    ? negative + random.nextInt((int) range / 3 + 1)
+                    : positive - random.nextInt((int) range / 3 + 1));
+      }
+
+      Store[] stores = new Store[2];
+      IntVar[][] x = new IntVar[2][n];
+      for (int mode = 0; mode < 2; mode++) {
+        stores[mode] = new Store();
+        for (int i = 0; i < n; i++) {
+          x[mode][i] = new BooleanVar(stores[mode], "b" + i);
+        }
+        for (int k = 0; k < constraints; k++) {
+          IntVar[] modeVars = x[mode];
+          IntVar[] vars =
+              Arrays.stream(scopes[k]).mapToObj(i -> modeVars[i]).toArray(IntVar[]::new);
+          LinearBool linear = new LinearBool(vars, weights[k], rels[k], rhs[k]);
+          linear.setWatchMinLength(mode == 0 ? 0 : Integer.MAX_VALUE);
+          stores[mode].impose(linear);
+        }
+      }
+      boolean[] consistent = {stores[0].consistency(), stores[1].consistency()};
+      assertThat(consistent[0]).as("trial " + trial + " root").isEqualTo(consistent[1]);
+      if (!consistent[0]) {
+        continue;
+      }
+      List<String> path = new ArrayList<>();
+      for (int step = 0; step < 300; step++) {
+        int level = stores[0].level;
+        boolean allFixed = Arrays.stream(x[0]).allMatch(IntVar::singleton);
+        if (level > 0 && (!consistent[0] || allFixed || random.nextInt(4) == 0)) {
+          int target = random.nextInt(level);
+          for (int mode = 0; mode < 2; mode++) {
+            while (stores[mode].level > target) {
+              stores[mode].removeLevel(stores[mode].level);
+              stores[mode].setLevel(stores[mode].level - 1);
+            }
+          }
+          path.add("back to " + target);
+          consistent[0] = true;
+          continue;
+        }
+        if (!consistent[0] || allFixed) {
+          break;
+        }
+        int i = random.nextInt(n);
+        while (x[0][i].singleton()) {
+          i = random.nextInt(n);
+        }
+        int value = random.nextInt(2);
+        path.add("b" + i + "=" + value);
+        for (int mode = 0; mode < 2; mode++) {
+          Store store = stores[mode];
+          store.setLevel(store.level + 1);
+          IntVar v = x[mode][i];
+          v.domain.in(store.level, v, value, value);
+          consistent[mode] = store.consistency();
+        }
+        String description = "trial " + trial + " path " + path;
+        assertThat(consistent[0]).as(description).isEqualTo(consistent[1]);
+        if (consistent[0]) {
+          for (int j = 0; j < n; j++) {
+            assertThat(x[0][j].dom().toString())
+                .as(description + " b" + j)
+                .isEqualTo(x[1][j].dom().toString());
+          }
+        }
+      }
+    }
+  }
+
+  // A LinearBool imposed during search keeps the counter propagation, as the watches of the store
+  // are not removed on backtracking.
+  @Test
+  void testLinearBoolImposedDuringSearchIsNotWatched() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[10];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "b" + i);
+    }
+    int[] w = new int[x.length];
+    Arrays.fill(w, 1);
+    store.setLevel(1);
+    LinearBool linear = new LinearBool(x, w, "<=", 2);
+    linear.setWatchMinLength(0);
+    store.impose(linear);
+    assertThat(linear.isWatched()).isFalse();
+    assertThat(store.consistency()).isTrue();
+  }
+
+  @Test
+  void testLinearBoolRejectsInvalidArguments() {
+
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar x = new IntVar(store, "x", 0, 2);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b, x}, new int[] {1, 1}, "==", 1))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1}, "==", b))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1}, "!=", 0))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new LinearBool(new IntVar[] {b}, new int[] {1, 2}, "==", 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void sumIntWithARepeatedVariableCountsMatchBruteForce() {
+    // a variable repeated in the list, or also the sum: pruning one occurrence changes the others
+    String[] relations = {"==", "<=", "<", ">", ">=", "!="};
+    Random random = new Random(47);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int k = 2 + random.nextInt(2);
+      IntVar[] v = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        v[i] = randomVar(store, "v" + i, -3, 4, random);
+      }
+      int[] pick = new int[2 + random.nextInt(3)];
+      IntVar[] list = new IntVar[pick.length];
+      for (int i = 0; i < pick.length; i++) {
+        pick[i] = random.nextInt(k);
+        list[i] = v[pick[i]];
+      }
+      int sumIndex = random.nextInt(k);
+      String rel = relations[random.nextInt(relations.length)];
+      int expected =
+          bruteForce(
+                  v,
+                  a -> {
+                    long total = 0;
+                    for (int p : pick) {
+                      total += a[p];
+                    }
+                    long s = a[sumIndex];
+                    return switch (rel) {
+                      case "==" -> total == s;
+                      case "<=" -> total <= s;
+                      case "<" -> total < s;
+                      case ">" -> total > s;
+                      case ">=" -> total >= s;
+                      default -> total != s;
+                    };
+                  })
+              .size();
+
+      store.impose(new SumInt(list, rel, v[sumIndex]));
+      assertThat(countSolutions(store, v, random))
+          .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void networkFlowWithAWeightThatIsAnotherArcsFlowCountsMatchBruteForce() {
+    // the weight of one arc is the flow of another: pruning the flow during the sensitivity
+    // analysis left the arc cost behind its weight (AssertionError in Pruning.analyzeArc); and a
+    // cost that is also an arc variable never told the network of its changes
+    Random random = new Random(59);
+    for (int trial = 0; trial < 1000; trial++) {
+      int[] supply = {random.nextInt(3), random.nextInt(3)};
+      int d0 = random.nextInt(supply[0] + supply[1] + 1);
+      int[] demand = {d0, supply[0] + supply[1] - d0};
+      int[] w = {random.nextInt(3), random.nextInt(3), random.nextInt(3), random.nextInt(3)};
+      int[] hi = {1 + random.nextInt(3), 1 + random.nextInt(3), 1 + random.nextInt(3), 3};
+      // arc wk has the flow of arc fk as its weight; with costIsFlow the cost is the flow of arc 3
+      int wk = random.nextInt(3);
+      int fk = (wk + 1 + random.nextInt(2)) % 3;
+      boolean costIsFlow = random.nextInt(3) == 0;
+      Store store = new Store();
+      IntVar[] f = new IntVar[4];
+      for (int k = 0; k < 4; k++) {
+        f[k] = new IntVar(store, "f" + k, 0, hi[k]);
+      }
+      IntVar cost = costIsFlow ? f[3] : new IntVar(store, "cost", 0, 40);
+      int expected = 0;
+      for (int[] t : tuples(hi)) {
+        if (t[0] + t[1] != supply[0]
+            || t[2] + t[3] != supply[1]
+            || t[0] + t[2] != demand[0]
+            || t[1] + t[3] != demand[1]) {
+          continue;
+        }
+        int total = 0;
+        for (int k = 0; k < 4; k++) {
+          total += (k == wk ? t[fk] : w[k]) * t[k];
+        }
+        if (costIsFlow ? total == t[3] : total <= 40) {
+          expected++;
+        }
+      }
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] sources = {net.addNode("s0", supply[0]), net.addNode("s1", supply[1])};
+      Node[] sinks = {net.addNode("t0", -demand[0]), net.addNode("t1", -demand[1])};
+      for (int k = 0; k < 4; k++) {
+        if (k == wk) {
+          net.addArc(sources[k / 2], sinks[k % 2], f[fk], f[k]);
+        } else {
+          net.addArc(sources[k / 2], sinks[k % 2], w[k], f[k]);
+        }
+      }
+      net.setCostVariable(cost);
+      store.impose(net.build());
+      IntVar[] all = costIsFlow ? f : new IntVar[] {f[0], f[1], f[2], f[3], cost};
+      assertThat(countSolutions(store, all, random))
+          .as(
+              "trial %d supply %s demand %s weights %s wk %d fk %d",
+              trial, Arrays.toString(supply), Arrays.toString(demand), Arrays.toString(w), wk, fk)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void softAlldifferentWithTheCostAlsoInTheList() {
+    // the cost c is also x1: the network's cost handler replaced the handler of x1, so changes of
+    // x1 never reached the value graph and both solutions were lost
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    x0.addDom(3, 3);
+    IntVar c = new IntVar(store, "c", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 1);
+    store.imposeDecomposition(
+        new SoftAlldifferent(new IntVar[] {x0, c, x2}, c, ViolationMeasure.VARIABLE_BASED));
+    // c = 1 = 3 - |distinct values|: [1, 1, 0] and [3, 1, 1]
+    assertThat(countSolutions(store, new IntVar[] {x0, c, x2}, new Random(1))).isEqualTo(2);
+  }
+
+  /** All tuples t with 0 <= t[i] <= hi[i]. */
+  private static List<int[]> tuples(int[] hi) {
+    List<int[]> all = new ArrayList<>();
+    all.add(new int[0]);
+    for (int h : hi) {
+      List<int[]> next = new ArrayList<>();
+      for (int[] t : all) {
+        for (int v = 0; v <= h; v++) {
+          int[] u = Arrays.copyOf(t, t.length + 1);
+          u[t.length] = v;
+          next.add(u);
+        }
+      }
+      all = next;
+    }
+    return all;
+  }
+
+  @Test
+  void channelReifWithXAlsoItsOwnBoolean() {
+    // x is the 0/1 variable of both values 1 and 3: setting it to 0 for value 3 fixed x to 0, a
+    // value without an item, and the lookup of its 0/1 variable threw NullPointerException
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new ChannelReif(x, new IntVar[] {x, x}, new int[] {1, 3}));
+    // x = 0: both items off and x is neither 1 nor 3; x = 1 would turn the item of 3 on
+    assertThat(countSolutions(store, new IntVar[] {x}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
+  void spreadFailsWhenNoValueFitsTheCostBound() {
+    // cost <= 3 allows |4 * v - 10| <= 1, which no integer v satisfies; narrow() used to call in()
+    // with min 3 > max 2 and threw IllegalStateException instead of failing
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", -1, 4), new IntVar(store, "x1", -1, 4)};
+    IntVar cost = new IntVar(store, "cost", 0, 3);
+    store.impose(new Spread(x, 4, 10, 5, cost));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void knapsackRejectsAQuantityThatIsTheProfitOrTheCapacity() {
+    // a free quantity that is also the profit or the capacity broke the tree invariants
+    // (IllegalStateException "Slice variable has not been adjusted"); fixed values still share
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q", 1, 2);
+    IntVar capacity = new IntVar(store, "capacity", 0, 10);
+    assertThatThrownBy(
+            () -> new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, capacity, q))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new Knapsack(new int[] {1}, new int[] {2}, new IntVar[] {q}, q, capacity))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    IntVar two = new IntVar(store, "two", 2, 2);
+    IntVar other = new IntVar(store, "other", 0, 3);
+    IntVar weight = new IntVar(store, "weight", 0, 20);
+    store.impose(
+        new Knapsack(new int[] {1, 2}, new int[] {1, 1}, new IntVar[] {two, other}, weight, two));
+    assertThat(countSolutions(store, new IntVar[] {other, weight}, new Random(1))).isEqualTo(1);
+  }
+
+  @Test
+  void directedReachableWithTheRootAlsoANodeVariable() {
+    // ns[2] is also the root: removing root candidates fixed ns[2] while the count of selected
+    // nodes was already taken, and the stale count lost both solutions
+    Store store = new Store();
+    IntVar n0 = new IntVar(store, "n0", 0, 1);
+    IntVar n1 = new IntVar(store, "n1", 1, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    IntVar e0 = new IntVar(store, "e0", 0, 1);
+    IntVar e1 = new IntVar(store, "e1", 0, 1);
+    store.impose(
+        new Reachable(
+            new int[] {2, 1},
+            new int[] {0, 2},
+            r,
+            new IntVar[] {n0, n1, r},
+            new IntVar[] {e0, e1},
+            0,
+            true));
+    // root 1 = ns[2] selected, e1 = 1->2 selected; n0 and e0 = 2->0 both on or both off
+    assertThat(countSolutions(store, new IntVar[] {n0, n1, r, e0, e1}, new Random(1))).isEqualTo(2);
+  }
+
+  @Test
+  void sumBoolWithARepeatedVariableCountsMatchBruteForce() {
+    // the sum also in the list, or a list variable repeated: x0 + x1 > x1 with x0 = 0 pruned x1 to
+    // 0 through the sum and kept the stale bound of the list, so it accepted 0 + 0 > 0
+    String[] relations = {"==", "<=", "<", ">", ">=", "!="};
+    Random random = new Random(53);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int k = 2 + random.nextInt(2);
+      IntVar[] v = new IntVar[k + 1];
+      for (int i = 0; i < k; i++) {
+        v[i] = new IntVar(store, "v" + i, 0, 1);
+      }
+      v[k] = randomVar(store, "s", -1, 4, random);
+      int[] pick = new int[2 + random.nextInt(3)];
+      IntVar[] list = new IntVar[pick.length];
+      for (int i = 0; i < pick.length; i++) {
+        pick[i] = random.nextInt(k);
+        list[i] = v[pick[i]];
+      }
+      int sumIndex = random.nextInt(k + 1);
+      String rel = relations[random.nextInt(relations.length)];
+      boolean reified = random.nextBoolean();
+      IntVar b = new IntVar(store, "b", 0, 1);
+      IntVar[] all = Arrays.copyOf(v, k + 2);
+      all[k + 1] = b;
+      int expected =
+          bruteForce(
+                  all,
+                  a -> {
+                    int total = 0;
+                    for (int p : pick) {
+                      total += a[p];
+                    }
+                    int s = a[sumIndex];
+                    boolean holds =
+                        switch (rel) {
+                          case "==" -> total == s;
+                          case "<=" -> total <= s;
+                          case "<" -> total < s;
+                          case ">" -> total > s;
+                          case ">=" -> total >= s;
+                          default -> total != s;
+                        };
+                    return reified ? holds == (a[k + 1] == 1) : holds && a[k + 1] == 0;
+                  })
+              .size();
+
+      SumBool c = new SumBool(list, rel, v[sumIndex]);
+      if (reified) {
+        store.impose(new Reified(c, b));
+      } else {
+        store.impose(c);
+        store.impose(new XeqC(b, 0));
+      }
+      assertThat(countSolutions(store, all, random))
+          .as(
+              "trial %d: sum %s %s %s reified %b",
+              trial, Arrays.toString(list), rel, v[sumIndex], reified)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testConditionalSelectCountsMatchBruteForce() {
+
+    Random random = new Random(47);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(4);
+      IntVar[] b = new IntVar[n];
+      IntVar[] x = new IntVar[n];
+      IntVar y = randomVar(store, "y", -2, 2, random);
+      List<IntVar> all = new ArrayList<>(List.of(y));
+      for (int i = 0; i < n; i++) {
+        int kind = random.nextInt(4);
+        b[i] = new IntVar(store, "b" + i, kind == 0 ? 0 : kind == 1 ? 1 : 0, kind == 0 ? 0 : 1);
+        all.add(b[i]);
+        int share = random.nextInt(6);
+        if (share == 0) {
+          x[i] = y;
+        } else if (share == 1 && i > 0) {
+          x[i] = x[random.nextInt(i)];
+        } else {
+          x[i] = randomVar(store, "x" + i, -2, 2, random);
+          all.add(x[i]);
+        }
+      }
+      IntVar[] vars = all.toArray(new IntVar[0]);
+      int[] bAt = new int[n];
+      int[] xAt = new int[n];
+      for (int i = 0; i < n; i++) {
+        bAt[i] = all.indexOf(b[i]);
+        xAt[i] = all.indexOf(x[i]);
+      }
+      int expected =
+          bruteForce(
+                  vars,
+                  a -> {
+                    for (int i = 0; i < n; i++) {
+                      if (a[bAt[i]] == 1) {
+                        return a[xAt[i]] == a[0];
+                      }
+                    }
+                    return false;
+                  })
+              .size();
+
+      try {
+        store.impose(new ConditionalSelect(b, x, y));
+      } catch (FailException e) {
+        assertThat(expected).as("trial %d: failed at imposition", trial).isZero();
+        continue;
+      }
+      Collections.shuffle(all, random);
+      assertThat(countSolutions(store, all.toArray(new IntVar[0]), random))
+          .as(
+              "trial %d: ConditionalSelect(%s, %s, %s)",
+              trial, Arrays.toString(b), Arrays.toString(x), y)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void conditionalSelectBoundsResultByPossibleBranches() {
+
+    Store store = new Store();
+    BooleanVar c = new BooleanVar(store, "c");
+    IntVar t = new IntVar(store, "t", 3, 5);
+    IntVar e = new IntVar(store, "e", 7, 9);
+    IntVar y = new IntVar(store, "y", 0, 20);
+    store.impose(
+        new ConditionalSelect(new IntVar[] {c, new IntVar(store, 1, 1)}, new IntVar[] {t, e}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(3);
+    assertThat(y.max()).isEqualTo(9);
+
+    // the then branch cannot reach y any more, so the else branch is selected
+    store.impose(new XgtC(y, 6));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+    assertThat(y.dom().toString()).isEqualTo(e.dom().toString());
+  }
+
+  @Test
+  void testXplusCneqZCountsMatchBruteForce() {
+
+    Random random = new Random(43);
+    for (int trial = 0; trial < 1000; trial++) {
+      Store store = new Store();
+      IntVar x = randomVar(store, "x", -4, 4, random);
+      IntVar z = randomVar(store, "z", -4, 4, random);
+      int c = random.nextInt(9) - 4;
+      IntVar[] all = {x, z};
+      int expected = bruteForce(all, a -> a[0] + c != a[1]).size();
+
+      store.impose(new XplusCneqZ(x, c, z));
+      assertThat(countSolutions(store, random.nextBoolean() ? all : new IntVar[] {z, x}, random))
+          .as("trial %d: %s + %d != %s", trial, x, c, z)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testXplusCneqZOnTheSameVariable() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    store.impose(new XplusCneqZ(x, 2, x));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.getSize()).isEqualTo(4);
+    assertThatThrownBy(() -> store.impose(new XplusCneqZ(x, 0, x)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testXplusClteqZImpliedCountsMatchBruteForce() {
+
+    Random random = new Random(47);
+    for (int trial = 0; trial < 1000; trial++) {
+      Store store = new Store();
+      IntVar b = random.nextBoolean() ? new BooleanVar(store, "b") : new IntVar(store, "b", 0, 1);
+      IntVar x = randomVar(store, "x", -4, 4, random);
+      IntVar z = randomVar(store, "z", -4, 4, random);
+      int c = random.nextInt(9) - 4;
+      IntVar[] all = {b, x, z};
+      int expected = bruteForce(all, a -> a[0] == 0 || a[1] + c <= a[2]).size();
+
+      store.impose(new XplusClteqZImplied(b, x, c, z));
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d: %s => %s + %d <= %s", trial, b, x, c, z)
+          .isEqualTo(expected);
+    }
+  }
+
+  // An entailed constraint is only marked during search: it is not woken and not counted by
+  // sizeConstraints until the store backtracks below the level of the mark, when it propagates
+  // again. At the root it is still detached from its variables.
+  @Test
+  void testEntailedConstraintIsSkippedUntilBacktrack() {
+
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    XplusClteqZImplied c = new XplusClteqZImplied(b, x, 0, y);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    int attached = x.sizeConstraints();
+
+    store.setLevel(1);
+    b.domain.in(store.level, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.isEntailed()).isTrue();
+    assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
+    assertThat(x.dom().constraints()).doesNotContain(c);
+
+    store.setLevel(2);
+    x.domain.in(store.level, x, 6, 10);
+    assertThat(store.changed[c.getQueueIndex()].contains(c)).isFalse();
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(1);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    assertThat(c.isEntailed()).isFalse();
+    assertThat(x.sizeConstraints()).isEqualTo(attached);
+    store.setLevel(1);
+    b.domain.in(store.level, b, 1, 1);
+    x.domain.in(store.level, x, 6, 10);
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(6);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    b.domain.in(store.level, b, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.isEntailed()).isFalse();
+    assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
+  }
+
+  // A constraint that reads one bound of a variable is attached with the MIN_EVENT or MAX_EVENT
+  // event and is
+  // not woken when only the other bound changes.
+  @Test
+  void testBoundConstraintIsWokenOnlyByTheBoundItReads() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar z = new IntVar(store, "z", 0, 10);
+    XplusClteqZ c = new XplusClteqZ(x, 2, z);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().modelConstraints[IntDomain.MIN_EVENT]).contains(c);
+    assertThat(z.dom().modelConstraints[IntDomain.MAX_EVENT]).contains(c);
+
+    store.setLevel(1);
+    x.domain.inMax(store.level, x, 7);
+    z.domain.inMin(store.level, z, 3);
+    assertThat(store.changed[c.getQueueIndex()].contains(c)).isFalse();
+    x.domain.inMin(store.level, x, 2);
+    assertThat(store.changed[c.getQueueIndex()].contains(c)).isTrue();
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(4);
+    z.domain.inMax(store.level, z, 6);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.max()).isEqualTo(4);
+
+    // with the same variable on both sides, or an event set by the user, both bounds are watched
+    XlteqY same = new XlteqY(x, x);
+    assertThat(same.getBoundPruningEvent(x)).isEqualTo(IntDomain.BOUND);
+    XplusClteqZ set = new XplusClteqZ(x, 1, z);
+    set.setConsistencyPruningEvent(x, IntDomain.BOUND);
+    store.impose(set);
+    assertThat(x.dom().modelConstraints[IntDomain.BOUND]).contains(set);
+  }
+
+  // Constraints attached with MIN_EVENT or MAX_EVENT keep every solution and reach a fixpoint after
+  // any
+  // decision, including decisions that change only one bound.
+  @Test
+  void testBoundSideConstraintsKeepSupportsAndReachFixpoint() {
+
+    record Case(
+        String name, int arity, Function<IntVar[], Constraint> constraint, Predicate<int[]> test) {}
+
+    List<Case> cases =
+        List.of(
+            new Case("x <= y", 2, v -> new XlteqY(v[0], v[1]), t -> t[0] <= t[1]),
+            new Case("x < y", 2, v -> new XltY(v[0], v[1]), t -> t[0] < t[1]),
+            new Case("x >= y", 2, v -> new XgteqY(v[0], v[1]), t -> t[0] >= t[1]),
+            new Case("x > y", 2, v -> new XgtY(v[0], v[1]), t -> t[0] > t[1]),
+            new Case("x + 2 <= z", 2, v -> new XplusClteqZ(v[0], 2, v[1]), t -> t[0] + 2 <= t[1]),
+            new Case(
+                "x + y <= z", 3, v -> new XplusYlteqZ(v[0], v[1], v[2]), t -> t[0] + t[1] <= t[2]),
+            new Case(
+                "b => x - 1 <= z",
+                3,
+                v -> new XplusClteqZImplied(v[0], v[1], -1, v[2]),
+                t -> t[0] == 0 || t[1] - 1 <= t[2]),
+            new Case(
+                "2x - 3y + z <= 4",
+                3,
+                v -> new LinearInt(v, new int[] {2, -3, 1}, "<=", 4),
+                t -> 2 * t[0] - 3 * t[1] + t[2] <= 4),
+            new Case(
+                "2x - 3y + z < 4",
+                3,
+                v -> new LinearInt(v, new int[] {2, -3, 1}, "<", 4),
+                t -> 2 * t[0] - 3 * t[1] + t[2] < 4),
+            new Case(
+                "x - 2y + 3z >= 5",
+                3,
+                v -> new LinearInt(v, new int[] {1, -2, 3}, ">=", 5),
+                t -> t[0] - 2 * t[1] + 3 * t[2] >= 5),
+            new Case(
+                "x - 2y + 3z > 5",
+                3,
+                v -> new LinearInt(v, new int[] {1, -2, 3}, ">", 5),
+                t -> t[0] - 2 * t[1] + 3 * t[2] > 5),
+            new Case(
+                "x + y <= z (sum)",
+                3,
+                v -> new SumInt(new IntVar[] {v[0], v[1]}, "<=", v[2]),
+                t -> t[0] + t[1] <= t[2]),
+            new Case(
+                "x + y > z (sum)",
+                3,
+                v -> new SumInt(new IntVar[] {v[0], v[1]}, ">", v[2]),
+                t -> t[0] + t[1] > t[2]));
+
+    Random random = new Random(53);
+    for (Case c : cases) {
+      for (int run = 0; run < 300; run++) {
+        Store store = new Store();
+        IntVar[] vars = new IntVar[c.arity()];
+        for (int i = 0; i < vars.length; i++) {
+          vars[i] =
+              c.name().startsWith("b ") && i == 0
+                  ? new IntVar(store, "b", 0, 1)
+                  : randomVar(store, "v" + i, -3, 6, random);
+        }
+        Constraint constraint = c.constraint().apply(vars);
+        store.impose(constraint);
+        String instance = c.name() + " run " + run + " " + domainsOf(vars);
+        checkSupportsAndFixpoint(
+            instance,
+            store,
+            vars,
+            v -> bruteForce(v, c.test()),
+            () -> rerunAtNewLevel(store, constraint, vars),
+            random,
+            true);
+      }
+    }
+  }
+
+  private static void decideOnBound(Store store, IntVar v, int value, Random random) {
+    switch (random.nextInt(4)) {
+      case 0 -> v.domain.inMin(store.level, v, value);
+      case 1 -> v.domain.inMax(store.level, v, value);
+      case 2 -> v.domain.inComplement(store.level, v, value);
+      default -> v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
+    }
+  }
+
+  private static IntVar randomVar(Store store, String name, int lo, int hi, Random random) {
+    IntVar v = new IntVar(store, name);
+    for (int k = lo; k <= hi; k++) {
+      if (random.nextInt(4) > 0) {
+        v.addDom(k, k);
+      }
+    }
+    if (v.getSize() == 0) {
+      v.addDom(lo, lo);
+    }
+    return v;
+  }
+
+  private static int countSolutions(Store store, IntVar[] vars, Random random) {
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    boolean found =
+        search.labeling(
+            store, new SimpleSelect<>(vars, null, new IndomainRandom<>(random.nextInt())));
+    return found ? search.getSolutionListener().solutionsNo() : 0;
+  }
+
+  private static List<int[]> bruteForce(IntVar[] vars, Predicate<int[]> constraint) {
+    List<int[]> solutions = new ArrayList<>();
+    int[][] domains = Arrays.stream(vars).map(SingleConstraintTest::valuesOf).toArray(int[][]::new);
+    int[] index = new int[vars.length];
+    while (true) {
+      int[] assignment = new int[vars.length];
+      for (int i = 0; i < vars.length; i++) {
+        assignment[i] = domains[i][index[i]];
+      }
+      if (constraint.test(assignment)) {
+        solutions.add(assignment);
+      }
+      int k = 0;
+      while (k < vars.length && ++index[k] == domains[k].length) {
+        index[k] = 0;
+        k++;
+      }
+      if (k == vars.length) {
+        return solutions;
+      }
+    }
+  }
+
+  private static String domainsOf(IntVar[] vars) {
+    return Arrays.stream(vars).map(v -> v.dom().toString()).collect(Collectors.joining(" "));
+  }
+
+  private static String rerunAtNewLevel(Store store, Constraint c, IntVar[] vars) {
+    int level = store.level;
+    store.setLevel(level + 1);
+    String result;
+    try {
+      c.consistency(store);
+      result = domainsOf(vars);
+    } catch (FailException e) {
+      result = "FAIL";
+    }
+    store.removeLevel(level + 1);
+    store.setLevel(level);
+    return result;
+  }
+
+  /**
+   * Propagates, then makes random decisions. After each propagation it checks that no solution
+   * listed by the solver for the domains before propagation was removed, and that re-running the
+   * constraint does not prune anything more.
+   */
+  private static void checkSupportsAndFixpointAlongRandomWalk(
+      String instance,
+      Store store,
+      IntVar[] vars,
+      Function<IntVar[], List<int[]>> solver,
+      Supplier<String> rerun,
+      Random random) {
+    checkSupportsAndFixpoint(instance, store, vars, solver, rerun, random, false);
+  }
+
+  /**
+   * Checks supports and fixpoint along a random walk. With bound decisions, the decisions also move
+   * a single bound, so that a constraint that misses the event of the bound it reads leaves values
+   * it should prune.
+   */
+  private static void checkSupportsAndFixpoint(
+      String instance,
+      Store store,
+      IntVar[] vars,
+      Function<IntVar[], List<int[]>> solver,
+      Supplier<String> rerun,
+      Random random,
+      boolean boundDecisions) {
+    List<int[]> solutions = solver.apply(vars);
+    for (int step = 0; step < (boundDecisions ? 8 : 6); step++) {
+      boolean consistent = store.consistency();
+      if (solutions.isEmpty()) {
+        // propagation does not have to detect every failure
+        return;
+      }
+      String state = instance + " step " + step;
+      assertThat(consistent).as(state).isTrue();
+      for (int[] solution : solutions) {
+        for (int i = 0; i < vars.length; i++) {
+          assertThat(vars[i].domain.contains(solution[i]))
+              .as(state + " keeps solution " + Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+      String propagated = domainsOf(vars);
+      assertThat(rerun.get()).as(state + " re-run").isEqualTo(propagated);
+
+      IntVar v = vars[random.nextInt(vars.length)];
+      if (v.singleton()) {
+        continue;
+      }
+      store.setLevel(store.level + 1);
+      int value = valuesOf(v)[random.nextInt(v.getSize())];
+      if (boundDecisions) {
+        decideOnBound(store, v, value, random);
+      } else if (random.nextBoolean()) {
+        v.domain.inValue(store.level, v, value);
+      } else {
+        v.domain.inComplement(store.level, v, value);
+      }
+      solutions = solver.apply(vars);
+    }
+  }
+
+  @Test
+  void countWithCounterInTheListReachesFixpoint() {
+    // magicseq: count(4, [x0, x1, x2, x3], x3). Narrowing the counter x3 to {0..3} removed the
+    // value 4 from x3, which is also in the list, so the maximal count dropped to 2 but the
+    // constraint was not run again for its own change.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1");
+    x1.addDom(1, 2);
+    x1.addDom(4, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 4);
+    IntVar x3 = new IntVar(store, "x3", 0, 4);
+
+    store.impose(new Count(new IntVar[] {x0, x1, x2, x3}, x3, 4));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x3.dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void countAppliesCountedCaseAfterNarrowingCounter() {
+    // Narrowing counter {0, 5..9} to [0, 3] makes it 0, so value 1 must be removed from the list
+    // in the same call.
+    Store store = new Store();
+    IntVar[] list = {
+      new IntVar(store, "y0", 0, 1), new IntVar(store, "y1", 0, 1), new IntVar(store, "y2", 0, 1)
+    };
+    IntVar counter = new IntVar(store, "c");
+    counter.addDom(0, 0);
+    counter.addDom(5, 9);
+
+    store.impose(new Count(list, counter, 1));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(counter.singleton(0)).isTrue();
+    for (IntVar y : list) {
+      assertThat(y.singleton(0)).as("%s", y).isTrue();
+    }
+  }
+
+  @Test
+  void countVarRemovesValuesWhoseCountCannotMatchTheCounter() {
+    // Only x1 can equal the value, and the counter is 1, so the value must be x1's value 0. The
+    // value variable kept 2, which no variable can take.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    IntVar counter = new IntVar(store, "c", 1, 1);
+    IntVar value = new IntVar(store, "y", 0, 0);
+    value.addDom(2, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.singleton(0)).isTrue();
+  }
+
+  @Test
+  void countVarRemovesListValuesThatNoValueSupports() {
+    // Two variables must equal the value. With x1 = 1 the value 1 occurs three times and the value
+    // 0 once, so x1 = 1 has no support.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar x2 = new IntVar(store, "x2", 2, 2);
+    IntVar x3 = new IntVar(store, "x3", 1, 1);
+    IntVar x4 = new IntVar(store, "x4", 0, 0);
+    IntVar counter = new IntVar(store, "c", 2, 2);
+    IntVar value = new IntVar(store, "y", 0, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1, x2, x3, x4}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.singleton(0)).isTrue();
+    assertThat(value.dom()).hasToString("{0..1}");
+  }
+
+  @Test
+  void countVarNarrowsEveryVariableToTheValueItFixes() {
+    // Both variables must equal the value. Narrowing the value by x1 leaves only 0, after x0 was
+    // already narrowed by the value domain, and x0 must still become 0.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar counter = new IntVar(store, "c", 2, 2);
+    IntVar value = new IntVar(store, "y", 0, 0);
+    value.addDom(2, 2);
+
+    store.impose(new CountVar(new IntVar[] {x0, x1}, counter, value));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.singleton(0)).isTrue();
+    assertThat(x1.singleton(0)).isTrue();
+    assertThat(value.singleton(0)).isTrue();
+  }
+
+  @Test
+  void countKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(17);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(3);
+      IntVar[] list = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        list[i] = randomSubsetVar(store, "x" + i, 0, 4, random);
+      }
+      boolean aliased = random.nextBoolean();
+      IntVar counter =
+          aliased ? list[random.nextInt(n)] : randomSubsetVar(store, "c", 0, 4, random);
+      int value = random.nextInt(5);
+      IntVar[] vars =
+          aliased
+              ? list
+              : Stream.concat(Arrays.stream(list), Stream.of(counter)).toArray(IntVar[]::new);
+      int counterIndex = Arrays.asList(vars).indexOf(counter);
+      String instance =
+          "run " + run + " count(" + value + ", list, " + counter.id() + ") " + domainsOf(vars);
+      Count count = new Count(list, counter, value);
+      store.impose(count);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a -> IntStream.range(0, n).filter(i -> a[i] == value).count() == a[counterIndex]),
+          () -> rerunAtNewLevel(store, count, vars),
+          random);
+    }
+  }
+
+  @Test
+  void channelReifWithSharedBooleanReachesFixpoint() {
+    // self_referential_quiz: the same b is used for q = 1 and q = 4. Value 4 is not in q, so b
+    // becomes 0, but the item for value 1 had already been visited and q kept the value 1.
+    Store store = new Store();
+    IntVar q = new IntVar(store, "q");
+    q.addDom(1, 3);
+    q.addDom(5, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar b2 = new IntVar(store, "b2", 0, 1);
+    IntVar b3 = new IntVar(store, "b3", 0, 1);
+
+    store.impose(new ChannelReif(q, new IntVar[] {b2, b3, b, b}, new int[] {2, 3, 1, 4}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(0)).isTrue();
+    assertThat(q.dom().toString()).isEqualTo("{2..3, 5}");
+  }
+
+  @Test
+  void channelReifKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(19);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      IntVar x = randomSubsetVar(store, "x", 0, 5, random);
+      int k = 2 + random.nextInt(3);
+      IntVar[] pool = new IntVar[1 + random.nextInt(k)];
+      for (int i = 0; i < pool.length; i++) {
+        pool[i] = new IntVar(store, "b" + i, 0, 1);
+      }
+      List<Integer> candidates = new ArrayList<>(List.of(0, 1, 2, 3, 4, 5));
+      java.util.Collections.shuffle(candidates, random);
+      int[] values = new int[k];
+      int[] bIndex = new int[k];
+      IntVar[] bs = new IntVar[k];
+      for (int i = 0; i < k; i++) {
+        values[i] = candidates.get(i);
+        bIndex[i] = random.nextInt(pool.length);
+        bs[i] = pool[bIndex[i]];
+      }
+      IntVar[] vars = Stream.concat(Stream.of(x), Arrays.stream(pool)).toArray(IntVar[]::new);
+      String instance =
+          "run "
+              + run
+              + " values "
+              + Arrays.toString(values)
+              + " b "
+              + Arrays.toString(bIndex)
+              + " "
+              + domainsOf(vars);
+      ChannelReif channel = new ChannelReif(x, bs, values);
+      store.impose(channel);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a ->
+                      IntStream.range(0, k)
+                          .allMatch(i -> (a[1 + bIndex[i]] == 1) == (a[0] == values[i]))),
+          () -> rerunAtNewLevel(store, channel, vars),
+          random);
+    }
+  }
+
+  @Test
+  void amongReRunAfterLowerBorderReachesNDoesNotFail() {
+    // hakank_among_global: once the lower border reaches n the remaining variables are pruned
+    // out of the set and moved behind the new upper border; they are still in the variable queue.
+    // A variable at position ub (outside the half-open range [lb, ub)) was not skipped and was
+    // moved out a second time, so a re-run failed (or threw ArrayIndexOutOfBoundsException).
+    Store store = new Store();
+    IntVar[] list = {
+      new IntVar(store, "a0", 0, 3),
+      new IntVar(store, "a1", 0, 3),
+      new IntVar(store, "a2", 0, 3),
+      new IntVar(store, "a3", 0, 3)
+    };
+    IntVar n = new IntVar(store, "n", 2, 2);
+    Among among = new Among(list, new IntervalDomain(1, 3), n);
+    store.impose(among);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    list[0].domain.inValue(store.level, list[0], 1);
+    list[1].domain.inValue(store.level, list[1], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(list[2].singleton(0)).isTrue();
+    assertThat(list[3].singleton(0)).isTrue();
+
+    String propagated = domainsOf(list) + " " + n.dom();
+    store.setLevel(store.level + 1);
+    among.consistency(store);
+    assertThat(domainsOf(list) + " " + n.dom()).isEqualTo(propagated);
+  }
+
+  @Test
+  void amongKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(23);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int size = 2 + random.nextInt(3);
+      IntVar[] list = new IntVar[size];
+      for (int i = 0; i < size; i++) {
+        list[i] = randomSubsetVar(store, "x" + i, 0, 4, random);
+      }
+      int low = random.nextInt(4);
+      int high = low + random.nextInt(3);
+      IntVar n = randomSubsetVar(store, "n", 0, size, random);
+      IntVar[] vars = Stream.concat(Arrays.stream(list), Stream.of(n)).toArray(IntVar[]::new);
+      String instance = "run " + run + " kset " + low + ".." + high + " " + domainsOf(vars);
+      Among among = new Among(list, new IntervalDomain(low, high), n);
+      store.impose(among);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs ->
+              bruteForce(
+                  vs,
+                  a ->
+                      IntStream.range(0, size).filter(i -> a[i] >= low && a[i] <= high).count()
+                          == a[size]),
+          () -> rerunAtNewLevel(store, among, vars),
+          random);
+    }
+  }
+
+  @Test
+  void alldiffBoundsReasoningOnHolesReachesFixpoint() {
+    // latin-squares-fd2/07: after x32 = 1 the Hall interval {5..7} lowers x30.max to 4, which lands
+    // on the hole and makes x30 = 2. Neither the new bound nor the new singleton was propagated,
+    // so x29 kept 2 and x31 kept 2 and 3.
+    Store store = new Store();
+    IntVar x28 = new IntVar(store, "x28", 6, 6);
+    IntVar x31 = new IntVar(store, "x31", 2, 4);
+    IntVar x29 = new IntVar(store, "x29", 1, 3);
+    IntVar x30 = new IntVar(store, "x30");
+    x30.addDom(2, 2);
+    x30.addDom(5, 5);
+    x30.addDom(7, 7);
+    IntVar x32 = new IntVar(store, "x32");
+    x32.addDom(1, 1);
+    x32.addDom(4, 4);
+    IntVar x34 = new IntVar(store, "x34");
+    x34.addDom(1, 1);
+    x34.addDom(5, 5);
+    x34.addDom(7, 7);
+    IntVar x33 = new IntVar(store, "x33");
+    x33.addDom(5, 5);
+    x33.addDom(7, 7);
+    store.impose(new Alldiff(new IntVar[] {x28, x31, x29, x30, x32, x34, x33}));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    x32.domain.inValue(store.level, x32, 1);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x30.singleton(2)).as("x30 = %s", x30.dom()).isTrue();
+    assertThat(x29.singleton(3)).as("x29 = %s", x29.dom()).isTrue();
+    assertThat(x31.singleton(4)).as("x31 = %s", x31.dom()).isTrue();
+  }
+
+  @Test
+  void alldiffKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(29);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 3 + random.nextInt(3);
+      IntVar[] vars = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        vars[i] = randomSubsetVar(store, "x" + i, 0, n, random);
+      }
+      String instance = "run " + run + " " + domainsOf(vars);
+      Alldiff alldiff = new Alldiff(vars);
+      store.impose(alldiff);
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> bruteForce(vs, a -> Arrays.stream(a).distinct().count() == a.length),
+          () -> rerunAtNewLevel(store, alldiff, vars),
+          random);
+    }
+  }
+
+  private static String knapsackOnCopies(int[] profits, int[] weights, IntVar[] vars) {
+    Store copyStore = new Store();
+    IntVar[] copies = new IntVar[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      copies[i] = new IntVar(copyStore, vars[i].id());
+      copies[i].addDom(vars[i].dom());
+    }
+    int n = profits.length;
+    copyStore.impose(
+        new Knapsack(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+            .dynamicProgramming(false));
+    return copyStore.consistency() ? domainsOf(copies) : "FAIL";
+  }
+
+  private static List<int[]> knapsackSolutions(int[] profits, int[] weights, IntVar[] vars) {
+    int n = profits.length;
+    List<int[]> solutions = new ArrayList<>();
+    for (int[] q : bruteForce(Arrays.copyOf(vars, n), a -> true)) {
+      int capacity = 0;
+      int profit = 0;
+      for (int i = 0; i < n; i++) {
+        capacity += weights[i] * q[i];
+        profit += profits[i] * q[i];
+      }
+      if (vars[n].domain.contains(capacity) && vars[n + 1].domain.contains(profit)) {
+        int[] solution = Arrays.copyOf(q, n + 2);
+        solution[n] = capacity;
+        solution[n + 1] = profit;
+        solutions.add(solution);
+      }
+    }
+    return solutions;
+  }
+
+  @Test
+  void knapsackReachesFixpoint() {
+    // Raising the minimal profit made the mandatory part raise the used capacity, which allows a
+    // stronger capacity bound, but the pass was not repeated and the store does not re-run the
+    // constraint for its own changes.
+    int[] weights = {15, 11, 10, 15, 11, 11, 14, 6};
+    int[] profits = {18, 20, 25, 9, 10, 19, 24, 22};
+    Store store = new Store();
+    IntVar[] vars = new IntVar[weights.length + 2];
+    for (int i = 0; i < weights.length; i++) {
+      vars[i] = new IntVar(store, "q" + i, 0, i == 4 ? 3 : 1);
+    }
+    vars[weights.length] = new IntVar(store, "capacity", 0, 115);
+    vars[weights.length + 1] = new IntVar(store, "profit", 0, 167);
+    IntVar profit = vars[weights.length + 1];
+    store.impose(
+        new Knapsack(
+                profits, weights, Arrays.copyOf(vars, weights.length), vars[weights.length], profit)
+            .dynamicProgramming(false));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    profit.domain.inMin(store.level, profit, 162);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(knapsackOnCopies(profits, weights, vars)).isEqualTo(domainsOf(vars));
+  }
+
+  @Test
+  void knapsackKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(31);
+    for (int run = 0; run < 2000; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(5);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(12);
+        profits[i] = 1 + random.nextInt(20);
+        int max = random.nextBoolean() ? 1 : 1 + random.nextInt(3);
+        vars[i] = new IntVar(store, "q" + i, 0, max);
+        weightSum += weights[i] * max;
+        profitSum += profits[i] * max;
+      }
+      vars[n] = new IntVar(store, "capacity", 0, weightSum);
+      vars[n + 1] = new IntVar(store, "profit", 0, profitSum);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> knapsackSolutions(profits, weights, vs),
+          () -> knapsackOnCopies(profits, weights, vars),
+          random);
+    }
+  }
+
+  /**
+   * Imposes Knapsack on quantities in lo..hi, capacity in capacityMin..capacityMax and profit in
+   * profitMin..profitMax, and checks that propagation keeps every solution.
+   */
+  private static void assertKnapsackKeepsAllSolutions(
+      int[] weights,
+      int[] profits,
+      int[] lo,
+      int[] hi,
+      int capacityMin,
+      int capacityMax,
+      int profitMin,
+      int profitMax) {
+    int n = weights.length;
+    Store store = new Store();
+    IntVar[] vars = new IntVar[n + 2];
+    for (int i = 0; i < n; i++) {
+      vars[i] = new IntVar(store, "q" + i, lo[i], hi[i]);
+    }
+    vars[n] = new IntVar(store, "capacity", capacityMin, capacityMax);
+    vars[n + 1] = new IntVar(store, "profit", profitMin, profitMax);
+    List<int[]> solutions = knapsackSolutions(profits, weights, vars);
+    assertThat(solutions).isNotEmpty();
+    store.impose(new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1]));
+    assertThat(store.consistency()).as(domainsOf(vars)).isTrue();
+    for (int[] solution : solutions) {
+      for (int i = 0; i < vars.length; i++) {
+        assertThat(vars[i].domain.contains(solution[i]))
+            .as(domainsOf(vars) + " keeps solution " + Arrays.toString(solution))
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
+  void knapsackKeepsSolutionsWithEquallyEfficientItems() {
+    // The search for the weight replaceable by less efficient items stopped at a leaf reached by
+    // descending the tree without checking its neighbor, and divided by a zero efficiency loss when
+    // the next item was as efficient. Item 0 was wrongly made mandatory.
+    int[] ones = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+    assertKnapsackKeepsAllSolutions(
+        new int[] {3, 2, 2, 1, 3, 1, 3, 3, 2, 1},
+        new int[] {6, 2, 4, 2, 6, 2, 6, 3, 2, 2},
+        new int[10],
+        ones,
+        11,
+        11,
+        22,
+        36);
+    // An already fixed item between two equally efficient items hid the second one.
+    assertKnapsackKeepsAllSolutions(
+        new int[] {3, 2, 5, 5, 1, 1, 1},
+        new int[] {6, 2, 5, 10, 2, 2, 2},
+        new int[] {0, 1, 0, 0, 0, 0, 0},
+        new int[] {1, 1, 1, 1, 1, 0, 1},
+        0,
+        7,
+        12,
+        26);
+    // The constraint failed although x8 = x9 = x10 = 1 plus any other item is a solution.
+    assertKnapsackKeepsAllSolutions(
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1},
+        new int[] {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0},
+        new int[] {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+        2,
+        5,
+        6,
+        7);
+  }
+
+  @Test
+  void knapsackHandlesLargeQuantitiesWithoutOverflow() {
+    // Sums of weights and profits were kept in int and overflowed, so the constraint failed.
+    Store store = new Store();
+    IntVar[] q = {
+      new IntVar(store, "q0", 0, IntDomain.MAX_INT), new IntVar(store, "q1", 0, IntDomain.MAX_INT)
+    };
+    IntVar capacity = new IntVar(store, "capacity", 0, 100);
+    IntVar profit = new IntVar(store, "profit", 0, IntDomain.MAX_INT);
+    store.impose(new Knapsack(new int[] {3, 4}, new int[] {5, 7}, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q[0].max()).isEqualTo(20);
+    assertThat(q[1].max()).isEqualTo(14);
+
+    store = new Store();
+    q = new IntVar[3];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 100, 100);
+    }
+    capacity = new IntVar(store, "capacity", 0, 500_000_000);
+    profit = new IntVar(store, "profit", 0, 500_000_000);
+    int[] large = {1_000_000, 1_000_000, 1_000_000};
+    store.impose(new Knapsack(large, large, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.value()).isEqualTo(300_000_000);
+    assertThat(profit.value()).isEqualTo(300_000_000);
+  }
+
+  @Test
+  void knapsackUpdatesItemsChangedAfterBacktrack() {
+    // The position up to which the changed items of a level were applied to the tree was shared
+    // by all levels. After backtracking from a level with more changes, items changed again at the
+    // lower level were skipped, so the tree kept their old minimal quantities.
+    // Sixteen items, so that a few changes are applied incrementally instead of by recomputing.
+    Store store = new Store();
+    IntVar[] q = new IntVar[16];
+    int[] weights = new int[q.length];
+    int[] profits = new int[q.length];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 2);
+      weights[i] = i + 1;
+      profits[i] = q.length - i;
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 1000);
+    IntVar profit = new IntVar(store, "profit", 0, 1000);
+    store.impose(new Knapsack(profits, weights, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    q[0].domain.in(store.level, q[0], 1, 2);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(2);
+    for (int i = 1; i < 4; i++) {
+      q[i].domain.in(store.level, q[i], 1, 2);
+    }
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(2);
+    store.setLevel(1);
+
+    q[1].domain.in(store.level, q[1], 2, 2);
+    q[2].domain.in(store.level, q[2], 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.min()).isEqualTo(1 + 2 * 2 + 2 * 3);
+    assertThat(profit.min()).isEqualTo(16 + 2 * 15 + 2 * 14);
+  }
+
+  @Test
+  void knapsackSortsManyEquallyEfficientItems() {
+    // The item comparator returned 1 for two items with the same weight and profit in both
+    // directions, so sorting 32 or more items threw "Comparison method violates its general
+    // contract".
+    int[] profits = {
+      3, 2, 1, 1, 3, 1, 2, 1, 1, 1, 1, 1, 1, 2, 1, 2, 2, 1, 1, 1, 2, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1
+    };
+    int[] weights = new int[profits.length];
+    Arrays.fill(weights, 1);
+    Store store = new Store();
+    IntVar[] q = new IntVar[profits.length];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 1);
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 22);
+    IntVar profit = new IntVar(store, "profit", 0, 43);
+    store.impose(new Knapsack(profits, weights, q, capacity, profit));
+    assertThat(store.consistency()).isTrue();
+    // The 22 most profitable items give 2 * 3 + 7 * 2 + 13 * 1 = 33.
+    assertThat(profit.max()).isEqualTo(33);
+  }
+
+  /**
+   * The maximal profit of the linear relaxation (Dantzig bound) when item skip is left out, the
+   * other quantities lie in their bounds and the weight is at most capacity; minus infinity if the
+   * minimal quantities exceed the capacity.
+   */
+  private static double knapsackRelaxation(
+      int[] weights, int[] profits, IntVar[] vars, int skip, double capacity) {
+    double profit = 0;
+    List<Integer> order = new ArrayList<>();
+    for (int i = 0; i < weights.length; i++) {
+      if (i != skip) {
+        capacity -= (double) vars[i].min() * weights[i];
+        profit += (double) vars[i].min() * profits[i];
+        order.add(i);
+      }
+    }
+    if (capacity < -1e-9) {
+      return Double.NEGATIVE_INFINITY;
+    }
+    order.sort(
+        (a, b) -> Long.compare((long) profits[b] * weights[a], (long) profits[a] * weights[b]));
+    for (int i : order) {
+      double take = Math.min(vars[i].max() - vars[i].min(), capacity / weights[i]);
+      profit += take * profits[i];
+      capacity -= take * weights[i];
+    }
+    return profit;
+  }
+
+  @Test
+  void knapsackReachesRelaxationConsistencyAndDominatesLinearDecomposition() {
+    // Every bound of a quantity must have a support in the linear relaxation (capacity at most its
+    // maximum, profit at least its minimum), as in Fahle and Sellmann or Katriel et al., including
+    // the critical item. The pruning must also include what the two linear equalities give.
+    Random random = new Random(7);
+    for (int run = 0; run < 3000; run++) {
+      int n = 1 + random.nextInt(8);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      Store store = new Store();
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(10);
+        profits[i] = random.nextBoolean() ? weights[i] : 1 + random.nextInt(10);
+        int min = random.nextInt(4) == 0 ? 1 : 0;
+        int max = min + random.nextInt(3);
+        vars[i] = new IntVar(store, "q" + i, min, max);
+        weightSum += weights[i] * max;
+        profitSum += profits[i] * max;
+      }
+      int capacityMin = random.nextInt(weightSum / 3 + 1);
+      int capacityMax = Math.max(capacityMin, random.nextInt(weightSum + 1));
+      int profitMin = random.nextInt(profitSum + 1);
+      vars[n] = new IntVar(store, "capacity", capacityMin, capacityMax);
+      vars[n + 1] =
+          new IntVar(store, "profit", profitMin, profitMin + random.nextInt(profitSum + 2));
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(
+          new Knapsack(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .dynamicProgramming(false));
+      if (!store.consistency()) {
+        continue;
+      }
+      String state = instance + " -> " + domainsOf(vars);
+      for (int i = 0; i < n; i++) {
+        for (int bound : new int[] {vars[i].min(), vars[i].max()}) {
+          double best =
+              (double) bound * profits[i]
+                  + knapsackRelaxation(
+                      weights, profits, vars, i, vars[n].max() - (double) bound * weights[i]);
+          assertThat(best)
+              .as(state + " q" + i + " = " + bound)
+              .isGreaterThan(vars[n + 1].min() - 1e-6);
+        }
+      }
+      Store linearStore = new Store();
+      IntVar[] copies = new IntVar[n + 2];
+      for (int i = 0; i < copies.length; i++) {
+        copies[i] = new IntVar(linearStore, vars[i].id(), vars[i].dom().cloneLight());
+      }
+      IntVar[] weighted = Arrays.copyOf(copies, n + 1);
+      int[] coefficients = Arrays.copyOf(weights, n + 1);
+      coefficients[n] = -1;
+      linearStore.impose(new LinearInt(weighted, coefficients, "==", 0));
+      weighted = weighted.clone();
+      weighted[n] = copies[n + 1];
+      coefficients = Arrays.copyOf(profits, n + 1);
+      coefficients[n] = -1;
+      linearStore.impose(new LinearInt(weighted, coefficients, "==", 0));
+      assertThat(linearStore.consistency()).as(state).isTrue();
+      assertThat(domainsOf(copies)).as(state).isEqualTo(domainsOf(vars));
+    }
+  }
+
+  @Test
+  void knapsackDpReachesDomainConsistency() {
+    // With a maximal profit that does not restrict, the dynamic program keeps exactly the values of
+    // the quantities and of the capacity that belong to a solution, and the exact profit bounds.
+    Random random = new Random(11);
+    for (int run = 0; run < 1500; run++) {
+      int n = 1 + random.nextInt(6);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      Store store = new Store();
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = 1 + random.nextInt(8);
+        profits[i] = random.nextInt(9);
+        vars[i] = randomSubsetVar(store, "q" + i, random.nextInt(2), 3, random);
+        weightSum += weights[i] * vars[i].max();
+        profitSum += profits[i] * vars[i].max();
+      }
+      vars[n] = randomSubsetVar(store, "capacity", 0, weightSum, random);
+      vars[n + 1] = new IntVar(store, "profit", random.nextInt(profitSum + 1), profitSum);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      List<int[]> solutions = knapsackSolutions(profits, weights, vars);
+      store.impose(
+          new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .adaptive(false));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
+      if (!consistent) {
+        continue;
+      }
+      for (int i = 0; i <= n; i++) {
+        int k = i;
+        int[] supported = solutions.stream().mapToInt(a -> a[k]).distinct().sorted().toArray();
+        assertThat(valuesOf(vars[i]))
+            .as(instance + " " + domainsOf(vars))
+            .containsExactly(supported);
+      }
+      int profitMin = solutions.stream().mapToInt(a -> a[n + 1]).min().getAsInt();
+      int profitMax = solutions.stream().mapToInt(a -> a[n + 1]).max().getAsInt();
+      assertThat(vars[n + 1].max()).as(instance).isEqualTo(profitMax);
+      assertThat(vars[n + 1].min()).as(instance).isLessThanOrEqualTo(profitMin);
+    }
+  }
+
+  @Test
+  void knapsackDpKeepsSupportsAndReachesFixpoint() {
+    Random random = new Random(13);
+    for (int run = 0; run < 1500; run++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(4);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      IntVar[] vars = new IntVar[n + 2];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(10);
+        profits[i] = random.nextInt(12);
+        vars[i] = randomSubsetVar(store, "q" + i, 0, 1 + random.nextInt(3), random);
+        weightSum += weights[i] * vars[i].max();
+        profitSum += profits[i] * vars[i].max();
+      }
+      vars[n] = randomSubsetVar(store, "capacity", 0, weightSum, random);
+      vars[n + 1] = randomSubsetVar(store, "profit", 0, profitSum, random);
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " "
+              + domainsOf(vars);
+      store.impose(
+          new KnapsackDP(profits, weights, Arrays.copyOf(vars, n), vars[n], vars[n + 1])
+              .adaptive(false));
+      checkSupportsAndFixpointAlongRandomWalk(
+          instance,
+          store,
+          vars,
+          vs -> knapsackSolutions(profits, weights, vs),
+          () -> {
+            Store copyStore = new Store();
+            IntVar[] copies = new IntVar[vars.length];
+            for (int i = 0; i < vars.length; i++) {
+              copies[i] = new IntVar(copyStore, vars[i].id());
+              copies[i].addDom(vars[i].dom());
+            }
+            copyStore.impose(
+                new KnapsackDP(profits, weights, Arrays.copyOf(copies, n), copies[n], copies[n + 1])
+                    .adaptive(false));
+            return copyStore.consistency() ? domainsOf(copies) : "FAIL";
+          },
+          random);
+    }
+  }
+
+  @Test
+  void knapsackDpAdaptiveFindsAllSolutions() {
+    // The adaptive mode skips calls, so it is checked through search: alone and inside Knapsack it
+    // must find exactly the solutions of the brute force.
+    Random random = new Random(17);
+    for (int run = 0; run < 300; run++) {
+      int n = 2 + random.nextInt(5);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      int[] maxima = new int[n];
+      int weightSum = 0;
+      int profitSum = 0;
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(8);
+        profits[i] = random.nextInt(9);
+        maxima[i] = 1 + random.nextInt(2);
+        weightSum += weights[i] * maxima[i];
+        profitSum += profits[i] * maxima[i];
+      }
+      int capacityMin = random.nextInt(weightSum / 2 + 1);
+      int profitMin = random.nextInt(profitSum / 2 + 1);
+      long expected = -1;
+      for (boolean withKnapsack : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] vars = new IntVar[n + 2];
+        for (int i = 0; i < n; i++) {
+          vars[i] = new IntVar(store, "q" + i, 0, maxima[i]);
+        }
+        vars[n] = new IntVar(store, "capacity", capacityMin, weightSum);
+        vars[n + 1] = new IntVar(store, "profit", profitMin, profitSum);
+        if (expected < 0) {
+          expected = knapsackSolutions(profits, weights, vars).size();
+        }
+        IntVar[] q = Arrays.copyOf(vars, n);
+        if (withKnapsack
+            && Arrays.stream(weights).allMatch(w -> w > 0)
+            && Arrays.stream(profits).allMatch(p -> p > 0)) {
+          store.impose(new Knapsack(profits, weights, q, vars[n], vars[n + 1]));
+        } else {
+          store.impose(new KnapsackDP(profits, weights, q, vars[n], vars[n + 1]));
+        }
+        long found = 0;
+        if (store.consistency()) {
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(false);
+          search.setPrintInfo(false);
+          search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+          found = search.getSolutionListener().solutionsNo();
+        }
+        assertThat(found)
+            .as(
+                "run %d weights %s profits %s",
+                run, Arrays.toString(weights), Arrays.toString(profits))
+            .isEqualTo(expected);
+      }
+    }
+  }
+
+  @Test
+  void knapsackDpSkipsAboveLimit() {
+    Store store = new Store();
+    IntVar[] q = {new IntVar(store, "q0", 0, 10), new IntVar(store, "q1", 0, 10)};
+    IntVar capacity = new IntVar(store, "capacity", 0, 1000);
+    IntVar profit = new IntVar(store, "profit", 0, 1000);
+    store.impose(new KnapsackDP(new int[] {3, 5}, new int[] {7, 11}, q, capacity, profit, 10));
+    assertThat(store.consistency()).isTrue();
+    assertThat(capacity.max()).isEqualTo(1000);
+    assertThat(q[0].max()).isEqualTo(10);
+  }
+
+  private static IntVar randomSubsetVar(Store store, String name, int min, int max, Random random) {
+    IntVar v = new IntVar(store, name);
+    for (int i = min; i <= max; i++) {
+      if (random.nextInt(3) > 0) {
+        v.addDom(i, i);
+      }
+    }
+    if (v.domain.isEmpty()) {
+      v.addDom(min, min);
+    }
+    return v;
+  }
+
+  private static int[] valuesOf(IntVar v) {
+    int[] values = new int[v.getSize()];
+    int i = 0;
+    for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      values[i++] = e.nextElement();
+    }
+    return values;
+  }
+
+  @Test
+  void testExtensionalConflictVA() {
+
+    Store store = new Store();
+
+    int xLength = 2;
+    int xSize = 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    int[][] tuples = new int[][] {{0, 0}, {1, 1}};
+    ExtensionalConflictVa extensionalConflictVA = new ExtensionalConflictVa(x, tuples);
+
+    store.impose(extensionalConflictVA);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(xSize * xSize - 2);
+  }
+
+  @Test
+  void testIfThenBool() {
+
+    Store store = new Store();
+
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+
+    IfThenBool ifThenBool = new IfThenBool(x, y, b);
+
+    store.impose(ifThenBool);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
+
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  @Test
+  void testXor() {
+
+    Store store = new Store();
+
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+
+    PrimitiveConstraint c = new XeqY(x, y);
+    Xor xor = new Xor(c, b);
+
+    store.impose(xor);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, b});
+
+    assertThat(noOfSolutions).isEqualTo(10);
+  }
+
+  @Test
+  void testXexpYeqZ() {
+
+    Store store = new Store();
+
+    IntVar x = new IntVar(store, "x", 0, 4);
+    IntVar y = new IntVar(store, "y", 1, 2);
+    IntVar z = new IntVar(store, "z", 0, 16);
+
+    XexpYeqZ xexpYeqZ = new XexpYeqZ(x, y, z);
+
+    store.impose(xexpYeqZ);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
+
+    assertThat(noOfSolutions).isEqualTo(10);
+  }
+
+  @Test
+  void testXmulYeqC() {
+
+    Store store = new Store();
+
+    int xLength = 2;
+    int xSize = 3;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    XmulCeqZ xmulCeqZ = new XmulCeqZ(x[0], 2, x[1]);
+
+    store.impose(xmulCeqZ);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  @Test
+  void testAlldiff() {
+
+    Store store = new Store();
+
+    int xLength = 2;
+    int xSize = xLength * 2 + 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    Alldiff alldiff = new Alldiff(x);
+
+    store.impose(alldiff);
+
+    store.print();
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(30);
+  }
+
+  @Test
+  void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActiveSmall() {
+
+    Store store = new Store();
+
+    int xLength = 2;
+    int xSize = xLength * 2 + 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+    store.impose(new Alldiff(x));
+
+    store.print();
+
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(2);
+  }
+
+  @Test
+  void testXgtCwithHelperSimpleConstraintsToAvoidNoConstraintBeingActive() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = xLength * 2 + 2;
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+
+    Arrays.stream(x).forEach(i -> store.impose(new XgtC(i, i.min() + xSize / 2)));
+    store.impose(new Alldiff(x));
+
+    store.print();
+
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(24);
+  }
+
+  @Test
+  void testArgMin() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 6;
+
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    IntVar index = new IntVar(store, "index", 0, xLength);
+    ArgMin argMin = new ArgMin(x, index, -1);
+
+    store.impose(argMin);
+
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
+
+    assertThat(noOfSolutions).isEqualTo(2401);
+  }
+
+  @Test
+  // BUG, problem with using BoundDomain, SmallDenseDomain and asserts, need to investigate.
+  // The same problem and fixed applied for ArgMin. Keep this for investigation of the buggy
+  // scenario.
+  void testArgMax() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 6;
+
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    IntVar index = new IntVar(store, "index", 0, xLength);
+    ArgMax argMax = new ArgMax(x, index, -1);
+
+    store.impose(argMax);
+
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
+
+    assertThat(noOfSolutions).isEqualTo(2401);
+  }
+
+  @Test
+  void argMinMaxSatisfiedRespectsFirstIndexTieBreak() {
+    // satisfied() accepted an index whose value ties with an earlier element, and ArgMax read the
+    // value of a non-singleton index.
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 3, 3), new IntVar(store, "x2", 3, 3)};
+    IntVar second = new IntVar(store, "second", 2, 2);
+    IntVar first = new IntVar(store, "first", 1, 1);
+    IntVar any = new IntVar(store, "any", 1, 2);
+
+    assertThat(new ArgMax(x, second).satisfied()).isFalse();
+    assertThat(new ArgMin(x, second).satisfied()).isFalse();
+    assertThat(new ArgMax(x, first).satisfied()).isTrue();
+    assertThat(new ArgMin(x, first).satisfied()).isTrue();
+    assertThat(new ArgMax(x, any).satisfied()).isFalse();
+    assertThat(new ArgMin(x, any).satisfied()).isFalse();
+  }
+
+  @Test
+  void argMinMaxIndexKeepsOnlyPositionsThatCanHoldTheFirstExtremum() {
+    // Positions 4..6 (offset 3). Position 6 holds the first maximum only if x2 < x3 = 1, and the
+    // first minimum only if x2 > x3 = 2; the index used to be pruned only against the largest lower
+    // (smallest upper) bound, which keeps it.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 0, 2), new IntVar(store, "x2", 1, 2), new IntVar(store, "x3", 1, 1)
+    };
+    IntVar maxIndex = new IntVar(store, "maxIndex", 4, 6);
+    store.impose(new ArgMax(x, maxIndex, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(maxIndex.dom().toString()).isEqualTo("{4..5}");
+
+    store = new Store();
+    IntVar[] y = {
+      new IntVar(store, "y1", 1, 3), new IntVar(store, "y2", 1, 2), new IntVar(store, "y3", 2, 2)
+    };
+    IntVar minIndex = new IntVar(store, "minIndex", 4, 6);
+    store.impose(new ArgMin(y, minIndex, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(minIndex.dom().toString()).isEqualTo("{4..5}");
+  }
+
+  @Test
+  void argMinMaxIndexIsDomainConsistentAtFixpoint() {
+    // Without repeated variables, every index value left after propagation must be the first
+    // extremum of some tuple of the current domains, and every removed one must have none.
+    Random random = new Random(43);
+    for (int instance = 0; instance < 4000; instance++) {
+      boolean max = random.nextBoolean();
+      int n = 1 + random.nextInt(4);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, randomDomain(random, -2, 4));
+      }
+      IntVar index = new IntVar(store, "index", randomDomain(random, 0, n + 1));
+      IntDomain before = index.dom().cloneLight();
+      BitSet supportedBefore = firstExtremumPositions(x, max);
+      store.impose(max ? new ArgMax(x, index) : new ArgMin(x, index));
+      boolean consistent = store.consistency();
+
+      String context = (max ? "ArgMax " : "ArgMin ") + Arrays.toString(x) + " index " + before;
+      BitSet supported = consistent ? firstExtremumPositions(x, max) : supportedBefore;
+      for (ValueEnumeration e = before.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        assertThat(consistent && index.dom().contains(v))
+            .as(context + " value " + v)
+            .isEqualTo(supported.get(v));
+      }
+    }
+  }
+
+  /** Returns the 1-based positions that are the first maximum (minimum) of some tuple of x. */
+  private static BitSet firstExtremumPositions(IntVar[] x, boolean max) {
+    int n = x.length;
+    int[][] values = new int[n][];
+    for (int i = 0; i < n; i++) {
+      values[i] = x[i].dom().toIntArray();
+    }
+    BitSet positions = new BitSet();
+    int[] position = new int[n];
+    do {
+      int best = 0;
+      for (int i = 1; i < n; i++) {
+        int v = values[i][position[i]];
+        int b = values[best][position[best]];
+        if (max ? v > b : v < b) {
+          best = i;
+        }
+      }
+      positions.set(best + 1);
+    } while (nextTuple(position, values));
+    return positions;
+  }
+
+  private static IntDomain randomDomain(Random random, int min, int max) {
+    IntervalDomain domain = new IntervalDomain();
+    for (int v = min; v <= max; v++) {
+      if (random.nextInt(3) > 0) {
+        domain.unionAdapt(v, v);
+      }
+    }
+    if (domain.isEmpty()) {
+      int v = min + random.nextInt(max - min + 1);
+      domain.unionAdapt(v, v);
+    }
+    return domain;
+  }
+
+  private static boolean nextTuple(int[] position, int[][] values) {
+    for (int i = 0; i < position.length; i++) {
+      if (++position[i] < values[i].length) {
+        return true;
+      }
+      position[i] = 0;
+    }
+    return false;
+  }
+
+  @Test
+  void testSum() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 2;
+
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+    IntVar sum = new IntVar(store, "sum", 0, xLength * xSize);
+
+    SumInt sumConstraint = new SumInt(x, "==", sum);
+
+    store.impose(sumConstraint);
+
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(15);
+  }
+
+  @Test
+  void testLinear() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 2;
+
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+
+    LinearInt linear = new LinearInt(x, new int[] {2, 1, 3, 1}, ">=", 5);
+
+    store.impose(linear);
+
+    int noOfSolutions = noOfAllSolutions(store, x);
+
+    assertThat(noOfSolutions).isEqualTo(81);
+  }
+
+  @Test
+  void testIfThenElse() {
+
+    Store store = new Store();
+
+    int size = 3;
+
+    IntVar x = new IntVar(store, "x", 0, size);
+    IntVar y = new IntVar(store, "y", 0, size);
+    IntVar z = new IntVar(store, "z", 0, size);
+
+    PrimitiveConstraint ifCond = new XeqY(x, y);
+    PrimitiveConstraint thenCond = new XneqY(y, z);
+    PrimitiveConstraint elseCond = new XeqY(y, z);
+
+    IfThenElse ifThenElse = new IfThenElse(ifCond, thenCond, elseCond);
+
+    store.impose(ifThenElse);
+
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, y, z});
+
+    assertThat(noOfSolutions).isEqualTo(24);
+  }
+
+  @Test
+  void testElementIntegerFast() {
+
+    Store store = new Store();
+
+    int size = 3;
+    int length = 1000;
+
+    IntVar x = new IntVar(store, "x", 0, length);
+    IntVar z = new IntVar(store, "z", 0, length);
+
+    int[] values = IntStream.iterate(1, i -> i + 1).map(i -> i / size).limit(length).toArray();
+
+    ElementIntegerFast ifThenElse = new ElementIntegerFast(x, values, z);
+
+    store.impose(ifThenElse);
+
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {x, z});
+
+    assertThat(noOfSolutions).isEqualTo(length);
+  }
+
+  @Test
+  void elementVariableRemovesEveryPositionOfRepeatedVariable() {
+    // A variable repeated on the list kept its first position when it became disjoint from the
+    // value, so the index could still select it.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 2, 2);
+    store.impose(new ElementVariable(index, new IntVar[] {y, y, z}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 0, 0);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.singleton(3)).isTrue();
+  }
+
+  @Test
+  void elementVariableStaysAttachedToIndexOnTheList() {
+    // The index is also on the list, at a position it cannot take. Removing that position
+    // detached the index from the constraint, which then ignored the index being fixed.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 1);
+    index.addDom(3, 3);
+    IntVar value = new IntVar(store, "value", 5, 6);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    IntVar b = new IntVar(store, "b", 5, 7);
+    store.impose(new ElementVariable(index, new IntVar[] {a, index, b}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 3, 3);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isEqualTo(6);
+  }
+
+  @Test
+  void elementIntegerWithoutDuplicateCheck() {
+    // The constructor option checkDuplicates = false left the duplicate structures null, so the
+    // first consistency call threw a NullPointerException.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 4);
+    IntVar value = new IntVar(store, "value", 0, 9);
+    store.impose(new ElementInteger(index, new int[] {3, 1, 3, 7}, value, 0, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{1, 3, 7}");
+
+    int noOfSolutions = noOfAllSolutions(store, new IntVar[] {index, value});
+    assertThat(noOfSolutions).isEqualTo(4);
+  }
+
+  @Test
+  void elementIntegerWithTheSameVariableAsIndexAndValue() {
+    // x = list[x] with x in 1..3: pruning the value side to {2, 3} and then the index side to
+    // {3} changed the shared variable after each step, and the constraint stopped at x = 3
+    // although list[3] = 2. Only positions that hold their own index are solutions.
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    store.impose(new ElementInteger(x, new int[] {3, -1, 2, 1}, x, 0));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", -1, 6);
+    store.impose(new ElementInteger(x, new int[] {0, 5, 2, 3, 1}, x, -1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{0, 2..3}");
+    assertThat(noOfAllSolutions(store, new IntVar[] {x})).isEqualTo(3);
+  }
+
+  @Test
+  void elementIntegerIsDomainConsistentForLargeIndex() {
+    // With 100 or more index values the value domain was only pruned to the bounds of the
+    // supported values, here 3..360 instead of the multiples of 3.
+    Store store = new Store();
+    int[] list = IntStream.rangeClosed(1, 120).map(i -> 3 * i).toArray();
+    IntVar index = new IntVar(store, "index", 1, 120);
+    IntVar value = new IntVar(store, "value", 0, 400);
+    store.impose(new ElementInteger(index, list, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.getSize()).isEqualTo(120);
+    assertThat(value.domain.contains(4)).isFalse();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 60);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(180)).isFalse();
+    assertThat(value.getSize()).isEqualTo(119);
+
+    // Values repeated more than ten times are grouped as duplicates.
+    store = new Store();
+    int[] repeated = IntStream.range(0, 150).map(i -> i % 2 == 0 ? 0 : 10).toArray();
+    index = new IntVar(store, "index", 1, 150);
+    value = new IntVar(store, "value", 0, 20);
+    store.impose(new ElementInteger(index, repeated, value, 0));
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.dom().toString()).isEqualTo("{0, 10}");
+  }
+
+  @Test
+  void elementIntegerWithLargeIndexMatchesBruteForce() {
+    // Long lists against the supports computed directly, at every node of random dives.
+    Random random = new Random(7);
+    for (int instance = 0; instance < 200; instance++) {
+      Store store = new Store();
+      int length = 100 + random.nextInt(150);
+      int spread = 1 + random.nextInt(400);
+      int[] list = new int[length];
+      for (int i = 0; i < length; i++) {
+        list[i] = random.nextInt(spread) - spread / 3;
+      }
+      int offset = random.nextInt(3) - 1;
+      IntVar index = new IntVar(store, "index", offset - 2, length + offset + 2);
+      IntVar value = new IntVar(store, "value", -spread, spread);
+      store.impose(new ElementInteger(index, list, value, offset, random.nextBoolean()));
+
+      for (int step = 0; step < 30; step++) {
+        store.setLevel(store.level + 1);
+        IntVar x = random.nextBoolean() ? index : value;
+        int v = x.min() + random.nextInt(x.max() - x.min() + 1);
+        try {
+          if (random.nextInt(4) == 0) {
+            x.domain.in(
+                store.level,
+                x,
+                random.nextBoolean() ? x.min() : v,
+                random.nextBoolean() ? v : x.max());
+          } else if (x.domain.contains(v) && !x.singleton()) {
+            x.domain.inComplement(store.level, x, v);
+          }
+        } catch (FailException e) {
+          break;
+        }
+        if (!store.consistency()) {
+          break;
+        }
+        IntervalDomain expectedValue = new IntervalDomain();
+        IntervalDomain expectedIndex = new IntervalDomain();
+        for (int i = 1 + offset; i <= length + offset; i++) {
+          int val = list[i - 1 - offset];
+          if (index.domain.contains(i) && value.domain.contains(val)) {
+            expectedIndex.unionAdapt(i);
+            expectedValue.unionAdapt(val);
+          }
+        }
+        assertThat(value.dom().eq(expectedValue))
+            .as("value %s, expected %s", value.dom(), expectedValue)
+            .isTrue();
+        assertThat(index.dom().eq(expectedIndex))
+            .as("index %s, expected %s", index.dom(), expectedIndex)
+            .isTrue();
+      }
+    }
+  }
+
+  @Test
+  void elementVariableLooksForSupportsWithinIndex() {
+    // A value that lost its support was given a new support at a position the index can no
+    // longer take, so it stayed in the value domain.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 3);
+    IntVar a = new IntVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 1, 3);
+    IntVar c = new IntVar(store, "c", 1, 1);
+    c.addDom(3, 3);
+    store.impose(new ElementVariable(index, new IntVar[] {a, b, c}, value));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    index.domain.inComplement(store.level, index, 1);
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 3, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.domain.contains(2)).isFalse();
+  }
+
+  @Test
+  void elementBoolRejectsNonBooleanList() {
+    // Positions holding a value other than 0 or 1 were never removed from the index, so with
+    // list [2, 0] and value in 0..1 the solution index = 1, value = 0 was accepted.
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 2);
+    IntVar value = new IntVar(store, "value", 0, 1);
+    assertThatThrownBy(() -> new ElementBool(index, new int[] {2, 0}, value, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testEqBool() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+
+    IntVar[] x = getIntVars(store, "x", xLength, 2);
+    IntVar n = new IntVar(store, "sum", 0, 1);
+    EqBool eqBool = new EqBool(x, n);
+
+    store.impose(eqBool);
+
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
+
+    assertThat(noOfSolutions).isEqualTo(16);
+  }
+
+  @Test
+  void testLex() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 2;
+
+    IntVar[] x1 = getShiftedIntVars(store, "a", xLength, xSize + 1);
+    IntVar[] x2 = getIntVars(store, "b", xLength + xSize, xLength);
+
+    Lex lex = new Lex(new IntVar[][] {x1, x2}, true);
+
+    store.imposeDecomposition(lex);
+
+    int noOfSolutions = noOfAllSolutions(store, x1, x2);
+
+    assertThat(noOfSolutions).isEqualTo(188640);
+  }
+
+  @Test
+  void testLexChainSolutionCount() {
+
+    for (boolean strict : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[][] x = new IntVar[4][3];
+      for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 3; j++) {
+          x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+        }
+      }
+      store.impose(new LexChain(x, strict));
+
+      // chains of 4 of the 27 tuples: C(27, 4) strictly increasing, C(30, 4) non-decreasing
+      assertThat(noOfAllSolutions(store, x)).isEqualTo(strict ? 17550 : 27405);
+    }
+  }
+
+  @Test
+  void testLexChainPrunesWhatPairwiseLexMisses() {
+
+    // x0 < x1 < x2: x0 = (2, _) leaves only (2, 2) for x1 and nothing above it for x2. Each pair
+    // alone is domain consistent, so pairwise LexOrder prunes nothing here.
+    Store store = new Store();
+    IntVar[] x0 = {new IntVar(store, "a0", 0, 0), new IntVar(store, "a1", 1, 2)};
+    x0[0].addDom(2, 2);
+    IntVar[] x1 = {new IntVar(store, "b0", 0, 2), new IntVar(store, "b1", 0, 2)};
+    IntVar[] x2 = {new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2)};
+
+    store.impose(new LexChain(new IntVar[][] {x0, x1, x2}, true));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0[0].singleton(0)).isTrue();
+    assertThat(x0[1].dom().toString()).isEqualTo("{1..2}");
+    assertThat(x1[0].dom().toString()).isEqualTo("{0..2}");
+    assertThat(x2[0].dom().toString()).isEqualTo("{1..2}");
+    assertThat(x2[1].dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void testLexChainRejectsVectorsOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] a = {new IntVar(store, "a", 0, 1)};
+    IntVar[] b = {new IntVar(store, "b0", 0, 1), new IntVar(store, "b1", 0, 1)};
+
+    assertThatThrownBy(() -> new LexChain(new IntVar[][] {a, b}, false))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testGCC() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 2;
+
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize + 1);
+
+    IntVar[] counters = getIntVars(store, "counters", xLength + xSize, xLength);
+
+    GCC gcc = new GCC(x, counters);
+
+    store.impose(gcc);
+
+    int noOfSolutions = noOfAllSolutions(store, x, counters);
+
+    assertThat(noOfSolutions).isEqualTo(81);
+  }
+
+  // A counter whose domain is all negative had its bounds taken as the capacity of its value, and
+  // the matching then found no variable to move out of that value (an IllegalStateException under
+  // jacop.asserts.enabled, a corrupt matching without it) instead of failing.
+  @Test
+  void gccFailsOnACounterWithANegativeDomain() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", -2, -1)};
+    store.impose(new GCC(x, counters));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void gccKeepsTheSolutionsWhenCountersHaveNegativeMinimums() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "c0", -1, 2), new IntVar(store, "c1", -2, 2)};
+    store.impose(new GCC(x, counters));
+
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(4);
+  }
+
+  @Test
+  void testAmongVar() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 3;
+    int nMax = 3;
+
+    IntVar[] x = getShiftedIntVars(store, "x", xLength, xSize);
+
+    IntVar[] y = getIntVars(store, "y", xLength + xSize, xSize);
+
+    IntVar n = new IntVar(store, "n", 0, nMax);
+    AmongVar amongVar = new AmongVar(x, y, n);
+
+    store.impose(amongVar);
+
+    int noOfSolutions = noOfAllSolutions(store, x, y, new IntVar[] {n});
+
+    assertThat(noOfSolutions).isEqualTo(177147);
+  }
+
+  @Test
+  void testDisjoint() {
+
+    Store store = new Store();
+
+    int noOfRectangles = 4;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
+
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
+
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
+
+    Disjoint diff = new Disjoint(origin1, origin2, length1, length2);
+
+    store.impose(diff);
+
+    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
+
+    assertThat(noOfSolutions).isEqualTo(699189);
+  }
+
+  @Test
+  void testDiff2() {
+
+    Store store = new Store();
+
+    int noOfRectangles = 4;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
+
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
+
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
+
+    Diff2 diff2 = new Diff2(origin1, origin2, length1, length2);
+
+    store.impose(diff2);
+
+    int noOfSolutions = noOfAllSolutions(store, origin1, origin2, length1, length2);
+
+    assertThat(noOfSolutions).isEqualTo(791208);
+  }
+
+  @Test
+  void testDisjointConditional() {
+
+    Store store = new Store();
+
+    int noOfRectangles = 3;
+    int xSize = 2;
+    int ySize = 2;
+    int durationSize = 3;
+
+    IntVar[] origin1 = getShiftedIntVars(store, "OX", noOfRectangles, xSize);
+    IntVar[] origin2 = getIntVars(store, "OY", noOfRectangles, ySize);
+
+    IntVar[] length1 = getShiftedIntVars(store, "DX", noOfRectangles, durationSize);
+    IntVar[] length2 = getIntVars(store, "DY", noOfRectangles, durationSize);
+
+    List<List<Integer>> conditionalPairs = new ArrayList<>();
+    conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {1, 3})));
+    conditionalPairs.add(new ArrayList<>(Arrays.asList(new Integer[] {2, 3})));
+
+    IntVar[] exceptionCondition = getIntVars(store, "condition", 2, 2);
+
+    DisjointConditional disjointConditional =
+        new DisjointConditional(
+            origin1,
+            origin2,
+            length1,
+            length2,
+            conditionalPairs,
+            Arrays.asList(exceptionCondition));
+
+    store.impose(disjointConditional);
+
+    int noOfSolutions =
+        noOfAllSolutions(store, origin1, origin2, length1, length2, exceptionCondition);
+
+    assertThat(noOfSolutions).isEqualTo(141141);
+  }
+
+  @Test
+  void allEqualNegatedKeepsCallerArrayOrder() {
+    // not all_equal(x) moved fixed variables to the front of the array it was given, so the
+    // caller's array (in FlatZinc the output array) was reordered during search
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 3),
+      new IntVar(store, "x1", 1, 3),
+      new IntVar(store, "x2", 1, 3),
+      new IntVar(store, "x3", 1, 1)
+    };
+    IntVar[] original = x.clone();
+    store.impose(new Reified(new AllEqual(x), new IntVar(store, "b", 0, 0)));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(26);
+    assertThat(x).containsExactly(original);
+  }
+
+  @Test
+  void allEqualNegatedOnOneVariableFails() {
+    // a single variable is always all equal, so its negation has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    store.impose(new Not(new AllEqual(new IntVar[] {x})));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void allEqualReifiedFalseWithoutCommonValue() {
+    // the domains intersect pairwise but have no common value, so b must be 0
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 2, 3), new IntVar(store, "x2", 1, 2)
+    };
+    x[0].addDom(3, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new AllEqual(x), b));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom().toString()).isEqualTo("0");
+  }
+
+  @Test
+  void increasingWithRepeatedVariableReachesFixpoint() {
+    // [x, y, x] increasing means x = y; strictly decreasing [x, x] has no solution
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 2, 5);
+    store.impose(new Increasing(new IntVar[] {x, y, x}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{2..3}");
+    assertThat(y.dom().toString()).isEqualTo("{2..3}");
+
+    Store store2 = new Store();
+    IntVar z = new IntVar(store2, "z", 0, 2);
+    store2.impose(new Decreasing(new IntVar[] {z, z}, true));
+    assertThat(store2.consistency()).isFalse();
+  }
+
+  @Test
+  void increasingSumBoundsUseOrderAndSumTogether() {
+    // the sum and the order posted apart prune nothing here
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    store.impose(new IncreasingSum(x, new IntVar(store, "s", 6, 6)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("{0..2}");
+    assertThat(x[1].dom().toString()).isEqualTo("{0..3}");
+    assertThat(x[2].dom().toString()).isEqualTo("{2..6}");
+
+    // strictly increasing: the solutions are (0, 1, 5), (0, 2, 4) and (1, 2, 3)
+    Store store2 = new Store();
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      y[i] = new IntVar(store2, "y" + i, 0, 10);
+    }
+    IntVar t = new IntVar(store2, "t", 0, 6);
+    store2.impose(new IncreasingSum(y, t, true));
+    assertThat(store2.consistency()).isTrue();
+    assertThat(t.dom().toString()).isEqualTo("{3..6}");
+    t.domain.in(store2.level, t, 6, 6);
+    assertThat(store2.consistency()).isTrue();
+    assertThat(y[0].dom().toString()).isEqualTo("{0..1}");
+    assertThat(y[1].dom().toString()).isEqualTo("{1..2}");
+    assertThat(y[2].dom().toString()).isEqualTo("{3..5}");
+  }
+
+  @Test
+  void increasingNValueUsesOrderAndCountTogether() {
+    // Increasing and Values posted apart prune nothing here: two distinct values ending at 2
+    // need x0 = 1
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2), new IntVar(store, "x2", 2, 2)
+    };
+    IntVar count = new IntVar(store, "count", 2, 2);
+    store.impose(new IncreasingNValue(x, count));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("1");
+    assertThat(x[1].dom().toString()).isEqualTo("{1..2}");
+
+    // the counts reachable through the holes: [1], [3, 4], [2, 3, 4] give 2 or 3 values
+    Store store2 = new Store();
+    IntVar[] y = {
+      new IntVar(store2, "y0", 1, 1), new IntVar(store2, "y1", 3, 4), new IntVar(store2, "y2", 2, 4)
+    };
+    IntVar c = new IntVar(store2, "c", 0, 5);
+    store2.impose(new IncreasingNValue(y, c));
+    assertThat(store2.consistency()).isTrue();
+    assertThat(c.dom().toString()).isEqualTo("{2..3}");
+    c.domain.in(store2.level, c, 3, 3);
+    assertThat(store2.consistency()).isTrue();
+    assertThat(y[1].dom().toString()).isEqualTo("3");
+    assertThat(y[2].dom().toString()).isEqualTo("4");
+  }
+
+  @Test
+  void increasingNValueWithCountInsideX() {
+    // x = [c, y1, y2, y3] with c also the count; the pruning of c as the count was not seen again
+    // at x[0], so propagation fixed x = [1, 4, 4, 4] with one distinct value counted as 1
+    Store store = new Store();
+    IntVar c = new IntVar(store, "c", -1, 5);
+    c.domain.inComplement(store.level, c, 2);
+    IntVar y1 = new IntVar(store, "y1", 2, 4);
+    IntVar y2 = new IntVar(store, "y2", -1, 4);
+    y2.domain.in(store.level, y2, new IntervalDomain(-1, -1).union(2).union(4));
+    IntVar y3 = new IntVar(store, "y3", -1, 4);
+    store.impose(new IncreasingNValue(new IntVar[] {c, y1, y2, y3}, c));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void disjointConditionalProfileCountsOverlappingPairOnce() {
+    // rectangles 3 and 4 may overlap when c1 = 0; the profile built for rectangle 2 lost track
+    // of which rectangles a profile segment holds and counted both, removing y2 = 0
+    Store store = new Store();
+    IntVar[][] r = {
+      {new IntVar(store, "x1", 0, 2), new IntVar(store, 1, 1), one(store), one(store)},
+      {new IntVar(store, 1, 1), new IntVar(store, "y2", 0, 2), oneTwo(store), oneTwo(store)},
+      {new IntVar(store, 2, 2), new IntVar(store, 0, 0), one(store), oneTwo(store)},
+      {new IntVar(store, 2, 2), new IntVar(store, 0, 0), one(store), new IntVar(store, 2, 2)}
+    };
+    IntVar[] c = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    List<List<Integer>> pairs = List.of(List.of(1, 2), List.of(3, 4));
+    store.impose(new DisjointConditional(r, pairs, Arrays.asList(c)));
+
+    IntVar[] all =
+        Stream.concat(Arrays.stream(r).flatMap(Arrays::stream), Arrays.stream(c))
+            .toArray(IntVar[]::new);
+    int expected =
+        bruteForce(
+                all,
+                a -> {
+                  for (int i = 0; i < 4; i++) {
+                    for (int j = i + 1; j < 4; j++) {
+                      int p = pairs.indexOf(List.of(i + 1, j + 1));
+                      boolean apart =
+                          a[4 * i] + a[4 * i + 2] <= a[4 * j]
+                              || a[4 * j] + a[4 * j + 2] <= a[4 * i]
+                              || a[4 * i + 1] + a[4 * i + 3] <= a[4 * j + 1]
+                              || a[4 * j + 1] + a[4 * j + 3] <= a[4 * i + 1];
+                      if (!apart && (p < 0 || a[16 + p] == 1)) {
+                        return false;
+                      }
+                    }
+                  }
+                  return true;
+                })
+            .size();
+
+    // label the variables on the path to the lost solution first
+    IntVar[] labeled =
+        Stream.concat(Stream.of(r[1][3], c[0], r[2][3], c[1], r[0][0]), Arrays.stream(all))
+            .distinct()
+            .toArray(IntVar[]::new);
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(labeled, null, new IndomainMin<>()));
+
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(expected);
+  }
+
+  private static IntVar one(Store store) {
+    return new IntVar(store, 1, 1);
+  }
+
+  private static IntVar oneTwo(Store store) {
+    return new IntVar(store, 1, 2);
+  }
+
+  @Test
+  void testValues() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 7;
+
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    IntVar n = new IntVar(store, "sum", 0, 1);
+    Values values = new Values(x, n);
+
+    store.impose(values);
+
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
+
+    assertThat(noOfSolutions).isEqualTo(xSize);
+  }
+
+  @Test
+  void testValues2() {
+
+    Store store = new Store();
+
+    int xLength = 4;
+    int xSize = 4;
+
+    IntVar[] x = getIntVars(store, "x", xLength, xSize);
+    IntVar n = new IntVar(store, "sum", 1, 2);
+    Values values = new Values(x, n);
+
+    store.impose(values);
+
+    int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {n});
+
+    assertThat(noOfSolutions).isEqualTo(88);
+  }
+
+  // with at most 2 values, x2 must share a value with x0 (1..2) or with x1 (4..5)
+  @Test
+  void testValuesPrunesValuesNeedingTooManyValues() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 2);
+    IntVar x1 = new IntVar(store, "x1", 4, 5);
+    IntVar x2 = new IntVar(store, "x2", 1, 5);
+    IntVar count = new IntVar(store, "count", 0, 2);
+    store.impose(new Values(new IntVar[] {x0, x1, x2}, count));
+
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(count.dom().toString()).isEqualTo("2");
+    assertThat(x2.dom().toString()).isEqualTo("{1..2, 4..5}");
+  }
+
+  // with at least 3 values, x0 and x1 take 1 and 2, so x2 must take 3
+  @Test
+  void testValuesPrunesValuesGivingTooFewValues() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 2);
+    IntVar x1 = new IntVar(store, "x1", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 1, 3);
+    IntVar x3 = new IntVar(store, "x3", 1, 3);
+    IntVar count = new IntVar(store, "count", 3, 4);
+    store.impose(new Values(new IntVar[] {x0, x1, x2, x3}, count));
+
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(count.dom().toString()).isEqualTo("3");
+    assertThat(x2.dom().toString()).isEqualTo("{1..3}");
+
+    x3.domain.in(store.level, x3, 1, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x2.dom().toString()).isEqualTo("3");
+  }
+
+  // Values switches between dense value arrays and a hash map when a variable keeps a far value;
+  // the singleton pruning must use the values of the current path after each switch
+  @Test
+  void testValuesWithFarValueMatchesBruteForce() {
+    int far = 1_000_000;
+    int[][] domains = {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}, {0, 1, 2, far}};
+    for (int countMin = 1; countMin <= 4; countMin++) {
+      for (int countMax = countMin; countMax <= 4; countMax++) {
+        int expected = 0;
+        for (int a : domains[0]) {
+          for (int b : domains[1]) {
+            for (int c : domains[2]) {
+              for (int d : domains[3]) {
+                long different = IntStream.of(a, b, c, d).distinct().count();
+                if (countMin <= different && different <= countMax) {
+                  expected++;
+                }
+              }
+            }
+          }
+        }
+
+        Store store = new Store();
+        IntVar[] x = new IntVar[domains.length];
+        for (int i = 0; i < x.length; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        IntVar count = new IntVar(store, "count", countMin, countMax);
+        store.impose(new Values(x, count));
+
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        boolean found = search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+
+        assertThat(found ? search.getSolutionListener().solutionsNo() : 0)
+            .as("count in %d..%d", countMin, countMax)
+            .isEqualTo(expected);
+      }
+    }
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodViolatedOverSingletons() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 2, 2)};
+
+    store.impose(new NoGood(x, new int[] {1, 2}));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodSatisfiedOverSingletons() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 3, 3)};
+
+    store.impose(new NoGood(x, new int[] {1, 2}));
+
+    assertThat(store.consistency()).isTrue();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/78
+  @Test
+  void testNoGoodWithSingletonsAndOneFreeVariable() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 1, 3), new IntVar(store, "x3", 2, 2)
+    };
+
+    store.impose(new NoGood(x, new int[] {1, 2, 2}));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1].dom().contains(2)).isFalse();
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(2);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/64
+  @Test
+  void testGeostFailsWhenGroundedStartPlusDurationDiffersFromEnd() {
+
+    // object 1 is grounded in time with start 0, duration 1 and end 3, which is inconsistent.
+    Store store = new Store();
+    IntVar[] vars = geostTimeModel(store, new IntVar(store, "duration1", 1, 1));
+
+    assertThat(noOfAllSolutions(store, vars)).isZero();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/64
+  @Test
+  void testGeostEnforcesPositiveDuration() {
+
+    // object 1 must have start 0 + duration 3 = end 3; duration 0 is not allowed.
+    Store store = new Store();
+    IntVar[] vars = geostTimeModel(store, new IntVar(store, "duration1", 0, 3));
+
+    // object 0 (x in 0..2, start 1, duration 1..2) overlaps object 1 (x 0, time 0..3)
+    // in time, so it must not overlap it in space: x0 in 2..2, duration0 in 1..2.
+    assertThat(noOfAllSolutions(store, vars)).isEqualTo(2);
+  }
+
+  /**
+   * Two objects of length 2 in one dimension plus time. Object 0: x in 0..2, start 1, duration in
+   * 1..2, end in 0..4. Object 1: x 0, start 0, the given duration, end 3.
+   */
+  private IntVar[] geostTimeModel(Store store, IntVar duration1) {
+
+    List<Shape> shapes =
+        List.of(
+            new Shape(0, new int[] {0}, new int[] {2}), new Shape(1, new int[] {0}, new int[] {2}));
+
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar start0 = new IntVar(store, "start0", 1, 1);
+    IntVar duration0 = new IntVar(store, "duration0", 1, 2);
+    IntVar end0 = new IntVar(store, "end0", 0, 4);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    IntVar start1 = new IntVar(store, "start1", 0, 0);
+    IntVar end1 = new IntVar(store, "end1", 3, 3);
+
+    List<GeostObject> objects =
+        List.of(
+            new GeostObject(
+                0, new IntVar[] {x0}, new IntVar(store, "shape0", 0, 0), start0, duration0, end0),
+            new GeostObject(
+                1, new IntVar[] {x1}, new IntVar(store, "shape1", 1, 1), start1, duration1, end1));
+    List<ExternalConstraint> constraints = List.of(new NonOverlapping(objects, new int[] {0, 1}));
+
+    store.impose(new Geost(objects, constraints, shapes));
+
+    return new IntVar[] {x0, start0, duration0, end0, x1, start1, duration1, end1};
+  }
+
+  @Test
+  void geostKeepsInterleavedShapesApartAtNegativeCoordinates() {
+    // Shape = cells x and x + 2. With object 0 at x0 the cells x0 + 1 and x0 + 3 are free, so
+    // object 1 fits at x0 + 1. The frame of the fixed object was rounded with % 4, which is
+    // negative for negative coordinates, and covered the hole whenever x0 <= -1.
+    for (int x0 = -6; x0 <= 3; x0++) {
+      Store store = new Store();
+      List<Dbox> cells =
+          List.of(new Dbox(new int[] {0}, new int[] {1}), new Dbox(new int[] {2}, new int[] {1}));
+      List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {1}), new Shape(1, cells));
+      IntVar[] x = {new IntVar(store, "x0", x0, x0), new IntVar(store, "x1", x0 - 3, x0 + 3)};
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                new IntVar[] {x[i]},
+                new IntVar(store, 1, 1),
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      store.impose(
+          new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes));
+
+      assertThat(store.consistency()).as("x0 = %d", x0).isTrue();
+      // x1 = x0 - 3, x0 - 1, x0 + 1, x0 + 3 interleave or touch; x0 +- 2 and x0 overlap
+      assertThat(noOfAllSolutions(store, x)).as("x0 = %d", x0).isEqualTo(4);
+    }
+  }
+
+  @Test
+  void searchOverNoVariablesFindsTheEmptySolution() {
+    // A search over no variables (all of them removed by presolve, for example) reported no
+    // solution with InputOrderSelect and threw with SimpleSelect, SplitSelect and RandomSelect.
+    for (int kind = 0; kind < 4; kind++) {
+      for (boolean feasible : new boolean[] {true, false}) {
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 1, 2);
+        store.impose(new XneqC(x, 1));
+        if (!feasible) {
+          store.impose(new XneqC(x, 2));
+        }
+        IntVar[] none = new IntVar[0];
+        SelectChoicePoint<IntVar> select =
+            switch (kind) {
+              case 0 -> new SimpleSelect<>(none, null, new IndomainMin<>());
+              case 1 -> new InputOrderSelect<>(store, none, new IndomainMin<>());
+              case 2 -> new RandomSelect<>(none, new IndomainMin<>());
+              default -> new SplitSelect<>(none, null, new IndomainMin<>());
+            };
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+
+        assertThat(search.labeling(store, select)).as("select %d", kind).isEqualTo(feasible);
+        assertThat(search.getSolutionListener().solutionsNo())
+            .as("select %d", kind)
+            .isEqualTo(feasible ? 1 : 0);
+      }
+    }
+  }
+
+  @Test
+  void geostCopyMadeDuringSearchKeepsTheInitialDomains() {
+    // Lazy clause generation replays the explanations of Geost on a copy over the initial domains,
+    // made the first time an explanation is needed. The copy turned the variables fixed at that
+    // time
+    // into constants, so it failed where Geost does not and gave wrong reasons (a wrong optimum on
+    // hakank_geost_test).
+    Store store = new Store();
+    List<Shape> shapes = List.of(new Shape(0, new int[] {0}, new int[] {2}));
+    IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 0, 3)};
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i]},
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0, 1})), shapes);
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0].domain.in(store.level, x[0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+
+    Store target = new Store();
+    IntVar[] y = {new IntVar(target, "y0", 0, 3), new IntVar(target, "y1", 0, 3)};
+    Map<Var, Var> copies = Map.of(x[0], y[0], x[1], y[1]);
+    target.impose(
+        geost.copy(
+            new VarMap() {
+              @Override
+              public Store target() {
+                return target;
+              }
+
+              @Override
+              @SuppressWarnings("unchecked")
+              public <V extends Var> V get(V v) {
+                return (V) copies.get(v);
+              }
+            }));
+
+    // the pairs at distance 2 or more
+    assertThat(noOfAllSolutions(target, y)).isEqualTo(6);
+  }
+
+  @Test
+  void geostNonOverlappingWithoutTimeKeepsObjectsApart() {
+    // Two unit squares, object 0 at (0, 0), object 1 at (x1, 0) with x1 in 0..1. NonOverlapping
+    // over the spatial dimensions only (no time dimension, 2) must forbid x1 = 0, and so must
+    // NonOverlapping over dimension 0 only. The filter of useful internal constraints overflowed
+    // on the unbounded time extent and dropped the obstacle, which accepted x1 = 0.
+    for (int[] dims : new int[][] {{0, 1}, {0}, {0, 1, 2}}) {
+      Store store = new Store();
+      List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}));
+      IntVar x1 = new IntVar(store, "x1", 0, 1);
+      IntVar[][] coords = {
+        {new IntVar(store, 0, 0), new IntVar(store, 0, 0)}, {x1, new IntVar(store, 0, 0)}
+      };
+      List<GeostObject> objects = new ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        objects.add(
+            new GeostObject(
+                i,
+                coords[i],
+                new IntVar(store, 0, 0),
+                new IntVar(store, 0, 0),
+                new IntVar(store, 1, 1),
+                new IntVar(store, 1, 1)));
+      }
+      store.impose(new Geost(objects, List.of(new NonOverlapping(objects, dims)), shapes));
+
+      assertThat(noOfAllSolutions(store, new IntVar[] {x1}))
+          .as("dims %s", Arrays.toString(dims))
+          .isEqualTo(1);
+    }
+  }
+
+  @Test
+  void geostPrunesWithObjectsFreeInDimensionNotSelected() {
+    // NonOverlapping over dimension 0 only: object 0 occupies x = 0 whatever its y, so object 1
+    // (x1 in 0..1) must move to x1 = 1. The frame of object 0 also required a compulsory part in
+    // the dimension that is not selected (y in 0..5), found none and pruned nothing.
+    Store store = new Store();
+    List<Shape> shapes = List.of(new Shape(0, new int[] {0, 0}, new int[] {1, 1}));
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar[][] coords = {
+      {new IntVar(store, 0, 0), new IntVar(store, 0, 5)}, {x1, new IntVar(store, 0, 0)}
+    };
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      objects.add(
+          new GeostObject(
+              i,
+              coords[i],
+              new IntVar(store, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    store.impose(new Geost(objects, List.of(new NonOverlapping(objects, new int[] {0})), shapes));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.min()).isEqualTo(1);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/46
+  @Test
+  void testAmongVarWithGroundedX() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 2),
+      new IntVar(store, "x1", 0, 0),
+      new IntVar(store, "x2", 0, 2),
+      new IntVar(store, "x3", 2, 2)
+    };
+    IntVar[] y = {new IntVar(store, "y0", 0, 0), new IntVar(store, "y1", 1, 2)};
+    IntVar n = new IntVar(store, "n", 1, 2);
+
+    store.impose(new AmongVar(x, y, n));
+
+    assertThat(noOfAllSolutions(store, x, y, new IntVar[] {n})).isEqualTo(6);
+  }
+
+  // Compares AmongVar with a brute-force count on random small instances; it found that
+  // grounded Y could be skipped after being reordered (https://github.com/radsz/jacop/issues/46).
+  @Test
+  void testAmongVarAgainstBruteForce() {
+
+    Random random = new Random(46);
+    for (int trial = 0; trial < 300; trial++) {
+      int[][] xDomains = randomDomains(random, 1 + random.nextInt(4));
+      int[][] yDomains = randomDomains(random, 1 + random.nextInt(4));
+      int nMin = random.nextInt(2);
+      int nMax = nMin + random.nextInt(xDomains.length + 1);
+
+      Store store = new Store();
+      IntVar[] x = new IntVar[xDomains.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, xDomains[i][0], xDomains[i][1]);
+      }
+      IntVar[] y = new IntVar[yDomains.length];
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, yDomains[i][0], yDomains[i][1]);
+      }
+      IntVar n = new IntVar(store, "n", nMin, nMax);
+
+      store.impose(new AmongVar(x, y, n));
+
+      assertThat(noOfAllSolutions(store, x, y, new IntVar[] {n}))
+          .as(
+              "AmongVar x=%s y=%s n=%d..%d",
+              Arrays.deepToString(xDomains), Arrays.deepToString(yDomains), nMin, nMax)
+          .isEqualTo(amongVarBruteForce(xDomains, yDomains, nMin, nMax));
+    }
+  }
+
+  private static int[][] randomDomains(Random random, int size) {
+    int[][] domains = new int[size][];
+    for (int i = 0; i < size; i++) {
+      int min = random.nextInt(3);
+      domains[i] = new int[] {min, random.nextBoolean() ? min : min + random.nextInt(4)};
+    }
+    return domains;
+  }
+
+  private static int amongVarBruteForce(int[][] xDomains, int[][] yDomains, int nMin, int nMax) {
+    int[][] domains =
+        Stream.concat(Arrays.stream(xDomains), Arrays.stream(yDomains)).toArray(int[][]::new);
+    return amongVarBruteForce(domains, xDomains.length, new int[domains.length], 0, nMin, nMax);
+  }
+
+  private static int amongVarBruteForce(
+      int[][] domains, int xLength, int[] values, int index, int nMin, int nMax) {
+    if (index == domains.length) {
+      Set<Integer> yValues = new HashSet<>();
+      for (int i = xLength; i < values.length; i++) {
+        yValues.add(values[i]);
+      }
+      long count = IntStream.range(0, xLength).filter(i -> yValues.contains(values[i])).count();
+      return count >= nMin && count <= nMax ? 1 : 0;
+    }
+    int solutions = 0;
+    for (int v = domains[index][0]; v <= domains[index][1]; v++) {
+      values[index] = v;
+      solutions += amongVarBruteForce(domains, xLength, values, index + 1, nMin, nMax);
+    }
+    return solutions;
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/71
+  @Test
+  void testNetworkFlowCostMissingSolutions() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "A", 0, 0);
+    a.addDom(2, 2);
+    IntVar b = new IntVar(store, "B", 0, 0);
+    b.addDom(4, 4);
+    IntVar c = new IntVar(store, "C", 0, 4);
+    IntVar h = new IntVar(store, "H", 0, 0);
+    h.addDom(4, 4);
+    IntVar cost = new IntVar(store, "J", 0, 60);
+
+    int[][] arcs = {
+      {0, 1}, {0, 2}, {0, 3}, {1, 0}, {1, 2}, {1, 3}, {2, 0}, {2, 1}, {2, 3}, {3, 0}, {3, 1}, {3, 2}
+    };
+    int[] weights = {1, 2, 2, 2, 1, 2, 2, 1, 2, 0, 0, 1};
+    IntVar[] flows = {
+      new IntVar(store, 2, 2),
+      new IntVar(store, 4, 4),
+      a,
+      new IntVar(store, 0, 0),
+      new IntVar(store, 4, 4),
+      new IntVar(store, 4, 4),
+      c,
+      new IntVar(store, 3, 3),
+      h,
+      b,
+      new IntVar(store, 2, 2),
+      new IntVar(store, 4, 4)
+    };
+    int[] balance = {4, 1, -5, 0};
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node[] nodes = new Node[balance.length];
+    for (int i = 0; i < balance.length; i++) {
+      nodes[i] = net.addNode("n" + i, balance[i]);
+    }
+    for (int i = 0; i < arcs.length; i++) {
+      // weights are variables as in the FlatZinc interface
+      net.addArc(
+          nodes[arcs[i][0]],
+          nodes[arcs[i][1]],
+          new IntVar(store, weights[i], weights[i]),
+          flows[i]);
+    }
+    net.setCostVariable(cost);
+    store.impose(net.build());
+
+    // (J, A, B, C, H) = (41, 2, 0, 4, 0) and (41, 2, 4, 0, 4); J is labelled first as in the issue
+    assertThat(noOfAllSolutions(store, new IntVar[] {cost, a, b, c, h})).isEqualTo(2);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/71: when the lower bound of the cost
+  // variable is above the optimal flow cost, values of valid solutions were pruned.
+  @Test
+  void testSoftAlldifferentWithCostAboveOptimum() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 0, 1), new IntVar(store, "x2", 0, 0)
+    };
+    IntVar cost = new IntVar(store, "cost", 2, 2);
+
+    store.imposeDecomposition(new SoftAlldifferent(x, cost, ViolationMeasure.VARIABLE_BASED));
+
+    assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isEqualTo(1);
+  }
+
+  // Compares network flow with a brute-force count on random small networks.
+  @Test
+  void testNetworkFlowAgainstBruteForce() {
+
+    Random random = new Random(71);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 2 + random.nextInt(3);
+      int arcCount = 1 + random.nextInt(5);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] = (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(4);
+        int min = random.nextInt(2);
+        flowDomains[i] = new int[] {min, min + random.nextInt(3)};
+        // balances come from a random flow so that most networks are feasible
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+      }
+      int costMin = random.nextInt(6);
+      int costMax = costMin + random.nextInt(10);
+
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] nodes = new Node[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        nodes[i] = net.addNode("n" + i, balance[i]);
+      }
+      IntVar[] flows = new IntVar[arcCount];
+      for (int i = 0; i < arcCount; i++) {
+        flows[i] = new IntVar(store, "f" + i, flowDomains[i][0], flowDomains[i][1]);
+        net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], flows[i]);
+      }
+      IntVar cost = new IntVar(store, "cost", costMin, costMax);
+      net.setCostVariable(cost);
+      store.impose(net.build());
+
+      assertThat(noOfAllSolutions(store, flows, new IntVar[] {cost}))
+          .as(
+              "network arcs=%s weights=%s flows=%s balance=%s cost=%d..%d",
+              Arrays.deepToString(arcs),
+              Arrays.toString(weights),
+              Arrays.deepToString(flowDomains),
+              Arrays.toString(balance),
+              costMin,
+              costMax)
+          .isEqualTo(
+              networkFlowBruteForce(
+                  arcs, weights, flowDomains, balance, costMin, costMax, new int[arcCount], 0));
+    }
+  }
+
+  private static int networkFlowBruteForce(
+      int[][] arcs,
+      int[] weights,
+      int[][] flowDomains,
+      int[] balance,
+      int costMin,
+      int costMax,
+      int[] flows,
+      int index) {
+    if (index == flows.length) {
+      int[] actual = new int[balance.length];
+      int cost = 0;
+      for (int i = 0; i < flows.length; i++) {
+        actual[arcs[i][0]] += flows[i];
+        actual[arcs[i][1]] -= flows[i];
+        cost += weights[i] * flows[i];
+      }
+      return Arrays.equals(actual, balance) && cost >= costMin && cost <= costMax ? 1 : 0;
+    }
+    int solutions = 0;
+    for (int f = flowDomains[index][0]; f <= flowDomains[index][1]; f++) {
+      flows[index] = f;
+      solutions +=
+          networkFlowBruteForce(
+              arcs, weights, flowDomains, balance, costMin, costMax, flows, index + 1);
+    }
+    return solutions;
+  }
+
+  // The cost of a flow was summed with an early exit once it passed the cost bound, which is wrong
+  // when later arcs have negative costs: a feasible flow was taken as too expensive.
+  @Test
+  void testNetworkFlowWithNegativeCosts() {
+
+    Store store = new Store();
+    IntVar f0 = new IntVar(store, "f0", 1, 3);
+    IntVar f1 = new IntVar(store, "f1", 1, 3);
+    IntVar cost = new IntVar(store, "cost", -4, 6);
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node n0 = net.addNode("n0", 0);
+    Node n1 = net.addNode("n1", 0);
+    net.addArc(n0, n1, -1, f0);
+    net.addArc(n1, n0, 3, f1);
+    net.setCostVariable(cost);
+    store.impose(net.build());
+
+    // f0 = f1 = f and cost = 2 * f; f1 is labelled first, so the flow 3 is tried first
+    assertThat(noOfAllSolutions(store, new IntVar[] {f1, f0, cost})).isEqualTo(3);
+  }
+
+  // Compares network flow with a brute-force count on random small networks with negative costs,
+  // negative flows and loops (arcs from a node to itself).
+  @Test
+  void testNetworkFlowWithNegativeValuesAndLoopsAgainstBruteForce() {
+
+    Random random = new Random(1185);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 2 + random.nextInt(3);
+      int arcCount = 1 + random.nextInt(5);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] =
+            random.nextInt(5) == 0
+                ? arcs[i][0]
+                : (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(7) - 3;
+        int min = random.nextInt(5) - 2;
+        flowDomains[i] = new int[] {min, min + random.nextInt(4)};
+        // balances come from a random flow so that most networks are feasible
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+      }
+      int costMin = random.nextInt(14) - 6;
+      int costMax = costMin + random.nextInt(12);
+
+      Store store = new Store();
+      NetworkBuilder net = new NetworkBuilder();
+      Node[] nodes = new Node[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        nodes[i] = net.addNode("n" + i, balance[i]);
+      }
+      IntVar[] flows = new IntVar[arcCount];
+      for (int i = 0; i < arcCount; i++) {
+        flows[i] = new IntVar(store, "f" + i, flowDomains[i][0], flowDomains[i][1]);
+        net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], flows[i]);
+      }
+      IntVar cost = new IntVar(store, "cost", costMin, costMax);
+      net.setCostVariable(cost);
+      store.impose(net.build());
+
+      assertThat(noOfAllSolutions(store, flows, new IntVar[] {cost}))
+          .as(
+              "network arcs=%s weights=%s flows=%s balance=%s cost=%d..%d",
+              Arrays.deepToString(arcs),
+              Arrays.toString(weights),
+              Arrays.deepToString(flowDomains),
+              Arrays.toString(balance),
+              costMin,
+              costMax)
+          .isEqualTo(
+              networkFlowBruteForce(
+                  arcs, weights, flowDomains, balance, costMin, costMax, new int[arcCount], 0));
+    }
+  }
+
+  @Test
+  void testNetworkFlowFixesCostWhenFlowsAreFixed() {
+
+    Store store = new Store();
+    IntVar f0 = new IntVar(store, "f0", 0, 3);
+    IntVar f1 = new IntVar(store, "f1", 0, 3);
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+
+    NetworkBuilder net = new NetworkBuilder();
+    Node source = net.addNode("source", 3);
+    Node sink = net.addNode("sink", -3);
+    net.addArc(source, sink, 1, f0);
+    net.addArc(source, sink, 2, f1);
+    net.setCostVariable(cost);
+    store.impose(net.build());
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    f1.domain.in(store.level, f1, 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(f0.value()).isEqualTo(1);
+    assertThat(cost.singleton()).isTrue();
+    assertThat(cost.value()).isEqualTo(5);
+  }
+
+  // A search that assigns its last solution runs consistency again at the level where it started,
+  // after its deeper levels marked arcs as modified. The network did not record arcs modified
+  // again at that level, so it did not restore them when the level was removed and lost solutions.
+  @Test
+  void testNetworkFlowRestoresArcsModifiedAgainAtAnEarlierLevel() {
+
+    int[] counts = new int[2];
+    for (int run = 0; run < 2; run++) {
+      Store store = new Store();
+      IntVar[] x = {new IntVar(store, "x0", 0, 3), new IntVar(store, "x1", 0, 3)};
+      IntVar hard = new IntVar(store, "hard", 0, 2);
+      IntVar soft = new IntVar(store, "soft", 0, 2);
+      IntVar cost = new IntVar(store, "cost", 0, 1);
+      cost.addDom(3, 4);
+      store.imposeDecomposition(
+          new SoftGCC(
+              x,
+              new IntVar[] {hard},
+              new int[] {2},
+              new IntVar[] {soft},
+              cost,
+              ViolationMeasure.VALUE_BASED));
+      IntVar[] vars = {x[0], x[1], hard, soft, cost};
+      if (run == 1) {
+        assertThat(store.consistency()).isTrue();
+        store.setLevel(store.level + 1);
+        x[1].domain.in(store.level, x[1], 3, 3);
+        assertThat(noOfAllSolutions(store, vars)).isEqualTo(9);
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+      counts[run] = noOfAllSolutions(store, vars);
+    }
+    assertThat(counts[0]).isEqualTo(38);
+    assertThat(counts[1]).isEqualTo(counts[0]);
+  }
+
+  // Without counted values SoftGCC counts the values in the domains of x when it is created. A
+  // ground x can remove one of them, and the counters were then silently paired with other values.
+  @Test
+  void testSoftGccWithoutCountedValuesRejectsCountersOfRemovedValues() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 2, 2)};
+    IntVar[] hard = {
+      new IntVar(store, "h0", 1, 1), new IntVar(store, "h1", 0, 0), new IntVar(store, "h2", 1, 1)
+    };
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    int[] lower = {0, 0, 0};
+    int[] upper = {2, 2, 2};
+
+    assertThatThrownBy(() -> new SoftGCC(x, hard, lower, upper, cost, ViolationMeasure.VALUE_BASED))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    store.imposeDecomposition(
+        new SoftGCC(
+            x, hard, new int[] {0, 1, 2}, lower, upper, cost, ViolationMeasure.VALUE_BASED));
+    assertThat(noOfAllSolutions(store, x, hard, new IntVar[] {cost})).isEqualTo(1);
+    assertThat(cost.value()).isZero();
+  }
+
+  // satisfied() compared the rectangles twice in dimension 0, so rectangles side by side in
+  // dimension 1 counted as overlapping; satisfied() and notSatisfied() also ignored that rectangles
+  // of size 0 may overlap anything unless the constraint is strict.
+  @Test
+  void testNooverlapSatisfied() {
+
+    Store store = new Store();
+    // [0, 2) x [0, 1) and [1, 3) x [1, 2): overlapping in dimension 0 only
+    IntVar[][] apart = {rectangle(store, 0, 0, 2, 1), rectangle(store, 1, 1, 2, 1)};
+    assertThat(new Nooverlap(apart, true).satisfied()).isTrue();
+    assertThat(new Nooverlap(apart, true).notSatisfied()).isFalse();
+
+    // [0, 2) x [0, 2) and a rectangle of width 0 at (1, 1)
+    IntVar[][] inside = {rectangle(store, 0, 0, 2, 2), rectangle(store, 1, 1, 0, 1)};
+    assertThat(new Nooverlap(inside, false).satisfied()).isTrue();
+    assertThat(new Nooverlap(inside, false).notSatisfied()).isFalse();
+    assertThat(new Nooverlap(inside, true).satisfied()).isFalse();
+    assertThat(new Nooverlap(inside, true).notSatisfied()).isTrue();
+  }
+
+  private static IntVar[] rectangle(Store store, int x, int y, int width, int height) {
+    return new IntVar[] {
+      new IntVar(store, x, x),
+      new IntVar(store, y, y),
+      new IntVar(store, width, width),
+      new IntVar(store, height, height)
+    };
+  }
+
+  // The cost of an arc with a variable weight is bounded by the smallest weight, which is only a
+  // lower bound for flows that are not negative.
+  @Test
+  void testNetworkFlowRejectsVariableWeightOnNegativeFlow() {
+
+    Store store = new Store();
+    NetworkBuilder net = new NetworkBuilder();
+    Node n0 = net.addNode("n0", 0);
+    Node n1 = net.addNode("n1", 0);
+    IntVar weight = new IntVar(store, "w", 1, 2);
+    IntVar flow = new IntVar(store, "f", -2, 0);
+
+    assertThatThrownBy(() -> net.addArc(n0, n1, weight, flow))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // A variable whose domain had values that are not counted got the arc for those values once per
+  // counted value, and the copies pruned each other, so solutions were lost.
+  @Test
+  void testSoftGccWithValuesThatAreNotCounted() {
+
+    // x2 has the domain {1, 3}
+    int[][] domains = {{0, 3}, {0, 3}, {1, 1}};
+    int[] values = {1, 2};
+    int[][] hard = {{1, 3}, {0, 3}};
+    int[][] soft = {{1, 1}, {2, 3}};
+
+    int[] counts = new int[2];
+    for (boolean network : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[domains.length];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, domains[i][0], domains[i][1]);
+      }
+      x[2].addDom(3, 3);
+      IntVar[] hardCounters = new IntVar[values.length];
+      IntVar[] softCounters = new IntVar[values.length];
+      for (int i = 0; i < values.length; i++) {
+        hardCounters[i] = new IntVar(store, "h" + i, hard[i][0], hard[i][1]);
+        softCounters[i] = new IntVar(store, "s" + i, soft[i][0], soft[i][1]);
+      }
+      IntVar cost = new IntVar(store, "cost", 1, 5);
+      SoftGCC softGcc =
+          new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED);
+      if (network) {
+        store.imposeDecomposition(softGcc);
+      } else {
+        softGcc.primitiveDecomposition(store).forEach(store::impose);
+      }
+      counts[network ? 0 : 1] =
+          noOfAllSolutions(store, x, hardCounters, softCounters, new IntVar[] {cost});
+    }
+    assertThat(counts[1]).isPositive();
+    assertThat(counts[0]).isEqualTo(counts[1]);
+  }
+
+  // The network matched the counters and bounds, given in the order of the counted values, to the
+  // value nodes in increasing value order, so unsorted counted values swapped them.
+  @Test
+  void testSoftGccWithUnsortedCountedValues() {
+
+    Store store = new Store();
+    // x = [1, 1]: value 1 occurs twice and value -1 never
+    IntVar[] x = {new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 1, 1)};
+    int[] values = {1, -1};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 0, 0)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    store.imposeDecomposition(
+        new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(hardCounters[0].dom().toString()).isEqualTo("2");
+    assertThat(hardCounters[1].dom().toString()).isEqualTo("0");
+    assertThat(cost.dom().toString()).isEqualTo("0");
+  }
+
+  // A value counted twice had one value node in the network but two counters, so solutions were
+  // lost.
+  @Test
+  void testSoftGccWithAValueCountedTwice() {
+
+    Store store = new Store();
+    // x = [1, 0, 1]: value 0 occurs once
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 0, 0), new IntVar(store, "x2", 1, 1)
+    };
+    int[] values = {0, 0};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 3), new IntVar(store, "h1", 0, 3)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 0, 0)};
+    IntVar cost = new IntVar(store, "cost", 0, 5);
+    store.imposeDecomposition(
+        new SoftGCC(x, hardCounters, values, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    // both counters count the single 0; the costs are |1 - 2| + |1 - 0|
+    assertThat(store.consistency()).isTrue();
+    assertThat(hardCounters[0].dom().toString()).isEqualTo("1");
+    assertThat(hardCounters[1].dom().toString()).isEqualTo("1");
+    assertThat(cost.dom().toString()).isEqualTo("2");
+  }
+
+  // The variable-based measure is the smallest number of variables that must change their value so
+  // that every count meets its soft bounds; [1, 1, 1] with each of 1 and 2 wanted once needs two
+  // changes (one 1 becomes 2, one becomes a value that is not counted), the value-based cost is 3.
+  @Test
+  void testVariableBasedSoftGccCountsVariablesToChange() {
+
+    for (boolean network : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 1);
+      }
+      IntVar[] hardCounters = {new IntVar(store, "h0", 0, 3), new IntVar(store, "h1", 0, 3)};
+      IntVar cost = new IntVar(store, "cost", 0, 9);
+      SoftGCC softGcc =
+          new SoftGCC(
+              x,
+              hardCounters,
+              new int[] {1, 2},
+              new int[] {1, 1},
+              new int[] {1, 1},
+              cost,
+              ViolationMeasure.VARIABLE_BASED);
+      if (network) {
+        store.imposeDecomposition(softGcc);
+      } else {
+        softGcc.primitiveDecomposition(store).forEach(store::impose);
+      }
+      assertThat(store.consistency()).isTrue();
+      assertThat(cost.dom().toString()).isEqualTo("2");
+    }
+  }
+
+  // Soft counters (or soft lower bounds) that sum to more than the number of variables cannot be
+  // met by changing variables, so the variable-based measure is undefined and the constraint fails.
+  @Test
+  void testVariableBasedSoftGccFailsWhenSoftCountersExceedTheVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] hardCounters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar[] softCounters = {new IntVar(store, "s0", 2, 2), new IntVar(store, "s1", 1, 1)};
+    IntVar cost = new IntVar(store, "cost", 0, 9);
+    store.imposeDecomposition(
+        new SoftGCC(
+            x,
+            hardCounters,
+            new int[] {0, 1},
+            softCounters,
+            cost,
+            ViolationMeasure.VARIABLE_BASED));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testVariableBasedSoftGccRejectsAValueCountedTwice() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] counters = {new IntVar(store, "h0", 0, 2), new IntVar(store, "h1", 0, 2)};
+    IntVar cost = new IntVar(store, "cost", 0, 4);
+    assertThatThrownBy(
+            () ->
+                new SoftGCC(
+                    x,
+                    counters,
+                    new int[] {0, 0},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    cost,
+                    ViolationMeasure.VARIABLE_BASED))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // The network and the primitive decomposition of the variable-based measure find exactly the
+  // solutions of its definition, computed by enumerating the counts the changed variables reach.
+  @Test
+  void testVariableBasedSoftGccMatchesItsDefinition() {
+
+    Random random = new Random(7);
+    int satisfiable = 0;
+    for (int instance = 0; instance < 60; instance++) {
+      int n = 1 + random.nextInt(3);
+      int[] values = random.nextBoolean() ? new int[] {1, 0} : new int[] {0, 2};
+      int m = values.length;
+      boolean softBounds = random.nextBoolean();
+      int[][] xDomains = new int[n][];
+      for (int i = 0; i < n; i++) {
+        xDomains[i] = randomSubset(random, -1, 2);
+      }
+      int[] softLower = new int[m];
+      int[] softUpper = new int[m];
+      int[][] softDomains = new int[m][];
+      int[][] hardBounds = new int[m][];
+      for (int k = 0; k < m; k++) {
+        softLower[k] = random.nextInt(n + 1);
+        softUpper[k] = softLower[k] + random.nextInt(n + 1 - softLower[k]);
+        softDomains[k] = randomSubset(random, 0, n);
+        int lo = random.nextInt(n + 1);
+        hardBounds[k] = new int[] {lo, lo + random.nextInt(n + 1 - lo)};
+      }
+      int[] costBounds = {random.nextInt(2), 1 + random.nextInt(n + 1)};
+
+      int expected =
+          countVariableBasedSoftGcc(
+              xDomains,
+              values,
+              softBounds,
+              softLower,
+              softUpper,
+              softDomains,
+              hardBounds,
+              costBounds);
+
+      for (boolean network : new boolean[] {true, false}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : xDomains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        IntVar[] hard = new IntVar[m];
+        IntVar[] soft = new IntVar[m];
+        for (int k = 0; k < m; k++) {
+          hard[k] = new IntVar(store, "h" + k, hardBounds[k][0], hardBounds[k][1]);
+          soft[k] = new IntVar(store, "s" + k);
+          for (int v : softDomains[k]) {
+            soft[k].addDom(v, v);
+          }
+        }
+        IntVar cost = new IntVar(store, "cost", costBounds[0], costBounds[1]);
+        SoftGCC softGcc =
+            softBounds
+                ? new SoftGCC(
+                    x, hard, values, softLower, softUpper, cost, ViolationMeasure.VARIABLE_BASED)
+                : new SoftGCC(x, hard, values, soft, cost, ViolationMeasure.VARIABLE_BASED);
+        if (network) {
+          store.imposeDecomposition(softGcc);
+        } else {
+          softGcc.primitiveDecomposition(store).forEach(store::impose);
+        }
+        IntVar[] vars = softBounds ? x : concat(x, soft);
+        int found =
+            store.consistency()
+                ? countSolutions(store, concat(vars, concat(hard, new IntVar[] {cost})), random)
+                : 0;
+        assertThat(found).as("instance %d, network %s", instance, network).isEqualTo(expected);
+      }
+    }
+  }
+
+  private static int[] randomSubset(Random random, int lo, int hi) {
+    List<Integer> subset = new ArrayList<>();
+    for (int v = lo; v <= hi; v++) {
+      if (random.nextInt(3) > 0) {
+        subset.add(v);
+      }
+    }
+    if (subset.isEmpty()) {
+      subset.add(lo + random.nextInt(hi - lo + 1));
+    }
+    return subset.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static IntVar[] concat(IntVar[] a, IntVar[] b) {
+    IntVar[] result = Arrays.copyOf(a, a.length + b.length);
+    System.arraycopy(b, 0, result, a.length, b.length);
+    return result;
+  }
+
+  // Counts the assignments of x (and of the soft counters) whose counts are within the hard bounds
+  // and whose variable-based cost exists and is within the cost bounds; the counters and the cost
+  // follow from them.
+  private static int countVariableBasedSoftGcc(
+      int[][] xDomains,
+      int[] values,
+      boolean softBounds,
+      int[] softLower,
+      int[] softUpper,
+      int[][] softDomains,
+      int[][] hardBounds,
+      int[] costBounds) {
+    int n = xDomains.length;
+    int m = values.length;
+    int[][] domains = new int[n + (softBounds ? 0 : m)][];
+    System.arraycopy(xDomains, 0, domains, 0, n);
+    if (!softBounds) {
+      System.arraycopy(softDomains, 0, domains, n, m);
+    }
+    int solutions = 0;
+    int[] index = new int[domains.length];
+    while (true) {
+      int[] counts = new int[m + 1];
+      counts[m] = n;
+      for (int i = 0; i < n; i++) {
+        for (int k = 0; k < m; k++) {
+          if (xDomains[i][index[i]] == values[k]) {
+            counts[k]++;
+            counts[m]--;
+          }
+        }
+      }
+      boolean hardOk = true;
+      int[] lower = new int[m];
+      int[] upper = new int[m];
+      for (int k = 0; k < m; k++) {
+        hardOk &= counts[k] >= hardBounds[k][0] && counts[k] <= hardBounds[k][1];
+        lower[k] = softBounds ? softLower[k] : softDomains[k][index[n + k]];
+        upper[k] = softBounds ? softUpper[k] : lower[k];
+      }
+      int cost = fewestChanges(counts, lower, upper, n, 0, new int[m + 1]);
+      if (hardOk && cost >= costBounds[0] && cost <= costBounds[1]) {
+        solutions++;
+      }
+      int i = 0;
+      while (i < domains.length && ++index[i] == domains[i].length) {
+        index[i++] = 0;
+      }
+      if (i == domains.length) {
+        return solutions;
+      }
+    }
+  }
+
+  // The fewest variables to change so that each counted value reaches a count within its bounds;
+  // the last count is of the values that are not counted, which take what is left.
+  private static int fewestChanges(int[] counts, int[] lower, int[] upper, int n, int k, int[] t) {
+    int m = lower.length;
+    if (k == m) {
+      int used = 0;
+      for (int j = 0; j < m; j++) {
+        used += t[j];
+      }
+      if (used > n) {
+        return Integer.MAX_VALUE;
+      }
+      t[m] = n - used;
+      int changes = 0;
+      for (int j = 0; j <= m; j++) {
+        changes += Math.max(0, counts[j] - t[j]);
+      }
+      return changes;
+    }
+    int best = Integer.MAX_VALUE;
+    for (int v = lower[k]; v <= upper[k]; v++) {
+      t[k] = v;
+      best = Math.min(best, fewestChanges(counts, lower, upper, n, k + 1, t));
+    }
+    return best;
+  }
+
+  @Test
+  void testComparisonsOverInconsistentDomainsFailWithoutException() {
+
+    Store store = new Store();
+    IntVar two = new IntVar(store, "two", 2, 2);
+    IntVar small = new IntVar(store, "small", 1, 2);
+    store.impose(new XltY(two, small));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    two = new IntVar(store, "two", 2, 2);
+    small = new IntVar(store, "small", 1, 2);
+    store.impose(new XgtY(small, two));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    two = new IntVar(store, "two", 2, 2);
+    IntVar alsoTwo = new IntVar(store, "alsoTwo", 2, 2);
+    store.impose(new XneqY(two, alsoTwo));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // x <= x and x >= x hold for every x, so their negations have no solution; x < x and x > x never
+  // hold, so under Xor with b = 0 (the constraint must hold) there is none either. Pruning one
+  // bound at a time on the same variable left the propagator short of its fixpoint, so search
+  // accepted a value.
+  @Test
+  void testComparisonOfAVariableWithItselfHasNoSolutionWhenItMustFail() {
+
+    assertThat(countOnSameVariable(XlteqY::new, (c, b) -> new Not(c), -1)).isZero();
+    assertThat(countOnSameVariable(XgteqY::new, (c, b) -> new Not(c), -1)).isZero();
+    assertThat(countOnSameVariable(XlteqY::new, Xor::new, 1)).isZero();
+    assertThat(countOnSameVariable(XgteqY::new, Xor::new, 1)).isZero();
+    assertThat(countOnSameVariable(XltY::new, Xor::new, 0)).isZero();
+    assertThat(countOnSameVariable(XgtY::new, Xor::new, 0)).isZero();
+    assertThat(countOnSameVariable(XltY::new, (c, b) -> new Not(c), -1)).isEqualTo(6);
+    assertThat(countOnSameVariable(XlteqY::new, Xor::new, 0)).isEqualTo(6);
+  }
+
+  // x < x, x > x and x != x never hold. impose rejected them with IllegalArgumentException, which
+  // also escaped from search when IfThen imposed its then-part once the condition held.
+  @Test
+  void testComparisonOfAVariableWithItselfThatNeverHoldsFails() {
+
+    List<BiFunction<IntVar, IntVar, PrimitiveConstraint>> never =
+        List.of(XltY::new, XgtY::new, XneqY::new);
+    for (BiFunction<IntVar, IntVar, PrimitiveConstraint> comparison : never) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 3);
+      store.impose(comparison.apply(x, x));
+      assertThat(store.consistency()).isFalse();
+
+      store = new Store();
+      x = new IntVar(store, "x", 0, 3);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      store.impose(new IfThen(new XeqC(b, 1), comparison.apply(x, x)));
+      // only b = 0 is left, with any x
+      assertThat(countSolutions(store, new IntVar[] {b, x}, new Random(1))).isEqualTo(4);
+    }
+  }
+
+  /**
+   * Solutions of wrapper(x op x, b) for x in {-3, -1, 0, 1, 2, 3}, with b fixed to bValue, or b in
+   * 0..1 (and not labelled) when bValue is negative.
+   */
+  private static int countOnSameVariable(
+      BiFunction<IntVar, IntVar, PrimitiveConstraint> comparison,
+      BiFunction<PrimitiveConstraint, IntVar, Constraint> wrapper,
+      int bValue) {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, 3);
+    x.domain.inComplement(store.level, x, -2);
+    IntVar b = bValue < 0 ? new IntVar(store, "b", 0, 1) : new IntVar(store, "b", bValue, bValue);
+    store.impose(wrapper.apply(comparison.apply(x, x), b));
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    // smallest value first reaches a node where the propagator itself grounds x
+    boolean found =
+        search.labeling(store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+    return found ? search.getSolutionListener().solutionsNo() : 0;
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
+  // -Djacop.asserts.enabled=true before the fix).
+  @Test
+  void testSoftAlldifferentOnInfeasibleStore() {
+
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 2);
+    IntVar[] vars = {new IntVar(store, "v_0", 0, 1), new IntVar(store, "v_1", 0, 1)};
+    store.impose(new In(cost, new IntervalDomain(0, 0)));
+    store.impose(new In(vars[0], new IntervalDomain(0, 0)));
+    store.impose(new In(vars[1], new IntervalDomain(0, 0)));
+
+    store.imposeDecomposition(
+        new SoftAlldifferent(vars, cost, ViolationMeasure.DECOMPOSITION_BASED));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/47 (fails with
+  // -Djacop.asserts.enabled=true before the fix).
+  @Test
+  void testSoftGccOnInfeasibleStore() {
+
+    Store store = new Store();
+    IntVar cost = new IntVar(store, "cost", 0, 2);
+    IntVar[] xVars = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar[] hardCounters = {
+      new IntVar(store, "hardCounter0", 0, 2), new IntVar(store, "hardCounter1", 0, 2)
+    };
+    IntVar[] softCounters = {
+      new IntVar(store, "softCounter0", 0, 2), new IntVar(store, "softCounter1", 0, 2)
+    };
+    store.impose(new In(xVars[0], new IntervalDomain(0, 0)));
+    store.impose(new In(xVars[1], new IntervalDomain(0, 0)));
+    store.impose(new In(hardCounters[0], new IntervalDomain(2, 2)));
+    store.impose(new In(softCounters[0], new IntervalDomain(1, 1)));
+    store.impose(new In(softCounters[1], new IntervalDomain(2, 2)));
+    store.impose(new In(cost, new IntervalDomain(1, 1)));
+
+    store.imposeDecomposition(
+        new SoftGCC(xVars, hardCounters, softCounters, cost, ViolationMeasure.VALUE_BASED));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/30
+  @Test
+  void testRegularExpressionParser() {
+
+    assertThat(parseRegularExpression("(32.14*)").toString()).isEqualTo("32.(14)*");
+    assertThat(parseRegularExpression("1+2.3*").toString()).isEqualTo("(1+2.(3)*)");
+    // literals in a sum are kept first and in reverse order
+    assertThat(parseRegularExpression("(1+2).3").toString()).isEqualTo("(2+1).3");
+
+    assertThatThrownBy(() -> parseRegularExpression("(.32*)"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> parseRegularExpression("(32.*)"))
+        .isInstanceOf(IllegalArgumentException.class);
+    // a missing operator between ")" and "17" used to silently drop the rest of the input
+    assertThatThrownBy(() -> parseRegularExpression("(32.14*)17*.23"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // Regression test for https://github.com/radsz/jacop/issues/30: compares the words accepted by a
+  // Regular constraint built from a parsed expression with java.util.regex on random expressions.
+  @Test
+  void testRegularExpressionAgainstJavaRegex() {
+
+    Random random = new Random(30);
+    for (int trial = 0; trial < 300; trial++) {
+      String[] expression = randomRegularExpression(random, 1 + random.nextInt(4));
+      int length = 1 + random.nextInt(4);
+
+      Fsm fsm = parseRegularExpression(expression[0]).parseToFsm();
+      Store store = new Store();
+      IntVar[] x = new IntVar[length];
+      for (int i = 0; i < length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 3);
+      }
+      store.impose(new Regular(fsm, x));
+
+      Pattern pattern = Pattern.compile(expression[1]);
+      int expected = 0;
+      for (int code = 0; code < Math.pow(3, length); code++) {
+        StringBuilder word = new StringBuilder();
+        for (int i = 0, c = code; i < length; i++, c /= 3) {
+          word.append(1 + c % 3);
+        }
+        if (pattern.matcher(word).matches()) {
+          expected++;
+        }
+      }
+
+      assertThat(noOfAllSolutions(store, x))
+          .as("expression %s, length %d", expression[0], length)
+          .isEqualTo(expected);
+    }
+  }
+
+  private static RegularExpressionParser.Expression parseRegularExpression(String expression) {
+    return new RegularExpressionParser(new StringReader(expression)).parse(false);
+  }
+
+  /** Returns a random expression over 1..3 in JaCoP syntax and in java.util.regex syntax. */
+  private static String[] randomRegularExpression(Random random, int depth) {
+    int kind = depth <= 0 ? 0 : random.nextInt(4);
+    if (kind == 0) {
+      String digit = String.valueOf(1 + random.nextInt(3));
+      return new String[] {digit, digit};
+    }
+    String[] a = randomRegularExpression(random, depth - 1);
+    if (kind == 3) {
+      return new String[] {"(" + a[0] + ")*", "(?:" + a[1] + ")*"};
+    }
+    String[] b = randomRegularExpression(random, depth - 1);
+    if (kind == 1) {
+      return new String[] {"(" + a[0] + "." + b[0] + ")", "(?:" + a[1] + b[1] + ")"};
+    }
+    return new String[] {"(" + a[0] + "+" + b[0] + ")", "(?:" + a[1] + "|" + b[1] + ")"};
+  }
+
+  @Test
+  void testCumulativeOptionalAllPresent() {
+
+    // All tasks present, so the optional profile is never used; this only ran into the
+    // reflective event accessors that could not read ProfileOptional events.
+    assertThat(cumulativeSolutions(true, 3, 4, 1, new int[] {1, 2, 1}, 2, false))
+        .isEqualTo(cumulativeBruteForce(3, 4, 1, new int[] {1, 2, 1}, 2, false));
+  }
+
+  @Test
+  void testCumulativeZeroDurationTaskWithFixedDurations() {
+
+    // With fixed durations and resources the sweep of CumulativePrimary also pruned the start of
+    // a task of zero duration, which does not occupy the resource, against the profile.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 0), new IntVar(store, 0, 1)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 0)};
+    IntVar[] r = {new IntVar(store, 1, 1), new IntVar(store, 3, 3)};
+    store.impose(new Cumulative(s, d, r, new IntVar(store, 3, 3)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(s[1].min()).isZero();
+  }
+
+  @Test
+  void testCumulativeOptionalZeroDurationTask() {
+
+    // An optional task of zero duration was made absent when the profile had no room at its
+    // start, although it does not occupy the resource.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 3, 3), new IntVar(store, 3, 3), new IntVar(store, 1, 1)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 0), new IntVar(store, 2, 2)};
+    IntVar[] r = {new IntVar(store, 2, 2), new IntVar(store, 1, 1), new IntVar(store, 2, 2)};
+    IntVar[] o = {new IntVar(store, 1, 1), new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    store.impose(new CumulativeOptional(s, d, r, new IntVar(store, 2, 2), o));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o[1].max()).isEqualTo(1);
+  }
+
+  @Test
+  void testCumulativeVariableDurations() {
+
+    // Two tasks that can never overload the resource; edge finding used a capacity map built for
+    // the original task order after the tasks had been reordered, and pruned valid starts.
+    assertThat(cumulativeSolutions(false, 2, 2, 3, new int[] {2, 1}, 3, false))
+        .isEqualTo(cumulativeBruteForce(2, 2, 3, new int[] {2, 1}, 3, false));
+    assertThat(cumulativeSolutions(false, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, false))
+        .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, false));
+  }
+
+  @Test
+  void testCumulativeResourceOfTaskOutsideProfile() {
+
+    // The third task must run at time 25, where the first two use the whole capacity, so it
+    // cannot use the resource. With a resource use of 0 or 6 it is not in the profile, and the
+    // sweep only checked its resource use at the dates where the profile changes (24 and 26).
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 24, 24), new IntVar(store, 20, 20), new IntVar(store, 22, 25)};
+    IntVar[] d = {new IntVar(store, 2, 2), new IntVar(store, 6, 6), new IntVar(store, 4, 4)};
+    IntVar r3 = new IntVar(store, 0, 0);
+    r3.addDom(6, 6);
+    IntVar[] r = {new IntVar(store, 6, 6), new IntVar(store, 9, 9), r3};
+    store.impose(new Cumulative(s, d, r, new IntVar(store, 15, 15)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(r3.singleton(0)).isTrue();
+  }
+
+  @Test
+  void testCumulativeOptional() {
+
+    // An optional task that fits right after the profile of the present tasks was made absent.
+    assertThat(cumulativeSolutions(true, 2, 2, 1, new int[] {1, 1}, 1, true))
+        .isEqualTo(cumulativeBruteForce(2, 2, 1, new int[] {1, 1}, 1, true));
+    assertThat(cumulativeSolutions(true, 4, 4, 2, new int[] {1, 2, 1, 1}, 2, true))
+        .isEqualTo(cumulativeBruteForce(4, 4, 2, new int[] {1, 2, 1, 1}, 2, true));
+  }
+
+  @Test
+  void testCumulativeUnaryTaskAboveLimit() {
+
+    // Without the profile only unary edge finding ran, which assumes every task fits in the limit,
+    // so a task using more than the limit was accepted.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 1, 1)};
+    IntVar[] r = {new IntVar(store, 2, 2)};
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), false, true));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    s = new IntVar[] {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    d = new IntVar[] {new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    r = new IntVar[] {new IntVar(store, 2, 2), new IntVar(store, 0, 3)};
+    store.impose(new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), false, true));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d[0].max()).isZero();
+    assertThat(r[1].max()).isEqualTo(1);
+  }
+
+  @Test
+  void testCumulativeUnaryOverloadAboveHundredTasks() {
+
+    // With more than 100 tasks CumulativeUnary ran only the profile, so three tasks of duration 2
+    // that must all run in [0, 4) were accepted: none has a compulsory part. The unary rules now
+    // run for any number of tasks.
+    for (boolean profileArgument : new boolean[] {false, true}) {
+      Store store = new Store();
+      int n = 101;
+      IntVar[] s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] r = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = i < 3 ? new IntVar(store, 0, 2) : new IntVar(store, 100 + i, 100 + i);
+        d[i] = new IntVar(store, i < 3 ? 2 : 1, i < 3 ? 2 : 1);
+        r[i] = new IntVar(store, 1, 1);
+      }
+      IntVar limit = new IntVar(store, 1, 1);
+      store.impose(
+          profileArgument
+              ? new CumulativeUnary(s, d, r, limit, true)
+              : new CumulativeUnary(s, d, r, limit));
+      assertThat(store.consistency()).as("profile argument %s", profileArgument).isFalse();
+    }
+  }
+
+  @Test
+  void testCumulativeUnaryOptionalTaskAboveLimit() {
+
+    // The same as testCumulativeUnaryTaskAboveLimit for optional tasks: a task using more than the
+    // limit is absent or has zero duration.
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, 0, 2), new IntVar(store, 0, 2)};
+    IntVar[] d = {new IntVar(store, 1, 1), new IntVar(store, 0, 1)};
+    IntVar[] r = {new IntVar(store, 2, 2), new IntVar(store, 2, 2)};
+    IntVar[] o = {new IntVar(store, 0, 1), new IntVar(store, 1, 1)};
+    store.impose(new CumulativeUnaryOptional(s, d, r, new IntVar(store, 1, 1), o, false, true));
+    assertThat(store.consistency()).isTrue();
+    assertThat(o[0].max()).isZero();
+    assertThat(d[1].max()).isZero();
+  }
+
+  /**
+   * Counts the solutions of a cumulative constraint over tasks with starts in 0..horizon-1,
+   * durations in 1..maxDuration and the given resource requirements.
+   */
+  private int cumulativeSolutions(
+      boolean optionalConstraint,
+      int noOfTasks,
+      int horizon,
+      int maxDuration,
+      int[] resources,
+      int limit,
+      boolean optionalTasks) {
+
+    Store store = new Store();
+
+    IntVar[] starts = getIntVars(store, "s", noOfTasks, horizon);
+    IntVar[] durations = new IntVar[noOfTasks];
+    IntVar[] res = new IntVar[noOfTasks];
+    IntVar[] present = new IntVar[noOfTasks];
+    for (int i = 0; i < noOfTasks; i++) {
+      durations[i] = new IntVar(store, "d" + i, 1, maxDuration);
+      res[i] = new IntVar(store, "r" + i, resources[i], resources[i]);
+      present[i] = new IntVar(store, "o" + i, optionalTasks ? 0 : 1, 1);
+    }
+    IntVar limitVar = new IntVar(store, "limit", limit, limit);
+
+    if (optionalConstraint) {
+      store.impose(new CumulativeOptional(starts, durations, res, limitVar, present));
+    } else {
+      store.impose(new Cumulative(starts, durations, res, limitVar));
+    }
+
+    return noOfAllSolutions(store, starts, durations, present);
+  }
+
+  /** Counts the same solutions as {@link #cumulativeSolutions} by enumerating all assignments. */
+  private static int cumulativeBruteForce(
+      int noOfTasks,
+      int horizon,
+      int maxDuration,
+      int[] resources,
+      int limit,
+      boolean optionalTasks) {
+
+    int perTask = horizon * maxDuration * (optionalTasks ? 2 : 1);
+    int combinations = (int) Math.pow(perTask, noOfTasks);
+    int count = 0;
+    for (int code = 0; code < combinations; code++) {
+      int rest = code;
+      int[] s = new int[noOfTasks];
+      int[] d = new int[noOfTasks];
+      boolean[] o = new boolean[noOfTasks];
+      for (int i = 0; i < noOfTasks; i++) {
+        s[i] = rest % horizon;
+        rest /= horizon;
+        d[i] = 1 + rest % maxDuration;
+        rest /= maxDuration;
+        o[i] = !optionalTasks || rest % 2 == 1;
+        if (optionalTasks) {
+          rest /= 2;
+        }
+      }
+      boolean ok = true;
+      for (int t = 0; t < horizon + maxDuration && ok; t++) {
+        int load = 0;
+        for (int i = 0; i < noOfTasks; i++) {
+          if (o[i] && s[i] <= t && t < s[i] + d[i]) {
+            load += resources[i];
+          }
+        }
+        ok = load <= limit;
+      }
+      if (ok) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Fingerprints the search of the rectangle constraints built on AbstractDiff: for each kind, the
+   * solutions found, in order, and the search statistics on seeded random instances. Refactoring
+   * that engine must leave every fingerprint unchanged, which means the same search tree and not
+   * only the same solutions.
+   */
+  @Test
+  void rectangleConstraintsKeepTheirSearchTrees() {
+    Map<String, String> actual = new LinkedHashMap<>();
+    for (String kind :
+        List.of(
+            "Diff2",
+            "Diff2NoProfile",
+            "Diff2Exclusive",
+            "Disjoint",
+            "DisjointNoProfile",
+            "DisjointConditional",
+            "DisjointConditionalNoProfile")) {
+      actual.put(kind, rectangleSearchFingerprint(kind));
+    }
+
+    assertThat(actual)
+        .isEqualTo(
+            Map.of(
+                "Diff2",
+                "solutions=261426 nodes=271150 decisions=266268 wrong=4882 hash=67a9b6d05bb56939",
+                "Diff2NoProfile",
+                "solutions=261426 nodes=275572 decisions=268479 wrong=7093 hash=1d2a26df1730729",
+                "Diff2Exclusive",
+                "solutions=274199 nodes=281043 decisions=277601 wrong=3442 hash=e3ba8c5362d530ad",
+                "Disjoint",
+                "solutions=250703 nodes=258629 decisions=254646 wrong=3983 hash=688d304cb8d0f443",
+                "DisjointNoProfile",
+                "solutions=250683 nodes=263587 decisions=257115 wrong=6472 hash=37879c275e329ec3",
+                "DisjointConditional",
+                "solutions=737646 nodes=765448 decisions=751527 wrong=13921 hash=f7e9e3977ef731a1",
+                "DisjointConditionalNoProfile",
+                "solutions=737646 nodes=766920 decisions=752263 wrong=14657 hash=5f89905bc162726d"));
+  }
+
+  private static String rectangleSearchFingerprint(String kind) {
+    Random random = new Random(20261024L);
+    long solutions = 0;
+    long nodes = 0;
+    long decisions = 0;
+    long wrongDecisions = 0;
+    long[] hash = {17};
+    for (int instance = 0; instance < 40; instance++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(2);
+      List<List<? extends IntVar>> rectangles = new ArrayList<>();
+      List<IntVar> vars = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        List<IntVar> r =
+            List.of(
+                rectangleVar(store, random, 0, 3),
+                rectangleVar(store, random, 0, 3),
+                rectangleVar(store, random, 0, 2),
+                rectangleVar(store, random, 0, 2));
+        rectangles.add(r);
+        vars.addAll(r);
+      }
+      List<List<Integer>> pairs = new ArrayList<>();
+      for (int i = 1; i <= n; i++) {
+        for (int j = i + 1; j <= n; j++) {
+          if (random.nextInt(3) == 0) {
+            pairs.add(List.of(i, j));
+          }
+        }
+      }
+      List<IntVar> conditions = new ArrayList<>();
+      for (int p = 0; p < pairs.size(); p++) {
+        conditions.add(new IntVar(store, "c" + p, 0, 1));
+      }
+      switch (kind) {
+        case "Diff2" -> store.impose(new Diff2(rectangles));
+        case "Diff2NoProfile" -> store.impose(new Diff2(rectangles, false));
+        case "Diff2Exclusive" -> store.impose(new Diff2(rectangles, pairs));
+        case "Disjoint" -> store.impose(new Disjoint(rectangles));
+        case "DisjointNoProfile" -> store.impose(new Disjoint(rectangles, false));
+        case "DisjointConditional" ->
+            store.impose(new DisjointConditional(rectangles, pairs, conditions));
+        case "DisjointConditionalNoProfile" ->
+            store.impose(new DisjointConditional(rectangles, pairs, conditions, false));
+        default -> throw new IllegalArgumentException(kind);
+      }
+      if (kind.startsWith("DisjointConditional")) {
+        vars.addAll(conditions);
+      }
+      Collections.shuffle(vars, random);
+
+      IntVar[] order = vars.toArray(IntVar[]::new);
+      SelectChoicePoint<IntVar> select =
+          new SimpleSelect<>(
+              order,
+              null,
+              instance % 2 == 0 ? new IndomainMin<>() : new IndomainRandom<>(instance));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      // hashes every solution in the order the search finds it
+      search.setSolutionListener(
+          new SimpleSolutionListener<>() {
+            @Override
+            public boolean executeAfterSolution(
+                Search<IntVar> s, SelectChoicePoint<IntVar> choicePoint) {
+              long value = 0;
+              for (IntVar v : order) {
+                value = value * 31 + v.value();
+              }
+              hash[0] = hash[0] * 1_000_003 + value;
+              return super.executeAfterSolution(s, choicePoint);
+            }
+          });
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      search.labeling(store, select);
+
+      solutions += search.getSolutionListener().solutionsNo();
+      nodes += search.getNodes();
+      decisions += search.getDecisions();
+      wrongDecisions += search.getWrongDecisions();
+    }
+    return "solutions="
+        + solutions
+        + " nodes="
+        + nodes
+        + " decisions="
+        + decisions
+        + " wrong="
+        + wrongDecisions
+        + " hash="
+        + Long.toHexString(hash[0]);
+  }
+
+  @Test
+  void equalityShiftsReachFixpointWhenTheFirstVariableOnlyKeepsBounds() {
+    // A boolean x keeps only bounds, so pruning x from z leaves it at 0..1 and then z gets fixed;
+    // one more pass is needed to fix x to 0.
+    List<Function<IntVar[], Constraint>> constraints =
+        List.of(
+            v -> new XeqY(v[0], v[1]),
+            v -> new XplusCeqZ(v[0], 0, v[1]),
+            v -> new Not(new XplusCneqZ(v[0], 0, v[1])),
+            v -> new XplusYeqZ(v[0], v[2], v[1]),
+            v -> new XplusYeqZ(v[2], v[0], v[1]),
+            v -> new XplusYeqC(v[1], v[0], 5));
+    for (Function<IntVar[], Constraint> constraint : constraints) {
+      Store store = new Store();
+      IntVar x = new BooleanVar(store, "x");
+      IntVar z = new IntVar(store, "z", 0, 0);
+      z.addDom(5, 5);
+      IntVar zero = new IntVar(store, "zero", 0, 0);
+      Constraint c = constraint.apply(new IntVar[] {x, z, zero});
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.max()).as(c.toString()).isEqualTo(0);
+      assertThat(z.singleton()).as(c.toString()).isTrue();
+    }
+  }
+
+  @Test
+  void memberIncludedAgainDuringSearchSurvivesBacktracking() {
+    // A wrapper includes its nested constraints each time it is imposed, also at a search level,
+    // and calls their consistency without imposing them. include() created a new position stamp
+    // each time, so after backtracking below that level the stamp had no value and consistency
+    // threw ArrayIndexOutOfBoundsException.
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 3);
+    IntVar e = new IntVar(store, "e", 3, 3);
+    x[1].addDom(3, 3);
+    Member member = new Member(x, e);
+    member.include(store);
+    store.setLevel(1);
+    member.include(store);
+    store.removeLevel(1);
+    store.setLevel(0);
+
+    member.consistency(store);
+    assertThat(x[1].singleton(3)).isTrue();
+
+    // included first at a search level, its stamp is gone after backtracking and is replaced
+    Store other = new Store();
+    IntVar[] y = getIntVars(other, "y", 3, 3);
+    IntVar f = new IntVar(other, "f", 3, 3);
+    y[1].addDom(3, 3);
+    Member late = new Member(y, f);
+    other.setLevel(1);
+    late.include(other);
+    other.removeLevel(1);
+    other.setLevel(0);
+    late.include(other);
+
+    late.consistency(other);
+    assertThat(y[1].singleton(3)).isTrue();
+  }
+
+  @Test
+  void reifiedMemberIsEntailedWhenFixedListValuesCoverTheElement() {
+    // e in {0, 1}, x = [1, 0, {0, 1}]: both values of e are taken by fixed list variables, so
+    // member holds whatever e and x3 become and b must be 1. satisfied() checked only a fixed e.
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 0, 0), new IntVar(store, "x3", 0, 1)
+    };
+    IntVar e = new IntVar(store, "e", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new Member(x, e), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.singleton(1)).isTrue();
+  }
+
+  @Test
+  void memberWithTheElementOnItsListIsAlwaysTrue() {
+    // e is x[0], so member holds whatever the values are. Not(Member) must fail and the reified
+    // form must set b = 1 at once, not only when e is fixed.
+    Store store = new Store();
+    IntVar e = new IntVar(store, "e", 0, 3);
+    IntVar a = new IntVar(store, "a", 5, 6);
+    store.impose(new Not(new Member(new IntVar[] {e, a}, e)));
+    assertThat(store.consistency()).isFalse();
+
+    Store other = new Store();
+    IntVar f = new IntVar(other, "f", 0, 3);
+    IntVar c = new IntVar(other, "c", 5, 6);
+    IntVar b = new IntVar(other, "b", 0, 1);
+    other.impose(new Reified(new Member(new IntVar[] {c, f}, f), b));
+    assertThat(other.consistency()).isTrue();
+    assertThat(b.singleton(1)).isTrue();
+  }
+
+  @Test
+  void memberPrunesTheLastCandidateWhenItIsRepeated() {
+    // x = [a, a, c] with c disjoint from e: a is the only candidate and must equal e, although it
+    // takes two positions of the list.
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar c = new IntVar(store, "c", 8, 9);
+    IntVar e = new IntVar(store, "e", 2, 3);
+    store.impose(new Member(new IntVar[] {a, a, c}, e));
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.min()).isEqualTo(2);
+    assertThat(a.max()).isEqualTo(3);
+  }
+
+  @Test
+  void memberSatisfiedIsExactEntailment() {
+    // Without repeated variables, member is entailed exactly when every tuple of the domains
+    // satisfies it.
+    Random random = new Random(47);
+    for (int instance = 0; instance < 5000; instance++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(4);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int min = random.nextInt(4);
+        x[i] =
+            new IntVar(store, "x" + i, min, random.nextInt(3) == 0 ? min : min + random.nextInt(3));
+      }
+      IntVar e = new IntVar(store, "e");
+      for (int v = 0; v < 5; v++) {
+        if (random.nextInt(3) == 0) {
+          e.addDom(v, v);
+        }
+      }
+      if (e.dom().isEmpty()) {
+        e.addDom(2, 2);
+      }
+      boolean entailed = true;
+      int[] tuple = new int[n];
+      for (ValueEnumeration ev = e.dom().valueEnumeration(); ev.hasMoreElements(); ) {
+        int value = ev.nextElement();
+        for (int i = 0; i < n; i++) {
+          tuple[i] = x[i].min();
+        }
+        do {
+          boolean found = false;
+          for (int i = 0; i < n; i++) {
+            found |= tuple[i] == value;
+          }
+          entailed &= found;
+        } while (nextBoxTuple(tuple, x));
+      }
+      Member member = new Member(x, e);
+      assertThat(member.satisfied()).as(member.toString()).isEqualTo(entailed);
+    }
+  }
+
+  private static boolean nextBoxTuple(int[] tuple, IntVar[] x) {
+    for (int i = 0; i < tuple.length; i++) {
+      if (tuple[i] < x[i].max()) {
+        tuple[i]++;
+        return true;
+      }
+      tuple[i] = x[i].min();
+    }
+    return false;
+  }
+
+  @Test
+  void alldifferentExceptAcceptsRepeatedExceptionValues() {
+    // [0, 0, 1] and [4, 4, 1] satisfy the constraints: exception values may repeat
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 0), new IntVar(store, "x1", 0, 0), new IntVar(store, "x2", 1, 1)
+    };
+    IntVar[] y = {
+      new IntVar(store, "y0", 4, 4), new IntVar(store, "y1", 4, 4), new IntVar(store, "y2", 1, 1)
+    };
+    AlldifferentExceptZero zero = new AlldifferentExceptZero(x);
+    AlldifferentExcept except = new AlldifferentExcept(y, new IntervalDomain(4, 4));
+    store.impose(zero);
+    store.impose(except);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(zero.satisfied()).isTrue();
+    assertThat(zero.notSatisfied()).isFalse();
+    assertThat(except.satisfied()).isTrue();
+    assertThat(except.notSatisfied()).isFalse();
+  }
+
+  @Test
+  void alldifferentExceptIsDomainConsistentAndKeepsAllSolutions() {
+    // Random instances with 0-3 exception values, some outside the domains, and offsets that send
+    // the values of some instances beyond the range the joker filtering handles, so the
+    // feasibility-only fallback is covered as well. After the root propagation every value left
+    // must have a support (domain consistency), and an all-solution search must find exactly the
+    // brute-force solutions.
+    Random random = new Random(15);
+    for (int run = 0; run < 1500; run++) {
+      int n = 3 + random.nextInt(4);
+      int offset = run % 7 == 0 ? 100_000 : 0;
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = randomVar(store, "x" + i, -1, Math.min(n, 4), random);
+        if (offset != 0 && random.nextBoolean()) {
+          x[i].addDom(offset, offset);
+        }
+      }
+      boolean zero = run % 3 == 0;
+      IntervalDomain except = new IntervalDomain();
+      if (zero) {
+        except.unionAdapt(0, 0);
+      } else {
+        for (int k = random.nextInt(4); k > 0; k--) {
+          int e = random.nextInt(n + 3) - 1;
+          except.unionAdapt(e, e);
+        }
+      }
+      Predicate<int[]> check =
+          t -> {
+            int[] kept = Arrays.stream(t).filter(v -> !except.contains(v)).toArray();
+            return Arrays.stream(kept).distinct().count() == kept.length;
+          };
+      String instance = "run " + run + " except " + except + " " + domainsOf(x);
+      List<int[]> solutions = bruteForce(x, check);
+
+      store.impose(zero ? new AlldifferentExceptZero(x) : new AlldifferentExcept(x, except));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as(instance).isEqualTo(!solutions.isEmpty());
+      if (!consistent) {
+        continue;
+      }
+      if (offset == 0) {
+        for (int i = 0; i < n; i++) {
+          int position = i;
+          int[] supported =
+              solutions.stream().mapToInt(t -> t[position]).distinct().sorted().toArray();
+          assertThat(valuesOf(x[i])).as(instance + " " + x[i]).containsExactly(supported);
+        }
+      }
+      assertThat(countSolutions(store, x, random)).as(instance).isEqualTo(solutions.size());
+    }
+  }
+
+  @Test
+  void linearIntWithManyVariablesHasTheSolutionCountOfBruteForce() {
+    // a LinearInt with more than three variables stops reading the variables that get fixed and
+    // reads them again after backtracking, which an all-solution search exercises
+    String[] relations = {"==", "<=", "<", "!=", ">", ">="};
+    Random random = new Random(7);
+    for (int run = 0; run < 600; run++) {
+      int n = 4 + random.nextInt(4);
+      int[] weights = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = (1 + random.nextInt(3)) * (random.nextBoolean() ? 1 : -1);
+      }
+      String rel = relations[run % relations.length];
+      int b = random.nextInt(9) - 4;
+      Store store = new Store();
+      IntVar[] vars = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        vars[i] = randomVar(store, "v" + i, -2, 3, random);
+      }
+      if (run % 5 == 0) {
+        vars[n - 1] = vars[0];
+      }
+      String instance =
+          "run "
+              + run
+              + " "
+              + Arrays.toString(weights)
+              + " "
+              + rel
+              + " "
+              + b
+              + " "
+              + domainsOf(vars);
+      int expected = countLinearSolutions(vars, weights, rel, b, new int[n], 0);
+      store.impose(new LinearInt(vars, weights, rel, b));
+      assertThat(noOfAllSolutionsNoRecord(store, vars)).as(instance).isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void tableWithReusedTuplesImposedDuringSearchRejectsGroundAssignmentOutsideTable() {
+    // Variables fixed at the root to a non-tuple, the table imposed at a search level: the tuples
+    // were not filtered by the constructor, and the empty word left in the bit-set kept the table
+    // from being empty, so all variables being singletons from an older level skipped the check.
+    for (boolean reuse : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -1, 3);
+      IntVar y = new IntVar(store, "y", -1, 3);
+      x.domain.in(store.level, x, 0, 0);
+      y.domain.in(store.level, y, 1, 1);
+      store.setLevel(store.level + 1);
+      store.impose(new Table(new IntVar[] {x, y}, new int[][] {{0, 2}, {1, 1}}, reuse));
+      assertThat(store.consistency()).as("reuse " + reuse).isFalse();
+    }
+  }
+
+  @Test
+  void hybridTableWithTwoRestrictionsBetweenTheSameColumnsPrunesTheChangedColumn() {
+    // x1 > x2 and x2 >= x1 - 1 in one tuple mean x1 = x2 + 1: (0, -1) and (3, 2). After x1 != 0
+    // the tuple removes 2 from x1 itself; skipping the only changed column kept it and the
+    // constraint was removed with x1 = 2, x2 = 2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", new IntervalDomain(-1, 0));
+      x0.addDom(2, 3);
+      IntVar x1 = new IntVar(store, "x1", 0, 0);
+      x1.addDom(2, 3);
+      IntVar x2 = new IntVar(store, "x2", -1, -1);
+      x2.addDom(2, 3);
+      IntVar[] x = {x0, x1, x2};
+      Restriction[][] tuples = {
+        {
+          Restriction.le(3),
+          Restriction.column(Restriction.Relation.GT, 2),
+          Restriction.column(Restriction.Relation.GE, 1, -1)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(noOfAllSolutionsNoRecord(store, x)).as("expand " + expand).isEqualTo(8);
+    }
+  }
+
+  @Test
+  void hybridTableRefiltersTheChangedColumnWhenTheRevisionRemovesItsSupports() {
+    // The second tuple, x0 != x1 + 2 and x1 = x0 - 2, allows nothing, but arc consistency on its
+    // restrictions only finds that out once x0 has lost values. At the root it is the only support
+    // of x0 = 0; after x0 != 3 it is removed and x0 = 0 must go too, or the constraint is removed
+    // with x0 = 0, x1 = -2 still possible.
+    for (boolean expand : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x0 = new IntVar(store, "x0", 0, 0);
+      x0.addDom(3, 4);
+      IntVar x1 = new IntVar(store, "x1", -2, -2);
+      x1.addDom(1, 1);
+      IntVar[] x = {x0, x1};
+      Restriction[][] tuples = {
+        {Restriction.eq(4), Restriction.eq(-2)},
+        {
+          Restriction.column(Restriction.Relation.NE, 1, 2),
+          Restriction.column(Restriction.Relation.EQ, 0, -2)
+        }
+      };
+      store.impose(new HybridTable(x, tuples, expand));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      x0.domain.inComplement(1, x0, 3);
+      assertThat(store.consistency()).isTrue();
+      assertThat(x0.dom()).as("expand " + expand).hasToString("4");
+    }
+  }
+
+  @Test
+  void hybridTableRepeatsTheFirstFilteringAfterBacktrackingAboveIt() {
+    // The first consistency at level 1 filtered every column and was undone by the backtrack. The
+    // next call, with only x0 changed, took the old filtering as done: x0 = 1 kept no support and
+    // the constraint was removed with x0 = 1, x1 = 0 still possible.
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new HybridTable(new IntVar[] {x0, x1}, new int[][] {{0, 0}, {2, 0}}));
+    store.setLevel(1);
+    x1.domain.inComplement(1, x1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(0);
+    store.setLevel(1);
+    x0.domain.inComplement(1, x0, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.dom()).hasToString("0");
+  }
+
+  @Test
+  void booleanDomainOperationsKeepTheHolesOfTheOtherDomain() {
+    // The domain of a BooleanVar treated {-1, 2} as its bounds -1..2: subtract gave {} and
+    // isIntersecting true, so a hybrid table with b not in {-1, 2} failed although b = 0 and b = 1
+    // are allowed, and intersecting with an empty domain threw a NullPointerException. Subtracting
+    // a disjoint interval enlarged the domain, which sent the revision of a tuple into an endless
+    // loop.
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    IntDomain bd = b.dom();
+    IntervalDomain holes = new IntervalDomain(-1, -1);
+    holes.unionAdapt(2, 2);
+    assertThat(bd.subtract(holes)).hasToString("{0..1}");
+    assertThat(bd.isIntersecting(holes)).isFalse();
+    assertThat(bd.intersect(holes).isEmpty()).isTrue();
+    assertThat(bd.intersect(new IntervalDomain()).isEmpty()).isTrue();
+    IntervalDomain oneAndThree = new IntervalDomain(1, 1);
+    oneAndThree.unionAdapt(3, 3);
+    assertThat(bd.subtract(oneAndThree)).hasToString("0");
+    assertThat(bd.intersect(oneAndThree)).hasToString("1");
+    // A disjoint interval made the domain grow: {0..1} minus -5..-3 gave {-2..1}.
+    assertThat(bd.subtract(new IntervalDomain(-5, -3))).hasToString("{0..1}");
+    assertThat(bd.subtract(-5, -3)).hasToString("{0..1}");
+    assertThat(bd.subtract(new IntervalDomain(4, 6))).hasToString("{0..1}");
+    assertThat(bd.subtract(4, 6)).hasToString("{0..1}");
+
+    IntervalDomain far = new IntervalDomain(0, 1);
+    far.unionAdapt(100_000, 100_000);
+    IntVar y = new IntVar(store, "y", far);
+    Restriction[][] tuples = {
+      {Restriction.notIn(-1, 2), Restriction.column(Restriction.Relation.GE, 0)},
+      {Restriction.column(Restriction.Relation.EQ, 1, 600_000_000), Restriction.any()}
+    };
+    store.impose(new HybridTable(new IntVar[] {b, y}, tuples, false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b, y})).isEqualTo(5);
+  }
+
+  @Test
+  void booleanVarInADomainWithHolesKeepsOnlyItsValues() {
+    // The domain of a BooleanVar pruned by the bounds -1..1 of {-1, 1}, which removed nothing, so
+    // b in {-1, 1} accepted b = 0.
+    IntervalDomain minusOneAndOne = new IntervalDomain(-1, -1);
+    minusOneAndOne.unionAdapt(1, 1);
+    Store store = new Store();
+    BooleanVar b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.dom()).hasToString("1");
+
+    // The same for a shifted domain: b + 1 in {0, 2} is b in {-1, 1}.
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.setLevel(1);
+    IntervalDomain zeroAndTwo = new IntervalDomain(0, 0);
+    zeroAndTwo.unionAdapt(2, 2);
+    b.domain.inShift(store.level, b, zeroAndTwo, -1);
+    assertThat(b.dom()).hasToString("1");
+
+    store = new Store();
+    b = new BooleanVar(store, "b");
+    store.impose(new In(b, minusOneAndOne));
+    assertThat(noOfAllSolutionsNoRecord(store, new IntVar[] {b})).isEqualTo(1);
+  }
+
+  /** Counts the assignments of vars[i..] that satisfy the relation, given values[0..i). */
+  @Test
+  void xmulYeqCNegatedWithZeroFactor() {
+    // with x = 0 the negation divided c by 0; x * y != c then holds for all y when c != 0 and for
+    // no y when c == 0
+    for (int c : new int[] {-5, 0}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 0);
+      IntVar y = new IntVar(store, "y", -2, 2);
+      store.impose(new Not(new XmulYeqC(x, y, c)));
+      IntVar[] vars = {x, y};
+      int expected = c == 0 ? 0 : 5;
+      assertThat(store.consistency() ? countSolutions(store, vars, new Random(c)) : 0)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void xmulYeqCNotSatisfiedWithNegativeBounds() {
+    // -2 * 3 = -6 is possible, but notSatisfied() compared c with min * min and max * max only
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -4, 2);
+    IntVar y = new IntVar(store, "y", -4, 4);
+    XmulYeqC mul = new XmulYeqC(x, y, -6);
+    assertThat(mul.notSatisfied()).isFalse();
+
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Reified(new XmulYeqC(x, y, -6), b));
+    IntVar[] vars = {x, y, b};
+    List<int[]> expected = bruteForce(vars, t -> (t[0] * t[1] == -6) == (t[2] == 1));
+    assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
+  }
+
+  @Test
+  void absXeqYWithNegativeY() {
+    // |x| = y never holds for a negative y, but satisfied() accepted x = y = -5 and the negation
+    // removed -5 and 5 from x
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -5, -5);
+    IntVar y = new IntVar(store, "y", -5, -5);
+    assertThat(new AbsXeqY(x, y).satisfied()).isFalse();
+
+    for (boolean domainConsistency : new boolean[] {false, true}) {
+      store = new Store();
+      x = new IntVar(store, "x", -5, 5);
+      y = new IntVar(store, "y", -5, -5);
+      store.impose(new Not(new AbsXeqY(x, y, domainConsistency)));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x.getSize()).isEqualTo(11);
+    }
+  }
+
+  @Test
+  void distanceNegatedWithGroundVariables() {
+    // with x and y ground the negation removed y - x from x instead of z, and removed the
+    // negative x - y from z
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -3, -3);
+    IntVar y = new IntVar(store, "y", -2, -2);
+    IntVar z = new IntVar(store, "z", -4, 6);
+    store.impose(new Not(new Distance(x, y, z)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().contains(1)).isFalse();
+    assertThat(z.getSize()).isEqualTo(10);
+
+    // |x - y| != z holds for every x and y when z is negative
+    store = new Store();
+    x = new IntVar(store, "x", 3, 3);
+    y = new IntVar(store, "y", 0, 6);
+    z = new IntVar(store, "z", -2, -2);
+    store.impose(new Not(new Distance(x, y, z)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.getSize()).isEqualTo(7);
+  }
+
+  @Test
+  void xdivAndXmodYeqZSatisfiedRoundTowardsZero() {
+    // consistency() uses Java division and remainder; satisfied() rounded the quotient down
+    for (int a = -6; a <= 6; a++) {
+      for (int b = -3; b <= 3; b++) {
+        for (int c = -7; c <= 7; c++) {
+          Store store = new Store();
+          IntVar x = new IntVar(store, a, a);
+          IntVar y = new IntVar(store, b, b);
+          IntVar z = new IntVar(store, c, c);
+          assertThat(new XdivYeqZ(x, y, z).satisfied()).isEqualTo(b != 0 && a / b == c);
+          assertThat(new XmodYeqZ(x, y, z).satisfied()).isEqualTo(b != 0 && a % b == c);
+        }
+      }
+    }
+  }
+
+  @Test
+  void xdivYeqZPrunesUnsupportedDivisorBounds() {
+    // 9 div y is in z only for y = 1 and y = 3; the interval rules kept y >= -3
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 9, 9);
+    IntVar y = new IntVar(store, "y", -3, 3);
+    y.domain.subtractAdapt(0);
+    y.refreshBounds();
+    y.domain.subtractAdapt(2);
+    y.refreshBounds();
+    IntVar z = new IntVar(store, "z", -1, -1);
+    z.addDom(1, 6);
+    z.addDom(9, 9);
+    store.impose(new XdivYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(1);
+    assertThat(y.max()).isEqualTo(3);
+    assertThat(z.min()).isEqualTo(3);
+    assertThat(z.max()).isEqualTo(9);
+  }
+
+  @Test
+  void xmodYeqZPrunesToNegativeDividends() {
+    // a remainder of -2 needs a negative x and |y| > 2: x in -8..-2; x kept its positive values
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -9, 1);
+    x.addDom(4, 5);
+    x.addDom(8, 9);
+    IntVar y = new IntVar(store, "y", -3, -1);
+    y.addDom(1, 1);
+    y.addDom(3, 4);
+    IntVar z = new IntVar(store, "z", -2, -2);
+    store.impose(new XmodYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(-8);
+    assertThat(x.max()).isEqualTo(-2);
+    assertThat(y.min()).isEqualTo(-3);
+    assertThat(y.max()).isEqualTo(4);
+  }
+
+  @Test
+  void xexpYeqZBoundsOnWideDomains() {
+    // x is too wide for the enumeration of supports until the bounds narrow it: z in 9..30 holds
+    // the squares of 3..5 and of -5..-3 and the cube 27, so x is in -5..5 and z in 9..27; then the
+    // supports remove -2..2
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1000, 1000);
+    IntVar y = new IntVar(store, "y", 2, 3);
+    IntVar z = new IntVar(store, "z", 9, 30);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(-5);
+    assertThat(x.max()).isEqualTo(5);
+    assertThat(z.min()).isEqualTo(9);
+    assertThat(z.max()).isEqualTo(27);
+    assertThat(x.domain.contains(0)).isFalse();
+  }
+
+  @Test
+  void xexpYeqZWithInfiniteOrHugePowers() {
+    // satisfied() threw for 0 ^ -1 and consistency() threw when x ^ y does not fit in a long
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 0);
+    IntVar y = new IntVar(store, "y", -1, -1);
+    IntVar z = new IntVar(store, "z", 0, 0);
+    assertThat(new XexpYeqZ(x, y, z).satisfied()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 10, 10);
+    y = new IntVar(store, "y", 100, 101);
+    z = new IntVar(store, "z", 0, 1000);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 2, 10);
+    y = new IntVar(store, "y", 2, 100);
+    z = new IntVar(store, "z", 0, 1000);
+    store.impose(new XexpYeqZ(x, y, z));
+    IntVar[] vars = {x, y, z};
+    List<int[]> expected = bruteForce(vars, t -> Math.pow(t[0], t[1]) == t[2]);
+    assertThat(countSolutions(store, vars, new Random(1))).isEqualTo(expected.size());
+  }
+
+  @Test
+  void xexpYeqZFixedExponentIsDomainConsistent() {
+    // a fixed exponent n > 0 with x^n increasing on x (n odd, or x >= 0) has its own propagator;
+    // at every fixpoint x and z must hold exactly the values that occur in solutions
+    Random random = new Random(7);
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(5);
+      int xLo = random.nextBoolean() ? 0 : -8;
+      IntVar x = randomVar(store, "x", xLo, 8, random);
+      IntVar y = new IntVar(store, "y", n, n);
+      int zRange = random.nextInt(3) == 0 ? 40 : 700;
+      IntVar z = randomVar(store, "z", -zRange, zRange, random);
+      IntVar[] vars = {x, y, z};
+      List<int[]> expected = bruteForce(vars, t -> Math.pow(t[0], t[1]) == t[2]);
+
+      store.impose(new XexpYeqZ(x, y, z));
+      boolean consistent = store.consistency();
+      assertThat(consistent).as("instance %d", instance).isEqualTo(!expected.isEmpty());
+      if (consistent && ((n & 1) == 1 || xLo >= 0)) {
+        assertThat(valuesOf(x))
+            .as("x, instance %d", instance)
+            .containsExactly(expected.stream().mapToInt(t -> t[0]).distinct().sorted().toArray());
+        assertThat(valuesOf(z))
+            .as("z, instance %d", instance)
+            .containsExactly(expected.stream().mapToInt(t -> t[2]).distinct().sorted().toArray());
+      }
+      if (consistent) {
+        assertThat(countSolutions(store, vars, random))
+            .as("instance %d", instance)
+            .isEqualTo(expected.size());
+      }
+    }
+  }
+
+  @Test
+  void xexpYeqZFixedExponentNearIntLimits() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2000);
+    IntVar y = new IntVar(store, "y", 3, 3);
+    IntVar z = new IntVar(store, "z", IntDomain.MIN_INT, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    long r = x.max();
+    assertThat(r * r * r).isLessThanOrEqualTo(IntDomain.MAX_INT);
+    assertThat((r + 1) * (r + 1) * (r + 1)).isGreaterThan(IntDomain.MAX_INT);
+    assertThat(z.max()).isEqualTo((int) (r * r * r));
+    assertThat(z.getSize()).isEqualTo(x.getSize());
+
+    store = new Store();
+    x = new IntVar(store, "x", -2000, 2000);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", -1000000, 1000000);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{-100..100}");
+    assertThat(z.getSize()).isEqualTo(201);
+    assertThat(z.min()).isEqualTo(-1000000);
+
+    store = new Store();
+    x = new IntVar(store, "x", 813, 2000);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", 0, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    // z holds no cube between the cubes of the bounds of x
+    store = new Store();
+    x = new IntVar(store, "x", 2, 3);
+    y = new IntVar(store, "y", 3, 3);
+    z = new IntVar(store, "z", 12, 12);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x = new IntVar(store, "x", 2, 3);
+    y = new IntVar(store, "y", 40, 40);
+    z = new IntVar(store, "z", IntDomain.MIN_INT, IntDomain.MAX_INT);
+    store.impose(new XexpYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  private static int countLinearSolutions(
+      IntVar[] vars, int[] weights, String rel, int b, int[] values, int i) {
+    if (i == vars.length) {
+      int sum = 0;
+      for (int j = 0; j < vars.length; j++) {
+        sum += weights[j] * values[j];
+      }
+      return switch (rel) {
+        case "==" -> sum == b ? 1 : 0;
+        case "<=" -> sum <= b ? 1 : 0;
+        case "<" -> sum < b ? 1 : 0;
+        case "!=" -> sum != b ? 1 : 0;
+        case ">" -> sum > b ? 1 : 0;
+        default -> sum >= b ? 1 : 0;
+      };
+    }
+    for (int j = 0; j < i; j++) {
+      if (vars[j] == vars[i]) {
+        // a repeated variable takes the value it already has
+        values[i] = values[j];
+        return countLinearSolutions(vars, weights, rel, b, values, i + 1);
+      }
+    }
+    int count = 0;
+    for (ValueEnumeration e = vars[i].dom().valueEnumeration(); e.hasMoreElements(); ) {
+      values[i] = e.nextElement();
+      count += countLinearSolutions(vars, weights, rel, b, values, i + 1);
+    }
+    return count;
+  }
+
+  private static IntVar rectangleVar(Store store, Random random, int min, int max) {
+    IntVar v = new IntVar(store);
+    for (int value = min; value <= max; value++) {
+      if (random.nextInt(3) != 0) {
+        v.addDom(value, value);
+      }
+    }
+    if (v.dom().isEmpty()) {
+      v.addDom(min, min);
+    }
+    return v;
+  }
+
+  // GCC(x, counters) reads its counted values from the domains of x, so once x was ground it could
+  // not be created; GCC(x, counters, firstValue) names the counted values instead.
+  @Test
+  void testGccWithFirstValueAndGroundedVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 1, 1), new IntVar(store, "x2", 1, 2)
+    };
+    IntVar[] counters = {
+      new IntVar(store, "c0", 0, 3), new IntVar(store, "c1", 0, 3), new IntVar(store, "c2", 0, 3)
+    };
+
+    assertThatThrownBy(() -> new GCC(x, counters)).isInstanceOf(IllegalArgumentException.class);
+    store.impose(new GCC(x, counters, 0));
+
+    // c0 = 0, and x2 = 1 (c1 = 3, c2 = 0) or x2 = 2 (c1 = 2, c2 = 1)
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
+  }
+
+  // GCC computed its counted values again at impose, so a variable ground between creating the
+  // constraint and imposing it made impose throw IllegalArgumentException.
+  @Test
+  void testGccWithVariablesGroundBeforeImpose() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar[] counters = {
+      new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2), new IntVar(store, "c2", 0, 2)
+    };
+    GCC gcc = new GCC(x, counters);
+    for (IntVar v : x) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    store.impose(gcc);
+
+    assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(1);
+    assertThat(counters[1].value()).isEqualTo(2);
+  }
+
+  // CostRegular dropped the changes queued between impose and its first consistency call, so
+  // values removed then still labelled edges and a wrong cost was accepted.
+  @Test
+  void testCostRegularWithVariablesGroundAfterImpose() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2)};
+    IntVar cost = new IntVar(store, "cost", -3, 8);
+    int[][] delta = {{1, 0, 0}, {0, 0, 1}};
+    int[][][] costs = {{{2, -2, 3}, {1, -2, 3}}};
+    store.impose(new CostRegular(x, delta, 0, 0, new int[] {0, 1}, costs, cost));
+    x[0].domain.in(store.level, x[0], 0, 0);
+    cost.domain.in(store.level, cost, -2, -2);
+
+    // label 0 from the initial state costs 2
+    assertThat(noOfAllSolutions(store, x, new IntVar[] {cost})).isZero();
+  }
+
+  // Knapsack found the ground instance inconsistent at impose but still registered for
+  // removeLevelLate, which then threw NullPointerException on backtracking.
+  @Test
+  void testKnapsackInconsistentAtImposeBacktracks() {
+
+    Store store = new Store();
+    IntVar[] quantity = {new IntVar(store, "q0", 1, 1), new IntVar(store, "q1", 0, 2)};
+    IntVar capacity = new IntVar(store, "capacity", 1, 1);
+    IntVar profit = new IntVar(store, "profit", 2, 2);
+    store.impose(new Knapsack(new int[] {2, 1}, new int[] {2, 2}, quantity, capacity, profit));
+
+    assertThat(noOfAllSolutions(store, quantity, new IntVar[] {capacity, profit})).isZero();
+  }
+
+  /**
+   * Imposes a wrapper around And(x0 {@literal <} x1, x0 = x1) with x0 in 0..1 and x1 in 0..2 and
+   * the constants 0 and 1, and runs the root consistency. One pass of the And fixes x0 = x1 = 1, so
+   * only a second pass, started by the variable events the wrapper forwards, finds the conflict.
+   */
+  private static boolean consistentWithNestedAnd(
+      BiFunction<PrimitiveConstraint, IntVar[], Constraint> wrapper) {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 2);
+    IntVar[] zeroOne = {new IntVar(store, "zero", 0, 0), new IntVar(store, "one", 1, 1)};
+    store.impose(wrapper.apply(new And(new XltY(x0, x1), new XeqY(x0, x1)), zeroOne));
+    return store.consistency();
+  }
+
+  @Test
+  void impliesForwardsVariableEventsToNestedConstraint() {
+    assertThat(consistentWithNestedAnd((and, b) -> new And(new PrimitiveConstraint[] {and})))
+        .isFalse();
+    assertThat(consistentWithNestedAnd((and, b) -> new Implies(b[1], and))).isFalse();
+  }
+
+  // Implies(b, x != y) woke on every domain change of x and y, since its satisfied() check uses
+  // the events that decide x != y, while its propagation and the check that sets b = 0 only need
+  // x or y fixed. On crossword models with thousands of such constraints per letter this was most
+  // of the search time.
+  @Test
+  void impliesWakesOnlyOnTheEventsOfItsPropagation() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 1, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Implies implies = new Implies(b, new XneqY(x, y));
+    assertThat(implies.getConsistencyPruningEvent(x)).isEqualTo(IntDomain.GROUND);
+    assertThat(implies.getConsistencyPruningEvent(y)).isEqualTo(IntDomain.GROUND);
+    assertThat(implies.getConsistencyPruningEvent(b)).isEqualTo(IntDomain.GROUND);
+    assertThat(new Implies(b, new XltY(x, y)).getConsistencyPruningEvent(x))
+        .isEqualTo(IntDomain.BOUND);
+    store.impose(implies);
+    assertThat(store.consistency()).isTrue();
+    store.impose(new XeqC(x, 3));
+    store.impose(new XeqC(y, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+  }
+
+  // Implies(b, x >= 6) woke only on c's own consistency event, GROUND for XgteqC, so x <= 5 did
+  // not set b = 0 until x was fixed; a reification set it at once
+  @Test
+  void impliesSetsItsBooleanFalseAsSoonAsItsConstraintFails() {
+    Random random = new Random(20261027);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 9);
+      IntVar y = new IntVar(store, "y", 0, 9);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      int c = random.nextInt(10);
+      PrimitiveConstraint nested =
+          switch (random.nextInt(6)) {
+            case 0 -> new XgteqC(x, c);
+            case 1 -> new XlteqC(x, c);
+            case 2 -> new XltY(x, y);
+            case 3 -> new XlteqY(x, y);
+            case 4 -> new LinearInt(new IntVar[] {x, y}, new int[] {1, 2}, "<=", c);
+            default -> new XneqY(x, y);
+          };
+      store.impose(new Implies(b, nested));
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      int lo = random.nextInt(10);
+      int hi = lo + random.nextInt(10 - lo);
+      x.domain.in(1, x, lo, hi);
+      if (random.nextBoolean()) {
+        int v = random.nextInt(10);
+        y.domain.in(1, y, v, v);
+      }
+      assertThat(store.consistency()).isTrue();
+      if (nested.notSatisfied()) {
+        assertThat(b.max()).as("trial %d, %s, x = %s, y = %s", trial, nested, x, y).isZero();
+      }
+    }
+  }
+
+  @Test
+  void impliesOfPrimitiveConstraintsMatchesBruteForce() {
+    Random random = new Random(47);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        int min = random.nextInt(4);
+        x[i] = new IntVar(store, "x" + i, min, min + 1 + random.nextInt(3));
+        if (random.nextBoolean()) {
+          x[i].domain.inComplement(store.level, x[i], min + 1);
+        }
+      }
+      IntVar[] b = new IntVar[3];
+      List<Predicate<int[]>> parts = new ArrayList<>();
+      for (int k = 0; k < b.length; k++) {
+        b[k] = new IntVar(store, "b" + k, 0, 1);
+        int i = random.nextInt(4);
+        int j = (i + 1 + random.nextInt(3)) % 4;
+        int c = random.nextInt(5);
+        int bi = 4 + k;
+        PrimitiveConstraint nested;
+        Predicate<int[]> holds;
+        switch (random.nextInt(6)) {
+          case 0 -> {
+            nested = new XneqY(x[i], x[j]);
+            holds = a -> a[i] != a[j];
+          }
+          case 1 -> {
+            nested = new XeqY(x[i], x[j]);
+            holds = a -> a[i] == a[j];
+          }
+          case 2 -> {
+            nested = new XltY(x[i], x[j]);
+            holds = a -> a[i] < a[j];
+          }
+          case 3 -> {
+            nested = new XplusCeqZ(x[i], c - 2, x[j]);
+            holds = a -> a[i] + c - 2 == a[j];
+          }
+          case 4 -> {
+            nested = new XneqC(x[i], c);
+            holds = a -> a[i] != c;
+          }
+          default -> {
+            nested = new LinearInt(new IntVar[] {x[i], x[j]}, new int[] {1, 2}, "!=", c + 3);
+            holds = a -> a[i] + 2 * a[j] != c + 3;
+          }
+        }
+        store.impose(new Implies(b[k], nested));
+        parts.add(a -> a[bi] == 0 || holds.test(a));
+      }
+      IntVar[] all = Stream.concat(Arrays.stream(x), Arrays.stream(b)).toArray(IntVar[]::new);
+      int expected = bruteForce(all, a -> parts.stream().allMatch(p -> p.test(a))).size();
+      List<IntVar> order = new ArrayList<>(Arrays.asList(all));
+      Collections.shuffle(order, random);
+      assertThat(countSolutions(store, order.toArray(new IntVar[0]), random))
+          .as("trial %d", trial)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void negatedImpliesFixesItsVariableBeforeNegatingTheConstraint() {
+    // not(b => (b = 1 <=> b)) has no solution; the reification is decided only once b is fixed
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Not(new Implies(b, new Reified(new XeqC(b, 1), b))));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void nestedXorForwardsVariableEventsToNestedConstraint() {
+    assertThat(consistentWithNestedAnd((and, b) -> new Reified(new Xor(and, b[0]), b[1])))
+        .isFalse();
+    assertThat(consistentWithNestedAnd((and, b) -> new Not(new Not(new Xor(and, b[0]))))).isFalse();
+  }
+
+  @Test
+  void conditionalForwardsVariableEventsToNestedConstraint() {
+    assertThat(
+            consistentWithNestedAnd(
+                (and, b) -> new Conditional(new IntVar[] {b[1]}, new PrimitiveConstraint[] {and})))
+        .isFalse();
+  }
+
+  @Test
+  void negatedIfThenReachesFixpoint() {
+    // not(x0 = 0 and x1 = 0 => x0 = x1): the condition fixes x0 = x1 = 0 after the negated
+    // consequence has run, so the negated consequence must run again and fail
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    store.impose(new Not(new IfThen(new And(new XeqC(x0, 0), new XeqC(x1, 0)), new XeqY(x0, x1))));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void ifThenElseReachesFixpoint() {
+    // the false branch rules out its side of the condition, then the other branch fixes the
+    // condition's variables to the side that was ruled out
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    IntVar x1 = new IntVar(store, "x1", 0, 1);
+    IntVar zero = new IntVar(store, "zero", 0, 0);
+    PrimitiveConstraint both = new And(new XeqC(x0, 1), new XeqC(x1, 1));
+    store.impose(new IfThenElse(new XeqY(x0, x1), new XeqC(zero, 1), both));
+    assertThat(store.consistency()).isFalse();
+
+    store = new Store();
+    x0 = new IntVar(store, "x0", 0, 1);
+    x1 = new IntVar(store, "x1", 0, 1);
+    zero = new IntVar(store, "zero", 0, 0);
+    both = new And(new XeqC(x0, 1), new XeqC(x1, 1));
+    store.impose(new IfThenElse(new XneqY(x0, x1), both, new XeqC(zero, 1)));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void imposedIfThenAndIfThenElseAreSatisfiedWhenTheirRelationHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 1);
+    IntVar y = new IntVar(store, "y", 1, 1);
+    IfThen ifThen = new IfThen(new XeqC(x, 1), new XeqC(y, 1));
+    IfThenElse ifThenElse = new IfThenElse(new XeqC(x, 1), new XeqC(y, 1), new XeqC(y, 0));
+    store.impose(ifThen);
+    store.impose(ifThenElse);
+    int constraints = store.numberConstraints();
+    assertThat(ifThen.satisfied()).isTrue();
+    assertThat(ifThenElse.satisfied()).isTrue();
+    // satisfied() only answers; it does not impose the branch
+    assertThat(ifThenElse.satisfied()).isTrue();
+    assertThat(store.numberConstraints()).isEqualTo(constraints);
+  }
+
+  @Test
+  void ifThenPropagatesWithoutImposingItsParts() {
+    // x = 1 => (y = 1 or z = 1), decided at a search level: the consequence is propagated in
+    // place, and after backtracking all solutions are found again
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    store.impose(new IfThen(new XeqC(x, 1), new Or(new XeqC(y, 1), new XeqC(z, 1))));
+    int constraints = store.numberConstraints();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x.domain.in(store.level, x, 1, 1);
+    z.domain.in(store.level, z, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.value()).isEqualTo(1);
+    assertThat(store.numberConstraints()).isEqualTo(constraints);
+    store.removeLevel(1);
+    store.setLevel(0);
+    assertThat(countSolutions(store, new IntVar[] {x, y, z}, new Random(1))).isEqualTo(7);
+  }
+
+  @Test
+  void channelsAreSatisfiedWhenTheirRelationHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 2);
+    IntVar[] b = {new IntVar(store, "b0", 0, 0), new IntVar(store, "b1", 1, 1)};
+    assertThat(new ChannelReif(x, b, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelReif(x, b, new int[] {2, 1}).satisfied()).isFalse();
+    assertThat(new ChannelImply(x, b, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelImply(x, b, new int[] {2, 1}).satisfied()).isFalse();
+
+    IntVar three = new IntVar(store, "three", 3, 3);
+    IntVar[] zeros = {new IntVar(store, "z0", 0, 0), new IntVar(store, "z1", 0, 0)};
+    assertThat(new ChannelReif(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
+    assertThat(new ChannelImply(three, zeros, new int[] {1, 2}).satisfied()).isTrue();
+  }
+
+  /** Counts all solutions, labelling the variables in the given order. */
+  private static int countInOrder(Store store, IntVar... vars) {
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(false);
+    search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+    return search.getSolutionListener().solutionsNo();
+  }
+
+  @Test
+  void testNegatedEqBoolKeepsAllSolutions() {
+    // not(eqBool(x, r)) holds for exactly the half of the 16 assignments where r differs from
+    // "all x are equal"; the negation used to force the wrong values
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Not(new EqBool(x, r)));
+    assertThat(countInOrder(store, x[0], x[1], x[2], r)).isEqualTo(8);
+
+    // with x0 = 0 and the result 0, the negation needs all equal: x1 = x2 = 0 only
+    Store store2 = new Store();
+    IntVar[] y = {
+      new IntVar(store2, "y0", 0, 0), new IntVar(store2, "y1", 0, 1), new IntVar(store2, "y2", 0, 1)
+    };
+    IntVar b = new IntVar(store2, "b", 0, 1);
+    IntVar r2 = new IntVar(store2, "r2", 0, 0);
+    store2.impose(new Reified(new EqBool(y, r2), b));
+    // b = 1 needs y not all equal (3 assignments), b = 0 needs all equal (1 assignment)
+    assertThat(countInOrder(store2, b, y[1], y[2])).isEqualTo(4);
+  }
+
+  @Test
+  void testEqBoolDecomposition() {
+    // the decomposition put every pair at index 0 and left a null in And
+    for (int n = 1; n <= 4; n++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      store.imposeDecomposition(new EqBool(x, r));
+      IntVar[] all = Arrays.copyOf(x, n + 1);
+      all[n] = r;
+      assertThat(store.consistency()).isTrue();
+      store.setLevel(1);
+      for (IntVar v : x) {
+        v.domain.in(store.level, v, 0, 0);
+      }
+      assertThat(store.consistency()).isTrue();
+      assertThat(r.singleton(1)).as("n = " + n).isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+      // one solution per assignment of x, with r = 1 exactly when all x are equal
+      assertThat(countInOrder(store, all)).as("n = " + n).isEqualTo(1 << n);
+    }
+  }
+
+  @Test
+  void testIfThenBoolSatisfied() {
+    // satisfied() and notSatisfied() of (x => y) <=> z on every ground assignment
+    for (int t = 0; t < 8; t++) {
+      Store store = new Store();
+      int xv = t >> 2;
+      int yv = (t >> 1) & 1;
+      int zv = t & 1;
+      IfThenBool c =
+          new IfThenBool(
+              new IntVar(store, "x", xv, xv),
+              new IntVar(store, "y", yv, yv),
+              new IntVar(store, "z", zv, zv));
+      boolean holds = (xv == 0 || yv == 1) == (zv == 1);
+      assertThat(c.satisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(holds);
+      assertThat(c.notSatisfied()).as("x=%d y=%d z=%d", xv, yv, zv).isEqualTo(!holds);
+    }
+  }
+
+  @Test
+  void testIfThenElseBoolSatisfied() {
+    // satisfied() of an imposed IfThenElseBool used to remove the constraint, impose a
+    // replacement and answer false whenever the condition was ground
+    for (int t = 0; t < 8; t++) {
+      Store store = new Store();
+      int cv = t >> 2;
+      int tv = (t >> 1) & 1;
+      int ev = t & 1;
+      BooleanVar cond = new BooleanVar(store, "c", cv, cv);
+      BooleanVar thenVar = new BooleanVar(store, "t", tv, tv);
+      BooleanVar elseVar = new BooleanVar(store, "e", ev, ev);
+      IfThenElseBool c = new IfThenElseBool(cond, thenVar, elseVar);
+      boolean holds = cv == 1 ? tv == 1 : ev == 1;
+      store.impose(c);
+      int constraints = store.numberConstraints();
+      assertThat(c.satisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(holds);
+      assertThat(c.notSatisfied()).as("c=%d t=%d e=%d", cv, tv, ev).isEqualTo(!holds);
+      assertThat(store.numberConstraints()).isEqualTo(constraints);
+      assertThat(store.consistency()).isEqualTo(holds);
+    }
+  }
+
+  @Test
+  void testBoolVectorsUnderIfThenAfterBacktracking() {
+    // IfThen imposes its consequence at a search level; that used to re-create the backtrackable
+    // position of AndBoolVector, OrBoolVector and BoolClause, which was emptied on backtracking
+    // while the consequence was still nested in IfThen (ArrayIndexOutOfBoundsException)
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar b = new IntVar(store, "b", 0, 1);
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      PrimitiveConstraint consequence =
+          switch (kind) {
+            case 0 -> new AndBoolVector(x, r);
+            case 1 -> new OrBoolVector(x, r);
+            default -> new BoolClause(x, new IntVar[] {r});
+          };
+      store.impose(new IfThen(new XeqC(b, 1), consequence));
+      // b = 0: all 16 assignments; b = 1: 8 for AndBoolVector and OrBoolVector, 15 for the clause
+      int expected = 16 + (kind == 2 ? 15 : 8);
+      assertThat(countInOrder(store, b, x[0], x[1], x[2], r))
+          .as("kind " + kind)
+          .isEqualTo(expected);
+      // and again with b = 1 tried first, so the nested constraint is used after backtracking
+      store = new Store();
+      IntVar nb = new IntVar(store, "nb", 0, 1);
+      IntVar[] y = new IntVar[3];
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, 0, 1);
+      }
+      IntVar s = new IntVar(store, "s", 0, 1);
+      consequence =
+          switch (kind) {
+            case 0 -> new AndBoolVector(y, s);
+            case 1 -> new OrBoolVector(y, s);
+            default -> new BoolClause(y, new IntVar[] {s});
+          };
+      store.impose(new IfThen(new XeqC(nb, 0), consequence));
+      assertThat(countInOrder(store, nb, y[0], y[1], y[2], s))
+          .as("kind " + kind)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void testBoolVectorsReimposedAfterBacktrackingFromTheirFirstImpose() {
+    // the other order: first imposed at a search level, backtracked, imposed again
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar r = new IntVar(store, "r", 0, 1);
+      PrimitiveConstraint c =
+          switch (kind) {
+            case 0 -> new AndBoolVector(x, r);
+            case 1 -> new OrBoolVector(x, r);
+            default -> new BoolClause(x, new IntVar[] {r});
+          };
+      store.setLevel(1);
+      store.impose(c);
+      assertThat(store.consistency()).isTrue();
+      store.removeLevel(1);
+      store.setLevel(1);
+      store.impose(c);
+      int expected = kind == 2 ? 15 : 8;
+      assertThat(countInOrder(store, x[0], x[1], x[2], r)).as("kind " + kind).isEqualTo(expected);
+    }
+  }
+
+  // NoGood watched a repeated variable as if it were two, so a no-good that can never match (one
+  // variable with two values) removed a value, and one with a repeated value threw
+  // IllegalStateException.
+  @Test
+  void testNoGoodWithRepeatedVariable() {
+
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    store.impose(new NoGood(new IntVar[] {x, y, y}, new int[] {3, 1, 2}));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(12);
+
+    store = new Store();
+    x = new IntVar(store, "x", 0, 3);
+    y = new IntVar(store, "y", 0, 3);
+    store.impose(new NoGood(new IntVar[] {x, x, y}, new int[] {1, 1, 1}));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {x, y})).isEqualTo(15);
+  }
+
+  // ElementBool never restricted the value variable to 0..1, so value 2 was accepted once the
+  // value variable had 1 as its minimum.
+  @Test
+  void testElementBoolValueOutsideZeroOne() {
+
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    IntVar value = new IntVar(store, "value", 1, 2);
+    store.impose(new ElementBool(index, new int[] {1, 1, 0}, value, 0));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {index, value})).isEqualTo(2);
+  }
+
+  // Sum stopped propagating after changing the sum, so when the sum variable was also summed and
+  // became ground by that change the wrong value was accepted.
+  @Test
+  void testSumWithSumVariableInList() {
+
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", -2, -2);
+    IntVar b = new IntVar(store, "b", 0, 0);
+    IntVar c = new IntVar(store, "c", -2, 3);
+    // a + b + c = c needs a + b = 0
+    store.impose(new Sum(new IntVar[] {a, b, c}, c));
+
+    assertThat(noOfAllSolutions(store, new IntVar[] {a, b, c})).isZero();
+  }
+
+  // MaxSimple and MinSimple reported satisfied() when both arguments were on the right side of the
+  // result, without checking that one of them is equal to it.
+  @Test
+  void testMaxSimpleMinSimpleSatisfied() {
+
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", -2, -1);
+    IntVar x2 = new IntVar(store, "x2", -2, -1);
+    IntVar m = new IntVar(store, "m", -1, -1);
+    MaxSimple max = new MaxSimple(x1, x2, m);
+    assertThat(max.satisfied()).isFalse();
+    x2.domain.in(store.level, x2, -1, -1);
+    assertThat(max.satisfied()).isTrue();
+
+    store = new Store();
+    x1 = new IntVar(store, "x1", 2, 3);
+    x2 = new IntVar(store, "x2", 2, 3);
+    m = new IntVar(store, "m", 2, 2);
+    MinSimple min = new MinSimple(x1, x2, m);
+    assertThat(min.satisfied()).isFalse();
+    x1.domain.in(store.level, x1, 2, 2);
+    assertThat(min.satisfied()).isTrue();
+  }
+
+  // CountValuesBounds.satisfied() counted only the ground variables, so it held while variables
+  // that may still take a value could exceed its upper bound.
+  @Test
+  void testCountValuesBoundsSatisfied() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 2, 2), new IntVar(store, "x1", 0, 2)};
+    CountValuesBounds count =
+        new CountValuesBounds(x, new int[] {0, 1}, new int[] {1, 1}, new int[] {0, 2});
+    // x1 = 2 counts 2 twice
+    assertThat(count.satisfied()).isFalse();
+    x[1].domain.in(store.level, x[1], 0, 0);
+    assertThat(count.satisfied()).isTrue();
+  }
+
+  // AmongVar.satisfied() threw IllegalStateException (with asserts enabled) when the constraint
+  // grounded variables itself, since its counters do not see those changes.
+  @Test
+  void testAmongVarSatisfiedAfterGroundingItsVariables() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 2, 2)};
+    IntVar y = new IntVar(store, "y", 0, 2);
+    IntVar n = new IntVar(store, "n", 2, 2);
+    y.domain.in(store.level, y, new IntervalDomain(0, 0).union(2));
+    AmongVar among = new AmongVar(x, new IntVar[] {y}, n);
+    store.impose(among);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].value()).isEqualTo(2);
+    assertThat(among.satisfied()).isTrue();
+  }
+
+  // IfThen, IfThenElse and Implies did not pass include() on to their constraints, so a counting
+  // constraint nested in them under another wrapper never created its TimeStamps and threw
+  // NullPointerException from consistency() or notConsistency().
+  @Test
+  void testCountingConstraintsNestedInWrappers() {
+
+    Map<String, Function<IntVar[], PrimitiveConstraint>> constraints = new LinkedHashMap<>();
+    constraints.put("Count", x -> new Count(new IntVar[] {x[0], x[1]}, x[2], 1));
+    constraints.put("CountBounds", x -> new CountBounds(new IntVar[] {x[0], x[1], x[2]}, 1, 1, 2));
+    constraints.put("CountVar", x -> new CountVar(new IntVar[] {x[0], x[1]}, x[2], x[1]));
+    constraints.put("AtLeast", x -> new AtLeast(new IntVar[] {x[0], x[1], x[2]}, 2, 1));
+    constraints.put("AtMost", x -> new AtMost(new IntVar[] {x[0], x[1], x[2]}, 1, 1));
+    constraints.put("AllEqual", x -> new AllEqual(new IntVar[] {x[0], x[1], x[2]}));
+
+    // variables: r, b, x0, x1, x2
+    List<BiFunction<IntVar[], PrimitiveConstraint, PrimitiveConstraint>> models =
+        List.of(
+            (v, c) -> new Reified(new IfThen(c, new XeqC(v[1], 1)), v[0]),
+            (v, c) -> new And(new IfThen(c, new XeqC(v[1], 1)), new XeqC(v[0], 1)),
+            (v, c) -> new Or(new IfThen(new XeqC(v[1], 1), c), new XeqC(v[0], 1)),
+            (v, c) -> new Not(new IfThen(c, new XeqC(v[1], 1))),
+            (v, c) -> new Reified(new IfThenElse(new XeqC(v[1], 1), c, new XeqC(v[2], 0)), v[0]),
+            (v, c) -> new Xor(new IfThen(c, new XeqC(v[1], 1)), v[0]),
+            (v, c) -> new Reified(new Implies(v[1], c), v[0]),
+            (v, c) ->
+                new IfThen(
+                    new XeqC(v[0], 1), new IfThenElse(new XeqC(v[1], 1), c, new XeqC(v[2], 0))),
+            (v, c) ->
+                new IfThenElse(new XeqC(v[0], 1), new IfThen(new XeqC(v[1], 1), c), new Not(c)));
+
+    for (Map.Entry<String, Function<IntVar[], PrimitiveConstraint>> e : constraints.entrySet()) {
+      for (int m = 0; m < models.size(); m++) {
+        BiFunction<IntVar[], PrimitiveConstraint, PrimitiveConstraint> model = models.get(m);
+
+        // reference: the model posted on ground variables, one store per assignment
+        int expected = 0;
+        for (int t = 0; t < 4 * 27; t++) {
+          Store ground = new Store();
+          int[] values = {t / 54, t / 27 % 2, t / 9 % 3, t / 3 % 3, t % 3};
+          IntVar[] g = new IntVar[5];
+          for (int i = 0; i < 5; i++) {
+            g[i] = new IntVar(ground, "v" + i, values[i], values[i]);
+          }
+          ground.impose(model.apply(g, e.getValue().apply(Arrays.copyOfRange(g, 2, 5))));
+          if (ground.consistency()) {
+            expected++;
+          }
+        }
+
+        for (int order = 0; order < 5; order++) {
+          Store store = new Store();
+          IntVar[] v = {
+            new IntVar(store, "r", 0, 1),
+            new IntVar(store, "b", 0, 1),
+            new IntVar(store, "x0", 0, 2),
+            new IntVar(store, "x1", 0, 2),
+            new IntVar(store, "x2", 0, 2)
+          };
+          store.impose(model.apply(v, e.getValue().apply(Arrays.copyOfRange(v, 2, 5))));
+          IntVar[] vars = new IntVar[5];
+          for (int i = 0; i < 5; i++) {
+            vars[i] = v[(i + order) % 5];
+          }
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          search.getSolutionListener().searchAll(true);
+          search.getSolutionListener().recordSolutions(false);
+          search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMax<>()));
+          assertThat(search.getSolutionListener().solutionsNo())
+              .as(e.getKey() + " in model " + m + " order " + order)
+              .isEqualTo(expected);
+        }
+      }
+    }
+  }
+
+  static class TestWatcherExtension implements BeforeEachCallback {
+    @Override
+    public void beforeEach(ExtensionContext context) {
+      log.info("Starting test: " + context.getDisplayName());
+    }
+  }
+
+  @Test
+  void testSequenceWithBoundsOutsideWindowHasNoSolution() {
+
+    // a window of 2 holds at most 2 values of the set, so min = 3 or max = -1 cannot be met
+    for (int[] minMax : new int[][] {{3, 3}, {-1, -1}}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+
+      store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, minMax[0], minMax[1]));
+
+      assertThat(noOfAllSolutions(store, x)).isZero();
+    }
+  }
+
+  @Test
+  void testSequenceWithWindowLongerThanListHoldsTrivially() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+
+    // no window of 4 fits in 3 variables, so every assignment is a solution
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 4, 1, 1));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(8);
+  }
+
+  @Test
+  void testSequenceRejectsNonPositiveWindow() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 3, 2);
+
+    assertThatThrownBy(() -> new Sequence(x, new IntervalDomain(1, 1), 0, 0, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchForbidsValueWithZeroMaximalLength() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 2);
+    }
+
+    // value 2 may form stretches of length 0 only, so x must be [1, 1, 1]
+    store.imposeDecomposition(new Stretch(new int[] {1, 2}, new int[] {1, 0}, new int[] {3, 0}, x));
+
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(1);
+  }
+
+  @Test
+  void testStretchRejectsRepeatedValues() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    // with value 1 listed twice, [1, 1] was accepted as two stretches of length 1
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 1}, new int[] {1, 1}, new int[] {1, 1}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testStretchRejectsArraysOfDifferentLengths() {
+
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 2, 2);
+
+    assertThatThrownBy(() -> new Stretch(new int[] {1, 2}, new int[] {1}, new int[] {2, 2}, x))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testBoundDomainInEmptyDomainFails() {
+
+    Store store = new Store();
+    // Boolean variables have a BoundDomain
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+    }
+
+    // the automaton has no accepting word, so Regular restricts x to empty domains
+    store.imposeDecomposition(new Sequence(x, new IntervalDomain(1, 1), 2, -1, -1));
+
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void testCountValuesBoundsIsNotSatisfiedWhileUnassignedVariablesCanExceedABound() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 2, 3);
+    }
+    // at most one variable equal to 3: nothing is assigned, so the occurrences of 3 counted so far
+    // (none) are within the bounds, but two or three variables can still take 3
+    CountValuesBounds c = new CountValuesBounds(x, new int[] {0}, new int[] {1}, new int[] {3});
+    store.impose(c);
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  @Test
+  void testCountValuesIsNotSatisfiedWhileAnUnassignedVariableCanChangeACount() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 3, 3), new IntVar(store, "x1", 2, 3)};
+    IntVar counter = new IntVar(store, "counter", 1, 1);
+    CountValues c = new CountValues(x, new IntVar[] {counter}, new int[] {3});
+
+    // checked before propagation, which would remove 3 from x1: x1 = 3 would still give two 3s
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  // With min = max the windows force a period of q, so Sequence posts reified memberships on q
+  // Booleans and one sum instead of Regular. It must keep the solutions and the domain
+  // consistency of the Regular automaton.
+  @Test
+  void testSequenceWithEqualBoundsMatchesRegular() {
+
+    Random random = new Random(7);
+    for (int instance = 0; instance < 300; instance++) {
+      int n = 2 + random.nextInt(6);
+      int q = 1 + random.nextInt(n);
+      int count = random.nextInt(q + 1);
+      int[][] values = new int[n][];
+      for (int i = 0; i < n; i++) {
+        values[i] = random.ints(1 + random.nextInt(3), 0, 4).toArray();
+      }
+      IntervalDomain set = new IntervalDomain(1, 1 + random.nextInt(2));
+
+      Store periodStore = new Store();
+      IntVar[] x = sequenceVariables(periodStore, values);
+      Sequence periodic = new Sequence(x, set, q, count, count);
+      assertThat(periodic.decompose(periodStore)).noneMatch(c -> c instanceof Regular);
+      periodStore.imposeDecomposition(periodic);
+
+      Store regularStore = new Store();
+      IntVar[] y = sequenceVariables(regularStore, values);
+      for (Constraint c : Sequence.decomposeByRegular(new Sequence(y, set, q, count, count))) {
+        regularStore.impose(c);
+      }
+
+      boolean consistent = regularStore.consistency();
+      assertThat(periodStore.consistency()).isEqualTo(consistent);
+      if (consistent) {
+        for (int i = 0; i < n; i++) {
+          assertThat(x[i].dom().toString()).isEqualTo(y[i].dom().toString());
+        }
+        assertThat(noOfAllSolutions(periodStore, x)).isEqualTo(noOfAllSolutions(regularStore, y));
+      }
+    }
+  }
+
+  private static IntVar[] sequenceVariables(Store store, int[][] values) {
+    IntVar[] x = new IntVar[values.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i);
+      for (int v : values[i]) {
+        x[i].addDom(v, v);
+      }
+    }
+    return x;
+  }
+
+  /** LinearForm compares, hashes and prints its arrays by content, not by identity. */
+  @Test
+  void linearFormComparesArraysByContent() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    LinearForm a = new LinearForm(new IntVar[] {x, y}, new long[] {1, -2}, 3, LinearForm.LE);
+    LinearForm b = new LinearForm(new IntVar[] {x, y}, new long[] {1, -2}, 3, LinearForm.LE);
+    assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
+    assertThat(a).isNotEqualTo(a.negated());
+    assertThat(a.toString()).contains("weights=[1, -2]");
+  }
+
+  // Rectangle 2 overlaps rectangle 0 in x at every position and always covers y = 2, so rectangle 0
+  // (at least 2 high) cannot start at y 1 or 2. Rectangle 3 reaches outside rectangle 0 in y; it
+  // must not widen the limit of
+  // the sweep profile, or the pruning is lost.
+  @Test
+  void diffnSweepLimitIgnoresRectanglesOutsideInOtherDimension() {
+    Store store = new Store();
+    IntVar y0 = new IntVar(store, "y0", 0, 3);
+    IntVar[][] rectangles = {
+      {new IntVar(store, 4, 4), y0, new IntVar(store, 3, 3), new IntVar(store, 2, 3)},
+      {
+        new IntVar(store, 4, 6),
+        new IntVar(store, 3, 6),
+        new IntVar(store, 1, 1),
+        new IntVar(store, 3, 3)
+      },
+      {
+        new IntVar(store, 4, 5),
+        new IntVar(store, 0, 2),
+        new IntVar(store, 1, 2),
+        new IntVar(store, 3, 3)
+      },
+      {
+        new IntVar(store, 3, 3),
+        new IntVar(store, 4, 6),
+        new IntVar(store, 3, 3),
+        new IntVar(store, 3, 4)
+      }
+    };
+    store.impose(new Diffn(rectangles, false));
+
+    assertThat(store.consistency()).isTrue();
+    assertThat(y0.dom().toString()).isEqualTo("{0, 3}");
+  }
+
+  @Test
+  void sumWeightPrunesOnceATermExceedsTheSlack() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    // x + y + 2z = 2: both sides have a slack of 2, as large as the term of z, so nothing prunes
+    store.impose(new SumWeight(new IntVar[] {x, y, z}, new int[] {1, 1, 2}, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().toString()).isEqualTo("{0..1}");
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 1, 1);
+    // now the slack below the sum is 1 and z must be 0
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.value()).isZero();
+    assertThat(y.value()).isEqualTo(1);
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    assertThat(z.dom().toString()).isEqualTo("{0..1}");
+
+    Store other = new Store();
+    IntVar a = new IntVar(other, "a", 0, 1);
+    IntVar b = new IntVar(other, "b", 0, 1);
+    IntVar c = new IntVar(other, "c", 0, 1);
+    // a + b + 3c = 3: the slack above the sum is 2, less than the term of c, so c = 1
+    other.impose(new SumWeight(new IntVar[] {a, b, c}, new int[] {1, 1, 3}, 3));
+    assertThat(other.consistency()).isTrue();
+    assertThat(c.value()).isEqualTo(1);
+    assertThat(a.value()).isZero();
+    assertThat(b.value()).isZero();
+  }
+
+  // A LinearInt that drops fixed variables listened to every removed level, so many short sums
+  // (such as the blocks of a split long sum) were each called at every backtrack. It now restores
+  // its state only at the levels where it dropped a variable.
+  @Test
+  void testLinearIntRestoresDroppedTermsOnlyWhereTheyChanged() {
+
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 4);
+    }
+    int[] a = {1, 2, -1, 3, -2};
+    store.impose(new LinearInt(x, a, "==", 5));
+    assertThat(store.removeLevelListeners).isEmpty();
+
+    int expected = 0;
+    for (int t = 0; t < 5 * 5 * 5 * 5 * 5; t++) {
+      long sum = 0;
+      for (int i = 0, v = t; i < x.length; i++, v /= 5) {
+        sum += (long) a[i] * (v % 5);
+      }
+      if (sum == 5) {
+        expected++;
+      }
+    }
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(expected);
+  }
+
+  // Under --lcg a long linear constraint is split into block sums, and a failure of the sum of the
+  // blocks weighed only the block sums, which dom/wdeg does not branch on: cutstock type04_TEST9
+  // found no solution in 60 s. The sum of the blocks now weighs the terms it stands for.
+  @Test
+  void testLinearIntFailureWeighsTheVariablesItIsGiven() {
+
+    Store store = new Store();
+    store.variableWeightManagement = true;
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar s = new IntVar(store, "s", 0, 2);
+    IntVar t = new IntVar(store, "t", 0, 2);
+    LinearInt sum = new LinearInt(new IntVar[] {s, t}, new int[] {1, 1}, ">=", 5);
+    sum.setWeightedVariables(new IntVar[] {x, y});
+    store.impose(sum);
+
+    assertThat(store.consistency()).isFalse();
+    assertThat(new int[] {x.weight, y.weight, s.weight, t.weight}).containsExactly(2, 2, 1, 1);
+  }
+
+  @Test
+  public void scopeAndBoolVectorKeepInputOrder() {
+    // both were HashSets, so their order followed identity hash codes: constraints attached to
+    // variables in another order, and -f searched another tree, under other JVM flags
+    Store store = new Store();
+    IntVar[] x = new IntVar[40];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar[] list = new IntVar[x.length + 1];
+    for (int i = 0; i < x.length; i++) {
+      list[i] = x[x.length - 1 - i];
+    }
+    list[x.length] = x[7];
+
+    OrBoolVector c = new OrBoolVector(list, y);
+
+    List<Var> expected = new ArrayList<>(Arrays.asList(list).subList(0, x.length));
+    expected.add(y);
+    assertThat(c.arguments()).containsExactlyElementsOf(expected);
+    String s = c.toString();
+    for (int i = 1; i < x.length; i++) {
+      assertThat(s.indexOf(list[i - 1].id() + ":")).isLessThan(s.indexOf(list[i].id() + ":"));
+    }
+  }
+
+  @Test
+  public void constraintCountsItsConsistencyCalls() {
+    // the replays of LCG explanations are budgeted by these counts, not by time, so that a run
+    // repeats its search
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    XltY c = new XltY(x, y);
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    long calls = c.consistencyCalls();
+    assertThat(calls).isPositive();
+
+    store.setLevel(1);
+    store.impose(new XeqC(y, 5));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.consistencyCalls()).isGreaterThan(calls);
+    assertThat(store.numberConsistencyCalls).isGreaterThanOrEqualTo(c.consistencyCalls());
+  }
+}

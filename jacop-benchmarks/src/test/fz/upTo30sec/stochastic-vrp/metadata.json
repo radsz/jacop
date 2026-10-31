@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element", "array_var_int_element", "int_lin_eq", "int_lin_le", "jacop_circuit", "jacop_maximum"],
+  "constraintFamilies": ["circuit", "element", "linear", "minmax"],
+  "domains": []
+}

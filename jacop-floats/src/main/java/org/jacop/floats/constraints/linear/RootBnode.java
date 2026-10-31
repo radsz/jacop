@@ -1,0 +1,220 @@
+/*
+ * RootBnode.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.floats.constraints.linear;
+
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+
+/** Root node for linear constraint tree. */
+public class RootBnode extends Bnode {
+
+  // right hand value
+  double val;
+  // relation
+  byte rel;
+
+  /**
+   * Constructs a root binary node with default bounds.
+   *
+   * @param store the constraint store
+   */
+  public RootBnode(Store store) {
+    super(store);
+  }
+
+  /**
+   * Constructs a root binary node with specified min and max bounds.
+   *
+   * @param store the constraint store
+   * @param min the minimum bound
+   * @param max the maximum bound
+   */
+  public RootBnode(Store store, double min, double max) {
+    super(store, min, max);
+  }
+
+  @Override
+  void propagateAndPrune() {
+
+    boolean changed = propagateForRoot();
+
+    if (changed) {
+
+      prune();
+
+      propagateForRoot();
+    }
+  }
+
+  @Override
+  void propagate() {
+
+    propagateForRoot();
+  }
+
+  boolean propagateForRoot() {
+
+    FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
+    double min = d.min();
+    double max = d.max();
+
+    checkRelationConsistency(min, max);
+
+    double currentMin = min();
+    double currentMax = max();
+    FloatDomain l = FloatDomain.addBounds(left.lb(), left.ub(), right.lb(), right.ub());
+    double lb = l.min();
+    double ub = l.max();
+
+    return updateBoundIfTightened(min, max, currentMin, currentMax, lb, ub);
+  }
+
+  private void checkRelationConsistency(double min, double max) {
+    switch (rel) {
+      case Linear.EQ:
+        if (min > val || max < val) {
+          throw Store.failException;
+        }
+        break;
+      case Linear.LT:
+        if (min >= val) {
+          throw Store.failException;
+        }
+        break;
+      case Linear.LE:
+        if (min > val) {
+          throw Store.failException;
+        }
+        break;
+      case Linear.GT:
+        if (max <= val) {
+          throw Store.failException;
+        }
+        break;
+      case Linear.GE:
+        if (max < val) {
+          throw Store.failException;
+        }
+        break;
+      case Linear.NE:
+        if (min == max && min == val) {
+          throw Store.failException;
+        }
+        break;
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private boolean updateBoundIfTightened(
+      double min, double max, double currentMin, double currentMax, double lb, double ub) {
+    if (min > currentMin) {
+      if (max < currentMax) {
+        if (min > max) {
+          throw Store.failException;
+        }
+        bound.update(min, max, lb, ub);
+      } else {
+        if (min > currentMax) {
+          throw Store.failException;
+        }
+        bound.update(min, currentMax, lb, ub);
+      }
+      return true;
+    }
+    if (max < currentMax) {
+      if (currentMin > max) {
+        throw Store.failException;
+      }
+      bound.update(currentMin, max, lb, ub);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  void prune() {
+
+    double min = min();
+    double max = max();
+
+    double[] pruned = computePrunedMinMax(min, max);
+    prune(pruned[0], pruned[1]);
+  }
+
+  private double[] computePrunedMinMax(double min, double max) {
+    switch (rel) {
+      case Linear.EQ:
+        return new double[] {val, val};
+      case Linear.LT:
+        return new double[] {min, FloatDomain.previous(val)};
+      case Linear.LE:
+        return new double[] {min, val};
+      case Linear.NE:
+        return computePrunedMinMaxNe(min, max);
+      case Linear.GT:
+        return new double[] {FloatDomain.next(val), max};
+      case Linear.GE:
+        return new double[] {val, max};
+      default:
+        throw new RuntimeException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private double[] computePrunedMinMaxNe(double min, double max) {
+    if (val >= min && val <= max) {
+      if (min == val) {
+        if (FloatDomain.next(min) <= max) {
+          min = FloatDomain.next(min);
+        } else {
+          throw Store.failException;
+        }
+      } else if (max == val) {
+        if (FloatDomain.previous(max) >= min) {
+          max = FloatDomain.previous(max);
+        } else {
+          throw Store.failException;
+        }
+      }
+    }
+    return new double[] {min, max};
+  }
+
+  /**
+   * Returns a string representation of this root binary node.
+   *
+   * @return string representation including relation and value
+   */
+  @Override
+  public String toString() {
+    return super.toString() + " (rel = " + rel + ", val = " + val + ")";
+  }
+}

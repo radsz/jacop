@@ -1,0 +1,117 @@
+/*
+ * Rosenbrock.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.examples.floats;
+
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PplusQeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.Optimize;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+
+/** Example for Rosenbrock function using float constraints. */
+@Slf4j
+public class Rosenbrock {
+
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    Rosenbrock example = new Rosenbrock();
+
+    example.rosenbrock();
+  }
+
+  void rosenbrock() {
+
+    long startTime;
+    startTime = System.currentTimeMillis();
+
+    log.info("========= rosenbrock =========");
+
+    Store store = new Store();
+
+    FloatDomain.setPrecision(1e-14);
+    FloatDomain.intervalPrint(false);
+
+    FloatVar x1 = new FloatVar(store, "x1", -1.0, 8.0);
+    FloatVar x2 = new FloatVar(store, "x2", -1.0, 8.0);
+    FloatVar z = new FloatVar(store, "z", minFloat, maxFloat);
+
+    FloatVar x1x1 = new FloatVar(store, "x1x1", minFloat, maxFloat);
+    FloatVar one = new FloatVar(store, "1", 1.0, 1.0);
+    FloatVar t1 = new FloatVar(store, "t1", minFloat, maxFloat);
+    FloatVar t2 = new FloatVar(store, "t2", minFloat, maxFloat);
+    FloatVar t3 = new FloatVar(store, "t3", minFloat, maxFloat);
+    FloatVar t4 = new FloatVar(store, "t4", minFloat, maxFloat);
+
+    store.impose(new PmulQeqR(x1, x1, x1x1)); // x1*x1
+    store.impose(new PplusQeqR(x1x1, t1, x2)); // x2 - x1*x1
+    store.impose(new PplusQeqR(x1, t2, one)); // 1 - x1
+    store.impose(new PmulQeqR(t1, t1, t3)); // (x2 - x1*x1)*(x2 - x1*x1)
+    store.impose(new PmulQeqR(t2, t2, t4)); // (1 - x1)*(1 -x1)
+    store.impose(
+        new LinearFloat(new FloatVar[] {z, t3, t4}, new double[] {-1.0, 100.0, 1.0}, "==", 0.0));
+
+    log.info(
+        "\bFloatVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, new FloatVar[] {x1, x2}, null);
+
+    Optimize<FloatVar> min = new Optimize<>(store, label, s, z);
+    boolean result = min.minimize();
+
+    if (result) {
+      log.info("\nPrecision = " + FloatDomain.precision());
+
+      long endTime = System.currentTimeMillis();
+      long elapsed = endTime - startTime;
+
+      log.info("\n\t*** Execution time = " + elapsed + " ms");
+    }
+  }
+}

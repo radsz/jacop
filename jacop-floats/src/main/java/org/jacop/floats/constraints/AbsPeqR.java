@@ -1,0 +1,153 @@
+/*
+ * AbsPeqR.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.floats.constraints;
+
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
+import org.jacop.constraints.Constraint;
+import org.jacop.core.InitOnce;
+import org.jacop.core.IntDomain;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatVar;
+
+/**
+ * Constraints |P| #= R.
+ *
+ * <p>Bounds consistency can be used; third parameter of constructor controls this.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class AbsPeqR extends Constraint implements SatisfiedPresent, Copyable<AbsPeqR> {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** It contains variable p. */
+  private final FloatVar p;
+
+  /** It contains variable q. */
+  private final FloatVar q;
+
+  /** One-time work of the first consistency call. */
+  final InitOnce init = new InitOnce();
+
+  /**
+   * It constructs |P| = Q constraints.
+   *
+   * @param p variable P1
+   * @param q variable Q
+   */
+  public AbsPeqR(FloatVar p, FloatVar q) {
+
+    checkInputForNullness(new String[] {"p", "q"}, new Object[] {p, q});
+
+    numberId = idNumber.incrementAndGet();
+
+    this.queueIndex = 0;
+    this.p = p;
+    this.q = q;
+
+    setScope(p, q);
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    if (init.begin(store)) {
+      q.domain.inMin(store.level, q, 0.0);
+    }
+
+    boundConsistency(store);
+  }
+
+  void boundConsistency(Store store) {
+
+    do {
+
+      if (p.min() >= 0) {
+        // possible domain consistecny for this case
+        // bounds consistency
+        updateDomains(store, q.min(), q.max(), p.min(), p.max());
+      } else if (p.max() < 0) {
+        updateDomains(store, -q.max(), -q.min(), -p.max(), -p.min());
+      } else { // p.min() < 0 && p.max() >= 0
+        double pBound = q.max(); // q is always >= 0
+        p.domain.in(store.level, p, -pBound, pBound);
+
+        store.propagationHasOccurred = false;
+
+        q.domain.inMax(store.level, q, Math.max(-p.min(), p.max()));
+      }
+
+    } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Updates p and q domains with the given bounds and resets the propagation flag.
+   *
+   * @param store the constraint store
+   * @param pminValue minimum bound for p
+   * @param pmaxValue maximum bound for p
+   * @param qminValue minimum bound for q
+   * @param qmaxValue maximum bound for q
+   */
+  private void updateDomains(
+      Store store, double pminValue, double pmaxValue, double qminValue, double qmaxValue) {
+    p.domain.in(store.level, p, pminValue, pmaxValue);
+
+    store.propagationHasOccurred = false;
+
+    q.domain.in(store.level, q, qminValue, qmaxValue);
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return grounded() && Math.abs(p.min()) == q.min();
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : absPeqR(" + p + ", " + q + " )";
+  }
+
+  @Override
+  public AbsPeqR copy(VarMap map) {
+    return new AbsPeqR(map.get(p), map.get(q));
+  }
+}

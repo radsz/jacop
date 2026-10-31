@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["float_eq", "float_le", "float_lin_eq", "float_times"],
+  "constraintFamilies": ["float"],
+  "domains": []
+}

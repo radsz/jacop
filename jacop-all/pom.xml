@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.jacop</groupId>
+        <artifactId>jacop-parent</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <artifactId>jacop-all</artifactId>
+    <packaging>jar</packaging>
+
+    <description>JaCoP All-in-One: Aggregated JAR with all modules and dependencies</description>
+
+    <properties>
+        <jacop-all.enabled>false</jacop-all.enabled>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-floats</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-sets</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-sat</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-flatzinc</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-scala</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Shade replaces this jar in place; without forceCreation an incremental build keeps the
+                 previously shaded jar and re-shades its stale classes over the freshly built modules. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <forceCreation>true</forceCreation>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <includes>
+                                    <include>org.jacop:jacop-core</include>
+                                    <include>org.jacop:jacop-floats</include>
+                                    <include>org.jacop:jacop-sets</include>
+                                    <include>org.jacop:jacop-sat</include>
+                                    <include>org.jacop:jacop-flatzinc</include>
+                                    <include>org.jacop:jacop-scala</include>
+                                </includes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.9.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeScope>runtime</includeScope>
+                            <excludeTransitive>false</excludeTransitive>
+                            <stripVersion>false</stripVersion>
+                            <excludeGroupIds>org.jacop</excludeGroupIds>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-script-templates</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/resources/scripts</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>*.template</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- MiniZinc solver configuration; mznlib and executable paths are relative to the .msc file -->
+                    <execution>
+                        <id>copy-minizinc-solver-config</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../jacop-flatzinc/src/main/minizinc</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>org.jacop.msc</include>
+                                    </includes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <!-- FlatZinc models the fzn-jacop-aot script trains the JVM's ahead-of-time cache on -->
+                    <execution>
+                        <id>copy-aot-training-models</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}/aot-training</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/aot-training</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>copy-minizinc-library</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <outputDirectory>${project.build.directory}/mznlib</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../jacop-flatzinc/src/main/minizinc/org/jacop/minizinc</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>rename-scripts-and-chmod</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${jacop-all.enabled} != true</skip>
+                            <target>
+                                <move file="${project.build.directory}/fzn-jacop.template"
+                                      tofile="${project.build.directory}/fzn-jacop"
+                                      overwrite="true"/>
+                                <move file="${project.build.directory}/jacop.template"
+                                      tofile="${project.build.directory}/jacop"
+                                      overwrite="true"/>
+                                <chmod file="${project.build.directory}/fzn-jacop" perm="ugo+x"/>
+                                <chmod file="${project.build.directory}/jacop" perm="ugo+x"/>
+                                <move file="${project.build.directory}/fzn-jacop-aot.template"
+                                      tofile="${project.build.directory}/fzn-jacop-aot"
+                                      overwrite="true"/>
+                                <chmod file="${project.build.directory}/fzn-jacop-aot" perm="ugo+x"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- mvn -Paot -DskipTests install: also makes target/jacop.aot, the ahead-of-time cache that
+             cuts fzn-jacop's JVM start-up (needs bash and Java 25 as java on the PATH) -->
+        <profile>
+            <id>aot</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>make-aot-cache</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <exec executable="bash" dir="${project.build.directory}"
+                                              failonerror="true">
+                                            <arg value="./fzn-jacop-aot"/>
+                                        </exec>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+</project>

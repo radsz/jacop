@@ -1,0 +1,693 @@
+/*
+ * Portfolio.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.fz;
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
+import java.util.regex.Pattern;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.free.SharedSolution;
+
+/**
+ * A parallel portfolio for FlatZinc models (option -p). Each thread reads the model into a store of
+ * its own and solves it with its own settings: the first with the options given, the others with
+ * free search and lazy clause generation under other heuristics. The threads share the objective
+ * value of the best solution found so far, which bounds the search of the others, and the values of
+ * the model's variables in it, which free search threads replay to start their neighbourhoods and
+ * values from it. The first thread that finishes its search decides the result: a solution for
+ * satisfaction, an optimum, or that there is none.
+ *
+ * <p>The threads print to their own capture, which tells when a thread has explored its whole
+ * search space; the portfolio alone prints solutions and the final status.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@SuppressWarnings("java:S106") // stdout is the interface of a FlatZinc solver
+final class Portfolio {
+
+  /**
+   * The settings of the threads after the first, in this order; -f and --lcg are given here. The
+   * order comes from each setting run alone on 240 hard instances (osolpro
+   * benchmarks/portfolio-configs) and is the best one both after --lcg on -f (the default with -f)
+   * and after --lcg on (the default without options): LCG branching on the solver's literals solves
+   * the most instances the others do not, then free search without LCG, then depth-first search on
+   * the annotation without and with LCG. The LCG settings that differ only in core-guided or
+   * lower-bound search (lcg, lcg-bb) solve the same instances as one another.
+   */
+  private static final String[][] CONFIGS = {
+    {"lcg-lits", "--lcg", "on", "-f", "--free-config", "lcg-branching=literals"},
+    {
+      "free-chs-luby",
+      "--lcg",
+      "off",
+      "-f",
+      "--free-config",
+      "heuristic=chs,restarts=luby,scale=100"
+    },
+    {"default", "--lcg", "off"},
+    {"lcg-fixed", "--lcg", "on"},
+    {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
+    {"free", "--lcg", "off", "-f"},
+    // local search for half the time, as long as it progresses, then free search from its solution
+    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"},
+    {"lcg", "--lcg", "on", "-f"},
+    {"lcg-bb", "--lcg", "on", "-f", "--free-config", "lcg-core=0,lcg-lb=0"},
+    {"free-cacd", "--lcg", "off", "-f", "--free-config", "heuristic=cacd"},
+    {"free-luby-keep", "--lcg", "off", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
+  };
+
+  /** The most threads the portfolio uses: the options given and each setting above. */
+  static final int MAX_THREADS = CONFIGS.length + 1;
+
+  private static final String COMPLETE = "==========";
+
+  /** The value shared for a variable that is not fixed in a solution. */
+  static final int UNKNOWN = Integer.MIN_VALUE;
+
+  /** How long the portfolio waits for its stopped threads to end after printing the answer. */
+  private static final long JOIN_MILLIS = 10_000;
+
+  private static final String UNSATISFIABLE = "=====UNSATISFIABLE=====";
+
+  // floats are solved in one thread: their precision and derivatives are kept in static fields
+  private static final Pattern FLOAT_VAR = Pattern.compile("\\bvar\\s+(float\\b|-?\\d+\\.\\d)");
+
+  private static final ThreadLocal<OutputStream> CAPTURE = new ThreadLocal<>();
+
+  private final Options options;
+  private final List<Worker> workers = new ArrayList<>();
+  private final Object lock = new Object();
+  // where the portfolio prints: stdout as it was when the portfolio started
+  private PrintStream stdout;
+  // stdout while the portfolio runs, given back by the last thread to end if it outlives run()
+  private PrintStream dispatch;
+  private boolean restorePending;
+
+  // the objective value (of the minimised cost variable) of the best solution, read by all threads
+  private volatile int bestCost = Integer.MAX_VALUE;
+  private String bestSolution;
+  // the values of the model's variables in the best solution, by name; UNKNOWN when not fixed
+  private String[] bestNames;
+  private int[] bestValues;
+  private Worker bestWorker;
+  // the times a thread replayed the best solution
+  private int imports;
+  private boolean optimisation;
+  private boolean maximisation;
+  private int solutions;
+  private int running;
+  private boolean finished;
+  private boolean complete;
+
+  private Portfolio(Options options) {
+    this.options = options;
+  }
+
+  /**
+   * Returns why the model cannot be solved by a portfolio, or null when it can.
+   *
+   * @param options the options given
+   * @return the reason, or null
+   */
+  static String unsupported(Options options) {
+    if (options.getNumberSolutions() != -1 && !options.getAll()) {
+      return "a number of solutions (-n) is asked for";
+    }
+    if (!options.getOutputFilename().isEmpty()) {
+      return "the output goes to a file (-o)";
+    }
+    String model;
+    try {
+      model = Files.readString(Path.of(options.getFileName()), StandardCharsets.ISO_8859_1);
+    } catch (IOException _) {
+      return "the model cannot be read";
+    }
+    if (FLOAT_VAR.matcher(model).find()) {
+      return "the model has float variables";
+    }
+    if (options.getAll() && isSatisfaction(model)) {
+      return "all solutions are asked for";
+    }
+    return null;
+  }
+
+  private static boolean isSatisfaction(String model) {
+    int solve = model.lastIndexOf("solve");
+    return solve >= 0 && model.indexOf("satisfy", solve) >= 0;
+  }
+
+  /**
+   * Solves the model with a portfolio of threads and prints the result as one thread would.
+   *
+   * @param args the command line arguments
+   * @param options the options given
+   * @return the exit status: 0 when the threads ran, 1 when none could solve the model
+   */
+  static int solve(String[] args, Options options) {
+    return new Portfolio(options).run(args);
+  }
+
+  private int run(String[] args) {
+    stdout = System.out;
+    dispatch = new PrintStream(new Dispatch(stdout), true, stdout.charset());
+    System.setOut(dispatch);
+    try {
+      return run(args, stdout);
+    } finally {
+      synchronized (lock) {
+        // a thread still running would print its own status lines into stdout
+        restorePending = running > 0;
+        if (!restorePending) {
+          restoreStdout();
+        }
+      }
+    }
+  }
+
+  private void restoreStdout() {
+    if (System.out == dispatch) {
+      System.setOut(stdout);
+    }
+  }
+
+  private int run(String[] args, PrintStream out) {
+    long start = System.currentTimeMillis();
+    List<String> base = baseArguments(args);
+    int threads = Math.min(options.threads(), MAX_THREADS);
+    boolean satisfaction = isSatisfaction(readModel(options));
+    workers.add(new Worker("given", arguments(base, List.of(), false)));
+    String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
+    for (String[] config : settings(given, threads - 1, satisfaction)) {
+      List<String> flags = Arrays.asList(config).subList(1, config.length);
+      workers.add(new Worker(config[0], arguments(base, flags, true)));
+    }
+    String file = args[args.length - 1];
+    synchronized (lock) {
+      running = workers.size();
+    }
+    for (Worker w : workers) {
+      Thread t = new Thread(() -> w.run(file), "jacop-portfolio-" + w.name);
+      t.setDaemon(true);
+      w.thread = t;
+      t.start();
+    }
+    boolean timedOut = await(start);
+    for (Worker w : workers) {
+      w.stop();
+    }
+    printResult(out, timedOut, start);
+    // the threads stop within milliseconds in search, later when stopped while reading the model
+    long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
+    for (Worker w : workers) {
+      try {
+        w.thread.join(Math.max(1, joinDeadline - System.currentTimeMillis()));
+      } catch (InterruptedException _) {
+        Thread.currentThread().interrupt();
+        break;
+      }
+    }
+    return 0;
+  }
+
+  /** Waits until a thread finishes its search or all threads end. Returns true on a time-out. */
+  private boolean await(long start) {
+    long timeOut = options.getTimeOut();
+    synchronized (lock) {
+      while (!finished && running > 0) {
+        long wait = 0;
+        if (timeOut > 0) {
+          // the threads stop at the time-out themselves; this is a safety margin
+          wait = start + timeOut + 2000 - System.currentTimeMillis();
+          if (wait <= 0) {
+            finished = true;
+            return true;
+          }
+        }
+        try {
+          lock.wait(wait);
+        } catch (InterruptedException _) {
+          Thread.currentThread().interrupt();
+          finished = true;
+          return false;
+        }
+      }
+      finished = true;
+      return !complete && timeOut > 0 && System.currentTimeMillis() - start >= timeOut;
+    }
+  }
+
+  private void printResult(PrintStream out, boolean timedOut, long start) {
+    StringBuilder s = new StringBuilder();
+    synchronized (lock) {
+      if (bestSolution != null) {
+        if (!options.getAll()) {
+          s.append(bestSolution);
+        }
+        if (complete && optimisation) {
+          s.append(COMPLETE).append('\n');
+        } else if (timedOut) {
+          s.append("%% =====TIME-OUT=====\n");
+        }
+      } else if (complete) {
+        s.append(UNSATISFIABLE).append('\n');
+      } else {
+        s.append("=====UNKNOWN=====\n");
+        if (timedOut) {
+          s.append("%% =====TIME-OUT=====\n");
+        }
+      }
+      if (options.getStatistics()) {
+        if (options.searchStatistics()) {
+          s.append("%%%mzn-stat: portfolioThreads=").append(workers.size()).append('\n');
+          if (bestWorker != null) {
+            s.append("%%%mzn-stat: portfolioBest=").append(bestWorker.name).append('\n');
+          }
+          if (imports > 0) {
+            s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+          }
+        }
+        s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
+        if (optimisation && bestSolution != null) {
+          s.append("%%%mzn-stat: objective=").append(objective(bestCost)).append('\n');
+        }
+        s.append("%%%mzn-stat: solveTime=")
+            .append((System.currentTimeMillis() - start) / 1000.0)
+            .append("\n%%%mzn-stat-end\n");
+      }
+    }
+    out.print(s);
+    out.flush();
+  }
+
+  // the cost variable is the negated objective under maximisation
+  private int objective(int cost) {
+    return maximisation ? -cost : cost;
+  }
+
+  /**
+   * The options given without those the portfolio handles itself: the number of threads,
+   * statistics, the seed (already set), and the model file.
+   */
+  private static List<String> baseArguments(String[] args) {
+    List<String> base = new ArrayList<>();
+    for (int i = 0; i < args.length - 1; i++) {
+      switch (args[i]) {
+        case "-p", "--parallel", "-r", "--random-seed", "-t", "--time-out" -> i++;
+        case "-s", "--statistics", "-a", "--all", "--all-solutions" -> {
+          // printed by the portfolio
+        }
+        default -> base.add(args[i]);
+      }
+    }
+    return base;
+  }
+
+  /** The arguments of a thread: the options given, with its own search settings if any. */
+  private List<String> arguments(List<String> base, List<String> flags, boolean ownSearch) {
+    List<String> a = new ArrayList<>();
+    for (int i = 0; i < base.size(); i++) {
+      String arg = base.get(i);
+      if (!ownSearch || !isSearchFlag(arg)) {
+        a.add(arg);
+      } else if ("--lcg".equals(arg) && i + 1 < base.size() && isOnOff(base.get(i + 1))) {
+        i++;
+      }
+    }
+    a.addAll(flags);
+    if (options.getTimeOut() > 0) {
+      a.add("-t");
+      a.add(Integer.toString(options.getRemainingTimeOut()));
+    }
+    return a;
+  }
+
+  private static boolean isOnOff(String arg) {
+    return "on".equals(arg) || "off".equals(arg);
+  }
+
+  private static boolean isSearchFlag(String arg) {
+    return "-f".equals(arg) || "--free-search".equals(arg) || "--lcg".equals(arg);
+  }
+
+  /**
+   * The settings of the threads after the first: the first ones of {@link #CONFIGS} that run a
+   * search no earlier thread runs on a model of this kind.
+   *
+   * @param given the search of the first thread, as {@link #search(List, boolean)} gives it
+   * @param count how many settings at most
+   * @param satisfaction whether the model has no objective
+   * @return the settings, in the order of {@link #CONFIGS}
+   */
+  static List<String[]> settings(String given, int count, boolean satisfaction) {
+    Set<String> searches = new HashSet<>();
+    searches.add(given);
+    List<String[]> chosen = new ArrayList<>();
+    for (String[] config : CONFIGS) {
+      if (chosen.size() >= count) {
+        break;
+      }
+      if (searches.add(search(Arrays.asList(config).subList(1, config.length), satisfaction))) {
+        chosen.add(config);
+      }
+    }
+    return chosen;
+  }
+
+  /**
+   * The search a setting runs on a model of this kind, as a key: two settings with the same key
+   * would run the same search. Without an objective the settings of the objective (core-guided and
+   * lower-bound search, LNS, probes) change nothing, so lcg-bb is lcg on a satisfaction model.
+   */
+  static String search(List<String> flags, boolean satisfaction) {
+    Map<String, String> config = new TreeMap<>();
+    int i = flags.indexOf("--free-config");
+    if (i >= 0) {
+      for (String kv : flags.get(i + 1).split(",")) {
+        String[] p = kv.split("=", 2);
+        config.put(p[0].strip(), p.length > 1 ? p[1].strip() : "");
+      }
+    }
+    int lcg = flags.indexOf("--lcg");
+    boolean on = lcg >= 0 && (lcg + 1 == flags.size() || !"off".equals(flags.get(lcg + 1)));
+    return search(on, flags.contains("-f"), config, satisfaction);
+  }
+
+  private static String search(
+      boolean lcg, boolean free, Map<String, String> config, boolean satisfaction) {
+    Map<String, String> c = new TreeMap<>(config);
+    if (satisfaction) {
+      c.keySet().removeIf(Portfolio::objectiveSetting);
+    }
+    return (lcg ? "lcg " : "") + (free ? "free " : "") + c;
+  }
+
+  private static boolean objectiveSetting(String key) {
+    return key.startsWith("lcg-core")
+        || "lcg-lb".equals(key)
+        || key.startsWith("lns")
+        || key.startsWith("probe");
+  }
+
+  private static String readModel(Options options) {
+    try {
+      return Files.readString(Path.of(options.getFileName()), StandardCharsets.ISO_8859_1);
+    } catch (IOException _) {
+      return "";
+    }
+  }
+
+  /**
+   * Takes a solution of a thread: the first one for satisfaction, which ends the search, and for
+   * optimisation each one better than the best so far.
+   */
+  private void solution(
+      Worker w, String text, Integer cost, boolean maximise, String[] names, int[] values) {
+    synchronized (lock) {
+      if (finished) {
+        return;
+      }
+      if (cost == null) {
+        bestSolution = text;
+        bestWorker = w;
+        solutions++;
+        finished = true;
+        lock.notifyAll();
+      } else {
+        if (cost >= bestCost) {
+          return;
+        }
+        optimisation = true;
+        maximisation = maximise;
+        bestCost = cost;
+        bestSolution = text;
+        bestNames = names;
+        bestValues = values;
+        bestWorker = w;
+        solutions++;
+      }
+      if (options.getAll()) {
+        stdout.print(text);
+        stdout.flush();
+      }
+    }
+  }
+
+  private void ended(boolean searchComplete) {
+    synchronized (lock) {
+      running--;
+      if (searchComplete && !finished) {
+        complete = true;
+        finished = true;
+      }
+      if (restorePending && running == 0) {
+        restoreStdout();
+      }
+      lock.notifyAll();
+    }
+  }
+
+  /** One thread of the portfolio, as seen by the model it solves. */
+  final class Worker {
+
+    final String name;
+    private final List<String> args;
+    private final List<Runnable> stops = new CopyOnWriteArrayList<>();
+    private volatile boolean stopped;
+    private Thread thread;
+
+    Worker(String name, List<String> args) {
+      this.name = name;
+      this.args = args;
+    }
+
+    private void run(String file) {
+      StatusCapture capture = new StatusCapture();
+      CAPTURE.set(capture);
+      boolean ran = false;
+      try {
+        List<String> a = new ArrayList<>(args);
+        a.add(file);
+        Options opt = new Options(a.toArray(new String[0]));
+        opt.portfolioWorker = this;
+        try (FileInputStream in = opt.getFile()) {
+          ran = Fz2jacop.solveInPortfolio(opt, in) == 0;
+        }
+      } catch (IOException | RuntimeException e) {
+        FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
+      } finally {
+        CAPTURE.remove();
+        ended(ran && !stopped && capture.complete);
+      }
+    }
+
+    /**
+     * The objective value of the best solution of the portfolio, as a value of the minimised cost
+     * variable; {@link Integer#MAX_VALUE} while there is none.
+     *
+     * @return the bound
+     */
+    int sharedBound() {
+      return bestCost;
+    }
+
+    /**
+     * Reports a solution.
+     *
+     * @param text the solution as printed
+     * @param cost the value of the minimised cost variable, or null for satisfaction
+     * @param maximise whether the cost variable is the negated objective
+     * @param names the names of the model's variables, an array the thread keeps from one solution
+     *     to the next
+     * @param values their values in the solution, {@link #UNKNOWN} for a variable not fixed
+     */
+    void solution(String text, Integer cost, boolean maximise, String[] names, int[] values) {
+      Portfolio.this.solution(this, text, cost, maximise, names, values);
+    }
+
+    /**
+     * Returns the best solution of the portfolio as a solution for this thread to replay.
+     *
+     * @param variable the variable of this thread's store with a name of the model, or null
+     * @return the shared solution
+     */
+    SharedSolution sharedSolution(Function<String, IntVar> variable) {
+      return new Replay(variable);
+    }
+
+    /**
+     * Registers how to stop the search of this thread; it runs at once when the thread is stopped
+     * already.
+     *
+     * @param stop the action, which may run more than once
+     */
+    void onStop(Runnable stop) {
+      stops.add(stop);
+      if (stopped) {
+        stop.run();
+      }
+    }
+
+    /**
+     * Whether the portfolio has stopped this thread.
+     *
+     * @return true once stopped
+     */
+    boolean stopped() {
+      return stopped;
+    }
+
+    private void stop() {
+      stopped = true;
+      for (Runnable r : stops) {
+        r.run();
+      }
+    }
+
+    /** The best solution of the portfolio, fixed on the variables of this thread's store. */
+    private final class Replay implements SharedSolution {
+
+      private final Function<String, IntVar> variable;
+      // the variables of this thread for the names of the last solution replayed
+      private String[] names;
+      private IntVar[] vars;
+
+      Replay(Function<String, IntVar> variable) {
+        this.variable = variable;
+      }
+
+      @Override
+      public int objective() {
+        return bestCost;
+      }
+
+      @Override
+      public void impose(Store store) {
+        String[] n;
+        int[] values;
+        synchronized (lock) {
+          n = bestNames;
+          values = bestValues;
+          imports++;
+        }
+        if (n == null) {
+          return;
+        }
+        if (n != names) {
+          names = n;
+          vars = new IntVar[n.length];
+          for (int i = 0; i < n.length; i++) {
+            vars[i] = variable.apply(n[i]);
+          }
+        }
+        for (int i = 0; i < vars.length; i++) {
+          IntVar x = vars[i];
+          int v = values[i];
+          if (x != null && v != UNKNOWN && !x.singleton() && x.domain.contains(v)) {
+            x.domain.inValue(store.level, x, v);
+          }
+        }
+      }
+    }
+  }
+
+  /** Sends the output of portfolio threads to their capture, and that of other threads on. */
+  private static final class Dispatch extends OutputStream {
+
+    private final OutputStream out;
+
+    Dispatch(OutputStream out) {
+      this.out = out;
+    }
+
+    @Override
+    public void write(int b) throws IOException {
+      target().write(b);
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException {
+      target().write(b, off, len);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      target().flush();
+    }
+
+    private OutputStream target() {
+      OutputStream t = CAPTURE.get();
+      return t == null ? out : t;
+    }
+  }
+
+  /** The output of a thread: only the line that says its search is complete matters. */
+  private static final class StatusCapture extends OutputStream {
+
+    private final StringBuilder line = new StringBuilder();
+    boolean complete;
+
+    @Override
+    public void write(int b) {
+      if (b == '\n') {
+        String l = line.toString().strip();
+        if (COMPLETE.equals(l) || UNSATISFIABLE.equals(l)) {
+          complete = true;
+        }
+        line.setLength(0);
+      } else if (line.length() < 64) {
+        line.append((char) b);
+      }
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) {
+      for (int i = off; i < off + len; i++) {
+        write(b[i]);
+      }
+    }
+  }
+}

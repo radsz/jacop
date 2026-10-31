@@ -1,0 +1,10 @@
+
+predicate jacop_nvalue(var int: n,array [int] of var int: x);
+array [1..1] of int: X_INTRODUCED_18_ = [5];
+array [1..4] of int: X_INTRODUCED_21_ = [3,3,3,4];
+var 2..2: limitx;
+var 0..2: X_INTRODUCED_19_ ::var_is_introduced ;
+var 0..2: X_INTRODUCED_20_ ::var_is_introduced ;
+constraint jacop_nvalue(X_INTRODUCED_19_,X_INTRODUCED_18_);
+constraint jacop_nvalue(X_INTRODUCED_20_,X_INTRODUCED_21_);
+solve  satisfy;

@@ -1,0 +1,50 @@
+---
+description: When a JaCoP constraint is modified, run the matching constraint-family benchmark tests
+globs: "**/constraints/**/*.java,**/constraints/*.java,**/fz/constraints/*.java,**/floats/constraints/*.java,**/set/constraints/*.java"
+alwaysApply: false
+---
+
+# Constraint Change Benchmark Testing
+
+When you modify a constraint implementation, you MUST run the constraint-family benchmark test
+to verify no regressions. Use the class-to-family mapping below to determine the right filter.
+
+## Command
+
+```
+mvn -pl jacop-benchmarks -am -Dtest=MinizincByConstraintTest -DconstraintFilter=<FAMILY> -Dsurefire.failIfNoSpecifiedTests=false test
+```
+
+Add `-DtimeFilter=upTo5sec` for a fast check, or omit it to use the default (upTo30sec).
+
+## Class-to-Family Mapping
+
+| Constraint classes modified | `-DconstraintFilter` value |
+|-----------------------------|---------------------------|
+| `Alldiff`, `Alldifferent`, `Alldistinct`, `AlldifferentExcept*`, `SoftAlldifferent`, `AllEqual` | `alldifferent` |
+| `GCC`, `SoftGCC` | `gcc` |
+| `Cumulative*`, `CumulativeBasic`, `CumulativeUnary*` | `cumulative` |
+| `Circuit`, `Subcircuit` | `circuit` |
+| `ElementInteger*`, `ElementVariable*` | `element` |
+| `Table`, `SimpleTable`, `TableMill` | `table` |
+| `Regular`, `RegState*`, `RegEdge` | `regular` |
+| `Knapsack` | `knapsack` |
+| `Binpacking` | `binpacking` |
+| `Diffn`, `Diff`, `Diff2*`, `DisjointConditional*` | `diffn` |
+| `LinearInt*`, `SumInt`, `SumBool`, `Sum`, `SumWeight` | `linear` |
+| `Xeq*`, `Xneq*`, `Xlt*`, `Xlteq*`, `Xgt*` | `comparison` |
+| `And`, `Or`, `Not`, `Xor`, `BoolClause`, `*BoolVector` | `boolean` |
+| `AbsXeqY`, `Distance`, `XmulY*`, `XdivY*`, `XmodY*`, `XexpY*`, `XplusY*` | `arithmetic` |
+| `Count*`, `Among*`, `Values`, `AtLeast`, `AtMost` | `counting` |
+| `LexOrder`, `Lex`, `Increasing`, `Decreasing`, `SeqPrecedeChain` | `ordering` |
+| `NetworkFlow`, `NetworkBuilder` | `networkflow` |
+| `Geost`, `GeostObject`, `Shape` | `geost` |
+| `Sequence`, `Stretch`, `ValuePrecede` | `sequence` |
+| `Assignment` | `assignment` |
+| `Min`, `Max`, `ArgMin`, `ArgMax` | `minmax` |
+| `Member` | `member` |
+| Set constraints (`set/constraints/`) | `set` |
+| Float constraints (`floats/constraints/`) | `float` |
+| Graph constraints | `graph` |
+
+When multiple families are affected, combine them: `-DconstraintFilter=cumulative,diffn`.

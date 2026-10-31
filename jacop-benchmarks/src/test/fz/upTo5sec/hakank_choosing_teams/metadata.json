@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_alldiff", "jacop_increasing", "jacop_lex_lesseq_int"],
+  "constraintFamilies": ["alldifferent", "ordering"],
+  "domains": []
+}

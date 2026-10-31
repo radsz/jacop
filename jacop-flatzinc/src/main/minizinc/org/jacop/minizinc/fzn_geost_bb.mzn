@@ -1,0 +1,73 @@
+include "fzn_geost.mzn";
+
+predicate jacop_geost_bb(
+                      int        : k       ,
+    array[int] of int        : rect_size   ,
+    array[int] of int        : rect_offset ,
+    array[int] of set of int : shape       , 
+    array[int] of var int    : x           ,
+    array[int] of var int    : kind        ,
+    array[int] of int    : l               ,
+    array[int] of int    : u
+
+);
+
+predicate fzn_geost_bb(
+                      int        : k           ,
+    array[int,int] of int        : rect_size   ,
+    array[int,int] of int        : rect_offset ,
+    array[int    ] of set of int : shape       , 
+    array[int,int] of var int    : x           ,
+    array[int    ] of var int    : kind        ,
+    array[int    ] of int    : l               ,
+    array[int    ] of int    : u
+) =
+    if jacop_geost_positive_sizes(rect_size) then
+        forall(o in index_set(kind))(kind[o] in index_set(shape))
+        /\ jacop_geost_bb(k, array1d(rect_size), array1d(rect_offset),
+                          jacop_geost_shapes(rect_size, shape), array1d(x),
+                          jacop_geost_kinds(shape, kind), l, u)
+    else
+        fzn_geost(k, rect_size, rect_offset, shape, x, kind)
+        /\ forall(o in index_set(kind))(
+            forall(s in dom(kind[o]) intersect index_set(shape))(
+                (kind[o] = s ->
+                    forall(r in shape[s], j in 1..k)(
+                        x[o,j] + rect_offset[r,j] >= l[j]
+                    /\  x[o,j] + rect_offset[r,j] + rect_size[r,j] <= u[j]
+                    )
+                )
+            )
+        )
+    endif
+    ;
+
+
+predicate fzn_geost_bb(
+                      int        : k           ,
+    array[int,int] of int        : rect_size   ,
+    array[int,int] of int        : rect_offset ,
+    array[int    ] of set of int : shape       , 
+    array[int,int] of var int    : x           ,
+    array[int    ] of var int    : kind        ,
+    array[int    ] of var int    : l           ,
+    array[int    ] of var int    : u
+) =
+        % Two useful definitions
+        let {
+            set of int: DIMS    = 1..k;
+            set of int: OBJECTS = index_set(kind); 
+        } in
+        % Posting the geost constraint
+        fzn_geost(k, rect_size, rect_offset, shape, x, kind)
+        /\ % Posting the bounding box constraints
+        forall(o in OBJECTS)(
+            forall(s in dom(kind[o]) intersect index_set(shape))(
+                (kind[o] = s ->
+                    forall(r in shape[s], j in DIMS)(
+                        x[o,j] + rect_offset[r,j] >= l[j]
+                    /\  x[o,j] + rect_offset[r,j] + rect_size[r,j] <= u[j]
+                    )
+                )
+            )
+        );

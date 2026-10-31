@@ -1,0 +1,3 @@
+pick = array1d(1..18, [true, true, true, true, true, false, true, false, false, false, false, false, false, false, false, false, false, false]);
+----------
+==========

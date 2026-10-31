@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool_clause", "int_eq", "int_le_reif", "set_card", "set_in", "set_in_reif"],
+  "constraintFamilies": ["boolean", "comparison", "set"],
+  "domains": []
+}

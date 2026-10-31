@@ -1,0 +1,167 @@
+/*
+ * SinPeqR.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.floats.constraints;
+
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.VarMap;
+import org.jacop.core.Store;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+
+/**
+ * Constraints sin(P) = R.
+ *
+ * <p>Bounds consistency can be used; third parameter of constructor controls this.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class SinPeqR extends AbstractTrigConstraint
+    implements SatisfiedPresent, FloatDerivableConstraint, Copyable<SinPeqR> {
+
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /**
+   * It constructs sin(P) = Q constraints.
+   *
+   * @param p variable P
+   * @param q variable Q
+   */
+  public SinPeqR(FloatVar p, FloatVar q) {
+    super(p, q);
+    numberId = idNumber.incrementAndGet();
+  }
+
+  @Override
+  protected void boundConsistency(Store store) {
+
+    if (spansFullPeriod()) {
+      return;
+    }
+
+    do {
+
+      store.propagationHasOccurred = false;
+
+      if (satisfied()) {
+        return;
+      }
+
+      // Math.sin reduces its argument exactly, so evaluate it at the bounds of p; between them
+      // sin is monotone unless the interval contains a maximum or a minimum of sin
+      double min = p.min();
+      double max = p.max();
+      double atMin = Math.sin(min);
+      double atMax = Math.sin(max);
+      double qMin =
+          min < max && mayContain(min, max, -FloatDomain.PI / 2, 2 * FloatDomain.PI)
+              ? -1.0
+              : FloatDomain.down(Math.min(atMin, atMax));
+      double qMax =
+          min < max && mayContain(min, max, FloatDomain.PI / 2, 2 * FloatDomain.PI)
+              ? 1.0
+              : FloatDomain.up(Math.max(atMin, atMax));
+
+      q.domain.in(store.level, q, qMin, qMax);
+
+      // p update using asin (range -PI/2..PI/2)
+      // asin is increasing, so swap qMin/qMax: pMin = asin(qMin), pMax = asin(qMax)
+      updateFirstDomainFromSecond(
+          store, qMax, qMin, Math::asin, -FloatDomain.PI / 2, FloatDomain.PI / 2);
+
+      // with p and q the same variable, sin(x) = x shrinks the bounds towards 0 by about x^3 per
+      // pass, so the loop would not reach a fixpoint in any reasonable time; search splits instead
+    } while (store.propagationHasOccurred && p != q);
+
+    // the store does not run the constraint again for its own pruning, so check a value it left
+    if (p == q && p.singleton() && !satisfied()) {
+      throw Store.failException;
+    }
+  }
+
+  @Override
+  public boolean satisfied() {
+    return satisfiedWithTrigFunction(Math::sin);
+  }
+
+  @Override
+  public String toString() {
+
+    return id() + " : SinPeqR(" + p + ", " + q + " )";
+  }
+
+  /**
+   * Computes the derivative of this constraint with respect to a variable.
+   *
+   * @param store the constraint store
+   * @param f the function variable for which to compute the derivative
+   * @param vars the set of variables involved in the derivative computation
+   * @param x the variable with respect to which the derivative is computed
+   * @return the derivative variable, or null if f is not part of this constraint
+   */
+  public FloatVar derivative(Store store, FloatVar f, Set<FloatVar> vars, FloatVar x) {
+    if (f.equals(q)) {
+      // f = sin(p)
+      // f' = cos(p) * d(p)
+      FloatVar v = newDeriv(store);
+      FloatVar v1 = newDeriv(store);
+      Derivative.poseDerivativeConstraint(new CosPeqR(p, v1));
+      Derivative.poseDerivativeConstraint(
+          new PmulQeqR(v1, Derivative.getDerivative(store, p, vars, x), v));
+      return v;
+    } else if (f.equals(p)) {
+      // f = asin(q)
+      // f' = d(q) * 1/sqrt(1-q^2)
+      FloatVar v = newDeriv(store);
+      FloatVar v1 = newDeriv(store);
+      FloatVar v2 = newDeriv(store);
+      FloatVar v3 = newDeriv(store);
+      FloatVar v4 = newDeriv(store);
+      Derivative.poseDerivativeConstraint(new PmulQeqR(q, q, v1));
+      Derivative.poseDerivativeConstraint(new PminusQeqR(new FloatVar(store, 1.0, 1.0), v1, v2));
+      Derivative.poseDerivativeConstraint(new SqrtPeqR(v2, v3));
+      Derivative.poseDerivativeConstraint(new PdivQeqR(new FloatVar(store, 1.0, 1.0), v3, v4));
+      Derivative.poseDerivativeConstraint(
+          new PmulQeqR(Derivative.getDerivative(store, q, vars, x), v4, v));
+      return v;
+    }
+
+    return null;
+  }
+
+  @Override
+  public SinPeqR copy(VarMap map) {
+    return new SinPeqR(map.get(p), map.get(q));
+  }
+}
