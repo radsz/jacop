@@ -31,6 +31,7 @@
 
 package org.jacop.lcg;
 
+import java.util.Arrays;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
@@ -105,6 +106,41 @@ public interface PbModel {
    * @param literals the literals of which one is true
    */
   void clause(String... literals);
+
+  /**
+   * Adds the relation {@code sum a[k] * literal[k] + sum w[j] * x[j] relation c}, for a relation
+   * {@link LinearForm#LE}, {@link LinearForm#GE} or {@link LinearForm#EQ}.
+   *
+   * @param literals literals of {@link #equal} and {@link #atLeast}
+   * @param a their coefficients
+   * @param x integer variables
+   * @param w their weights
+   * @param relation the relation
+   * @param c the right hand side
+   */
+  void sum(String[] literals, long[] a, IntVar[] x, long[] w, int relation, long c);
+
+  /**
+   * Adds {@code (number of x[i] = value) - sum y[j] relation c}: the counting constraints.
+   *
+   * @param model the model
+   * @param x the counted variables
+   * @param value the counted value
+   * @param y variables subtracted from the count
+   * @param relation the relation, as in {@link #sum}
+   * @param c the right hand side
+   */
+  static void count(PbModel model, IntVar[] x, int value, IntVar[] y, int relation, long c) {
+    String[] l = new String[x.length];
+    long[] a = new long[x.length];
+    for (int i = 0; i < x.length; i++) {
+      l[i] = model.equal(x[i], value);
+      a[i] = 1;
+    }
+    long[] w = new long[y.length];
+    Arrays.fill(w, -1);
+    model.sum(l, a, y, w, relation, c);
+  }
 
   /**
    * Returns the negation of a literal.

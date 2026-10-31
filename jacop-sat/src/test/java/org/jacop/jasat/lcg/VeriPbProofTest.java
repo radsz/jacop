@@ -37,12 +37,17 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AtLeast;
+import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Max;
+import org.jacop.constraints.Min;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XlteqY;
@@ -236,6 +241,33 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS 9 9");
+  }
+
+  // five variables over 1..4: two of them are 2, at most one is 4, and the spread max - min is
+  // smallest; the counting and min/max encodings carry the proof
+  @Test
+  void countAndMaxOptimumIsProved() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 4);
+    }
+    store.impose(new Count(x, new IntVar(store, "two", 2, 2), 2));
+    store.impose(new AtMost(x, 1, 4));
+    store.impose(new AtLeast(x, 1, 1));
+    IntVar hi = new IntVar(store, "hi", 1, 4);
+    IntVar lo = new IntVar(store, "lo", 1, 4);
+    store.impose(new Max(x, hi));
+    store.impose(new Min(x, lo));
+    IntVar obj = new IntVar(store, "obj", 0, 3);
+    store.impose(new LinearInt(new IntVar[] {hi, lo, obj}, new int[] {1, -1, -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // a 1 and two 2s give a spread of at least 1, reached by 1, 2, 2, 1, 1
+    assertThat(lcg.value(obj)).isEqualTo(1);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 1 1");
   }
 
   @Test

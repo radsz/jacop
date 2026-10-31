@@ -35,7 +35,9 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.ToIntFunction;
@@ -417,6 +419,57 @@ final class OpbEncoder implements PbModel {
       return "0";
     }
     return ge(i, v);
+  }
+
+  @Override
+  public void sum(String[] literals, long[] a, IntVar[] x, long[] w, int relation, long c) {
+    // positive literal -> coefficient, and the constant the negated and fixed ones give
+    Map<String, Long> terms = new LinkedHashMap<>();
+    long constant = 0;
+    for (int k = 0; k < literals.length; k++) {
+      String l = literals[k];
+      switch (l) {
+        case "1" -> constant = Math.addExact(constant, a[k]);
+        case "0" -> {}
+        default -> {
+          if (l.startsWith("~")) {
+            constant = Math.addExact(constant, a[k]);
+            terms.merge(l.substring(1), -a[k], Math::addExact);
+          } else {
+            terms.merge(l, a[k], Math::addExact);
+          }
+        }
+      }
+    }
+    for (int j = 0; j < x.length; j++) {
+      IntDomain d = root[id.applyAsInt(x[j])];
+      constant = Math.addExact(constant, Math.multiplyExact(w[j], d.min()));
+      if (w[j] == 0 || d.singleton()) {
+        continue;
+      }
+      grow((long) d.max() - d.min());
+      for (int v = d.min() + 1; v <= d.max(); v++) {
+        terms.merge(ge(id.applyAsInt(x[j]), v), w[j], Math::addExact);
+      }
+    }
+    if (relation != LinearForm.LE) {
+      sumLine(terms, 1, Math.subtractExact(c, constant));
+    }
+    if (relation != LinearForm.GE) {
+      sumLine(terms, -1, Math.subtractExact(constant, c));
+    }
+  }
+
+  // sign * sum of terms >= rhs, under the guard
+  private void sumLine(Map<String, Long> terms, long sign, long rhs) {
+    StringBuilder s = new StringBuilder(guardPrefix());
+    terms.forEach(
+        (l, a) -> {
+          if (a != 0) {
+            s.append(Math.multiplyExact(sign, a)).append(' ').append(l).append(' ');
+          }
+        });
+    line(s.append(">= ").append(rhs).toString());
   }
 
   @Override
