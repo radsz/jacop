@@ -128,6 +128,7 @@ final class DualReductions implements Rule {
   private final IntVar objective;
   private final boolean minimize;
   private final Set<Var> exempt;
+  private final boolean dominatedColumns;
 
   private int rounds;
   private int fixed;
@@ -140,11 +141,13 @@ final class DualReductions implements Rule {
    * @param objective the objective variable, or null for a satisfaction problem.
    * @param minimize true if the objective is minimised.
    * @param exempt variables to leave alone, for example those of constraints posted later.
+   * @param dominatedColumns true to look for dominated columns too; see {@link DominatedColumns}.
    */
-  DualReductions(IntVar objective, boolean minimize, Set<Var> exempt) {
+  DualReductions(IntVar objective, boolean minimize, Set<Var> exempt, boolean dominatedColumns) {
     this.objective = objective;
     this.minimize = minimize;
     this.exempt = exempt;
+    this.dominatedColumns = dominatedColumns && DominatedColumns.ENABLED;
   }
 
   /**
@@ -197,7 +200,7 @@ final class DualReductions implements Rule {
     rounds++;
     boolean changed = apply(context.store(), context.level(), context.constraints());
     // dominated columns once, on the first round that leaves the dual reductions nothing to do
-    if (!changed && columns == null && DominatedColumns.ENABLED) {
+    if (!changed && columns == null && dominatedColumns) {
       dominatedColumns(context);
     }
   }

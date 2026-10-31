@@ -1201,6 +1201,28 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+82. The FlatZinc front end solves the independent parts of a model that
+    the objective does not depend on (for a satisfaction model, every
+    part but the largest) once at the root, and fixes them. Each part
+    gets a depth-first search in annotation order with a 2 s budget
+    (-Djacop.components.budget, in ms); a part without a solution makes
+    the model infeasible, and a part that runs out of time is left to
+    the main search. It is skipped with -a, with -n > 1 for satisfaction
+    and with on_restart. --components off turns it off. On the
+    MiniZinc Challenge instances that split into several parts (109 of
+    1,781), 60 s: same statuses, ghoulomb 3-7-20 and 3-8-20 prove their
+    optimum in 2 s instead of 14 s, 3-10-20 in 13 s instead of 37 s, and
+    cable_tree_wiring R046 ends at its optimum 143,534 instead of 284,142.
+
+83. Presolve dual reductions also find dominated columns: if raising x
+    by one and lowering y by one keeps every constraint and the
+    objective, the clause x = max(x) or y = min(y) is added (x >= y for
+    0-1 variables). It is left out with -a, since it can remove some of
+    the improving solutions printed on the way to the optimum (the
+    optimum stays). -Djacop.presolve.domcol=false turns it off. It fires
+    on 37 Challenge instances (train, table-layout, connect,
+    unit-commitment, wmsmc-int) and is neutral on them at 60 s.
+
 Version 4.11
 =============
 

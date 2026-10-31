@@ -1041,9 +1041,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * Switches presolve's dual reductions on when the search wants one solution or an optimum: they
    * keep both but not every solution, so they stay off for all solutions of a satisfaction problem
    * (-a, -n), and with a float or constant objective. With -a an optimisation prints improving
-   * solutions only, which they keep. They stay off with on_restart too, whose built-ins fix
-   * variables from outside the store, and leave alone the variables of the clauses kept for the SAT
-   * solver, which are posted after presolve.
+   * solutions only, which they keep; the dominated columns may remove some of them, so they stay
+   * off with -a. They stay off with on_restart too, whose built-ins fix variables from outside the
+   * store, and leave alone the variables of the clauses kept for the SAT solver, which are posted
+   * after presolve.
    */
   private void dualReductions(Presolver presolver, ASTSolveItem node) {
     if (!options.presolveDual() || dictionary.onRestart != null) {
@@ -1076,7 +1077,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return;
       }
     }
-    presolver.dualReductions(objective, k != 2);
+    presolver.dualReductions(objective, k != 2).dominatedColumns(!options.getAll());
     for (IntVar[][] clause : sat.collectedClauses()) {
       presolver.exempt(clause[0]);
       presolver.exempt(clause[1]);

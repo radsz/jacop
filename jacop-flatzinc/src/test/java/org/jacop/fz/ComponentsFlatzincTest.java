@@ -188,6 +188,42 @@ class ComponentsFlatzincTest {
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
   }
 
+  /**
+   * A Boolean sum of 40 terms is imposed with watched literals, so it is not among the constraints
+   * registered on the domains; it still links the 20 pairs it reads (MiniZinc devils_word).
+   */
+  @Test
+  void aWatchedConstraintLinksItsVariables() throws IOException {
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder terms = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    for (int i = 0; i < 20; i++) {
+      fzn.append("var 0..1: p").append(i).append(":: output_var;\n");
+      fzn.append("var 0..1: m").append(i).append(";\n");
+      terms.append(i == 0 ? "" : ",").append("p").append(i).append(",m").append(i);
+      weights.append(i == 0 ? "" : ",").append(i + 1).append(',').append(-(i + 1));
+    }
+    for (int i = 0; i < 20; i++) {
+      fzn.append("constraint int_lin_eq([1,1],[p")
+          .append(i)
+          .append(",m")
+          .append(i)
+          .append("],1);\n");
+    }
+    // m = 1 - p, so the sum is 2 * (the weights with p = 1) - 210 and the weights with p = 0 sum to
+    // 4: {1, 3} or {4}. Pair 1 alone has the solution p1 = 0, which no solution of the model has.
+    fzn.append("constraint int_lin_eq([")
+        .append(weights)
+        .append("],[")
+        .append(terms)
+        .append("],202);\n");
+    fzn.append("solve satisfy;\n");
+    String out = run(fzn.toString(), "-s", "--lcg", "off");
+    assertTrue(out.contains("p1 = 1;") && out.contains("p19 = 1;"), out);
+    out = run(fzn.toString(), "-s");
+    assertTrue(out.contains("p1 = 1;") && out.contains("p19 = 1;"), out);
+  }
+
   private String run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

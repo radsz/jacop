@@ -205,7 +205,8 @@ public final class Derivation implements VarMap {
             ? new DualReductions(
                 builder.objective,
                 builder.minimize,
-                builder.exempt == null ? Set.of() : builder.exempt)
+                builder.exempt == null ? Set.of() : builder.exempt,
+                builder.dominatedColumns)
             : null;
     List<Rule> list = new ArrayList<>(builder.ruleList);
     if (dual != null) {
@@ -241,6 +242,7 @@ public final class Derivation implements VarMap {
     private IntVar objective;
     private boolean minimize;
     private Set<Var> exempt;
+    private boolean dominatedColumns = true;
     private final List<Rule> ruleList = new ArrayList<>();
     private int maxRounds = DEFAULT_ROUNDS;
     private boolean views = true;
@@ -351,6 +353,18 @@ public final class Derivation implements VarMap {
      */
     public Builder dualReductions(boolean on) {
       this.dual = on;
+      return this;
+    }
+
+    /**
+     * Switches the dominated columns of the dual reductions on or off; on by default. They keep an
+     * optimum but may remove the improving solutions a search would find on the way to it.
+     *
+     * @param on true to look for dominated columns when the dual reductions are on.
+     * @return this builder.
+     */
+    public Builder dominatedColumns(boolean on) {
+      this.dominatedColumns = on;
       return this;
     }
 

@@ -31,9 +31,11 @@
 package org.jacop.fz;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -93,7 +95,7 @@ final class Components {
       Store store, List<IntVar[][]> clauses, IntVar objective, List<Var> order, long budgetMillis) {
     long start = System.currentTimeMillis();
     Map<Var, Var> parent = new IdentityHashMap<>();
-    for (Constraint c : store.getConstraints()) {
+    for (Constraint c : constraints(store)) {
       if (c instanceof SatisfiedPresent s && s.satisfied()) {
         continue;
       }
@@ -168,6 +170,22 @@ final class Components {
       fixed += values.length;
     }
     return new Outcome(n, solved, fixed, timedOut, System.currentTimeMillis() - start);
+  }
+
+  /**
+   * The constraints of the store: those registered on the domains of its variables, and those that
+   * only watch some of their variables, such as a long LinearBool or a clause, which {@link
+   * Store#getConstraints()} leaves out.
+   */
+  private static Set<Constraint> constraints(Store store) {
+    Set<Constraint> all = new LinkedHashSet<>(store.getConstraints());
+    List<Var> vars = new ArrayList<>(store.variablesHashMap.values());
+    vars.addAll(Arrays.asList(store.vars).subList(0, store.size()));
+    for (Var v : vars) {
+      all.addAll(store.watchedLiteralConstraints(v));
+      all.addAll(store.valueWatchers(v));
+    }
+    return all;
   }
 
   /**
