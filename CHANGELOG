@@ -1370,7 +1370,25 @@ Version 5.0 (unreleased)
     7 better and 7 worse (pairs_24_5_2 UNSAT not proved, power proofs
     up to 2x slower, cover_24_5_1 a first solution).
 
-90. Geost checks volumes: in every dimension of a non-overlapping group
+94. The experimental cut-based conflict analysis of --lcg
+    (-Djacop.lcg.linear=learn, still off by default) also combines
+    linear rows of non-linear constraints, made once on the root bounds:
+    big-M rows of reified and implied linear relations (and of FlatZinc
+    x = y and x = c implied by a Boolean), and/or, max/min, |x| and the
+    McCormick rows of x*y. It also starts from an LP failure and uses the
+    LP's bound prunings as reasons, through the new LinearReasons
+    interface of LinearRelaxation. A failing constraint that is itself
+    asserting is no longer learnt again as a copy. On the 249 mznbench
+    instances, 10 s, failures that end in a learnt sum after at least one
+    step went from 2.5% to 8.0% (--lcg -f) and from 2.1% to 7.0%
+    (--lcg). 30 s with 30 terms at most: on the 102 instance/mode pairs
+    that learn, 2 reps, --lcg -f 18 better and 9 worse, --lcg 15 and 2
+    (still_life_8x8 proved in 10 s, hrc_exp2-1-4795 and maximum-dag
+    faster, bus_scheduling r4 and t2 faster); over the whole set, --lcg
+    13 and 11, --lcg -f 21 and 17, with 11 and 2 (11 and 3 under -f)
+    where the analysis learns.
+
+95. Geost checks volumes: in every dimension of a non-overlapping group
     that selects all spatial dimensions (and time, if selected), the
     objects that must lie inside a window must fit there by volume,
     within the hull of those objects and the InArea box. It is on by
@@ -1385,7 +1403,7 @@ Version 5.0 (unreleased)
     pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
     No MiniZinc Challenge instance 2008-2026 reaches Geost.
 
-95. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
+96. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
     failures, restarts, peakDepth, variables, propagators, propagations,
     nogoods, initTime, solveTime, objective, solutions) and now peakMem,
     the peak memory of the JVM in Mbytes. The statistics of JaCoP's own
@@ -1395,6 +1413,11 @@ Version 5.0 (unreleased)
     (which implies -s), or -s together with -debug. The MiniZinc solver
     configuration declares --search-statistics. A malformed
     "%%%%mzn-stat: restarts" line of -v output is fixed.
+
+97. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
+    decision level of the SAT search (assumption levels included), and
+    restarts, the SAT solver's restarts (as lcgRestarts). Before, both
+    were always 0.
 
 Version 4.11
 =============

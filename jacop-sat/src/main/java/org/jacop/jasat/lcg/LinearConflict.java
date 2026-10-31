@@ -31,18 +31,25 @@
 package org.jacop.jasat.lcg;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearBool;
+import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.SumWeight;
 import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ConflictRows;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.LinearReasons;
 
 /**
  * Cut-based conflict analysis over the atomic trail (IntSat, Pumpkin's lazy linear generation): a
@@ -99,10 +106,87 @@ final class LinearConflict {
   // earlier, or null
   private final IntFunction<Constraint> origin;
 
-  LinearConflict(AtomicTrail trail, IntUnaryOperator source, IntFunction<Constraint> origin) {
+  // the rows of the constraints that formOf does not read: clauses and fixed and/or as linear
+  // relations (LinearForms), big-M rows of reified sums, and/or, max/min, |x|, products
+  // (Linearizations), made once on the root bounds, where they hold for the whole search
+  private final Map<Constraint, List<LinearForm>> relaxations = new IdentityHashMap<>();
+
+  // the saved sum, while a reason is tried
+  private int[] savedTerms = new int[16];
+  private long[] savedCoef = new long[16];
+  private int savedSize;
+  private long savedRhs;
+
+  LinearConflict(
+      AtomicTrail trail, Store store, IntUnaryOperator source, IntFunction<Constraint> origin) {
     this.trail = trail;
     this.source = source;
     this.origin = origin;
+    if (store != null && !"false".equals(System.getProperty("jacop.lcg.linearRows"))) {
+      for (Constraint c : store.getConstraints()) {
+        if (formOf(c) == null && !(c instanceof LinearReasons)) {
+          LinearForm f = LinearForms.of(c);
+          List<LinearForm> rows;
+          if (f != null && f.relation() != LinearForm.NE) {
+            rows = List.of(f);
+          } else if (c instanceof ConflictRows r) {
+            rows = r.conflictRows();
+          } else {
+            rows = Linearizations.of(c);
+          }
+          if (!rows.isEmpty()) {
+            relaxations.put(c, rows);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns the inequalities a constraint gives for an analysis: its linear relation, the rows made
+   * at the root for a constraint that is not one, or for an LP relaxation the form that failed (x
+   * null) or the forms that pruned x.
+   */
+  private List<LinearForm> candidates(Constraint c, IntVar x) {
+    if (c instanceof LinearReasons lr) {
+      if (x == null) {
+        LinearForm f = lr.failureForm();
+        return f == null ? List.of() : List.of(f);
+      }
+      return lr.reasonForms(x);
+    }
+    LinearForm f = formOf(c);
+    if (f != null) {
+      return f.relation() == LinearForm.NE ? List.of() : List.of(f);
+    }
+    List<LinearForm> rows = relaxations.get(c);
+    return rows == null ? List.of() : rows;
+  }
+
+  private void save() {
+    if (savedTerms.length < size) {
+      savedTerms = new int[2 * size];
+      savedCoef = new long[2 * size];
+    }
+    for (int k = 0; k < size; k++) {
+      savedTerms[k] = terms[k];
+      savedCoef[k] = coef[terms[k]];
+    }
+    savedSize = size;
+    savedRhs = rhs;
+  }
+
+  private void restore() {
+    clear();
+    if (terms.length < savedSize) {
+      terms = Arrays.copyOf(terms, savedTerms.length);
+    }
+    for (int k = 0; k < savedSize; k++) {
+      terms[k] = savedTerms[k];
+      coef[savedTerms[k]] = savedCoef[k];
+    }
+    size = savedSize;
+    rhs = savedRhs;
   }
 
   private void count(String outcome) {
@@ -120,6 +204,16 @@ final class LinearConflict {
         || c instanceof LinearExplainable
         || c instanceof LinearBool
         || c instanceof SumWeight;
+  }
+
+  /**
+   * Returns whether an analysis can use a constraint as a reason.
+   *
+   * @param c the constraint, or null
+   * @return true when it has a linear relation, root rows or LP forms
+   */
+  boolean usable(Constraint c) {
+    return isLinear(c) || c instanceof LinearReasons || c != null && relaxations.containsKey(c);
   }
 
   /**
@@ -162,21 +256,34 @@ final class LinearConflict {
   }
 
   private LinearForm analyseFailure(Constraint failed, int level) {
-    LinearForm f = failed == null ? null : formOf(failed);
-    if (f == null || f.relation() == LinearForm.NE) {
+    List<LinearForm> starts = failed == null ? List.of() : candidates(failed, null);
+    if (starts.isEmpty()) {
       count("start-nonlinear:" + (failed == null ? "none" : failed.getClass().getSimpleName()));
       return null;
     }
     int now = trail.size();
-    clear();
-    // the side of the relation that fails on the current bounds
-    if (f.relation() != LinearForm.GE && load(f, false) && slack(now) < 0) {
-      // sum <= c fails
-    } else if (f.relation() != LinearForm.LE && clearAnd() && load(f, true) && slack(now) < 0) {
-      // sum >= c fails
-    } else {
+    // the first relation, and side of it, that fails on the current bounds
+    boolean started = false;
+    for (LinearForm f : starts) {
+      clear();
+      if (f.relation() != LinearForm.GE && load(f, false) && slack(now) < 0) {
+        started = true;
+        break;
+      }
+      clear();
+      if (f.relation() != LinearForm.LE && load(f, true) && slack(now) < 0) {
+        started = true;
+        break;
+      }
+    }
+    if (!started) {
+      clear();
       count("start-not-failing");
       return null;
+    }
+    boolean modelStart = formOf(failed) != null;
+    if (!modelStart && !(failed instanceof LinearReasons)) {
+      count("start-row");
     }
     for (int step = 0; ; step++) {
       // the latest entry giving a bound the sum uses, and the level of the latest other one
@@ -199,7 +306,12 @@ final class LinearConflict {
       }
       if (trail.level(latest) < level
           || (otherLevel < level && trail.level(latest) == level && slack(latest) >= 0)) {
-        count(step == 0 ? "asserting-at-start" : "asserting");
+        if (step == 0 && (modelStart || size > maxTerms)) {
+          // the failing constraint itself, already in the model, or a row or LP form too long
+          count(modelStart ? "asserting-at-start" : "too-many-terms:start");
+          return null;
+        }
+        count(step == 0 ? "asserting-row" : "asserting");
         learntTerms += size;
         learntSteps += step;
         return result();
@@ -224,38 +336,49 @@ final class LinearConflict {
                 + SOURCES[source.applyAsInt(latest)]);
         return null;
       }
-      LinearForm rf = formOf(r);
-      if (rf == null || rf.relation() == LinearForm.NE) {
+      List<LinearForm> reasons = candidates(r, trail.variable(latest));
+      if (reasons.isEmpty()) {
         count("stop-nonlinear:" + r.getClass().getSimpleName());
         return null;
       }
       int x = trail.id(trail.variable(latest));
       long a = coef[x];
-      // the side of the reason that bounds x in the direction the sum uses
-      if (!loadReason(rf, x, a)) {
-        count("stop-wrong-side:" + r.getClass().getSimpleName());
+      // the first relation whose side bounding x in the direction the sum uses gives a sum that
+      // still fails on the bounds before the entry: the trail is undone up to it
+      String why = "stop-wrong-side:";
+      boolean combined = false;
+      save();
+      for (LinearForm rf : reasons) {
+        if (!loadReason(rf, x, a)) {
+          continue;
+        }
+        if (!combine(x, a)) {
+          why = "overflow:";
+        } else if (size > maxTerms) {
+          why = "too-many-terms:";
+        } else if (size == 0) {
+          why = "cancelled:";
+        } else if (slack(latest) >= 0) {
+          why = guessed ? "not-failing-kept:" : "not-failing:";
+        } else {
+          combined = true;
+          break;
+        }
+        restore();
+      }
+      if (!combined) {
+        restore();
+        count(why + r.getClass().getSimpleName());
         return null;
       }
-      if (!combine(x, a)) {
-        count("overflow");
-        return null;
-      }
-      if (size > maxTerms) {
-        count("too-many-terms");
-        return null;
-      }
-      if (size == 0) {
-        count("cancelled");
-        return null;
-      }
-      // the reason holds on the bounds before the entry: the trail is undone up to it
       now = latest;
       if (guessed) {
         count("kept-origin");
       }
-      if (slack(now) >= 0) {
-        count((guessed ? "not-failing-kept:" : "not-failing:") + r.getClass().getSimpleName());
-        return null;
+      if (formOf(r) == null && !(r instanceof LinearReasons)) {
+        count("row-reason");
+      } else if (r instanceof LinearReasons) {
+        count("lp-reason");
       }
     }
   }
@@ -292,11 +415,6 @@ final class LinearConflict {
     }
     size = 0;
     rhs = 0;
-  }
-
-  private boolean clearAnd() {
-    clear();
-    return true;
   }
 
   private void grow(int id) {
