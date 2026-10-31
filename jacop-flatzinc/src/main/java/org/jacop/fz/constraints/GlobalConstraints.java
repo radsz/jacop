@@ -54,6 +54,7 @@ import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -641,7 +642,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (IntVar vv : v) {
       dom = (IntervalDomain) dom.union(vv.dom());
     }
-    if (v.length > 100) {
+    // a large all_different over sparse domains (successor arrays) keeps domain consistency:
+    // bounds consistency prunes nothing inside them
+    if (v.length > 100 && !isSparseDomains(v)) {
       support.pose(new Alldiff(v));
       return;
     }
@@ -2497,9 +2500,22 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
+    if (CONDITIONAL_SELECT) {
+      support.pose(new ConditionalSelect(b, x, y));
+      return;
+    }
     PrimitiveConstraint[] cs = createIntEqualityConstraintsForConditional(x, y);
     poseIntConditionalConstraint(b, cs, n);
   }
+
+  /**
+   * Whether if_then_else on integers is posed as {@link ConditionalSelect}, which bounds the result
+   * by the branches still possible ({@code -Dorg.jacop.fz.conditionalSelect}, true by default),
+   * instead of IfThenElse/Conditional over equalities, which wait until the selected branch is
+   * known.
+   */
+  static final boolean CONDITIONAL_SELECT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.conditionalSelect", "true"));
 
   private boolean tryEarlyReturnForIfThenElseIntTwoBranches(IntVar[] b, IntVar[] x, IntVar y) {
     if (support.options.useSat()
