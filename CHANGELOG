@@ -1201,6 +1201,25 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+83. New constraint Cumulatives (org.jacop.constraints.cumulative), the
+    cumulatives of Beldiceanu and Carlsson: tasks with variable starts,
+    durations, heights and machines, a bound per machine that is an
+    upper or a lower limit on the load wherever a task runs, heights
+    that may be negative, and optional tasks. A sweep over each
+    machine's least-load profile prunes starts, machines, durations,
+    heights, presence and bounds; it also forces a negative task to run
+    where the others alone break the bound, a deduction the forbidden
+    regions miss. Under --lcg it explains its pruning and failures.
+    MiniZinc cumulatives with lower bounds or negative heights, and the
+    optional form, use it instead of the quadratic standard library
+    decomposition (upper bounds with non-negative heights still go to
+    one cumulative per machine). No Challenge model uses cumulatives; on
+    29 generated coverage, paired-task and power instances, 60 s:
+    --lcg off 10 better, none worse (cover_10_3_0 optimum in 3.5 s
+    instead of 40 s, three power instances find a solution); --lcg
+    7 better and 7 worse (pairs_24_5_2 UNSAT not proved, power proofs
+    up to 2x slower, cover_24_5_1 a first solution).
+
 Version 4.11
 =============
 

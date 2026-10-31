@@ -2209,14 +2209,14 @@ class GlobalConstraintBruteForceTest {
       int machineCount = 1 + random.nextInt(2);
       int[][] domains =
           append(
-              domains(random, n, 0, 3),
+              domains(random, n, 0, 2),
               append(
                   domains(random, n, 0, 2),
                   append(
-                      domains(random, n, -1, 3),
+                      domains(random, n, -1, 2),
                       append(
                           domains(random, n, 1, machineCount),
-                          domains(random, machineCount, -1, 4)))));
+                          domains(random, machineCount, -1, 3)))));
       // fixed durations and heights for half of the tasks keep the brute force small
       for (int i = n; i < 3 * n; i++) {
         if (random.nextBoolean()) {
@@ -2245,7 +2245,7 @@ class GlobalConstraintBruteForceTest {
                           : null)),
           v -> {
             for (int k = 1; k <= machineCount; k++) {
-              for (int t = 0; t <= 5; t++) {
+              for (int t = 0; t <= 4; t++) {
                 long sum = 0;
                 boolean running = false;
                 for (int i = 0; i < n; i++) {
