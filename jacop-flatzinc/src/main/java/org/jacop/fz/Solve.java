@@ -31,6 +31,9 @@
 package org.jacop.fz;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
+import java.lang.management.MemoryUsage;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -350,7 +353,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!store.consistency()) {
       throw Store.failException;
     }
-    if (opt.getStatistics()) {
+    if (opt.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: symmetryTime="
               + time / 1_000_000_000.0
@@ -490,7 +493,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
-    if (options.getStatistics()) {
+    if (options.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: lpTime="
               + (timer.getCpuTime() - start) / 1_000_000_000.0
@@ -530,7 +533,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /** Prints the counts of the linear relaxation (--lp). */
   private void printLinearRelaxationStatistics() {
     LinearRelaxation r = linearRelaxation;
-    if (r == null || !options.getStatistics()) {
+    if (r == null || !options.searchStatistics()) {
       return;
     }
     IO.println(
@@ -648,7 +651,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       objectiveMinimized = presolve.minimize();
     }
     // under presolve the rule runs every round until it imposes the equation
-    if (options.getStatistics()
+    if (options.searchStatistics()
         && (!reformulation.isEmpty() || options.presolve() == Options.Presolve.OFF)) {
       IO.println(
           "%%%mzn-stat: presolveObjectiveTime="
@@ -792,7 +795,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Derivation d = presolver.presolve();
     long time = timer.getCpuTime() - start;
-    if (options.getStatistics()) {
+    if (options.searchStatistics()) {
       printPresolveStatistics(d, tabling, implied.imposed(), time, cumulative);
     }
     switch (d.outcome()) {
@@ -2057,7 +2060,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         int value = lcgLastCost;
         IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
       }
-      printLcgExplanationStatistics();
+      if (options.searchStatistics()) {
+        printLcgExplanationStatistics();
+      }
     }
   }
 
@@ -3580,22 +3585,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + (freeSearch != null && freeSearch.getNogoods() > 0
                 ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
                 : "")
-            + (freeSearch != null && freeSearch.getProbes() > 0
-                ? "\n%%%mzn-stat: objectiveProbes="
-                    + nf.format(freeSearch.getProbes())
-                    + "\n%%%mzn-stat: objectiveProbesRefuted="
-                    + nf.format(freeSearch.getProbesRefuted())
-                    + "\n%%%mzn-stat: objectiveProbeFailures="
-                    + nf.format(freeSearch.getProbeFailures())
-                : "")
-            + lnsStatistics(freeLns)
-            + localSearchStatistics()
+            + peakMemory()
+            + (options.searchStatistics() ? searchStatistics() : "")
             + "\n%%%mzn-stat-end");
 
     if (options.debug()) {
       String s = "% " + failStatistics.toString();
       IO.println(s.replace("\n", "\n% "));
     }
+  }
+
+  /** The peak memory of the JVM's heap and non-heap pools, in Mbytes, as the standard peakMem. */
+  private String peakMemory() {
+    long bytes = 0;
+    for (MemoryPoolMXBean pool : ManagementFactory.getMemoryPoolMXBeans()) {
+      MemoryUsage peak = pool.getPeakUsage();
+      if (peak != null) {
+        bytes += peak.getUsed();
+      }
+    }
+    return "\n%%%mzn-stat: peakMem=" + nf.format(bytes / (1024.0 * 1024.0));
+  }
+
+  /** The statistics of free search, LNS and local search beyond the standard ones. */
+  private String searchStatistics() {
+    return (freeSearch != null && freeSearch.getProbes() > 0
+            ? "\n%%%mzn-stat: objectiveProbes="
+                + nf.format(freeSearch.getProbes())
+                + "\n%%%mzn-stat: objectiveProbesRefuted="
+                + nf.format(freeSearch.getProbesRefuted())
+                + "\n%%%mzn-stat: objectiveProbeFailures="
+                + nf.format(freeSearch.getProbeFailures())
+            : "")
+        + lnsStatistics(freeLns)
+        + localSearchStatistics();
   }
 
   /**
@@ -4013,14 +4036,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     appendCostLineToBuffer(printBuffer);
     double cpuTime = getSearchTime_ms();
     printBuffer.append("%%%mzn-stat: nodes=").append(nf.format(nodes)).append("\n");
-    printBuffer
-        .append("%%%mzn-stat: nodesPerSecond=")
-        .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
-        .append("\n");
-    if (restartCalculator != null) {
-      printBuffer.append("%%%%mzn-stat: restarts=").append(nf.format(rs.restarts()));
+    if (options.searchStatistics()) {
+      printBuffer
+          .append("%%%mzn-stat: nodesPerSecond=")
+          .append(nf.format(cpuTime == 0 ? 0.0 : (double) nodes / (cpuTime / 1000)))
+          .append("\n");
     }
-    printBuffer.append("\n%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");
+    if (restartCalculator != null) {
+      printBuffer.append("%%%mzn-stat: restarts=").append(nf.format(rs.restarts())).append("\n");
+    }
+    printBuffer.append("%%%mzn-stat: solveTime=").append(nf.format(cpuTime / 1000)).append("\n");
     printBuffer.append("%%%mzn-stat-end\n");
   }
 

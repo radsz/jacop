@@ -39,7 +39,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -65,10 +69,17 @@ import org.jacop.search.free.SharedSolution;
 @SuppressWarnings("java:S106") // stdout is the interface of a FlatZinc solver
 final class Portfolio {
 
-  /** The settings of the threads after the first, in this order; -f and --lcg are given here. */
+  /**
+   * The settings of the threads after the first, in this order; -f and --lcg are given here. The
+   * order comes from each setting run alone on 240 hard instances (osolpro
+   * benchmarks/portfolio-configs) and is the best one both after --lcg on -f (the default with -f)
+   * and after --lcg on (the default without options): LCG branching on the solver's literals solves
+   * the most instances the others do not, then free search without LCG, then depth-first search on
+   * the annotation without and with LCG. The LCG settings that differ only in core-guided or
+   * lower-bound search (lcg, lcg-bb) solve the same instances as one another.
+   */
   private static final String[][] CONFIGS = {
-    {"free", "--lcg", "off", "-f"},
-    {"lcg", "--lcg", "on", "-f"},
+    {"lcg-lits", "--lcg", "on", "-f", "--free-config", "lcg-branching=literals"},
     {
       "free-chs-luby",
       "--lcg",
@@ -77,13 +88,16 @@ final class Portfolio {
       "--free-config",
       "heuristic=chs,restarts=luby,scale=100"
     },
+    {"default", "--lcg", "off"},
+    {"lcg-fixed", "--lcg", "on"},
+    {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
+    {"free", "--lcg", "off", "-f"},
+    // local search for half the time, as long as it progresses, then free search from its solution
+    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"},
+    {"lcg", "--lcg", "on", "-f"},
     {"lcg-bb", "--lcg", "on", "-f", "--free-config", "lcg-core=0,lcg-lb=0"},
     {"free-cacd", "--lcg", "off", "-f", "--free-config", "heuristic=cacd"},
-    {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
-    {"lcg-fixed", "--lcg", "on"},
-    {"free-luby-keep", "--lcg", "off", "-f", "--free-config", "restarts=luby,scale=50,flush=0"},
-    // local search for half the time, as long as it progresses, then free search from its solution
-    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"}
+    {"free-luby-keep", "--lcg", "off", "-f", "--free-config", "restarts=luby,scale=50,flush=0"}
   };
 
   /** The most threads the portfolio uses: the options given and each setting above. */
@@ -204,15 +218,12 @@ final class Portfolio {
     long start = System.currentTimeMillis();
     List<String> base = baseArguments(args);
     int threads = Math.min(options.threads(), MAX_THREADS);
+    boolean satisfaction = isSatisfaction(readModel(options));
     workers.add(new Worker("given", arguments(base, List.of(), false)));
-    for (String[] config : CONFIGS) {
-      if (workers.size() == threads) {
-        break;
-      }
-      if (!sameAsGiven(config)) {
-        List<String> flags = Arrays.asList(config).subList(1, config.length);
-        workers.add(new Worker(config[0], arguments(base, flags, true)));
-      }
+    String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
+    for (String[] config : settings(given, threads - 1, satisfaction)) {
+      List<String> flags = Arrays.asList(config).subList(1, config.length);
+      workers.add(new Worker(config[0], arguments(base, flags, true)));
     }
     String file = args[args.length - 1];
     synchronized (lock) {
@@ -290,12 +301,14 @@ final class Portfolio {
         }
       }
       if (options.getStatistics()) {
-        s.append("%%%mzn-stat: portfolioThreads=").append(workers.size()).append('\n');
-        if (bestWorker != null) {
-          s.append("%%%mzn-stat: portfolioBest=").append(bestWorker.name).append('\n');
-        }
-        if (imports > 0) {
-          s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+        if (options.searchStatistics()) {
+          s.append("%%%mzn-stat: portfolioThreads=").append(workers.size()).append('\n');
+          if (bestWorker != null) {
+            s.append("%%%mzn-stat: portfolioBest=").append(bestWorker.name).append('\n');
+          }
+          if (imports > 0) {
+            s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+          }
         }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {
@@ -360,13 +373,71 @@ final class Portfolio {
     return "-f".equals(arg) || "--free-search".equals(arg) || "--lcg".equals(arg);
   }
 
-  /** Whether a setting is what the options given select already, so it would repeat that thread. */
-  private boolean sameAsGiven(String[] config) {
-    List<String> flags = Arrays.asList(config);
-    return "on".equals(flags.get(flags.indexOf("--lcg") + 1)) == options.lcg()
-        && flags.contains("-f") == options.freeSearch()
-        && !flags.contains("--free-config")
-        && options.freeConfig.isEmpty();
+  /**
+   * The settings of the threads after the first: the first ones of {@link #CONFIGS} that run a
+   * search no earlier thread runs on a model of this kind.
+   *
+   * @param given the search of the first thread, as {@link #search(List, boolean)} gives it
+   * @param count how many settings at most
+   * @param satisfaction whether the model has no objective
+   * @return the settings, in the order of {@link #CONFIGS}
+   */
+  static List<String[]> settings(String given, int count, boolean satisfaction) {
+    Set<String> searches = new HashSet<>();
+    searches.add(given);
+    List<String[]> chosen = new ArrayList<>();
+    for (String[] config : CONFIGS) {
+      if (chosen.size() >= count) {
+        break;
+      }
+      if (searches.add(search(Arrays.asList(config).subList(1, config.length), satisfaction))) {
+        chosen.add(config);
+      }
+    }
+    return chosen;
+  }
+
+  /**
+   * The search a setting runs on a model of this kind, as a key: two settings with the same key
+   * would run the same search. Without an objective the settings of the objective (core-guided and
+   * lower-bound search, LNS, probes) change nothing, so lcg-bb is lcg on a satisfaction model.
+   */
+  static String search(List<String> flags, boolean satisfaction) {
+    Map<String, String> config = new TreeMap<>();
+    int i = flags.indexOf("--free-config");
+    if (i >= 0) {
+      for (String kv : flags.get(i + 1).split(",")) {
+        String[] p = kv.split("=", 2);
+        config.put(p[0].strip(), p.length > 1 ? p[1].strip() : "");
+      }
+    }
+    int lcg = flags.indexOf("--lcg");
+    boolean on = lcg >= 0 && (lcg + 1 == flags.size() || !"off".equals(flags.get(lcg + 1)));
+    return search(on, flags.contains("-f"), config, satisfaction);
+  }
+
+  private static String search(
+      boolean lcg, boolean free, Map<String, String> config, boolean satisfaction) {
+    Map<String, String> c = new TreeMap<>(config);
+    if (satisfaction) {
+      c.keySet().removeIf(Portfolio::objectiveSetting);
+    }
+    return (lcg ? "lcg " : "") + (free ? "free " : "") + c;
+  }
+
+  private static boolean objectiveSetting(String key) {
+    return key.startsWith("lcg-core")
+        || "lcg-lb".equals(key)
+        || key.startsWith("lns")
+        || key.startsWith("probe");
+  }
+
+  private static String readModel(Options options) {
+    try {
+      return Files.readString(Path.of(options.getFileName()), StandardCharsets.ISO_8859_1);
+    } catch (IOException _) {
+      return "";
+    }
   }
 
   /**
