@@ -1994,7 +1994,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printResultStatus(interrupted, numberSolutions > 0, !complete, complete && !interrupted);
     if (options.getStatistics()) {
       printStatisticsOutput(
-          (int) lcg.sat().decisions, (int) lcg.sat().conflicts, 0, numberSolutions);
+          (int) lcg.sat().decisions,
+          (int) lcg.sat().conflicts,
+          lcg.sat().peakDecisionLevel,
+          numberSolutions);
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
         int value = lcgLastCost;
@@ -3491,6 +3494,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long restarts = rs != null ? rs.restarts() : 0;
     if (freeSearch != null) {
       restarts = freeSearch.getRestarts();
+    }
+    if (lcg != null) {
+      restarts = lcg.sat().restarts;
     }
 
     IO.println(
