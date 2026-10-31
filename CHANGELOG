@@ -1312,6 +1312,21 @@ Version 5.0 (unreleased)
     7 better and 7 worse (pairs_24_5_2 UNSAT not proved, power proofs
     up to 2x slower, cover_24_5_1 a first solution).
 
+90. Geost checks volumes: in every dimension of a non-overlapping group
+    that selects all spatial dimensions (and time, if selected), the
+    objects that must lie inside a window must fit there by volume,
+    within the hull of those objects and the InArea box. It is on by
+    default; Geost.setVolumeReasoning(false) turns it off. New external
+    constraint LexChain(objects) orders the origins of interchangeable
+    objects lexicographically inside the sweep (symmetry breaking, like
+    SICStus geost lex); it is opt-in. Shape.area() returned 0 for
+    shapes made of one box; it is fixed. On the Geost benchmarks (60 s,
+    input order search) volume takes squares13 from 23,031 to 4,083
+    nodes and proves jobs12 and pallet2x5-12x9-11 infeasible at the
+    root (101,583 nodes and the time limit before); LexChain proves
+    pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
+    No MiniZinc Challenge instance 2008-2026 reaches Geost.
+
 Version 4.11
 =============
 
