@@ -137,6 +137,39 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void aSearchForTheLargestValuesMeetsTheLargestSolutionFirst() throws IOException {
+    // any two of the four may be 1; the search tries 1 first, so it meets x = [1, 1, 0, 0] first,
+    // which the lex-leader constraints must keep
+    String model =
+        """
+        array [1..4] of var 0..1: x :: output_array([1..4]);
+        constraint int_lin_le([1,1,1,1], x, 2);
+        constraint int_lin_le([-1,-1,-1,-1], x, -2);
+        solve :: int_search(x, input_order, indomain_max, complete) satisfy;
+        """;
+    String out = FlatzincTestRunner.run(tmp, model, "-s", "--symmetry", "on");
+    assertTrue(out.contains("x = array1d(1..4, [1, 1, 0, 0]);"), out);
+    assertTrue(out.contains("failures=0"), out);
+    assertTrue(generators(out) > 0, out);
+  }
+
+  /**
+   * The model with a search annotation over its x variables that tries the largest values first.
+   */
+  private static String largestFirst(String model) {
+    List<String> xs = new ArrayList<>();
+    Matcher m = Pattern.compile("var [^:]+: (x\\d+)").matcher(model);
+    while (m.find()) {
+      xs.add(m.group(1));
+    }
+    return model.replace(
+        "solve ",
+        "solve :: int_search(["
+            + String.join(",", xs)
+            + "], input_order, indomain_max, complete) ");
+  }
+
+  @Test
   void allSolutionsOfASatisfactionProblemAreKept() throws IOException {
     String model =
         """
@@ -170,6 +203,10 @@ class SymmetryBreakingFlatzincTest {
       // breaking, since LCG rejects some of these models (array_int_maximum) that CP refutes
       String lcgOff = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
       String lcgOn = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg");
+      // a search for the largest values first keeps the largest solution of each orbit
+      if (trial % 2 == 0) {
+        lcgOn = FlatzincTestRunner.run(tmp, largestFirst(model), "--symmetry", "on", "--lcg");
+      }
       boolean lcgUnsat = lcgOff.contains("=====UNSATISFIABLE=====");
       assertEquals(lcgUnsat, lcgOn.contains("=====UNSATISFIABLE====="), what + "\n" + lcgOn);
       if (optimise && !lcgUnsat) {

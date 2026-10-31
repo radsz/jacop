@@ -340,6 +340,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long start = timer.getCpuTime();
     SymmetryBreaking.Outcome o =
         new SymmetryBreaking(store, dictionary)
+            .keepLargest(largestFirst(item))
             .run(
                 astTree,
                 objective,
@@ -369,6 +370,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  /** Whether the first value choice of the search annotation tries the largest values first. */
+  private static boolean largestFirst(SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e
+        && e.getIdent() != null
+        && e.getIdent().startsWith("indomain")) {
+      return e.getIdent().equals("indomain_max") || e.getIdent().equals("indomain_reverse_split");
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      SimpleNode child = (SimpleNode) node.jjtGetChild(i);
+      if (containsIndomain(child)) {
+        return largestFirst(child);
+      }
+    }
+    return false;
+  }
+
+  private static boolean containsIndomain(SimpleNode node) {
+    if (node instanceof ASTScalarFlatExpr e
+        && e.getIdent() != null
+        && e.getIdent().startsWith("indomain")) {
+      return true;
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (containsIndomain((SimpleNode) node.jjtGetChild(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** The variables named in an annotation, in order. */

@@ -359,10 +359,27 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final Tables dictionary;
   // when the time given to run ends (System.nanoTime)
   private long deadline = Long.MAX_VALUE;
+  // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
+  private boolean largest;
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
     this.dictionary = dictionary;
+  }
+
+  /**
+   * Keeps the lexicographically largest solution of each orbit of the variable symmetries, for a
+   * search that tries the largest values first; with the smallest one kept, such a search would
+   * first meet the solutions the lex-leader constraints remove. Value precedence keeps the values
+   * in order of first use, which goes with the smallest solution only, so the variable symmetries
+   * are then broken towards the smallest one all the same.
+   *
+   * @param largest true for the largest solution.
+   * @return this.
+   */
+  SymmetryBreaking keepLargest(boolean largest) {
+    this.largest = largest;
+    return this;
   }
 
   /**
@@ -485,7 +502,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
     List<GraphAutomorphisms.Permutation> generators = new ArrayList<>(result.generators());
     int orbitopes = 0;
     int posted = values.posted();
+    boolean descending = largest && values.posted() == 0;
     for (IntVar[][] columns : orbitopes(generators, varAt, rankAt)) {
+      if (descending) {
+        Collections.reverse(Arrays.asList(columns));
+      }
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
       store.impose(chain);
@@ -528,7 +549,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
         // ordered by the lex chain of its orbitope
         continue;
       }
-      LexOrder lex = new LexOrder(xs.toArray(new IntVar[0]), ys.toArray(new IntVar[0]), false);
+      IntVar[] x = xs.toArray(new IntVar[0]);
+      IntVar[] y = ys.toArray(new IntVar[0]);
+      LexOrder lex = descending ? new LexOrder(y, x, false) : new LexOrder(x, y, false);
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
       store.impose(lex);
