@@ -54,6 +54,7 @@ import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -93,6 +94,7 @@ import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
+import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -110,6 +112,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
@@ -640,7 +643,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (IntVar vv : v) {
       dom = (IntervalDomain) dom.union(vv.dom());
     }
-    if (v.length > 100) {
+    // a large all_different over sparse domains (successor arrays) keeps domain consistency:
+    // bounds consistency prunes nothing inside them
+    if (v.length > 100 && !isSparseDomains(v)) {
       support.pose(new Alldiff(v));
       return;
     }
@@ -1764,6 +1769,33 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * How inverse(x, x) over n variables is posted, set by the system property {@code
+   * org.jacop.fz.symmetricAlldifferent}: {@code matching} (the default) for a {@link
+   * SymmetricAlldifferent} that channels x[i] = j with x[j] = i and fails when no perfect matching
+   * exists, {@code domain} for the domain consistent one, {@code false} for Assignment, which is
+   * also used above 1000 variables. On the MiniZinc Challenge models with inverse(x, x) (p1f,
+   * elitserien) the domain consistent one searched the same number of nodes and was a quarter
+   * slower.
+   *
+   * @param n the number of variables
+   * @return matching, domain or false
+   */
+  static String symmetricAlldifferent(int n) {
+    return n > 1000
+        ? "false"
+        : System.getProperty("org.jacop.fz.symmetricAlldifferent", "matching");
+  }
+
+  private static boolean sameVariables(IntVar[] a, IntVar[] b) {
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i] && !(a[i].singleton() && b[i].singleton() && a[i].value() == b[i].value())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void gen_jacop_assignment(SimpleNode node) {
     IntVar[] f = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] invf = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -1773,6 +1805,13 @@ class GlobalConstraints implements ParserTreeConstants {
     // inverse functions are bijections, so index sets of different sizes cannot be satisfied
     if (f.length != invf.length) {
       throw Store.failException;
+    }
+
+    // inverse(x, x) is symmetric all different, a perfect matching of the variables
+    String symmetric = symmetricAlldifferent(f.length);
+    if (indexF == indexInvf && sameVariables(f, invf) && !"false".equals(symmetric)) {
+      support.pose(new SymmetricAlldifferent(f, indexF, "domain".equals(symmetric)));
+      return;
     }
 
     // we do not not pose Assignment directly because of possible inconsistency with its
@@ -2496,9 +2535,22 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
+    if (CONDITIONAL_SELECT) {
+      support.pose(new ConditionalSelect(b, x, y));
+      return;
+    }
     PrimitiveConstraint[] cs = createIntEqualityConstraintsForConditional(x, y);
     poseIntConditionalConstraint(b, cs, n);
   }
+
+  /**
+   * Whether if_then_else on integers is posed as {@link ConditionalSelect}, which bounds the result
+   * by the branches still possible ({@code -Dorg.jacop.fz.conditionalSelect}, true by default),
+   * instead of IfThenElse/Conditional over equalities, which wait until the selected branch is
+   * known.
+   */
+  static final boolean CONDITIONAL_SELECT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.conditionalSelect", "true"));
 
   private boolean tryEarlyReturnForIfThenElseIntTwoBranches(IntVar[] b, IntVar[] x, IntVar y) {
     if (support.options.useSat()
@@ -2650,6 +2702,20 @@ class GlobalConstraints implements ParserTreeConstants {
       c.doOptionalOverload(Boolean.parseBoolean(p));
     }
     support.pose(c);
+  }
+
+  void gen_jacop_cumulatives(SimpleNode node) {
+    IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] machine = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar[] bound = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+    boolean upper = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5)) != 0;
+    int first = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    IntVar[] opt =
+        node.jjtGetNumChildren() > 7 ? support.getVarArray((SimpleNode) node.jjtGetChild(7)) : null;
+
+    support.pose(new Cumulatives(str, dur, res, machine, bound, upper, first, opt));
   }
 
   void gen_jacop_disjunctive_optional(SimpleNode node) {

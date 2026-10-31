@@ -74,6 +74,8 @@ public class VariablesParameters implements ParserTreeConstants {
   private static final String OUTPUT_ARRAY = "output_array";
   Tables dictionary;
   int lowInterval;
+  // the last interval read when it was narrowed to JaCoP's range, or null
+  private ASTIntTiExprTail clampedInterval;
   int highInterval;
   double lowFloatInterval;
   double highFloatInterval;
@@ -166,9 +168,21 @@ public class VariablesParameters implements ParserTreeConstants {
   private void extractIntInterval(ASTIntTiExprTail tail) {
     lowInterval = tail.getLow();
     highInterval = tail.getHigh();
+    clampedInterval = tail.getClamped() != null ? tail : null;
     if (CHECK_BOUNDS && (lowInterval < IntDomain.MIN_INT || highInterval > IntDomain.MAX_INT)) {
       throw new ArithmeticException(
           "Too large bounds on intervals " + lowInterval + ".." + highInterval);
+    }
+  }
+
+  private void noteClampedDomain(String ident) {
+    if (clampedInterval != null) {
+      dictionary.noteClampedDomain(
+          new Tables.ClampedDomain(
+              ident,
+              clampedInterval.getClamped(),
+              clampedInterval.lowClamped(),
+              clampedInterval.highClamped()));
     }
   }
 
@@ -240,6 +254,7 @@ public class VariablesParameters implements ParserTreeConstants {
 
     int type = getType(node);
     int initChild = getAnnotations(node, 1);
+    noteClampedDomain(((ASTVarDeclItem) node).getIdent());
 
     if (annotations.contains("output_var")) {
       outputVar = true;
@@ -526,6 +541,7 @@ public class VariablesParameters implements ParserTreeConstants {
     int type = getType(node);
     int initChild = getArrayAnnotations(node, 1);
     String ident = ((ASTVarDeclItem) node).getIdent();
+    noteClampedDomain(ident);
     boolean outputArray = annotations.contains(OUTPUT_ARRAY);
     OutputArrayAnnotation outArrayAnn =
         outputArray ? new OutputArrayAnnotation(ident, indexBounds) : null;
@@ -905,6 +921,7 @@ public class VariablesParameters implements ParserTreeConstants {
   // 8 - float; 9 - float interval;
   // 10- range set {|1..n, m, ...|}
   int getType(SimpleNode node) {
+    clampedInterval = null;
     SimpleNode child = (SimpleNode) node.jjtGetChild(0);
     if (child.getId() == JJTINTTIEXPRTAIL) {
       return getTypeFromIntTail((ASTIntTiExprTail) child);

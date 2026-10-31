@@ -90,6 +90,9 @@ public class Tables {
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
 
+  // variables that no constraint uses any more, such as the sums merged into a minimum
+  final ArrayList<Var> unusedVariables = new ArrayList<>();
+
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
   // IntVar zero, one;
@@ -99,6 +102,18 @@ public class Tables {
   int numberSetVariables;
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
+  // variables whose declared domain reached beyond JaCoP's integer range and was narrowed to it
+  private final ArrayList<ClampedDomain> clampedDomains = new ArrayList<>();
+
+  /**
+   * A variable whose declared domain was narrowed to JaCoP's integer range.
+   *
+   * @param ident the variable's identifier
+   * @param declared the declared bounds, as written in the model
+   * @param low whether the lower bound was raised
+   * @param high whether the upper bound was lowered
+   */
+  record ClampedDomain(String ident, String declared, boolean low, boolean high) {}
 
   /**
    * It constructs the storage object to store different objects, like int, array of ints, sets, ...
@@ -113,6 +128,64 @@ public class Tables {
    */
   public Tables(Store s) {
     this.store = s;
+  }
+
+  void noteClampedDomain(ClampedDomain d) {
+    clampedDomains.add(d);
+  }
+
+  /**
+   * Tells whether a declared domain was narrowed to JaCoP's integer range. The search then covers
+   * only part of the model: its solutions are solutions of the model, but a completed search proves
+   * neither unsatisfiability nor, unless only the objective lost values worse than a solution
+   * found, optimality.
+   *
+   * @return true if a declared domain was narrowed.
+   */
+  public boolean domainsClamped() {
+    return !clampedDomains.isEmpty();
+  }
+
+  /**
+   * Tells whether only the objective was narrowed, and only on its worse side, so that no value cut
+   * off can be better than a solution found.
+   *
+   * @param objective the variable of the objective
+   * @param minimize whether the objective is minimised
+   * @return true if every narrowed domain is the objective's, cut on its worse side.
+   */
+  boolean onlyObjectiveWorseSideClamped(Var objective, boolean minimize) {
+    for (ClampedDomain d : clampedDomains) {
+      if (getVariable(d.ident()) != objective || (minimize ? d.low() : d.high())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the warning about domains narrowed to JaCoP's integer range.
+   *
+   * @return the warning, as a FlatZinc comment line.
+   */
+  String clampedDomainsWarning() {
+    int n = clampedDomains.size();
+    ClampedDomain first = clampedDomains.getFirst();
+    return "%% Warning: "
+        + n
+        + (n == 1 ? " variable domain reaches" : " variable domains reach")
+        + " beyond JaCoP's integer range "
+        + IntDomain.MIN_INT
+        + ".."
+        + IntDomain.MAX_INT
+        + " and "
+        + (n == 1 ? "was" : "were")
+        + " narrowed to it (first: "
+        + first.ident()
+        + " "
+        + first.declared()
+        + "); a completed search is reported as optimal only if the objective alone lost values"
+        + " worse than its solutions, and never as unsatisfiable";
   }
 
   /**
@@ -259,6 +332,7 @@ public class Tables {
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
+    t.unusedVariables.addAll(map.get(unusedVariables));
     t.splitSums.addAll(map.get(splitSums));
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;

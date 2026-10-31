@@ -945,6 +945,87 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void domainBeyondIntegerRangeIsNarrowedWithoutClaimingCompleteness() throws IOException {
+    // MiniZinc writes computed bounds such as 0..4722438400 for a product (2022
+    // arithmetic-target); they were rejected as 32-bit overflows, and 0..1687566400 was taken
+    // silently beyond IntDomain.MAX_INT. The domain is narrowed to JaCoP's range, so a completed
+    // search proves nothing about the values cut off.
+    String fzn =
+        """
+        var 0..4722438400: x :: output_var;
+        constraint int_le(x, 3);
+        solve maximize x;
+        """;
+    String[] out = run(fzn);
+    assertEquals(0, lastStatus, out[1]);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
+    assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
+
+    // no claim of unsatisfiability: the solutions may lie in the values cut off
+    out =
+        run("var -10..1687566400: x :: output_var;\nconstraint int_le(x, -11);\nsolve satisfy;\n");
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    out =
+        run(
+            """
+            var 0..1687566400: x :: output_var;
+            var 0..9: y :: output_var;
+            constraint int_lin_eq([1, -1], [x, y], 600000000);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+
+    // the same model without the narrowing: a domain within the range is taken as declared
+    out = run("var 0..536870909: x :: output_var;\nconstraint int_le(x, 3);\nsolve maximize x;\n");
+    assertEquals("x = 3;\n----------\n==========\n", out[0]);
+    assertEquals("", out[1]);
+  }
+
+  @Test
+  void objectiveNarrowedOnItsWorseSideKeepsOptimality() throws IOException {
+    // 2020 code-generator: "var 0..2014326920: objective" is minimised; the values cut off are
+    // worse than any solution found, so the optimum is still proved
+    String[] out =
+        run(
+            """
+            var 0..2014326920: c :: output_var;
+            var 1..5: y :: output_var;
+            constraint int_lin_eq([1, -2], [c, y], 0);
+            solve minimize c;
+            """);
+    assertEquals("c = 2;\ny = 1;\n----------\n==========\n", out[0]);
+    // maximised, the values cut off are the better ones
+    out =
+        run(
+            """
+            var 0..2014326920: c :: output_var;
+            var 1..5: y :: output_var;
+            constraint int_lin_eq([1, -2], [c, y], 0);
+            solve maximize c;
+            """);
+    assertTrue(out[0].endsWith("c = 10;\ny = 5;\n----------\n"), out[0]);
+    // an array element of the objective's array narrowed too: no claim
+    out =
+        run(
+            """
+            array [1..2] of var 0..2014326920: a :: output_array([1..2]);
+            constraint int_le(a[2], 4);
+            solve minimize a[1];
+            """);
+    assertFalse(out[0].contains("=========="), out[0]);
+  }
+
+  @Test
+  void domainWhollyOutsideIntegerRangeIsRejected() throws IOException {
+    String[] out = run("var 600000000..700000000: x :: output_var;\nsolve satisfy;\n");
+    assertEquals("", out[0]);
+    assertTrue(out[1].contains("domain 600000000..700000000 at line 1"), out[1]);
+    assertTrue(out[1].contains("lies outside the integer range"), out[1]);
+    assertEquals(1, lastStatus);
+  }
+
+  @Test
   void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
     // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
     // assignment of the other variables timed out below its only node. The annotated search had no
@@ -1080,6 +1161,38 @@ class FlatzincFrontEndTest {
     String bounds = run(fzn, "-s", "-b")[0];
     assertTrue(bounds.contains("x30 = 2;"), bounds);
     assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
+  }
+
+  @Test
+  void largeSparseAlldiffGetsDomainConsistency() throws IOException {
+    // An all_different over more than 100 variables got bounds consistency (Alldiff) whatever its
+    // domains. x1 and x2 take 3 and 5 between them, a Hall set that is not an interval, so bounds
+    // consistency tries x120 = 5 and x120 = 3 first. The domains are sparse, so the constraint is
+    // now an Alldistinct, which removes 3 and 5 from x120 at the root (as on the successor
+    // arrays of multi-agent-graph-coverage, where only domain consistency finds a solution).
+    int n = 120;
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("var {3,5}: x1:: output_var;\n").append("var {3,5}: x2:: output_var;\n");
+    for (int i = 3; i < n; i++) {
+      fzn.append("var {")
+          .append(10 + i)
+          .append(',')
+          .append(1000 + i)
+          .append("}: x")
+          .append(i)
+          .append(":: output_var;\n");
+    }
+    fzn.append("var {1,2,3,5}: x").append(n).append(":: output_var;\n");
+    fzn.append("array [1..").append(n).append("] of var int: x = [");
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i > 1 ? "," : "").append('x').append(i);
+    }
+    fzn.append("];\nconstraint jacop_alldiff(x);\n").append(hallSetSearch(n));
+
+    // without --lcg, whose conflicts the failures statistic does not count
+    String out = run(fzn.toString(), "-s", "--lcg", "off")[0];
+    assertTrue(out.contains("x120 = 2;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
   }
 
   /** Successors of n nodes with the Hall set {x1, x2} on {3, 4} and x_n in 1..4. */
@@ -1278,6 +1391,47 @@ class FlatzincFrontEndTest {
 
     String stdout = run(fzn)[0];
     assertTrue(stdout.contains("=====UNSATISFIABLE====="), stdout);
+  }
+
+  @Test
+  void inverseOfItselfIsSymmetricAlldifferent() throws IOException {
+    // inverse(x, x) with x1, x3 in {2, 4} and x2, x4 in {1, 3, 5}: x5 can only be a fixed point,
+    // and the other four form an even cycle with two solutions. The domain consistent propagator
+    // finds them without a failure.
+    String fzn =
+        """
+        array [1..5] of var 1..5: x :: output_array([1..5]);
+        constraint set_in(x[1], {2, 4});
+        constraint set_in(x[3], {2, 4});
+        constraint set_in(x[2], {1, 3, 5});
+        constraint set_in(x[4], {1, 3, 5});
+        constraint jacop_assignment(x, x, 1, 1);
+        solve satisfy;
+        """;
+    String out = run(fzn, "-a", "-s")[0];
+    assertEquals(2, out.lines().filter(l -> l.startsWith("x = ")).count(), out);
+    System.setProperty("org.jacop.fz.symmetricAlldifferent", "domain");
+    try {
+      out = run(fzn, "-a", "-s")[0];
+    } finally {
+      System.clearProperty("org.jacop.fz.symmetricAlldifferent");
+    }
+    assertEquals(2, out.lines().filter(l -> l.startsWith("x = ")).count(), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    // three variables that may each take either of the other two have no perfect matching, which
+    // fails before search; channeling x[i] = j with x[j] = i (Assignment) needed a search node
+    String odd =
+        """
+        array [1..3] of var 1..3: x :: output_array([1..3]);
+        constraint set_in(x[1], {2, 3});
+        constraint set_in(x[2], {1, 3});
+        constraint set_in(x[3], {1, 2});
+        constraint jacop_assignment(x, x, 1, 1);
+        solve satisfy;
+        """;
+    out = run(odd, "-s")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("%%%mzn-stat: nodes="), out);
   }
 
   @Test

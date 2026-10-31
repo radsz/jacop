@@ -1038,6 +1038,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_cumulative_optional(n);
   }
 
+  /** Handles the jacop_cumulatives FlatZinc constraint. */
+  public void jacop_cumulatives(SimpleNode n) {
+    gc.gen_jacop_cumulatives(n);
+  }
+
+  /** Handles the jacop_cumulatives_optional FlatZinc constraint. */
+  public void jacop_cumulatives_optional(SimpleNode n) {
+    gc.gen_jacop_cumulatives(n);
+  }
+
   /** Handles the jacop_disjunctive_optional FlatZinc constraint. */
   public void jacop_disjunctive_optional(SimpleNode n) {
     gc.gen_jacop_disjunctive_optional(n);

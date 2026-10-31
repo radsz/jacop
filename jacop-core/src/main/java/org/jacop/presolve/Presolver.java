@@ -225,6 +225,40 @@ public final class Presolver {
   }
 
   /**
+   * Sets the costliest timing class of rules to run; see {@link Derivation.Builder#timing}.
+   *
+   * @param max the costliest class; {@link Rule.Timing#EXHAUSTIVE}, the default, runs every rule.
+   * @return this presolver.
+   */
+  public Presolver timing(Rule.Timing max) {
+    builder.timing(max);
+    return this;
+  }
+
+  /**
+   * Sets the share of the variables a round must change to count as finding much; see {@link
+   * Derivation.Builder#abortFactor(double)}.
+   *
+   * @param factor the share, at least 0.
+   * @return this presolver.
+   */
+  public Presolver abortFactor(double factor) {
+    builder.abortFactor(factor);
+    return this;
+  }
+
+  /**
+   * Sets the time the rounds of rules may take; see {@link Derivation.Builder#budget(long)}.
+   *
+   * @param millis the time in milliseconds.
+   * @return this presolver.
+   */
+  public Presolver budget(long millis) {
+    builder.budget(millis);
+    return this;
+  }
+
+  /**
    * Sets variables the dual reductions leave alone; see {@link Derivation.Builder#exempt(Var...)}.
    *
    * @param vars the variables.
@@ -232,6 +266,30 @@ public final class Presolver {
    */
   public Presolver exempt(Var... vars) {
     builder.exempt(vars);
+    return this;
+  }
+
+  /**
+   * Sets whether presolve leaves the store in place when its rules simplified nothing; see {@link
+   * Derivation.Builder#inPlace(boolean)}.
+   *
+   * @param on true to skip a copy that would not simplify the problem.
+   * @return this presolver.
+   */
+  public Presolver inPlace(boolean on) {
+    builder.inPlace(on);
+    return this;
+  }
+
+  /**
+   * Switches the doubleton substitutions of rule 8 on or off; see {@link
+   * Derivation.Builder#doubletons(boolean)}.
+   *
+   * @param on true to substitute, the default.
+   * @return this presolver.
+   */
+  public Presolver doubletons(boolean on) {
+    builder.doubletons(on);
     return this;
   }
 

@@ -31,12 +31,12 @@
 package org.jacop.presolve;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.jacop.api.Copyable;
@@ -82,6 +82,13 @@ public final class Derivation implements VarMap {
 
   /** The most rounds of presolve rules by default. */
   public static final int DEFAULT_ROUNDS = 10;
+
+  /**
+   * The share of the variables a round must change for the next round to go back to the fast rules
+   * by default; a round that changes less moves on to the next timing class, and at the last class
+   * it ends the rounds. SCIP's presolving/abortfac is 0.0008.
+   */
+  public static final double DEFAULT_ABORT_FACTOR = 0.001;
 
   /** What happens to the parent's constraints. */
   public enum Retention {
@@ -168,8 +175,14 @@ public final class Derivation implements VarMap {
   private final boolean solutionPreserving;
   private final List<Rule> ruleList;
   private final int maxRounds;
+  private final Rule.Timing maxTiming;
+  private final double abortFactor;
+  private final long budgetNanos;
+  private final int[] timingRounds = new int[Rule.Timing.values().length];
   private final boolean views;
   private final boolean affine;
+  private final boolean doubletons;
+  private final boolean inPlace;
   private final DualReductions dual;
 
   private Outcome outcome;
@@ -181,6 +194,7 @@ public final class Derivation implements VarMap {
   private List<Constraint> collected = List.of();
   private Statistics statistics;
   private final Map<String, Integer> reductions = new LinkedHashMap<>();
+  private final Map<String, Long> timings = new LinkedHashMap<>();
   private Map<Var, Integer> relaxed = Map.of();
   private DualStatistics dualStatistics;
   private boolean solutionWritten;
@@ -215,8 +229,13 @@ public final class Derivation implements VarMap {
     }
     this.ruleList = List.copyOf(list);
     this.maxRounds = builder.maxRounds;
+    this.maxTiming = builder.maxTiming;
+    this.abortFactor = builder.abortFactor;
+    this.budgetNanos = builder.budgetNanos;
     this.views = builder.views;
     this.affine = builder.affine;
+    this.doubletons = builder.doubletons;
+    this.inPlace = builder.inPlace;
   }
 
   /**
@@ -245,8 +264,13 @@ public final class Derivation implements VarMap {
     private boolean dominatedColumns = true;
     private final List<Rule> ruleList = new ArrayList<>();
     private int maxRounds = DEFAULT_ROUNDS;
+    private Rule.Timing maxTiming = Rule.Timing.EXHAUSTIVE;
+    private double abortFactor = DEFAULT_ABORT_FACTOR;
+    private long budgetNanos = Long.MAX_VALUE;
     private boolean views = true;
     private boolean affine = true;
+    private boolean doubletons = true;
+    private boolean inPlace;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -413,6 +437,81 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Sets the costliest timing class of rules to run; the rules of a costlier class are left out.
+     * {@link Rule.Timing#EXHAUSTIVE} by default, which runs every rule.
+     *
+     * @param max the costliest class.
+     * @return this builder.
+     */
+    public Builder timing(Rule.Timing max) {
+      this.maxTiming = Objects.requireNonNull(max);
+      return this;
+    }
+
+    /**
+     * Sets the share of the variables a round must change to count as finding much; see {@link
+     * #DEFAULT_ABORT_FACTOR}. With 0 every change counts, so the rounds stop only at a fixpoint.
+     *
+     * @param factor the share, at least 0.
+     * @return this builder.
+     */
+    public Builder abortFactor(double factor) {
+      if (!(factor >= 0)) {
+        throw new IllegalArgumentException("The abort factor must be at least 0; " + factor);
+      }
+      this.abortFactor = factor;
+      return this;
+    }
+
+    /**
+     * Sets the time the rounds of rules may take, in milliseconds; no new round starts once it is
+     * spent. Unlimited by default. The steps after the rounds (SAT preprocessing, substitution, the
+     * copy) are not limited.
+     *
+     * @param millis the time, at least 0.
+     * @return this builder.
+     */
+    public Builder budget(long millis) {
+      if (millis < 0) {
+        throw new IllegalArgumentException("The budget must be at least 0; " + millis);
+      }
+      this.budgetNanos =
+          millis > Long.MAX_VALUE / 1_000_000L ? Long.MAX_VALUE : millis * 1_000_000L;
+      return this;
+    }
+
+    /**
+     * Sets whether a derivation whose rules only narrowed domains and imposed constraints leaves
+     * the parent to be searched, with outcome {@link Outcome#LIVE}, instead of copying it. Off by
+     * default. The narrowing and the imposed constraints are in the parent already, and a copy
+     * costs time and changes the order of variables and constraints, which changes the search of
+     * lazy clause generation and the rows of the linear relaxation.
+     *
+     * @param on true to skip a copy that would not simplify the problem.
+     * @return this builder.
+     */
+    public Builder inPlace(boolean on) {
+      this.inPlace = on;
+      return this;
+    }
+
+    /**
+     * Switches the doubleton substitutions of rule 8 on or off; on by default. A doubleton
+     * substitution replaces a variable defined by a linear equality by its definition in the one
+     * other linear constraint it occurs in, so the result is longer. Lazy clause generation is
+     * better off without them: the explanations of a long sum are long, while the variable that
+     * stands for part of a sum lets them refer to that part with one literal. The singleton columns
+     * of rule 8 are eliminated either way.
+     *
+     * @param on true to substitute doubletons.
+     * @return this builder.
+     */
+    public Builder doubletons(boolean on) {
+      this.doubletons = on;
+      return this;
+    }
+
+    /**
      * Switches rule 2, affine equality substitution, on or off; on by default when the rules are.
      *
      * @param on true to substitute.
@@ -480,8 +579,10 @@ public final class Derivation implements VarMap {
                 dual.dominanceClauses());
       }
     }
+    long t = System.nanoTime();
     variables = variables(parent);
     collected = constraints(parent, variables);
+    t = time("collect", t);
 
     if (!copyable()) {
       live();
@@ -510,6 +611,7 @@ public final class Derivation implements VarMap {
       if (!sat.changed()) {
         sat = null;
       }
+      t = time("satPresolve", t);
     }
     Set<Constraint> absorbed = sat == null ? Set.of() : sat.absorbed();
     List<IntVar[][]> childClauses =
@@ -559,6 +661,7 @@ public final class Derivation implements VarMap {
     int equations = carried.size();
     Map<Var, Var> aliases = rules && Aliases.ENABLED ? Aliases.merge(carried) : Map.of();
     dropped += equations - carried.size();
+    t = time("rewrite", t);
 
     ReificationCleanup reifications =
         new ReificationCleanup(carried, frozenWith(clauseVariables), !solutionPreserving);
@@ -570,8 +673,10 @@ public final class Derivation implements VarMap {
       reductions.put("reificationsDropped", reifications.dropped());
     }
 
+    t = time("reificationCleanup", t);
     if (rules && frozen != null) {
       carried = eliminate(carried, aliases, reifications, clauseVariables);
+      t = time("elimination", t);
     }
 
     // rule 2: the equalities that define affine classes are replaced by substitution
@@ -601,6 +706,7 @@ public final class Derivation implements VarMap {
       }
     }
 
+    t = time("affineSubstitution", t);
     Set<Var> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : carried) {
       used.addAll(reifications.arguments(c));
@@ -613,6 +719,22 @@ public final class Derivation implements VarMap {
     }
     // the variable that stays for a class is kept, so every merged variable has a copy
     used.addAll(aliases.values());
+
+    if (inPlace
+        && removed.isEmpty()
+        && simplified == 0
+        && sat == null
+        && absorbed.isEmpty()
+        && aliases.isEmpty()
+        && reifications.simplified() + reifications.halfReified() + reifications.dropped() == 0
+        && entries.isEmpty()
+        && affine == null) {
+      // the rules only narrowed domains and imposed constraints, which the parent has: it is
+      // searched itself, as it was loaded, rather than a copy that would search differently
+      live();
+      time("copy", t);
+      return;
+    }
 
     child = new Store();
     int fixed = 0;
@@ -700,6 +822,7 @@ public final class Derivation implements VarMap {
     }
     degrees.forEach((copy, degree) -> copy.adjustDegree(degree - copy.sizeConstraintsOriginal()));
 
+    t = time("copy", t);
     relaxed = reifications.relaxed();
     statistics =
         new Statistics(
@@ -712,7 +835,9 @@ public final class Derivation implements VarMap {
             simplified,
             aliases.size());
 
-    if (!child.consistency()) {
+    boolean consistent = child.consistency();
+    t = time("childPropagation", t);
+    if (!consistent) {
       // the child holds the same problem, so the parent is infeasible at this level
       outcome = Outcome.INFEASIBLE;
       child = null;
@@ -731,6 +856,7 @@ public final class Derivation implements VarMap {
     } else {
       parent.setState(StoreState.SUSPENDED);
     }
+    time("release", t);
   }
 
   /** Returns the frozen variables and the given ones, or null if every variable is frozen. */
@@ -755,7 +881,8 @@ public final class Derivation implements VarMap {
         kept.addAll(c.arguments());
       }
     }
-    VariableElimination elimination = new VariableElimination(kept, solutionPreserving, aliases);
+    VariableElimination elimination =
+        new VariableElimination(kept, solutionPreserving, aliases, doubletons);
     List<Constraint> result = elimination.apply(carried);
     for (Var v : elimination.eliminated()) {
       entries.put(v, new Entry.Eliminated());
@@ -803,37 +930,98 @@ public final class Derivation implements VarMap {
   }
 
   /**
-   * Runs the rules in rounds, each followed by propagation of the parent, until a round changes
-   * nothing or the budget of rounds is spent.
+   * Runs the rules in rounds, each followed by propagation of the parent. A round runs the rules of
+   * the current timing class and the cheaper ones. A round that changes more than the abort factor
+   * of the variables sends the next round back to the fast rules; one that changes less moves the
+   * next round on to the next class. The rounds end when a round of the costliest class changes
+   * less, or the budget of rounds or time is spent.
    *
    * @return false if the parent is inconsistent.
    */
   private boolean applyRules() {
     Context context = new Context();
-    while (rounds < maxRounds) {
+    long start = System.nanoTime();
+    Rule.Timing top = Rule.Timing.FAST;
+    for (Rule rule : ruleList) {
+      if (rule.timing().compareTo(top) > 0 && rule.timing().compareTo(maxTiming) <= 0) {
+        top = rule.timing();
+      }
+    }
+    Rule.Timing timing = Rule.Timing.FAST;
+    while (rounds < maxRounds && (rounds == 0 || System.nanoTime() - start < budgetNanos)) {
       rounds++;
+      timingRounds[timing.ordinal()]++;
       List<Var> before = variables(parent);
       double[] sizes = sizes(before);
       int edits = context.edits;
       for (Rule rule : ruleList) {
+        if (rule.timing().compareTo(timing) > 0) {
+          continue;
+        }
         context.snapshot = null;
         // a rule that propagates may have raised the level (raiseLevelBeforeConsistency), and the
         // next one narrows domains at the level the store is at
         level = parent.level;
+        long t = System.nanoTime();
         rule.apply(context);
+        time(ruleName(rule), t);
       }
-      if (!parent.consistency()) {
+      long t = System.nanoTime();
+      boolean consistent = parent.consistency();
+      time("propagation", t);
+      if (!consistent) {
         return false;
       }
       // propagating may raise the level, as before the rules
       level = parent.level;
-      if (context.edits == edits
-          && variables(parent).size() == before.size()
-          && Arrays.equals(sizes, sizes(before))) {
+      int changes = context.edits - edits + Math.abs(variables(parent).size() - before.size());
+      double[] after = sizes(before);
+      for (int i = 0; i < sizes.length; i++) {
+        if (after[i] != sizes[i]) {
+          changes++;
+        }
+      }
+      if (changes > 0 && changes > abortFactor * before.size()) {
+        timing = Rule.Timing.FAST;
+      } else if (timing.compareTo(top) < 0) {
+        timing = Rule.Timing.values()[timing.ordinal() + 1];
+      } else {
         break;
       }
     }
     return true;
+  }
+
+  /**
+   * Returns the rounds of rules run in each timing class, indexed by {@link Rule.Timing#ordinal()}.
+   *
+   * @return the rounds.
+   */
+  public int[] timingRounds() {
+    return timingRounds.clone();
+  }
+
+  /** Adds the time since a start, in nanoseconds, to a phase of {@link #timings()}. */
+  private long time(String phase, long start) {
+    long now = System.nanoTime();
+    timings.merge(phase, now - start, Long::sum);
+    return now;
+  }
+
+  private static String ruleName(Rule rule) {
+    // a lambda is named after the class that defines it
+    String name = rule.getClass().getName();
+    name = name.substring(name.lastIndexOf('.') + 1);
+    int lambda = name.indexOf("$$");
+    if (lambda > 0) {
+      name = name.substring(0, lambda);
+    }
+    // an anonymous class is named after its enclosing class too
+    while (name.matches(".*\\$\\d+")) {
+      name = name.substring(0, name.lastIndexOf('$'));
+    }
+    name = name.substring(name.lastIndexOf('$') + 1);
+    return Character.toLowerCase(name.charAt(0)) + name.substring(1);
   }
 
   /** The domain sizes of the variables, in order, to tell whether a round changed a domain. */
@@ -1198,6 +1386,19 @@ public final class Derivation implements VarMap {
    */
   public Map<String, Integer> reductions() {
     return Collections.unmodifiableMap(reductions);
+  }
+
+  /**
+   * Returns the time each phase of the derivation took, in nanoseconds of wall-clock time, in the
+   * order the phases first ran: each rule under its class name, the propagation after the rounds of
+   * rules ("propagation"), and the steps that build the child ("collect", "satPresolve", "rewrite",
+   * "reificationCleanup", "elimination", "affineSubstitution", "copy", "childPropagation",
+   * "release").
+   *
+   * @return the times.
+   */
+  public Map<String, Long> timings() {
+    return Collections.unmodifiableMap(timings);
   }
 
   /**

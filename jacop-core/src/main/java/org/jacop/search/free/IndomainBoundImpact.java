@@ -66,6 +66,10 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
   private boolean solved;
   private int every;
   private long runs;
+  private boolean tiesToFallback;
+  private double timeShare = 1;
+  private long start = -1;
+  private long probeNanos;
 
   /**
    * Creates the heuristic.
@@ -94,6 +98,15 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
         || v.singleton()) {
       return fallback.indomain(v);
     }
+    long now = System.nanoTime();
+    if (start < 0) {
+      start = now;
+    }
+    if (timeShare < 1 && probeNanos > timeShare * (now - start)) {
+      return fallback.indomain(v);
+    }
+    // among equally good values, a search guided by the last solution keeps its value
+    int preferred = tiesToFallback ? fallback.indomain(v) : Integer.MIN_VALUE;
     int level = store.level;
     boolean found = false;
     int bestValue = 0;
@@ -112,7 +125,10 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
       int bound = maximize ? objective.max() : objective.min();
       store.removeLevel(level + 1);
       store.setLevel(level);
-      if (consistent && (!found || (maximize ? bound > bestBound : bound < bestBound))) {
+      if (consistent
+          && (!found
+              || (maximize ? bound > bestBound : bound < bestBound)
+              || (bound == bestBound && value == preferred))) {
         found = true;
         bestValue = value;
         bestBound = bound;
@@ -120,6 +136,7 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
     }
     // the probes are not failures of the search
     store.recentlyFailedConstraint = null;
+    probeNanos += System.nanoTime() - now;
     return found ? bestValue : fallback.indomain(v);
   }
 
@@ -143,6 +160,31 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
    */
   public IndomainBoundImpact everyRestarts(int restarts) {
     this.every = restarts;
+    return this;
+  }
+
+  /**
+   * Breaks ties between values that leave the same bound in favour of the value of the wrapped
+   * heuristic, for example the value in the last solution, instead of the smallest value.
+   *
+   * @return this heuristic.
+   */
+  public IndomainBoundImpact tiesToFallback() {
+    this.tiesToFallback = true;
+    return this;
+  }
+
+  /**
+   * Bounds the time spent probing: once the probes took more than the given share of the time since
+   * the first value this heuristic chose, the wrapped heuristic chooses until they are below it
+   * again. A search that proves optimality, where the probes rarely help, is then slowed down by at
+   * most that share.
+   *
+   * @param share the share of the time, from 0 to 1; 1 does not bound it.
+   * @return this heuristic.
+   */
+  public IndomainBoundImpact timeShare(double share) {
+    this.timeShare = share;
     return this;
   }
 
