@@ -1281,6 +1281,47 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void inverseOfItselfIsSymmetricAlldifferent() throws IOException {
+    // inverse(x, x) with x1, x3 in {2, 4} and x2, x4 in {1, 3, 5}: x5 can only be a fixed point,
+    // and the other four form an even cycle with two solutions. The domain consistent propagator
+    // finds them without a failure.
+    String fzn =
+        """
+        array [1..5] of var 1..5: x :: output_array([1..5]);
+        constraint set_in(x[1], {2, 4});
+        constraint set_in(x[3], {2, 4});
+        constraint set_in(x[2], {1, 3, 5});
+        constraint set_in(x[4], {1, 3, 5});
+        constraint jacop_assignment(x, x, 1, 1);
+        solve satisfy;
+        """;
+    String out = run(fzn, "-a", "-s")[0];
+    assertEquals(2, out.lines().filter(l -> l.startsWith("x = ")).count(), out);
+    System.setProperty("org.jacop.fz.symmetricAlldifferent", "domain");
+    try {
+      out = run(fzn, "-a", "-s")[0];
+    } finally {
+      System.clearProperty("org.jacop.fz.symmetricAlldifferent");
+    }
+    assertEquals(2, out.lines().filter(l -> l.startsWith("x = ")).count(), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    // three variables that may each take either of the other two have no perfect matching, which
+    // fails before search; channeling x[i] = j with x[j] = i (Assignment) needed a search node
+    String odd =
+        """
+        array [1..3] of var 1..3: x :: output_array([1..3]);
+        constraint set_in(x[1], {2, 3});
+        constraint set_in(x[2], {1, 3});
+        constraint set_in(x[3], {1, 2});
+        constraint jacop_assignment(x, x, 1, 1);
+        solve satisfy;
+        """;
+    out = run(odd, "-s")[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertFalse(out.contains("%%%mzn-stat: nodes="), out);
+  }
+
+  @Test
   void inverseWithIndexSetsOfDifferentSizeIsUnsatisfiable() throws IOException {
     // jacop_assignment with arrays of different length threw ArrayIndexOutOfBoundsException when
     // posting (invf shorter) or NullPointerException during propagation (invf longer).

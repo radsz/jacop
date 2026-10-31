@@ -1201,6 +1201,27 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+82. New constraint SymmetricAlldifferent(x, offset): x[i] = j + offset
+    if and only if x[j] = i + offset, MiniZinc symmetric_all_different
+    and inverse(x, x). A solution is a perfect matching of the graph
+    whose edges are the pairs of variables that may take each other's
+    index, found with Edmonds' blossom algorithm. It is domain
+    consistent (one matching search per variable at each call);
+    SymmetricAlldifferent(x, offset, false) only channels x[i] = j with
+    x[j] = i and fails when no perfect matching exists, as with an odd
+    number of variables and no fixed point. Under --lcg it explains a
+    failure, and a removed value, with a Tutte barrier read from the
+    failed search. The FlatZinc front end posts the second one for
+    jacop_assignment(x, x, i, i), which MiniZinc's inverse(x, x) and
+    the new fzn_symmetric_all_different give; before, it was Assignment
+    (and Alldistinct under :: domain), which needs search to find an
+    odd cycle. -Dorg.jacop.fz.symmetricAlldifferent=domain selects the
+    domain consistent one and =false Assignment.
+    MiniZinc Challenge, default options, 60 s: p1f 2015 13, 15 and 17
+    (UNSAT) fail at the root in under 1 s instead of 1.1-5.0 s of
+    search; the 20 elitserien instances take 328 s instead of 323 s;
+    the domain consistent version takes 412 s for the same objectives.
+
 Version 4.11
 =============
 
