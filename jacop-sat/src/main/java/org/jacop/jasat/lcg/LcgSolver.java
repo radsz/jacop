@@ -35,6 +35,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -210,6 +211,17 @@ public final class LcgSolver implements ExternalPropagator {
   private long untilMinimised;
   private final Map<String, long[]> minimalityCounts = new TreeMap<>();
 
+  // cut-based conflict analysis of linear failures (LinearConflict): "stats" only counts what it
+  // derives, "learn" also imposes each learnt sum at the root, the next time the search is there
+  private final String linearMode = System.getProperty("jacop.lcg.linear", "off");
+  private LinearConflict linear;
+  private final List<LinearForm> learntLinear = new ArrayList<>();
+  private final Set<LinearForm> learntSeen = new HashSet<>();
+  private final int linearLimit = Integer.getInteger("jacop.lcg.linearLimit", 20_000);
+
+  /** Learnt linear sums imposed. */
+  public long linearImposed;
+
   /** Statistics: reasons the solver asked for. */
   public long reasons;
 
@@ -313,6 +325,8 @@ public final class LcgSolver implements ExternalPropagator {
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private boolean[] late;
+  // variables that no constraint uses: never branched on, at their least value in a solution
+  private boolean[] unused;
   private double activityInc = 1;
   private long activityConflicts;
   // variables taken off the heap because they were fixed, with the decision level at the time
@@ -416,6 +430,15 @@ public final class LcgSolver implements ExternalPropagator {
     if (minimality > 0) {
       minimiser = new ExplanationMinimality(trail);
     }
+    if (!"off".equals(linearMode)) {
+      linear =
+          new LinearConflict(
+              trail,
+              e -> e < cause.length && cause[e] != 0 ? sat.reasonKind(cause[e]) : 6,
+              Boolean.parseBoolean(System.getProperty("jacop.lcg.linearKept", "true"))
+                  ? this::linearOrigin
+                  : null);
+    }
     List<IntVar> all = new ArrayList<>();
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof IntVar x) {
@@ -441,6 +464,7 @@ public final class LcgSolver implements ExternalPropagator {
     wide.grow(n, activity);
     lateHeap.grow(n, activity);
     late = new boolean[n];
+    unused = new boolean[n];
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
@@ -1614,6 +1638,91 @@ public final class LcgSolver implements ExternalPropagator {
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
     release(level);
+    if (linear != null) {
+      imposeLearntLinear(level);
+    }
+  }
+
+  private void learnLinear(LinearForm f) {
+    if (f == null || !"learn".equals(linearMode) || learntSeen.size() >= linearLimit) {
+      return;
+    }
+    // the sum of the terms' largest magnitudes must fit in a long, with room
+    double largest = Math.abs((double) f.c());
+    for (int k = 0; k < f.vars().length; k++) {
+      IntDomain d = root[trail.id(f.vars()[k])];
+      largest += Math.abs((double) f.weights()[k]) * Math.max(Math.abs(d.min()), Math.abs(d.max()));
+    }
+    if (largest > 0x1p61 || !learntSeen.add(f)) {
+      return;
+    }
+    learntLinear.add(f);
+  }
+
+  // per solver literal (at 2 * var, + 1 when negative): the linear constraint that last explained
+  // it, whose explanation the solver may keep as a clause
+  private Constraint[] keptOrigin = new Constraint[0];
+
+  private void noteOrigin(int lit, Constraint c) {
+    int key = 2 * Math.abs(lit) + (lit < 0 ? 1 : 0);
+    if (key >= keptOrigin.length) {
+      keptOrigin = Arrays.copyOf(keptOrigin, Math.max(key + 1, 2 * keptOrigin.length));
+    }
+    keptOrigin[key] = c;
+  }
+
+  private Constraint linearOrigin(int entry) {
+    int lit = entry < cause.length ? cause[entry] : 0;
+    if (lit == 0) {
+      return null;
+    }
+    int key = 2 * Math.abs(lit) + (lit < 0 ? 1 : 0);
+    return key < keptOrigin.length ? keptOrigin[key] : null;
+  }
+
+  /** The learnt linear sums so far, imposed or not, for tests. */
+  Set<LinearForm> learntLinear() {
+    return learntSeen;
+  }
+
+  // the learnt sums imposed, with the decision level of each, in order of levels: a constraint
+  // imposed above the root leaves its variables when the store backtracks below that level
+  private final List<LinearForm> liveLinear = new ArrayList<>();
+  private int[] liveLevel = new int[16];
+
+  // after backtracking to a level: the learnt sums imposed above it, and the new ones, are imposed
+  // at it; at the root they stay for good. They hold in every solution of the model
+  private void imposeLearntLinear(int level) {
+    while (!liveLinear.isEmpty() && liveLevel[liveLinear.size() - 1] > level) {
+      learntLinear.add(liveLinear.remove(liveLinear.size() - 1));
+    }
+    for (LinearForm f : learntLinear) {
+      store.impose(new LearntLinear(f));
+      if (liveLinear.size() == liveLevel.length) {
+        liveLevel = Arrays.copyOf(liveLevel, 2 * liveLevel.length);
+      }
+      liveLevel[liveLinear.size()] = level;
+      liveLinear.add(f);
+      linearImposed++;
+    }
+    learntLinear.clear();
+  }
+
+  /**
+   * Returns the counts of the cut-based conflict analysis (system property {@code
+   * jacop.lcg.linear}), by outcome; empty when it is off.
+   *
+   * @return the counts
+   */
+  public Map<String, Long> linearStatistics() {
+    if (linear == null) {
+      return Map.of();
+    }
+    Map<String, Long> m = new TreeMap<>(linear.outcomes);
+    m.put("learntTerms", linear.learntTerms);
+    m.put("learntSteps", linear.learntSteps);
+    m.put("imposed", linearImposed);
+    return m;
   }
 
   @Override
@@ -1997,6 +2106,9 @@ public final class LcgSolver implements ExternalPropagator {
         constraintConflicts++;
         EntryList atoms = failureAtoms;
         atoms.clear();
+        if (linear != null) {
+          learnLinear(linear.analyse(store.recentlyFailedConstraint, store.level));
+        }
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
@@ -2248,6 +2360,11 @@ public final class LcgSolver implements ExternalPropagator {
       return r;
     }
     int e = propagated[Math.abs(lit)];
+    if (linear != null
+        && trail.reason(e) != null
+        && LinearConflict.formOf(trail.reason(e)) != null) {
+      noteOrigin(lit, trail.reason(e));
+    }
     EntryList reason = reasonEntries;
     reason.clear();
     liftBefore = sat.trailPosition(lit);
@@ -2316,7 +2433,7 @@ public final class LcgSolver implements ExternalPropagator {
     int best = -1;
     int bestSize = Integer.MAX_VALUE;
     for (int i = 0; i < vars.length; i++) {
-      if (vars[i] != null && !vars[i].singleton() && vars[i].getSize() < bestSize) {
+      if (vars[i] != null && !unused[i] && !vars[i].singleton() && vars[i].getSize() < bestSize) {
         best = i;
         bestSize = vars[i].getSize();
       }
@@ -2392,6 +2509,27 @@ public final class LcgSolver implements ExternalPropagator {
       case "split" -> -geLit(i, x.min() + (x.max() - x.min()) / 2 + 1);
       default -> -geLit(i, x.min() + 1);
     };
+  }
+
+  /**
+   * Sets the variables that no constraint uses, such as the variables a reformulation of the model
+   * replaced: they are never branched on, and a solution gives them their least value. Set them
+   * before solving, and impose no constraint on them afterwards.
+   *
+   * @param vs the unused variables
+   */
+  public void setUnusedVariables(Iterable<? extends Var> vs) {
+    for (Var v : vs) {
+      int i = idOf(v);
+      if (i >= 0 && !unused[i]) {
+        unused[i] = true;
+        for (VarHeap h : new VarHeap[] {heap, wide, lateHeap}) {
+          if (h.contains(i)) {
+            h.remove(i);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -2530,6 +2668,10 @@ public final class LcgSolver implements ExternalPropagator {
     solution = new int[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] != null) {
+        if (unused[i] && !vars[i].singleton()) {
+          solution[i] = vars[i].min();
+          continue;
+        }
         if (!vars[i].singleton()) {
           throw new IllegalStateException(vars[i] + " is not fixed in a model");
         }

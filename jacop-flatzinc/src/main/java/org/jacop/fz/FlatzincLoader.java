@@ -75,7 +75,10 @@ public class FlatzincLoader {
       parser.model();
 
     } catch (FailException _) {
-      IO.println("=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
+      IO.println(
+          parser.getTables().domainsClamped()
+              ? "=====UNKNOWN====="
+              : "=====UNSATISFIABLE====="); // "*** Evaluation of model resulted in fail.");
     } catch (ParseException | TokenMgrError e) {
       IO.println("%% Parser exception " + e);
     } catch (ArrayIndexOutOfBoundsException e) {
