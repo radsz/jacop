@@ -1403,6 +1403,11 @@ Version 5.0 (unreleased)
     pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
     No MiniZinc Challenge instance 2008-2026 reaches Geost.
 
+94. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
+    decision level of the SAT search (assumption levels included), and
+    restarts, the SAT solver's restarts (as lcgRestarts). Before, both
+    were always 0.
+
 Version 4.11
 =============
 
