@@ -640,7 +640,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (IntVar vv : v) {
       dom = (IntervalDomain) dom.union(vv.dom());
     }
-    if (v.length > 100) {
+    // a large all_different over sparse domains (successor arrays) keeps domain consistency:
+    // bounds consistency prunes nothing inside them
+    if (v.length > 100 && !isSparseDomains(v)) {
       support.pose(new Alldiff(v));
       return;
     }

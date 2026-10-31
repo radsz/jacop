@@ -1201,6 +1201,19 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
+82. A FlatZinc all_different over more than 100 variables with sparse
+    domains (successor arrays) is posted as Alldistinct (domain
+    consistency) instead of Alldiff (bounds consistency), which pruned
+    nothing inside such domains. MiniZinc Challenge 2023
+    multi-agent-graph-coverage rnd_n40_p1000_c20_s1 now has its first
+    solution (4040, as SICStus) in 4 s and rnd_n75_p1000_c50_s1 (40474,
+    as SICStus, the only fd entry with a solution) in 51 s; JaCoP found
+    none in 20 minutes. Under --lcg, the all different explanation also
+    walks only the values of each variable's initial domain instead of
+    its whole span, and explains a value taken by a fixed variable by
+    that variable's bounds without building the value graph: rnd_n75
+    makes 50 times more conflicts per second.
+
 Version 4.11
 =============
 

@@ -1082,6 +1082,38 @@ class FlatzincFrontEndTest {
     assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
   }
 
+  @Test
+  void largeSparseAlldiffGetsDomainConsistency() throws IOException {
+    // An all_different over more than 100 variables got bounds consistency (Alldiff) whatever its
+    // domains. x1 and x2 take 3 and 5 between them, a Hall set that is not an interval, so bounds
+    // consistency tries x120 = 5 and x120 = 3 first. The domains are sparse, so the constraint is
+    // now an Alldistinct, which removes 3 and 5 from x120 at the root (as on the successor
+    // arrays of multi-agent-graph-coverage, where only domain consistency finds a solution).
+    int n = 120;
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("var {3,5}: x1:: output_var;\n").append("var {3,5}: x2:: output_var;\n");
+    for (int i = 3; i < n; i++) {
+      fzn.append("var {")
+          .append(10 + i)
+          .append(',')
+          .append(1000 + i)
+          .append("}: x")
+          .append(i)
+          .append(":: output_var;\n");
+    }
+    fzn.append("var {1,2,3,5}: x").append(n).append(":: output_var;\n");
+    fzn.append("array [1..").append(n).append("] of var int: x = [");
+    for (int i = 1; i <= n; i++) {
+      fzn.append(i > 1 ? "," : "").append('x').append(i);
+    }
+    fzn.append("];\nconstraint jacop_alldiff(x);\n").append(hallSetSearch(n));
+
+    // without --lcg, whose conflicts the failures statistic does not count
+    String out = run(fzn.toString(), "-s", "--lcg", "off")[0];
+    assertTrue(out.contains("x120 = 2;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+  }
+
   /** Successors of n nodes with the Hall set {x1, x2} on {3, 4} and x_n in 1..4. */
   private static String hallSetSuccessors(int n) {
     StringBuilder fzn = new StringBuilder();
