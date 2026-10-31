@@ -51,6 +51,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -2749,5 +2751,121 @@ class FlatzincFrontEndTest {
                         .collect(Collectors.toCollection(TreeSet::new))))
         .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
         .toList();
+  }
+
+  /**
+   * Three difference constraints in a cycle over wide domains: posting them propagates until the
+   * bounds have crept across the whole domain, which took 27 s with -t 2000, as prop_stress (2009)
+   * never left the parser. A command-line run ends a second after its time-out, with UNKNOWN.
+   */
+  @Test
+  void commandLineRunEndsAtItsTimeOutWhilePosting() throws IOException, InterruptedException {
+    Path fzn = tmp.resolve("creep.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var -500000000..500000000: x:: output_var;
+        var -500000000..500000000: y:: output_var;
+        var -500000000..500000000: z:: output_var;
+        constraint int_lin_le([1,-1],[x,y],-1);
+        constraint int_lin_le([1,-1],[y,z],-1);
+        constraint int_lin_le([1,-1],[z,x],-1);
+        solve satisfy;
+        """);
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "-cp",
+            System.getProperty("java.class.path"),
+            "org.jacop.fz.Fz2jacop",
+            "-t",
+            "1000",
+            fzn.toString());
+    pb.redirectErrorStream(true);
+    long start = System.nanoTime();
+    Process p = pb.start();
+    String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+    }
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(ended, out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+    assertTrue(out.contains("%% =====TIME-OUT====="), out);
+    // the time-out, the grace of a second, and the start of a JVM
+    assertTrue(millis < 15_000, "ended after " + millis + " ms");
+  }
+
+  /** What the watchdog prints when it fires, by what the solver printed before. */
+  @Test
+  void timeLimitWatchdogPrintsWhatTheRunLacks() throws InterruptedException {
+    PrintStream saved = System.out;
+    try {
+      assertEquals("=====UNKNOWN=====\n%% =====TIME-OUT=====\n", watchdogOutput("", true));
+      assertEquals(
+          "x = 1;\n----------\n%% =====TIME-OUT=====\n",
+          watchdogOutput("x = 1;\n----------\n", true));
+      // a run that printed its status ends on its own
+      assertEquals("=====UNSATISFIABLE=====\n", watchdogOutput("=====UNSATISFIABLE=====\n", false));
+      assertEquals(
+          "x = 1;\n----------\n==========\n",
+          watchdogOutput("x = 1;\n----------\n==========\n", false));
+      // lines that only start like a solution or a status are neither
+      assertEquals(
+          "-- note\n== x\n=====UNKNOWN=====\n%% =====TIME-OUT=====\n",
+          watchdogOutput("-- note\n== x\n", true));
+      // the statistics of a search print its status as well, but the watchdog printed it already
+      assertEquals(
+          "=====UNKNOWN=====\n%% =====TIME-OUT=====\n%%%mzn-stat: nodes=7\n%%%mzn-stat-end\n",
+          watchdogOutput(
+              "",
+              "",
+              "=====UNKNOWN=====\n%% =====TIME-OUT=====\n%%%mzn-stat: nodes=7\n%%%mzn-stat-end\n",
+              true));
+      // the solution kept back without -a, unless the run printed it already as it ended
+      assertEquals(
+          "x = 2;\n----------\n%% =====TIME-OUT=====\n",
+          watchdogOutput("", "x = 2;\n----------\n", "", true));
+      assertEquals(
+          "x = 2;\n----------\n%% =====TIME-OUT=====\n",
+          watchdogOutput("x = 2;\n----------\n", "x = 2;\n----------\n", "", true));
+    } finally {
+      System.setOut(saved);
+    }
+  }
+
+  // the output of a run that printed printed and was still going 0.2 s later, when a watchdog fired
+  private static String watchdogOutput(String printed, boolean halts) throws InterruptedException {
+    return watchdogOutput(printed, "", "", halts);
+  }
+
+  // the same, with the statistics the run would print when interrupted
+  private static String watchdogOutput(
+      String printed, String kept, String statistics, boolean halts) throws InterruptedException {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bytes, true, StandardCharsets.UTF_8));
+    CountDownLatch halted = new CountDownLatch(1);
+    TimeLimitWatchdog w =
+        TimeLimitWatchdog.start(
+            200 - TimeLimitWatchdog.GRACE,
+            new TimeLimitWatchdog.Report() {
+              @Override
+              public boolean printKeptSolution() {
+                System.out.print(kept);
+                return !kept.isEmpty();
+              }
+
+              @Override
+              public void printStatistics() {
+                System.out.print(statistics);
+              }
+            },
+            halted::countDown);
+    System.out.print(printed);
+    assertEquals(halts, halted.await(halts ? 5000 : 1000, TimeUnit.MILLISECONDS), printed);
+    w.cancel();
+    return bytes.toString(StandardCharsets.UTF_8);
   }
 }
