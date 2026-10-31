@@ -302,6 +302,63 @@ class LinearRelaxationTest {
     assertThat(x2.min()).isLessThanOrEqualTo(-2);
   }
 
+  /**
+   * The dense simplex is asked for, but a relaxation of 100 rows or more is solved by the sparse
+   * one, and so is one over the dense size cap, which before got no relaxation at all
+   * (roster-shifts-bool, physician-scheduling and table-layout of the Challenge had no LP).
+   */
+  @Test
+  void choosesTheSparseSimplexForLargeRelaxations() {
+    assertThat(chain(5).simplex()).isEqualTo(LinearRelaxation.Simplex.DENSE);
+    assertThat(chain(150).simplex()).isEqualTo(LinearRelaxation.Simplex.SPARSE);
+    // 2,000 rows over 2,001 columns: a dense tableau of 8 million entries, over its cap of 4
+    LinearRelaxation large = chain(2000);
+    assertThat(large).isNotNull();
+    assertThat(large.simplex()).isEqualTo(LinearRelaxation.Simplex.SPARSE);
+    assertThat(large.rows()).isEqualTo(2000);
+  }
+
+  /**
+   * The sparse relaxation over the dense cap proves the bound: x_i + x_(i+1) >= 1 sums to 1,000.
+   */
+  @Test
+  void boundsTheObjectiveOverTheDenseCap() {
+    Store store = new Store();
+    int n = 2000;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    for (int i = 0; i + 1 < n; i += 2) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, n);
+    IntVar[] all = Arrays.copyOf(x, n + 1);
+    all[n] = cost;
+    int[] w = new int[n + 1];
+    Arrays.fill(w, 1);
+    w[n] = -1;
+    store.impose(new LinearInt(all, w, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, cost, false);
+    assertThat(r).isNotNull();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(cost.min()).isEqualTo(n / 2);
+  }
+
+  // rows x_i + x_(i+1) <= 3 over a chain of m + 1 variables
+  private static LinearRelaxation chain(int m) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[m + 1];
+    for (int i = 0; i <= m; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    for (int i = 0; i < m; i++) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, "<=", 3));
+    }
+    return LinearRelaxation.of(store, x[0], true);
+  }
+
   // the rows of Max (m >= x_i) tie the objective to the linear constraint: the root bound is 12 / 3
   @Test
   void readsTheRowsOfConstraintsThatAreNotLinear() {

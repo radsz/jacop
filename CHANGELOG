@@ -1482,6 +1482,24 @@ Version 5.0 (unreleased)
     the translation) or by a constraint that cannot be encoded narrow the
     model's domains instead. The FlatZinc translation is not certified.
 
+100. The linear relaxation (--lp on, the default) picks its simplex by size:
+    the dense one below 100 rows of the model's linear constraints and the
+    sparse one from 100 rows on, and also for relaxations over the dense
+    size cap (org.jacop.lp.maxTableau), which before got no relaxation at
+    all (roster-shifts-bool, physician-scheduling, table-layout, connect
+    and radiation of the MiniZinc Challenge). With the sparse simplex the
+    rows of non-linear constraints tried at the first solve are at most
+    twice the model's rows plus 100. -Dorg.jacop.lp.sparseRows=N moves the
+    threshold, -1 keeps the dense simplex. The multipliers of each LP
+    deduction are cleaned before they are rounded: entries below 1e-12 of
+    the largest are dropped, a multiplier whose row lacks the side its
+    sign needs is dropped instead of losing the inequality, the scale goes
+    up to 2^32 when the bounds reasoning stays within a long, and the
+    inequality is divided by the gcd of its weights with its side rounded
+    down (-Dorg.jacop.lp.clean=false gives the old rounding). A ratio test
+    that meets NaN stops the solve at its limit instead of throwing
+    ArrayIndexOutOfBoundsException.
+
 Version 4.11
 =============
 
