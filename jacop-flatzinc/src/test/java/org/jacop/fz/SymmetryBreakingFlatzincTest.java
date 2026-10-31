@@ -170,6 +170,32 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void freeSearchLeavesTheMachinesOfAMakespanUnordered() throws IOException {
+    // identical machines with the largest load minimized (P||Cmax): value precedence on the
+    // machines multiplied the failures of --lcg -f, so free search leaves it out
+    String model =
+        """
+        array [1..6] of var 1..3: mc :: output_array([1..6]);
+        array [1..3] of var 0..30: load;
+        var 0..30: makespan :: output_var;
+        constraint jacop_bin_packing(mc, load, [7, 6, 5, 4, 3, 3], 1);
+        constraint jacop_maximum(makespan, load);
+        solve :: int_search(mc, first_fail, indomain_min, complete) minimize makespan;
+        """;
+    String annotated = FlatzincTestRunner.run(tmp, model, "-s", "--symmetry", "on");
+    assertTrue(annotated.contains("symmetryValuePrecedences=1"), annotated);
+    for (String[] options :
+        new String[][] {
+          {"-s", "-f", "--symmetry", "on"}, {"-s", "-f", "--lcg", "--symmetry", "on"}
+        }) {
+      String free = FlatzincTestRunner.run(tmp, model, options);
+      assertTrue(free.contains("symmetryValuePrecedences=0"), free);
+      assertEquals(10, objective(free, "makespan"), free);
+    }
+    assertEquals(10, objective(annotated, "makespan"), annotated);
+  }
+
+  @Test
   void allSolutionsOfASatisfactionProblemAreKept() throws IOException {
     String model =
         """

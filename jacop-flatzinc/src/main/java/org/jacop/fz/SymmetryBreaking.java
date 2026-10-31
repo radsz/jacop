@@ -361,6 +361,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private long deadline = Long.MAX_VALUE;
   // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
   private boolean largest;
+  // whether the search is free search (-f), which does not follow the search annotation
+  private boolean free;
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
@@ -380,6 +382,54 @@ final class SymmetryBreaking implements ParserTreeConstants {
   SymmetryBreaking keepLargest(boolean largest) {
     this.largest = largest;
     return this;
+  }
+
+  /**
+   * Tells that the search is free search. Value precedence is then left out of a model that
+   * minimizes the largest load of a bin packing (identical parallel machines, P||Cmax): under
+   * {@code --lcg -f} it multiplies the failures there (n41-m7-s18: 214 without it, 2,000-30,000
+   * with it), while it helps bin packing that minimizes the bins used.
+   *
+   * @param free true for free search.
+   * @return this.
+   */
+  SymmetryBreaking freeSearch(boolean free) {
+    this.free = free;
+    return this;
+  }
+
+  /** Whether the objective is the largest load of a bin packing of the model. */
+  private static boolean largestLoad(List<Item> items, IntVar objective) {
+    if (objective == null) {
+      return false;
+    }
+    Set<IntVar> loads = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Item item : items) {
+      if (item.name().startsWith("jacop_bin_packing") && item.args().length > 1) {
+        for (Atom a : item.args()[1]) {
+          if (a.var() != null) {
+            loads.add(a.var());
+          }
+        }
+      }
+    }
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if ((item.name().equals("jacop_maximum") || item.name().equals("array_int_maximum"))
+          && args.length == 2
+          && args[0].length == 1
+          && args[0][0].var() == objective
+          && args[1].length > 0) {
+        boolean all = true;
+        for (Atom a : args[1]) {
+          all &= a.var() != null && loads.contains(a.var());
+        }
+        if (all) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -802,6 +852,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
    */
   private ValueOutcome breakValueSymmetries(
       List<Item> items, IntVar objective, boolean minimize, List<IntVar> ranked, long maxNanos) {
+    if (free && minimize && largestLoad(items, objective)) {
+      return new ValueOutcome(List.of(), 0, true);
+    }
     List<Space> spaces = new ArrayList<>();
     // a minimized objective that only bounds the variables of one space from above
     Set<IntVar> bounded = minimize && objective != null ? upperBounded(items, objective) : null;

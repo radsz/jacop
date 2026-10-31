@@ -1209,7 +1209,11 @@ Version 5.0 (unreleased)
     loaded with FlatzincLoader. When the search annotation tries the
     largest values first (indomain_max, indomain_reverse_split), the
     lex-leader keeps the largest solution of each orbit, so the search
-    meets it first. The second given to symmetry detection now also
+    meets it first. Free search (-f) leaves value precedence out of
+    models that minimize the largest load of a bin packing (P||Cmax),
+    where it multiplied the failures of --lcg -f (pcmax n41-m7-s18:
+    30,015 to 214; 20 instances, 30 s: 16 to 19 proved). The second
+    given to symmetry detection now also
     bounds reading the model and building its graphs, which took up to
     7.5 s on groupsplitter and ma-path-finding. The FlatZinc test suites
     run with -Djacop.symmetry=presolve, which keeps the old behaviour.

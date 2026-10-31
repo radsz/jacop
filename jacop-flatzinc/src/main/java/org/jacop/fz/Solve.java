@@ -341,6 +341,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SymmetryBreaking.Outcome o =
         new SymmetryBreaking(store, dictionary)
             .keepLargest(largestFirst(item))
+            .freeSearch(opt.freeSearch())
             .run(
                 astTree,
                 objective,
