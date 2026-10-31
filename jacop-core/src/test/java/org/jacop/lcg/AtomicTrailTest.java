@@ -41,10 +41,12 @@ import java.util.function.Predicate;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
@@ -1337,5 +1339,139 @@ class AtomicTrailTest {
     assertThat(reason.size()).isEqualTo(1);
     assertThat(trail.variable(reason.get(0))).isSameAs(z);
     trail.detach();
+  }
+
+  /**
+   * The index of an ArgMax is fixed, so a later variable is bounded by the first one's maximum and
+   * its bound moves past a root hole of more than 256 values (as in tower): the reason needs no
+   * atom for the hole and stays its own (it was the generic reason).
+   */
+  @Test
+  void argMaxBoundAcrossAWideRootHoleHasItsOwnReason() {
+    Store store = new Store();
+    IntVar first = new IntVar(store, "first", 16, 1296);
+    IntervalDomain sparse = new IntervalDomain(0, 0);
+    sparse.unionAdapt(2000, 3000);
+    IntVar later = new IntVar(store, "later", sparse);
+    IntVar index = new IntVar(store, "index", 1, 2);
+    ArgMax argMax = new ArgMax(new IntVar[] {first, later}, index);
+    store.impose(argMax);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(later.max()).isZero();
+    int entry = trail.lastEntry(later, trail.size());
+    assertThat(trail.reason(entry)).isSameAs(argMax);
+    EntryList reason = new EntryList();
+    assertThat(argMax.explain(trail, entry, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(trail.variable(reason.get(0))).isSameAs(index);
+    trail.detach();
+  }
+
+  /**
+   * Counted values whose counters are bounded by counting alone: a counter's upper bound from the
+   * variables that exclude its value, a counter's lower bound from the variables fixed to it, a
+   * value removed because other variables fixed to it reach its counter's upper bound, and a
+   * counter's upper bound from the lower bounds of the others. Each reason cites only those atoms
+   * (the flow network gave reasons over every variable, and the generic one past its time share).
+   */
+  @Test
+  void cardinalityCountsHaveCountingReasons() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 3);
+    }
+    IntVar[] c = new IntVar[3];
+    for (int j = 0; j < c.length; j++) {
+      c[j] = new IntVar(store, "c" + (j + 1), 0, 4);
+    }
+    GCC gcc = new GCC(x, c);
+    store.impose(gcc);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    EntryList reason = new EntryList();
+    // x0, x1 != 1: c1 <= 2 by the two exclusions
+    store.setLevel(store.level + 1);
+    x[0].domain.inComplement(store.level, x[0], 1);
+    x[1].domain.inComplement(store.level, x[1], 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c[0].max()).isEqualTo(2);
+    int entry = trail.lastEntry(c[0], trail.size());
+    assertThat(gcc.explain(trail, entry, reason)).isTrue();
+    assertThat(variables(trail, reason)).containsExactlyInAnyOrder(x[0], x[1]);
+    // x2 = x3 = 1: c1 >= 2 by the two fixed variables
+    store.setLevel(store.level + 1);
+    x[2].domain.in(store.level, x[2], 1, 1);
+    x[3].domain.in(store.level, x[3], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c[0].min()).isEqualTo(2);
+    entry = trail.lastEntry(c[0], trail.size());
+    reason.clear();
+    assertThat(gcc.explain(trail, entry, reason)).isTrue();
+    assertThat(variables(trail, reason)).containsOnly(x[2], x[3]);
+    trail.detach();
+
+    // c2 >= 3 leaves at most one variable for value 1: c1 <= 1 by that lower bound
+    store = new Store();
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 3);
+    }
+    for (int j = 0; j < c.length; j++) {
+      c[j] = new IntVar(store, "c" + (j + 1), 0, 4);
+    }
+    gcc = new GCC(x, c);
+    store.impose(gcc);
+    assertThat(store.consistency()).isTrue();
+    trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    c[1].domain.inMin(store.level, c[1], 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c[0].max()).isEqualTo(1);
+    entry = trail.lastEntry(c[0], trail.size());
+    reason.clear();
+    assertThat(gcc.explain(trail, entry, reason)).isTrue();
+    assertThat(variables(trail, reason)).containsExactly(c[1]);
+    trail.detach();
+
+    // a network over more than 2^20 arcs, which the flow does not explain: the counting reason
+    // still does
+    store = new Store();
+    x = new IntVar[1100];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 1000);
+    }
+    c = new IntVar[1000];
+    for (int j = 0; j < c.length; j++) {
+      c[j] = new IntVar(store, "c" + (j + 1), 0, x.length);
+    }
+    gcc = new GCC(x, c);
+    store.impose(gcc);
+    assertThat(store.consistency()).isTrue();
+    trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int i = 1; i < x.length; i++) {
+      x[i].domain.inComplement(store.level, x[i], 1);
+    }
+    assertThat(store.consistency()).isTrue();
+    assertThat(c[0].max()).isEqualTo(1);
+    entry = trail.lastEntry(c[0], trail.size());
+    reason.clear();
+    assertThat(gcc.explain(trail, entry, reason)).isTrue();
+    assertThat(reason.size()).isEqualTo(x.length - 1);
+    trail.detach();
+  }
+
+  private static List<IntVar> variables(AtomicTrail trail, EntryList reason) {
+    List<IntVar> vars = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      if (!vars.contains(trail.variable(reason.get(k)))) {
+        vars.add(trail.variable(reason.get(k)));
+      }
+    }
+    return vars;
   }
 }
