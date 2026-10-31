@@ -61,6 +61,7 @@ import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -441,7 +442,7 @@ class LcgFuzzTest {
     // the globals added in 5.0 that have no explanation of their own, explained by replay
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(19)) {
+      return switch (rnd.nextInt(20)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -482,6 +483,12 @@ class LcgFuzzTest {
         case 15 -> new LexOrder(pick(x, 3), pick(x, 3), rnd.nextBoolean());
         case 16 -> network();
         case 17 -> geost();
+        case 18 -> {
+          IntVar[] c = pick(b, 2 + rnd.nextInt(2));
+          IntVar[] v = pick(x, c.length);
+          yield new ConditionalSelect(
+              Arrays.copyOf(c, v.length), v, rnd.nextBoolean() ? one() : p[0]);
+        }
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }

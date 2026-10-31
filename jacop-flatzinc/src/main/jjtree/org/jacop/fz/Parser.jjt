@@ -49,7 +49,9 @@ options {
 PARSER_BEGIN(Parser)  
 package org.jacop.fz;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
+import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
 
 public class Parser {
@@ -81,6 +83,41 @@ public class Parser {
 	    throw new ParseException("integer literal " + t.image + " at line " + t.beginLine
 				     + ", column " + t.beginColumn
 				     + " is outside the 32-bit integer range supported by JaCoP");
+	}
+    }
+
+    // A bound of a declared domain may lie beyond JaCoP's integer range (MiniZinc writes the
+    // bounds it computes, such as 0..4722438400 for a product); it is narrowed to that range, which
+    // keeps every solution JaCoP finds a solution of the model. A domain that lies wholly outside
+    // the range cannot be narrowed and is rejected.
+    // an INT_LITERAL token: decimal, 0x hexadecimal or 0o octal, with an optional minus
+    static BigInteger bigLiteral(String image) {
+	boolean negative = image.startsWith("-");
+	String digits = negative ? image.substring(1) : image;
+	BigInteger v;
+	if (digits.startsWith("0x")) {
+	    v = new BigInteger(digits.substring(2), 16);
+	} else if (digits.startsWith("0o")) {
+	    v = new BigInteger(digits.substring(2), 8);
+	} else {
+	    v = new BigInteger(digits);
+	}
+	return negative ? v.negate() : v;
+    }
+
+    static void intervalLiterals(ASTIntTiExprTail node, Token t1, Token t2) throws ParseException {
+	BigInteger low = bigLiteral(t1.image);
+	BigInteger high = bigLiteral(t2.image);
+	BigInteger min = BigInteger.valueOf(IntDomain.MIN_INT);
+	BigInteger max = BigInteger.valueOf(IntDomain.MAX_INT);
+	if (low.compareTo(high) <= 0 && (low.compareTo(max) > 0 || high.compareTo(min) < 0)) {
+	    throw new ParseException("domain " + t1.image + ".." + t2.image + " at line " + t1.beginLine
+				     + ", column " + t1.beginColumn + " lies outside the integer range "
+				     + IntDomain.MIN_INT + ".." + IntDomain.MAX_INT + " supported by JaCoP");
+	}
+	node.setLowHigh(low.max(min).min(max).intValue(), high.max(min).min(max).intValue());
+	if (low.compareTo(min) < 0 || high.compareTo(max) > 0) {
+	    node.setClamped(t1.image + ".." + t2.image, low.compareTo(min) < 0, high.compareTo(max) > 0);
 	}
     }
 }
@@ -247,6 +284,9 @@ void var_decl_items() #VarDeclItems:
  	{   //jjtThis.dump("");
 	    // jjtThis.removeChildren();
 	    dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
+	    if (dict.domainsClamped()) {
+		System.err.println(dict.clampedDomainsWarning());
+	    }
 	}
 //             	{ System.out.println(dict); }
 }
@@ -570,7 +610,7 @@ void int_ti_expr_tail() #IntTiExprTail:
     | t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> 
 	  {
 	      jjtThis.setType(1); 
-	      jjtThis.setLowHigh(intLiteral(t1), intLiteral(t2));
+	      intervalLiterals(jjtThis, t1, t2);
 	  }
     | <LB> int_literals() <RB> 
 	   {jjtThis.setType(2);}
