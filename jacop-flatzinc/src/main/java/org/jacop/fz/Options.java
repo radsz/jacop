@@ -242,8 +242,8 @@ public class Options {
                 propagation, before presolve stops short of a fixpoint (default 10).
             --presolve-level <value> the costliest presolve rules to run: "fast" (linear
                 rules only), "medium" (also at-most-ones, duplicate and dominated constraints,
-                cumulative reductions) or "exhaustive" (default; also probing, tabling, implied
-                constraints and symmetry breaking). A costlier class runs only after a round of
+                cumulative reductions) or "exhaustive" (default; also probing, tabling and implied
+                constraints). A costlier class runs only after a round of
                 the cheaper ones found little.
             --presolve-abort <value> the share of the variables a round of presolve rules must
                 change to go back to the fast rules (default 0.001); below it the rounds move to

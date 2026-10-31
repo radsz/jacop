@@ -258,6 +258,18 @@ public final class Presolver {
   }
 
   /**
+   * Sets whether presolve leaves the store in place when its rules simplified nothing; see {@link
+   * Derivation.Builder#inPlace(boolean)}.
+   *
+   * @param on true to skip a copy that would not simplify the problem.
+   * @return this presolver.
+   */
+  public Presolver inPlace(boolean on) {
+    builder.inPlace(on);
+    return this;
+  }
+
+  /**
    * Switches the doubleton substitutions of rule 8 on or off; see {@link
    * Derivation.Builder#doubletons(boolean)}.
    *

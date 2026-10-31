@@ -281,9 +281,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
       if (node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
-        if (opt.presolve() != Options.Presolve.OFF
-            && opt.symmetry()
-            && opt.presolveLevel() == Rule.Timing.EXHAUSTIVE) {
+        if (opt.presolve() != Options.Presolve.OFF && opt.symmetry()) {
           breakSymmetries(astTree, solveItem, opt);
         }
         search(solveItem, table, opt);
@@ -736,6 +734,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .checking(options.presolve() == Options.Presolve.CHECK)
             .rounds(options.presolveRounds())
             .timing(options.presolveLevel())
+            // a copy that simplifies nothing only changes the search; checking mode needs the copy
+            .inPlace(
+                options.presolve() != Options.Presolve.CHECK
+                    && !"off".equals(System.getProperty("jacop.presolve.inPlace")))
             .abortFactor(options.presolveAbort())
             .budget(presolveBudget())
             .probing(options.probe(), options.probeBudget())

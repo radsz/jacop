@@ -179,6 +179,7 @@ public final class Derivation implements VarMap {
   private final boolean views;
   private final boolean affine;
   private final boolean doubletons;
+  private final boolean inPlace;
   private final DualReductions dual;
 
   private Outcome outcome;
@@ -230,6 +231,7 @@ public final class Derivation implements VarMap {
     this.views = builder.views;
     this.affine = builder.affine;
     this.doubletons = builder.doubletons;
+    this.inPlace = builder.inPlace;
   }
 
   /**
@@ -263,6 +265,7 @@ public final class Derivation implements VarMap {
     private boolean views = true;
     private boolean affine = true;
     private boolean doubletons = true;
+    private boolean inPlace;
 
     private Builder(Store parent) {
       this.parent = parent;
@@ -457,6 +460,21 @@ public final class Derivation implements VarMap {
       }
       this.budgetNanos =
           millis > Long.MAX_VALUE / 1_000_000L ? Long.MAX_VALUE : millis * 1_000_000L;
+      return this;
+    }
+
+    /**
+     * Sets whether a derivation whose rules only narrowed domains and imposed constraints leaves
+     * the parent to be searched, with outcome {@link Outcome#LIVE}, instead of copying it. Off by
+     * default. The narrowing and the imposed constraints are in the parent already, and a copy
+     * costs time and changes the order of variables and constraints, which changes the search of
+     * lazy clause generation and the rows of the linear relaxation.
+     *
+     * @param on true to skip a copy that would not simplify the problem.
+     * @return this builder.
+     */
+    public Builder inPlace(boolean on) {
+      this.inPlace = on;
       return this;
     }
 
@@ -678,6 +696,22 @@ public final class Derivation implements VarMap {
     }
     // the variable that stays for a class is kept, so every merged variable has a copy
     used.addAll(aliases.values());
+
+    if (inPlace
+        && removed.isEmpty()
+        && simplified == 0
+        && sat == null
+        && absorbed.isEmpty()
+        && aliases.isEmpty()
+        && reifications.simplified() + reifications.halfReified() + reifications.dropped() == 0
+        && entries.isEmpty()
+        && affine == null) {
+      // the rules only narrowed domains and imposed constraints, which the parent has: it is
+      // searched itself, as it was loaded, rather than a copy that would search differently
+      live();
+      time("copy", t);
+      return;
+    }
 
     child = new Store();
     int fixed = 0;
