@@ -67,6 +67,8 @@ class MznlibGlobalsTest {
         "hook_cumulatives",
         "hook_cumulatives_opt",
         "hook_cumulatives_lb",
+        "hook_cumulatives_lb_opt",
+        "hook_cumulatives_neg",
         "hook_sliding_among_int",
         "hook_sliding_among_bool",
         "hook_sliding_among_edge",
