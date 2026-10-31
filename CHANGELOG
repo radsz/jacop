@@ -1208,11 +1208,14 @@ Version 5.0 (unreleased)
     (-Djacop.components.budget, in ms); a part without a solution makes
     the model infeasible, and a part that runs out of time is left to
     the main search. It is skipped with -a, with -n > 1 for satisfaction
-    and with on_restart. --components off turns it off. On the
-    MiniZinc Challenge instances that split into several parts (109 of
-    1,781), 60 s: same statuses, ghoulomb 3-7-20 and 3-8-20 prove their
-    optimum in 2 s instead of 14 s, 3-10-20 in 13 s instead of 37 s, and
-    cable_tree_wiring R046 ends at its optimum 143,534 instead of 284,142.
+    and with on_restart. --components off turns it off. Constraints
+    that watch only some of their variables (long Boolean sums, clauses)
+    link all their variables. 92 of the 1,781 MiniZinc Challenge
+    instances split into several parts; on the 109 checked, 60 s: same
+    statuses, ghoulomb 3-7-20 and 3-8-20 prove their optimum in 2 s
+    instead of 15 s, 3-10-20 in 15 s instead of 38 s, 2013 4-9-20 in
+    4 s instead of 17 s, and cable_tree_wiring R046 ends at its optimum
+    143,534 instead of 284,142; other objectives move by noise.
 
 83. Presolve dual reductions also find dominated columns: if raising x
     by one and lowering y by one keeps every constraint and the
