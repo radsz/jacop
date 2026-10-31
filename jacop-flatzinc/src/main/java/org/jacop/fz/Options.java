@@ -101,6 +101,8 @@ public class Options {
       Objects.requireNonNullElse(
           presolveLevel(System.getProperty("jacop.presolve.level", "exhaustive")),
           Rule.Timing.EXHAUSTIVE);
+  // --presolve-level aliases: no rounds of rules, only the rewrites that build the presolved store
+  boolean presolveRuleRounds = !"aliases".equals(System.getProperty("jacop.presolve.level"));
   double presolveAbort = Derivation.DEFAULT_ABORT_FACTOR;
   long presolveTime = -1;
   double presolveRestart;
@@ -245,10 +247,12 @@ public class Options {
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
-            --presolve-level <value> the costliest presolve rules to run: "fast" (linear
-                rules only), "medium" (also at-most-ones, duplicate and dominated constraints,
-                cumulative reductions) or "exhaustive" (default; also probing, tabling and implied
-                constraints). A costlier class runs only after a round of
+            --presolve-level <value> the costliest presolve rules to run: "aliases" (no
+                rules: only the rewrites that build the presolved model, such as merging the
+                variables of an int_eq and substituting two-variable equations; no symmetry
+                breaking), "fast" (linear rules only), "medium" (also at-most-ones, duplicate and
+                dominated constraints, cumulative reductions) or "exhaustive" (default; also
+                probing, tabling and implied constraints). A costlier class runs only after a round of
                 the cheaper ones found little.
             --presolve-abort <value> the share of the variables a round of presolve rules must
                 change to go back to the fast rules (default 0.001); below it the rounds move to
@@ -510,7 +514,8 @@ public class Options {
   }
 
   private int handlePresolveLevel(String[] args, int i) {
-    Rule.Timing level = presolveLevel(args[++i]);
+    presolveRuleRounds = !"aliases".equals(args[++i]);
+    Rule.Timing level = presolveLevel(args[i]);
     if (level != null) {
       presolveLevel = level;
     }
@@ -519,7 +524,7 @@ public class Options {
 
   private static Rule.Timing presolveLevel(String level) {
     return switch (level) {
-      case "fast" -> Rule.Timing.FAST;
+      case "aliases", "fast" -> Rule.Timing.FAST;
       case "medium" -> Rule.Timing.MEDIUM;
       case "exhaustive" -> Rule.Timing.EXHAUSTIVE;
       default -> {
@@ -1006,6 +1011,15 @@ public class Options {
    */
   public Rule.Timing presolveLevel() {
     return presolveLevel;
+  }
+
+  /**
+   * It defines whether presolve runs its rounds of rules; not with --presolve-level aliases.
+   *
+   * @return true by default
+   */
+  public boolean presolveRuleRounds() {
+    return presolveRuleRounds;
   }
 
   /**

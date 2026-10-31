@@ -171,6 +171,7 @@ public final class Derivation implements VarMap {
   private final List<IntVar[][]> clauses;
   private final boolean solutionPreserving;
   private final List<Rule> ruleList;
+  private final boolean ruleRounds;
   private final int maxRounds;
   private final Rule.Timing maxTiming;
   private final double abortFactor;
@@ -224,6 +225,7 @@ public final class Derivation implements VarMap {
       list.add(dual);
     }
     this.ruleList = List.copyOf(list);
+    this.ruleRounds = builder.ruleRounds;
     this.maxRounds = builder.maxRounds;
     this.maxTiming = builder.maxTiming;
     this.abortFactor = builder.abortFactor;
@@ -258,6 +260,7 @@ public final class Derivation implements VarMap {
     private boolean minimize;
     private Set<Var> exempt;
     private final List<Rule> ruleList = new ArrayList<>();
+    private boolean ruleRounds = true;
     private int maxRounds = DEFAULT_ROUNDS;
     private Rule.Timing maxTiming = Rule.Timing.EXHAUSTIVE;
     private double abortFactor = DEFAULT_ABORT_FACTOR;
@@ -405,6 +408,20 @@ public final class Derivation implements VarMap {
     }
 
     /**
+     * Switches the rounds of rules (those added with {@link #rule(Rule)} and the dual reductions)
+     * on or off; on by default. With them off, the rewrites that build the child still run: the
+     * global rewrites, variable aliasing, the reification cleanup, elimination and the affine
+     * substitution of rule 2.
+     *
+     * @param on true to run the rounds.
+     * @return this builder.
+     */
+    public Builder ruleRounds(boolean on) {
+      this.ruleRounds = on;
+      return this;
+    }
+
+    /**
      * Sets the most rounds of rules; the default is {@value Derivation#DEFAULT_ROUNDS}. The rounds
      * stop earlier at a fixpoint, when a round of rules and propagation changes nothing.
      *
@@ -544,7 +561,7 @@ public final class Derivation implements VarMap {
     }
     level = parent.level;
     try {
-      if (rules && !ruleList.isEmpty() && !applyRules()) {
+      if (rules && ruleRounds && !ruleList.isEmpty() && !applyRules()) {
         outcome = Outcome.INFEASIBLE;
         return;
       }

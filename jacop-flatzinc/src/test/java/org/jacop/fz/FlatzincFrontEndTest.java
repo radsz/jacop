@@ -2651,6 +2651,27 @@ class FlatzincFrontEndTest {
     }
   }
 
+  @Test
+  void presolveLevelAliasesOnlyMergesEqualVariables() throws IOException {
+    // x = y is merged, but no round of rules runs: x + z = 7 would fix nothing either way
+    String model =
+        """
+        var 1..5: x:: output_var;
+        var 1..5: y:: output_var;
+        var 1..5: z:: output_var;
+        constraint int_eq(x,y);
+        constraint int_lin_eq([1,1],[y,z],7);
+        constraint int_ne(x,z);
+        solve satisfy;
+        """;
+    String[] out = run(model, "-a", "-s", "--presolve", "check", "--presolve-level", "aliases");
+    assertTrue(out[0].contains("%%%mzn-stat: presolveRounds=0"), out[0]);
+    assertTrue(out[0].contains("%%%mzn-stat: presolveVariablesAliased=1"), out[0]);
+    assertEquals(4, out[0].split("----------", -1).length - 1, out[0]);
+    String[] fast = run(model, "-s", "--presolve", "on", "--presolve-level", "fast");
+    assertFalse(fast[0].contains("%%%mzn-stat: presolveRounds=0"), fast[0]);
+  }
+
   private String[] run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

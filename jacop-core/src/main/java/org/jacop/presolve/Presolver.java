@@ -224,6 +224,17 @@ public final class Presolver {
   }
 
   /**
+   * Switches the rounds of rules on or off; see {@link Derivation.Builder#ruleRounds(boolean)}.
+   *
+   * @param on true to run the rounds (the default).
+   * @return this presolver.
+   */
+  public Presolver ruleRounds(boolean on) {
+    builder.ruleRounds(on);
+    return this;
+  }
+
+  /**
    * Sets the share of the variables a round must change to count as finding much; see {@link
    * Derivation.Builder#abortFactor(double)}.
    *
