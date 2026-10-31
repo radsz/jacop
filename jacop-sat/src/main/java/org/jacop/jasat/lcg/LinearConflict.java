@@ -281,7 +281,8 @@ final class LinearConflict {
       count("start-not-failing");
       return null;
     }
-    if (!(failed instanceof LinearReasons) && formOf(failed) == null) {
+    boolean modelStart = formOf(failed) != null;
+    if (!modelStart && !(failed instanceof LinearReasons)) {
       count("start-row");
     }
     for (int step = 0; ; step++) {
@@ -305,7 +306,12 @@ final class LinearConflict {
       }
       if (trail.level(latest) < level
           || (otherLevel < level && trail.level(latest) == level && slack(latest) >= 0)) {
-        count(step == 0 ? "asserting-at-start" : "asserting");
+        if (step == 0 && (modelStart || size > maxTerms)) {
+          // the failing constraint itself, already in the model, or a row or LP form too long
+          count(modelStart ? "asserting-at-start" : "too-many-terms:start");
+          return null;
+        }
+        count(step == 0 ? "asserting-row" : "asserting");
         learntTerms += size;
         learntSteps += step;
         return result();
