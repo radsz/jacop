@@ -945,6 +945,87 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void domainBeyondIntegerRangeIsNarrowedWithoutClaimingCompleteness() throws IOException {
+    // MiniZinc writes computed bounds such as 0..4722438400 for a product (2022
+    // arithmetic-target); they were rejected as 32-bit overflows, and 0..1687566400 was taken
+    // silently beyond IntDomain.MAX_INT. The domain is narrowed to JaCoP's range, so a completed
+    // search proves nothing about the values cut off.
+    String fzn =
+        """
+        var 0..4722438400: x :: output_var;
+        constraint int_le(x, 3);
+        solve maximize x;
+        """;
+    String[] out = run(fzn);
+    assertEquals(0, lastStatus, out[1]);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
+    assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
+
+    // no claim of unsatisfiability: the solutions may lie in the values cut off
+    out =
+        run("var -10..1687566400: x :: output_var;\nconstraint int_le(x, -11);\nsolve satisfy;\n");
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    out =
+        run(
+            """
+            var 0..1687566400: x :: output_var;
+            var 0..9: y :: output_var;
+            constraint int_lin_eq([1, -1], [x, y], 600000000);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+
+    // the same model without the narrowing: a domain within the range is taken as declared
+    out = run("var 0..536870909: x :: output_var;\nconstraint int_le(x, 3);\nsolve maximize x;\n");
+    assertEquals("x = 3;\n----------\n==========\n", out[0]);
+    assertEquals("", out[1]);
+  }
+
+  @Test
+  void objectiveNarrowedOnItsWorseSideKeepsOptimality() throws IOException {
+    // 2020 code-generator: "var 0..2014326920: objective" is minimised; the values cut off are
+    // worse than any solution found, so the optimum is still proved
+    String[] out =
+        run(
+            """
+            var 0..2014326920: c :: output_var;
+            var 1..5: y :: output_var;
+            constraint int_lin_eq([1, -2], [c, y], 0);
+            solve minimize c;
+            """);
+    assertEquals("c = 2;\ny = 1;\n----------\n==========\n", out[0]);
+    // maximised, the values cut off are the better ones
+    out =
+        run(
+            """
+            var 0..2014326920: c :: output_var;
+            var 1..5: y :: output_var;
+            constraint int_lin_eq([1, -2], [c, y], 0);
+            solve maximize c;
+            """);
+    assertTrue(out[0].endsWith("c = 10;\ny = 5;\n----------\n"), out[0]);
+    // an array element of the objective's array narrowed too: no claim
+    out =
+        run(
+            """
+            array [1..2] of var 0..2014326920: a :: output_array([1..2]);
+            constraint int_le(a[2], 4);
+            solve minimize a[1];
+            """);
+    assertFalse(out[0].contains("=========="), out[0]);
+  }
+
+  @Test
+  void domainWhollyOutsideIntegerRangeIsRejected() throws IOException {
+    String[] out = run("var 600000000..700000000: x :: output_var;\nsolve satisfy;\n");
+    assertEquals("", out[0]);
+    assertTrue(out[1].contains("domain 600000000..700000000 at line 1"), out[1]);
+    assertTrue(out[1].contains("lies outside the integer range"), out[1]);
+    assertEquals(1, lastStatus);
+  }
+
+  @Test
   void timeOutOfTheCompletionSearchIsNotReportedUnsatisfiable() throws IOException {
     // hakank's farmer_and_cows: the annotated search labels x, and the search that completes the
     // assignment of the other variables timed out below its only node. The annotated search had no
