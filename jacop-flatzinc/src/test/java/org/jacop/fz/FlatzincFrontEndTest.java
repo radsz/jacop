@@ -2714,8 +2714,10 @@ class FlatzincFrontEndTest {
       System.setOut(originalOut);
       System.setErr(originalErr);
     }
+    // IO.println ends lines with the platform separator ("\r\n" on Windows); the checks expect "\n"
     return new String[] {
-      out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8)
+      out.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"),
+      err.toString(StandardCharsets.UTF_8).replace("\r\n", "\n")
     };
   }
 
