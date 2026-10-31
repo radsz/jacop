@@ -3912,4 +3912,26 @@ class LcgSolverTest {
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
+
+  /**
+   * A probe whose root propagation stops at the deadline backtracks to the root while root literals
+   * it notified are not applied yet. They stay assigned and are not notified again, so they must
+   * still reach the domains; ma-path-finding under -f threw "is not fixed in a model" when the core
+   * phase found every literal assigned and a variable open.
+   */
+  @Test
+  void rootLiteralsNotifiedBeforeABacktrackToTheRootReachTheDomains() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new XneqY(x, y));
+    LcgSolver lcg = new LcgSolver(store);
+    int lit = lcg.geLiteral(lcg.index(x), 1);
+    assertThat(lcg.solver().addClause(lit)).isTrue(); // [x >= 1] at the root
+    lcg.notifyAssignment(lit, true);
+    lcg.notifyBacktrack(0);
+    lcg.propagate(); // applies the pending literals, then gives the first atom they imply
+    assertThat(x.min()).isEqualTo(1);
+    assertThat(y.max()).isZero();
+  }
 }

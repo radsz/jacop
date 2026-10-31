@@ -1844,6 +1844,16 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the decision level of an assigned literal.
+   *
+   * @param lit a DIMACS literal whose variable is assigned
+   * @return the level it was assigned at
+   */
+  public int levelOf(int lit) {
+    return level[Math.abs(lit) - 1];
+  }
+
+  /**
    * Returns the position of a literal's variable on the trail.
    *
    * @param lit a DIMACS literal
