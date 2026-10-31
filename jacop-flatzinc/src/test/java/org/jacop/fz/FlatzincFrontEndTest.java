@@ -2608,6 +2608,63 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /**
+   * Every infeasible relaxation fails its node: the Farkas multipliers of the simplex carry
+   * round-off far below the multipliers of the proof, and rounding them at a scale of 2^24 lost the
+   * proof on most infeasible relaxations of spot5 2014-42 (2,556 of 4,063).
+   */
+  @Test
+  void anInfeasibleRelaxationFailsItsNode() throws IOException {
+    long infeasible = 0;
+    for (int seed = 1; seed <= 3; seed++) {
+      String model = weightedTables(new Random(seed), 40, 160);
+      String out =
+          run(model, "-f", "--lp", "sparse", "--search-statistics", "--free-config", "lcg-core=0")[
+              0];
+      assertEquals(stat(out, "lpInfeasible"), stat(out, "lpFailures"), "seed " + seed + "\n" + out);
+      infeasible += stat(out, "lpInfeasible");
+    }
+    assertTrue(infeasible > 0, "infeasible relaxations: " + infeasible);
+  }
+
+  // n variables over 0..3 and t random binary tables that allow every pair with a 0; the cost of a
+  // variable, small or in thousands as in spot5, is paid when it is 0
+  private static String weightedTables(Random r, int n, int t) {
+    int[] costs = {1, 2, 3, 1000, 2000, 3000, 5000};
+    StringBuilder m = new StringBuilder();
+    StringBuilder ws = new StringBuilder("1");
+    StringBuilder cs = new StringBuilder("obj");
+    for (int i = 0; i < n; i++) {
+      m.append("var 0..3: p%d :: output_var;\nvar bool: b%d;\nvar 0..1: c%d;\n".formatted(i, i, i));
+      ws.append(", -").append(costs[r.nextInt(costs.length)]);
+      cs.append(", c").append(i);
+    }
+    m.append("var 0..1000000: obj :: output_var;\n");
+    for (int k = 0; k < t; k++) {
+      int i = r.nextInt(n);
+      int j = r.nextInt(n);
+      if (i == j) {
+        continue;
+      }
+      StringBuilder tuples = new StringBuilder();
+      for (int a = 0; a < 4; a++) {
+        for (int b = 0; b < 4; b++) {
+          if (a == 0 || b == 0 || r.nextInt(3) == 0) {
+            tuples.append(tuples.isEmpty() ? "" : ", ").append(a).append(", ").append(b);
+          }
+        }
+      }
+      m.append("constraint jacop_table_int([p%d, p%d], [%s]);\n".formatted(i, j, tuples));
+    }
+    for (int i = 0; i < n; i++) {
+      m.append(
+          "constraint int_eq_reif(p%d, 0, b%d);\nconstraint bool2int(b%d, c%d);\n"
+              .formatted(i, i, i, i));
+    }
+    m.append("constraint int_lin_eq([%s], [%s], 0);\nsolve minimize obj;\n".formatted(ws, cs));
+    return m.toString();
+  }
+
   private static String objective(String out) {
     return out.lines()
         .filter(l -> l.startsWith("obj = ") || l.contains("UNSATISFIABLE"))

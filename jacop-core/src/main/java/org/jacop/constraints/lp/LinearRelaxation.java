@@ -98,8 +98,11 @@ public class LinearRelaxation extends Constraint
     LAZY
   }
 
+  // multipliers below this share of the largest are taken as round-off of the simplex
+  private static final double NOISE = 1e-11;
+
   // the scales tried for the multipliers, the largest first
-  private static final long[] SCALES = {1L << 24, 1L << 16, 1L << 8, 1};
+  private static final long[] SCALES = {1L << 40, 1L << 32, 1L << 24, 1L << 16, 1L << 8, 1};
 
   // the scale of the rows of the basis inverse the Gomory cuts come from
   private static final long GOMORY_SCALE = 1L << 20;
@@ -937,7 +940,10 @@ public class LinearRelaxation extends Constraint
             propagate(store, f);
           }
         }
-        return;
+        if (status != DualSimplex.INFEASIBLE) {
+          return;
+        }
+        // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
       }
       // the combination overflows: try a smaller scale
     }
@@ -1106,7 +1112,9 @@ public class LinearRelaxation extends Constraint
     }
     long[] lambda = new long[y.length];
     for (int i = 0; i < y.length; i++) {
-      lambda[i] = Math.round(y[i] / largest * scale);
+      // multipliers below 1e-11 of the largest are the simplex's round-off, not part of the proof
+      double r = y[i] / largest;
+      lambda[i] = Math.abs(r) < NOISE ? 0 : Math.round(r * scale);
     }
     return lambda;
   }
