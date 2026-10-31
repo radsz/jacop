@@ -910,7 +910,12 @@ public class LinearRelaxation extends Constraint
       limits++;
       stalled++;
       long extraHits = limits - extraLimits;
-      if (beforeExtra != null && extraHits >= EXTRA_LIMITS && extraHits * 20 > calls) {
+      // the first solves after the root often stop at the limit while the search moves far from
+      // the root solution: judge the extra rows only over 20 solves per limit or more
+      if (beforeExtra != null
+          && extraHits >= EXTRA_LIMITS
+          && extraHits * 20 > calls
+          && calls >= 20L * EXTRA_LIMITS) {
         dropExtraRows();
       }
       return;
