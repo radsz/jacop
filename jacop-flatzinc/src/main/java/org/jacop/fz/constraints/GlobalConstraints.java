@@ -257,6 +257,12 @@ class GlobalConstraints implements ParserTreeConstants {
     if (s.length == 0) {
       return;
     }
+    if (support.options.proof() != null) {
+      // --proof: the time table, which unit propagation over the time-indexed encoding states;
+      // the energy and edge-finding rules of the other cumulative constraints it does not
+      support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      return;
+    }
     if (poseInterDistance(s, d, r, b)) {
       return;
     }

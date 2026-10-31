@@ -30,7 +30,10 @@
 
 package org.jacop.fz;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryUsage;
@@ -1720,6 +1723,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     String unsupported = lcgUnsupported(costVar);
     if (unsupported != null) {
       IO.println("%% --lcg ignored: " + unsupported);
+      if (options.proof() != null) {
+        IO.println("%% --proof ignored: it needs --lcg");
+      }
+      if (dictionary.rootTrail != null) {
+        dictionary.rootTrail.detach();
+        dictionary.rootTrail = null;
+      }
       postCollectedClauses();
       return false;
     }
@@ -1786,6 +1796,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    if (options.proof() != null) {
+      try {
+        lcg.setProof(
+            new FileOutputStream(options.proof() + ".opb"),
+            new FileOutputStream(options.proof() + ".pbp"));
+        if (dictionary.rootTrail != null) {
+          lcg.setRootTrail(dictionary.rootTrail);
+          dictionary.rootTrail = null;
+        }
+      } catch (FileNotFoundException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
     lcg.setRestartPresolve(options.presolveRestart());
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
