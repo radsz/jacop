@@ -1913,7 +1913,7 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < alphabetSize; j++) {
         if (d[i * alphabetSize + j] != 0) {
-          addTransitionValue(condition, d[i * alphabetSize + j] - minIndex, j + minIndex);
+          addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -2067,8 +2067,10 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < S.getSize(); j++) {
         int valTran = valueTransition.nextElement();
+        // d holds 1-based next states (0 is the failure state); min_index is the smallest
+        // symbol of the alphabet, not of the states
         if (d[i * S.getSize() + j] != 0) {
-          addTransitionValue(condition, d[i * S.getSize() + j] - minIndex, valTran);
+          addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);

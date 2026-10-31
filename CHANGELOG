@@ -1482,6 +1482,13 @@ Version 5.0 (unreleased)
     the translation) or by a constraint that cannot be encoded narrow the
     model's domains instead. The FlatZinc translation is not certified.
 
+100. FlatZinc regular with a set alphabet (jacop_regular_set) read the
+    next states of its transition table shifted by the smallest symbol
+    instead of by 1. With an alphabet such as 0..1 it crashed with an
+    ArrayIndexOutOfBoundsException; with one from 2 it could map
+    transitions to the wrong state and report UNSAT for satisfiable
+    models. Alphabets from 1 (the usual case) were not affected.
+
 Version 4.11
 =============
 
