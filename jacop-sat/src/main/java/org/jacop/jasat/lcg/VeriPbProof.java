@@ -177,11 +177,24 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
    * explanation of an atom inside a conflict clause; it is not deleted.
    *
    * @param step the whole step, {@code rup ... ;} and a line end
+   * @return its id
    */
-  void lemma(CharSequence step) {
+  long lemma(CharSequence step) {
     write(step);
     steps++;
-    lastId++;
+    return ++lastId;
+  }
+
+  /**
+   * Writes a {@code pol} step, a sum of constraints and literal axioms in postfix order.
+   *
+   * @param operands the operands and operators, such as {@code "12 13 + ~x4e2 +"}
+   * @return the id of the derived constraint
+   */
+  long pol(CharSequence operands) {
+    write("pol " + operands + " ;\n");
+    steps++;
+    return ++lastId;
   }
 
   /**

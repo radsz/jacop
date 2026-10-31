@@ -36,6 +36,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
@@ -48,8 +50,10 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.Not;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.regular.Regular;
@@ -339,16 +343,50 @@ class VeriPbProofTest {
   }
 
   @Test
+  void allDifferentOptimumIsProved() {
+    for (int kind = 0; kind < 3; kind++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, 5);
+      }
+      store.impose(
+          switch (kind) {
+            case 0 -> new Alldistinct(x);
+            case 1 -> new Alldiff(x);
+            default -> new Alldifferent(x);
+          });
+      store.impose(new LinearInt(new IntVar[] {x[0], x[1], x[2]}, new int[] {1, 1, 1}, "<=", 7));
+      IntVar obj = new IntVar(store, "obj", -100, 0);
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[0], x[1], x[2], x[3], x[4], obj},
+              new int[] {5, 4, 3, 2, 1, 1},
+              "==",
+              0));
+      proof.reset();
+      model.reset();
+      LcgSolver lcg = withProof(store);
+      assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      // 4 2 1 5 3
+      assertThat(lcg.value(obj)).isEqualTo(-44);
+      RupChecker checker = new RupChecker();
+      assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+      assertThat(checker.conclusion).isEqualTo("BOUNDS -44 -44");
+    }
+  }
+
+  @Test
   void unsupportedConstraintIsRefused() {
     Store store = new Store();
     IntVar[] x = new IntVar[3];
     for (int i = 0; i < x.length; i++) {
       x[i] = new IntVar(store, "x" + i, 1, 3);
     }
-    store.impose(new Alldistinct(x));
+    store.impose(new Not(new XeqY(x[0], x[1])));
     LcgSolver lcg = withProof(store);
     assertThatThrownBy(lcg::solve)
         .isInstanceOf(UnsupportedOperationException.class)
-        .hasMessageContaining("Alldistinct");
+        .hasMessageContaining("Not");
   }
 }

@@ -128,6 +128,14 @@ public interface PbModel {
   void sum(String[] literals, long[] a, IntVar[] x, long[] w, int relation, long c);
 
   /**
+   * Adds that the variables take different values: at most one of them takes each value. The solver
+   * writes the counting steps that the explanations of such a constraint need.
+   *
+   * @param x the variables, all different objects
+   */
+  void allDifferent(IntVar[] x);
+
+  /**
    * Adds {@code (number of x[i] = value) - sum y[j] relation c}: the counting constraints.
    *
    * @param model the model

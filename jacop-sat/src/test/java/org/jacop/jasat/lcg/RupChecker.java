@@ -33,6 +33,7 @@ package org.jacop.jasat.lcg;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -42,9 +43,9 @@ import java.util.regex.Pattern;
 
 /**
  * A small checker of the VeriPB subset that {@link VeriPbProof} writes, for tests: the OPB model
- * with right implications and an objective, and the rules rup, soli, sol, del id, f and the
- * conclusions. A rup step passes when unit propagation over the database and the step's negation
- * fails, as in VeriPB.
+ * with right implications and an objective, and the rules rup, pol (with + and literal axioms),
+ * soli, sol, del id, f and the conclusions. A rup step passes when unit propagation over the
+ * database and the step's negation fails, as in VeriPB.
  */
 final class RupChecker {
 
@@ -166,6 +167,36 @@ final class RupChecker {
             return "rup step " + (steps + 1) + " fails: " + st;
           }
           add(c);
+          steps++;
+        }
+        case "pol" -> {
+          // postfix: constraint ids, literal axioms (l >= 0) and "+"
+          Deque<Pb> stack = new ArrayDeque<>();
+          for (String t : rest.split("\\s+")) {
+            if (t.equals("+")) {
+              Pb b = stack.pop();
+              Pb a = stack.pop();
+              List<Object[]> sum = new ArrayList<>();
+              for (Pb c : List.of(a, b)) {
+                for (Map.Entry<String, Long> e : c.terms().entrySet()) {
+                  sum.add(new Object[] {e.getValue(), e.getKey()});
+                }
+              }
+              stack.push(normalise(sum, a.degree() + b.degree()));
+            } else if (Character.isDigit(t.charAt(0))) {
+              Pb c = db.get(Long.parseLong(t));
+              if (c == null) {
+                return "pol on a missing constraint: " + st;
+              }
+              stack.push(c);
+            } else {
+              stack.push(new Pb(Map.of(t, 1L), 0));
+            }
+          }
+          if (stack.size() != 1) {
+            return "bad step " + st;
+          }
+          add(stack.pop());
           steps++;
         }
         case "soli", "sol" -> {

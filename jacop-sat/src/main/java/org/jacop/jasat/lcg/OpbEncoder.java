@@ -35,10 +35,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.ToIntFunction;
 import org.jacop.constraints.AbstractReifiedConstraint;
@@ -48,6 +51,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
@@ -85,6 +89,21 @@ final class OpbEncoder implements PbModel {
   private final Set<String> unsupported = new TreeSet<>();
   // the guard literals of the constraints being written, for reifications
   private final List<String> guard = new ArrayList<>();
+
+  /**
+   * The at-most-one line of each value of an all different constraint.
+   *
+   * @param variables the indexes of its variables
+   * @param position the position of each index in variables
+   * @param lines the line of each value two or more of the variables can take
+   */
+  record AllDifferentLines(
+      int[] variables, Map<Integer, Integer> position, Map<Integer, Long> lines) {}
+
+  private final Map<Constraint, AllDifferentLines> allDifferent = new IdentityHashMap<>();
+
+  // the constraint being written
+  private Constraint current;
 
   /**
    * Creates the encoder.
@@ -154,6 +173,7 @@ final class OpbEncoder implements PbModel {
    * @param c the constraint
    */
   void constraint(Constraint c) {
+    current = c;
     if (!encode(c)) {
       unsupported.add(c.getClass().getSimpleName());
     }
@@ -391,6 +411,51 @@ final class OpbEncoder implements PbModel {
   private boolean isBoolean(IntVar x) {
     IntDomain d = root[id.applyAsInt(x)];
     return d.min() >= 0 && d.max() <= 1;
+  }
+
+  @Override
+  public void allDifferent(IntVar[] x) {
+    if (!guard.isEmpty()) {
+      throw new IllegalStateException("an all different constraint under a guard");
+    }
+    int[] variables = new int[x.length];
+    Map<Integer, Integer> position = new HashMap<>();
+    Map<Integer, StringBuilder> terms = new TreeMap<>();
+    Map<Integer, Integer> count = new HashMap<>();
+    for (int j = 0; j < x.length; j++) {
+      int i = id.applyAsInt(x[j]);
+      variables[j] = i;
+      position.put(i, j);
+      IntDomain d = root[i];
+      grow(d.getSize());
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        count.merge(v, 1, Integer::sum);
+        StringBuilder t = terms.computeIfAbsent(v, k -> new StringBuilder());
+        if (!d.singleton()) {
+          // a fixed variable's term is 0, and the degree still counts it
+          t.append("1 ~").append(eq(i, v)).append(' ');
+        }
+      }
+    }
+    Map<Integer, Long> lines = new HashMap<>();
+    for (Map.Entry<Integer, StringBuilder> t : terms.entrySet()) {
+      int c = count.get(t.getKey());
+      if (c >= 2) {
+        line(t.getValue() + ">= " + (c - 1));
+        lines.put(t.getKey(), numConstraints);
+      }
+    }
+    allDifferent.put(current, new AllDifferentLines(variables, position, lines));
+  }
+
+  /**
+   * Returns the lines of the all different constraints written.
+   *
+   * @return the lines of each constraint
+   */
+  Map<Constraint, AllDifferentLines> allDifferentLines() {
+    return allDifferent;
   }
 
   @Override

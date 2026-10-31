@@ -38,6 +38,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -54,6 +55,7 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
@@ -494,6 +496,9 @@ public final class LcgSolver implements ExternalPropagator {
   private VeriPbProof proof;
   private OutputStream proofModel;
   private boolean proofStarted;
+
+  // the at-most-one lines of the all different constraints of the proof model
+  private Map<Constraint, OpbEncoder.AllDifferentLines> proofAllDifferent = Map.of();
   // the clauses of addClause, for the OPB model
   private final List<IntVar[][]> proofClauses = new ArrayList<>();
 
@@ -567,6 +572,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (IntVar[][] clause : proofClauses) {
       model.clause(clause[0], clause[1]);
     }
+    proofAllDifferent = model.allDifferentLines();
     if (!model.unsupported().isEmpty()) {
       throw new UnsupportedOperationException(
           "proof logging does not support " + String.join(", ", model.unsupported()));
@@ -608,6 +614,139 @@ public final class LcgSolver implements ExternalPropagator {
       s.append(" 1 ").append(extra > 0 ? "~" + name : name);
     }
     proof.lemma(s.append(" >= 1 ;\n"));
+  }
+
+  /**
+   * Writes the steps that make a reason or a failure of an all different constraint a rup step.
+   * Under its hypotheses, the atoms of the reason and the negated atom, some of the variables have
+   * fewer values left than there are of them: the variables that the search for a matching visits
+   * when it fails to match one more. The sum of the at-most-one lines of their values and of the
+   * clauses "each of them takes one of its values" is false under the hypotheses.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofPigeonhole(Constraint c, EntryList atoms, int from, int entry) {
+    OpbEncoder.AllDifferentLines lines = proofAllDifferent.get(c);
+    if (lines == null || !proofStarted) {
+      return;
+    }
+    int[] variables = lines.variables();
+    int n = variables.length;
+    IntDomain[] dom = new IntDomain[n];
+    StringBuilder[] literals = new StringBuilder[n];
+    for (int j = 0; j < n; j++) {
+      dom[j] = root[variables[j]];
+      literals[j] = new StringBuilder();
+    }
+    // the hypotheses, and the clause literals of each variable that negate them
+    for (int k = from; k < atoms.size(); k++) {
+      int e = atoms.get(k);
+      Integer j = lines.position().get(trail.id(trail.variable(e)));
+      if (j != null) {
+        String atom = proofAtom(e, atoms.slack(k));
+        int v = (int) trail.value(e);
+        dom[j] =
+            switch (trail.kind(e)) {
+              case AtomicTrail.GE -> dom[j].intersect(v - atoms.slack(k), dom[j].max());
+              case AtomicTrail.LE -> dom[j].intersect(dom[j].min(), v + atoms.slack(k));
+              default -> dom[j].subtract(v);
+            };
+        if (!"1".equals(atom)) {
+          literals[j].append(" 1 ").append(atom.startsWith("~") ? atom.substring(1) : "~" + atom);
+        }
+      }
+    }
+    if (entry >= 0) {
+      Integer j = lines.position().get(trail.id(trail.variable(entry)));
+      if (j != null) {
+        int v = (int) trail.value(entry);
+        dom[j] =
+            switch (trail.kind(entry)) {
+              case AtomicTrail.GE -> dom[j].intersect(dom[j].min(), v - 1);
+              case AtomicTrail.LE -> dom[j].intersect(v + 1, dom[j].max());
+              default -> dom[j].intersect(v, v);
+            };
+        literals[j].append(" 1 ").append(proofAtom(entry, 0));
+      }
+    }
+    // the restricted variables first, where the matching most likely fails
+    Integer[] order = new Integer[n];
+    for (int j = 0; j < n; j++) {
+      order[j] = j;
+    }
+    Arrays.sort(order, (a, b) -> Integer.compare(dom[a].getSize(), dom[b].getSize()));
+    Map<Integer, Integer> owner = new HashMap<>();
+    Set<Integer> visited = new HashSet<>();
+    int unmatched = -1;
+    for (int j : order) {
+      visited.clear();
+      if (!match(j, dom, owner, visited)) {
+        unmatched = j;
+        break;
+      }
+    }
+    if (unmatched < 0) {
+      return;
+    }
+    // the variables visited: the unmatched one and the owners of the values visited
+    List<Integer> set = new ArrayList<>();
+    set.add(unmatched);
+    for (int v : visited) {
+      set.add(owner.get(v));
+    }
+    StringBuilder pol = new StringBuilder();
+    int operands = 0;
+    for (int v : visited) {
+      Long line = lines.lines().get(v);
+      String operand = null;
+      if (line != null) {
+        operand = Long.toString(line);
+      } else {
+        // a value only one variable can take: the axiom ~[x = v] >= 0 stands for its line
+        for (int j : set) {
+          if (!root[variables[j]].singleton() && root[variables[j]].contains(v)) {
+            operand = "~" + OpbEncoder.eq(variables[j], v);
+          }
+        }
+      }
+      if (operand != null) {
+        pol.append(operands++ == 0 ? "" : " ").append(operand).append(operands > 1 ? " +" : "");
+      }
+    }
+    for (int j : set) {
+      int i = variables[j];
+      if (root[i].singleton()) {
+        continue;
+      }
+      StringBuilder takes = new StringBuilder("rup");
+      for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+        takes.append(" 1 ").append(OpbEncoder.eq(i, e.nextElement()));
+      }
+      long id = proof.lemma(takes.append(literals[j]).append(" >= 1 ;\n"));
+      pol.append(operands++ == 0 ? "" : " ").append(id).append(operands > 1 ? " +" : "");
+    }
+    if (operands >= 2) {
+      proof.pol(pol);
+    }
+  }
+
+  // Kuhn's augmenting path from variable j; visited collects the values tried
+  private static boolean match(
+      int j, IntDomain[] dom, Map<Integer, Integer> owner, Set<Integer> visited) {
+    for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      if (visited.add(v)) {
+        Integer o = owner.get(v);
+        if (o == null || match(o, dom, owner, visited)) {
+          owner.put(v, j);
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /** The OPB literal of a trail entry's atom weakened by slack, or "1" when the root has it. */
@@ -2315,6 +2454,9 @@ public final class LcgSolver implements ExternalPropagator {
         if (PROOF_TRACE && proof != null) {
           proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
         }
+        if (proof != null) {
+          proofPigeonhole(store.recentlyFailedConstraint, atoms, 0, -1);
+        }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
@@ -2345,6 +2487,9 @@ public final class LcgSolver implements ExternalPropagator {
     boolean own = trail.explain(e, out);
     if (PROOF_TRACE && proof != null) {
       proof.comment((own ? "reason " : "generic reason ") + trail.reason(e));
+    }
+    if (proof != null) {
+      proofPigeonhole(trail.reason(e), out, mark, e);
     }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
       genericDeferred.add(trail.reason(e));
