@@ -743,6 +743,15 @@ public class LinearRelaxation extends Constraint
   // the values of the columns in the last optimal solution of the simplex, and its store level
   private double[] solution = new double[0];
   private int solutionLevel = -1;
+  private boolean keepSolutions;
+
+  /**
+   * Makes the relaxation keep the solution of each optimal solve, for {@link #solutionValue}. Off
+   * by default, since copying the solution costs time on every solve.
+   */
+  public void keepSolutions() {
+    keepSolutions = true;
+  }
 
   /**
    * Returns the number of columns of the last optimal solution of the simplex: the columns of the
@@ -974,7 +983,7 @@ public class LinearRelaxation extends Constraint
       return;
     }
     stalled = 0;
-    if (status == DualSimplex.OPTIMAL) {
+    if (keepSolutions && status == DualSimplex.OPTIMAL) {
       int n = lp.columns();
       if (solution.length != n) {
         solution = new double[n];

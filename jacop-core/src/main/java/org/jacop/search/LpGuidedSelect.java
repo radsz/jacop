@@ -72,6 +72,7 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
   public LpGuidedSelect(LinearRelaxation lp, SelectChoicePoint<? extends Var> fallback) {
     this.lp = lp;
     this.fallback = fallback;
+    lp.keepSolutions();
   }
 
   @Override
