@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -58,6 +59,7 @@ import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.InArea;
+import org.jacop.constraints.geost.LexChain;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.core.IntVar;
@@ -622,6 +624,48 @@ public final class GeostInstance {
       store.impose(geost);
     }
     return new Posted(vars, geost);
+  }
+
+  /**
+   * Posts the instance as one Geost constraint with its volume reasoning on or off, and with a
+   * lexicographic chain over each group of interchangeable objects when asked.
+   */
+  public Posted postGeostWith(Store store, boolean volume, boolean lex) {
+    IntVar[] vars = variables(store, false);
+    List<GeostObject> objs = geostObjects(vars, range(objects.size()));
+    List<ExternalConstraint> ecs = new ArrayList<>(externalConstraints(objs));
+    if (lex) {
+      for (List<Integer> group : interchangeableGroups()) {
+        ecs.add(new LexChain(group.stream().map(objs::get).toArray(GeostObject[]::new)));
+      }
+    }
+    Geost geost = new Geost(objs, ecs, geostShapes());
+    geost.setVolumeReasoning(volume);
+    store.impose(geost);
+    return new Posted(vars, geost);
+  }
+
+  /**
+   * The groups of two or more objects (by position) that are interchangeable: the same domains of
+   * every variable and the same non-overlap constraints, so that swapping two of them maps
+   * solutions to solutions.
+   */
+  public List<List<Integer>> interchangeableGroups() {
+    Map<String, List<Integer>> groups = new LinkedHashMap<>();
+    for (int i = 0; i < objects.size(); i++) {
+      Obj o = objects.get(i);
+      StringBuilder key = new StringBuilder();
+      key.append(Arrays.deepToString(o.coords()))
+          .append(Arrays.toString(o.shape()))
+          .append(Arrays.toString(o.start()))
+          .append(Arrays.toString(o.dur()))
+          .append(Arrays.toString(o.end()));
+      for (NonOverlap no : nonOverlaps) {
+        key.append(Arrays.stream(no.objects()).anyMatch(x -> x == o.no()) ? '1' : '0');
+      }
+      groups.computeIfAbsent(key.toString(), x -> new ArrayList<>()).add(i);
+    }
+    return groups.values().stream().filter(g -> g.size() > 1).toList();
   }
 
   /**

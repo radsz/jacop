@@ -260,6 +260,7 @@ setup to run configuration. -->
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
+                                <include>**/GeostLexVolumeTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/CostRegularTest.java</include>
@@ -402,6 +403,7 @@ setup to run configuration. -->
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
+                                <include>**/GeostLexVolumeTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
@@ -544,6 +546,7 @@ setup to run configuration. -->
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
+                                <include>**/GeostLexVolumeTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/PresolveTest.java</include>
