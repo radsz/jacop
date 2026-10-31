@@ -817,34 +817,34 @@ public final class LcgSolver implements ExternalPropagator {
     if (lines == null || !proofStarted) {
       return;
     }
-    int[] variables = lines.variables();
-    int[] values = lines.values();
+    int[] variables = lines.variables;
+    int[] values = lines.values;
     int n = variables.length;
     int m = values.length;
     IntDomain[] dom = new IntDomain[n];
     StringBuilder[] literals = new StringBuilder[n];
-    hypotheses(lines.position(), variables, atoms, from, entry, dom, literals);
-    int[] counters = lines.counters();
+    hypotheses(lines.position, variables, atoms, from, entry, dom, literals);
+    int[] counters = lines.counters;
     IntDomain[] count = new IntDomain[m];
     for (int k = 0; k < m; k++) {
       count[k] =
           counters[k] < 0
-              ? new IntervalDomain(lines.low()[k], lines.up()[k])
+              ? new IntervalDomain(lines.low[k], lines.up[k])
               : proofDomains[counters[k]];
     }
-    if (!lines.counterPosition().isEmpty()) {
-      int[] free = new int[m];
-      Arrays.fill(free, -1);
-      lines.counterPosition().forEach((i, k) -> free[k] = i);
+    if (!lines.counterPosition.isEmpty()) {
+      int[] freeCounter = new int[m];
+      Arrays.fill(freeCounter, -1);
+      lines.counterPosition.forEach((i, k) -> freeCounter[k] = i);
       IntDomain[] restricted = new IntDomain[m];
-      StringBuilder[] unused = new StringBuilder[m];
+      StringBuilder[] counterLiterals = new StringBuilder[m];
       int[] ids = new int[m];
       for (int k = 0; k < m; k++) {
-        ids[k] = free[k] < 0 ? counters[k] : free[k];
+        ids[k] = freeCounter[k] < 0 ? counters[k] : freeCounter[k];
       }
-      hypotheses(lines.counterPosition(), ids, atoms, from, entry, restricted, unused);
+      hypotheses(lines.counterPosition, ids, atoms, from, entry, restricted, counterLiterals);
       for (int k = 0; k < m; k++) {
-        if (free[k] >= 0) {
+        if (freeCounter[k] >= 0) {
           count[k] = restricted[k];
         }
       }
@@ -854,17 +854,17 @@ public final class LcgSolver implements ExternalPropagator {
       valueIndex.put(values[k], k);
     }
     // the values not counted by an open constraint are free: any number of variables take them
-    Map<Integer, Integer> free = new HashMap<>();
-    for (int j = 0; j < n && !lines.closed(); j++) {
+    Map<Integer, Integer> freeValues = new HashMap<>();
+    for (int j = 0; j < n && !lines.closed; j++) {
       for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
         int v = e.nextElement();
         if (!valueIndex.containsKey(v)) {
-          free.putIfAbsent(v, n + m + 2 + free.size());
+          freeValues.putIfAbsent(v, n + m + 2 + freeValues.size());
         }
       }
     }
     // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
-    int source = n + m + 2 + free.size();
+    int source = n + m + 2 + freeValues.size();
     int sink = source + 1;
     Flow flow = new Flow(sink + 1);
     for (int j = 0; j < n; j++) {
@@ -872,7 +872,7 @@ public final class LcgSolver implements ExternalPropagator {
       for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
         int v = e.nextElement();
         Integer k = valueIndex.get(v);
-        Integer node = free.get(v);
+        Integer node = freeValues.get(v);
         if (k != null) {
           flow.add(2 + j, 2 + n + k, 0, 1);
         } else if (node != null) {
@@ -880,7 +880,7 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
-    for (int node : free.values()) {
+    for (int node : freeValues.values()) {
       flow.add(node, 1, 0, n);
     }
     for (int k = 0; k < m; k++) {
@@ -904,7 +904,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (!cut[0] && !cut[1]) {
       for (int k = 0; k < m; k++) {
         if (cut[2 + n + k]) {
-          String operand = lines.upper()[k] > 0 ? Long.toString(lines.upper()[k]) : null;
+          String operand = lines.upper[k] > 0 ? Long.toString(lines.upper[k]) : null;
           for (int j = 0; operand == null && j < n; j++) {
             // a value only one variable can take: the axiom ~[x = v] >= 0 stands for its line
             if (cut[2 + j]
@@ -932,14 +932,14 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } else if (cut[0] && cut[1]) {
       for (int k = 0; k < m; k++) {
-        if (!cut[2 + n + k] && lines.lower()[k] > 0) {
-          pol.append(operands++ == 0 ? "" : " ").append(lines.lower()[k]);
+        if (!cut[2 + n + k] && lines.lower[k] > 0) {
+          pol.append(operands++ == 0 ? "" : " ").append(lines.lower[k]);
           pol.append(operands > 1 ? " +" : "");
         }
       }
       for (int j = 0; j < n; j++) {
-        if (!cut[2 + j] && lines.atMostOne()[j] > 0) {
-          pol.append(operands++ == 0 ? "" : " ").append(lines.atMostOne()[j]);
+        if (!cut[2 + j] && lines.atMostOne[j] > 0) {
+          pol.append(operands++ == 0 ? "" : " ").append(lines.atMostOne[j]);
           pol.append(operands > 1 ? " +" : "");
         }
       }
@@ -980,14 +980,17 @@ public final class LcgSolver implements ExternalPropagator {
         capacity = Arrays.copyOf(capacity, 2 * capacity.length);
         next = Arrays.copyOf(next, 2 * next.length);
       }
-      to[arcs] = v;
-      capacity[arcs] = c;
-      next[arcs] = head[u];
-      head[u] = arcs++;
-      to[arcs] = u;
-      capacity[arcs] = 0;
-      next[arcs] = head[v];
-      head[v] = arcs++;
+      // the arc and its reverse, at a and a + 1 (a ^ 1 finds one from the other)
+      int a = arcs;
+      to[a] = v;
+      capacity[a] = c;
+      next[a] = head[u];
+      head[u] = a;
+      to[a + 1] = u;
+      capacity[a + 1] = 0;
+      next[a + 1] = head[v];
+      head[v] = a + 1;
+      arcs += 2;
     }
 
     /**
@@ -1075,7 +1078,7 @@ public final class LcgSolver implements ExternalPropagator {
       Integer j = position.get(trail.id(proofTrail.variable(e)));
       if (j != null) {
         String atom = proofAtom(e, atoms.slack(k));
-        int v = (int) proofTrail.value(e);
+        int v = proofTrail.value(e);
         dom[j] =
             switch (proofTrail.kind(e)) {
               case AtomicTrail.GE -> dom[j].intersect(v - atoms.slack(k), dom[j].max());
@@ -1091,7 +1094,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (entry >= 0) {
       Integer j = position.get(trail.id(proofTrail.variable(entry)));
       if (j != null) {
-        int v = (int) proofTrail.value(entry);
+        int v = proofTrail.value(entry);
         dom[j] =
             switch (proofTrail.kind(entry)) {
               case AtomicTrail.GE -> dom[j].intersect(dom[j].min(), v - 1);
@@ -1139,7 +1142,8 @@ public final class LcgSolver implements ExternalPropagator {
       clause.append(l);
     }
     long[] w = f.weights();
-    for (int round = 0, changed = 1; changed > 0 && round < 4 * n; round++) {
+    int changed = 1;
+    for (int round = 0; changed > 0 && round < 4 * n; round++) {
       changed = 0;
       for (int k = 0; k < n; k++) {
         if (w[k] == 0) {

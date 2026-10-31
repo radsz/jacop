@@ -66,9 +66,9 @@ public final class ElementExplanation {
     Map<Integer, List<String>> positions = new HashMap<>();
     String[] any = new String[list.length];
     for (int j = 0; j < list.length; j++) {
-      String at = model.equal(index, j + 1 + offset);
+      String at = model.equalTo(index, j + 1 + offset);
       any[j] = at;
-      model.clause(PbModel.not(at), model.equal(value, list[j]));
+      model.clause(PbModel.not(at), model.equalTo(value, list[j]));
       positions.computeIfAbsent(list[j], k -> new ArrayList<>()).add(at);
     }
     model.clause(any);
@@ -77,7 +77,7 @@ public final class ElementExplanation {
       int u = e.nextElement();
       List<String> at = positions.getOrDefault(u, List.of());
       String[] c = new String[at.size() + 1];
-      c[0] = PbModel.not(model.equal(value, u));
+      c[0] = PbModel.not(model.equalTo(value, u));
       for (int k = 0; k < at.size(); k++) {
         c[k + 1] = at.get(k);
       }

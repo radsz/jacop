@@ -97,32 +97,61 @@ final class OpbEncoder implements PbModel {
    * solver derives its flow reasons: for each counted value the upper line {@code sum [x_j = v] -
    * count <= 0} and the lower line {@code sum [x_j = v] - count >= 0}, and for each variable the
    * line that it takes at most one value. A line not written is 0.
-   *
-   * @param variables the indexes of the counted variables
-   * @param position the position of each index in variables
-   * @param values the counted values, increasing
-   * @param counters the index of the counter of each value, or -1 for constant bounds
-   * @param low the lower bound of each value without a counter
-   * @param up the upper bound of each value without a counter
-   * @param closed whether the variables take counted values only; otherwise the other values are
-   *     free
-   * @param counterPosition the position of each counter index in counters
-   * @param upper the upper line of each value
-   * @param lower the lower line of each value
-   * @param atMostOne the at-most-one line of each variable
    */
-  record CardinalityLines(
-      int[] variables,
-      Map<Integer, Integer> position,
-      int[] values,
-      int[] counters,
-      int[] low,
-      int[] up,
-      boolean closed,
-      Map<Integer, Integer> counterPosition,
-      long[] upper,
-      long[] lower,
-      long[] atMostOne) {}
+  static final class CardinalityLines {
+    final int[] variables;
+    final Map<Integer, Integer> position;
+    final int[] values;
+    final int[] counters;
+    final int[] low;
+    final int[] up;
+    final boolean closed;
+    final Map<Integer, Integer> counterPosition;
+    final long[] upper;
+    final long[] lower;
+    final long[] atMostOne;
+
+    /**
+     * Collects the lines.
+     *
+     * @param variables the indexes of the counted variables
+     * @param position the position of each index in variables
+     * @param values the counted values, increasing
+     * @param counters the index of the counter of each value, or -1 for constant bounds
+     * @param low the lower bound of each value without a counter
+     * @param up the upper bound of each value without a counter
+     * @param closed whether the variables take counted values only; otherwise the other values are
+     *     free
+     * @param counterPosition the position of each counter index in counters
+     * @param upper the upper line of each value
+     * @param lower the lower line of each value
+     * @param atMostOne the at-most-one line of each variable
+     */
+    CardinalityLines(
+        int[] variables,
+        Map<Integer, Integer> position,
+        int[] values,
+        int[] counters,
+        int[] low,
+        int[] up,
+        boolean closed,
+        Map<Integer, Integer> counterPosition,
+        long[] upper,
+        long[] lower,
+        long[] atMostOne) {
+      this.variables = variables;
+      this.position = position;
+      this.values = values;
+      this.counters = counters;
+      this.low = low;
+      this.up = up;
+      this.closed = closed;
+      this.counterPosition = counterPosition;
+      this.upper = upper;
+      this.lower = lower;
+      this.atMostOne = atMostOne;
+    }
+  }
 
   private final Map<Constraint, CardinalityLines> cardinality = new IdentityHashMap<>();
 
@@ -534,10 +563,10 @@ final class OpbEncoder implements PbModel {
       for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
         int v = e.nextElement();
         if (counted.contains(v) || !closed) {
-          literals.add(equal(x[j], v));
+          literals.add(equalTo(x[j], v));
         } else {
           // the variables take counted values only
-          clause(PbModel.not(equal(x[j], v)));
+          clause(PbModel.not(equalTo(x[j], v)));
         }
       }
       if (literals.size() >= 2) {
@@ -614,7 +643,7 @@ final class OpbEncoder implements PbModel {
   }
 
   @Override
-  public String equal(IntVar x, int v) {
+  public String equalTo(IntVar x, int v) {
     int i = id.applyAsInt(x);
     IntDomain d = root[i];
     if (!d.contains(v)) {
@@ -645,7 +674,9 @@ final class OpbEncoder implements PbModel {
       String l = literals[k];
       switch (l) {
         case "1" -> constant = Math.addExact(constant, a[k]);
-        case "0" -> {}
+        case "0" -> {
+          // a false literal adds nothing
+        }
         default -> {
           if (l.startsWith("~")) {
             constant = Math.addExact(constant, a[k]);

@@ -87,7 +87,7 @@ public interface PbModel {
    * @param v the value
    * @return the literal
    */
-  String equal(IntVar x, int v);
+  String equalTo(IntVar x, int v);
 
   /**
    * Returns the literal {@code [x >= v]}: its name, or "1" or "0" when the root domain of x decides
@@ -171,7 +171,7 @@ public interface PbModel {
     String[] l = new String[x.length];
     long[] a = new long[x.length];
     for (int i = 0; i < x.length; i++) {
-      l[i] = model.equal(x[i], value);
+      l[i] = model.equalTo(x[i], value);
       a[i] = 1;
     }
     long[] w = new long[y.length];

@@ -2080,7 +2080,7 @@ public class HybridTable extends Constraint
         model.clause(PbModel.not(lit), PbModel.not(model.atLeast(x[i], hi + 1)));
         for (int v : rejected) {
           if (v > lo && v < hi) {
-            model.clause(PbModel.not(lit), PbModel.not(model.equal(x[i], v)));
+            model.clause(PbModel.not(lit), PbModel.not(model.equalTo(x[i], v)));
           }
         }
         for (int v : accepted) {
@@ -2094,7 +2094,7 @@ public class HybridTable extends Constraint
         int v = e.nextElement();
         List<String> s = support.getOrDefault(key(i, v), List.of());
         String[] c = new String[s.size() + 1];
-        c[0] = PbModel.not(model.equal(x[i], v));
+        c[0] = PbModel.not(model.equalTo(x[i], v));
         for (int k = 0; k < s.size(); k++) {
           c[k + 1] = s.get(k);
         }

@@ -521,13 +521,13 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     int levels = list.length;
     int[] edge = description.edges;
-    int edges = description.size;
+    int numEdges = description.size;
     long[] first = new long[levels + 1];
     for (int level = 0; level < levels; level++) {
       first[level + 1] = first[level] + description.levelNodes[level];
     }
     Map<Long, Integer> next = new HashMap<>();
-    for (int e = 0; e < edges; e++) {
+    for (int e = 0; e < numEdges; e++) {
       long key = (first[edge[4 * e]] + edge[4 * e + 1]) << 32 | (edge[4 * e + 2] & 0xFFFFFFFFL);
       Integer target = next.putIfAbsent(key, edge[4 * e + 3]);
       if (target != null && target != edge[4 * e + 3]) {
@@ -552,12 +552,12 @@ public abstract class LayeredGraphConstraint extends Constraint
     for (int level = 0; level < levels; level++) {
       labelled.add(new HashMap<>());
     }
-    for (int e = 0; e < edges; e++) {
+    for (int e = 0; e < numEdges; e++) {
       int level = edge[4 * e];
       int source = edge[4 * e + 1];
       int value = edge[4 * e + 2];
       int target = edge[4 * e + 3];
-      String equal = model.equal(list[level], value);
+      String equal = model.equalTo(list[level], value);
       if ("0".equals(equal)) {
         continue;
       }
@@ -583,7 +583,7 @@ public abstract class LayeredGraphConstraint extends Constraint
       for (ValueEnumeration e = model.domain(list[level]).valueEnumeration();
           e.hasMoreElements(); ) {
         int v = e.nextElement();
-        String equal = model.equal(list[level], v);
+        String equal = model.equalTo(list[level], v);
         model.clause(implied(equal, labelled.get(level).getOrDefault(v, List.of())));
       }
     }

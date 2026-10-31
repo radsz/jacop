@@ -306,21 +306,21 @@ final class RupChecker {
 
   // sum terms >= rhs, normalised to positive coefficients over literals
   private static Pb normalise(List<Object[]> terms, long rhs) {
-    Map<String, Long> var = new LinkedHashMap<>();
+    Map<String, Long> coefficient = new LinkedHashMap<>();
     long constant = 0;
     for (Object[] t : terms) {
       long a = (Long) t[0];
       String l = (String) t[1];
       if (l.startsWith("~")) {
         constant += a;
-        var.merge(l.substring(1), -a, Long::sum);
+        coefficient.merge(l.substring(1), -a, Long::sum);
       } else {
-        var.merge(l, a, Long::sum);
+        coefficient.merge(l, a, Long::sum);
       }
     }
     long degree = rhs - constant;
     Map<String, Long> out = new LinkedHashMap<>();
-    for (Map.Entry<String, Long> e : var.entrySet()) {
+    for (Map.Entry<String, Long> e : coefficient.entrySet()) {
       if (e.getValue() > 0) {
         out.put(e.getKey(), e.getValue());
       } else if (e.getValue() < 0) {
