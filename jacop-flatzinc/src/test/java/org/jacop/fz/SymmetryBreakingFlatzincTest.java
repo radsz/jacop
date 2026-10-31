@@ -99,8 +99,10 @@ class SymmetryBreakingFlatzincTest {
     fzn.append("solve satisfy;\n");
     String model = fzn.toString();
 
-    String off = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "on", "--symmetry", "off");
-    String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+    String off =
+        FlatzincTestRunner.run(
+            tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
     assertTrue(off.contains("=====UNSATISFIABLE====="), off);
     assertTrue(on.contains("=====UNSATISFIABLE====="), on);
     // the pigeons and the holes are interchangeable: 7 + 6 generators
@@ -117,7 +119,8 @@ class SymmetryBreakingFlatzincTest {
         constraint int_ne(x, y);
         solve satisfy;
         """;
-    String out = FlatzincTestRunner.run(tmp, model, "-a", "-s", "--presolve", "check");
+    String out =
+        FlatzincTestRunner.run(tmp, model, "-a", "--search-statistics", "--presolve", "check");
     assertEquals(6, FlatzincTestRunner.solutions(out).size(), out);
     assertFalse(out.contains("symmetryGenerators"), out);
   }
@@ -131,7 +134,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
-      String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String what = "trial " + trial + "\n" + model + "\n" + on;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), what);
@@ -186,7 +189,8 @@ class SymmetryBreakingFlatzincTest {
           .append("],0);\n");
     }
     fzn.append("solve satisfy;\n");
-    String on = FlatzincTestRunner.run(tmp, fzn.toString(), "-s", "--presolve", "check");
+    String on =
+        FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     // value precedence: x0 = 1, and the first other colour is 2
     assertTrue(on.contains("x0 = 1;"), on);
@@ -209,7 +213,8 @@ class SymmetryBreakingFlatzincTest {
       fzn.append("constraint int_lin_le([1,-1],[x").append(i).append(",colours],0);\n");
     }
     fzn.append("solve minimize colours;\n");
-    String on = FlatzincTestRunner.run(tmp, fzn.toString(), "-s", "--presolve", "check");
+    String on =
+        FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     assertEquals(3, objective(on, "colours"), on);
   }
@@ -241,8 +246,10 @@ class SymmetryBreakingFlatzincTest {
         constraint bool_lin_eq([1,1,1,1],[u1,u2,u3,u4],used);
         solve minimize used;
         """;
-    String off = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "on", "--symmetry", "off");
-    String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+    String off =
+        FlatzincTestRunner.run(
+            tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
     assertEquals(objective(off, "used"), objective(on, "used"), on);
     assertEquals(3, objective(on, "used"), on);
     assertEquals(1, precedences(on), on);
@@ -311,7 +318,7 @@ class SymmetryBreakingFlatzincTest {
         constraint jacop_count([x0,x1,x2,x3,x4],3,c3);
         solve satisfy;
         """;
-    String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     assertTrue(on.contains("x0 = 1;"), on);
   }
@@ -329,7 +336,8 @@ class SymmetryBreakingFlatzincTest {
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
-            {"-s", "--presolve", "check"}, {"-s", "--presolve", "check", "--lcg"},
+            {"--search-statistics", "--presolve", "check"},
+            {"--search-statistics", "--presolve", "check", "--lcg"},
           }) {
         String on;
         try {
@@ -366,7 +374,8 @@ class SymmetryBreakingFlatzincTest {
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
-            {"-s", "--presolve", "check"}, {"-s", "--presolve", "check", "--lcg"},
+            {"--search-statistics", "--presolve", "check"},
+            {"--search-statistics", "--presolve", "check", "--lcg"},
           }) {
         String on;
         try {

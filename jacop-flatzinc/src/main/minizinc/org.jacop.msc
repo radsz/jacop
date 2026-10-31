@@ -37,6 +37,7 @@
         ["--free-engine", "engine for free search (-f)", "opt:new:legacy", "new"],
         ["--default-search", "search for a model without search annotation: free (as with -f) or input (input order, splitting domains)", "opt:free:input", "free"],
         ["--free-config", "settings of the new free search engine as key=value,...; see fzn-jacop -h", "string", ""],
+        ["--search-statistics", "with -s, also print the statistics of JaCoP's own components (LCG, presolve, LP, LNS, local search, symmetry, portfolio).", "bool", "false"],
         ["-debug", "print the constraints as imposed in JaCoP and the search used.", "bool", "false"]
     ]
 }
