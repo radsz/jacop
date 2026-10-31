@@ -1314,7 +1314,19 @@ Version 5.0 (unreleased)
     4108 reaches the optimum 7; 6872 and 8657 reach 8 and 9 with -f,
     optimum 7); the two code-generator instances still prove their optimum.
 
-91. Presolve rules have timing classes, as in SCIP: fast (the
+91. Free search without lazy clause generation (--lcg off -f) chooses, for
+    optimisation, the value of a variable with up to 64 values by trying
+    each one and taking the one that leaves the best bound on the
+    objective, as local search chooses its moves; ties keep the value of
+    the last solution. The probes take at most a quarter of the time, so
+    proofs of optimality are slowed by at most that much. --free-config
+    value-impact=<n> (0 = off) and value-impact-time=<share>. Against the
+    adaptive LNS of #322 on 119 instances (60 s): primal integral 21%
+    lower, 21 better and 16 worse final objectives (gbac UD5 280 against
+    6585; Yuck reaches 977, CP-SAT 372). Measured against Yuck and
+    Atlantis in osolpro benchmarks/lns-ls.
+
+92. Presolve rules have timing classes, as in SCIP: fast (the
     propagation-like rules), medium (at-most-one, redundant constraints,
     cumulative reductions) and exhaustive (probing, tabling, implied
     constraints). A round runs the costlier class only after a round of
@@ -1339,7 +1351,7 @@ Version 5.0 (unreleased)
     neutral there (158 solved, Borda 363.4). Presolve stays off by
     default.
 
-92. New constraint Cumulatives (org.jacop.constraints.cumulative), the
+93. New constraint Cumulatives (org.jacop.constraints.cumulative), the
     cumulatives of Beldiceanu and Carlsson: tasks with variable starts,
     durations, heights and machines, a bound per machine that is an
     upper or a lower limit on the load wherever a task runs, heights
@@ -1358,7 +1370,40 @@ Version 5.0 (unreleased)
     7 better and 7 worse (pairs_24_5_2 UNSAT not proved, power proofs
     up to 2x slower, cover_24_5_1 a first solution).
 
-93. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+94. The experimental cut-based conflict analysis of --lcg
+    (-Djacop.lcg.linear=learn, still off by default) also combines
+    linear rows of non-linear constraints, made once on the root bounds:
+    big-M rows of reified and implied linear relations (and of FlatZinc
+    x = y and x = c implied by a Boolean), and/or, max/min, |x| and the
+    McCormick rows of x*y. It also starts from an LP failure and uses the
+    LP's bound prunings as reasons, through the new LinearReasons
+    interface of LinearRelaxation. A failing constraint that is itself
+    asserting is no longer learnt again as a copy. On the 249 mznbench
+    instances, 10 s, failures that end in a learnt sum after at least one
+    step went from 2.5% to 8.0% (--lcg -f) and from 2.1% to 7.0%
+    (--lcg). 30 s with 30 terms at most: on the 102 instance/mode pairs
+    that learn, 2 reps, --lcg -f 18 better and 9 worse, --lcg 15 and 2
+    (still_life_8x8 proved in 10 s, hrc_exp2-1-4795 and maximum-dag
+    faster, bus_scheduling r4 and t2 faster); over the whole set, --lcg
+    13 and 11, --lcg -f 21 and 17, with 11 and 2 (11 and 3 under -f)
+    where the analysis learns.
+
+95. Geost checks volumes: in every dimension of a non-overlapping group
+    that selects all spatial dimensions (and time, if selected), the
+    objects that must lie inside a window must fit there by volume,
+    within the hull of those objects and the InArea box. It is on by
+    default; Geost.setVolumeReasoning(false) turns it off. New external
+    constraint LexChain(objects) orders the origins of interchangeable
+    objects lexicographically inside the sweep (symmetry breaking, like
+    SICStus geost lex); it is opt-in. Shape.area() returned 0 for
+    shapes made of one box; it is fixed. On the Geost benchmarks (60 s,
+    input order search) volume takes squares13 from 23,031 to 4,083
+    nodes and proves jobs12 and pallet2x5-12x9-11 infeasible at the
+    root (101,583 nodes and the time limit before); LexChain proves
+    pallet3x5-13x13-11 infeasible in 4.6 s, which times out without it.
+    No MiniZinc Challenge instance 2008-2026 reaches Geost.
+
+96. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
     search: <prefix>.opb is the model as pseudo-Boolean constraints over
     the order encoding of the domains the FlatZinc translation gives the
     variables, before the constraints propagate, and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
