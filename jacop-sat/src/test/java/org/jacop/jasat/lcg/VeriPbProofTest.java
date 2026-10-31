@@ -442,6 +442,92 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS " + lcg.value(obj) + " " + lcg.value(obj));
   }
 
+  // variable durations and resource uses, from 0: three tasks under a capacity of 3 that should
+  // start early, use much and run long but for the last one, which starts late, uses more than
+  // the capacity and so has length 0; the solutions logged fix every literal of the encoding
+  @Test
+  void cumulativeOfVariableTasksIsProved() {
+    int n = 3;
+    int[] weight = {1, 2, -1};
+    Store store = new Store();
+    IntVar[] s = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] res = new IntVar[n];
+    IntVar[] terms = new IntVar[3 * n + 1];
+    int[] w = new int[3 * n + 1];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 4);
+      dur[i] = new IntVar(store, "d" + i, 0, 2);
+      res[i] = new IntVar(store, "r" + i, i == 0 ? 2 : i == n - 1 ? 3 : 0, i == n - 1 ? 5 : 3);
+      terms[3 * i] = s[i];
+      w[3 * i] = weight[i];
+      terms[3 * i + 1] = dur[i];
+      w[3 * i + 1] = i == n - 1 ? 3 : -3;
+      terms[3 * i + 2] = res[i];
+      w[3 * i + 2] = -2;
+    }
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    terms[3 * n] = obj;
+    w[3 * n] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    store.impose(new CumulativeBasic(s, dur, res, new IntVar(store, "cap", 3, 3)));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // every start, duration and use, by enumeration
+    int best = Integer.MAX_VALUE;
+    int[] x = new int[3 * n];
+    for (int k = 0; k < Math.pow(90, n); k++) {
+      int rest = k;
+      int value = 0;
+      for (int i = 0; i < n; i++) {
+        x[3 * i] = rest % 5;
+        x[3 * i + 1] = rest / 5 % 3;
+        x[3 * i + 2] = rest / 15 % 6;
+        rest /= 90;
+        value += weight[i] * x[3 * i] + (i == n - 1 ? 3 : -3) * x[3 * i + 1] - 2 * x[3 * i + 2];
+      }
+      boolean fits = x[2] >= 2 && x[2] <= 3 && x[5] <= 3 && x[3 * n - 1] >= 3;
+      for (int t = 0; t < 7 && fits; t++) {
+        int load = 0;
+        for (int i = 0; i < n; i++) {
+          load += x[3 * i] <= t && t < x[3 * i] + x[3 * i + 1] ? x[3 * i + 2] : 0;
+        }
+        fits = load <= 3;
+      }
+      if (fits) {
+        best = Math.min(best, value);
+      }
+    }
+    assertThat(lcg.value(obj)).isEqualTo(best);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
+  }
+
+  // two tasks of length 0, one at its latest start and one at its earliest: the solution logged
+  // fixes the literals of both at their starts (fuzz seed 1739)
+  @Test
+  void cumulativeTasksOfLengthZeroAreFixedInTheSolution() {
+    Store store = new Store();
+    IntVar[] s = {new IntVar(store, "sa", -1, 1), new IntVar(store, "sb", 1, 5)};
+    IntVar[] dur = {new IntVar(store, "da", 0, 1), new IntVar(store, "db", 0, 2)};
+    IntVar[] res = {new IntVar(store, "ra", 2, 4), new IntVar(store, "rb", 1, 1)};
+    store.impose(new CumulativeBasic(s, dur, res, new IntVar(store, "cap", 2, 2)));
+    IntVar obj = new IntVar(store, "obj", -20, 20);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {s[0], dur[0], res[0], s[1], dur[1], obj},
+            new int[] {-1, 1, 1, 1, 1, -1},
+            "==",
+            0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(2);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
+  }
+
   // the shortest makespan over every start from 0 to horizon of each task
   private static int shortestMakespan(int[] d, int[] r, int capacity, int horizon) {
     int n = d.length;
