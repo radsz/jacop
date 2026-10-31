@@ -34,7 +34,6 @@ package org.jacop.jasat.lcg;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -550,7 +549,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     String objectiveLine = objective >= 0 ? model.objective(vars[objective]) : null;
     try {
-      proofModel.write(model.text(objectiveLine, names).getBytes(StandardCharsets.US_ASCII));
+      model.write(proofModel, objectiveLine, names);
       proofModel.close();
     } catch (IOException e) {
       throw new UncheckedIOException(e);

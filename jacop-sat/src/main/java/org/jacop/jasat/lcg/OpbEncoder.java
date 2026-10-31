@@ -31,6 +31,9 @@
 
 package org.jacop.jasat.lcg;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -419,32 +422,49 @@ final class OpbEncoder implements PbModel {
   private void line(String constraint) {
     constraints.append(constraint).append(" ;\n");
     numConstraints++;
+    if (constraints.length() > MAX_CHARS) {
+      // the order and channelling lines cost several lines per value, more than their term count
+      throw new UnsupportedOperationException("the OPB model is over " + MAX_CHARS + " characters");
+    }
   }
+
+  // the longest model text, well below the largest array a StringBuilder can hold
+  private static final int MAX_CHARS = 400_000_000;
 
   private void grow(long terms) {
     numTerms += terms;
     if (numTerms > maxTerms) {
-      throw new IllegalStateException(
+      throw new UnsupportedOperationException(
           "the OPB model is over " + maxTerms + " terms (system property jacop.lcg.proofTerms)");
     }
   }
 
   /**
-   * Returns the model: its header, the objective (or null), the comments and the constraints.
+   * Writes the model: its header, the objective (or null), the comments and the constraints.
    *
+   * @param out where the model goes
    * @param objective the objective line, or null
    * @param comments lines of comments, each starting with "* "
-   * @return the OPB text
+   * @throws IOException if out fails
    */
-  String text(String objective, CharSequence comments) {
-    return "* #variable= "
-        + (numVariables + numAuxiliaries)
-        + " #constraint= "
-        + numConstraints
-        + "\n"
-        + (objective == null ? "" : objective)
-        + comments
-        + constraints;
+  void write(OutputStream out, String objective, CharSequence comments) throws IOException {
+    String head =
+        "* #variable= "
+            + (numVariables + numAuxiliaries)
+            + " #constraint= "
+            + numConstraints
+            + "\n"
+            + (objective == null ? "" : objective)
+            + comments;
+    out.write(head.getBytes(StandardCharsets.US_ASCII));
+    byte[] chunk = new byte[1 << 16];
+    for (int from = 0; from < constraints.length(); from += chunk.length) {
+      int to = Math.min(constraints.length(), from + chunk.length);
+      for (int k = from; k < to; k++) {
+        chunk[k - from] = (byte) constraints.charAt(k);
+      }
+      out.write(chunk, 0, to - from);
+    }
   }
 
   /**

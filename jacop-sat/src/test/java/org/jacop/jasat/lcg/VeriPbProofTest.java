@@ -39,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
@@ -187,6 +188,23 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  // weighted 0/1 sums: 3 a + 2 b + 2 c + d >= 5 and a + b + c + d <= 2 leave a with b or c
+  @Test
+  void weightedBooleanSumsAreSolved() {
+    Store store = new Store();
+    BooleanVar[] x = new BooleanVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+    }
+    store.impose(new LinearBool(x, new int[] {3, 2, 2, 1}, ">=", 5));
+    store.impose(new LinearBool(x, new int[] {1, 1, 1, 1}, "<=", 2));
+    assertThat(withProof(store).solve()).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("SAT");
+    assertThat(opb()).contains("3 x");
   }
 
   @Test

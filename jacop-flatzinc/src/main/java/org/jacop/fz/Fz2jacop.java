@@ -145,6 +145,13 @@ public class Fz2jacop {
     } catch (FailException _) {
       handleFailException(opt, parser);
       status = 0;
+    } catch (UnsupportedOperationException e) {
+      if (opt.proof() == null) {
+        throw e;
+      }
+      // a model that --proof cannot write: no answer rather than one without its proof
+      IO.println("%% --proof: " + e.getMessage());
+      IO.println("=====UNKNOWN=====");
     } catch (ArithmeticException e) {
       handleArithmeticException(e);
     } catch (IllegalArgumentException e) {
