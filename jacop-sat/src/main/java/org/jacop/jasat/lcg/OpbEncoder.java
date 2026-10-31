@@ -734,7 +734,7 @@ final class OpbEncoder implements PbModel {
     numConstraints++;
     if (constraints.length() > MAX_CHARS) {
       // the order and channelling lines cost several lines per value, more than their term count
-      throw new UnsupportedOperationException("the OPB model is over " + MAX_CHARS + " characters");
+      throw new TooLarge("the OPB model is over " + MAX_CHARS + " characters");
     }
   }
 
@@ -744,8 +744,17 @@ final class OpbEncoder implements PbModel {
   private void grow(long terms) {
     numTerms += terms;
     if (numTerms > maxTerms) {
-      throw new UnsupportedOperationException(
+      throw new TooLarge(
           "the OPB model is over " + maxTerms + " terms (system property jacop.lcg.proofTerms)");
+    }
+  }
+
+  /** The model is larger than the encoder writes. */
+  static final class TooLarge extends UnsupportedOperationException {
+    private static final long serialVersionUID = 1L;
+
+    TooLarge(String message) {
+      super(message);
     }
   }
 

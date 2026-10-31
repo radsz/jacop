@@ -655,8 +655,56 @@ public final class LcgSolver implements ExternalPropagator {
         axioms++;
       }
     }
-    OpbEncoder model = new OpbEncoder(vars, domains, trail::id, PROOF_TERMS);
     StringBuilder names = new StringBuilder();
+    OpbEncoder model;
+    String tooLarge = null;
+    try {
+      long values = 0;
+      for (int i = 0; i < vars.length && rootTrail != null; i++) {
+        values += vars[i] == null ? 0 : (long) domains[i].max() - domains[i].min() + 1;
+      }
+      // the order and value lines of a domain cost about 8 terms per value
+      if (8 * values > PROOF_TERMS) {
+        throw new OpbEncoder.TooLarge("its domains have " + values + " values");
+      }
+      model = proofModel(domains, constraints, names);
+    } catch (OpbEncoder.TooLarge e) {
+      if (rootTrail == null) {
+        throw e;
+      }
+      // the domains the model states are too wide: it is stated after root propagation instead
+      tooLarge = e.getMessage();
+      rootTrail = null;
+      failedAtRoot = null;
+      domains = root;
+      names.setLength(0);
+      constraints = new LinkedHashSet<>(store.getConstraints());
+      constraints.addAll(store.watchedLiteralConstraints());
+      model = proofModel(domains, constraints, names);
+    }
+    String objectiveLine = objective >= 0 ? model.objective(vars[objective]) : null;
+    try {
+      model.write(proofModel, objectiveLine, names);
+      proofModel.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    proof.start(model.numConstraints());
+    if (rootTrail != null) {
+      proofRoot(domains, derived, axioms, late);
+    } else if (tooLarge != null) {
+      proof.comment("root propagation not derived: over the domains before it, " + tooLarge);
+    }
+    if (rootFailed) {
+      // the store failed at the root, which the proof does not derive
+      proof.comment("the store failed at the root");
+    }
+  }
+
+  /** Encodes the constraints over the domains, and names the variables in comments. */
+  private OpbEncoder proofModel(
+      IntDomain[] domains, Set<Constraint> constraints, StringBuilder names) {
+    OpbEncoder model = new OpbEncoder(vars, domains, trail::id, PROOF_TERMS);
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] != null && !domains[i].singleton()) {
         names.append("* x").append(i).append(" is ").append(vars[i].id()).append(' ');
@@ -675,21 +723,7 @@ public final class LcgSolver implements ExternalPropagator {
       throw new UnsupportedOperationException(
           "proof logging does not support " + String.join(", ", model.unsupported()));
     }
-    String objectiveLine = objective >= 0 ? model.objective(vars[objective]) : null;
-    try {
-      model.write(proofModel, objectiveLine, names);
-      proofModel.close();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-    proof.start(model.numConstraints());
-    if (rootTrail != null) {
-      proofRoot(domains, derived, axioms, late);
-    }
-    if (rootFailed) {
-      // the store failed at the root, which the proof does not derive
-      proof.comment("the store failed at the root");
-    }
+    return model;
   }
 
   /**
