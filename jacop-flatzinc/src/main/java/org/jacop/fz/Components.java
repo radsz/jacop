@@ -85,7 +85,7 @@ final class Components {
    * @param objective the objective variable, or null for a satisfaction problem.
    * @param order variables to branch on first, in this order, for example those of the search
    *     annotations.
-   * @param budgetMillis the time all the component searches may take together.
+   * @param budgetMillis the time the searches of all components may take together.
    * @return what was done.
    * @throws org.jacop.core.FailException if a component has no solution.
    */
@@ -142,12 +142,14 @@ final class Components {
     int solved = 0;
     int fixed = 0;
     int timedOut = 0;
+    // the budget is for the searches, not for finding the components
+    long searches = System.currentTimeMillis();
     for (Map.Entry<Var, List<Var>> e : components.entrySet()) {
       if (e.getKey() == kept) {
         continue;
       }
       List<IntVar> vars = variables(e.getValue(), order);
-      long left = budgetMillis - (System.currentTimeMillis() - start);
+      long left = budgetMillis - (System.currentTimeMillis() - searches);
       if (vars == null || vars.isEmpty() || left <= 0) {
         continue;
       }
