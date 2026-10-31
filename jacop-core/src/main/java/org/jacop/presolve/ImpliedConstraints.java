@@ -90,6 +90,11 @@ public final class ImpliedConstraints implements Rule {
    * @param context the derivation in progress.
    */
   @Override
+  public Timing timing() {
+    return Timing.EXHAUSTIVE;
+  }
+
+  @Override
   public void apply(Context context) {
     List<Constraint> implied = new ArrayList<>();
     collect(context.constraints(), done, implied);

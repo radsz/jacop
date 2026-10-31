@@ -1314,7 +1314,32 @@ Version 5.0 (unreleased)
     4108 reaches the optimum 7; 6872 and 8657 reach 8 and 9 with -f,
     optimum 7); the two code-generator instances still prove their optimum.
 
-89. New constraint Cumulatives (org.jacop.constraints.cumulative), the
+91. Presolve rules have timing classes, as in SCIP: fast (the
+    propagation-like rules), medium (at-most-one, redundant constraints,
+    cumulative reductions) and exhaustive (probing, tabling, implied
+    constraints). A round runs the costlier class only after a round of
+    the cheaper ones changed fewer than --presolve-abort (default 0.001)
+    times the variables, and the rounds stop after a small round at the
+    top class or when the budget is spent (--presolve-time, default 1/20
+    of the time left). --presolve-level fast|medium|exhaustive caps the
+    class. When the rules simplified nothing, the store is searched in
+    place instead of being copied: the copy alone changed the search
+    (cars_60_04 went unsolved). Under --lcg, rule 8 no longer substitutes
+    doubletons, which lengthened explanations (diameterc-mst 5 to 24
+    atoms); -Djacop.presolve.doubletons=on brings it back. The time of
+    every phase is printed as presolveTime<Phase> and the rounds per
+    class as presolveRounds<Class>. --presolve-restart <f> (off by
+    default) marks the constraints satisfied at the root entailed at a
+    restart once the root fixed f times the variables more. On the 249
+    mznbench instances, --lcg, 20 s: fast presolve with --symmetry off
+    solves the same 134 as presolve off with 18 better objectives and 3
+    worse (Borda 223.6 against 214.6; full presolve 206.8), at a median
+    0.06 s more set-up; with -f it still loses (157 against 159 solved,
+    Borda 335.0 against 355.0), and --presolve-restart 0.025 is about
+    neutral there (158 solved, Borda 363.4). Presolve stays off by
+    default.
+
+92. New constraint Cumulatives (org.jacop.constraints.cumulative), the
     cumulatives of Beldiceanu and Carlsson: tasks with variable starts,
     durations, heights and machines, a bound per machine that is an
     upper or a lower limit on the load wherever a task runs, heights
