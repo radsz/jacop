@@ -101,6 +101,9 @@ final class CumulativesExplanation {
     trail = t;
     pos = trail.size();
     int mark = out.size();
+    EntryList best = null;
+    EntryList candidate = new EntryList();
+    // the overloaded time with the smallest reason
     for (int k = 0; k < c.bounds.length; k++) {
       long b = bound(k);
       collectTimes(k, -1);
@@ -108,12 +111,91 @@ final class CumulativesExplanation {
         long time = times[a];
         load(k, time, -1);
         if (active && loadValue > b) {
-          if (addLoad(k, time, -1, b + 1, true, out) && addBoundAtom(k, b, out)) {
-            out.sortUnique(mark);
-            return true;
+          candidate.clear();
+          if (addLoad(k, time, -1, b + 1, true, candidate) && addBoundAtom(k, b, candidate)) {
+            candidate.sortUnique(0);
+            if (best == null || candidate.size() < best.size()) {
+              best = candidate;
+              candidate = new EntryList();
+            }
           }
-          out.truncate(mark);
         }
+      }
+    }
+    // a task whose starts all meet forbidden times, or that cannot run where it is forced to
+    for (int i = 0; i < n; i++) {
+      candidate.clear();
+      if (taskFailure(i, candidate)) {
+        candidate.sortUnique(0);
+        if (best == null || candidate.size() < best.size()) {
+          best = candidate;
+          candidate = new EntryList();
+        }
+      }
+    }
+    if (best == null) {
+      return false;
+    }
+    for (int a = 0; a < best.size(); a++) {
+      out.addFrom(best, a);
+    }
+    out.sortUnique(mark);
+    return true;
+  }
+
+  // a reason why task i has no place: no start of a fixed task avoids the forbidden times, or a
+  // time it is forced to run at is out of its reach
+  private boolean taskFailure(int i, EntryList out) {
+    IntVar s = c.starts[i];
+    int smin = trail.minBefore(s, pos);
+    int smax = trail.maxBefore(s, pos);
+    int dmax = trail.maxBefore(c.durations[i], pos);
+    long forcedOn = -1;
+    long firstForced = Long.MIN_VALUE;
+    for (int k = 0; k < c.bounds.length; k++) {
+      int mark = out.size();
+      if (onlyMachine(i, k)
+          && surelyPresent(i)
+          && smin <= smax
+          && addAtom(s, true, smin, out)
+          && addAtom(s, false, smax, out)
+          && coverStarts(i, k, smin, smax, out)
+          && addRunning(i, k, out)) {
+        return true;
+      }
+      out.truncate(mark);
+      long early = forcedTime(i, k, Long.MIN_VALUE, Long.MAX_VALUE, true);
+      if (early == Long.MIN_VALUE) {
+        continue;
+      }
+      long late = forcedTime(i, k, Long.MIN_VALUE, Long.MAX_VALUE, false);
+      int machine = c.firstMachine + k;
+      if (excludedAtom(c.machines[i], machine, out) && addForced(i, k, early, out)
+          || c.present != null
+              && trail.maxBefore(c.present[i], pos) == 0
+              && addAtom(c.present[i], false, 0, out)
+              && addForced(i, k, early, out)
+          || early < smin && addAtom(s, true, smin, out) && addForced(i, k, early, out)
+          || (long) smax + dmax <= late
+              && addAtom(s, false, smax, out)
+              && addAtom(c.durations[i], false, dmax, out)
+              && addForced(i, k, late, out)
+          || late - early + 1 > dmax
+              && addAtom(c.durations[i], false, late - early, out)
+              && addForced(i, k, early, out)
+              && addForced(i, k, late, out)) {
+        return true;
+      }
+      out.truncate(mark);
+      if (forcedOn >= 0) {
+        // forced on two machines
+        if (addForced(i, (int) forcedOn, firstForced, out) && addForced(i, k, early, out)) {
+          return true;
+        }
+        out.truncate(mark);
+      } else {
+        forcedOn = k;
+        firstForced = early;
       }
     }
     return false;
@@ -504,55 +586,94 @@ final class CumulativesExplanation {
 
   /**
    * Adds the atoms that keep the least load of the tasks other than exclude on machine k at t at
-   * least needed, with a compulsory part there when active is asked for.
+   * least needed, with a compulsory part there when mustCover. Compulsory parts with positive
+   * heights are kept only while the load needs them, and the tasks kept off the time only while it
+   * is short, so that the reason holds as widely as it can.
    */
   private boolean addLoad(
       int k, long t, int exclude, long needed, boolean mustCover, EntryList out) {
+    // 0: not counted, 1: compulsory part with a positive height, 2: other compulsory part,
+    // 3: may run there with a negative least height, 4: kept off
+    int[] role = new int[n];
     long sum = 0;
-    boolean covered = false;
-    // the tasks that may run there with a negative height, kept off by atoms while the load is
-    // short
-    int[] away = new int[n];
-    long[] gain = new long[n];
-    int awayCount = 0;
+    int cover = -1;
     for (int j = 0; j < n; j++) {
       if (j == exclude) {
         continue;
       }
       int h = height(j);
       if (compulsory(j, k, t)) {
-        if (!addCompulsory(j, k, t, out) || !addHeight(j, h, out)) {
-          return false;
-        }
+        role[j] = h > 0 ? 1 : 2;
         sum += h;
-        covered = true;
-      } else if (rootHeight(j) < 0) {
-        int least = Math.min(0, h);
-        if (!addHeight(j, least, out)) {
-          return false;
+        if (h <= 0 && cover < 0) {
+          cover = j;
         }
-        sum += least;
-        if (least < 0 && !canRun(j, k, t)) {
-          away[awayCount] = j;
-          gain[awayCount++] = -least;
-        }
+      } else if (h < 0) {
+        role[j] = canRun(j, k, t) ? 3 : 4;
+        sum += h;
       }
     }
-    if (mustCover && !covered) {
-      return false;
-    }
+    // keep off the tasks that cannot run there, the largest heights first, while the load is short
     while (sum < needed) {
       int best = -1;
-      for (int a = 0; a < awayCount; a++) {
-        if (away[a] >= 0 && (best < 0 || gain[a] > gain[best])) {
-          best = a;
+      for (int j = 0; j < n; j++) {
+        if (role[j] == 4 && (best < 0 || height(j) < height(best))) {
+          best = j;
         }
       }
-      if (best < 0 || !addAway(away[best], k, t, out)) {
+      if (best < 0) {
         return false;
       }
-      sum += gain[best];
-      away[best] = -1;
+      sum -= height(best);
+      role[best] = 5;
+    }
+    // drop compulsory parts with positive heights, the smallest first, while the load stays enough
+    while (true) {
+      int best = -1;
+      for (int j = 0; j < n; j++) {
+        if (role[j] == 1 && (best < 0 || height(j) < height(best))) {
+          best = j;
+        }
+      }
+      if (best < 0 || sum - height(best) < needed) {
+        break;
+      }
+      sum -= height(best);
+      role[best] = 6;
+    }
+    if (mustCover && cover < 0) {
+      for (int j = 0; j < n && cover < 0; j++) {
+        if (role[j] == 1) {
+          cover = j;
+        }
+      }
+      if (cover < 0) {
+        // a dropped compulsory part covers the time again
+        for (int j = 0; j < n && cover < 0; j++) {
+          if (role[j] == 6) {
+            cover = j;
+            role[j] = 1;
+          }
+        }
+      }
+      if (cover < 0) {
+        return false;
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      int h = height(j);
+      boolean ok =
+          switch (role[j]) {
+            case 1 -> addCompulsory(j, k, t, out) && addHeight(j, h, out);
+            case 2 ->
+                (j != cover || !mustCover || addCompulsory(j, k, t, out)) && addHeight(j, h, out);
+            case 3, 4 -> addHeight(j, h, out);
+            case 5 -> addAway(j, k, t, out);
+            default -> rootHeight(j) >= 0 || j == exclude || addHeight(j, Math.min(0, h), out);
+          };
+      if (!ok) {
+        return false;
+      }
     }
     return true;
   }
