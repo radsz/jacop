@@ -1417,6 +1417,40 @@ Version 5.0 (unreleased)
     and 16, jobshop swv07) and 2 equal. ptv 1c goes from 2,941 to 1,666,
     ptv 5a from 270 to 60, cgt_12 from 1 to -129,352 and cgt_3 from
     19,722 to -147,892.
+    
+97. Portfolio (-p) settings are chosen from data. Each setting was run
+    alone on 240 hard instances (osolpro benchmarks/portfolio-configs) and
+    the threads after the first now follow the greedy best order for both
+    -f (--lcg on -f) and no options (--lcg on): LCG with literal branching,
+    free search with CHS and Luby restarts, the annotation without LCG,
+    the annotation with LCG, then the rest. A setting that would run the
+    same search as an earlier thread is skipped: objective-only options
+    (lcg-core, lcg-lb, lns, probe) on a satisfaction model and share-*
+    options do not count, so lcg-bb no longer repeats lcg on satisfaction
+    models. The LCG core-guided phase stops when its lower bound meets the
+    bound shared by the portfolio, and hardens with it; before, it used
+    only its own best solution. -f -p 4, 60 s, 169 hard instances, two
+    rounds that run both builds on each instance in turn: 99 solved
+    instead of 95 and 101 instead of 92, 61 and 59 instances better
+    against 25 and 26 worse, proofs about 26% faster. Routing and large
+    scheduling models reach somewhat worse objectives, since plain -f
+    without LCG is no longer among the first four threads.
+
+98. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
+    failures, restarts, peakDepth, variables, propagators, propagations,
+    nogoods, initTime, solveTime, objective, solutions) and now peakMem,
+    the peak memory of the JVM in Mbytes. The statistics of JaCoP's own
+    components (lcg*, presolve*, lp*, lns*, ls*, symmetry*, probe*,
+    portfolio*, objectiveProbes*, goalSubproblems, nodesPerSecond and the
+    per-class "%% lcg" lines) need the new option --search-statistics
+    (which implies -s), or -s together with -debug. The MiniZinc solver
+    configuration declares --search-statistics. A malformed
+    "%%%%mzn-stat: restarts" line of -v output is fixed.
+
+99. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
+    decision level of the SAT search (assumption levels included), and
+    restarts, the SAT solver's restarts (as lcgRestarts). Before, both
+    were always 0.
 
 Version 4.11
 =============

@@ -463,7 +463,8 @@ public final class CoreSearch {
       if (!relaxTrueAtRoot()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
-      if (lcg.bestObjective() <= lowerBound) {
+      if (lcg.boundObjective() <= lowerBound) {
+        // also when the best solution was found elsewhere (a portfolio): none here is better
         return CdclSolver.SAT;
       }
       if (!harden()) {
@@ -527,7 +528,7 @@ public final class CoreSearch {
    * becomes unsatisfiable.
    */
   private boolean harden() {
-    long best = lcg.bestObjective();
+    long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return true;
     }
@@ -868,7 +869,7 @@ public final class CoreSearch {
    * @return false when there is no solution yet
    */
   boolean closing(long deadline) {
-    long best = lcg.bestObjective();
+    long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE || startTime == 0) {
       return false;
     }
@@ -898,7 +899,7 @@ public final class CoreSearch {
    * its budget of conflicts, and one per level of a term of a million values would run for hours.
    */
   private boolean rising() {
-    long best = lcg.bestObjective();
+    long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return false;
     }

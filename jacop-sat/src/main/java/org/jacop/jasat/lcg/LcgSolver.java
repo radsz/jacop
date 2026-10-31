@@ -1247,6 +1247,21 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * The objective value that a solution must beat: that of the best solution, here or found
+   * elsewhere and given by {@link #setSharedBound}; {@link Long#MAX_VALUE} while there is none.
+   */
+  long boundObjective() {
+    long bound = bestObjective();
+    if (sharedBound != null) {
+      int shared = sharedBound.getAsInt();
+      if (shared != Integer.MAX_VALUE) {
+        bound = Math.min(bound, shared);
+      }
+    }
+    return bound;
+  }
+
+  /**
    * Alternates branch and bound with objective lower-bound search: runs of branch and bound end
    * after a number of conflicts, and each is followed by a run under the assumption that the
    * objective is at its lower bound, with a share of those conflicts. When that run proves the
@@ -1635,7 +1650,17 @@ public final class LcgSolver implements ExternalPropagator {
     while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
       numAnnotationIndices--;
     }
-    numPending = 0;
+    // a notified literal at or below the level stays assigned, and the solver does not notify it
+    // again: it is applied at the next propagation (the root's, when a probe stopped at the
+    // deadline)
+    int kept = 0;
+    for (int k = 0; k < numPending; k++) {
+      int lit = pending[k];
+      if (sat.value(lit) != 0 && sat.levelOf(lit) <= level) {
+        pending[kept++] = lit;
+      }
+    }
+    numPending = kept;
     failed = false;
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;

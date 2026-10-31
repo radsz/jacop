@@ -3578,6 +3578,41 @@ class LcgSolverTest {
   }
 
   @Test
+  void coreGuidedSearchStopsAtTheSharedBound() {
+    Random rnd = new Random(23);
+    int provedElsewhere = 0;
+    int checked = 0;
+    long[] alone = new long[4];
+    long[] withBound = new long[4];
+    for (int instance = 0; instance < 200; instance++) {
+      long seed = rnd.nextLong();
+      Integer optimum = coreModelOptimum(seed, -1, new long[3]);
+      if (optimum == null) {
+        continue;
+      }
+      checked++;
+      coreModelOptimum(seed, 0, alone);
+      // the optimum found elsewhere: the search ends with the proof that nothing is better, with
+      // no solution of its own or one that is not better
+      Integer found = coreModelOptimum(seed, 0, withBound, optimum);
+      if (found == null || found > optimum) {
+        provedElsewhere++;
+      } else {
+        assertThat(found).as("instance %d (seed %d)", instance, seed).isEqualTo(optimum);
+      }
+      // a worse solution found elsewhere: the optimum is still found here
+      assertThat(coreModelOptimum(seed, 0, new long[3], optimum + 1))
+          .as("instance %d (seed %d), bound above the optimum", instance, seed)
+          .isEqualTo(optimum);
+    }
+    assertThat(checked).isPositive();
+    // the cores stop once their lower bound meets the bound found elsewhere, mostly before they
+    // find a solution of their own (55 of 82 instances; 5 when the cores ignore the bound)
+    assertThat(provedElsewhere).isGreaterThan(checked / 4);
+    assertThat(withBound[3]).isLessThanOrEqualTo(alone[3]);
+  }
+
+  @Test
   void coreGuidedSearchWithAtMostOneGroupsAgreesWithSearch() {
     Random rnd = new Random(29);
     long groups = 0;
@@ -3885,6 +3920,11 @@ class LcgSolverTest {
    * the soft literals it made hard.
    */
   private static Integer coreModelOptimum(long seed, int mode, long[] stats) {
+    return coreModelOptimum(seed, mode, stats, null);
+  }
+
+  /** As above, with the objective value of a solution found elsewhere as a shared bound. */
+  private static Integer coreModelOptimum(long seed, int mode, long[] stats, Integer shared) {
     Random rnd = new Random(seed);
     Store store = new Store();
     int n = 4 + rnd.nextInt(5);
@@ -3958,6 +3998,9 @@ class LcgSolverTest {
       // core-guided phase picks up where it stopped
       solver.setCoreDelay(1, 1 + rnd.nextInt(5), rnd.nextInt(2));
     }
+    if (shared != null) {
+      solver.setSharedBound(() -> shared);
+    }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {
@@ -3965,6 +4008,31 @@ class LcgSolverTest {
       stats[1] += solver.coreSearch().proved ? 1 : 0;
       stats[2] += solver.coreSearch().hardened;
     }
+    if (stats.length > 3) {
+      stats[3] += solver.solver().conflicts;
+    }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
+  }
+
+  /**
+   * A probe whose root propagation stops at the deadline backtracks to the root while root literals
+   * it notified are not applied yet. They stay assigned and are not notified again, so they must
+   * still reach the domains; ma-path-finding under -f threw "is not fixed in a model" when the core
+   * phase found every literal assigned and a variable open.
+   */
+  @Test
+  void rootLiteralsNotifiedBeforeABacktrackToTheRootReachTheDomains() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new XneqY(x, y));
+    LcgSolver lcg = new LcgSolver(store);
+    int lit = lcg.geLiteral(lcg.index(x), 1);
+    assertThat(lcg.solver().addClause(lit)).isTrue(); // [x >= 1] at the root
+    lcg.notifyAssignment(lit, true);
+    lcg.notifyBacktrack(0);
+    lcg.propagate(); // applies the pending literals, then gives the first atom they imply
+    assertThat(x.min()).isEqualTo(1);
+    assertThat(y.max()).isZero();
   }
 }

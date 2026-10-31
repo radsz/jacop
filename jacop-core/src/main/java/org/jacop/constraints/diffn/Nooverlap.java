@@ -744,6 +744,13 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     }
     if (!DiffnExplanation.explain(trail, entry, rectangle, out)) {
       DiffnExplanation.bounds(trail, entry, rectangle, out);
+      // a rule removes values up to a bound it computed, and the domain moves past the holes
+      // beyond it, which the bounds do not explain
+      int kind = trail.kind(entry);
+      if (kind != AtomicTrail.NE) {
+        trail.addSkippedHoles(
+            entry, kind == AtomicTrail.GE ? Integer.MIN_VALUE : Integer.MAX_VALUE, out);
+      }
     }
     return true;
   }
