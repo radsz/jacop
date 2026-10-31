@@ -1969,30 +1969,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       solver.stop();
       return null;
     }
-    Thread check =
-        Thread.ofPlatform()
-            .daemon()
-            .start(
-                () -> {
-                  try {
-                    Thread.sleep(wait);
-                    // LCG gives way only with a solution to hand over: without one, the check is
-                    // made again until LCG has one or is no longer slow. cutstock type16 TEST9
-                    // found its first solution with LCG at 37 s and none without
-                    while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
-                      if (solutionFound) {
-                        lcgSlow = true;
-                        solver.stop();
-                        return;
-                      }
-                      Thread.sleep(500);
-                    }
-                  } catch (InterruptedException e) {
-                    // LCG search ended first
-                    Thread.currentThread().interrupt();
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                Thread.sleep(wait);
+                // LCG gives way only with a solution to hand over: without one, the check is
+                // made again until LCG has one or is no longer slow. cutstock type16 TEST9
+                // found its first solution with LCG at 37 s and none without
+                while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
+                  if (solutionFound) {
+                    lcgSlow = true;
+                    solver.stop();
+                    return;
                   }
-                });
-    return check;
+                  Thread.sleep(500);
+                }
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
   }
 
   /**
