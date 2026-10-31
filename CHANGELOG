@@ -1421,6 +1421,22 @@ Version 5.0 (unreleased)
     scheduling models reach somewhat worse objectives, since plain -f
     without LCG is no longer among the first four threads.
 
+97. fzn-jacop -s prints only the standard FlatZinc statistics (nodes,
+    failures, restarts, peakDepth, variables, propagators, propagations,
+    nogoods, initTime, solveTime, objective, solutions) and now peakMem,
+    the peak memory of the JVM in Mbytes. The statistics of JaCoP's own
+    components (lcg*, presolve*, lp*, lns*, ls*, symmetry*, probe*,
+    portfolio*, objectiveProbes*, goalSubproblems, nodesPerSecond and the
+    per-class "%% lcg" lines) need the new option --search-statistics
+    (which implies -s), or -s together with -debug. The MiniZinc solver
+    configuration declares --search-statistics. A malformed
+    "%%%%mzn-stat: restarts" line of -v output is fixed.
+
+98. Under --lcg, the FlatZinc statistics report peakDepth, the deepest
+    decision level of the SAT search (assumption levels included), and
+    restarts, the SAT solver's restarts (as lcgRestarts). Before, both
+    were always 0.
+
 Version 4.11
 =============
 
