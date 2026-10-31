@@ -47,6 +47,7 @@ import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
+import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
@@ -154,6 +155,17 @@ public class Constraints implements ParserTreeConstants {
       } else {
         replaced = new HashSet<>(replaced);
         replaced.addAll(alldifferent.replaced());
+      }
+    }
+
+    if (MinOfSumsDetector.enabled()) {
+      MinOfSumsDetector minOfSums = new MinOfSumsDetector(support);
+      Set<SimpleNode> merged = minOfSums.detect(astTree);
+      if (!merged.isEmpty()) {
+        replaced = new HashSet<>(replaced);
+        replaced.addAll(merged);
+        dictionary.removeFromDefaultSearch(minOfSums.removed());
+        dictionary.unusedVariables.addAll(minOfSums.removed());
       }
     }
 

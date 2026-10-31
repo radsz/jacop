@@ -1867,6 +1867,31 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns how an assigned literal got its value: 0 a decision or an assumption, 1 a unit, 2 a
+   * binary clause, 3 a learnt clause (or a kept external reason), 4 an original clause, 5 the
+   * external propagator.
+   *
+   * @param lit the literal, in DIMACS form
+   * @return the kind of its reason
+   */
+  public int reasonKind(int lit) {
+    int r = reason[Math.abs(lit) - 1];
+    if (r == NO_REASON) {
+      return 0;
+    }
+    if (r == UNIT_REASON) {
+      return 1;
+    }
+    if (r == EXTERNAL_REASON || r >= STACK_REF) {
+      return 5;
+    }
+    if (r < NO_REASON) {
+      return 2;
+    }
+    return (mem[r + META] & LEARNT_FLAG) != 0 ? 3 : 4;
+  }
+
+  /**
    * Returns the number of assigned literals.
    *
    * @return the size of the trail
