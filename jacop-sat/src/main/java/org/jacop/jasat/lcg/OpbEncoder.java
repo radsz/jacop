@@ -292,7 +292,8 @@ final class OpbEncoder implements PbModel {
     return null;
   }
 
-  private void guarded(String lit, LinearForm f) {
+  @Override
+  public void guarded(String lit, LinearForm f) {
     if ("0".equals(lit)) {
       return; // the guard is false: nothing to state
     }

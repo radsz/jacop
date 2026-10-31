@@ -1498,12 +1498,15 @@ Version 5.0 (unreleased)
     --proof every cumulative is posted as CumulativeBasic, and the
     redundant constraints the front end adds (unary resources, energy
     precedence, weighted completion, stocking cost, overlapping all
-    different) are left out;
+    different) are left out; so are diffn (as Nooverlap without its area
+    and count failures, every pair of rectangles a clause of the four
+    ways they are apart over order literals), int_times (as a table of
+    the products) and element over variables (ElementVariableFast);
     for another constraint, or a
     model over 4*10^8 characters, fzn-jacop prints "%% --proof: ..." and
     =====UNKNOWN=====. The proof derives each change of the root
     propagation as a unit from its reason, and a failure of the root
-    propagation as UNSAT; changes without a reason (domains narrowed by
+    propagation, or a clause false at the root, as UNSAT; changes without a reason (domains narrowed by
     the translation) or by a constraint that cannot be encoded narrow the
     model's domains instead. The FlatZinc translation is not certified.
 
