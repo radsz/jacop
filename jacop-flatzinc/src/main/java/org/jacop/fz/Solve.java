@@ -55,6 +55,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -185,6 +186,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the linear relaxation (--lp), or null
   private LinearRelaxation linearRelaxation;
+
+  // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
+  // turns them off)
+  private static final boolean TABLE_CLIQUES =
+      !"false".equals(System.getProperty("org.jacop.lp.tableCliques"));
   // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
   // LcgSolver is between two runs and holds no solution
   int lcgLastCost;
@@ -489,6 +495,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         clauses.add(clauseRow(clause[0], clause[1]));
       }
     }
+    // the cliques of the binary tables, over Booleans of their values; only for an objective,
+    // whose bound they raise, since the new Booleans stay in the store when the rows do not help
+    TableCliques.Result cliques = null;
+    if (objective != null && TABLE_CLIQUES && !dictionary.binaryTables().isEmpty()) {
+      cliques = TableCliques.rows(store, dictionary.binaryTables());
+      clauses.addAll(cliques.rows());
+    }
     linearRelaxation =
         LinearRelaxation.of(store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     if (linearRelaxation != null) {
@@ -500,6 +513,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + (cliques == null
+                  ? ""
+                  : "\n%%%mzn-stat: lpTableCliques="
+                      + cliques.rows().size()
+                      + "\n%%%mzn-stat: lpTableBooleans="
+                      + cliques.booleans())
               + "\n%%%mzn-stat-end");
     }
   }

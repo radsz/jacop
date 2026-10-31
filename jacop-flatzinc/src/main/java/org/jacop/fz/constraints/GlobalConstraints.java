@@ -1551,6 +1551,9 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      if (v.length == 2) {
+        support.dictionary.addBinaryTable(v, t);
+      }
       poseTableBySize(v, t);
     }
   }

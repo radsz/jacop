@@ -2525,6 +2525,89 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /**
+   * Random weighted constraint networks over binary tables, as spot5: the cost of each variable is
+   * paid when it takes the value 0. The clique rows of the tables enter the linear relaxation, and
+   * the optimum, with every explanation checked under --lcg, is the one of an enumeration.
+   */
+  @Test
+  void tableCliquesKeepTheOptimumOfBinaryTables() throws IOException {
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      int withRows = 0;
+      for (int seed = 1; seed <= 40; seed++) {
+        Random r = new Random(seed);
+        int n = 6;
+        int[] w = new int[n];
+        List<int[]> pairs = new ArrayList<>();
+        List<boolean[][]> allowed = new ArrayList<>();
+        StringBuilder m = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+          w[i] = 1 + r.nextInt(20);
+          m.append(
+              "var 0..3: p%d :: output_var;\nvar bool: b%d;\nvar 0..1: c%d;\n".formatted(i, i, i));
+        }
+        m.append("var 0..1000: obj :: output_var;\n");
+        for (int t = 0; t < 9; t++) {
+          int i = r.nextInt(n);
+          int j = r.nextInt(n);
+          if (i == j) {
+            continue;
+          }
+          boolean[][] ok = new boolean[4][4];
+          StringBuilder tuples = new StringBuilder();
+          for (int a = 0; a < 4; a++) {
+            for (int b = 0; b < 4; b++) {
+              ok[a][b] = a == 0 || b == 0 || r.nextInt(3) == 0;
+              if (ok[a][b]) {
+                tuples.append(tuples.isEmpty() ? "" : ", ").append(a).append(", ").append(b);
+              }
+            }
+          }
+          pairs.add(new int[] {i, j});
+          allowed.add(ok);
+          m.append("constraint jacop_table_int([p%d, p%d], [%s]);\n".formatted(i, j, tuples));
+        }
+        StringBuilder ws = new StringBuilder("1");
+        StringBuilder cs = new StringBuilder("obj");
+        for (int i = 0; i < n; i++) {
+          m.append(
+              "constraint int_eq_reif(p%d, 0, b%d);\nconstraint bool2int(b%d, c%d);\n"
+                  .formatted(i, i, i, i));
+          ws.append(", -").append(w[i]);
+          cs.append(", c").append(i);
+        }
+        m.append("constraint int_lin_eq([%s], [%s], 0);\nsolve minimize obj;\n".formatted(ws, cs));
+        int best = Integer.MAX_VALUE;
+        for (int code = 0; code < 1 << 2 * n; code++) {
+          int[] p = new int[n];
+          int cost = 0;
+          for (int i = 0; i < n; i++) {
+            p[i] = code >> 2 * i & 3;
+            cost += p[i] == 0 ? w[i] : 0;
+          }
+          boolean feasible = true;
+          for (int t = 0; t < pairs.size() && feasible; t++) {
+            feasible = allowed.get(t)[p[pairs.get(t)[0]]][p[pairs.get(t)[1]]];
+          }
+          if (feasible) {
+            best = Math.min(best, cost);
+          }
+        }
+        for (String[] options :
+            List.of(
+                new String[] {"--search-statistics"}, new String[] {"-f", "--search-statistics"})) {
+          String out = run(m.toString(), options)[0];
+          assertEquals("obj = " + best + ";", objective(out), "seed " + seed + "\n" + m);
+          withRows += out.contains("lpTableCliques=0") || !out.contains("lpTableCliques=") ? 0 : 1;
+        }
+      }
+      assertTrue(withRows > 20, "clique rows in " + withRows + " runs");
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+    }
+  }
+
   private static String objective(String out) {
     return out.lines()
         .filter(l -> l.startsWith("obj = ") || l.contains("UNSATISFIABLE"))
