@@ -1282,13 +1282,17 @@ Version 5.0 (unreleased)
     search: <prefix>.opb is the model as pseudo-Boolean constraints over
     the order encoding of the variables' domains after root propagation,
     and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
-    reasons, soli for improving solutions, deletions, and a conclusion
-    UNSAT, SAT or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
+    reasons, pol steps for the Hall sets of all different constraints,
+    soli for improving solutions, deletions, and a conclusion UNSAT, SAT
+    or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
     It is off by default, implies --lcg, one thread, bounds consistency
-    and no LP, and runs no core-guided phase. Linear constraints
-    (LinearInt, LinearBool and the linear forms of LCG explanations),
-    their reifications, equalities with constants, ChannelReif,
-    ChannelImply and clauses are encoded; for another constraint, or a
+    and no LP, and runs no core-guided phase and learns no linear sums.
+    Linear constraints (LinearInt, LinearBool and the linear forms of LCG
+    explanations), their reifications, equalities with constants,
+    ChannelReif, ChannelImply, clauses, element over constants, Count,
+    AtMost, AtLeast, CountBounds, Max, Min, tables, regular and MDD
+    constraints and Alldifferent, Alldiff and Alldistinct are encoded;
+    for another constraint, or a
     model over 4*10^8 characters, fzn-jacop prints "%% --proof: ..." and
     =====UNKNOWN=====. Root propagation and the FlatZinc translation are
     not certified.
