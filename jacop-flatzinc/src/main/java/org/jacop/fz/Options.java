@@ -102,6 +102,8 @@ public class Options {
   // "presolve" to break symmetries only with presolve, as the FlatZinc test suites do) decides
   boolean symmetryGiven;
   boolean presolveDual = true;
+  // solve the independent components the objective does not depend on before search
+  boolean components = !"off".equals(System.getProperty("jacop.components", "on"));
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
   Rule.Timing presolveLevel =
       Objects.requireNonNullElse(
@@ -264,6 +266,10 @@ public class Options {
                 when a satisfaction problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
+            --components <value> before search, find one solution of each independent part of
+                the model that the objective does not depend on, and fix it (for satisfaction,
+                of each part but the largest); "on" (default) or "off". Off when a satisfaction
+                problem asks for more than one solution (-a, -n).
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
             --presolve-level <value> the costliest presolve rules to run: "fast" (linear
@@ -351,6 +357,7 @@ public class Options {
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
+      case "--components" -> i = handleComponents(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "--presolve-level" -> i = handlePresolveLevel(args, i);
       case "--presolve-abort" -> i = handlePresolveAbort(args, i);
@@ -537,6 +544,15 @@ public class Options {
       case "on" -> presolveDual = true;
       case "off" -> presolveDual = false;
       default -> System.err.println("%% Presolve dual mode " + args[i] + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handleComponents(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> components = true;
+      case "off" -> components = false;
+      default -> System.err.println("%% Components mode " + args[i] + " not known; ignored");
     }
     return i + 1;
   }
@@ -1028,9 +1044,19 @@ public class Options {
   }
 
   /**
+   * It defines whether the independent components the objective does not depend on are solved
+   * before search (--components).
+   *
+   * @return true by default
+   */
+  public boolean components() {
+    return components;
+  }
+
+  /**
    * It defines whether presolve posts implied constraints (--presolve-implied).
    *
-   * @return false by default
+   * @return true if it does
    */
   public boolean presolveImplied() {
     return presolveImplied;

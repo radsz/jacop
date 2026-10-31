@@ -1452,7 +1452,32 @@ Version 5.0 (unreleased)
     restarts, the SAT solver's restarts (as lcgRestarts). Before, both
     were always 0.
 
-98. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+100. The FlatZinc front end solves the independent parts of a model that
+    the objective does not depend on (for a satisfaction model, every
+    part but the largest) once at the root, and fixes them. Each part
+    gets a depth-first search in annotation order with a 2 s budget
+    (-Djacop.components.budget, in ms); a part without a solution makes
+    the model infeasible, and a part that runs out of time is left to
+    the main search. It is skipped with -a, with -n > 1 for satisfaction
+    and with on_restart. --components off turns it off. Constraints
+    that watch only some of their variables (long Boolean sums, clauses)
+    link all their variables. 92 of the 1,781 MiniZinc Challenge
+    instances split into several parts; on the 109 checked, 60 s: same
+    statuses, ghoulomb 3-7-20 and 3-8-20 prove their optimum in 2 s
+    instead of 15 s, 3-10-20 in 15 s instead of 38 s, 2013 4-9-20 in
+    4 s instead of 17 s, and cable_tree_wiring R046 ends at its optimum
+    143,534 instead of 284,142; other objectives move by noise.
+
+101. Presolve dual reductions also find dominated columns: if raising x
+    by one and lowering y by one keeps every constraint and the
+    objective, the clause x = max(x) or y = min(y) is added (x >= y for
+    0-1 variables). It is left out with -a, since it can remove some of
+    the improving solutions printed on the way to the optimum (the
+    optimum stays). -Djacop.presolve.domcol=false turns it off. It fires
+    on 37 Challenge instances (train, table-layout, connect,
+    unit-commitment, wmsmc-int) and is neutral on them at 60 s.
+
+102. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
     search: <prefix>.opb is the model as pseudo-Boolean constraints over
     the order encoding of the domains the FlatZinc translation gives the
     variables, before the constraints propagate, and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
