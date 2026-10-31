@@ -31,6 +31,8 @@
 package org.jacop.constraints.lp;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 /**
@@ -275,24 +277,26 @@ final class SparseDualSimplex implements LpSolver {
     int cols2 = cols + k;
     rowIdx = Arrays.copyOf(rowIdx, m2);
     rowVal = Arrays.copyOf(rowVal, m2);
+    Map<Integer, Integer> position = new HashMap<>();
     for (int q = 0; q < k; q++) {
       int i = m + q;
       // duplicates merged, zeros dropped
       int[] cs = columns[q].clone();
       double[] ws = weights[q].clone();
+      // the position of each column in the merged row, by a map of the columns, so that a row of
+      // many terms (an objective over 140,000 columns) is merged in linear time
       int len = 0;
       for (int e = 0; e < cs.length; e++) {
-        int f = 0;
-        while (f < len && cs[f] != cs[e]) {
-          f++;
-        }
-        if (f < len) {
+        int f = position.getOrDefault(cs[e], -1);
+        if (f >= 0) {
           ws[f] += ws[e];
         } else {
+          position.put(cs[e], len);
           cs[len] = cs[e];
           ws[len++] = ws[e];
         }
       }
+      position.clear();
       int keep = 0;
       for (int e = 0; e < len; e++) {
         if (ws[e] != 0) {

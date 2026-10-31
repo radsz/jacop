@@ -579,6 +579,10 @@ public class LinearRelaxation extends Constraint
       }
     }
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
+    if (auto && !sparseTakes(forms)) {
+      // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
+      auto = false;
+    }
     if (auto && (forms.size() >= SPARSE_ROWS || tooLarge(forms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
@@ -601,6 +605,30 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
+  // beyond them its root solve and its ratio test take more than the time limit of a run (nside
+  // EASY_200_50, 57,505 rows: 52 ms a pivot; rcpsp-wet-diverse j60_19_6, 140,925 columns), and the
+  // largest that helped in the Challenge has 19,141 rows (table-layout) and 23,242 columns
+  // (physician-scheduling)
+  private static final int SPARSE_MAX_ROWS =
+      Integer.getInteger("org.jacop.lp.sparseMaxRows", 25_000);
+  private static final int SPARSE_MAX_COLUMNS =
+      Integer.getInteger("org.jacop.lp.sparseMaxColumns", 30_000);
+
+  private static boolean sparseTakes(List<LinearForm> forms) {
+    if (forms.size() > SPARSE_MAX_ROWS) {
+      return false;
+    }
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (LinearForm f : forms) {
+      vars.addAll(Arrays.asList(f.vars()));
+      if (vars.size() > SPARSE_MAX_COLUMNS) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   // whether the given rows alone are over the size cap of the simplex
   private static boolean tooLarge(List<LinearForm> forms, Simplex simplex) {
@@ -653,7 +681,9 @@ public class LinearRelaxation extends Constraint
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS
-              || denseCap && further.size() >= 2L * forms.size() + SPARSE_ROWS) {
+              || denseCap
+                  && (further.size() >= 2L * forms.size() + SPARSE_ROWS
+                      || vars.size() + added > SPARSE_MAX_COLUMNS)) {
         return false;
       }
       further.add(f);
@@ -1126,28 +1156,40 @@ public class LinearRelaxation extends Constraint
   private static final long SPARSE_ROOT_WORK =
       Long.getLong("org.jacop.lp.sparseRootWork", 4_000_000_000L);
 
+  // the most time of a root solve of the sparse simplex, in seconds: on the largest relaxations its
+  // work estimate is far off (nside EASY_200_50, 57,505 rows: 52 ms a pivot, 75 s for 1,455
+  // pivots, past the time limit of the whole run); the limit only binds on such relaxations
+  private static final long SPARSE_ROOT_NANOS =
+      (long) (Double.parseDouble(System.getProperty("org.jacop.lp.sparseRootSeconds", "3")) * 1e9);
+
   private long rootWork() {
     return objective == null ? ROOT_WORK : SPARSE_ROOT_WORK;
   }
 
   /**
    * A root solve: the dense simplex in one call of at most the given pivots; the sparse one in
-   * chunks, until it is done, the pivots run out, or its work passes the budget.
+   * chunks, until it is done, the pivots run out, its work passes the budget, or its time passes
+   * {@code org.jacop.lp.sparseRootSeconds}.
    */
   private int rootSolve(LpSolver s, int pivots, long work) {
+    return rootSolve(s, pivots, work, SPARSE_ROOT_NANOS);
+  }
+
+  private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
     if (!(s instanceof SparseDualSimplex)) {
       return s.solve(pivots);
     }
     long startPivots = s.pivots();
     long startWork = s.work();
+    long startTime = System.nanoTime();
     while (true) {
       long left = pivots - (s.pivots() - startPivots);
       long spent = s.work() - startWork;
-      if (left <= 0 || spent >= work) {
+      if (left <= 0 || spent >= work || System.nanoTime() - startTime > nanos) {
         return LpSolver.LIMIT;
       }
       long size = Math.max(1, s.pivotWork());
-      int chunk = (int) Math.clamp((work - spent) / size, 5, Math.min(left, 500));
+      int chunk = (int) Math.clamp((work - spent) / size, 1, Math.min(left, 50));
       int status = s.solve(chunk);
       if (status != LpSolver.LIMIT) {
         return status;
