@@ -271,6 +271,13 @@ public class LinearRelaxation extends Constraint
   private static final int HELPER_POOL = Integer.getInteger("org.jacop.lp.helperPool", 4);
   private static final long HELPER_WORK = Long.getLong("org.jacop.lp.helperWork", WORK);
   private static final int HELPER_PIVOTS = Integer.getInteger("org.jacop.lp.helperPivots", 500);
+  private static final boolean HELPER_FILTER =
+      !"false".equals(System.getProperty("org.jacop.lp.helperFilter"));
+  private static final int HELPER_KEEP = Integer.getInteger("org.jacop.lp.helperKeep", 64);
+  private static final int HELPER_KEEP_TERMS =
+      Integer.getInteger("org.jacop.lp.helperKeepTerms", 1000);
+  private static final boolean HELPER_ROOT =
+      !"false".equals(System.getProperty("org.jacop.lp.helperRoot"));
   private boolean helperWanted = Boolean.getBoolean("org.jacop.lp.helper");
   private Helper helper;
   // the latest combinations from the helper, propagated at each call
@@ -968,6 +975,93 @@ public class LinearRelaxation extends Constraint
       }
     }
 
+    // the combinations kept on the helper and checked on every snapshot: the failing ones (kept
+    // dual proofs, at most HELPER_KEEP, the least active dropped first) and the first objective
+    // combination (the root reduced-cost row), sent to the search only when they prune
+    private final List<Kept> keptProofs = new ArrayList<>();
+    private Kept rootRow;
+    private long round;
+
+    private List<Kept> kept(Aggregate g) {
+      List<Kept> out = new ArrayList<>(2);
+      long[] coef = g.coef();
+      int size = 0;
+      for (long c : coef) {
+        size += c != 0 ? 1 : 0;
+      }
+      if (size == 0) {
+        return out;
+      }
+      int[] cols = new int[size];
+      long[] w = new long[size];
+      long[] neg = new long[size];
+      for (int j = 0, k = 0; j < coef.length; j++) {
+        if (coef[j] != 0) {
+          cols[k] = j;
+          w[k] = coef[j];
+          neg[k++] = -coef[j];
+        }
+      }
+      if (g.hasUpper()) {
+        out.add(new Kept(cols, w, g.upper()));
+      }
+      if (g.hasLower()) {
+        out.add(new Kept(cols, neg, -g.lower()));
+      }
+      return out;
+    }
+
+    // sends the fresh combinations and the kept ones that prune on the snapshot b
+    private void offer(List<Kept> fresh, int[] b, boolean infeasible) {
+      round++;
+      for (Kept k : fresh) {
+        if (!HELPER_FILTER || k.prunes(b)) {
+          send(k);
+        }
+      }
+      if (rootRow != null && rootRow.prunes(b)) {
+        send(rootRow);
+      }
+      for (Kept k : keptProofs) {
+        if (k.prunes(b)) {
+          k.used = round;
+          send(k);
+        }
+      }
+      if (!infeasible && rootRow == null && HELPER_ROOT && !fresh.isEmpty()) {
+        rootRow = fresh.get(0);
+      }
+      if (infeasible && HELPER_KEEP > 0) {
+        for (Kept k : fresh) {
+          if (k.cols.length <= HELPER_KEEP_TERMS) {
+            k.used = round;
+            if (keptProofs.size() == HELPER_KEEP) {
+              int oldest = 0;
+              for (int i = 1; i < keptProofs.size(); i++) {
+                if (keptProofs.get(i).used < keptProofs.get(oldest).used) {
+                  oldest = i;
+                }
+              }
+              keptProofs.set(oldest, k);
+            } else {
+              keptProofs.add(k);
+            }
+          }
+        }
+      }
+    }
+
+    private void send(Kept k) {
+      if (k.form == null) {
+        IntVar[] vars = new IntVar[k.cols.length];
+        for (int i = 0; i < vars.length; i++) {
+          vars[i] = x[k.cols[i]];
+        }
+        k.form = new LinearForm(vars, k.w, k.c, LinearForm.LE);
+      }
+      found.add(k.form);
+    }
+
     private void solve(int[] b) {
       long started = System.nanoTime();
       for (int j = 0; j < lp.columns(); j++) {
@@ -981,6 +1075,7 @@ public class LinearRelaxation extends Constraint
         double[] y;
         if (status == LpSolver.LIMIT) {
           limits++;
+          offer(List.of(), b, false);
           return;
         } else if (status == LpSolver.INFEASIBLE) {
           infeasible++;
@@ -988,25 +1083,56 @@ public class LinearRelaxation extends Constraint
         } else if (objective != null) {
           y = byRow(lp.duals());
         } else {
+          offer(List.of(), b, false);
           return;
         }
+        List<Kept> fresh = new ArrayList<>();
         for (long scale : SCALES) {
           long[] lambda = scaled(y, scale);
           if (lambda == null) {
-            return;
+            break;
           }
           Aggregate g = aggregate(lambda);
           if (g != null) {
-            for (LinearForm f : combine(g)) {
-              if (f != null) {
-                found.add(f);
-              }
-            }
-            return;
+            fresh = kept(g);
+            break;
           }
         }
+        offer(fresh, b, status == LpSolver.INFEASIBLE);
       } finally {
         solveNanos += System.nanoTime() - started;
+      }
+    }
+  }
+
+  /** A combination of rows, {@code sum w x[cols] <= c}, on the helper thread. */
+  private static final class Kept {
+    final int[] cols;
+    final long[] w;
+    final long c;
+    long used;
+    LinearForm form;
+
+    Kept(int[] cols, long[] w, long c) {
+      this.cols = cols;
+      this.w = w;
+      this.c = c;
+    }
+
+    // whether the combination fails or tightens a bound on the bounds b (min, max per column)
+    boolean prunes(int[] b) {
+      long smallest = 0;
+      long widest = 0;
+      try {
+        for (int k = 0; k < cols.length; k++) {
+          long lo = b[2 * cols[k]];
+          long hi = b[2 * cols[k] + 1];
+          smallest = Math.addExact(smallest, Math.multiplyExact(w[k], w[k] > 0 ? lo : hi));
+          widest = Math.max(widest, Math.multiplyExact(Math.abs(w[k]), hi - lo));
+        }
+        return smallest > c || widest > c - smallest;
+      } catch (ArithmeticException overflow) {
+        return false;
       }
     }
   }
