@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.TableCliques;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -102,6 +103,9 @@ public class Tables {
 
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
+
+  // the binary tables of the model, for the clique rows of the linear relaxation
+  private final ArrayList<TableCliques.Table> binaryTables = new ArrayList<>();
   // IntVar zero, one;
   Store store;
   int numberBoolVariables;
@@ -748,6 +752,25 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records a table over two variables for the clique rows of the linear relaxation.
+   *
+   * @param x the two variables
+   * @param tuples the allowed tuples
+   */
+  public void addBinaryTable(IntVar[] x, int[][] tuples) {
+    binaryTables.add(new TableCliques.Table(x, tuples));
+  }
+
+  /**
+   * Returns the tables over two variables of the model.
+   *
+   * @return the tables
+   */
+  public List<TableCliques.Table> binaryTables() {
+    return binaryTables;
   }
 
   /**
