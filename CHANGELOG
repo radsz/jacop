@@ -1418,7 +1418,13 @@ Version 5.0 (unreleased)
     AtMost, AtLeast, CountBounds, Max, Min, tables, regular and MDD
     constraints, Alldifferent, Alldiff, Alldistinct, GCC, CountValues and
     CountValuesBounds are encoded (the flow reasons of the last six by a
-    pol step over a violated cut of their flow network);
+    pol step over a violated cut of their flow network), as are
+    b -> x + c <= z and the time table of CumulativeBasic, with fixed or
+    variable durations and resource uses (a time-indexed encoding); under
+    --proof every cumulative is posted as CumulativeBasic, and the
+    redundant constraints the front end adds (unary resources, energy
+    precedence, weighted completion, stocking cost, overlapping all
+    different) are left out;
     for another constraint, or a
     model over 4*10^8 characters, fzn-jacop prints "%% --proof: ..." and
     =====UNKNOWN=====. The proof derives each change of the root
