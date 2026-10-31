@@ -549,7 +549,7 @@ public class GCC extends Constraint
     }
     for (IntVar c : counters) {
       // a counter among the variables, or two counters of one variable, would mix their bounds
-      if (!c.singleton() && !distinct.add(c)) {
+      if (!model.domain(c).singleton() && !distinct.add(c)) {
         return false;
       }
     }

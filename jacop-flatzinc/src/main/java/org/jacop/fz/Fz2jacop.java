@@ -187,9 +187,9 @@ public class Fz2jacop {
     } else {
       IO.println("=====UNSATISFIABLE=====");
     }
-    if (opt.proof() != null) {
-      // the proof's model is stated over the domains after root propagation
-      IO.println("%% --proof: no proof written, the model fails before the LCG search");
+    if (opt.proof() != null && !parser.getTables().rootFailureProved) {
+      // the model failed while it was translated, before the propagation the proof derives
+      IO.println("%% --proof: no proof written, the model fails while it is translated");
     }
     if (!opt.getOutputFilename().isEmpty() && !parser.getTables().domainsClamped()) {
       try {

@@ -413,6 +413,9 @@ public final class LcgSolver implements ExternalPropagator {
   public LcgSolver(Store store) {
     this.store = store;
     rootFailed = !store.consistency();
+    if (rootFailed) {
+      failedAtRoot = store.recentlyFailedConstraint;
+    }
     this.baseLevel = store.level; // consistency may raise the level after impositions
     trail = new AtomicTrail(store);
     if (liftLiterals) {
@@ -498,6 +501,15 @@ public final class LcgSolver implements ExternalPropagator {
   private OutputStream proofModel;
   private boolean proofStarted;
 
+  // the trail of the propagation before the solver, whose changes the proof derives, or null
+  private AtomicTrail rootTrail;
+  // the constraint whose propagation failed at the root, and whether the proof derived the failure
+  private Constraint failedAtRoot;
+  private boolean rootRefuted;
+  // the trail and the domains the proof steps read: the solver's trail and its root domains, and
+  // while the root propagation is logged, the root trail and the domains it has reached
+  private AtomicTrail proofTrail;
+  private IntDomain[] proofDomains;
   // the lines of the cardinality constraints of the proof model
   private Map<Constraint, OpbEncoder.CardinalityLines> proofCardinality = Map.of();
   // the clauses of addClause, for the OPB model
@@ -531,6 +543,42 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Derives the root propagation in the proof: the OPB model is stated over the domains a trail had
+   * when it was attached to the store, before the propagation, and the proof derives each change
+   * the trail recorded at the root as a unit. Changes without a reason, or by a constraint the
+   * model cannot state, narrow the model's domains instead. The trail is detached here; attach it
+   * after the model's constraints are imposed, before the store propagates them.
+   *
+   * @param rootTrail the trail of the root propagation
+   */
+  public void setRootTrail(AtomicTrail rootTrail) {
+    rootTrail.detach();
+    this.rootTrail = rootTrail;
+  }
+
+  /**
+   * Writes the proof that the propagation of a store at the root fails: the OPB model over the
+   * domains the root trail was attached with, the changes of the propagation as units, and the
+   * failure of the constraint that failed.
+   *
+   * @param store the store, whose propagation has just failed
+   * @param rootTrail the trail of the propagation
+   * @param model where the OPB model goes
+   * @param out where the proof goes
+   */
+  public static void proveRootFailure(
+      Store store, AtomicTrail rootTrail, OutputStream model, OutputStream out) {
+    Constraint failed = store.recentlyFailedConstraint;
+    store.clearChanged();
+    LcgSolver solver = new LcgSolver(store);
+    solver.setRootTrail(rootTrail);
+    solver.setProof(model, out);
+    solver.rootFailed = true;
+    solver.failedAtRoot = failed;
+    solver.finishProof(CdclSolver.UNSAT, false);
+  }
+
+  /**
    * Returns the proof writer, for its statistics.
    *
    * @return the proof, or null
@@ -556,17 +604,66 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     proofStarted = true;
-    OpbEncoder model = new OpbEncoder(vars, root, trail::id, PROOF_TERMS);
+    proofTrail = trail;
+    proofDomains = root;
+    Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
+    constraints.addAll(store.watchedLiteralConstraints());
+    IntDomain[] domains = root;
+    List<Integer> derived = new ArrayList<>();
+    int axioms = 0;
+    int late = 0;
+    if (rootTrail != null) {
+      late = rootTrail.lateVariables();
+      domains = new IntDomain[vars.length];
+      for (int i = 0; i < vars.length; i++) {
+        domains[i] = vars[i] == null ? null : rootTrail.rootDomain(vars[i]);
+      }
+      Map<Constraint, Boolean> encodable = new IdentityHashMap<>();
+      for (Constraint c : constraints) {
+        encodable.put(c, true);
+      }
+      List<Integer> axiomEntries = new ArrayList<>();
+      OpbEncoder probe = new OpbEncoder(vars, root, trail::id, PROOF_TERMS);
+      for (int e = 0; e < rootTrail.size() && rootTrail.level(e) <= baseLevel; e++) {
+        int i = trail.id(rootTrail.variable(e));
+        Constraint c = rootTrail.reason(e);
+        if (i >= vars.length || vars[i] == null) {
+          continue;
+        }
+        if (c != null && encodable.computeIfAbsent(c, probe::encodes)) {
+          constraints.add(c);
+          derived.add(e);
+        } else {
+          axiomEntries.add(e);
+        }
+      }
+      if (failedAtRoot != null && !encodable.computeIfAbsent(failedAtRoot, probe::encodes)) {
+        failedAtRoot = null;
+      } else if (failedAtRoot != null) {
+        constraints.add(failedAtRoot);
+      }
+      // the changes the proof cannot derive narrow the domains of the model
+      for (int e : axiomEntries) {
+        int i = trail.id(rootTrail.variable(e));
+        int v = rootTrail.value(e);
+        domains[i] =
+            switch (rootTrail.kind(e)) {
+              case AtomicTrail.GE -> domains[i].intersect(v, domains[i].max());
+              case AtomicTrail.LE -> domains[i].intersect(domains[i].min(), v);
+              default -> domains[i].subtract(v);
+            };
+        axioms++;
+      }
+    }
+    OpbEncoder model = new OpbEncoder(vars, domains, trail::id, PROOF_TERMS);
     StringBuilder names = new StringBuilder();
     for (int i = 0; i < vars.length; i++) {
-      if (vars[i] != null && !root[i].singleton()) {
+      if (vars[i] != null && !domains[i].singleton()) {
         names.append("* x").append(i).append(" is ").append(vars[i].id()).append(' ');
-        names.append(root[i]).append('\n');
+        names.append(domains[i]).append('\n');
       }
     }
     model.variables();
-    Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
-    constraints.addAll(store.watchedLiteralConstraints());
     for (Constraint c : constraints) {
       model.constraint(c);
     }
@@ -586,10 +683,58 @@ public final class LcgSolver implements ExternalPropagator {
       throw new UncheckedIOException(e);
     }
     proof.start(model.numConstraints());
+    if (rootTrail != null) {
+      proofRoot(domains, derived, axioms, late);
+    }
     if (rootFailed) {
       // the store failed at the root, which the proof does not derive
       proof.comment("the store failed at the root");
     }
+  }
+
+  /**
+   * Derives the changes of the root propagation, in their order, each as a unit from the units
+   * before it: unit propagation over the reason's encoding gives it, as it gives an explanation in
+   * the search, with the steps of {@link #proofCardinality} and {@link #proofLinearBounds}.
+   */
+  private void proofRoot(IntDomain[] domains, List<Integer> derived, int axioms, int late) {
+    proof.comment(
+        derived.size()
+            + " root changes derived, "
+            + axioms
+            + " taken into the model's domains, "
+            + late
+            + " variables stated after their first change");
+    IntDomain[] reached = domains.clone();
+    proofTrail = rootTrail;
+    proofDomains = reached;
+    EntryList none = new EntryList();
+    for (int e : derived) {
+      int i = trail.id(rootTrail.variable(e));
+      int v = rootTrail.value(e);
+      IntDomain d = reached[i];
+      IntDomain next =
+          switch (rootTrail.kind(e)) {
+            case AtomicTrail.GE -> d.intersect(v, d.max());
+            case AtomicTrail.LE -> d.intersect(d.min(), v);
+            default -> d.subtract(v);
+          };
+      if (next.getSize() == d.getSize()) {
+        continue;
+      }
+      Constraint c = rootTrail.reason(e);
+      proofCardinality(c, none, 0, e);
+      proofLinearBounds(c, none, 0, e);
+      proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
+      reached[i] = next;
+    }
+    if (rootFailed && failedAtRoot != null) {
+      proofCardinality(failedAtRoot, none, 0, -1);
+      proofLinearBounds(failedAtRoot, none, 0, -1);
+      rootRefuted = true;
+    }
+    proofTrail = trail;
+    proofDomains = root;
   }
 
   /**
@@ -649,7 +794,9 @@ public final class LcgSolver implements ExternalPropagator {
     IntDomain[] count = new IntDomain[m];
     for (int k = 0; k < m; k++) {
       count[k] =
-          counters[k] < 0 ? new IntervalDomain(lines.low()[k], lines.up()[k]) : root[counters[k]];
+          counters[k] < 0
+              ? new IntervalDomain(lines.low()[k], lines.up()[k])
+              : proofDomains[counters[k]];
     }
     if (!lines.counterPosition().isEmpty()) {
       int[] free = new int[m];
@@ -726,8 +873,8 @@ public final class LcgSolver implements ExternalPropagator {
           for (int j = 0; operand == null && j < n; j++) {
             // a value only one variable can take: the axiom ~[x = v] >= 0 stands for its line
             if (cut[2 + j]
-                && !root[variables[j]].singleton()
-                && root[variables[j]].contains(values[k])) {
+                && !proofDomains[variables[j]].singleton()
+                && proofDomains[variables[j]].contains(values[k])) {
               operand = "~" + OpbEncoder.eq(variables[j], values[k]);
             }
           }
@@ -738,7 +885,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       for (int j = 0; j < n; j++) {
         int i = variables[j];
-        if (!cut[2 + j] || root[i].singleton()) {
+        if (!cut[2 + j] || proofDomains[i].singleton()) {
           continue;
         }
         StringBuilder takes = new StringBuilder("rup");
@@ -880,34 +1027,38 @@ public final class LcgSolver implements ExternalPropagator {
       IntDomain[] dom,
       StringBuilder[] literals) {
     for (int j = 0; j < variables.length; j++) {
-      dom[j] = root[variables[j]];
+      dom[j] = proofDomains[variables[j]];
       literals[j] = new StringBuilder();
     }
     boolean hole = false;
+    for (int j = 0; j < variables.length && proofTrail != trail; j++) {
+      // while the root propagation is logged, the values it removed are holes too
+      hole |= dom[j].getSize() < (long) dom[j].max() - dom[j].min() + 1;
+    }
     for (int k = from; k < atoms.size(); k++) {
       int e = atoms.get(k);
-      Integer j = position.get(trail.id(trail.variable(e)));
+      Integer j = position.get(trail.id(proofTrail.variable(e)));
       if (j != null) {
         String atom = proofAtom(e, atoms.slack(k));
-        int v = (int) trail.value(e);
+        int v = (int) proofTrail.value(e);
         dom[j] =
-            switch (trail.kind(e)) {
+            switch (proofTrail.kind(e)) {
               case AtomicTrail.GE -> dom[j].intersect(v - atoms.slack(k), dom[j].max());
               case AtomicTrail.LE -> dom[j].intersect(dom[j].min(), v + atoms.slack(k));
               default -> dom[j].subtract(v);
             };
-        hole |= trail.kind(e) == AtomicTrail.NE;
+        hole |= proofTrail.kind(e) == AtomicTrail.NE;
         if (!"1".equals(atom)) {
           literals[j].append(" 1 ").append(atom.startsWith("~") ? atom.substring(1) : "~" + atom);
         }
       }
     }
     if (entry >= 0) {
-      Integer j = position.get(trail.id(trail.variable(entry)));
+      Integer j = position.get(trail.id(proofTrail.variable(entry)));
       if (j != null) {
-        int v = (int) trail.value(entry);
+        int v = (int) proofTrail.value(entry);
         dom[j] =
-            switch (trail.kind(entry)) {
+            switch (proofTrail.kind(entry)) {
               case AtomicTrail.GE -> dom[j].intersect(dom[j].min(), v - 1);
               case AtomicTrail.LE -> dom[j].intersect(v + 1, dom[j].max());
               default -> dom[j].intersect(v, v);
@@ -1011,7 +1162,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   // writes "clause or x >= v" (or x <= v); returns 1, or 0 when the bound is outside the root
   private int proofBound(int i, CharSequence clause, int v, boolean lower) {
-    IntDomain d = root[i];
+    IntDomain d = proofDomains[i];
     if (lower ? v <= d.min() || v > d.max() : v >= d.max() || v < d.min()) {
       return 0;
     }
@@ -1022,13 +1173,14 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The OPB literal of a trail entry's atom weakened by slack, or "1" when the root has it. */
   private String proofAtom(int entry, int slack) {
-    int i = trail.id(trail.variable(entry));
-    long v = trail.value(entry);
-    return switch (trail.kind(entry)) {
-      case AtomicTrail.GE -> v - slack <= root[i].min() ? "1" : OpbEncoder.ge(i, (int) (v - slack));
+    int i = trail.id(proofTrail.variable(entry));
+    long v = proofTrail.value(entry);
+    return switch (proofTrail.kind(entry)) {
+      case AtomicTrail.GE ->
+          v - slack <= proofDomains[i].min() ? "1" : OpbEncoder.ge(i, (int) (v - slack));
       case AtomicTrail.LE ->
-          v + slack >= root[i].max() ? "1" : "~" + OpbEncoder.ge(i, (int) (v + slack + 1));
-      default -> root[i].contains((int) v) ? "~" + OpbEncoder.eq(i, (int) v) : "1";
+          v + slack >= proofDomains[i].max() ? "1" : "~" + OpbEncoder.ge(i, (int) (v + slack + 1));
+      default -> proofDomains[i].contains((int) v) ? "~" + OpbEncoder.eq(i, (int) v) : "1";
     };
   }
 
@@ -1053,7 +1205,14 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     startProof();
-    if (rootFailed || result == CdclSolver.UNKNOWN) {
+    if (rootRefuted) {
+      // unit propagation over the derived units and the failed constraint gives the contradiction
+      if (optimising) {
+        proof.concludeBounds("INF", "INF");
+      } else {
+        proof.concludeUnsatisfiable();
+      }
+    } else if (rootFailed || result == CdclSolver.UNKNOWN) {
       proof.concludeNothing();
     } else if (!optimising) {
       if (result == CdclSolver.SAT) {

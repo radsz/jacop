@@ -511,6 +511,11 @@ public abstract class LayeredGraphConstraint extends Constraint
    */
   @Override
   public boolean encode(PbModel model) {
+    if (description != null && description.levelNodes[0] == 0) {
+      // no path is left over the domains the graph was built from: the constraint fails
+      model.clause();
+      return true;
+    }
     if (description == null || description.levelNodes[0] != 1) {
       return false;
     }

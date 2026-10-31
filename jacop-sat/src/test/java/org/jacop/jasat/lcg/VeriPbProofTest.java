@@ -68,6 +68,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.lcg.AtomicTrail;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.SimpleSelect;
 import org.jacop.util.fsm.Fsm;
@@ -438,6 +439,53 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), pbp)).isNull();
     assertThat(checker.conclusion).isEqualTo("SAT");
+  }
+
+  @Test
+  void rootPropagationIsDerived() {
+    // the OPB states the domains before the root propagation; the proof derives its changes, the
+    // Hall set {x0, x1} of the all different constraint with a pol step
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2), new IntVar(store, "x2", 1, 4)
+    };
+    IntVar obj = new IntVar(store, "obj", 0, 100);
+    // attached after the variables are created: it states their domains then
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new Alldistinct(x));
+    store.imposeWithConsistency(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 2, 3, -1}, "==", 0));
+    assertThat(x[2].min()).isEqualTo(3);
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(13);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(opb()).contains(" is x2 {1..4}\n");
+    assertThat(pbp).contains("root changes derived, 0 taken into").contains("\npol ");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 13 13");
+  }
+
+  @Test
+  void rootFailureIsRefuted() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5);
+    IntVar y = new IntVar(store, "y", 1, 5);
+    IntVar z = new IntVar(store, "z", 9, 9);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new XneqC(x, 4));
+    assertThat(store.consistency()).isTrue();
+    // x + y = 9 gives x >= 4, so x = 5 past the hole, and y = x fails
+    store.impose(new XeqY(x, y));
+    store.impose(new XplusYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
   }
 
   @Test

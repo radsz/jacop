@@ -203,6 +203,17 @@ final class OpbEncoder implements PbModel {
     }
   }
 
+  /**
+   * Returns whether the model can state a constraint, encoding it into this model.
+   *
+   * @param c the constraint
+   * @return true if it is encoded
+   */
+  boolean encodes(Constraint c) {
+    current = c;
+    return encode(c);
+  }
+
   private boolean encode(Constraint c) {
     if (c instanceof PbEncodable p && p.encode(this)) {
       return true;

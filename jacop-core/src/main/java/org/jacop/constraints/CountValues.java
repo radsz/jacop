@@ -232,7 +232,7 @@ public class CountValues extends AbstractCountValues
     }
     for (IntVar c : extendedCounter) {
       // a counter among the variables, or two counters of one variable, would mix their bounds
-      if (!c.singleton() && !distinct.add(c)) {
+      if (!model.domain(c).singleton() && !distinct.add(c)) {
         return false;
       }
     }

@@ -1682,6 +1682,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (options.proof() != null) {
         IO.println("%% --proof ignored: it needs --lcg");
       }
+      if (dictionary.rootTrail != null) {
+        dictionary.rootTrail.detach();
+        dictionary.rootTrail = null;
+      }
       postCollectedClauses();
       return false;
     }
@@ -1753,6 +1757,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.setProof(
             new FileOutputStream(options.proof() + ".opb"),
             new FileOutputStream(options.proof() + ".pbp"));
+        if (dictionary.rootTrail != null) {
+          lcg.setRootTrail(dictionary.rootTrail);
+          dictionary.rootTrail = null;
+        }
       } catch (FileNotFoundException e) {
         throw new UncheckedIOException(e);
       }
