@@ -52,11 +52,16 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 
 /** VeriPB proofs of LCG searches, checked by {@link RupChecker}. */
@@ -295,6 +300,42 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS -12 -12");
+  }
+
+  @Test
+  void regularOptimumIsProved() {
+    Store store = new Store();
+    // no two 3s in a row
+    Fsm fsm = new Fsm();
+    FsmState other = new FsmState();
+    FsmState three = new FsmState();
+    fsm.initState = other;
+    fsm.allStates.add(other);
+    fsm.allStates.add(three);
+    fsm.finalStates.add(other);
+    fsm.finalStates.add(three);
+    other.transitions.add(new FsmTransition(new IntervalDomain(1, 2), other));
+    other.transitions.add(new FsmTransition(new IntervalDomain(3, 3), three));
+    three.transitions.add(new FsmTransition(new IntervalDomain(1, 2), other));
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 3);
+    }
+    store.impose(new Regular(fsm, x));
+    IntVar obj = new IntVar(store, "obj", -15, 0);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], x[4], obj},
+            new int[] {1, 1, 1, 1, 1, 1},
+            "==",
+            0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // 3 2 3 2 3
+    assertThat(lcg.value(obj)).isEqualTo(-13);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -13 -13");
   }
 
   @Test
