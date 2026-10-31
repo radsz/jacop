@@ -94,6 +94,7 @@ import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
+import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -1768,6 +1769,33 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * How inverse(x, x) over n variables is posted, set by the system property {@code
+   * org.jacop.fz.symmetricAlldifferent}: {@code matching} (the default) for a {@link
+   * SymmetricAlldifferent} that channels x[i] = j with x[j] = i and fails when no perfect matching
+   * exists, {@code domain} for the domain consistent one, {@code false} for Assignment, which is
+   * also used above 1000 variables. On the MiniZinc Challenge models with inverse(x, x) (p1f,
+   * elitserien) the domain consistent one searched the same number of nodes and was a quarter
+   * slower.
+   *
+   * @param n the number of variables
+   * @return matching, domain or false
+   */
+  static String symmetricAlldifferent(int n) {
+    return n > 1000
+        ? "false"
+        : System.getProperty("org.jacop.fz.symmetricAlldifferent", "matching");
+  }
+
+  private static boolean sameVariables(IntVar[] a, IntVar[] b) {
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i] && !(a[i].singleton() && b[i].singleton() && a[i].value() == b[i].value())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void gen_jacop_assignment(SimpleNode node) {
     IntVar[] f = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] invf = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -1777,6 +1805,13 @@ class GlobalConstraints implements ParserTreeConstants {
     // inverse functions are bijections, so index sets of different sizes cannot be satisfied
     if (f.length != invf.length) {
       throw Store.failException;
+    }
+
+    // inverse(x, x) is symmetric all different, a perfect matching of the variables
+    String symmetric = symmetricAlldifferent(f.length);
+    if (indexF == indexInvf && sameVariables(f, invf) && !"false".equals(symmetric)) {
+      support.pose(new SymmetricAlldifferent(f, indexF, "domain".equals(symmetric)));
+      return;
     }
 
     // we do not not pose Assignment directly because of possible inconsistency with its

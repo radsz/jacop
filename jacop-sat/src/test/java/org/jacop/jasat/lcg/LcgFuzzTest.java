@@ -118,6 +118,7 @@ import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -725,6 +726,12 @@ class LcgFuzzTest {
           IntVar[] ds = rnd.nextInt(4) == 0 ? xs : chain("d", 3, shift, shift + 3);
           posted.add("link " + xs[0].id() + " = " + p[0].id());
           store.impose(new XeqY(xs[0], p[0]));
+          if (ds == xs && rnd.nextBoolean()) {
+            // the same relation, inverse(x, x), on more variables, domain consistent or light
+            IntVar[] ys = chain("y", 3 + rnd.nextInt(3), shift - 1, shift + 4);
+            ys[0] = xs[0];
+            yield new SymmetricAlldifferent(ys, shift, rnd.nextInt(3) > 0);
+          }
           yield new Assignment(xs, ds, shift, shift);
         }
         case 51 -> rnd.nextBoolean() ? new SumInt(q, relation(), one()) : new Sum(q, one());
