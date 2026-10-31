@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.lp;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -42,6 +43,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
@@ -260,6 +262,28 @@ public class LinearRelaxation extends Constraint
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
   private static final double MAX_PARALLELISM = 0.9;
+
+  // below the root a helper thread may solve the relaxation instead of the search (setHelper):
+  // the search hands it the bounds of the node it is at whenever the helper is free, and
+  // propagates the combinations of rows the helper sends back at whatever node it reaches by then.
+  // A combination of rows holds in the whole search, so one that comes late is still sound, and
+  // its prunings are explained on the bounds of the node they happen at.
+  private static final int HELPER_POOL = Integer.getInteger("org.jacop.lp.helperPool", 4);
+  private static final long HELPER_WORK = Long.getLong("org.jacop.lp.helperWork", WORK);
+  private static final int HELPER_PIVOTS = Integer.getInteger("org.jacop.lp.helperPivots", 500);
+  private boolean helperWanted = Boolean.getBoolean("org.jacop.lp.helper");
+  private Helper helper;
+  // the latest combinations from the helper, propagated at each call
+  private final ArrayDeque<LinearForm> pool = new ArrayDeque<>();
+
+  /** Statistics: the time of the first solve, its cuts and further rows, in nanoseconds. */
+  public long rootNanos;
+
+  /** Statistics: solves by the helper thread. */
+  public volatile long helperSolves;
+
+  /** Statistics: combinations the helper sent that the search received. */
+  public long helperForms;
 
   // the cuts are made at the first solve only, before any search decision: they use the bounds of
   // that moment, which hold for the whole search
@@ -798,6 +822,11 @@ public class LinearRelaxation extends Constraint
     if (suspended) {
       return;
     }
+    if (helper != null) {
+      helper.exchange(store);
+      checkGround();
+      return;
+    }
     credit = Math.min(credit + WORK_PER_CALL, WORK);
     if (++tick < period || credit < 0 || stalled >= IDLE_RUNS) {
       return;
@@ -813,6 +842,9 @@ public class LinearRelaxation extends Constraint
       solveAndPropagate(store);
     } finally {
       solveNanos += System.nanoTime() - started;
+      if (first) {
+        rootNanos = solveNanos;
+      }
       long cost =
           simplex == Simplex.DENSE
               ? (pivots() - pivots + 1) * lp.pivotWork()
@@ -839,7 +871,144 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
+    if (helperWanted && calls > 0 && stalled == 0) {
+      // the root solve, its cuts and further rows are done here: the helper takes over the simplex
+      helper = new Helper();
+    }
     checkGround();
+  }
+
+  /**
+   * Lets a helper thread solve the relaxation below the root, so that the search spends no time in
+   * the simplex; meant for runs that have a spare core (the {@code -p} portfolio). The results then
+   * depend on timing.
+   *
+   * @param helper whether a helper thread solves the relaxation
+   */
+  public void setHelper(boolean helper) {
+    helperWanted = helper;
+  }
+
+  /** The thread that solves the relaxation for the search below the root. */
+  private final class Helper implements Runnable {
+    // the bounds of the next node to solve, min and max of each column, or null
+    private int[] request;
+    private boolean running;
+    private volatile boolean busy;
+    private volatile boolean failed;
+    private final ConcurrentLinkedQueue<LinearForm> found = new ConcurrentLinkedQueue<>();
+
+    // in the search: takes the combinations found, hands over the bounds when the helper is free,
+    // and propagates the latest combinations
+    void exchange(Store store) {
+      for (LinearForm f = found.poll(); f != null; f = found.poll()) {
+        if (pool.size() == HELPER_POOL) {
+          pool.removeFirst();
+        }
+        pool.addLast(f);
+        helperForms++;
+      }
+      if (!busy && !failed) {
+        synchronized (this) {
+          if (request == null) {
+            int[] b = new int[2 * x.length];
+            for (int j = 0; j < x.length; j++) {
+              b[2 * j] = x[j].min();
+              b[2 * j + 1] = x[j].max();
+            }
+            request = b;
+            if (running) {
+              notifyAll();
+            } else {
+              running = true;
+              Thread t = new Thread(this, "jacop-lp-" + numberId);
+              t.setDaemon(true);
+              t.start();
+            }
+          }
+        }
+      }
+      for (LinearForm f : pool) {
+        propagate(store, f);
+      }
+    }
+
+    @Override
+    public void run() {
+      while (true) {
+        int[] b;
+        synchronized (this) {
+          if (request == null) {
+            try {
+              wait(1000);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+          }
+          if (request == null) {
+            // no node for a while: the search ended or waits elsewhere, the next request restarts
+            running = false;
+            return;
+          }
+          b = request;
+          request = null;
+          busy = true;
+        }
+        try {
+          solve(b);
+        } catch (RuntimeException numerical) {
+          failed = true;
+          synchronized (this) {
+            running = false;
+          }
+          return;
+        } finally {
+          busy = false;
+        }
+      }
+    }
+
+    private void solve(int[] b) {
+      long started = System.nanoTime();
+      for (int j = 0; j < lp.columns(); j++) {
+        lp.setBounds(j, b[2 * j], b[2 * j + 1]);
+      }
+      long size = Math.max(1, lp.pivotWork());
+      int limit = (int) Math.clamp(HELPER_WORK / size, 5, HELPER_PIVOTS);
+      int status = simplex == Simplex.LAZY ? solveLazily(limit) : lp.solve(limit);
+      helperSolves++;
+      try {
+        double[] y;
+        if (status == LpSolver.LIMIT) {
+          limits++;
+          return;
+        } else if (status == LpSolver.INFEASIBLE) {
+          infeasible++;
+          y = byRow(lp.farkas());
+        } else if (objective != null) {
+          y = byRow(lp.duals());
+        } else {
+          return;
+        }
+        for (long scale : SCALES) {
+          long[] lambda = scaled(y, scale);
+          if (lambda == null) {
+            return;
+          }
+          Aggregate g = aggregate(lambda);
+          if (g != null) {
+            for (LinearForm f : combine(g)) {
+              if (f != null) {
+                found.add(f);
+              }
+            }
+            return;
+          }
+        }
+      } finally {
+        solveNanos += System.nanoTime() - started;
+      }
+    }
   }
 
   // fails when every variable is fixed and a row does not hold
@@ -1649,6 +1818,7 @@ public class LinearRelaxation extends Constraint
         new LinearRelaxation(
             copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
     c.pivotLimit = pivotLimit;
+    c.helperWanted = helperWanted;
     c.keepExtra = !keptExtraForms.isEmpty();
     return c;
   }

@@ -487,6 +487,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     linearRelaxation =
         LinearRelaxation.of(store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     if (linearRelaxation != null) {
+      // prototype: org.jacop.lp.helperWorkers names the portfolio threads whose LP gets a helper
+      String helped = System.getProperty("org.jacop.lp.helperWorkers");
+      String thread = Thread.currentThread().getName();
+      if (helped != null && thread.startsWith("jacop-portfolio-")) {
+        linearRelaxation.setHelper(
+            Arrays.asList(helped.split(","))
+                .contains(thread.substring("jacop-portfolio-".length())));
+      }
       store.impose(linearRelaxation);
     }
     if (options.getStatistics()) {
@@ -545,6 +553,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
             + r.prunings
+            + "\n%%%mzn-stat: lpRootTime="
+            + r.rootNanos / 1e9
+            + "\n%%%mzn-stat: lpHelperSolves="
+            + r.helperSolves
+            + "\n%%%mzn-stat: lpHelperForms="
+            + r.helperForms
             + "\n%%%mzn-stat: lpSolveTime="
             + r.solveNanos / 1e9
             + "\n%%%mzn-stat: lpColumns="
