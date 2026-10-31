@@ -196,6 +196,7 @@ setup to run configuration. -->
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
                                 <costassignment.instances>300</costassignment.instances>
+                                <symmetricalldifferent.instances>200</symmetricalldifferent.instances>
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
@@ -267,6 +268,7 @@ setup to run configuration. -->
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
+                                <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -418,6 +420,7 @@ setup to run configuration. -->
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
+                                <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -560,6 +563,7 @@ setup to run configuration. -->
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
+                                <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
@@ -701,6 +705,7 @@ setup to run configuration. -->
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
+                                <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>

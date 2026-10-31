@@ -1201,7 +1201,43 @@ Version 5.0 (unreleased)
     instances, 30 s, two paired runs: --lcg 3 better and none worse
     (upTo1hour tp7_0 462,388 to 196,237), --lcg -f 9 better and 2 worse.
 
-84. FlatZinc if_then_else on integers is posed as the new constraint
+84. New constraint SymmetricAlldifferent(x, offset): x[i] = j + offset
+    if and only if x[j] = i + offset, MiniZinc symmetric_all_different
+    and inverse(x, x). A solution is a perfect matching of the graph
+    whose edges are the pairs of variables that may take each other's
+    index, found with Edmonds' blossom algorithm. It is domain
+    consistent (one matching search per variable at each call);
+    SymmetricAlldifferent(x, offset, false) only channels x[i] = j with
+    x[j] = i and fails when no perfect matching exists, as with an odd
+    number of variables and no fixed point. Under --lcg it explains a
+    failure, and a removed value, with a Tutte barrier read from the
+    failed search. The FlatZinc front end posts the second one for
+    jacop_assignment(x, x, i, i), which MiniZinc's inverse(x, x) and
+    the new fzn_symmetric_all_different give; before, it was Assignment
+    (and Alldistinct under :: domain), which needs search to find an
+    odd cycle. -Dorg.jacop.fz.symmetricAlldifferent=domain selects the
+    domain consistent one and =false Assignment.
+    MiniZinc Challenge, default options, 60 s: p1f 2015 13, 15 and 17
+    (UNSAT) fail at the root in under 1 s instead of 1.1-5.0 s of
+    search; the 20 elitserien instances take 328 s instead of 323 s;
+    the domain consistent version takes 412 s for the same objectives.
+
+85. Local search (--free-config ls=<share>, off by default) makes
+    feasibility jump moves (Luteberget and Sartor, 2023): each variable
+    of a violated constraint has a jump value, the value that most
+    lowers the weighted violation of all its constraints, tried at the
+    bounds, next to its value and where each linear row starts or stops
+    being violated; a step makes the best jump of a sample of variables,
+    and at a minimum every violated constraint weighs more. Jumps are
+    cached until one of the variable's constraints changes.
+    LocalSearch.Builder.jump(true) selects them; ls-moves=walk restores
+    the moves of one violated constraint per step. On 105 instances with
+    a slow or no first solution, 30 s, local search itself finds a
+    solution on 23 instances instead of 17 with -f --lcg off and on 17
+    instead of 15 with --lcg -f (cutstock, cyclic-rcpsp, largescheduling
+    and magicseq only with jumps).
+
+86. FlatZinc if_then_else on integers is posed as the new constraint
     ConditionalSelect(b, x, y): y = x[k] for the first k with b[k] = 1.
     It keeps y within the bounds of the branches that can still be
     selected, rules out a branch that cannot give y its value and selects
@@ -1216,7 +1252,7 @@ Version 5.0 (unreleased)
     and 9 worse (ptv pax_period_20_1c, cgt and stripboard the largest).
     -Dorg.jacop.fz.conditionalSelect=false restores the old posting.
 
-85. Under --lcg, an experimental cut-based conflict analysis, off by
+87. Under --lcg, an experimental cut-based conflict analysis, off by
     default: -Djacop.lcg.linear=learn. When a linear constraint fails,
     it is combined with the linear constraints behind its latest bounds,
     eliminating one variable at a time, until the sum is asserting; the
@@ -1230,7 +1266,7 @@ Version 5.0 (unreleased)
     over the whole set, --lcg 15 better and 6 worse, --lcg -f 13 better
     and 33 worse, mostly on instances where it never learns (noise).
 
-86. A FlatZinc all_different over more than 100 variables with sparse
+88. A FlatZinc all_different over more than 100 variables with sparse
     domains (successor arrays) is posted as Alldistinct (domain
     consistency) instead of Alldiff (bounds consistency), which pruned
     nothing inside such domains. MiniZinc Challenge 2023
@@ -1243,7 +1279,7 @@ Version 5.0 (unreleased)
     that variable's bounds without building the value graph: rnd_n75
     makes 50 times more conflicts per second.
 
-87. New constraint MinOfSums(x, y, m): m = min(x[i] + y[i]), a term
+89. New constraint MinOfSums(x, y, m): m = min(x[i] + y[i]), a term
     being x[i] alone where y[i] is null, with the bounds pruning of the
     decomposition z[i] = x[i] + y[i], m = min(z) and its own explanations
     under --lcg. The FlatZinc front end merges a sum z = x + y (int_lin_eq
@@ -1264,7 +1300,7 @@ Version 5.0 (unreleased)
     case) read the bounds kept on IntVar and only call the domain when a
     bound changes, +7 to +11% on road-cons before the merge.
 
-88. A FlatZinc variable declared with a bound beyond JaCoP's integer range
+90. A FlatZinc variable declared with a bound beyond JaCoP's integer range
     (-536,870,910..536,870,909) is narrowed to it, with one warning on
     stderr; MiniZinc writes such computed bounds, for example
     var 0..4722438400 for a product in 2022 arithmetic-target. Before, a
@@ -1278,7 +1314,51 @@ Version 5.0 (unreleased)
     4108 reaches the optimum 7; 6872 and 8657 reach 8 and 9 with -f,
     optimum 7); the two code-generator instances still prove their optimum.
 
-89. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+91. Presolve rules have timing classes, as in SCIP: fast (the
+    propagation-like rules), medium (at-most-one, redundant constraints,
+    cumulative reductions) and exhaustive (probing, tabling, implied
+    constraints). A round runs the costlier class only after a round of
+    the cheaper ones changed fewer than --presolve-abort (default 0.001)
+    times the variables, and the rounds stop after a small round at the
+    top class or when the budget is spent (--presolve-time, default 1/20
+    of the time left). --presolve-level fast|medium|exhaustive caps the
+    class. When the rules simplified nothing, the store is searched in
+    place instead of being copied: the copy alone changed the search
+    (cars_60_04 went unsolved). Under --lcg, rule 8 no longer substitutes
+    doubletons, which lengthened explanations (diameterc-mst 5 to 24
+    atoms); -Djacop.presolve.doubletons=on brings it back. The time of
+    every phase is printed as presolveTime<Phase> and the rounds per
+    class as presolveRounds<Class>. --presolve-restart <f> (off by
+    default) marks the constraints satisfied at the root entailed at a
+    restart once the root fixed f times the variables more. On the 249
+    mznbench instances, --lcg, 20 s: fast presolve with --symmetry off
+    solves the same 134 as presolve off with 18 better objectives and 3
+    worse (Borda 223.6 against 214.6; full presolve 206.8), at a median
+    0.06 s more set-up; with -f it still loses (157 against 159 solved,
+    Borda 335.0 against 355.0), and --presolve-restart 0.025 is about
+    neutral there (158 solved, Borda 363.4). Presolve stays off by
+    default.
+
+92. New constraint Cumulatives (org.jacop.constraints.cumulative), the
+    cumulatives of Beldiceanu and Carlsson: tasks with variable starts,
+    durations, heights and machines, a bound per machine that is an
+    upper or a lower limit on the load wherever a task runs, heights
+    that may be negative, and optional tasks. A sweep over each
+    machine's least-load profile prunes starts, machines, durations,
+    heights, presence and bounds; it also forces a negative task to run
+    where the others alone break the bound, a deduction the forbidden
+    regions miss. Under --lcg it explains its pruning and failures.
+    MiniZinc cumulatives with lower bounds or negative heights, and the
+    optional form, use it instead of the quadratic standard library
+    decomposition (upper bounds with non-negative heights still go to
+    one cumulative per machine). No Challenge model uses cumulatives; on
+    29 generated coverage, paired-task and power instances, 60 s:
+    --lcg off 12 better, none worse (cover_10_3_0 optimum in 4.8 s
+    instead of 42 s, three power instances find a solution); --lcg
+    7 better and 7 worse (pairs_24_5_2 UNSAT not proved, power proofs
+    up to 2x slower, cover_24_5_1 a first solution).
+
+93. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
     search: <prefix>.opb is the model as pseudo-Boolean constraints over
     the order encoding of the domains the FlatZinc translation gives the
     variables, before the constraints propagate, and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
