@@ -49,6 +49,9 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Linearizations;
+import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -207,6 +210,12 @@ public class LinearRelaxation extends Constraint
   /** Statistics: cuts added. */
   public long cuts;
 
+  /** Statistics: energy cuts added. */
+  public long energyCuts;
+
+  // the number of energy cuts among the cuts of the last call of separateCuts
+  private long lastEnergyChosen;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -259,6 +268,16 @@ public class LinearRelaxation extends Constraint
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
+
+  // energy cuts of the resources over the starts of their tasks, in the same rounds
+  private static final boolean ENERGY_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
+
+  /** A resource: the starts, durations and usages of its tasks, and its capacity. */
+  private record Resource(IntVar[] starts, long[] dur, long[] use, long cap) {}
+
+  // the resources of the model whose tasks have fixed durations and usages
+  private List<Resource> resources = List.of();
   private static final double MAX_PARALLELISM = 0.9;
 
   // the cuts are made at the first solve only, before any search decision: they use the bounds of
@@ -607,7 +626,86 @@ public class LinearRelaxation extends Constraint
       nonzeros += f.vars().length;
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
-    return r.rows() + r.extraColumns.length < 2 ? null : r;
+    if (r.rows() + r.extraColumns.length < 2) {
+      return null;
+    }
+    r.resources = resources(constraints);
+    return r;
+  }
+
+  // the cumulative resources whose tasks have fixed durations and usages, optional tasks excepted
+  private static List<Resource> resources(Collection<Constraint> constraints) {
+    List<Resource> out = new ArrayList<>();
+    for (Constraint c : constraints) {
+      if (!(c instanceof CumulativeBasic cb)
+          || c instanceof CumulativeOptional
+          || c instanceof CumulativeUnaryOptional
+          || cb.limit().max() <= 0) {
+        continue;
+      }
+      IntVar[][] t = cb.tasks();
+      List<Integer> kept = new ArrayList<>();
+      boolean fixed = true;
+      for (int i = 0; i < t[0].length && fixed; i++) {
+        fixed = t[1][i].singleton() && t[2][i].singleton();
+        if (fixed && t[1][i].value() > 0 && t[2][i].value() > 0) {
+          kept.add(i);
+        }
+      }
+      if (!fixed || kept.size() < 2) {
+        continue;
+      }
+      IntVar[] starts = new IntVar[kept.size()];
+      long[] dur = new long[kept.size()];
+      long[] use = new long[kept.size()];
+      for (int k = 0; k < kept.size(); k++) {
+        starts[k] = t[0][kept.get(k)];
+        dur[k] = t[1][kept.get(k)].value();
+        use[k] = t[2][kept.get(k)].value();
+      }
+      out.add(new Resource(starts, dur, use, cb.limit().max()));
+    }
+    return out;
+  }
+
+  // the energy separators of the resources, over the tasks whose starts are columns
+  private List<EnergyCut> energySeparators(int n, long[] lo) {
+    List<EnergyCut> out = new ArrayList<>();
+    if (!ENERGY_CUTS) {
+      return out;
+    }
+    Map<IntVar, Integer> col = new IdentityHashMap<>();
+    for (int j = 0; j < n; j++) {
+      col.put(x[j], j);
+    }
+    for (Resource r : resources) {
+      List<Integer> tasks = new ArrayList<>();
+      for (int k = 0; k < r.starts().length; k++) {
+        if (col.containsKey(r.starts()[k])) {
+          tasks.add(k);
+        }
+      }
+      if (tasks.size() < 2) {
+        continue;
+      }
+      int[] cs = new int[tasks.size()];
+      long[] d = new long[tasks.size()];
+      long[] u = new long[tasks.size()];
+      long[] est = new long[tasks.size()];
+      for (int q = 0; q < tasks.size(); q++) {
+        int k = tasks.get(q);
+        cs[q] = col.get(r.starts()[k]);
+        d[q] = r.dur()[k];
+        u[q] = r.use()[k];
+        est[q] = lo[cs[q]];
+      }
+      try {
+        out.add(new EnergyCut(cs, d, u, est, r.cap()));
+      } catch (ArithmeticException _) {
+        // a resource whose energies overflow gives no cuts
+      }
+    }
+    return out;
   }
 
   /**
@@ -1291,9 +1389,11 @@ public class LinearRelaxation extends Constraint
     long[] hi = Arrays.copyOf(rootHi, n);
     int original = rows();
     Set<List<Long>> seen = new HashSet<>();
+    List<EnergyCut> energy = energySeparators(n, lo);
     int status = DualSimplex.OPTIMAL;
     for (int round = 0; round < CUT_ROUNDS; round++) {
-      List<MirCut> chosen = separateCuts(lo, hi, original, seen);
+      List<MirCut> chosen = separateCuts(lo, hi, original, seen, energy);
+      long chosenEnergy = lastEnergyChosen;
       if (chosen.isEmpty()) {
         break;
       }
@@ -1302,17 +1402,20 @@ public class LinearRelaxation extends Constraint
       long pivots = lp.pivots();
       double before = lp.value(0);
       addCuts(chosen);
+      energyCuts += chosenEnergy;
       long size = Math.max(1, lp.pivotWork());
       status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
         dropCuts(chosen.size(), kept, keptRows);
+        energyCuts -= chosenEnergy;
         break;
       }
       if (status != DualSimplex.OPTIMAL) {
         if (status == DualSimplex.LIMIT) {
           dropCuts(chosen.size(), kept, keptRows);
+          energyCuts -= chosenEnergy;
           status = DualSimplex.OPTIMAL;
         }
         break;
@@ -1332,9 +1435,11 @@ public class LinearRelaxation extends Constraint
    * @param hi the global upper bounds by column, of the first solve
    * @param original the number of rows that are not cuts
    * @param seen the cuts chosen in earlier rounds, as keys; the cuts chosen are added
+   * @param energy the energy separators, whose cuts compete with the MIR cuts
    * @return the cuts chosen, most efficacious first
    */
-  private List<MirCut> separateCuts(long[] lo, long[] hi, int original, Set<List<Long>> seen) {
+  private List<MirCut> separateCuts(
+      long[] lo, long[] hi, int original, Set<List<Long>> seen, List<EnergyCut> energy) {
     int n = lp.columns();
     double[] value = new double[n];
     for (int j = 0; j < n; j++) {
@@ -1361,6 +1466,11 @@ public class LinearRelaxation extends Constraint
       mir(aggregate(unit), value, lo, hi, found);
       unit[i] = 0;
     }
+    int mirs = found.size();
+    for (EnergyCut e : energy) {
+      e.separate(value, found);
+    }
+    Set<MirCut> energyFound = new HashSet<>(found.subList(mirs, found.size()));
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();
     for (MirCut c : found) {
@@ -1380,6 +1490,7 @@ public class LinearRelaxation extends Constraint
         chosen.add(c);
       }
     }
+    lastEnergyChosen = chosen.stream().filter(energyFound::contains).count();
     return chosen;
   }
 
@@ -1726,6 +1837,11 @@ public class LinearRelaxation extends Constraint
             copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
+    List<Resource> rs = new ArrayList<>();
+    for (Resource r : resources) {
+      rs.add(new Resource(map.get(r.starts()), r.dur(), r.use(), r.cap()));
+    }
+    c.resources = rs;
     return c;
   }
 

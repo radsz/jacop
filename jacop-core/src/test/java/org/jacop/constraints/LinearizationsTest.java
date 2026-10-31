@@ -61,7 +61,7 @@ class LinearizationsTest {
     Random rnd = new Random(7);
     int rows = 0;
     for (int run = 0; run < 3000; run++) {
-      int kind = run % 15;
+      int kind = run % 18;
       Store store = new Store();
       IntVar[] x = new IntVar[4];
       for (int i = 0; i < x.length; i++) {
@@ -145,6 +145,36 @@ class LinearizationsTest {
           cs.add(new ElementInteger(index, list, value, 0));
           scope = new IntVar[] {index, value, bs[0], bs[1], bs[2]};
         }
+        case 15 -> {
+          // an index with holes and values outside the list removed by propagation first
+          IntVar index = new IntVar(store, "i", 1, 6);
+          index.domain.subtract(1 + rnd.nextInt(6));
+          IntVar value = new IntVar(store, "v", -20, 20);
+          int[] list = new int[6];
+          for (int i = 0; i < list.length; i++) {
+            list[i] = rnd.nextInt(21) - 10;
+          }
+          cs.add(new ElementInteger(index, list, value, 0));
+          scope = new IntVar[] {index, value};
+        }
+        case 16 -> {
+          IntVar[] bin = new IntVar[3];
+          for (int i = 0; i < bin.length; i++) {
+            bin[i] = new IntVar(store, "bin" + i, 1, 2);
+          }
+          IntVar[] load = {new IntVar(store, "l1", 0, 9), new IntVar(store, "l2", 0, 9)};
+          int[] ws = {1 + rnd.nextInt(4), 1 + rnd.nextInt(4), rnd.nextInt(4)};
+          cs.add(new org.jacop.constraints.binpacking.Binpacking(bin, load, ws));
+          scope = new IntVar[] {bin[0], bin[1], bin[2], load[0], load[1]};
+        }
+        case 17 -> {
+          IntVar[] succ = new IntVar[4];
+          for (int i = 0; i < succ.length; i++) {
+            succ[i] = new IntVar(store, "s" + i, 1, 4);
+          }
+          cs.add(rnd.nextBoolean() ? new Circuit(succ) : new Subcircuit(succ));
+          scope = succ;
+        }
         default -> {
           int lo = x[0].min();
           cs.add(new Reified(new XeqC(x[0], lo), bs[0]));
@@ -171,6 +201,21 @@ class LinearizationsTest {
       }
     }
     assertThat(rows).isGreaterThan(5000);
+  }
+
+  @Test
+  void elementGetsTheFacetsOfTheHullOfItsPoints() {
+    // y = [0, 10, 0][x]: the upper hull is y <= 10 x - 10 and y <= 30 - 10 x; the lower one is flat
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", -20, 20);
+    List<LinearForm> rows = Linearizations.of(new ElementInteger(x, new int[] {0, 10, 0}, y, 0));
+    assertThat(rows).hasSize(2);
+    for (LinearForm f : rows) {
+      assertThat(f.relation()).isEqualTo(LinearForm.LE);
+      assertThat(holds(f, new IntVar[] {x, y}, new long[] {2, 10})).isTrue();
+      assertThat(holds(f, new IntVar[] {x, y}, new long[] {2, 11})).isFalse();
+    }
   }
 
   private static boolean holds(LinearForm f, IntVar[] scope, long[] value) {

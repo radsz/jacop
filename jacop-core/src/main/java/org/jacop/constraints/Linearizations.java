@@ -217,8 +217,15 @@ public final class Linearizations {
       abs(((AbsXeqY) c).x, ((AbsXeqY) c).y, out);
     } else if (k == Alldistinct.class) {
       alldifferent(((Alldistinct) c).list, out);
-    } else if (k == Alldiff.class || k == Alldifferent.class) {
+    } else if (k == Alldiff.class
+        || k == Alldifferent.class
+        || k == Circuit.class
+        || k == Subcircuit.class) {
+      // the successors of a circuit or a subcircuit are a permutation
       alldifferent(((Alldifferent) c).list, out);
+    } else if (k == ElementInteger.class) {
+      ElementInteger el = (ElementInteger) c;
+      hull(el.index, el.list, el.indexOffset, el.value, out);
     } else if (k == ChannelImply.class) {
       // b_v -> x = v: at most one of the Booleans
       AbstractChannel ch = (AbstractChannel) c;
@@ -466,6 +473,74 @@ public final class Linearizations {
     if (high < most) {
       out.add(new LinearForm(list, ones, high, LinearForm.LE));
     }
+  }
+
+  // the most rows of each side of the hull of an element
+  private static final int MAX_HULL = 32;
+
+  /**
+   * The facets of the convex hull of the points {@code (v, a[v - offset - 1])} for the values v of
+   * the index, as rows over the index and the value: {@code y >= } the lower hull and {@code y <=}
+   * the upper hull. Each facet through {@code (x1, y1)} and {@code (x2, y2)} is {@code (x2 - x1) y
+   * - (y2 - y1) x >= (x2 - x1) y1 - (y2 - y1) x1}, in integers.
+   */
+  private static void hull(IntVar x, int[] a, int offset, IntVar y, List<LinearForm> out) {
+    if (x == y || x.singleton()) {
+      return;
+    }
+    List<long[]> points = new ArrayList<>();
+    for (ValueEnumeration e = x.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      int position = v - offset - 1;
+      if (position < 0 || position >= a.length) {
+        return; // the constraint fails on such values; its propagation removes them first
+      }
+      points.add(new long[] {v, a[position]});
+      if (points.size() > 100_000) {
+        return;
+      }
+    }
+    if (points.size() < 2) {
+      return;
+    }
+    // points by increasing x; the facets of the lower hull turn left, those of the upper right
+    for (boolean lower : new boolean[] {true, false}) {
+      List<long[]> h = new ArrayList<>();
+      for (long[] p : points) {
+        while (h.size() >= 2 && !turns(h.get(h.size() - 2), h.get(h.size() - 1), p, lower)) {
+          h.remove(h.size() - 1);
+        }
+        h.add(p);
+      }
+      if (h.size() - 1 > MAX_HULL) {
+        continue; // too many facets; the bounds of y stand in for them
+      }
+      for (int q = 0; q + 1 < h.size(); q++) {
+        long dx = h.get(q + 1)[0] - h.get(q)[0];
+        long dy = h.get(q + 1)[1] - h.get(q)[1];
+        if (dy == 0) {
+          continue; // a flat facet is a bound of y
+        }
+        long side =
+            Math.subtractExact(
+                Math.multiplyExact(dx, h.get(q)[1]), Math.multiplyExact(dy, h.get(q)[0]));
+        out.add(
+            new LinearForm(
+                new IntVar[] {y, x},
+                new long[] {dx, -dy},
+                side,
+                lower ? LinearForm.GE : LinearForm.LE));
+      }
+    }
+  }
+
+  // whether o, p, q turn left (lower hull) or right (upper hull), strictly
+  private static boolean turns(long[] o, long[] p, long[] q, boolean lower) {
+    long cross =
+        Math.subtractExact(
+            Math.multiplyExact(p[0] - o[0], q[1] - o[1]),
+            Math.multiplyExact(p[1] - o[1], q[0] - o[0]));
+    return lower ? cross > 0 : cross < 0;
   }
 
   /** A constraint outside this package that gives its own rows. */
