@@ -391,6 +391,48 @@ final class OpbEncoder implements PbModel {
     return d.min() >= 0 && d.max() <= 1;
   }
 
+  @Override
+  public IntDomain domain(IntVar x) {
+    return root[id.applyAsInt(x)];
+  }
+
+  @Override
+  public String equal(IntVar x, int v) {
+    int i = id.applyAsInt(x);
+    IntDomain d = root[i];
+    if (!d.contains(v)) {
+      return "0";
+    }
+    return d.singleton() ? "1" : eq(i, v);
+  }
+
+  @Override
+  public String atLeast(IntVar x, int v) {
+    int i = id.applyAsInt(x);
+    IntDomain d = root[i];
+    if (v <= d.min()) {
+      return "1";
+    }
+    if (v > d.max()) {
+      return "0";
+    }
+    return ge(i, v);
+  }
+
+  @Override
+  public void clause(String... literals) {
+    StringBuilder s = new StringBuilder(guardPrefix());
+    for (String l : literals) {
+      if ("1".equals(l)) {
+        return;
+      }
+      if (!"0".equals(l)) {
+        s.append("1 ").append(l).append(' ');
+      }
+    }
+    line(s.append(">= 1").toString());
+  }
+
   private static String negate(String lit) {
     return switch (lit) {
       case "0" -> "1";

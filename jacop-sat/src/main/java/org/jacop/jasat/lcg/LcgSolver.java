@@ -1838,7 +1838,11 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void learnLinear(LinearForm f) {
-    if (f == null || !"learn".equals(linearMode) || learntSeen.size() >= linearLimit) {
+    // a learnt sum is a cutting-plane derivation, which a proof of rup steps cannot state
+    if (f == null
+        || !"learn".equals(linearMode)
+        || proof != null
+        || learntSeen.size() >= linearLimit) {
       return;
     }
     // the sum of the terms' largest magnitudes must fit in a long, with room

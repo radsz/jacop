@@ -31,6 +31,7 @@
 
 package org.jacop.lcg;
 
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
 /**
@@ -68,4 +69,54 @@ public interface PbModel {
    * @param negative the variables of which one may be 0
    */
   void clause(IntVar[] positive, IntVar[] negative);
+
+  /**
+   * Returns the domain of a variable in the model, which its literals cover.
+   *
+   * @param x the variable
+   * @return its root domain
+   */
+  IntDomain domain(IntVar x);
+
+  /**
+   * Returns the literal {@code [x = v]}: its name, or "1" or "0" when the root domain of x decides
+   * it.
+   *
+   * @param x the variable
+   * @param v the value
+   * @return the literal
+   */
+  String equal(IntVar x, int v);
+
+  /**
+   * Returns the literal {@code [x >= v]}: its name, or "1" or "0" when the root domain of x decides
+   * it.
+   *
+   * @param x the variable
+   * @param v the value
+   * @return the literal
+   */
+  String atLeast(IntVar x, int v);
+
+  /**
+   * Adds a clause over literals of {@link #equal} and {@link #atLeast}, each one negated by {@link
+   * #not}; a literal "1" makes the clause true and a literal "0" is left out.
+   *
+   * @param literals the literals of which one is true
+   */
+  void clause(String... literals);
+
+  /**
+   * Returns the negation of a literal.
+   *
+   * @param literal a literal of {@link #equal} or {@link #atLeast}, or "1" or "0"
+   * @return its negation
+   */
+  static String not(String literal) {
+    return switch (literal) {
+      case "0" -> "1";
+      case "1" -> "0";
+      default -> literal.startsWith("~") ? literal.substring(1) : "~" + literal;
+    };
+  }
 }

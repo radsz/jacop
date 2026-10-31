@@ -39,6 +39,8 @@ import java.nio.charset.StandardCharsets;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
@@ -205,6 +207,35 @@ class VeriPbProofTest {
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("SAT");
     assertThat(opb()).contains("3 x");
+  }
+
+  // two different items by element tables of weight and cost: least cost of weight at least 9
+  @Test
+  void elementOptimumIsProved() {
+    Store store = new Store();
+    int[] weight = {2, 7, 4, 5, 3, 6};
+    int[] cost = {1, 9, 3, 6, 2, 7};
+    IntVar[] item = new IntVar[2];
+    IntVar[] w = new IntVar[2];
+    IntVar[] c = new IntVar[2];
+    for (int k = 0; k < 2; k++) {
+      item[k] = new IntVar(store, "i" + k, 1, weight.length);
+      w[k] = new IntVar(store, "w" + k, 0, 10);
+      c[k] = new IntVar(store, "c" + k, 0, 10);
+      store.impose(new ElementInteger(item[k], weight, w[k], 0));
+      store.impose(new ElementIntegerFast(item[k], cost, c[k], 0));
+    }
+    store.impose(new XneqY(item[0], item[1]));
+    store.impose(new LinearInt(w, new int[] {1, 1}, ">=", 9));
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    store.impose(new LinearInt(new IntVar[] {c[0], c[1], obj}, new int[] {1, 1, -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // weights 4 + 5 (cost 3 + 6) and 3 + 6 (cost 2 + 7) are the cheapest that reach 9
+    assertThat(lcg.value(obj)).isEqualTo(9);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 9 9");
   }
 
   @Test
