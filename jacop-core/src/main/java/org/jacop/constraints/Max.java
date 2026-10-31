@@ -95,7 +95,6 @@ public class Max extends AbstractMinMax
 
       store.propagationHasOccurred = false;
       IntVar v;
-      IntDomain vDom;
 
       int minValue = IntDomain.MIN_INT;
       int maxValue = IntDomain.MIN_INT;
@@ -106,9 +105,8 @@ public class Max extends AbstractMinMax
 
         v = list[i];
 
-        vDom = v.dom();
-        int varMin = vDom.min();
-        int varMax = vDom.max();
+        int varMin = v.min();
+        int varMax = v.max();
 
         if (varMax < minMax) {
           swap(start, i);
@@ -121,7 +119,9 @@ public class Max extends AbstractMinMax
         maxValue = Math.max(maxValue, varMax);
       }
 
-      max.domain.in(store.level, max, minValue, maxValue);
+      if (minValue > max.min() || maxValue < max.max()) {
+        max.domain.in(store.level, max, minValue, maxValue);
+      }
 
       if (start == l) { // all variables have their max value lower than min value of max variable
         throw Store.failException;
