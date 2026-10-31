@@ -59,6 +59,7 @@ public class Options {
   boolean all;
   boolean verbose;
   boolean statistics;
+  boolean searchStatistics;
   boolean freeSearch;
   boolean freeSearchWithoutAnnotation = true;
   boolean newFreeSearchEngine = true;
@@ -158,6 +159,10 @@ public class Options {
             -t <value>, --time-out <value>
                 <value> - time in milisecond.
             -s, --statistics
+                Print the standard FlatZinc statistics (nodes, failures, restarts, peakDepth, ...).
+            --search-statistics
+                As -s, and also the statistics of JaCoP's own components (lcg*, presolve*, lp*,
+                lns*, ls*, symmetry*, probe*, portfolio*, ...). -debug together with -s does the same.
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
             -f free search; no need to follow search annotations.
@@ -324,6 +329,7 @@ public class Options {
       case "-a", "--all-solutions", "--all" -> i = handleAllSolutions(i);
       case "-t", "--time-out" -> i = handleTimeOut(args, i);
       case "-s", "--statistics" -> i = handleStatistics(i);
+      case "--search-statistics", "-searchStatistics" -> i = handleSearchStatistics(i);
       case "-f", "--free-search" -> i = handleFreeSearch(i);
       case "--free-engine" -> i = handleFreeEngine(args, i);
       case "--free-config" -> i = handleFreeConfig(args, i);
@@ -387,6 +393,12 @@ public class Options {
 
   private int handleStatistics(int i) {
     statistics = true;
+    return i + 1;
+  }
+
+  private int handleSearchStatistics(int i) {
+    statistics = true;
+    searchStatistics = true;
     return i + 1;
   }
 
@@ -801,6 +813,17 @@ public class Options {
    */
   public boolean getStatistics() {
     return statistics;
+  }
+
+  /**
+   * It returns true if the statistics of JaCoP's own components (LCG, presolve, LP, LNS, local
+   * search, symmetry, probing, portfolio) are printed as well as the standard FlatZinc ones: with
+   * --search-statistics, or with -s and -debug.
+   *
+   * @return true if the extra statistics are printed, false otherwise.
+   */
+  public boolean searchStatistics() {
+    return statistics && (searchStatistics || debug);
   }
 
   /**

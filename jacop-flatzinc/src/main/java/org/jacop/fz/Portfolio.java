@@ -290,12 +290,14 @@ final class Portfolio {
         }
       }
       if (options.getStatistics()) {
-        s.append("%%%mzn-stat: portfolioThreads=").append(workers.size()).append('\n');
-        if (bestWorker != null) {
-          s.append("%%%mzn-stat: portfolioBest=").append(bestWorker.name).append('\n');
-        }
-        if (imports > 0) {
-          s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+        if (options.searchStatistics()) {
+          s.append("%%%mzn-stat: portfolioThreads=").append(workers.size()).append('\n');
+          if (bestWorker != null) {
+            s.append("%%%mzn-stat: portfolioBest=").append(bestWorker.name).append('\n');
+          }
+          if (imports > 0) {
+            s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+          }
         }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {

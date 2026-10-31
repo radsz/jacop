@@ -60,6 +60,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -1350,6 +1351,58 @@ class AtomicTrailTest {
     assertThat(sum.explain(trail, entry, reason)).isTrue();
     assertThat(reason.size()).isEqualTo(1);
     assertThat(trail.variable(reason.get(0))).isSameAs(z);
+    trail.detach();
+  }
+
+  /**
+   * The diffn profile rule: a and b, of height 1 and width 2, both at x = 0 in a strip of height 2,
+   * leave no room at x in 0..1 for r, whose x already lost 2. The rule removes 0..1 and the domain
+   * moves on to 3, so the reason of x >= 3 cites the hole x != 2 besides the bounds of a and b
+   * (pillars-and-planks, cargo).
+   */
+  @Test
+  void diffnProfileReasonCitesTheHolesItsBoundSkipped() {
+    Store store = new Store();
+    IntVar rx = new IntVar(store, "rx", 0, 5);
+    IntVar ax = new IntVar(store, "ax", 0, 3);
+    IntVar bx = new IntVar(store, "bx", 0, 3);
+    IntVar[] x = {rx, ax, bx};
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+    }
+    IntVar one = new IntVar(store, 1, 1);
+    IntVar two = new IntVar(store, 2, 2);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new Diffn(x, y, new IntVar[] {one, two, two}, new IntVar[] {one, one, one}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    rx.domain.inComplement(store.level, rx, 2);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    ax.domain.inMax(store.level, ax, 0);
+    bx.domain.inMax(store.level, bx, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(rx.min()).isEqualTo(3);
+    int bound = -1;
+    int hole = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == rx && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 3) {
+        bound = e;
+      }
+      if (trail.variable(e) == rx && trail.kind(e) == AtomicTrail.NE && trail.value(e) == 2) {
+        hole = e;
+      }
+    }
+    assertThat(bound).isNotNegative();
+    assertThat(hole).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(bound, reason)).isTrue();
+    List<Integer> cited = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      cited.add(reason.get(k));
+    }
+    assertThat(cited).contains(hole);
     trail.detach();
   }
 }
