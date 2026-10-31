@@ -373,6 +373,10 @@ public final class LcgSolver implements ExternalPropagator {
   // OR-Tools set; either alone lost.
   private static final double CORE_NO_SOLUTION =
       Double.parseDouble(System.getProperty("jacop.lcg.coreNoSolution", "0.33"));
+  // the conflicts the core phase gets before it gives up without a solution of its own, whatever
+  // the time: -Djacop.lcg.coreNoSolutionConflicts
+  private static final long CORE_NO_SOLUTION_CONFLICTS =
+      Long.getLong("jacop.lcg.coreNoSolutionConflicts", 2000);
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
@@ -1029,8 +1033,22 @@ public final class LcgSolver implements ExternalPropagator {
       if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
         // without a solution of its own by this share of the phase, branch and bound gets the time
         long first = now + (long) (CORE_NO_SOLUTION * (full - now));
+        long startConflicts = sat.conflicts;
         sat.setDeadline(first);
         result = coreSearch.run(phaseLimit, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN
+            && System.nanoTime() >= first
+            && !ownSolution()
+            && sat.conflicts - startConflicts < CORE_NO_SOLUTION_CONFLICTS) {
+          // that share of the time passed after few conflicts, as when the JIT compiler or other
+          // threads slow the start: the phase also gets a number of conflicts before it gives up
+          // (kidney-exchange 3_25 stopped after 150 conflicts next to another JVM and took 40 s
+          // instead of 2 s)
+          sat.setDeadline(full);
+          result =
+              coreSearch.run(
+                  Math.min(phaseLimit, startConflicts + CORE_NO_SOLUTION_CONFLICTS), coreCallLimit);
+        }
         if (result == CdclSolver.UNKNOWN && System.nanoTime() >= first) {
           if (ownSolution()) {
             sat.setDeadline(full);
