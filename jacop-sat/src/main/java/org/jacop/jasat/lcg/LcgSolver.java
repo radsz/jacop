@@ -1635,7 +1635,17 @@ public final class LcgSolver implements ExternalPropagator {
     while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
       numAnnotationIndices--;
     }
-    numPending = 0;
+    // a notified literal at or below the level stays assigned, and the solver does not notify it
+    // again: it is applied at the next propagation (the root's, when a probe stopped at the
+    // deadline)
+    int kept = 0;
+    for (int k = 0; k < numPending; k++) {
+      int lit = pending[k];
+      if (sat.value(lit) != 0 && sat.levelOf(lit) <= level) {
+        pending[kept++] = lit;
+      }
+    }
+    numPending = kept;
     failed = false;
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
