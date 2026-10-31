@@ -236,34 +236,8 @@ public class MinOfSumsDetector implements ParserTreeConstants {
     }
   }
 
-  /** It counts the variables of an argument, array elements included. */
   private void count(SimpleNode arg) {
-    if (arg.getId() == JJTARRAYLITERAL) {
-      for (int i = 0; i < arg.jjtGetNumChildren(); i++) {
-        count((SimpleNode) arg.jjtGetChild(i));
-      }
-      return;
-    }
-    if (arg.getId() != JJTSCALARFLATEXPR) {
-      return;
-    }
-    ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
-    if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getVariableArray(e.getIdent());
-      if (array != null) {
-        for (IntVar v : array) {
-          occurrences.merge(v, 1, Integer::sum);
-        }
-        return;
-      }
-      IntVar v = support.dictionary.getVariable(e.getIdent());
-      if (v != null) {
-        occurrences.merge(v, 1, Integer::sum);
-      }
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
-      // an element of an array of variables; other arrays hold parameters
-      occurrences.merge(support.getVariable(e), 1, Integer::sum);
-    }
+    PartialCopyDetector.countVariables(support, arg, occurrences);
   }
 
   private static SimpleNode child(SimpleNode node, int i) {

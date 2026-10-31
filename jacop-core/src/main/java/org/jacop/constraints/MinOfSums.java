@@ -318,33 +318,33 @@ public class MinOfSums extends Constraint
 
   // the low of term i reaches limit before the position: x[i] + y[i] >= limit
   private boolean termAbove(AtomicTrail trail, int position, int i, long limit, EntryList out) {
-    IntVar a = x[i];
-    IntVar b = y[i];
-    if (b == null) {
-      return cite(trail.earliestLowerBound(a, limit, position), out);
-    }
-    long bLow = trail.minBefore(b, position);
-    if ((long) trail.minBefore(a, position) + bLow < limit) {
-      return false;
-    }
-    long used = trail.addBoundReaching(a, position, true, limit - bLow, out);
-    trail.addBoundReaching(b, position, true, limit - used, out);
-    return true;
+    return termReaching(trail, position, i, true, limit, out);
   }
 
   // the high of term i reaches limit before the position: x[i] + y[i] <= limit
   private boolean termBelow(AtomicTrail trail, int position, int i, long limit, EntryList out) {
+    return termReaching(trail, position, i, false, limit, out);
+  }
+
+  // the low (lower) or the high of term i reaches limit before the position
+  private boolean termReaching(
+      AtomicTrail trail, int position, int i, boolean lower, long limit, EntryList out) {
     IntVar a = x[i];
     IntVar b = y[i];
     if (b == null) {
-      return cite(trail.earliestUpperBound(a, limit, position), out);
+      return cite(
+          lower
+              ? trail.earliestLowerBound(a, limit, position)
+              : trail.earliestUpperBound(a, limit, position),
+          out);
     }
-    long bHigh = trail.maxBefore(b, position);
-    if ((long) trail.maxBefore(a, position) + bHigh > limit) {
+    long bBound = lower ? trail.minBefore(b, position) : trail.maxBefore(b, position);
+    long sum = (lower ? trail.minBefore(a, position) : trail.maxBefore(a, position)) + bBound;
+    if (lower ? sum < limit : sum > limit) {
       return false;
     }
-    long used = trail.addBoundReaching(a, position, false, limit - bHigh, out);
-    trail.addBoundReaching(b, position, false, limit - used, out);
+    long used = trail.addBoundReaching(a, position, lower, limit - bBound, out);
+    trail.addBoundReaching(b, position, lower, limit - used, out);
     return true;
   }
 
