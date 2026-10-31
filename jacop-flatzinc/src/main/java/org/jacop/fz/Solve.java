@@ -162,6 +162,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   Tables output;
   // the derivation of the searched store, or null when the loaded store is searched
   Derivation presolve;
+  // whether symmetry breaking ran: its constraints, which the model does not imply, may differ
+  // between portfolio threads, so their learnt clauses are not shared
+  private boolean symmetryBreaking;
   Options options;
   int initNumberConstraints;
   Timer timer;
@@ -299,6 +302,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the objective variable is kept by every symmetry.
    */
   private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
+    symmetryBreaking = true;
     ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
     boolean satisfy = getKind(kind.getKind()) == 0;
     if (satisfy && (opt.getAll() || opt.getNumberSolutions() > 1)) {
@@ -2148,14 +2152,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Shares short learnt clauses and root bounds with the portfolio's other LCG threads, which solve
-   * the same model; not after presolve, whose store has variables of its own and whose symmetry
-   * breaking the model does not imply. {@code --free-config share-clauses=<size>} sets the largest
-   * clause shared (default 8, 0 turns sharing off), {@code share-lbd=<lbd>} its largest LBD
-   * (default 2).
+   * the same model; not with presolve on, whose rules may run differently in each thread, nor after
+   * symmetry breaking, which the model does not imply. {@code --free-config share-clauses=<size>}
+   * sets the largest clause shared (default 8, 0 turns sharing off), {@code share-lbd=<lbd>} its
+   * largest LBD (default 2).
    */
   private void shareClauses(Portfolio.Worker worker) {
     int size = Integer.parseInt(options.freeConfig("share-clauses", "8"));
-    if (presolve != null || size <= 0) {
+    if (options.presolve() != Options.Presolve.OFF || symmetryBreaking || size <= 0) {
       return;
     }
     int lbd = Integer.parseInt(options.freeConfig("share-lbd", "2"));
