@@ -56,6 +56,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * HybridTable is a table constraint whose tuples may contain restrictions instead of values: the
@@ -96,7 +98,8 @@ public class HybridTable extends Constraint
         SatisfiedPresent,
         Simplifiable,
         Copyable<HybridTable>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -2025,6 +2028,84 @@ public class HybridTable extends Constraint
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return explanation().explainFailure(trail, out);
+  }
+
+  /**
+   * Writes the table with a literal per tuple: a tuple implies each of its restrictions on the
+   * values of the root domains, each value needs a tuple that accepts it, and some tuple holds.
+   * Unit propagation on them gives domain consistency. Restrictions between columns are not
+   * written.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != HybridTable.class) {
+      return false;
+    }
+    for (int k = 0; k < cells.length; k++) {
+      if (cells[k].isBinary()) {
+        return false;
+      }
+    }
+    String[] tuple = new String[tupleCount];
+    List<IntDomain> domains = new ArrayList<>();
+    for (int i = 0; i < arity; i++) {
+      domains.add(model.domain(x[i]));
+    }
+    Map<Long, List<String>> support = new HashMap<>();
+    for (int t = 0; t < tupleCount; t++) {
+      String lit = model.auxiliary();
+      tuple[t] = lit;
+      for (int i = 0; i < arity; i++) {
+        Restriction r = cells[t * arity + i];
+        if (r.kind == Restriction.Kind.ANY) {
+          for (ValueEnumeration e = domains.get(i).valueEnumeration(); e.hasMoreElements(); ) {
+            support.computeIfAbsent(key(i, e.nextElement()), k -> new ArrayList<>()).add(lit);
+          }
+          continue;
+        }
+        // the accepted values: lit implies the bounds of them and excludes the others between
+        List<Integer> accepted = new ArrayList<>();
+        List<Integer> rejected = new ArrayList<>();
+        for (ValueEnumeration e = domains.get(i).valueEnumeration(); e.hasMoreElements(); ) {
+          int v = e.nextElement();
+          (r.accepts(v) ? accepted : rejected).add(v);
+        }
+        if (accepted.isEmpty()) {
+          model.clause(PbModel.not(lit));
+          continue;
+        }
+        int lo = accepted.get(0);
+        int hi = accepted.get(accepted.size() - 1);
+        model.clause(PbModel.not(lit), model.atLeast(x[i], lo));
+        model.clause(PbModel.not(lit), PbModel.not(model.atLeast(x[i], hi + 1)));
+        for (int v : rejected) {
+          if (v > lo && v < hi) {
+            model.clause(PbModel.not(lit), PbModel.not(model.equal(x[i], v)));
+          }
+        }
+        for (int v : accepted) {
+          support.computeIfAbsent(key(i, v), k -> new ArrayList<>()).add(lit);
+        }
+      }
+    }
+    model.clause(tuple);
+    for (int i = 0; i < arity; i++) {
+      for (ValueEnumeration e = domains.get(i).valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        List<String> s = support.getOrDefault(key(i, v), List.of());
+        String[] c = new String[s.size() + 1];
+        c[0] = PbModel.not(model.equal(x[i], v));
+        for (int k = 0; k < s.size(); k++) {
+          c[k + 1] = s.get(k);
+        }
+        model.clause(c);
+      }
+    }
+    return true;
+  }
+
+  private static long key(int column, int value) {
+    return ((long) column << 32) | (value & 0xFFFFFFFFL);
   }
 
   private TableExplanation explanation() {

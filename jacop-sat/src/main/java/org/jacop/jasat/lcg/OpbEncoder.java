@@ -394,6 +394,11 @@ final class OpbEncoder implements PbModel {
   }
 
   @Override
+  public String auxiliary() {
+    return "aux" + ++numAuxiliaries;
+  }
+
+  @Override
   public IntDomain domain(IntVar x) {
     return root[id.applyAsInt(x)];
   }

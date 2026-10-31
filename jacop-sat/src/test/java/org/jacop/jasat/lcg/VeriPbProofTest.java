@@ -52,6 +52,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -268,6 +269,32 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS 1 1");
+  }
+
+  // a chain x0, x1, x2, x3 of allowed pairs whose sum is largest
+  @Test
+  void tableOptimumIsProved() {
+    Store store = new Store();
+    int[][] pairs = {{1, 3}, {3, 2}, {2, 4}, {4, 1}, {3, 3}, {2, 2}};
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 4);
+    }
+    for (int i = 0; i + 1 < x.length; i++) {
+      store.impose(new HybridTable(new IntVar[] {x[i], x[i + 1]}, pairs));
+    }
+    store.impose(new XneqY(x[0], x[3]));
+    IntVar obj = new IntVar(store, "obj", -16, 0);
+    store.impose(
+        new LinearInt(
+            new IntVar[] {x[0], x[1], x[2], x[3], obj}, new int[] {1, 1, 1, 1, 1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    // 3 3 2 4 sums to 12; 3 3 3 3 (12 too) has x0 = x3
+    assertThat(lcg.value(obj)).isEqualTo(-12);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -12 -12");
   }
 
   @Test

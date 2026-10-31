@@ -100,6 +100,13 @@ public interface PbModel {
   String atLeast(IntVar x, int v);
 
   /**
+   * Returns a new literal of the model alone, which no variable of the store stands for.
+   *
+   * @return its name
+   */
+  String auxiliary();
+
+  /**
    * Adds a clause over literals of {@link #equal} and {@link #atLeast}, each one negated by {@link
    * #not}; a literal "1" makes the clause true and a literal "0" is left out.
    *
