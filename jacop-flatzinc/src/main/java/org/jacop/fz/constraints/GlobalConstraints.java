@@ -110,6 +110,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
@@ -2650,6 +2651,20 @@ class GlobalConstraints implements ParserTreeConstants {
       c.doOptionalOverload(Boolean.parseBoolean(p));
     }
     support.pose(c);
+  }
+
+  void gen_jacop_cumulatives(SimpleNode node) {
+    IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] machine = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar[] bound = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+    boolean upper = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5)) != 0;
+    int first = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    IntVar[] opt =
+        node.jjtGetNumChildren() > 7 ? support.getVarArray((SimpleNode) node.jjtGetChild(7)) : null;
+
+    support.pose(new Cumulatives(str, dur, res, machine, bound, upper, first, opt));
   }
 
   void gen_jacop_disjunctive_optional(SimpleNode node) {
