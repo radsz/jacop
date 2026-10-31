@@ -277,6 +277,34 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
    * memberships known (the elements in, when the cardinality cannot be larger, or the elements out,
    * when it cannot be smaller), and the cardinality's bounds given by the memberships.
    */
+  // the greatest lower bound when the mirror was made
+  IntDomain rootGlb() {
+    return glb;
+  }
+
+  // the number of elements in the greatest lower bound when the mirror was made
+  int rootGlbSize() {
+    return glb.getSize();
+  }
+
+  /**
+   * Tells whether a variable is one of this mirror's: a membership or the cardinality.
+   *
+   * @param x the variable
+   * @return true when it is
+   */
+  boolean covers(IntVar x) {
+    if (x == cardinality) {
+      return true;
+    }
+    for (IntVar b : members) {
+      if (b == x) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     IntVar x = trail.variable(entry);
@@ -320,6 +348,95 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
         < trail.minBefore(cardinality, now)) {
       trail.addLowerBound(cardinality, now, out);
       return addMembers(trail, now, false, null, out);
+    }
+    return false;
+  }
+
+  /**
+   * Adds to {@code out} the reason of an atom of a constraint that makes x equal to the set's
+   * cardinality (CardAeqX): a bound of x or of the cardinality from the other's bound or from the
+   * elements in (or out), and a membership forced by a bound of x.
+   *
+   * @param trail the trail
+   * @param entry the entry of the atom
+   * @param x the variable equal to the cardinality
+   * @param out where the reason entries are added
+   * @return false when the atom does not follow this way
+   */
+  boolean explainCardinalityEqual(AtomicTrail trail, int entry, IntVar x, EntryList out) {
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    if (y == x || y == cardinality) {
+      IntVar other = y == x ? cardinality : x;
+      if (kind == AtomicTrail.GE) {
+        if (trail.minBefore(other, entry) >= v) {
+          trail.addBoundReaching(other, entry, true, v, out);
+          return true;
+        }
+        return countBefore(trail, entry, true, null) >= v
+            && addMembers(trail, entry, true, null, out);
+      }
+      if (kind == AtomicTrail.LE) {
+        if (trail.maxBefore(other, entry) <= v) {
+          trail.addBoundReaching(other, entry, false, v, out);
+          return true;
+        }
+        return elements.length + glb.getSize() - countBefore(trail, entry, false, null) <= v
+            && addMembers(trail, entry, false, null, out);
+      }
+      return false;
+    }
+    if (!covers(y)) {
+      return false;
+    }
+    boolean in = kind == AtomicTrail.GE || (kind == AtomicTrail.NE && v == 0);
+    if (in) {
+      int possible = elements.length + glb.getSize() - countBefore(trail, entry, false, y);
+      if (possible > trail.minBefore(x, entry)) {
+        return false;
+      }
+      trail.addLowerBound(x, entry, out);
+      return addMembers(trail, entry, false, y, out);
+    }
+    if (countBefore(trail, entry, true, y) < trail.maxBefore(x, entry)) {
+      return false;
+    }
+    trail.addUpperBound(x, entry, out);
+    return addMembers(trail, entry, true, y, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of a constraint that makes x equal to the set's
+   * cardinality: more elements in than x's maximum, or fewer possible than its minimum.
+   *
+   * @param trail the trail
+   * @param x the variable equal to the cardinality
+   * @param out where the reason entries are added
+   * @return false when the failure is not of this kind
+   */
+  boolean explainCardinalityEqualFailure(AtomicTrail trail, IntVar x, EntryList out) {
+    int now = trail.size();
+    for (IntVar c : new IntVar[] {x, cardinality}) {
+      if (countBefore(trail, now, true, null) > trail.maxBefore(c, now)) {
+        trail.addUpperBound(c, now, out);
+        return addMembers(trail, now, true, null, out);
+      }
+      if (elements.length + glb.getSize() - countBefore(trail, now, false, null)
+          < trail.minBefore(c, now)) {
+        trail.addLowerBound(c, now, out);
+        return addMembers(trail, now, false, null, out);
+      }
+    }
+    if (trail.minBefore(x, now) > trail.maxBefore(cardinality, now)) {
+      trail.addLowerBound(x, now, out);
+      trail.addUpperBound(cardinality, now, out);
+      return true;
+    }
+    if (trail.maxBefore(x, now) < trail.minBefore(cardinality, now)) {
+      trail.addUpperBound(x, now, out);
+      trail.addLowerBound(cardinality, now, out);
+      return true;
     }
     return false;
   }

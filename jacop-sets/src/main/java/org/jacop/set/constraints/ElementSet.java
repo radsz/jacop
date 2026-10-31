@@ -42,6 +42,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -55,7 +58,8 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek, Krzysztof Kuchcinski and Robert Åkemalm
  * @version 5.0
  */
-public class ElementSet extends Constraint implements SatisfiedPresent, Copyable<ElementSet> {
+public class ElementSet extends Constraint
+    implements SatisfiedPresent, Copyable<ElementSet>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -172,6 +176,163 @@ public class ElementSet extends Constraint implements SatisfiedPresent, Copyable
   @Override
   public int getDefaultConsistencyPruningEvent() {
     throw new IllegalStateException("Not implemented as more precise variants exist.");
+  }
+
+  /*
+   * LCG explanations: an index is excluded when its set has an element out of value, misses an
+   * element in value, or has a size outside value's cardinality; a membership or a cardinality bound
+   * of value holds for every set of an index left; the failure is that no index is left.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    SetMirror m = value.lcgMirror();
+    if (getClass() != ElementSet.class || m == null) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    int mark = out.size();
+    boolean done;
+    if (y == index) {
+      done =
+          switch (kind) {
+            case AtomicTrail.NE -> incompatible(trail, m, v, entry, out);
+            case AtomicTrail.GE ->
+                indexesImpossible(trail, m, Integer.MIN_VALUE, v - 1, entry, out);
+            default -> indexesImpossible(trail, m, v + 1, Integer.MAX_VALUE, entry, out);
+          };
+    } else {
+      done = m.explain(trail, entry, out);
+      if (!done) {
+        out.truncate(mark);
+        done = everyIndex(trail, m, entry, out);
+      }
+    }
+    if (!done) {
+      out.truncate(mark);
+    }
+    return done;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    SetMirror m = value.lcgMirror();
+    if (getClass() != ElementSet.class || m == null) {
+      return false;
+    }
+    int mark = out.size();
+    if (indexesImpossible(trail, m, Integer.MIN_VALUE, Integer.MAX_VALUE, trail.size(), out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  // whether every index value in [lo, hi] was removed before the position or names an incompatible
+  // set; the bounds of the index cited narrow the range
+  private boolean indexesImpossible(
+      AtomicTrail trail, SetMirror m, int lo, int hi, int position, EntryList out) {
+    int from = Math.max(lo, 1 + indexOffset);
+    int to = Math.min(hi, list.length + indexOffset);
+    if (from < trail.minBefore(index, position)) {
+      trail.addLowerBound(index, position, out);
+      from = trail.minBefore(index, position);
+    }
+    if (to > trail.maxBefore(index, position)) {
+      trail.addUpperBound(index, position, out);
+      to = trail.maxBefore(index, position);
+    }
+    for (int v = from; v <= to; v++) {
+      if (!trail.excludedBefore(index, v, position, out)
+          && !incompatible(trail, m, v, position, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether the set of index value v cannot be value just before the position
+  private boolean incompatible(AtomicTrail trail, SetMirror m, int v, int position, EntryList out) {
+    int i = v - 1 - indexOffset;
+    if (i < 0 || i >= list.length) {
+      return true;
+    }
+    IntDomain set = list[i];
+    for (ValueEnumeration e = set.valueEnumeration(); e.hasMoreElements(); ) {
+      if (SetExplanation.membership(trail, value, e.nextElement(), position, false, out)) {
+        return true;
+      }
+    }
+    for (ValueEnumeration e = m.rootGlb().valueEnumeration(); e.hasMoreElements(); ) {
+      if (!set.contains(e.nextElement())) {
+        return true;
+      }
+    }
+    for (int e : m.elements()) {
+      if (!set.contains(e) && SetExplanation.membership(trail, value, e, position, true, out)) {
+        return true;
+      }
+    }
+    IntVar[] vars = m.mirrorVariables();
+    IntVar card = vars[vars.length - 1];
+    int size = set.getSize();
+    if (size < trail.minBefore(card, position)) {
+      trail.addBoundReaching(card, position, true, size + 1L, out);
+      return true;
+    }
+    if (size > trail.maxBefore(card, position)) {
+      trail.addBoundReaching(card, position, false, size - 1L, out);
+      return true;
+    }
+    return false;
+  }
+
+  // whether an atom of value holds for the set of every index left: the indexes whose set breaks it
+  // are cited as excluded
+  private boolean everyIndex(AtomicTrail trail, SetMirror m, int entry, EntryList out) {
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    IntVar[] vars = m.mirrorVariables();
+    boolean isCard = y == vars[vars.length - 1];
+    int element = 0;
+    if (!isCard) {
+      boolean found = false;
+      for (int e : m.elements()) {
+        if (m.member(e) == y) {
+          element = e;
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    boolean in = kind == AtomicTrail.GE || (kind == AtomicTrail.NE && v == 0);
+    int from = Math.max(1 + indexOffset, trail.minBefore(index, entry));
+    int to = Math.min(list.length + indexOffset, trail.maxBefore(index, entry));
+    trail.addLowerBound(index, entry, out);
+    trail.addUpperBound(index, entry, out);
+    for (int w = from; w <= to; w++) {
+      IntDomain set = list[w - 1 - indexOffset];
+      boolean holds;
+      if (isCard) {
+        holds =
+            switch (kind) {
+              case AtomicTrail.GE -> set.getSize() >= v;
+              case AtomicTrail.LE -> set.getSize() <= v;
+              default -> set.getSize() != v;
+            };
+      } else {
+        holds = set.contains(element) == in;
+      }
+      if (!holds && !trail.excludedBefore(index, w, entry, out)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
