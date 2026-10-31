@@ -740,6 +740,59 @@ public class LinearRelaxation extends Constraint
     return x.length;
   }
 
+  // the values of the columns in the last optimal solution of the simplex, and its store level
+  private double[] solution = new double[0];
+  private int solutionLevel = -1;
+
+  /**
+   * Returns the number of columns of the last optimal solution of the simplex: the columns of the
+   * simplex then, which can be fewer than {@link #columns()} when it has no extra rows.
+   *
+   * @return the columns of the last solution, 0 before the first one
+   */
+  public int solutionColumns() {
+    return solution.length;
+  }
+
+  /**
+   * Returns the value of a column in the last optimal solution of the simplex, which may be from
+   * another branch of the search than the current one.
+   *
+   * @param j the column, below {@link #solutionColumns()}
+   * @return its value
+   */
+  public double solutionValue(int j) {
+    return solution[j];
+  }
+
+  /**
+   * Returns the store level of the last optimal solution of the simplex.
+   *
+   * @return the level, -1 before the first solution
+   */
+  public int solutionLevel() {
+    return solutionLevel;
+  }
+
+  /**
+   * Returns the variable of a column.
+   *
+   * @param j the column
+   * @return its variable
+   */
+  public IntVar column(int j) {
+    return x[j];
+  }
+
+  /**
+   * Returns the variable minimized, or null for satisfaction.
+   *
+   * @return the objective
+   */
+  public IntVar objective() {
+    return objective;
+  }
+
   /**
    * Returns the simplex that solves the relaxation.
    *
@@ -921,6 +974,16 @@ public class LinearRelaxation extends Constraint
       return;
     }
     stalled = 0;
+    if (status == DualSimplex.OPTIMAL) {
+      int n = lp.columns();
+      if (solution.length != n) {
+        solution = new double[n];
+      }
+      for (int j = 0; j < n; j++) {
+        solution[j] = lp.value(j);
+      }
+      solutionLevel = store.level;
+    }
     double[] y;
     if (status == DualSimplex.INFEASIBLE) {
       infeasible++;

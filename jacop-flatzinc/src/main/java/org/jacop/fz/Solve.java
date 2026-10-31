@@ -104,6 +104,7 @@ import org.jacop.search.IndomainMin;
 import org.jacop.search.InitializeListener;
 import org.jacop.search.LastConflictSelect;
 import org.jacop.search.Lds;
+import org.jacop.search.LpGuidedSelect;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
@@ -1873,6 +1874,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
+    }
+    if (free
+        && linearRelaxation != null
+        && annotated != null
+        && "on".equals(options.freeConfig("lcg-lp-branching", "off"))) {
+      // the runs of the annotation follow the solution of the linear relaxation
+      annotated = new LpGuidedSelect(linearRelaxation, annotated);
     }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
