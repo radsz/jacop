@@ -128,6 +128,7 @@ import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.binpacking.VectorBinpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.diffn.Diffn;
@@ -309,6 +310,9 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::energyPrecedence),
         Arguments.of("Reservoir", reservoir(false)),
         Arguments.of("ReservoirPrecedences", reservoir(true)),
+        Arguments.of("CumulativesUpper", cumulatives(true, false)),
+        Arguments.of("CumulativesLower", cumulatives(false, false)),
+        Arguments.of("CumulativesOptional", cumulatives(false, true)),
         Arguments.of("StockingCost", stockingCost(false)),
         Arguments.of("StockingCostItemDependent", stockingCost(true)),
         Arguments.of(
@@ -2195,6 +2199,72 @@ class GlobalConstraintBruteForceTest {
             + Arrays.toString(to)
             + " lag="
             + Arrays.toString(lag));
+  }
+
+  // tasks with starts, durations, heights (possibly negative) and machines 1..2 whose bounds are
+  // upper or lower; with optional, presence variables follow
+  private static Function<Random, Instance> cumulatives(boolean upper, boolean optional) {
+    return random -> {
+      int n = 2 + random.nextInt(2);
+      int machineCount = 1 + random.nextInt(2);
+      int[][] domains =
+          append(
+              domains(random, n, 0, 2),
+              append(
+                  domains(random, n, 0, 2),
+                  append(
+                      domains(random, n, -1, 2),
+                      append(
+                          domains(random, n, 1, machineCount),
+                          domains(random, machineCount, -1, 3)))));
+      // fixed durations and heights for half of the tasks keep the brute force small
+      for (int i = n; i < 3 * n; i++) {
+        if (random.nextBoolean()) {
+          domains[i] = new int[] {domains[i][random.nextInt(domains[i].length)]};
+        }
+      }
+      if (optional) {
+        domains = append(domains, domains(random, n, 0, 1));
+      }
+      int b = 4 * n;
+      int[][] all = domains;
+      return new Instance(
+          all,
+          (store, v) ->
+              store.impose(
+                  new Cumulatives(
+                      Arrays.copyOfRange(v, 0, n),
+                      Arrays.copyOfRange(v, n, 2 * n),
+                      Arrays.copyOfRange(v, 2 * n, 3 * n),
+                      Arrays.copyOfRange(v, 3 * n, b),
+                      Arrays.copyOfRange(v, b, b + machineCount),
+                      upper,
+                      1,
+                      optional
+                          ? Arrays.copyOfRange(v, b + machineCount, b + machineCount + n)
+                          : null)),
+          v -> {
+            for (int k = 1; k <= machineCount; k++) {
+              for (int t = 0; t <= 4; t++) {
+                long sum = 0;
+                boolean running = false;
+                for (int i = 0; i < n; i++) {
+                  boolean on = !optional || v[b + machineCount + i] == 1;
+                  if (on && v[3 * n + i] == k && v[i] <= t && t < v[i] + v[n + i]) {
+                    sum += v[2 * n + i];
+                    running = true;
+                  }
+                }
+                int bound = v[b + k - 1];
+                if (running && (upper ? sum > bound : sum < bound)) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          },
+          "upper=" + upper + " optional=" + optional);
+    };
   }
 
   // events at times t[0..n-1] change a level that starts at initial and stays within [min, max];

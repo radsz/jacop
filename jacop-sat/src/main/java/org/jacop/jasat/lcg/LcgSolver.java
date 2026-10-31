@@ -48,6 +48,7 @@ import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
+import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.BooleanVar;
@@ -2333,8 +2334,63 @@ public final class LcgSolver implements ExternalPropagator {
     return m;
   }
 
+  // re-presolve at restarts, see setRestartPresolve
+  private double restartPresolve;
+  private int restartPresolveVariables = -1;
+  private int rootAtPresolve;
+
+  /** The restarts at which the root was presolved again. */
+  public long represolves;
+
+  /** The constraints that presolving at restarts found satisfied at the root and left out. */
+  public long represolveEntailed;
+
+  /**
+   * Presolves the root again at a restart once the root literals learnt since the last time number
+   * at least a share of the integer variables, as SCIP restarts its root when presolving/restartfac
+   * (2.5%) of the variables got fixed. The re-presolve leaves out the constraints the root domains
+   * satisfy: they can no longer prune in any branch, but they were still woken and propagated. Off
+   * (0) by default.
+   *
+   * @param factor the share of the integer variables, 0 for no re-presolve.
+   */
+  public void setRestartPresolve(double factor) {
+    this.restartPresolve = factor;
+  }
+
+  private void presolveAtRestart() {
+    if (restartPresolveVariables < 0) {
+      restartPresolveVariables = 0;
+      for (int i = 0; i < store.size(); i++) {
+        if (store.vars[i] instanceof IntVar) {
+          restartPresolveVariables++;
+        }
+      }
+    }
+    int root = sat.rootAssignments();
+    if (root - rootAtPresolve < restartPresolve * Math.max(1, restartPresolveVariables)) {
+      return;
+    }
+    rootAtPresolve = root;
+    represolves++;
+    Set<Constraint> constraints = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < store.size(); i++) {
+      constraints.addAll(store.vars[i].dom().constraints());
+    }
+    for (Constraint c : constraints) {
+      // at the root level of the search, which it does not backtrack below
+      if (!c.isEntailed() && c instanceof SatisfiedPresent p && p.satisfied()) {
+        store.markEntailed(c);
+        represolveEntailed++;
+      }
+    }
+  }
+
   @Override
   public void notifyRestart() {
+    if (restartPresolve > 0 && store.level == baseLevel) {
+      presolveAtRestart();
+    }
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {

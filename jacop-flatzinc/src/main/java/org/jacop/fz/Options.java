@@ -42,6 +42,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Probing;
+import org.jacop.presolve.Rule;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -98,6 +99,13 @@ public class Options {
   boolean symmetry = true;
   boolean presolveDual = true;
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
+  Rule.Timing presolveLevel =
+      Objects.requireNonNullElse(
+          presolveLevel(System.getProperty("jacop.presolve.level", "exhaustive")),
+          Rule.Timing.EXHAUSTIVE);
+  double presolveAbort = Derivation.DEFAULT_ABORT_FACTOR;
+  long presolveTime = -1;
+  double presolveRestart;
   boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
@@ -200,7 +208,9 @@ public class Options {
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
-                violated constraints, default 1000)
+                violated constraints, default 1000), ls-moves=fj|walk (fj, the default:
+                feasibility jump, the best jump of a sample of variables, all violated constraints
+                weigh more at a minimum; walk: a step moves a variable of one violated constraint)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
@@ -240,6 +250,20 @@ public class Options {
                 run only when one solution or an optimum is searched for
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
+            --presolve-level <value> the costliest presolve rules to run: "fast" (linear
+                rules only), "medium" (also at-most-ones, duplicate and dominated constraints,
+                cumulative reductions) or "exhaustive" (default; also probing, tabling and implied
+                constraints). A costlier class runs only after a round of
+                the cheaper ones found little.
+            --presolve-abort <value> the share of the variables a round of presolve rules must
+                change to go back to the fast rules (default 0.001); below it the rounds move to
+                the next class, and after the costliest class they stop
+            --presolve-restart <value> under --lcg, presolve the root again at a restart once
+                the root facts learnt since the last time number this share of the integer
+                variables (SCIP's restartfac is 0.025): constraints the root satisfies are left
+                out. Default 0 (off); independent of --presolve
+            --presolve-time <ms> time the rounds of presolve rules may take (default a
+                twentieth of the time limit, unlimited without one)
             --presolve-tabling replace small groups of constraints by the tables of their
                 solutions when presolving (default false)
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
@@ -311,6 +335,10 @@ public class Options {
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
+      case "--presolve-level" -> i = handlePresolveLevel(args, i);
+      case "--presolve-abort" -> i = handlePresolveAbort(args, i);
+      case "--presolve-time" -> i = handlePresolveTime(args, i);
+      case "--presolve-restart" -> i = handlePresolveRestart(args, i);
       case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
@@ -490,6 +518,56 @@ public class Options {
       presolveRounds = rounds;
     } else {
       System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveLevel(String[] args, int i) {
+    Rule.Timing level = presolveLevel(args[++i]);
+    if (level != null) {
+      presolveLevel = level;
+    }
+    return i + 1;
+  }
+
+  private static Rule.Timing presolveLevel(String level) {
+    return switch (level) {
+      case "fast" -> Rule.Timing.FAST;
+      case "medium" -> Rule.Timing.MEDIUM;
+      case "exhaustive" -> Rule.Timing.EXHAUSTIVE;
+      default -> {
+        System.err.println("%% Presolve level " + level + " not known; ignored");
+        yield null;
+      }
+    };
+  }
+
+  private int handlePresolveAbort(String[] args, int i) {
+    double f = Double.parseDouble(args[++i]);
+    if (f >= 0) {
+      presolveAbort = f;
+    } else {
+      System.err.println("%% Presolve abort factor must be at least 0; " + f + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveTime(String[] args, int i) {
+    long t = Long.parseLong(args[++i]);
+    if (t >= 0) {
+      presolveTime = t;
+    } else {
+      System.err.println("%% Presolve time must be at least 0; " + t + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveRestart(String[] args, int i) {
+    double f = Double.parseDouble(args[++i]);
+    if (f >= 0) {
+      presolveRestart = f;
+    } else {
+      System.err.println("%% Presolve restart factor must be at least 0; " + f + " ignored");
     }
     return i + 1;
   }
@@ -944,6 +1022,45 @@ public class Options {
    */
   public int presolveRounds() {
     return presolveRounds;
+  }
+
+  /**
+   * It defines the costliest timing class of presolve rules to run (--presolve-level).
+   *
+   * @return the class, {@link Rule.Timing#EXHAUSTIVE} by default
+   */
+  public Rule.Timing presolveLevel() {
+    return presolveLevel;
+  }
+
+  /**
+   * It defines the share of the variables a round of presolve rules must change to go back to the
+   * fast rules (--presolve-abort).
+   *
+   * @return the share, {@link Derivation#DEFAULT_ABORT_FACTOR} by default
+   */
+  public double presolveAbort() {
+    return presolveAbort;
+  }
+
+  /**
+   * It defines when lazy clause generation presolves the root again at a restart
+   * (--presolve-restart).
+   *
+   * @return the share of the integer variables learnt as root facts since the last time, 0 (off) by
+   *     default
+   */
+  public double presolveRestart() {
+    return presolveRestart;
+  }
+
+  /**
+   * It defines the time the rounds of presolve rules may take (--presolve-time).
+   *
+   * @return the time in milliseconds, or -1 for the default (a twentieth of the time limit)
+   */
+  public long presolveTime() {
+    return presolveTime;
   }
 
   /**

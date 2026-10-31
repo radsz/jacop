@@ -146,7 +146,18 @@ final class RedundantConstraints {
 
   /** The rule: leaves out of the child the constraints that the others imply. */
   static final Rule RULE =
-      context -> find(context.constraints()).removed().forEach(context::remove);
+      new Rule() {
+        @Override
+        public void apply(Context context) {
+          find(context.constraints()).removed().forEach(context::remove);
+        }
+
+        @Override
+        public Timing timing() {
+          // pairs of constraints over the same variables
+          return Timing.MEDIUM;
+        }
+      };
 
   private final Map<Var, Integer> ordinals = new IdentityHashMap<>();
 

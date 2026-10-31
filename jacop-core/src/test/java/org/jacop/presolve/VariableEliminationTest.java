@@ -210,6 +210,23 @@ class VariableEliminationTest {
   }
 
   @Test
+  void withoutDoubletonsADefinedVariableIsKeptForItsOtherConstraint() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar w = new IntVar(store, "w", 0, 8);
+    IntVar z = new IntVar(store, "z", -100, 100);
+    store.impose(new XplusYeqZ(x, y, z));
+    store.impose(new LinearInt(new IntVar[] {z, w}, new int[] {1, -1}, "<=", 2));
+
+    Derivation d = Presolver.of(store).keep(x, y, w).doubletons(false).presolve();
+
+    assertThat(d.entry(z)).isInstanceOf(Entry.Kept.class);
+    assertThat(d.substitutions()).isZero();
+    assertThat(d.statistics().childConstraints()).isEqualTo(2);
+  }
+
+  @Test
   void aReificationWhoseBooleanIsUsedNowhereElseIsEliminated() {
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 0, 3);
