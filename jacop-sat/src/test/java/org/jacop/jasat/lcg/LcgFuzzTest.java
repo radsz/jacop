@@ -709,8 +709,7 @@ class LcgFuzzTest {
           posted.add("link " + xs[0].id() + " = " + p[0].id());
           store.impose(new XeqY(xs[0], p[0]));
           if (ds == xs && rnd.nextBoolean()) {
-            // the same relation, inverse(x, x), with a domain consistent propagator on more
-            // variables
+            // the same relation, inverse(x, x), on more variables, domain consistent or light
             IntVar[] ys = chain("y", 3 + rnd.nextInt(3), shift - 1, shift + 4);
             ys[0] = xs[0];
             yield new SymmetricAlldifferent(ys, shift, rnd.nextInt(3) > 0);
