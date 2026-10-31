@@ -1205,7 +1205,12 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x = c, reified with b or implied by b. */
   final class FzXeqC extends Constraint
-      implements Violation, Copyable<FzXeqC>, Explainable, ValueIndicator, PbEncodable, ConflictRows {
+      implements Violation,
+          Copyable<FzXeqC>,
+          Explainable,
+          ValueIndicator,
+          PbEncodable,
+          ConflictRows {
 
     final IntVar x;
     final int c;
