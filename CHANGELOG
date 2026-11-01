@@ -1680,6 +1680,12 @@ Version 5.0 (unreleased)
      before), Benzenoide-06, MaximumDensityOscillatingLife-6-4 and
      RollerSplat-05c-70 get solutions; no instance lost an answer.
 
+112. Bug fix in InterDistance: an interval sweep with exactly 16 distinct
+     coordinates read past the end of its segment array, whose initial
+     length was that of the coordinates instead of one more
+     (ArrayIndexOutOfBoundsException; found on XCSP3 Hsp-table-14409, where
+     fzn-jacop posts a cumulative of tasks of length 22 as InterDistance).
+
 Version 4.11
 =============
 
