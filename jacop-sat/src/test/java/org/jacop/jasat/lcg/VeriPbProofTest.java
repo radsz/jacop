@@ -62,6 +62,7 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
@@ -679,6 +680,39 @@ class VeriPbProofTest {
             w[i] = random.nextInt(9) - 4;
           }
           w[2 * n + 1] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // x <=lex y or x <lex y over vectors with holes, twice, against an objective that pulls them
+  // apart
+  @Test
+  void lexOrderIsProved() {
+    optimaAreProved(
+        12,
+        (store, random) -> {
+          int n = 3 + random.nextInt(2);
+          IntVar[][] v = new IntVar[3][n];
+          for (int k = 0; k < 3; k++) {
+            for (int i = 0; i < n; i++) {
+              v[k][i] = new IntVar(store, "v" + k + "_" + i, 0, 4);
+              v[k][i].domain.inComplement(0, v[k][i], random.nextInt(5));
+            }
+          }
+          store.impose(new LexOrder(v[0], v[1], random.nextBoolean()));
+          store.impose(new LexOrder(v[1], v[2], random.nextBoolean()));
+          IntVar[] terms = new IntVar[3 * n + 1];
+          int[] w = new int[terms.length];
+          for (int k = 0; k < 3; k++) {
+            for (int i = 0; i < n; i++) {
+              terms[k * n + i] = v[k][i];
+              w[k * n + i] = (k == 1 ? -1 : 1) * (1 + random.nextInt(3)) * (n - i);
+            }
+          }
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          terms[3 * n] = obj;
+          w[3 * n] = -1;
           store.impose(new LinearInt(terms, w, "==", 0));
           return obj;
         });
