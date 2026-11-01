@@ -508,6 +508,9 @@ public final class LcgSolver implements ExternalPropagator {
   // the constraint whose propagation failed at the root, and whether the proof derived the failure
   private Constraint failedAtRoot;
   private boolean rootRefuted;
+  // a clause added before the search is false at the root: unit propagation over the model and the
+  // root units refutes it
+  private boolean clauseFailedAtRoot;
   // the trail and the domains the proof steps read: the solver's trail and its root domains, and
   // while the root propagation is logged, the root trail and the domains it has reached
   private AtomicTrail proofTrail;
@@ -523,7 +526,10 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private static final long PROOF_TERMS = Long.getLong("jacop.lcg.proofTerms", 20_000_000L);
 
-  /** Whether the proof names the constraint behind each explanation in a comment, for debugging. */
+  /**
+   * Whether the proof names the constraint behind each explanation in a comment and writes each
+   * conflict clause as a step, for debugging.
+   */
   private static final boolean PROOF_TRACE = Boolean.getBoolean("jacop.lcg.proofTrace");
 
   /**
@@ -699,7 +705,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (rootFailed) {
       // the store failed at the root, which the proof does not derive
-      proof.comment("the store failed at the root");
+      proof.comment(
+          "the store failed at the root"
+              + (failedAtRoot == null ? "" : ", in " + failedAtRoot.id())
+              + (clauseFailedAtRoot ? ", in a clause" : ""));
     }
   }
 
@@ -1246,7 +1255,7 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     startProof();
-    if (rootRefuted) {
+    if (rootRefuted || clauseFailedAtRoot) {
       // unit propagation over the derived units and the failed constraint gives the contradiction
       if (optimising) {
         proof.concludeBounds("INF", "INF");
@@ -2345,12 +2354,9 @@ public final class LcgSolver implements ExternalPropagator {
         clause.add(sign * geLit(i, 1));
       }
     }
-    if (clause.isEmpty()) {
+    if (clause.isEmpty() || !sat.addClause(clause.stream().mapToInt(Integer::intValue).toArray())) {
       rootFailed = true;
-      return;
-    }
-    if (!sat.addClause(clause.stream().mapToInt(Integer::intValue).toArray())) {
-      rootFailed = true;
+      clauseFailedAtRoot = true;
     }
   }
 
@@ -3238,6 +3244,15 @@ public final class LcgSolver implements ExternalPropagator {
       }
       structural.add(new int[0]);
       clause = new int[] {-any};
+    }
+    if (PROOF_TRACE && proof != null) {
+      // the conflict clause as a step of its own, so that a checker names it when it is not rup
+      int[] internal = new int[clause.length];
+      for (int k = 0; k < clause.length; k++) {
+        internal[k] = clause[k] > 0 ? 2 * (clause[k] - 1) : 2 * (-clause[k] - 1) + 1;
+      }
+      proof.comment("conflict clause");
+      proof.add(internal, 0, internal.length);
     }
     pushedReason = clause;
     return clause[0];

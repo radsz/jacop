@@ -33,11 +33,14 @@ package org.jacop.constraints;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
@@ -171,6 +174,116 @@ class LinearizationsTest {
       }
     }
     assertThat(rows).isGreaterThan(5000);
+  }
+
+  @Test
+  void tableCliquesHoldForEverySolutionAndKeepThemAll() {
+    Random rnd = new Random(11);
+    int rows = 0;
+    for (int run = 0; run < 400; run++) {
+      Store store = new Store();
+      int n = 3 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1 + rnd.nextInt(3));
+        if (rnd.nextInt(3) == 0 && x[i].max() > 1) {
+          x[i].domain.inComplement(0, x[i], 1);
+        }
+      }
+      // some values already have the model's Boolean
+      for (int i = 0; i < n; i++) {
+        if (rnd.nextBoolean()) {
+          store.impose(new Reified(new XeqC(x[i], 0), new IntVar(store, "r" + i, 0, 1)));
+        }
+      }
+      List<TableCliques.Table> tables = new ArrayList<>();
+      for (int t = 0; t < n + 1; t++) {
+        int i = rnd.nextInt(n);
+        int j = rnd.nextInt(n);
+        if (i == j) {
+          continue;
+        }
+        List<int[]> allowed = new ArrayList<>();
+        for (int a = x[i].min(); a <= x[i].max(); a++) {
+          for (int b = x[j].min(); b <= x[j].max(); b++) {
+            if (rnd.nextInt(3) > 0) {
+              allowed.add(new int[] {a, b});
+            }
+          }
+        }
+        if (allowed.isEmpty()) {
+          continue;
+        }
+        int[][] tuples = allowed.toArray(new int[0][]);
+        store.impose(new HybridTable(new IntVar[] {x[i], x[j]}, tuples));
+        tables.add(new TableCliques.Table(new IntVar[] {x[i], x[j]}, tuples));
+      }
+      long before = count(x, tables, new int[n], 0);
+      TableCliques.Result r = TableCliques.rows(store, tables);
+      List<IntVar> scope = new ArrayList<>(List.of(x));
+      for (LinearForm f : r.rows()) {
+        for (IntVar v : f.vars()) {
+          if (!scope.contains(v)) {
+            scope.add(v);
+          }
+        }
+      }
+      IntVar[] all = scope.toArray(new IntVar[0]);
+      List<long[]> after = solutions(store, all);
+      assertThat(after).hasSize((int) before);
+      for (long[] a : after) {
+        for (LinearForm f : r.rows()) {
+          assertThat(holds(f, all, a)).as("%s", f).isTrue();
+        }
+      }
+      rows += r.rows().size();
+    }
+    assertThat(rows).isGreaterThan(300);
+  }
+
+  @Test
+  void tableCliquesMergeConflictsIntoOneRowAndReuseTheModelsBooleans() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 1);
+    IntVar notX = new IntVar(store, "notX", 0, 1);
+    store.impose(new Reified(new XeqC(x, 0), notX));
+    // at most one of x, y and z is 1: three tables that forbid (1, 1)
+    int[][] tuples = {{0, 0}, {0, 1}, {1, 0}};
+    List<TableCliques.Table> tables =
+        List.of(
+            new TableCliques.Table(new IntVar[] {x, y}, tuples),
+            new TableCliques.Table(new IntVar[] {y, z}, tuples),
+            new TableCliques.Table(new IntVar[] {x, z}, tuples));
+    TableCliques.Result r = TableCliques.rows(store, tables);
+    // x = 0 has the model's Boolean; x = 1, y = 0, y = 1, z = 0 and z = 1 get new ones
+    assertThat(r.booleans()).isEqualTo(5);
+    assertThat(r.rows()).hasSize(1);
+    assertThat(r.rows().get(0).vars()).hasSize(3);
+    assertThat(r.rows().get(0).vars()).doesNotContain(notX);
+    assertThat(Linearizations.valueBooleans(List.copyOf(x.dom().constraints())).get(x))
+        .containsEntry(0, notX);
+  }
+
+  // the assignments of x[k..] in the domains of x that every table allows, given a[0..k)
+  private static long count(IntVar[] x, List<TableCliques.Table> tables, int[] a, int k) {
+    if (k == x.length) {
+      for (TableCliques.Table t : tables) {
+        int i = Arrays.asList(x).indexOf(t.x()[0]);
+        int j = Arrays.asList(x).indexOf(t.x()[1]);
+        if (Arrays.stream(t.tuples()).noneMatch(u -> u[0] == a[i] && u[1] == a[j])) {
+          return 0;
+        }
+      }
+      return 1;
+    }
+    long c = 0;
+    for (ValueEnumeration e = x[k].domain.valueEnumeration(); e.hasMoreElements(); ) {
+      a[k] = e.nextElement();
+      c += count(x, tables, a, k + 1);
+    }
+    return c;
   }
 
   private static boolean holds(LinearForm f, IntVar[] scope, long[] value) {

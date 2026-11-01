@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +53,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.ElementVariableExplanation;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * ElementVariableFast constraint defines a relation list[index - indexOffset] = value. This version
@@ -72,9 +75,13 @@ public class ElementVariableFast extends AbstractElement
         Simplifiable,
         SatisfiedPresent,
         Copyable<ElementVariableFast>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** The most values of the list variables and the value an encoding enumerates. */
+  private static final int ENCODED_VALUES = 1 << 18;
 
   /** It specifies variable value within an element constraint list[index - indexOffset] = value. */
   private final IntVar value;
@@ -261,6 +268,59 @@ public class ElementVariableFast extends AbstractElement
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == ElementVariableFast.class
         && ElementVariableExplanation.explainFailure(trail, index, list, value, indexOffset, out);
+  }
+
+  /**
+   * Writes list[index - indexOffset] = value as clauses: the index is one of the positions, and a
+   * position makes its variable and the value agree on every order literal and value literal of
+   * either. Unit propagation on them prunes the index, the bounds and the holes of the value, and,
+   * once the index is fixed, the domains of both, as consistency does.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ElementVariableFast.class
+        || index == value
+        || Arrays.asList(list).contains(index)) {
+      return false;
+    }
+    IntDomain valueDomain = model.domain(value);
+    IntDomain indexDomain = model.domain(index);
+    long size = 0;
+    for (ValueEnumeration e = indexDomain.valueEnumeration(); e.hasMoreElements(); ) {
+      int p = e.nextElement() - 1 - indexOffset;
+      if (p >= 0 && p < list.length) {
+        size += model.domain(list[p]).getSize() + valueDomain.getSize();
+      }
+    }
+    if (size > ENCODED_VALUES) {
+      return false;
+    }
+    List<String> positions = new ArrayList<>();
+    for (ValueEnumeration e = indexDomain.valueEnumeration(); e.hasMoreElements(); ) {
+      int i = e.nextElement();
+      int p = i - 1 - indexOffset;
+      String at = model.equalTo(index, i);
+      if (p < 0 || p >= list.length) {
+        model.clause(PbModel.not(at));
+        continue;
+      }
+      positions.add(at);
+      IntVar x = list[p];
+      if (x == value) {
+        continue;
+      }
+      String elsewhere = PbModel.not(at);
+      IntDomain values = model.domain(x).union(valueDomain);
+      for (ValueEnumeration v = values.valueEnumeration(); v.hasMoreElements(); ) {
+        int u = v.nextElement();
+        model.clause(elsewhere, PbModel.not(model.atLeast(x, u)), model.atLeast(value, u));
+        model.clause(elsewhere, PbModel.not(model.atLeast(value, u)), model.atLeast(x, u));
+        model.clause(elsewhere, PbModel.not(model.equalTo(x, u)), model.equalTo(value, u));
+        model.clause(elsewhere, PbModel.not(model.equalTo(value, u)), model.equalTo(x, u));
+      }
+    }
+    model.clause(positions.toArray(new String[0]));
+    return true;
   }
 
   @Override

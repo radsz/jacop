@@ -98,16 +98,15 @@ public class LinearRelaxation extends Constraint
     LAZY
   }
 
-  // whether the multipliers are cleaned before they are combined (certificate(), scaled()); off,
-  // the scales are those before the cleaning
+  // whether certificate() cleans the combination: drops the multipliers of a missing side and
+  // divides each inequality by the gcd of its weights
   private static final boolean CLEAN = !"false".equals(System.getProperty("org.jacop.lp.clean"));
 
-  // the scales tried for the multipliers, the largest first: rounding at 2^24 loses a few units of
-  // bound when the objective has coefficients in the thousands (rel2onto, train), 2^32 keeps them
-  private static final long[] SCALES =
-      CLEAN
-          ? new long[] {1L << 32, 1L << 24, 1L << 16, 1L << 8, 1}
-          : new long[] {1L << 24, 1L << 16, 1L << 8, 1};
+  // multipliers below this share of the largest are taken as round-off of the simplex
+  private static final double NOISE = 1e-11;
+
+  // the scales tried for the multipliers, the largest first
+  private static final long[] SCALES = {1L << 40, 1L << 32, 1L << 24, 1L << 16, 1L << 8, 1};
 
   // the scale of the rows of the basis inverse the Gomory cuts come from
   private static final long GOMORY_SCALE = 1L << 20;
@@ -837,6 +836,68 @@ public class LinearRelaxation extends Constraint
     return x.length;
   }
 
+  // the values of the columns in the last optimal solution of the simplex, and its store level
+  private double[] solution = new double[0];
+  private int solutionLevel = -1;
+  private boolean keepSolutions;
+
+  /**
+   * Makes the relaxation keep the solution of each optimal solve, for {@link #solutionValue}. Off
+   * by default, since copying the solution costs time on every solve.
+   */
+  public void keepSolutions() {
+    keepSolutions = true;
+  }
+
+  /**
+   * Returns the number of columns of the last optimal solution of the simplex: the columns of the
+   * simplex then, which can be fewer than {@link #columns()} when it has no extra rows.
+   *
+   * @return the columns of the last solution, 0 before the first one
+   */
+  public int solutionColumns() {
+    return solution.length;
+  }
+
+  /**
+   * Returns the value of a column in the last optimal solution of the simplex, which may be from
+   * another branch of the search than the current one.
+   *
+   * @param j the column, below {@link #solutionColumns()}
+   * @return its value
+   */
+  public double solutionValue(int j) {
+    return solution[j];
+  }
+
+  /**
+   * Returns the store level of the last optimal solution of the simplex.
+   *
+   * @return the level, -1 before the first solution
+   */
+  public int solutionLevel() {
+    return solutionLevel;
+  }
+
+  /**
+   * Returns the variable of a column.
+   *
+   * @param j the column
+   * @return its variable
+   */
+  public IntVar column(int j) {
+    return x[j];
+  }
+
+  /**
+   * Returns the variable minimized, or null for satisfaction.
+   *
+   * @return the objective
+   */
+  public IntVar objective() {
+    return objective;
+  }
+
   /**
    * Returns the simplex that solves the relaxation.
    *
@@ -1010,12 +1071,27 @@ public class LinearRelaxation extends Constraint
       limits++;
       stalled++;
       long extraHits = limits - extraLimits;
-      if (beforeExtra != null && extraHits >= EXTRA_LIMITS && extraHits * 20 > calls) {
+      // the first solves after the root often stop at the limit while the search moves far from
+      // the root solution: judge the extra rows only over 20 solves per limit or more
+      if (beforeExtra != null
+          && extraHits >= EXTRA_LIMITS
+          && extraHits * 20 > calls
+          && calls >= 20L * EXTRA_LIMITS) {
         dropExtraRows();
       }
       return;
     }
     stalled = 0;
+    if (keepSolutions && status == LpSolver.OPTIMAL) {
+      int n = lp.columns();
+      if (solution.length != n) {
+        solution = new double[n];
+      }
+      for (int j = 0; j < n; j++) {
+        solution[j] = lp.value(j);
+      }
+      solutionLevel = store.level;
+    }
     double[] y;
     if (status == DualSimplex.INFEASIBLE) {
       infeasible++;
@@ -1047,7 +1123,10 @@ public class LinearRelaxation extends Constraint
             propagate(store, f);
           }
         }
-        return;
+        if (status != LpSolver.INFEASIBLE) {
+          return;
+        }
+        // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
       }
       // the bounds reasoning on the form would overflow: try a smaller scale
     }
@@ -1361,10 +1440,11 @@ public class LinearRelaxation extends Constraint
     if (largest == 0 || Double.isNaN(largest) || Double.isInfinite(largest)) {
       return null;
     }
-    double tiny = CLEAN ? largest * 1e-12 : 0;
     long[] lambda = new long[y.length];
     for (int i = 0; i < y.length; i++) {
-      lambda[i] = Math.abs(y[i]) < tiny ? 0 : Math.round(y[i] / largest * scale);
+      // multipliers below 1e-11 of the largest are the simplex's round-off, not part of the proof
+      double r = y[i] / largest;
+      lambda[i] = Math.abs(r) < NOISE ? 0 : Math.round(r * scale);
     }
     return lambda;
   }

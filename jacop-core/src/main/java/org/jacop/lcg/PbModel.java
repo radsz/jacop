@@ -31,9 +31,14 @@
 
 package org.jacop.lcg;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.ValueEnumeration;
 
 /**
  * The pseudo-Boolean model that {@link PbEncodable} constraints write to. Each integer variable
@@ -61,6 +66,15 @@ public interface PbModel {
    * @param equivalence true for b = 1 if and only if the relation holds, false for an implication
    */
   void reified(IntVar b, LinearForm form, boolean equivalence);
+
+  /**
+   * Adds a linear relation that holds when a literal is true.
+   *
+   * @param literal a literal of {@link #equalTo}, {@link #atLeast} or {@link #auxiliary}, or "1" or
+   *     "0"
+   * @param form the relation, one of LE, GE and EQ
+   */
+  void guarded(String literal, LinearForm form);
 
   /**
    * Adds a clause over 0/1 variables: one of the positive ones is 1 or one of the negative ones is
@@ -177,6 +191,46 @@ public interface PbModel {
     long[] w = new long[y.length];
     Arrays.fill(w, -1);
     model.sum(l, a, y, w, relation, c);
+  }
+
+  /**
+   * Adds that the variables take one of the tuples, by the support encoding: a literal per tuple
+   * that implies its values, a clause per value of each variable that some tuple with it holds, and
+   * one that some tuple holds. Unit propagation over it reaches domain consistency.
+   *
+   * @param model the model
+   * @param x the variables
+   * @param tuples the allowed tuples, each a value per variable within its root domain
+   */
+  static void table(PbModel model, IntVar[] x, List<int[]> tuples) {
+    String[] some = new String[tuples.size()];
+    List<Map<Integer, List<String>>> support = new ArrayList<>();
+    for (int i = 0; i < x.length; i++) {
+      support.add(new HashMap<>());
+    }
+    for (int t = 0; t < tuples.size(); t++) {
+      String lit = model.auxiliary();
+      some[t] = lit;
+      for (int i = 0; i < x.length; i++) {
+        int v = tuples.get(t)[i];
+        model.clause(not(lit), model.equalTo(x[i], v));
+        support.get(i).computeIfAbsent(v, k -> new ArrayList<>()).add(lit);
+      }
+    }
+    model.clause(some);
+    for (int i = 0; i < x.length; i++) {
+      IntDomain d = model.domain(x[i]);
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        List<String> s = support.get(i).getOrDefault(v, List.of());
+        String[] c = new String[s.size() + 1];
+        c[0] = not(model.equalTo(x[i], v));
+        for (int k = 0; k < s.size(); k++) {
+          c[k + 1] = s.get(k);
+        }
+        model.clause(c);
+      }
+    }
   }
 
   /**
