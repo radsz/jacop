@@ -1071,6 +1071,18 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void proofTurnsOffSymmetryBreakingAndComponents() {
+    // lex-leader constraints are not in the model a proof is checked against, and a component
+    // solved before search fixes values the proof does not derive: wide-set proofs used both
+    Options opt = new Options(new String[] {"--proof", "p", "--symmetry", "on", "model.fzn"});
+    assertTrue(!opt.symmetry());
+    assertTrue(!opt.components());
+    Options plain = new Options(new String[] {"--symmetry", "on", "model.fzn"});
+    assertTrue(plain.symmetry());
+    assertTrue(plain.components());
+  }
+
+  @Test
   void optionValueMayFollowAnEqualsSign() {
     // --lp=off was taken for an unknown option and ignored, so the relaxation stayed on
     Options opt = new Options(new String[] {"--lp=off", "-t", "50", "--restart=luby", "model.fzn"});

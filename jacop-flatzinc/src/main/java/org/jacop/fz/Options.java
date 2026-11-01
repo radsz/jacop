@@ -1046,12 +1046,12 @@ public class Options {
 
   /**
    * It defines whether the independent components the objective does not depend on are solved
-   * before search (--components).
+   * before search (--components); not under --proof, whose search must derive every value it fixes.
    *
    * @return true by default
    */
   public boolean components() {
-    return components;
+    return components && proof == null;
   }
 
   /**
@@ -1066,12 +1066,13 @@ public class Options {
   /**
    * It defines whether the symmetries of the model are broken (--symmetry), with or without
    * presolve. By default they are, except in a model loaded for the API without search, whose store
-   * keeps the constraints of the model only.
+   * keeps the constraints of the model only, and under --proof, whose lex-leader constraints are
+   * not in the model the proof is checked against.
    *
    * @return true by default
    */
   public boolean symmetry() {
-    if (!symmetry) {
+    if (!symmetry || proof != null) {
       return false;
     }
     if (symmetryGiven || presolve != Presolve.OFF) {

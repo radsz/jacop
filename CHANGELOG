@@ -1485,7 +1485,8 @@ Version 5.0 (unreleased)
     soli for improving solutions, deletions, and a conclusion UNSAT, SAT
     or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
     It is off by default, implies --lcg, one thread, bounds consistency
-    and no LP, and learns no linear sums. The core-guided phase runs
+    and no LP, and learns no linear sums; symmetry breaking and the
+    components solved before search are off under it. The core-guided phase runs
     without its at-most-one groups: the proof sums the model's lines of
     the objective's definitions into a lower-bound line, defines each
     totalizer output by two red steps, derives the totalizer clauses and
