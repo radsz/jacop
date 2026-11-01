@@ -1053,31 +1053,59 @@ public final class LcgSolver implements ExternalPropagator {
           arc(v, sink, -excess[v]);
         }
       }
+      // Dinic: a blocking flow along the shortest paths of the residual graph in each phase
+      int nodes = head.length;
+      int[] distance = new int[nodes];
+      int[] current = new int[nodes];
+      int[] queue = new int[nodes];
       int total = 0;
-      boolean[] seen = new boolean[head.length];
-      while (true) {
-        Arrays.fill(seen, false);
-        int pushed = augment(source, sink, Integer.MAX_VALUE, seen);
-        if (pushed == 0) {
-          break;
+      while (levels(source, sink, distance, queue)) {
+        System.arraycopy(head, 0, current, 0, nodes);
+        for (int pushed;
+            (pushed = block(source, sink, Integer.MAX_VALUE, distance, current)) > 0; ) {
+          total += pushed;
         }
-        total += pushed;
       }
       if (total == demand) {
         return null;
       }
-      // seen holds the nodes the last, failed search reached: those reachable in the residual graph
-      return Arrays.copyOf(seen, source);
+      // the nodes the last breadth-first search reached: those reachable in the residual graph
+      boolean[] seen = new boolean[source];
+      for (int v = 0; v < source; v++) {
+        seen[v] = distance[v] >= 0;
+      }
+      return seen;
     }
 
-    private int augment(int u, int sink, int limit, boolean[] seen) {
+    // the distances from the source in the residual graph; tells whether the sink is reached
+    private boolean levels(int source, int sink, int[] distance, int[] queue) {
+      Arrays.fill(distance, -1);
+      distance[source] = 0;
+      int first = 0;
+      int last = 0;
+      queue[last++] = source;
+      while (first < last) {
+        int u = queue[first++];
+        for (int a = head[u]; a >= 0; a = next[a]) {
+          if (capacity[a] > 0 && distance[to[a]] < 0) {
+            distance[to[a]] = distance[u] + 1;
+            queue[last++] = to[a];
+          }
+        }
+      }
+      return distance[sink] >= 0;
+    }
+
+    // a path of increasing distances, each arc tried once per phase from current[u]
+    private int block(int u, int sink, int limit, int[] distance, int[] current) {
       if (u == sink) {
         return limit;
       }
-      seen[u] = true;
-      for (int a = head[u]; a >= 0; a = next[a]) {
-        if (capacity[a] > 0 && !seen[to[a]]) {
-          int pushed = augment(to[a], sink, Math.min(limit, capacity[a]), seen);
+      for (; current[u] >= 0; current[u] = next[current[u]]) {
+        int a = current[u];
+        int v = to[a];
+        if (capacity[a] > 0 && distance[v] == distance[u] + 1) {
+          int pushed = block(v, sink, Math.min(limit, capacity[a]), distance, current);
           if (pushed > 0) {
             capacity[a] -= pushed;
             capacity[a ^ 1] += pushed;
