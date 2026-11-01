@@ -239,8 +239,8 @@ public interface PbModel {
 
   /**
    * Adds that the variables take one of the tuples, by the support encoding: a literal per tuple
-   * that implies its values, a clause per value of each variable that some tuple with it holds, and
-   * one that some tuple holds. Unit propagation over it reaches domain consistency.
+   * that holds exactly when its values do, a clause per value of each variable that some tuple with
+   * it holds, and one that some tuple holds. Unit propagation over it reaches domain consistency.
    *
    * @param model the model
    * @param x the variables
@@ -255,11 +255,16 @@ public interface PbModel {
     for (int t = 0; t < tuples.size(); t++) {
       String lit = model.auxiliary();
       some[t] = lit;
+      // lit is the tuple, both ways, so that a solution fixes it even among equal tuples
+      String[] holds = new String[x.length + 1];
+      holds[0] = lit;
       for (int i = 0; i < x.length; i++) {
         int v = tuples.get(t)[i];
         model.clause(not(lit), model.equalTo(x[i], v));
+        holds[i + 1] = not(model.equalTo(x[i], v));
         support.get(i).computeIfAbsent(v, k -> new ArrayList<>()).add(lit);
       }
+      model.clause(holds);
     }
     model.clause(some);
     for (int i = 0; i < x.length; i++) {

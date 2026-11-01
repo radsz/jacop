@@ -718,19 +718,47 @@ class VeriPbProofTest {
         });
   }
 
+  // tables of random tuples, among them equal ones, whose literals each solution must fix
+  @Test
+  void tablesOfValuesAreProved() {
+    optimaAreProved(
+        200,
+        (store, random) -> {
+          IntVar[] x = new IntVar[4];
+          for (int i = 0; i < x.length; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, 7);
+          }
+          for (int k = 0; k < 2; k++) {
+            int[][] tuples = new int[6 + random.nextInt(6)][3];
+            for (int[] t : tuples) {
+              for (int i = 0; i < 3; i++) {
+                t[i] = random.nextInt(8);
+              }
+            }
+            store.impose(new HybridTable(new IntVar[] {x[k], x[k + 1], x[k + 2]}, tuples));
+          }
+          store.impose(new XneqY(x[0], x[3]));
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          IntVar[] terms = {x[0], x[1], x[2], x[3], obj};
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 4; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[4] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
   /**
    * Minimizes the objective of a model per seed with a proof, checks the proof and compares the
-   * optimum with that of a depth-first search over the same model.
+   * optimum, or that there is no solution, with a depth-first search over the same model.
    */
   private void optimaAreProved(int seeds, BiFunction<Store, Random, IntVar> builder) {
     String test = caller();
     for (int seed = 0; seed < seeds; seed++) {
       model.reset();
       proof.reset();
-      Store store = new Store();
-      IntVar obj = builder.apply(store, new Random(seed));
-      LcgSolver lcg = withProof(store);
-      assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
       Store reference = new Store();
       IntVar cost = builder.apply(reference, new Random(seed));
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
@@ -739,10 +767,18 @@ class VeriPbProofTest {
       for (int i = 0; i < all.length; i++) {
         all[i] = (IntVar) reference.vars[i];
       }
-      assertThat(
-              search.labeling(reference, new SimpleSelect<>(all, null, new IndomainMin<>()), cost))
-          .isTrue();
-      assertThat(lcg.value(obj)).as("seed %d", seed).isEqualTo(search.getCostValue());
+      boolean feasible =
+          search.labeling(reference, new SimpleSelect<>(all, null, new IndomainMin<>()), cost);
+      Store store = new Store();
+      IntVar obj = builder.apply(store, new Random(seed));
+      LcgSolver lcg = withProof(store);
+      int status = lcg.minimize(obj);
+      assertThat(status)
+          .as("seed %d", seed)
+          .isEqualTo(feasible ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (feasible) {
+        assertThat(lcg.value(obj)).as("seed %d", seed).isEqualTo(search.getCostValue());
+      }
       RupChecker checker = new RupChecker();
       assertThat(checker.check(opb(test + seed), proof.toString(StandardCharsets.US_ASCII)))
           .as("seed %d", seed)
