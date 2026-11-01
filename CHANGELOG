@@ -1502,7 +1502,7 @@ Version 5.0 (unreleased)
     constraints, Alldifferent, Alldiff, Alldistinct, GCC, CountValues and
     CountValuesBounds are encoded (the flow reasons of the last six by a
     pol step over a violated cut of their flow network), as are In,
-    AllEqual, AbsXeqY, MaxSimple, MinSimple, AndBoolSimple, OrBoolSimple,
+    BoolClause, AllEqual, AbsXeqY, MaxSimple, MinSimple, AndBoolSimple, OrBoolSimple,
     XorBool, Reified and Implies of these and of AtMost and AtLeast (the
     encoding under the literal, and for Reified the negation's under its
     negation), Not of them and of linear constraints, ConditionalSelect

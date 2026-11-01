@@ -51,6 +51,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
@@ -746,6 +747,39 @@ class VeriPbProofTest {
             w[i] = random.nextInt(9) - 4;
           }
           w[4] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // BoolClause, reified and negated
+  @Test
+  void boolClausesAreProved() {
+    optimaAreProved(
+        12,
+        (store, random) -> {
+          IntVar[] b = new IntVar[8];
+          for (int i = 0; i < b.length; i++) {
+            b[i] = new IntVar(store, "b" + i, 0, 1);
+          }
+          for (int k = 0; k < 6; k++) {
+            IntVar[] x = {b[random.nextInt(8)], b[random.nextInt(8)]};
+            IntVar[] y = {b[random.nextInt(8)]};
+            BoolClause c = new BoolClause(x, y);
+            switch (k % 3) {
+              case 0 -> store.impose(c);
+              case 1 -> store.impose(new Reified(c, b[random.nextInt(8)]));
+              default -> store.impose(new Not(c));
+            }
+          }
+          int[] w = new int[9];
+          for (int i = 0; i < 8; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[8] = -1;
+          IntVar obj = new IntVar(store, "obj", -50, 50);
+          IntVar[] terms = Arrays.copyOf(b, 9);
+          terms[8] = obj;
           store.impose(new LinearInt(terms, w, "==", 0));
           return obj;
         });
