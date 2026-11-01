@@ -102,6 +102,7 @@ import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -111,6 +112,21 @@ import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.SimpleSelect;
+import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.set.constraints.AdisjointB;
+import org.jacop.set.constraints.AeqB;
+import org.jacop.set.constraints.AinB;
+import org.jacop.set.constraints.AintersectBeqC;
+import org.jacop.set.constraints.AunionBeqC;
+import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.ChannelBoolSet;
+import org.jacop.set.constraints.EinA;
+import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.SetMirror;
+import org.jacop.set.constraints.XinA;
+import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetVar;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -786,6 +802,83 @@ class VeriPbProofTest {
         });
   }
 
+  // set constraints over sets mirrored as fzn-jacop mirrors them under --lcg, among them reified
+  // and negated ones, against an objective over the memberships and the cardinalities
+  @Test
+  void setConstraintsAreProved() {
+    optimaAreProved(
+        20,
+        (store, random) -> {
+          int n = 3 + random.nextInt(2);
+          SetVar[] s = new SetVar[n];
+          for (int i = 0; i < n; i++) {
+            IntervalDomain lub = new IntervalDomain();
+            for (int e = 0; e <= 5; e++) {
+              if (random.nextInt(6) > 0) {
+                lub.unionAdapt(e, e);
+              }
+            }
+            IntervalDomain glb = new IntervalDomain();
+            if (random.nextInt(3) == 0 && !lub.isEmpty()) {
+              glb.unionAdapt(lub.min(), lub.min());
+            }
+            s[i] = new SetVar(store, "s" + i, new BoundSetDomain(glb, lub));
+          }
+          IntVar x = new IntVar(store, "x", 0, 5);
+          IntVar k = new IntVar(store, "k", 0, 6);
+          IntVar[] b = new IntVar[3];
+          for (int i = 0; i < b.length; i++) {
+            b[i] = new IntVar(store, "b" + i, 0, 1);
+          }
+          for (int c = 0; c < 3; c++) {
+            int i = random.nextInt(n);
+            int j = (i + 1 + random.nextInt(n - 1)) % n;
+            int l = (j + 1) % n == i ? (j + 2) % n : (j + 1) % n;
+            SetVar p = s[i];
+            SetVar q = s[j];
+            SetVar r = s[l];
+            IntVar bc = b[c % b.length];
+            int e = random.nextInt(6);
+            switch (random.nextInt(17)) {
+              case 0 -> store.impose(new AunionBeqC(p, q, r));
+              case 1 -> store.impose(new AintersectBeqC(p, q, r));
+              case 2 -> store.impose(new AdiffBeqC(p, q, r));
+              case 3 -> store.impose(new AinB(p, q));
+              case 4 -> store.impose(new AeqB(p, q));
+              case 5 -> store.impose(new Reified(new EinA(e, p), bc));
+              case 6 -> store.impose(new Reified(new AinB(p, q), bc));
+              case 7 -> store.impose(new Not(new AeqB(p, q)));
+              case 8 -> store.impose(new XinA(x, p));
+              case 9 -> store.impose(new Reified(new XinA(x, p), bc));
+              case 10 -> store.impose(new CardAeqX(p, k));
+              case 11 -> store.impose(new AdisjointB(p, q));
+              case 12 -> {
+                IntDomain[] list = new IntDomain[4];
+                for (int t = 0; t < list.length; t++) {
+                  list[t] = new IntervalDomain(random.nextInt(3), 2 + random.nextInt(4));
+                }
+                store.impose(new ElementSet(x, list, p));
+              }
+              case 13 -> store.impose(new ChannelBoolSet(b, p));
+              case 14 ->
+                  store.impose(new PartitionSet(new SetVar[] {p, q}, new IntervalDomain(0, 5)));
+              case 15 -> store.impose(new Reified(new AeqB(p, q), bc));
+              default -> store.impose(new Not(new EinA(e, p)));
+            }
+          }
+          for (SetVar v : s) {
+            if (!v.singleton()) {
+              store.impose(new SetMirror(v));
+            }
+          }
+          IntVar[] terms =
+              Arrays.stream(store.vars, 0, store.size())
+                  .filter(IntVar.class::isInstance)
+                  .toArray(IntVar[]::new);
+          return weightedSum(store, random, terms);
+        });
+  }
+
   // a knapsack without its dynamic program, whose reasons are rows of the two equalities, with
   // the profit maximised under a capacity bound and a side constraint
   @Test
@@ -949,10 +1042,11 @@ class VeriPbProofTest {
       IntVar cost = builder.apply(reference, new Random(seed));
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
-      IntVar[] all = new IntVar[reference.size()];
-      for (int i = 0; i < all.length; i++) {
-        all[i] = (IntVar) reference.vars[i];
-      }
+      // the set variables follow the integer variables that mirror them
+      IntVar[] all =
+          Arrays.stream(reference.vars, 0, reference.size())
+              .filter(IntVar.class::isInstance)
+              .toArray(IntVar[]::new);
       boolean feasible =
           search.labeling(reference, new SimpleSelect<>(all, null, new IndomainMin<>()), cost);
       Store store = new Store();

@@ -42,6 +42,9 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -52,7 +55,7 @@ import org.jacop.set.core.SetVar;
  * @version 3.1
  */
 public class CardAeqX extends Constraint
-    implements SatisfiedPresent, Copyable<CardAeqX>, Explainable {
+    implements SatisfiedPresent, Copyable<CardAeqX>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -172,5 +175,22 @@ public class CardAeqX extends Constraint
   @Override
   public CardAeqX copy(VarMap map) {
     return new CardAeqX(map.get(a), map.get(cardinality));
+  }
+
+  /** Writes that the cardinality of a is the variable. */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != CardAeqX.class || !SetPb.stated(a)) {
+      return false;
+    }
+    SetPb.cardinalities(
+        model,
+        new SetVar[] {a},
+        new long[] {1},
+        new IntVar[] {cardinality},
+        new long[] {-1},
+        LinearForm.EQ,
+        0);
+    return true;
   }
 }
