@@ -47,6 +47,8 @@ import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AtLeast;
@@ -63,6 +65,7 @@ import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
+import org.jacop.constraints.Increasing;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -74,7 +77,9 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XgteqC;
@@ -719,6 +724,82 @@ class VeriPbProofTest {
           store.impose(new LinearInt(terms, w, "==", 0));
           return obj;
         });
+  }
+
+  // all different except a set of values, over variables with holes, against a random objective
+  @Test
+  void allDifferentExceptIsProved() {
+    optimaAreProved(
+        30,
+        (store, random) -> {
+          int n = 4 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 0, n - 2);
+          IntervalDomain except = new IntervalDomain(0, 0);
+          if (random.nextBoolean()) {
+            except.unionAdapt(n - 2, n - 2);
+          }
+          store.impose(
+              random.nextBoolean() && except.getSize() == 1
+                  ? new AlldifferentExceptZero(x)
+                  : new AlldifferentExcept(x, except));
+          return weightedSum(store, random, x);
+        });
+  }
+
+  // x[0] <= x[1] <= ... (or <) over variables with holes
+  @Test
+  void increasingIsProved() {
+    optimaAreProved(
+        30,
+        (store, random) -> {
+          IntVar[] x = holeyVariables(store, random, 4 + random.nextInt(3), 0, 7);
+          store.impose(new Increasing(x, random.nextBoolean()));
+          return weightedSum(store, random, x);
+        });
+  }
+
+  // seq_precede_chain, value_precede_chain and value_precede against an objective that wants high
+  // values first
+  @Test
+  void precedenceChainsAreProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 5 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 0, 4);
+          switch (random.nextInt(3)) {
+            case 0 -> store.impose(new SeqPrecedeChain(x));
+            case 1 -> store.impose(new SeqPrecedeChain(x, new int[] {3, 1, 4}));
+            default -> store.impose(new ValuePrecede(2, 0, x));
+          }
+          return weightedSum(store, random, x);
+        });
+  }
+
+  /** Variables over min..max with two random holes each (the value may be missing already). */
+  private static IntVar[] holeyVariables(Store store, Random random, int n, int min, int max) {
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, min, max);
+      for (int h = 0; h < 2; h++) {
+        x[i].domain.inComplement(0, x[i], min + random.nextInt(max - min + 1));
+      }
+    }
+    return x;
+  }
+
+  /** The objective sum w[i] * x[i] with random weights from -5 to 5. */
+  private static IntVar weightedSum(Store store, Random random, IntVar[] x) {
+    IntVar[] terms = Arrays.copyOf(x, x.length + 1);
+    int[] w = new int[terms.length];
+    for (int i = 0; i < x.length; i++) {
+      w[i] = random.nextInt(11) - 5;
+    }
+    IntVar obj = new IntVar(store, "obj", -1000, 1000);
+    terms[x.length] = obj;
+    w[x.length] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    return obj;
   }
 
   // tables of random tuples, among them equal ones, whose literals each solution must fix, and
