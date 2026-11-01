@@ -72,7 +72,9 @@ import org.junit.jupiter.params.provider.MethodSource;
  * upTo5sec), {@code mznc.options} adds JaCoP options (for example {@code -f} or {@code --lcg -f}),
  * {@code mznc.filter} keeps instances whose name matches the regular expression, and {@code
  * mznc.timeFactor} multiplies the time limit of the category (default 3, as for the other FlatZinc
- * categories).
+ * categories). The categories of JaCoP's free search ({@code f-upTo5sec}, {@code f-upTo30sec},
+ * {@code f-upTo1min}, {@code f-above1min}, run with {@code -Dmznc.options="-f"}) have the time
+ * limits of the categories they are named after.
  *
  * <p>Each line of a category's {@code reference.txt} is {@code instance kind [value]}:
  *
@@ -94,8 +96,15 @@ class MinizincCompetitionTest {
   private static final String OBJECTIVE = "%%%mzn-stat: objective=";
   private static final List<String> TIERS =
       List.of(
-          "upTo5sec", "upTo30sec", "upTo1min", "upTo5min", "upTo10min", "upTo1hour", "above1hour");
-  private static final long[] TIER_SECONDS = {5, 30, 60, 300, 600, 3600, 3600};
+          "upTo5sec",
+          "upTo30sec",
+          "upTo1min",
+          "upTo5min",
+          "upTo10min",
+          "upTo1hour",
+          "above1hour",
+          "above1min");
+  private static final long[] TIER_SECONDS = {5, 30, 60, 300, 600, 3600, 3600, 3600};
 
   /** One instance of the bench: its category and its reference line. */
   record Instance(String tier, String line) {
@@ -138,7 +147,9 @@ class MinizincCompetitionTest {
     String kind = fields[1];
     BigDecimal value = fields.length > 2 ? new BigDecimal(fields[2]) : null;
 
-    int index = TIERS.indexOf(instance.tier());
+    // the free-search categories f-<category> list the instances of the other categories
+    String tier = instance.tier();
+    int index = TIERS.indexOf(tier.startsWith("f-") ? tier.substring(2) : tier);
     long seconds =
         (index < 0 ? 60 : TIER_SECONDS[index])
             * Long.parseLong(System.getProperty("mznc.timeFactor", "3"));

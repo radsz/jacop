@@ -1552,4 +1552,46 @@ class FreeSearchTest {
       }
     }
   }
+
+  @Test
+  void sequenceOfManySelectionsKeepsEverySolution() {
+    // fzn -f wraps every int_search of a model in one sequence: the code-generator models have 150
+    for (int selections : new int[] {2, 129, 150, 300}) {
+      for (boolean nested : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[6];
+        for (int i = 0; i < x.length; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 3);
+        }
+        store.impose(new Alldifferent(Arrays.copyOfRange(x, 0, 4)));
+        store.impose(new XltY(x[4], x[5]));
+        List<SelectChoicePoint<IntVar>> selects = new ArrayList<>();
+        for (int k = 0; k < selections; k++) {
+          IntVar[] vars = {x[(k * 5) % x.length], x[(k * 5 + 1) % x.length]};
+          selects.add(
+              new SimpleSelect<>(
+                  vars,
+                  k % 3 == 0 ? new SmallestDomain<>() : null,
+                  k % 2 == 0 ? new IndomainMin<>() : new IndomainMax<>()));
+        }
+        // the last selection labels what the others left
+        SimpleSelect<IntVar> rest = new SimpleSelect<>(x, null, new IndomainMin<>());
+        SelectChoicePoint<Var> select;
+        if (nested) {
+          select = new SequenceSelect(List.of(new SequenceSelect(selects), rest));
+        } else {
+          selects.add(rest);
+          select = new SequenceSelect(selects);
+        }
+        DepthFirstSearch<Var> search = new DepthFirstSearch<>();
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        search.setPrintInfo(false);
+        assertTrue(search.labeling(store, select), selections + " selections");
+        // 4 * 3 * 2 * 1 permutations of x0..x3, 6 pairs x4 < x5
+        assertEquals(
+            24 * 6, search.getSolutionListener().solutionsNo(), selections + " selections");
+      }
+    }
+  }
 }
