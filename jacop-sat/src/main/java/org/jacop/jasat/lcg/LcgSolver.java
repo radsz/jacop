@@ -54,6 +54,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -526,6 +527,7 @@ public final class LcgSolver implements ExternalPropagator {
   // the equalities of the proof model, the first order line of each variable and the domains the
   // model states, for the core-guided phase's lower-bound line
   private Map<Constraint, OpbEncoder.EqualityLine> proofEqualities = Map.of();
+  private Map<Constraint, List<OpbEncoder.EqualityLine>> proofAllEqualities = Map.of();
   // the position literals of the circuits of the proof model
   private Map<Constraint, OpbEncoder.CircuitLines> proofCircuits = Map.of();
   private Map<Constraint, OpbEncoder.TimetableLines> proofTimetables = Map.of();
@@ -772,6 +774,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     proofCardinality = model.cardinalityLines();
     proofEqualities = model.equalityLines();
+    proofAllEqualities = model.allEqualityLines();
     proofCircuits = model.circuitLines();
     proofTimetables = model.timetableLines();
     proofChains = model.chainLines();
@@ -817,6 +820,10 @@ public final class LcgSolver implements ExternalPropagator {
       proofCardinality(c, none, 0, e);
       proofCircuit(c, none, 0, e);
       proofEnergy(c, none, 0, e);
+      if (c instanceof Knapsack k) {
+        // the row of the reason, which the root propagation did not ask for
+        k.explain(rootTrail, e, new EntryList());
+      }
       proofLinearBounds(c, none, 0, e);
       proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
       reached[i] = next;
@@ -825,6 +832,9 @@ public final class LcgSolver implements ExternalPropagator {
       proofCardinality(failedAtRoot, none, 0, -1);
       proofCircuit(failedAtRoot, none, 0, -1);
       proofEnergy(failedAtRoot, none, 0, -1);
+      if (failedAtRoot instanceof Knapsack k) {
+        k.explainFailure(rootTrail, new EntryList());
+      }
       proofLinearBounds(failedAtRoot, none, 0, -1);
       rootRefuted = true;
     }
@@ -1531,6 +1541,53 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void proofLinearBounds(Constraint c, EntryList atoms, int from, int entry) {
     LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
+    if (f == null && proofStarted && c instanceof Knapsack k) {
+      f = proofKnapsackRow(k);
+    }
+    proofLinearBounds(f, atoms, from, entry);
+  }
+
+  /**
+   * Writes the row of a knapsack reason, b times the profit equality less a times the weight
+   * equality ({@link Knapsack#explanationRatio}), by pol steps over the model's lines, and returns
+   * it; null when the reason is not one of a row.
+   */
+  private LinearForm proofKnapsackRow(Knapsack k) {
+    long[] ratio = k.explanationRatio();
+    List<OpbEncoder.EqualityLine> lines = proofAllEqualities.get(k);
+    if (ratio == null || lines == null || lines.size() != 2) {
+      return null;
+    }
+    long a = ratio[0];
+    long b = ratio[1];
+    // lines: sum(w q) - capacity >= 0 (id), <= 0 (id + 1); the same for the profit
+    long weight = lines.get(0).id();
+    long profit = lines.get(1).id();
+    if (a == 0) {
+      return lines.get(1).form();
+    }
+    if (b == 0) {
+      return lines.get(0).form();
+    }
+    // b * profit - a * weight >= 0 and <= 0
+    proof.pol(profit + " " + b + " * " + (weight + 1) + " " + a + " * +");
+    proof.pol((profit + 1) + " " + b + " * " + weight + " " + a + " * +");
+    LinearForm[] rows = k.rows();
+    int n = rows[0].vars().length;
+    IntVar[] vars = new IntVar[n + 1];
+    long[] w = new long[n + 1];
+    for (int i = 0; i < n - 1; i++) {
+      vars[i] = rows[0].vars()[i];
+      w[i] = b * rows[1].weights()[i] - a * rows[0].weights()[i];
+    }
+    vars[n - 1] = rows[0].vars()[n - 1];
+    w[n - 1] = a;
+    vars[n] = rows[1].vars()[n - 1];
+    w[n] = -b;
+    return new LinearForm(vars, w, 0, LinearForm.EQ);
+  }
+
+  private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry) {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }

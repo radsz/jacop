@@ -165,6 +165,7 @@ final class OpbEncoder implements PbModel {
   record EqualityLine(LinearForm form, long id) {}
 
   private final Map<Constraint, EqualityLine> equalities = new IdentityHashMap<>();
+  private final Map<Constraint, List<EqualityLine>> allEqualities = new IdentityHashMap<>();
 
   // the id of each variable's first order line, [x >= v] or not [x >= v + 1], for v = min + 1
   private long[] chainStart;
@@ -385,7 +386,9 @@ final class OpbEncoder implements PbModel {
       case LinearForm.GE -> atLeast(f, 1, f.c());
       case LinearForm.EQ -> {
         if (guard.isEmpty() && current != null) {
-          equalities.putIfAbsent(current, new EqualityLine(f, numConstraints + 1));
+          EqualityLine line = new EqualityLine(f, numConstraints + 1);
+          equalities.putIfAbsent(current, line);
+          allEqualities.computeIfAbsent(current, k -> new ArrayList<>()).add(line);
         }
         atLeast(f, 1, f.c());
         atLeast(f, -1, -f.c());
@@ -708,6 +711,15 @@ final class OpbEncoder implements PbModel {
    */
   Map<Constraint, EqualityLine> equalityLines() {
     return equalities;
+  }
+
+  /**
+   * Returns the first lines of all equalities written unguarded, by their constraint, in order.
+   *
+   * @return the lines
+   */
+  Map<Constraint, List<EqualityLine>> allEqualityLines() {
+    return allEqualities;
   }
 
   /**

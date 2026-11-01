@@ -69,6 +69,9 @@ final class KnapsackExplanation {
   private final IntVar capacity;
   private final IntVar total;
 
+  /** The ratio a / b of the row of the last reason, or null. */
+  long[] ratio;
+
   KnapsackExplanation(
       IntVar[] quantity, int[] weight, int[] profit, IntVar capacity, IntVar total) {
     this.quantity = quantity;
@@ -108,8 +111,9 @@ final class KnapsackExplanation {
   private boolean best(AtomicTrail trail, int entry, EntryList out) {
     EntryList shortest = null;
     EntryList reason = new EntryList();
-    for (long[] ratio : ratios()) {
-      LinearForm row = row(trail, ratio[0], ratio[1], entry);
+    ratio = null;
+    for (long[] candidate : ratios()) {
+      LinearForm row = row(trail, candidate[0], candidate[1], entry);
       if (row == null) {
         continue;
       }
@@ -120,6 +124,7 @@ final class KnapsackExplanation {
         reason.sortUnique(0);
         if (shortest == null || reason.size() < shortest.size()) {
           shortest = reason;
+          ratio = candidate;
           reason = new EntryList();
           if (shortest.size() == 0) {
             break;

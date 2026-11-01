@@ -2119,7 +2119,9 @@ class GlobalConstraints implements ParserTreeConstants {
             .quantity(x)
             .knapsackCapacity(W)
             .knapsackProfit(P)
-            .build());
+            .build()
+            // a proof derives the rows of the relaxation, not the prunings of the dynamic program
+            .dynamicProgramming(support.options.proof() == null));
   }
 
   void gen_jacop_sequence(SimpleNode node) {

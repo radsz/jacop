@@ -94,6 +94,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.diffn.Nooverlap;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
@@ -773,6 +774,34 @@ class VeriPbProofTest {
             default -> store.impose(new ValuePrecede(2, 0, x));
           }
           return weightedSum(store, random, x);
+        });
+  }
+
+  // a knapsack without its dynamic program, whose reasons are rows of the two equalities, with
+  // the profit maximised under a capacity bound and a side constraint
+  @Test
+  void knapsackIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 4 + random.nextInt(4);
+          IntVar[] q = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            q[i] = new IntVar(store, "q" + i, 0, 1 + random.nextInt(3));
+          }
+          int[] w = new int[n];
+          int[] p = new int[n];
+          for (int i = 0; i < n; i++) {
+            w[i] = 1 + random.nextInt(9);
+            p[i] = 1 + random.nextInt(9);
+          }
+          IntVar capacity = new IntVar(store, "capacity", 0, 5 + random.nextInt(15));
+          IntVar profit = new IntVar(store, "profit", 0, 200);
+          store.impose(new Knapsack(p, w, q, capacity, profit).dynamicProgramming(false));
+          store.impose(new XneqY(q[0], q[1]));
+          IntVar obj = new IntVar(store, "obj", -200, 0);
+          store.impose(new XplusYeqC(obj, profit, 0));
+          return obj;
         });
   }
 
