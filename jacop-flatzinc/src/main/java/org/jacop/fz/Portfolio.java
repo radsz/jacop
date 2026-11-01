@@ -49,6 +49,7 @@ import java.util.function.Function;
 import java.util.regex.Pattern;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.jasat.lcg.SharedClauses;
 import org.jacop.search.free.SharedSolution;
 
 /**
@@ -120,6 +121,8 @@ final class Portfolio {
 
   private final Options options;
   private final List<Worker> workers = new ArrayList<>();
+  // learnt clauses and root bounds of the LCG threads
+  private final SharedClauses sharedClauses = new SharedClauses();
   private final Object lock = new Object();
   // where the portfolio prints: stdout as it was when the portfolio started
   private PrintStream stdout;
@@ -309,6 +312,11 @@ final class Portfolio {
           if (imports > 0) {
             s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
           }
+        }
+        if (sharedClauses.size() > 0) {
+          s.append("%%%mzn-stat: portfolioSharedClauses=")
+              .append(sharedClauses.size())
+              .append('\n');
         }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {
@@ -546,6 +554,15 @@ final class Portfolio {
      */
     void solution(String text, Integer cost, boolean maximise, String[] names, int[] values) {
       Portfolio.this.solution(this, text, cost, maximise, names, values);
+    }
+
+    /**
+     * The clauses the LCG threads share.
+     *
+     * @return the clauses
+     */
+    SharedClauses sharedClauses() {
+      return sharedClauses;
     }
 
     /**
