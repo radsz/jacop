@@ -39,6 +39,8 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Increasing constraint assures that all variables are in increasing order.
@@ -46,7 +48,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Increasing extends Constraint implements Copyable<Increasing> {
+public class Increasing extends Constraint implements Copyable<Increasing>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final IntVar[] x;
@@ -130,6 +132,24 @@ public class Increasing extends Constraint implements Copyable<Increasing> {
         }
       }
     } while (hasDuplicates && store.propagationHasOccurred);
+  }
+
+  /**
+   * Writes x[i - 1] + strict <= x[i] for each i as clauses over the order literals, [x[i - 1] >= v]
+   * implies [x[i] >= v + strict], so that unit propagation follows a chain of bounds.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Increasing.class) {
+      return false;
+    }
+    for (int i = 1; i < n; i++) {
+      IntDomain d = model.domain(x[i - 1]);
+      for (int v = d.min(); v <= d.max(); v++) {
+        model.clause(PbModel.not(model.atLeast(x[i - 1], v)), model.atLeast(x[i], v + strict));
+      }
+    }
+    return true;
   }
 
   @Override
