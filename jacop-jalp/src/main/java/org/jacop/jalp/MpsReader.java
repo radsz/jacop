@@ -30,17 +30,15 @@
 
 package org.jacop.jalp;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -67,10 +65,12 @@ public final class MpsReader {
    * @throws IOException when the file cannot be read or is not valid MPS
    */
   public static LpProblem read(Path file) throws IOException {
-    try (InputStream in = Files.newInputStream(file)) {
-      InputStream s = file.toString().endsWith(".gz") ? new GZIPInputStream(in, 1 << 16) : in;
-      String name = file.getFileName().toString().replaceAll("(\\.mps)?(\\.gz)?$", "");
-      return read(s.readAllBytes(), name);
+    String name = file.getFileName().toString().replaceAll("(\\.mps)?(\\.gz)?$", "");
+    if (!file.toString().endsWith(".gz")) {
+      return read(Files.readAllBytes(file), name);
+    }
+    try (InputStream in = new GZIPInputStream(Files.newInputStream(file), 1 << 16)) {
+      return read(in.readAllBytes(), name);
     }
   }
 
@@ -118,10 +118,7 @@ public final class MpsReader {
 
   @SuppressWarnings("checkstyle:CyclomaticComplexity")
   private static LpProblem read(byte[] data, String defaultName, boolean fixed) throws IOException {
-    BufferedReader r =
-        new BufferedReader(
-            new InputStreamReader(new ByteArrayInputStream(data), StandardCharsets.US_ASCII),
-            1 << 16);
+    Iterator<String> lines = new String(data, StandardCharsets.US_ASCII).lines().iterator();
     String name = defaultName;
     boolean maximize = false;
     String objective = null;
@@ -147,9 +144,9 @@ public final class MpsReader {
     Map<String, Boolean> skipRows = new HashMap<>();
     String section = "";
     boolean integerMarker = false;
-    String line;
     int lineNo = 0;
-    while ((line = r.readLine()) != null) {
+    while (lines.hasNext()) {
+      String line = lines.next();
       lineNo++;
       if (line.isEmpty() || line.charAt(0) == '*') {
         continue;

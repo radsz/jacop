@@ -40,14 +40,35 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the simplex of JaLP, through {@link JalpSimplex}, against the dense simplex on random
- * bounded LPs: the same status, the same optimal objective, and the certificates of {@link
- * DualSimplexTest} for its own duals and Farkas rows (unscaled), through warm-started re-solves,
- * added rows, removed rows and copies.
+ * Tests the simplex of JaLP, through {@link JalpSimplex}, against the dense one on random bounded
+ * LPs: the same status, the same optimal objective, and the certificates of {@link DualSimplexTest}
+ * for its own duals and Farkas rows, through warm-started re-solves, added rows, removed rows and
+ * copies.
  */
 class JalpSimplexTest {
 
   private static final Offset<Double> CLOSE = Offset.offset(1e-5);
+
+  // JaLP over dense rows
+  private static LpSolver jalp(double[][] a, double[] rowLo, double[] rowHi, double[] cost) {
+    int n = cost.length;
+    int[][] c = new int[a.length][];
+    double[][] w = new double[a.length][];
+    for (int i = 0; i < a.length; i++) {
+      c[i] = new int[n];
+      w[i] = new double[n];
+      int k = 0;
+      for (int j = 0; j < n; j++) {
+        if (a[i][j] != 0) {
+          c[i][k] = j;
+          w[i][k++] = a[i][j];
+        }
+      }
+      c[i] = Arrays.copyOf(c[i], k);
+      w[i] = Arrays.copyOf(w[i], k);
+    }
+    return new JalpSimplex(c, w, rowLo, rowHi, cost);
+  }
 
   // a random LP: rows a with sides, costs, column bounds
   private static final class Lp {
@@ -99,27 +120,6 @@ class JalpSimplexTest {
         hi[j] = Math.max(lo[j], hi[j] - 1 - rnd.nextInt(2));
       }
     }
-  }
-
-  // the JaLP simplex over dense rows
-  private static LpSolver jalp(double[][] a, double[] rowLo, double[] rowHi, double[] cost) {
-    int n = cost.length;
-    int[][] c = new int[a.length][];
-    double[][] w = new double[a.length][];
-    for (int i = 0; i < a.length; i++) {
-      c[i] = new int[n];
-      w[i] = new double[n];
-      int k = 0;
-      for (int j = 0; j < n; j++) {
-        if (a[i][j] != 0) {
-          c[i][k] = j;
-          w[i][k++] = a[i][j];
-        }
-      }
-      c[i] = Arrays.copyOf(c[i], k);
-      w[i] = Arrays.copyOf(w[i], k);
-    }
-    return new JalpSimplex(c, w, rowLo, rowHi, cost);
   }
 
   // solves both, checks they agree and the sparse certificates; returns the status

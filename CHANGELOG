@@ -1632,8 +1632,8 @@ Version 5.0 (unreleased)
      (java org.jacop.jalp.LpMain [-noscale] [-limit N] files) solve LP
      files. The sparse and lazy relaxations of LinearRelaxation
      (Simplex.SPARSE and LAZY, including the sparse simplex chosen by
-     size) now run on JaLP; -Dorg.jacop.lp.engine=sparse brings back
-     SparseDualSimplex. On the osolpro LP bench (Netlib, MIPLIB 3 and
+     size) now run on JaLP, which replaces SparseDualSimplex and SparseLu
+     (removed). On the osolpro LP bench (Netlib, MIPLIB 3 and
      2017, Mittelmann and JaCoP root LPs, golden references from HiGHS,
      SCIP/SoPlex and GLOP; 687 instances, 300 s) JaLP matches 636
      references, stops at the time limit on 50 and gives no wrong answer.

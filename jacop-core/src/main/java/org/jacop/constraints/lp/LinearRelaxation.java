@@ -73,13 +73,12 @@ import org.jacop.lcg.LinearReasons;
  * <p>For lazy clause generation each deduction is explained by its inequality ({@link LinearForm}),
  * through the bounds of the other variables, as a linear constraint of the model would be.
  *
- * <p>The simplex is the dense {@link DualSimplex} by default, or the sparse revised dual simplex
- * ({@link Simplex#SPARSE}), which fits large sparse relaxations: the one of JaLP ({@code
- * org.jacop.jalp.RevisedDualSimplex}, through {@code JalpSimplex}), or {@link SparseDualSimplex}
- * with {@code -Dorg.jacop.lp.engine=sparse}. With {@link Simplex#LAZY} the sparse simplex starts
- * without rows: each solve adds, in batches, the rows its solution breaks and solves again, and
- * rows that stay inactive for many solves leave the simplex again. The rows the simplex lacks only
- * weaken its deductions; every deduction is still a combination of rows of the model.
+ * <p>The simplex is the dense {@link DualSimplex} by default, or the sparse revised dual simplex of
+ * JaLP ({@link Simplex#SPARSE}, {@code org.jacop.jalp.RevisedDualSimplex} through {@code
+ * JalpSimplex}), which fits large sparse relaxations. With {@link Simplex#LAZY} the sparse simplex
+ * starts without rows: each solve adds, in batches, the rows its solution breaks and solves again,
+ * and rows that stay inactive for many solves leave the simplex again. The rows the simplex lacks
+ * only weaken its deductions; every deduction is still a combination of rows of the model.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -93,7 +92,7 @@ public class LinearRelaxation extends Constraint
   public enum Simplex {
     /** The dense tableau simplex, {@link DualSimplex}. */
     DENSE,
-    /** The sparse revised simplex, JaLP's or {@link SparseDualSimplex}, with every row. */
+    /** The sparse revised dual simplex of JaLP, with every row. */
     SPARSE,
     /** The sparse revised simplex with the rows added and removed lazily. */
     LAZY
@@ -451,12 +450,10 @@ public class LinearRelaxation extends Constraint
     setScope(x);
   }
 
-  // the sparse simplex: JaLP's, or SparseDualSimplex with org.jacop.lp.engine=sparse
+  // the sparse simplex, JaLP's
   private static LpSolver sparse(
       int[][] columns, double[][] weights, double[] lo, double[] hi, double[] cost) {
-    return JalpSimplex.ENABLED
-        ? new JalpSimplex(columns, weights, lo, hi, cost)
-        : new SparseDualSimplex(columns, weights, lo, hi, cost);
+    return new JalpSimplex(columns, weights, lo, hi, cost);
   }
 
   /**

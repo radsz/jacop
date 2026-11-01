@@ -34,15 +34,13 @@ import org.jacop.jalp.RevisedDualSimplex;
 
 /**
  * The simplex of JaLP ({@link RevisedDualSimplex}, module jacop-jalp) behind the interface of the
- * relaxation. It replaces {@link SparseDualSimplex} when {@code org.jacop.lp.engine=jalp}.
+ * relaxation: the sparse simplex of {@link LinearRelaxation.Simplex#SPARSE} and {@link
+ * LinearRelaxation.Simplex#LAZY}.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 final class JalpSimplex implements LpSolver {
-
-  /** Whether the sparse and lazy relaxations use JaLP, from {@code org.jacop.lp.engine}. */
-  static final boolean ENABLED = "jalp".equals(System.getProperty("org.jacop.lp.engine", "jalp"));
 
   private final RevisedDualSimplex lp;
 
