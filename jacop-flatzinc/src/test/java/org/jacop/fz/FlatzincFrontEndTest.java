@@ -2900,6 +2900,7 @@ class FlatzincFrontEndTest {
    */
   @Test
   void commandLineRunEndsAtItsTimeOutWhilePosting() throws IOException, InterruptedException {
+    // coefficients 2 and -2, so that DifferenceBoundsDetector leaves the creeping cycle alone
     Path fzn = tmp.resolve("creep.fzn");
     Files.writeString(
         fzn,
@@ -2907,9 +2908,9 @@ class FlatzincFrontEndTest {
         var -500000000..500000000: x:: output_var;
         var -500000000..500000000: y:: output_var;
         var -500000000..500000000: z:: output_var;
-        constraint int_lin_le([1,-1],[x,y],-1);
-        constraint int_lin_le([1,-1],[y,z],-1);
-        constraint int_lin_le([1,-1],[z,x],-1);
+        constraint int_lin_le([2,-2],[x,y],-1);
+        constraint int_lin_le([2,-2],[y,z],-1);
+        constraint int_lin_le([2,-2],[z,x],-1);
         solve satisfy;
         """);
     Path java = Path.of(System.getProperty("java.home"), "bin", "java");
@@ -3007,5 +3008,99 @@ class FlatzincFrontEndTest {
     assertEquals(halts, halted.await(halts ? 5000 : 1000, TimeUnit.MILLISECONDS), printed);
     w.cancel();
     return bytes.toString(StandardCharsets.UTF_8);
+  }
+
+  @Test
+  void negativeCycleOfDifferencesFailsWithoutCreeping() {
+    // 2009 prop_stress in small: y0 <= y1 + 1, y1 <= x0 <= x1, x1 <= y0 - 2. Bounds propagation
+    // moves the bounds by 1 each time round the cycle, 5 * 10^8 times over these domains.
+    String model =
+        """
+        array [1..2] of int: a = [1,-1];
+        var 0..500000000: y0:: output_var;
+        var 0..500000000: y1:: output_var;
+        var 0..500000000: x0:: output_var;
+        var 0..500000000: x1:: output_var;
+        constraint int_lin_le(a,[y0,y1],1);
+        constraint int_le(y1,x0);
+        constraint int_lin_le(a,[x0,x1],0);
+        constraint int_lin_le(a,[x1,y0],-2);
+        solve satisfy;
+        """;
+    String out = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> run(model, "-s")[0]);
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void differenceBoundsKeepEverySolution() throws IOException {
+    Random r = new Random(20261031);
+    for (int run = 0; run < 150; run++) {
+      int n = 2 + r.nextInt(3);
+      int[] lo = new int[n];
+      int[] hi = new int[n];
+      StringBuilder model = new StringBuilder("array [1..2] of int: a = [1,-1];\n");
+      model.append("array [1..2] of int: b = [-1,1];\narray [1..2] of int: c = [2,1];\n");
+      for (int i = 0; i < n; i++) {
+        lo[i] = r.nextInt(9) - 4;
+        hi[i] = lo[i] + r.nextInt(6);
+        model.append("var %d..%d: x%d:: output_var;\n".formatted(lo[i], hi[i], i));
+      }
+      List<java.util.function.Predicate<int[]>> checks = new ArrayList<>();
+      for (int k = 1 + r.nextInt(5); k > 0; k--) {
+        int p = r.nextInt(n);
+        int q = (p + 1 + r.nextInt(n - 1)) % n;
+        int d = r.nextInt(7) - 3;
+        switch (r.nextInt(6)) {
+          case 0 -> {
+            model.append("constraint int_lin_le(a,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> v[p] - v[q] <= d);
+          }
+          case 1 -> {
+            model.append("constraint int_lin_le(b,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> v[q] - v[p] <= d);
+          }
+          case 2 -> {
+            model.append("constraint int_lin_eq(a,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> v[p] - v[q] == d);
+          }
+          case 3 -> {
+            model.append("constraint int_le(x%d,x%d);\n".formatted(p, q));
+            checks.add(v -> v[p] <= v[q]);
+          }
+          case 4 -> {
+            model.append("constraint int_lt(x%d,x%d);\n".formatted(p, q));
+            checks.add(v -> v[p] < v[q]);
+          }
+          default -> {
+            model.append("constraint int_lin_le(c,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> 2 * v[p] + v[q] <= d);
+          }
+        }
+      }
+      model.append("solve satisfy;\n");
+      int solutions = 0;
+      int[] v = lo.clone();
+      while (true) {
+        int[] t = v;
+        if (checks.stream().allMatch(ch -> ch.test(t))) {
+          solutions++;
+        }
+        int i = 0;
+        while (i < n && v[i] == hi[i]) {
+          v[i] = lo[i];
+          i++;
+        }
+        if (i == n) {
+          break;
+        }
+        v[i]++;
+      }
+      String out = run(model.toString(), "-a")[0];
+      long found = out.lines().filter(l -> l.equals("----------")).count();
+      assertEquals(solutions, found, model + out);
+      if (solutions == 0) {
+        assertTrue(out.contains("=====UNSATISFIABLE====="), model + out);
+      }
+    }
   }
 }

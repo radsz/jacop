@@ -47,6 +47,7 @@ import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
+import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
@@ -193,6 +194,11 @@ public class Constraints implements ParserTreeConstants {
             replaced.addAll(nvalues);
           }
         }
+      }
+
+      // before any constraint propagates: bounds propagation creeps round a negative cycle
+      if (DifferenceBoundsDetector.enabled() && support.options.proof() == null) {
+        new DifferenceBoundsDetector(support).detect(astTree);
       }
 
       int n = astTree.jjtGetNumChildren();
