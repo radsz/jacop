@@ -42,6 +42,7 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ProofOutput;
@@ -65,7 +66,12 @@ import org.jacop.jasat.cdcl.ProofOutput;
  */
 public final class VeriPbProof implements ProofOutput, AutoCloseable {
 
+  // the proof being written, which abandon() ends
+  private static final AtomicReference<VeriPbProof> open = new AtomicReference<>();
+
   private final Writer out;
+  // whether abandon() ended the proof; later steps are dropped
+  private boolean abandoned;
   // the name of each solver variable (DIMACS)
   private final IntFunction<String> names;
   // the id of the last constraint in the database
@@ -78,6 +84,8 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   // whether the header is written, and what comes after it until then
   private boolean started;
   private final StringBuilder early = new StringBuilder();
+  // the id of the constraint the last soli added, or 0
+  private long improvement;
   // deletions written after the next added clause
   private long[] deleted = new long[16];
   private int numDeleted;
@@ -97,6 +105,7 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   public VeriPbProof(OutputStream out, IntFunction<String> names) {
     this.out = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.US_ASCII), 1 << 16);
     this.names = names;
+    open.set(this);
   }
 
   /**
@@ -127,6 +136,12 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
 
   @Override
   public void add(int[] lits, int from, int n) {
+    if (!started && n > 0) {
+      // a clause simplified by the units of the root before the proof starts: those units are
+      // derived only after the model, so the clause is left as the model states it, which unit
+      // propagation with them uses the same way
+      return;
+    }
     line.setLength(0);
     line.append("rup");
     for (int k = from; k < from + n; k++) {
@@ -198,6 +213,43 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   }
 
   /**
+   * Writes a {@code red} step, a constraint with a witness, such as the definition of a new
+   * variable.
+   *
+   * @param step the constraint and its witness, such as {@code "1 ~y4 1 x1 >= 1 : y4 -> 0"}
+   * @return its id
+   */
+  long red(CharSequence step) {
+    write("red " + step + " ;\n");
+    steps++;
+    return ++lastId;
+  }
+
+  /**
+   * Deletes constraints this proof derived by steps of its own ({@link #pol}, {@link #red}).
+   *
+   * @param ids their ids
+   */
+  void deleteSteps(long... ids) {
+    line.setLength(0);
+    line.append("del id");
+    for (long id : ids) {
+      line.append(' ').append(id);
+    }
+    write(line.append(" ;\n"));
+    deletions += ids.length;
+  }
+
+  /**
+   * Returns the id of the constraint that the objective improves on the last logged solution.
+   *
+   * @return the id, or 0 when no solution was logged with it
+   */
+  long improvement() {
+    return improvement;
+  }
+
+  /**
    * Logs a solution, given by the literals true in it; with an objective, VeriPB adds the
    * constraint that the objective is smaller.
    *
@@ -213,7 +265,7 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
     line.append(" ;\n");
     write(line);
     if (improve) {
-      lastId++;
+      improvement = ++lastId;
     }
   }
 
@@ -252,11 +304,14 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   /**
    * Concludes bounds of the objective, of the OPB objective function.
    *
-   * @param lower the lower bound, proved by the contradiction that no solution is better
+   * @param lower the lower bound, proved by the contradiction that no solution is better, or {@code
+   *     "bound : id"} for the bound that the constraint of that id states
    * @param upper the upper bound, the value of a logged solution; null for none
    */
   void concludeBounds(String lower, String upper) {
-    refute();
+    if (lower.indexOf(':') < 0) {
+      refute();
+    }
     conclude("BOUNDS " + lower + " " + (upper == null ? "INF" : upper));
   }
 
@@ -274,7 +329,11 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
     return dimacs < 0 ? "~" + name : name;
   }
 
-  private void write(CharSequence s) {
+  // every step goes out whole, under the lock that abandon() takes from another thread
+  private synchronized void write(CharSequence s) {
+    if (abandoned) {
+      return;
+    }
     if (!started) {
       early.append(s);
       return;
@@ -292,8 +351,39 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
    * @throws IOException if the output fails
    */
   @Override
-  public void close() throws IOException {
-    out.close();
+  public synchronized void close() throws IOException {
+    open.compareAndSet(this, null);
+    if (!abandoned) {
+      out.close();
+    }
+  }
+
+  /**
+   * Ends the proof that is being written, if any, with no conclusion after its last whole step, and
+   * closes it; the steps that follow are dropped. A run that halts at its time-out calls it from
+   * another thread, so that the proof still checks.
+   */
+  public static void abandon() {
+    VeriPbProof p = open.getAndSet(null);
+    if (p != null) {
+      p.end();
+    }
+  }
+
+  private synchronized void end() {
+    if (abandoned) {
+      return;
+    }
+    if (started) {
+      conclude("NONE");
+    }
+    abandoned = true;
+    try {
+      out.close();
+    } catch (IOException e) {
+      // the run halts: the proof is lost, which its checker reports
+      System.err.println("%% the proof is not closed: " + e.getMessage());
+    }
   }
 
   /** A clause as a sorted set of literals, the key of its ids. */

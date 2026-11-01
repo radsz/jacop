@@ -273,7 +273,9 @@ public class ElementVariableFast extends AbstractElement
   /**
    * Writes list[index - indexOffset] = value as clauses: the index is one of the positions, and a
    * position makes its variable and the value agree on every order literal and value literal of
-   * either. Unit propagation on them prunes the index, the bounds and the holes of the value, and,
+   * either; each value of the value is supported by an auxiliary literal per position whose
+   * variable has it, true exactly when the index is at that position and the variable takes the
+   * value. Unit propagation on them prunes the index, the bounds and the holes of the value, and,
    * once the index is fixed, the domains of both, as consistency does.
    */
   @Override
@@ -320,6 +322,31 @@ public class ElementVariableFast extends AbstractElement
       }
     }
     model.clause(positions.toArray(new String[0]));
+    // a value of the value is taken at some position whose variable has it
+    for (ValueEnumeration v = valueDomain.valueEnumeration(); v.hasMoreElements(); ) {
+      int u = v.nextElement();
+      List<String> support = new ArrayList<>();
+      support.add(PbModel.not(model.equalTo(value, u)));
+      for (ValueEnumeration e = indexDomain.valueEnumeration(); e.hasMoreElements(); ) {
+        int i = e.nextElement();
+        int p = i - 1 - indexOffset;
+        if (p < 0 || p >= list.length || !(list[p] == value || model.domain(list[p]).contains(u))) {
+          continue;
+        }
+        String at = model.equalTo(index, i);
+        if (list[p] == value) {
+          support.add(at);
+          continue;
+        }
+        String takes = model.equalTo(list[p], u);
+        String y = model.auxiliary();
+        model.clause(PbModel.not(y), at);
+        model.clause(PbModel.not(y), takes);
+        model.clause(y, PbModel.not(at), PbModel.not(takes));
+        support.add(y);
+      }
+      model.clause(support.toArray(new String[0]));
+    }
     return true;
   }
 

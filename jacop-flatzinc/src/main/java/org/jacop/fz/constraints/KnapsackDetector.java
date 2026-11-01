@@ -456,6 +456,7 @@ public class KnapsackDetector implements ParserTreeConstants {
             knapsackProfit);
     // redundant, so degree-based variable selections see the degrees of the model
     k.setDegreeWeight(0);
+    k.dynamicProgramming(support.options.proof() == null);
     if (support.options.debug()) {
       FzConsole.println("% redundant surrogate " + k);
     }

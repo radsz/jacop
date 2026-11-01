@@ -41,6 +41,9 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ShiftExplanation;
 
 /**
@@ -54,7 +57,7 @@ import org.jacop.lcg.ShiftExplanation;
  * @version 5.0
  */
 public class ConditionalSelect extends Constraint
-    implements SatisfiedPresent, Copyable<ConditionalSelect>, Explainable {
+    implements SatisfiedPresent, Copyable<ConditionalSelect>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -188,6 +191,40 @@ public class ConditionalSelect extends Constraint
   @Override
   public ConditionalSelect copy(VarMap map) {
     return new ConditionalSelect(map.get(b), map.get(x), map.get(y));
+  }
+
+  /**
+   * States the selection by a literal per branch, that it is selected: its condition holds and
+   * those before it do not. A selected branch equals y, and some branch is selected.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ConditionalSelect.class) {
+      return false;
+    }
+    int n = b.length;
+    String[] condition = new String[n];
+    String[] some = new String[n];
+    for (int i = 0; i < n; i++) {
+      condition[i] = model.atLeast(b[i], 1);
+      String selected = model.auxiliary();
+      some[i] = selected;
+      model.clause(PbModel.not(selected), condition[i]);
+      String[] definition = new String[i + 2];
+      definition[0] = selected;
+      definition[1] = PbModel.not(condition[i]);
+      for (int j = 0; j < i; j++) {
+        model.clause(PbModel.not(selected), PbModel.not(condition[j]));
+        definition[j + 2] = condition[j];
+      }
+      model.clause(definition);
+      if (x[i] != y) {
+        model.guarded(
+            selected, new LinearForm(new IntVar[] {y, x[i]}, new long[] {1, -1}, 0, LinearForm.EQ));
+      }
+    }
+    model.clause(some);
+    return true;
   }
 
   // explanations for lazy clause generation; the semantics need some condition to be 1

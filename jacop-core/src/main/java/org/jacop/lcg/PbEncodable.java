@@ -49,4 +49,18 @@ public interface PbEncodable {
    * @return false when this constraint (for example a subclass) has no encoding
    */
   boolean encode(PbModel model);
+
+  /**
+   * Writes to a pseudo-Boolean model that a literal implies the constraint or, when negated, its
+   * negation; reifications and negations of the constraint are stated by it. The default writes the
+   * encoding under the literal and has no negation.
+   *
+   * @param model where the constraint goes
+   * @param literal the literal, "1" for a literal that always holds
+   * @param negated whether the literal implies the negation of the constraint
+   * @return false when this constraint has no such encoding
+   */
+  default boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    return !negated && model.implied(literal, () -> encode(model));
+  }
 }

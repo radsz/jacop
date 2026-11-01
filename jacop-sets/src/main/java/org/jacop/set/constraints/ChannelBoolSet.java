@@ -44,6 +44,8 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -56,7 +58,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public class ChannelBoolSet extends Constraint
-    implements SatisfiedPresent, Copyable<ChannelBoolSet> {
+    implements SatisfiedPresent, Copyable<ChannelBoolSet>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -197,5 +199,26 @@ public class ChannelBoolSet extends Constraint
   @Override
   public ChannelBoolSet copy(VarMap map) {
     return new ChannelBoolSet(map.get(b), map.get(s), offset);
+  }
+
+  /** Writes that b[i] is the membership of i + offset, and that s has no other element. */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ChannelBoolSet.class || !SetPb.stated(s)) {
+      return false;
+    }
+    for (int i = 0; i < n; i++) {
+      String in = SetPb.in(model, s, i + offset);
+      String bi = model.atLeast(b[i], 1);
+      model.clause(PbModel.not(bi), in);
+      model.clause(bi, PbModel.not(in));
+    }
+    for (ValueEnumeration e = SetPb.lub(s).valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      if (v < offset || v >= n + offset) {
+        model.clause(PbModel.not(SetPb.in(model, s, v)));
+      }
+    }
+    return true;
   }
 }

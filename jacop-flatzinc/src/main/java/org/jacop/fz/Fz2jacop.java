@@ -39,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.jasat.lcg.VeriPbProof;
 
 /**
  * An executable to parse and execute the flatzinc file.
@@ -148,7 +149,13 @@ public class Fz2jacop {
     if (watchdog && opt.getTimeOut() > 0 && opt.portfolioWorker() == null) {
       watch =
           TimeLimitWatchdog.start(
-              opt.getRemainingTimeOut(), report(opt, parser), () -> Runtime.getRuntime().halt(0));
+              opt.getRemainingTimeOut(),
+              report(opt, parser),
+              () -> {
+                // a proof ends after its last whole step, so that it still checks
+                VeriPbProof.abandon();
+                Runtime.getRuntime().halt(0);
+              });
     }
     try {
       return solve(opt, parser, t);

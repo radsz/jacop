@@ -775,6 +775,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_table_int(n);
   }
 
+  /** Handles the jacop_short_table_int FlatZinc constraint. */
+  public void jacop_short_table_int(SimpleNode n) {
+    gc.gen_jacop_short_table_int(n);
+  }
+
+  /** Handles the jacop_negative_table_int FlatZinc constraint. */
+  public void jacop_negative_table_int(SimpleNode n) {
+    gc.gen_jacop_negative_table_int(n);
+  }
+
   /** Handles the jacop_table_int_reif FlatZinc constraint. */
   public void jacop_table_int_reif(SimpleNode n) {
     gc.gen_jacop_table_int_reif(n, false);

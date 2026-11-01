@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -44,7 +45,10 @@ import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * It defines Value Precedence constraint for integers.
@@ -59,7 +63,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class ValuePrecede extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<ValuePrecede> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<ValuePrecede>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -309,5 +313,32 @@ public class ValuePrecede extends Constraint
   @Override
   public ValuePrecede copy(VarMap map) {
     return new ValuePrecede(s, t, map.get(x));
+  }
+
+  /**
+   * Writes the constraint as a layered graph of two nodes per level, whether s was taken before: t
+   * leaves only the second one, and s leads to it.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ValuePrecede.class) {
+      return false;
+    }
+    int[] levelNodes = new int[n + 1];
+    Arrays.fill(levelNodes, 2);
+    levelNodes[0] = 1;
+    List<Integer> edges = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int seen = 0; seen < levelNodes[i]; seen++) {
+        for (ValueEnumeration e = model.domain(x[i]).valueEnumeration(); e.hasMoreElements(); ) {
+          int v = e.nextElement();
+          if (v != t || seen == 1) {
+            edges.addAll(List.of(i, seen, v, v == s ? 1 : seen));
+          }
+        }
+      }
+    }
+    int[] edge = edges.stream().mapToInt(Integer::intValue).toArray();
+    return PbModel.layeredGraph(model, x, levelNodes, edge, edge.length / 4);
   }
 }

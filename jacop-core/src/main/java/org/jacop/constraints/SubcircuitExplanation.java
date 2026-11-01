@@ -138,7 +138,8 @@ final class SubcircuitExplanation {
    * @param list the variables
    * @param offset the value that points to list[0]
    * @param circuit whether every node is in the circuit (Circuit rather than Subcircuit)
-   * @param roots nodes recently used as roots of the dominator pruning, -1 for none
+   * @param roots nodes recently used as roots of the dominator pruning, -1 for none; null for no
+   *     dominator reasons, only cuts of the graph (which a VeriPB proof derives)
    * @param out where the reason entries are added
    * @return false when some removed value has no reason here
    */
@@ -613,7 +614,7 @@ final class SubcircuitExplanation {
       // t cannot be in the circuit
       offerNodeOut(t);
     }
-    if (bestEmpty) {
+    if (bestEmpty && recentRoots != null) {
       // a required root reaches v only through t, or t reaches the root only through v
       for (int r : candidateRoots(v, t)) {
         forward(r, t);
@@ -645,7 +646,7 @@ final class SubcircuitExplanation {
     }
     startBest();
     // two required nodes whose paths all pass through v
-    for (int r : candidateRoots(v, v)) {
+    for (int r : recentRoots == null ? new int[0] : candidateRoots(v, v)) {
       forward(r, v);
       int u = requiredOutside(v);
       if (u >= 0) {

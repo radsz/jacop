@@ -211,4 +211,20 @@ public class AtLeast extends AbstractAtLeastMost
     PbModel.count(model, list, value, new IntVar[0], LinearForm.GE, counter);
     return true;
   }
+
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (!negated) {
+      return model.implied(literal, () -> encode(model));
+    }
+    if (getClass() != AtLeast.class) {
+      return false;
+    }
+    return model.implied(
+        literal,
+        () -> {
+          PbModel.count(model, list, value, new IntVar[0], LinearForm.LE, (long) counter - 1);
+          return true;
+        });
+  }
 }

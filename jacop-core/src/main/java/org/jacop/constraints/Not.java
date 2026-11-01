@@ -73,6 +73,15 @@ public class Not extends PrimitiveConstraint
     this.queueIndex = c.queueIndex;
   }
 
+  /**
+   * Returns the negated constraint.
+   *
+   * @return the constraint this one negates
+   */
+  public PrimitiveConstraint negatedConstraint() {
+    return c;
+  }
+
   @Override
   public void consistency(final Store store) {
     c.notConsistency(store);

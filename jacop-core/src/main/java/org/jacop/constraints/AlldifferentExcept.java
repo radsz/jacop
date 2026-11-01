@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.function.ToIntFunction;
 import org.jacop.api.SatisfiedPresent;
@@ -38,8 +39,11 @@ import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbModel;
 
 /**
  * AlldifferentExcept constraint assures that all FDVs except those given as a set of values
@@ -155,6 +159,32 @@ public class AlldifferentExcept extends Alldifferent
   IntDomain explainedExceptions() {
     Class<?> type = getClass();
     return type == AlldifferentExcept.class || type == AlldifferentExceptZero.class ? s : null;
+  }
+
+  /**
+   * Writes the constraint as a cardinality constraint: each value outside the exceptions taken at
+   * most once; the solver derives the flow steps of its explanations.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (explainedExceptions() == null || new HashSet<>(Arrays.asList(list)).size() != list.length) {
+      return false;
+    }
+    IntDomain values = new IntervalDomain();
+    for (IntVar x : list) {
+      values = values.union(model.domain(x));
+    }
+    values = values.subtract(s);
+    int[] counted = new int[values.getSize()];
+    int k = 0;
+    for (ValueEnumeration e = values.valueEnumeration(); e.hasMoreElements(); ) {
+      counted[k++] = e.nextElement();
+    }
+    int[] up = new int[counted.length];
+    Arrays.fill(up, 1);
+    model.cardinality(
+        list, counted, new IntVar[counted.length], new int[counted.length], up, false, null);
+    return true;
   }
 
   @Override

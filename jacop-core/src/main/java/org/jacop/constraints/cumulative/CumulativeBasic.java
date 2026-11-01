@@ -399,7 +399,7 @@ public class CumulativeBasic extends Constraint
    */
   @Override
   public boolean encode(PbModel model) {
-    if (getClass() != CumulativeBasic.class) {
+    if (getClass() != CumulativeBasic.class && getClass() != Cumulative.class) {
       return false;
     }
     // time point -> the literals of the uses at it and their coefficients
@@ -408,6 +408,7 @@ public class CumulativeBasic extends Constraint
     // time point -> the tasks of variable use at it: {first term, end of its terms, task}, and c
     Map<Integer, List<int[]>> variableUses = new HashMap<>();
     Map<Integer, List<String>> variableCovers = new HashMap<>();
+    noteTimetable(model);
     for (int i = 0; i < taskNormal.length; i++) {
       TaskView task = taskNormal[i];
       IntDomain dd = model.domain(task.dur);
@@ -418,7 +419,7 @@ public class CumulativeBasic extends Constraint
         continue;
       }
       for (long t = sd.min(); t <= (long) sd.max() + dd.max() - 1; t++) {
-        String c = dd.singleton() ? fixedCover(model, task.start, dd.value(), t) : null;
+        String c = dd.singleton() ? fixedCover(model, i, task.start, dd.value(), t) : null;
         long kmin = Math.max(dmin, t - sd.max() + 1);
         // the smallest k from which [s >= t - k + 1] holds at the root is the last one needed
         long kmax = Math.min(dd.max(), Math.max(kmin, t - sd.min() + 1));
@@ -478,6 +479,7 @@ public class CumulativeBasic extends Constraint
     for (var e : literals.entrySet()) {
       List<String> l = e.getValue();
       List<Long> a = coefficients.get(e.getKey());
+      model.timetableLine(-1, e.getKey());
       model.sum(l.toArray(new String[0]), unboxed(a), cap, minus, LinearForm.LE, 0);
       List<int[]> uses = variableUses.getOrDefault(e.getKey(), List.of());
       for (int k = 0; k < uses.size(); k++) {
@@ -525,7 +527,27 @@ public class CumulativeBasic extends Constraint
   }
 
   // [s <= t < s + d] for a fixed duration d: [s >= t - d + 1] - [s >= t + 1]
-  private static String fixedCover(PbModel model, IntVar s, int d, long t) {
+  // the tasks of fixed durations and uses, for proofs that sum the lines of the time table
+  private void noteTimetable(PbModel model) {
+    int n = taskNormal.length;
+    IntVar[] starts = new IntVar[n];
+    int[] durations = new int[n];
+    int[] uses = new int[n];
+    for (int i = 0; i < n; i++) {
+      TaskView task = taskNormal[i];
+      IntDomain dd = model.domain(task.dur);
+      IntDomain rd = model.domain(task.res);
+      if (dd.max() > 0 && rd.max() > 0 && (!dd.singleton() || !rd.singleton())) {
+        return;
+      }
+      starts[i] = task.start;
+      durations[i] = Math.max(dd.max(), 0);
+      uses[i] = Math.max(rd.max(), 0);
+    }
+    model.timetable(starts, durations, uses, limit);
+  }
+
+  private static String fixedCover(PbModel model, int task, IntVar s, int d, long t) {
     String from = model.atLeast(s, (int) (t - d + 1));
     String after = model.atLeast(s, (int) (t + 1));
     if ("0".equals(from) || "1".equals(after)) {
@@ -536,6 +558,7 @@ public class CumulativeBasic extends Constraint
       return PbModel.not(after);
     }
     String covers = model.auxiliary();
+    model.timetableLine(task, t);
     model.sum(
         new String[] {covers, from, after},
         new long[] {1, -1, 1},

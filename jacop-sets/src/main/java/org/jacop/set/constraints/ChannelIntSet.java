@@ -44,6 +44,8 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -57,7 +59,8 @@ import org.jacop.set.core.SetVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class ChannelIntSet extends Constraint implements SatisfiedPresent, Copyable<ChannelIntSet> {
+public class ChannelIntSet extends Constraint
+    implements SatisfiedPresent, Copyable<ChannelIntSet>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -255,5 +258,36 @@ public class ChannelIntSet extends Constraint implements SatisfiedPresent, Copya
   @Override
   public ChannelIntSet copy(VarMap map) {
     return new ChannelIntSet(map.get(x), map.get(s), offsetInt, offsetSet);
+  }
+
+  /** Writes that x[i] = j + offsetSet is the membership of i + offsetInt in s[j]. */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ChannelIntSet.class || !SetPb.stated(s)) {
+      return false;
+    }
+    for (int i = 0; i < ni; i++) {
+      for (int j = 0; j < ns; j++) {
+        String in = SetPb.in(model, s[j], i + offsetInt);
+        String eq = model.equalTo(x[i], j + offsetSet);
+        model.clause(PbModel.not(eq), in);
+        model.clause(eq, PbModel.not(in));
+      }
+      for (ValueEnumeration e = model.domain(x[i]).valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (v < offsetSet || v >= ns + offsetSet) {
+          model.clause(PbModel.not(model.equalTo(x[i], v)));
+        }
+      }
+    }
+    for (SetVar sj : s) {
+      for (ValueEnumeration e = SetPb.lub(sj).valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (v < offsetInt || v >= ni + offsetInt) {
+          model.clause(PbModel.not(SetPb.in(model, sj, v)));
+        }
+      }
+    }
+    return true;
   }
 }

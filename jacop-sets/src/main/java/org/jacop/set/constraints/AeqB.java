@@ -34,7 +34,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -144,5 +147,31 @@ public class AeqB extends PrimitiveConstraint implements Copyable<AeqB>, Element
   @Override
   public AeqB copy(VarMap map) {
     return new AeqB(map.get(a), map.get(b));
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /** Writes the equality of every membership, with the equality of the cardinalities. */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    SetExplanation.Relation r = relation();
+    SetVar[] sets = {a, b};
+    if (r == null || !SetPb.stated(sets)) {
+      return false;
+    }
+    if (negated) {
+      return SetPb.violated(model, literal, sets, r);
+    }
+    return model.implied(
+        literal,
+        () -> {
+          SetPb.elementwise(model, sets, r);
+          SetPb.cardinalities(
+              model, sets, new long[] {1, -1}, new IntVar[0], new long[0], LinearForm.EQ, 0);
+          return true;
+        });
   }
 }
