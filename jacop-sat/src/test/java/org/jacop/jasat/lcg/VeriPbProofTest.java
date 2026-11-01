@@ -979,6 +979,31 @@ class VeriPbProofTest {
   }
 
   /**
+   * A run that overruns its time-out halts from another thread; the proof then ends after its last
+   * whole step with no conclusion (it was cut in the middle of a step), and later steps are
+   * dropped.
+   */
+  @Test
+  void anAbandonedProofEndsAfterItsLastStep() {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    VeriPbProof p = new VeriPbProof(out, d -> "x" + d);
+    p.start(1);
+    p.lemma("rup 1 x1 >= 1 ;\n");
+    VeriPbProof.abandon();
+    p.lemma("rup 1 x2 >= 1 ;\n");
+    p.concludeNothing();
+    try {
+      p.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    assertThat(out.toString(StandardCharsets.US_ASCII))
+        .isEqualTo(
+            "pseudo-Boolean proof version 3.0\nf 1 ;\nrup 1 x1 >= 1 ;\n"
+                + "output NONE ;\nconclusion NONE ;\nend pseudo-Boolean proof ;\n");
+  }
+
+  /**
    * A reason for a bound of the value skips a position whose variable has no value in common with
    * it while the index still has the position; unit propagation finds that the index is not there
    * only through the support literals of the value's values.

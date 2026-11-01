@@ -1492,7 +1492,9 @@ Version 5.0 (unreleased)
     totalizer output by two red steps, derives the totalizer clauses and
     each core's increase of the bound by pol steps, and hardened literals
     and the bound clause by rup. A search stopped by a limit concludes
-    BOUNDS with the lower bound it proved (of the cores or of the root).
+    BOUNDS with the lower bound it proved (of the cores or of the root);
+    a run that overruns its time-out ends its proof after the last whole
+    step with conclusion NONE.
     Linear constraints (LinearInt, LinearBool and the linear forms of LCG
     explanations), their reifications, equalities with constants,
     ChannelReif, ChannelImply, clauses, element over constants, Count,

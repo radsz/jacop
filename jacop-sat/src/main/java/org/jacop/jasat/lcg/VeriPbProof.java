@@ -42,6 +42,7 @@ import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.IntFunction;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ProofOutput;
@@ -65,7 +66,12 @@ import org.jacop.jasat.cdcl.ProofOutput;
  */
 public final class VeriPbProof implements ProofOutput, AutoCloseable {
 
+  // the proof being written, which abandon() ends
+  private static final AtomicReference<VeriPbProof> open = new AtomicReference<>();
+
   private final Writer out;
+  // whether abandon() ended the proof; later steps are dropped
+  private boolean abandoned;
   // the name of each solver variable (DIMACS)
   private final IntFunction<String> names;
   // the id of the last constraint in the database
@@ -99,6 +105,7 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   public VeriPbProof(OutputStream out, IntFunction<String> names) {
     this.out = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.US_ASCII), 1 << 16);
     this.names = names;
+    open.set(this);
   }
 
   /**
@@ -316,7 +323,11 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
     return dimacs < 0 ? "~" + name : name;
   }
 
-  private void write(CharSequence s) {
+  // every step goes out whole, under the lock that abandon() takes from another thread
+  private synchronized void write(CharSequence s) {
+    if (abandoned) {
+      return;
+    }
     if (!started) {
       early.append(s);
       return;
@@ -334,8 +345,39 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
    * @throws IOException if the output fails
    */
   @Override
-  public void close() throws IOException {
-    out.close();
+  public synchronized void close() throws IOException {
+    open.compareAndSet(this, null);
+    if (!abandoned) {
+      out.close();
+    }
+  }
+
+  /**
+   * Ends the proof that is being written, if any, with no conclusion after its last whole step, and
+   * closes it; the steps that follow are dropped. A run that halts at its time-out calls it from
+   * another thread, so that the proof still checks.
+   */
+  public static void abandon() {
+    VeriPbProof p = open.getAndSet(null);
+    if (p != null) {
+      p.end();
+    }
+  }
+
+  private synchronized void end() {
+    if (abandoned) {
+      return;
+    }
+    if (started) {
+      conclude("NONE");
+    }
+    abandoned = true;
+    try {
+      out.close();
+    } catch (IOException e) {
+      // the run halts: the proof is lost, which its checker reports
+      System.err.println("%% the proof is not closed: " + e.getMessage());
+    }
   }
 
   /** A clause as a sorted set of literals, the key of its ids. */
