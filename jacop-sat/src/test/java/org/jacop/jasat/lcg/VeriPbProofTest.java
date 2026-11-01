@@ -718,11 +718,12 @@ class VeriPbProofTest {
         });
   }
 
-  // tables of random tuples, among them equal ones, whose literals each solution must fix
+  // tables of random tuples, among them equal ones, whose literals each solution must fix, and
+  // tuples whose accepted values are removed one by one (lot-sizing pigment20a)
   @Test
   void tablesOfValuesAreProved() {
     optimaAreProved(
-        200,
+        300,
         (store, random) -> {
           IntVar[] x = new IntVar[4];
           for (int i = 0; i < x.length; i++) {

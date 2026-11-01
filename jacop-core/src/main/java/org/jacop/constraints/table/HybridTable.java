@@ -2032,9 +2032,9 @@ public class HybridTable extends Constraint
 
   /**
    * Writes the table with a literal per tuple: a tuple implies each of its restrictions on the
-   * values of the root domains, holds when they all do, each value needs a tuple that accepts it,
-   * and some tuple holds. Unit propagation on them gives domain consistency. Restrictions between
-   * columns are not written.
+   * values of the root domains and one of the values each accepts, holds when they all do, each
+   * value needs a tuple that accepts it, and some tuple holds. Unit propagation on them gives
+   * domain consistency. Restrictions between columns are not written.
    */
   @Override
   public boolean encode(PbModel model) {
@@ -2091,9 +2091,16 @@ public class HybridTable extends Constraint
             holds.add(model.equalTo(x[i], v));
           }
         }
-        for (int v : accepted) {
-          support.computeIfAbsent(key(i, v), k -> new ArrayList<>()).add(lit);
+        // lit also implies one of the accepted values, which rules the tuple out by unit
+        // propagation once they are removed one by one
+        String[] one = new String[accepted.size() + 1];
+        one[0] = PbModel.not(lit);
+        for (int k = 0; k < accepted.size(); k++) {
+          int v = accepted.get(k);
+          one[k + 1] = model.equalTo(x[i], v);
+          support.computeIfAbsent(key(i, v), key -> new ArrayList<>()).add(lit);
         }
+        model.clause(one);
       }
       if (holds != null) {
         model.clause(holds.toArray(new String[0]));
