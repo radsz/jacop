@@ -48,10 +48,13 @@ import org.jacop.core.Var;
  */
 public class SequenceSelect implements SelectChoicePoint<Var> {
 
-  /** The index of a selection is kept in the bits above this shift, the selection's own below. */
-  private static final int SHIFT = 24;
+  /** The most bits of an index that hold the index of a selection's own variable. */
+  private static final int MAX_SHIFT = 24;
 
-  private static final int LOCAL_MASK = (1 << SHIFT) - 1;
+  // the index of a selection is kept in the bits above shift, the selection's own index below
+  private final int shift;
+
+  private final int localMask;
 
   private final SelectChoicePoint<? extends Var>[] selects;
 
@@ -66,8 +69,8 @@ public class SequenceSelect implements SelectChoicePoint<Var> {
    */
   @SuppressWarnings("unchecked")
   public SequenceSelect(List<? extends SelectChoicePoint<? extends Var>> selects) {
-    if (selects.isEmpty() || selects.size() > (1 << (31 - SHIFT))) {
-      throw new IllegalArgumentException("Between 1 and 128 selections are supported");
+    if (selects.isEmpty()) {
+      throw new IllegalArgumentException("At least one selection is needed");
     }
     // nested sequences are flattened, since each keeps the index of its selection in the same bits
     List<SelectChoicePoint<? extends Var>> flat = new ArrayList<>();
@@ -78,18 +81,21 @@ public class SequenceSelect implements SelectChoicePoint<Var> {
         flat.add(s);
       }
     }
-    if (flat.size() > (1 << (31 - SHIFT))) {
-      throw new IllegalArgumentException("At most 128 selections are supported");
-    }
     this.selects = flat.toArray(new SelectChoicePoint[0]);
+    // as many bits as the selections need (a FlatZinc model may have hundreds of int_search), the
+    // rest for the selection's own index. A selection's own index above the mask is cut to a
+    // smaller one, which only makes the selection scan its variables from an earlier position.
+    int bits = 32 - Integer.numberOfLeadingZeros(this.selects.length - 1);
+    this.shift = Math.min(MAX_SHIFT, 31 - bits);
+    this.localMask = (1 << shift) - 1;
   }
 
   @Override
   public Var getChoiceVariable(int index) {
     pendingConstraint = null;
-    int first = index >>> SHIFT;
+    int first = index >>> shift;
     for (int k = first; k < selects.length; k++) {
-      int local = k == first ? index & LOCAL_MASK : 0;
+      int local = k == first ? index & localMask : 0;
       Var v = selects[k].getChoiceVariable(local);
       if (v != null) {
         current = k;
@@ -128,7 +134,7 @@ public class SequenceSelect implements SelectChoicePoint<Var> {
 
   @Override
   public int getIndex() {
-    return (current << SHIFT) | (selects[current].getIndex() & LOCAL_MASK);
+    return (current << shift) | (selects[current].getIndex() & localMask);
   }
 
   @Override

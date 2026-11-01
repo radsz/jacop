@@ -98,6 +98,10 @@ public class LinearRelaxation extends Constraint
     LAZY
   }
 
+  // whether certificate() cleans the combination: drops the multipliers of a missing side and
+  // divides each inequality by the gcd of its weights
+  private static final boolean CLEAN = !"false".equals(System.getProperty("org.jacop.lp.clean"));
+
   // multipliers below this share of the largest are taken as round-off of the simplex
   private static final double NOISE = 1e-11;
 
@@ -173,6 +177,13 @@ public class LinearRelaxation extends Constraint
   // so a relaxation that finds little costs a bounded share of the search
   private static final long WORK_PER_CALL = Long.getLong("org.jacop.lp.workPerCall", 4096L);
   private static final long PRUNE_DISCOUNT = Long.getLong("org.jacop.lp.pruneDiscount", 16L);
+
+  // the work of the sparse simplex in search counted against the credit, in units of a dense
+  // tableau entry. A unit of the sparse simplex's work takes 1-1.8 ns and a dense tableau entry
+  // 0.45-0.57 ns (Challenge: triangular n11, unit-commitment, roster-shifts-bool), but a factor of
+  // 3 slowed the LP proofs (roster-shifts-bool s200_e50_c8 16 -> 32 s, harmony canon 28 -> 49 s)
+  // more than it helped elsewhere (triangular n11 LP time 56 -> 30 of 60 s), so it stays 1
+  private static final long SPARSE_COST = Long.getLong("org.jacop.lp.sparseCost", 1L);
   private long credit = WORK;
 
   // the solves in a row stopped at the pivot limit; after IDLE_RUNS of them the simplex is taken to
@@ -256,6 +267,9 @@ public class LinearRelaxation extends Constraint
   private int baseRows;
   private long extraLimits;
   private static final int EXTRA_LIMITS = 3;
+
+  // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
+  private boolean bySize;
 
   // MIR cuts at the root: rounds, cuts per round, and the share of the rows they may add
   private static final boolean CUTS_ENABLED =
@@ -553,6 +567,74 @@ public class LinearRelaxation extends Constraint
     if (!substituted.isEmpty()) {
       forms = substitute(forms, substituted, objective);
     }
+    if (LINEARIZE) {
+      relaxed.addAll(Linearizations.encodings(constraints));
+    }
+    // the rows of the other constraints; rows over a variable that was substituted away are left
+    // out
+    List<LinearForm> candidates = new ArrayList<>();
+    for (LinearForm f : relaxed) {
+      if (f.relation() != LinearForm.NE
+          && f.vars().length >= 2
+          && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
+        candidates.add(f);
+      }
+    }
+    boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
+    if (auto && !sparseTakes(forms)) {
+      // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
+      auto = false;
+    }
+    if (auto && (forms.size() >= SPARSE_ROWS || tooLarge(forms, Simplex.DENSE))) {
+      // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
+      // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
+      // larger ones, also those over the dense size cap, which would get no relaxation at all
+      simplex = Simplex.SPARSE;
+    }
+    if (tooLarge(forms, simplex)) {
+      return null;
+    }
+    List<LinearForm> further = new ArrayList<>();
+    // the further rows are tried at the first solve over every column; on the sparse simplex
+    // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
+    // trial stays in proportion to the relaxation (a trial over every candidate of a large model
+    // can take a minute and then drop them all)
+    fitsSimplex(forms, candidates, simplex, auto, further);
+    LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
+    r.bySize = auto && simplex == Simplex.SPARSE;
+    return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
+  // when the dense one is asked for; -1 keeps the dense one whatever the size
+  private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
+  // beyond them its root solve and its ratio test take more than the time limit of a run (nside
+  // EASY_200_50, 57,505 rows: 52 ms a pivot; rcpsp-wet-diverse j60_19_6, 140,925 columns), and the
+  // largest that helped in the Challenge has 19,141 rows (table-layout) and 23,242 columns
+  // (physician-scheduling)
+  private static final int SPARSE_MAX_ROWS =
+      Integer.getInteger("org.jacop.lp.sparseMaxRows", 25_000);
+  private static final int SPARSE_MAX_COLUMNS =
+      Integer.getInteger("org.jacop.lp.sparseMaxColumns", 30_000);
+
+  private static boolean sparseTakes(List<LinearForm> forms) {
+    if (forms.size() > SPARSE_MAX_ROWS) {
+      return false;
+    }
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (LinearForm f : forms) {
+      vars.addAll(Arrays.asList(f.vars()));
+      if (vars.size() > SPARSE_MAX_COLUMNS) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether the given rows alone are over the size cap of the simplex
+  private static boolean tooLarge(List<LinearForm> forms, Simplex simplex) {
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
     long rows = 0;
     long nonzeros = 0;
@@ -564,37 +646,55 @@ public class LinearRelaxation extends Constraint
       if (simplex == Simplex.DENSE
           ? rows * (rows + vars.size() + 1) > MAX_TABLEAU
           : nonzeros > MAX_NONZEROS) {
-        return null;
+        return true;
       }
     }
-    if (LINEARIZE) {
-      relaxed.addAll(Linearizations.encodings(constraints));
+    return false;
+  }
+
+  /**
+   * Fills further with the candidate rows the simplex takes after the given rows, in order, until
+   * its size cap.
+   *
+   * @return true when the given rows and every candidate fit; false when the given rows are over
+   *     the cap (further stays empty) or some candidates were left out
+   */
+  private static boolean fitsSimplex(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      Simplex simplex,
+      boolean denseCap,
+      List<LinearForm> further) {
+    if (tooLarge(forms, simplex)) {
+      return false;
     }
-    // the rows of the other constraints, as many as the simplex takes; rows over a variable that
-    // was substituted away are left out
-    List<LinearForm> further = new ArrayList<>();
-    for (LinearForm f : relaxed) {
-      if (f.relation() == LinearForm.NE
-          || f.vars().length < 2
-          || Arrays.stream(f.vars()).anyMatch(substituted::contains)) {
-        continue;
-      }
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    long rows = 0;
+    long nonzeros = 0;
+    for (LinearForm f : forms) {
+      vars.addAll(Arrays.asList(f.vars()));
+      rows++;
+      nonzeros += f.vars().length;
+    }
+    for (LinearForm f : candidates) {
       int added = 0;
       for (IntVar v : f.vars()) {
         added += vars.contains(v) ? 0 : 1;
       }
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
-          : nonzeros + f.vars().length > MAX_NONZEROS) {
-        break;
+          : nonzeros + f.vars().length > MAX_NONZEROS
+              || denseCap
+                  && (further.size() >= 2L * forms.size() + SPARSE_ROWS
+                      || vars.size() + added > SPARSE_MAX_COLUMNS)) {
+        return false;
       }
       further.add(f);
       vars.addAll(Arrays.asList(f.vars()));
       rows++;
       nonzeros += f.vars().length;
     }
-    LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
-    return r.rows() + r.extraColumns.length < 2 ? null : r;
+    return true;
   }
 
   /**
@@ -882,7 +982,7 @@ public class LinearRelaxation extends Constraint
       long cost =
           simplex == Simplex.DENSE
               ? (pivots() - pivots + 1) * lp.pivotWork()
-              : Math.max(0, lp.work() - work) + lp.pivotWork() + scanned;
+              : SPARSE_COST * (Math.max(0, lp.work() - work) + lp.pivotWork() + scanned);
       scanned = 0;
       if (first) {
         // the root solve and its cuts may take up to their own budget; they spend the credit only
@@ -950,11 +1050,23 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = Math.max(1, lp.pivotWork());
+    if (beforeExtra != null && bySize) {
+      // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense
+      // tableau they would make, as before the choice: a sparse work unit takes two to four times
+      // a dense entry, and the sparse limit alone keeps rows that slow every solve (slnb7x7)
+      long dense = (long) lp.rows() * (lp.rows() + lp.columns() + 1);
+      if (dense <= MAX_TABLEAU) {
+        size = Math.max(size, dense);
+      }
+    }
     int limit =
         calls == 1
             ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
-    int status = simplex == Simplex.LAZY ? solveLazily(limit) : lp.solve(limit);
+    int status =
+        simplex == Simplex.LAZY
+            ? solveLazily(limit)
+            : calls == 1 ? rootSolve(lp, limit, rootWork()) : lp.solve(limit);
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
     if (calls == 1 && extraColumns.length > 0) {
@@ -1005,14 +1117,21 @@ public class LinearRelaxation extends Constraint
     } else {
       return;
     }
-    for (long scale : SCALES) {
-      long[] lambda = scaled(y, scale);
+    for (int s = 0; s < SCALES.length; s++) {
+      long[] lambda = scaled(y, SCALES[s]);
       if (lambda == null) {
         return;
       }
-      Aggregate g = aggregate(lambda);
-      if (g != null) {
-        for (LinearForm f : combine(g)) {
+      LinearForm[] forms = certificate(lambda);
+      if (forms == null) {
+        continue; // the combination overflows: try a smaller scale
+      }
+      boolean fits = true;
+      for (LinearForm f : forms) {
+        fits &= f == null || fits(f);
+      }
+      if (fits || s == SCALES.length - 1) {
+        for (LinearForm f : forms) {
           if (f != null) {
             propagate(store, f);
           }
@@ -1022,7 +1141,151 @@ public class LinearRelaxation extends Constraint
         }
         // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
       }
-      // the combination overflows: try a smaller scale
+      // the bounds reasoning on the form would overflow: try a smaller scale
+    }
+  }
+
+  /**
+   * The two inequalities of the combination of the rows by lambda, cleaned (Neumaier and
+   * Shcherbina): a multiplier whose row lacks the side its sign needs is dropped from that
+   * inequality instead of losing the inequality, and each inequality is divided by the greatest
+   * common divisor of its weights with its side rounded down, which holds as every column is an
+   * integer. Null when a combination overflows.
+   */
+  private LinearForm[] certificate(long[] lambda) {
+    Aggregate g = aggregate(lambda);
+    if (g == null) {
+      return null;
+    }
+    if (!CLEAN) {
+      return combine(g);
+    }
+    LinearForm[] forms = combine(g);
+    if (forms.length == 0) {
+      return forms;
+    }
+    if (!g.hasUpper()) {
+      Aggregate u = aggregate(sided(lambda, true));
+      if (u == null) {
+        return null;
+      }
+      LinearForm[] c = combine(u);
+      forms[0] = c.length > 0 ? c[0] : null;
+    }
+    if (!g.hasLower()) {
+      Aggregate l = aggregate(sided(lambda, false));
+      if (l == null) {
+        return null;
+      }
+      LinearForm[] c = combine(l);
+      forms[1] = c.length > 1 ? c[1] : null;
+    }
+    for (int k = 0; k < forms.length; k++) {
+      forms[k] = forms[k] == null ? null : divided(forms[k]);
+    }
+    return forms;
+  }
+
+  // lambda without the multipliers whose row lacks the side the upper (or lower) inequality needs
+  private long[] sided(long[] lambda, boolean upper) {
+    long[] l = lambda.clone();
+    for (int i = 0; i < l.length; i++) {
+      if (l[i] != 0 && !((l[i] > 0) == upper ? hasHi[i] : hasLo[i])) {
+        l[i] = 0;
+      }
+    }
+    return l;
+  }
+
+  // sum w x <= c divided by the gcd g of the weights: sum (w / g) x <= floor(c / g)
+  private static LinearForm divided(LinearForm f) {
+    long g = 0;
+    for (long w : f.weights()) {
+      g = gcd(g, Math.abs(w));
+      if (g == 1) {
+        return f;
+      }
+    }
+    if (g <= 1) {
+      return f;
+    }
+    long[] w = new long[f.weights().length];
+    for (int k = 0; k < w.length; k++) {
+      w[k] = f.weights()[k] / g;
+    }
+    return new LinearForm(f.vars(), w, Math.floorDiv(f.c(), g), LinearForm.LE);
+  }
+
+  private static long gcd(long a, long b) {
+    while (b != 0) {
+      long t = a % b;
+      a = b;
+      b = t;
+    }
+    return a;
+  }
+
+  // whether the bounds reasoning on sum w x <= c stays within a long with room to spare: the sum
+  // of |w| times the largest bound, and |c|, below 2^61
+  private static boolean fits(LinearForm f) {
+    final double limit = 0x1p61;
+    double sum = Math.abs((double) f.c());
+    IntVar[] vars = f.vars();
+    long[] w = f.weights();
+    for (int k = 0; k < vars.length; k++) {
+      double b = Math.max(Math.abs((double) vars[k].min()), Math.abs((double) vars[k].max()));
+      sum += Math.abs((double) w[k]) * b;
+    }
+    return sum < limit;
+  }
+
+  // the work budget of a root solve of the sparse simplex: its pivots cost far more than the
+  // estimate made before the first one (latin-squares-lp 20: 40,000 estimated, 390,000 spent, so
+  // 20,000 root pivots took 14 s where the dense simplex had no relaxation at all), so its budget
+  // is
+  // counted as work spent; optimisation gets four times the budget of satisfaction, whose
+  // relaxation can only find infeasibility
+  private static final long SPARSE_ROOT_WORK =
+      Long.getLong("org.jacop.lp.sparseRootWork", 4_000_000_000L);
+
+  // the most time of a root solve of the sparse simplex, in seconds: on the largest relaxations its
+  // work estimate is far off (nside EASY_200_50, 57,505 rows: 52 ms a pivot, 75 s for 1,455
+  // pivots, past the time limit of the whole run); the limit only binds on such relaxations
+  private static final long SPARSE_ROOT_NANOS =
+      (long) (Double.parseDouble(System.getProperty("org.jacop.lp.sparseRootSeconds", "3")) * 1e9);
+
+  private long rootWork() {
+    return objective == null ? ROOT_WORK : SPARSE_ROOT_WORK;
+  }
+
+  /**
+   * A root solve: the dense simplex in one call of at most the given pivots; the sparse one in
+   * chunks, until it is done, the pivots run out, its work passes the budget, or its time passes
+   * {@code org.jacop.lp.sparseRootSeconds}.
+   */
+  private int rootSolve(LpSolver s, int pivots, long work) {
+    return rootSolve(s, pivots, work, SPARSE_ROOT_NANOS);
+  }
+
+  private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
+    if (!(s instanceof SparseDualSimplex)) {
+      return s.solve(pivots);
+    }
+    long startPivots = s.pivots();
+    long startWork = s.work();
+    long startTime = System.nanoTime();
+    while (true) {
+      long left = pivots - (s.pivots() - startPivots);
+      long spent = s.work() - startWork;
+      if (left <= 0 || spent >= work || System.nanoTime() - startTime > nanos) {
+        return LpSolver.LIMIT;
+      }
+      long size = Math.max(1, s.pivotWork());
+      int chunk = (int) Math.clamp((work - spent) / size, 1, Math.min(left, 50));
+      int status = s.solve(chunk);
+      if (status != LpSolver.LIMIT) {
+        return status;
+      }
     }
   }
 
@@ -1178,7 +1441,10 @@ public class LinearRelaxation extends Constraint
     inactive = inactive2;
   }
 
-  // y scaled so that its largest entry is about scale, rounded; null when y is zero
+  // y scaled so that its largest entry is about scale, rounded; null when y is zero. With the
+  // certificate cleaning on, entries below 1e-12 of the largest are noise of the simplex (its cost
+  // perturbation and eta file) and are zeroed, so that a large scale does not turn them into
+  // multipliers of rows without the side they need
   private static long[] scaled(double[] y, long scale) {
     double largest = 0;
     for (double v : y) {
@@ -1377,7 +1643,11 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      status = lp.solve(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS));
+      status =
+          rootSolve(
+              lp,
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
@@ -1506,7 +1776,7 @@ public class LinearRelaxation extends Constraint
       full.setBounds(j, x[j].min(), x[j].max());
     }
     long size = Math.max(1, full.pivotWork());
-    int withExtra = full.solve(Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS));
+    int withExtra = rootSolve(full, Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
     boolean keep;
     if (withExtra == DualSimplex.INFEASIBLE) {
       keep = true;
