@@ -150,6 +150,16 @@ public interface PbModel {
   void allDifferent(IntVar[] x);
 
   /**
+   * Adds that the successors x form one circuit through all nodes: node i points to node j when
+   * x[i] = offset + j. The solver writes the steps that the cut explanations of the constraint
+   * need.
+   *
+   * @param x the successor variables, all different objects
+   * @param offset the value that points to node 0
+   */
+  void circuit(IntVar[] x, int offset);
+
+  /**
    * Adds that counters[k] of the variables take values[k] (between low[k] and up[k] when
    * counters[k] is null), and that they take counted values only when closed. The solver writes the
    * counting steps that the flow explanations of such a constraint need.

@@ -668,6 +668,122 @@ final class OpbEncoder implements PbModel {
     return chainStart;
   }
 
+  /**
+   * The literals of a circuit's positions, by which the solver derives its cut reasons:
+   * forward[i][k] that node i is k arcs after node 0 along the circuit, reverse[i][k] that it is k
+   * arcs before it, for k from 1 to n - 1, as names or "0" and "1"; node 0 and position n have none
+   * ("0").
+   */
+  record CircuitLines(int[] variables, int offset, String[][] forward, String[][] reverse) {}
+
+  private final Map<Constraint, CircuitLines> circuits = new IdentityHashMap<>();
+
+  /**
+   * Returns the position literals of each circuit.
+   *
+   * @return the literals, by constraint
+   */
+  Map<Constraint, CircuitLines> circuitLines() {
+    return circuits;
+  }
+
+  /**
+   * Writes a circuit: all different successors in the range of the nodes, no node its own
+   * successor, each node some node's successor, and two position encodings. Node 0 is at position
+   * 0; an arc i to j with j not 0 puts j one after i, and an arc into 0 puts its tail at n - 1.
+   * Backwards, an arc into 0 puts its tail at 1, an arc i to j with i not 0 puts i one after j, and
+   * the arc out of 0 puts its head at n - 1. Each position is a value of a node, by order literals,
+   * and each arc a clause per position. A set of nodes that no arc leaves, without node 0, then has
+   * no position for its nodes, which steps derive from the last position down; the nodes outside
+   * such a set with node 0 have no backward position.
+   */
+  @Override
+  public void circuit(IntVar[] x, int offset) {
+    if (!guard.isEmpty()) {
+      throw new IllegalStateException("a circuit under a guard");
+    }
+    int n = x.length;
+    int[] variables = new int[n];
+    for (int i = 0; i < n; i++) {
+      variables[i] = id.applyAsInt(x[i]);
+    }
+    allDifferent(x);
+    long arcs = 0;
+    for (int i = 0; i < n; i++) {
+      arcs += root[variables[i]].getSize();
+      clause(atLeast(x[i], offset));
+      clause(PbModel.not(atLeast(x[i], offset + n)));
+      clause(PbModel.not(equalTo(x[i], offset + i)));
+    }
+    grow(6 * arcs * n + 8L * n * n);
+    String[][] forward = positions(n);
+    String[][] reverse = positions(n);
+    for (int j = 0; j < n; j++) {
+      String[] column = new String[n];
+      for (int i = 0; i < n; i++) {
+        column[i] = i == j ? "0" : equalTo(x[i], offset + j);
+      }
+      clause(column);
+    }
+    for (int i = 0; i < n; i++) {
+      IntDomain d = root[variables[i]];
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int w = e.nextElement();
+        long j = (long) w - offset;
+        if (j < 0 || j >= n || j == i) {
+          continue;
+        }
+        String arc = PbModel.not(equalTo(x[i], w));
+        arc(arc, forward, i, (int) j, n);
+        arc(arc, reverse, (int) j, i, n);
+      }
+    }
+    circuits.put(current, new CircuitLines(variables, offset, forward, reverse));
+  }
+
+  // the clauses of an arc that puts node b one after node a (node 0 at 0, and n - 1 before it)
+  private void arc(String notArc, String[][] p, int a, int b, int n) {
+    if (a == 0) {
+      clause(notArc, p[b][1]);
+    } else if (b == 0) {
+      clause(notArc, p[a][n - 1]);
+    } else {
+      for (int k = 1; k < n; k++) {
+        clause(notArc, negate(p[a][k]), p[b][k + 1]);
+      }
+    }
+  }
+
+  // the literals that node i (not 0) is at position k, for k in 1..n - 1, defined by order literals
+  private String[][] positions(int n) {
+    String[][] p = new String[n][n + 1];
+    for (String[] row : p) {
+      Arrays.fill(row, "0");
+    }
+    for (int i = 1; i < n; i++) {
+      // at[k] that the position is at least k: 1 for k = 1, 0 for k = n
+      String[] at = new String[n + 1];
+      at[1] = "1";
+      at[n] = "0";
+      for (int k = 2; k < n; k++) {
+        at[k] = auxiliary();
+        if (k > 2) {
+          clause(negate(at[k]), at[k - 1]);
+        }
+      }
+      for (int k = 1; k < n; k++) {
+        String e = n == 2 ? "1" : auxiliary();
+        p[i][k] = e;
+        if (!"1".equals(e)) {
+          clause(negate(e), at[k]);
+          clause(negate(e), negate(at[k + 1]));
+          clause(e, negate(at[k]), at[k + 1]);
+        }
+      }
+    }
+    return p;
+  }
+
   @Override
   public String auxiliary() {
     return "aux" + ++numAuxiliaries;

@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
+import org.jacop.lcg.PbModel;
 
 /**
  * Circuit constraint assures that all variables build a Hamiltonian circuit. Value of every
@@ -358,10 +360,38 @@ public class Circuit extends Alldiff {
         new CircuitVarValue(((CircuitVarValue) graph[vMin - 1].value()).next, i + 1));
   }
 
+  // whether the explanations use cuts of the graph only, without dominator reasons
+  private boolean cutsOnly;
+
+  /**
+   * Makes the explanations use cuts of the graph only, no dominator reasons: the steps of a VeriPB
+   * proof derive cuts from the encoding of {@link #encode}.
+   *
+   * @return this constraint
+   */
+  public Circuit cutReasonsOnly() {
+    cutsOnly = true;
+    return this;
+  }
+
+  /**
+   * Encodes the circuit for a VeriPB proof: all different successors, and positions along the
+   * circuit from node 0 and back to it ({@link PbModel#circuit}).
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Circuit.class || new HashSet<>(Arrays.asList(list)).size() != list.length) {
+      return false;
+    }
+    model.circuit(list, offset);
+    return true;
+  }
+
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     int mark = out.size();
-    if (SubcircuitExplanation.explain(trail, entry, list, offset, true, NO_ROOTS, out)) {
+    int[] roots = cutsOnly ? null : NO_ROOTS;
+    if (SubcircuitExplanation.explain(trail, entry, list, offset, true, roots, out)) {
       return true;
     }
     out.truncate(mark);
@@ -370,7 +400,8 @@ public class Circuit extends Alldiff {
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return SubcircuitExplanation.explainFailure(trail, list, offset, true, NO_ROOTS, out);
+    return SubcircuitExplanation.explainFailure(
+        trail, list, offset, true, cutsOnly ? null : NO_ROOTS, out);
   }
 
   @Override

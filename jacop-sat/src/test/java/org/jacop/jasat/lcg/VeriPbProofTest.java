@@ -47,6 +47,7 @@ import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -900,6 +901,81 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS " + bound + " INF");
   }
 
+  // the shortest circuit through 7 cities, whose subtours the proof refutes by positions along
+  // the circuit; the optimum is checked by enumeration of the circuits
+  @Test
+  void circuitOptimumIsProved() {
+    int n = 7;
+    int[][] cost = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        cost[i][j] = (7 * i + 3 * j + i * j) % 11 + 1;
+      }
+    }
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    IntVar[] c = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, n);
+      c[i] = new IntVar(store, "c" + i, 0, 12);
+      store.impose(new ElementInteger(x[i], cost[i], c[i], 0));
+    }
+    store.impose(new Circuit(x));
+    IntVar obj = new IntVar(store, "obj", 0, 100);
+    IntVar[] all = new IntVar[n + 1];
+    int[] a = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      all[i] = c[i];
+      a[i] = 1;
+    }
+    all[n] = obj;
+    a[n] = -1;
+    store.impose(new LinearInt(all, a, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(shortestCircuit(cost));
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).startsWith("BOUNDS");
+  }
+
+  // the length of the shortest circuit, over the orders of the nodes after node 0
+  private static int shortestCircuit(int[][] cost) {
+    int n = cost.length;
+    int[] order = new int[n - 1];
+    for (int k = 0; k < n - 1; k++) {
+      order[k] = k + 1;
+    }
+    int best = Integer.MAX_VALUE;
+    while (true) {
+      int length = cost[0][order[0]] + cost[order[n - 2]][0];
+      for (int k = 0; k + 1 < n - 1; k++) {
+        length += cost[order[k]][order[k + 1]];
+      }
+      best = Math.min(best, length);
+      // the next permutation
+      int i = n - 3;
+      while (i >= 0 && order[i] > order[i + 1]) {
+        i--;
+      }
+      if (i < 0) {
+        return best;
+      }
+      int j = n - 2;
+      while (order[j] < order[i]) {
+        j--;
+      }
+      int t = order[i];
+      order[i] = order[j];
+      order[j] = t;
+      for (int l = i + 1, r = n - 2; l < r; l++, r--) {
+        t = order[l];
+        order[l] = order[r];
+        order[r] = t;
+      }
+    }
+  }
+
   // list[index] = value over variables with holes; the optimum is checked by enumeration
   @Test
   void elementOfVariablesIsProved() {
@@ -962,4 +1038,5 @@ class VeriPbProofTest {
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("Not");
   }
+
 }

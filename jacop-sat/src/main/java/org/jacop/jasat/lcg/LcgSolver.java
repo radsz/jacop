@@ -50,6 +50,7 @@ import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.BooleanVar;
@@ -70,6 +71,7 @@ import org.jacop.lcg.ExplanationMinimality;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
+import org.jacop.lcg.PbModel;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.lns.AdaptiveLns;
 
@@ -523,6 +525,8 @@ public final class LcgSolver implements ExternalPropagator {
   // the equalities of the proof model, the first order line of each variable and the domains the
   // model states, for the core-guided phase's lower-bound line
   private Map<Constraint, OpbEncoder.EqualityLine> proofEqualities = Map.of();
+  // the position literals of the circuits of the proof model
+  private Map<Constraint, OpbEncoder.CircuitLines> proofCircuits = Map.of();
   private long[] proofChains;
   private IntDomain[] proofModelDomains;
   // the auxiliary variables the proof defines, named y<number>
@@ -631,6 +635,12 @@ public final class LcgSolver implements ExternalPropagator {
     proofDomains = root;
     Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
     constraints.addAll(store.watchedLiteralConstraints());
+    for (Constraint c : constraints) {
+      if (c instanceof Circuit circuit) {
+        // the proof derives cuts of the graph, not dominator reasons
+        circuit.cutReasonsOnly();
+      }
+    }
     IntDomain[] domains = root;
     List<Integer> derived = new ArrayList<>();
     int axioms = 0;
@@ -746,6 +756,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     proofCardinality = model.cardinalityLines();
     proofEqualities = model.equalityLines();
+    proofCircuits = model.circuitLines();
     proofChains = model.chainLines();
     proofModelDomains = domains;
     if (!model.unsupported().isEmpty()) {
@@ -787,12 +798,14 @@ public final class LcgSolver implements ExternalPropagator {
       }
       Constraint c = rootTrail.reason(e);
       proofCardinality(c, none, 0, e);
+      proofCircuit(c, none, 0, e);
       proofLinearBounds(c, none, 0, e);
       proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
       reached[i] = next;
     }
     if (rootFailed && failedAtRoot != null) {
       proofCardinality(failedAtRoot, none, 0, -1);
+      proofCircuit(failedAtRoot, none, 0, -1);
       proofLinearBounds(failedAtRoot, none, 0, -1);
       rootRefuted = true;
     }
@@ -812,10 +825,14 @@ public final class LcgSolver implements ExternalPropagator {
       return;
     }
     StringBuilder s = new StringBuilder("rup 1 ").append(atom);
+    // several atoms of a reason can be one literal of the model, written once
+    Set<String> written = new HashSet<>();
+    written.add(atom);
     for (int k = from; k < reason.size(); k++) {
       String r = proofAtom(reason.get(k), reason.slack(k));
-      if (!"1".equals(r)) {
-        s.append(" 1 ").append(r.startsWith("~") ? r.substring(1) : "~" + r);
+      String negated = r.startsWith("~") ? r.substring(1) : "~" + r;
+      if (!"1".equals(r) && written.add(negated)) {
+        s.append(" 1 ").append(negated);
       }
     }
     if (extra != 0) {
@@ -1070,6 +1087,169 @@ public final class LcgSolver implements ExternalPropagator {
       }
       return 0;
     }
+  }
+
+  /**
+   * Writes the steps that make a cut reason of a circuit a rup step. Under the hypotheses of the
+   * clause, the arcs left are those of the domains; a strongly connected component that no arc
+   * leaves (a sink of the graph of components) is a set C of nodes whose circuit stays in C. When C
+   * does not hold node 0, no node of C has a position after node 0: the clause "hypotheses imply
+   * node i of C is not at position k" is a rup step for k from n - 1 down to 1, since the arcs from
+   * i lead into C, whose nodes are not at k + 1. When C holds node 0, the nodes outside it have no
+   * arc into them from C and, by the same steps backwards from node 0, no position before it. Unit
+   * propagation then finds a node without a position.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofCircuit(Constraint c, EntryList atoms, int from, int entry) {
+    OpbEncoder.CircuitLines lines = proofCircuits.get(c);
+    if (lines == null || !proofStarted) {
+      return;
+    }
+    int[] variables = lines.variables();
+    int n = variables.length;
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int j = 0; j < n; j++) {
+      position.put(variables[j], j);
+    }
+    IntDomain[] dom = new IntDomain[n];
+    StringBuilder[] literals = new StringBuilder[n];
+    hypotheses(position, variables, atoms, from, entry, dom, literals);
+    int[][] successors = new int[n][];
+    for (int i = 0; i < n; i++) {
+      int[] s = new int[n];
+      int count = 0;
+      for (ValueEnumeration e = dom[i].valueEnumeration(); e.hasMoreElements(); ) {
+        long j = (long) e.nextElement() - lines.offset();
+        if (j >= 0 && j < n && j != i) {
+          s[count++] = (int) j;
+        }
+      }
+      if (count == 0) {
+        return; // a node without a successor: unit propagation finds it
+      }
+      successors[i] = Arrays.copyOf(s, count);
+    }
+    int[] component = components(successors);
+    if (component == null) {
+      return; // one strongly connected component: not a cut reason
+    }
+    // a component that no arc leaves (forwards) or enters (backwards) without node 0, the smallest
+    int count = 0;
+    for (int k : component) {
+      count = Math.max(count, k + 1);
+    }
+    boolean[] leaves = new boolean[count];
+    boolean[] entered = new boolean[count];
+    int[] size = new int[count];
+    for (int v = 0; v < n; v++) {
+      size[component[v]]++;
+      for (int w : successors[v]) {
+        if (component[w] != component[v]) {
+          leaves[component[v]] = true;
+          entered[component[w]] = true;
+        }
+      }
+    }
+    int best = -1;
+    boolean forward = true;
+    for (int k = 0; k < count; k++) {
+      if (k != component[0] && (!leaves[k] || !entered[k]) && (best < 0 || size[k] < size[best])) {
+        best = k;
+        forward = !leaves[k];
+      }
+    }
+    // the hypotheses used: on the arcs out of the set forwards, into it backwards
+    StringBuilder clause = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      if ((component[i] == best) == forward) {
+        clause.append(literals[i]);
+      }
+    }
+    String[][] p = forward ? lines.forward() : lines.reverse();
+    for (int k = n - 1; k >= 1; k--) {
+      for (int i = 1; i < n; i++) {
+        if (component[i] == best && !"0".equals(p[i][k])) {
+          proof.lemma("rup" + clause + " 1 " + PbModel.not(p[i][k]) + " >= 1 ;\n");
+        }
+      }
+    }
+  }
+
+  /** The strongly connected component of each node of a graph, or null for one component. */
+  private static int[] components(int[][] successors) {
+    int n = successors.length;
+    // Kosaraju: the finishing order of a depth-first search, then components on the reverse graph
+    int[] order = new int[n];
+    int finished = 0;
+    boolean[] seen = new boolean[n];
+    int[] stack = new int[n];
+    int[] next = new int[n];
+    for (int s = 0; s < n; s++) {
+      if (seen[s]) {
+        continue;
+      }
+      int sp = 0;
+      stack[sp++] = s;
+      seen[s] = true;
+      next[s] = 0;
+      while (sp > 0) {
+        int v = stack[sp - 1];
+        if (next[v] < successors[v].length) {
+          int w = successors[v][next[v]++];
+          if (!seen[w]) {
+            seen[w] = true;
+            next[w] = 0;
+            stack[sp++] = w;
+          }
+        } else {
+          order[finished++] = v;
+          sp--;
+        }
+      }
+    }
+    int[] inCount = new int[n];
+    for (int[] s : successors) {
+      for (int w : s) {
+        inCount[w]++;
+      }
+    }
+    int[][] predecessors = new int[n][];
+    for (int v = 0; v < n; v++) {
+      predecessors[v] = new int[inCount[v]];
+    }
+    int[] fill = new int[n];
+    for (int v = 0; v < n; v++) {
+      for (int w : successors[v]) {
+        predecessors[w][fill[w]++] = v;
+      }
+    }
+    int[] component = new int[n];
+    Arrays.fill(component, -1);
+    int components = 0;
+    for (int k = n - 1; k >= 0; k--) {
+      int s = order[k];
+      if (component[s] >= 0) {
+        continue;
+      }
+      int sp = 0;
+      stack[sp++] = s;
+      component[s] = components;
+      while (sp > 0) {
+        int v = stack[--sp];
+        for (int u : predecessors[v]) {
+          if (component[u] < 0) {
+            component[u] = components;
+            stack[sp++] = u;
+          }
+        }
+      }
+      components++;
+    }
+    return components == 1 ? null : component;
   }
 
   /**
@@ -3189,6 +3369,7 @@ public final class LcgSolver implements ExternalPropagator {
         }
         if (proof != null) {
           proofCardinality(store.recentlyFailedConstraint, atoms, 0, -1);
+          proofCircuit(store.recentlyFailedConstraint, atoms, 0, -1);
           proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
@@ -3224,6 +3405,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (proof != null) {
       proofCardinality(trail.reason(e), out, mark, e);
+      proofCircuit(trail.reason(e), out, mark, e);
       proofLinearBounds(trail.reason(e), out, mark, e);
     }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
