@@ -385,13 +385,19 @@ public final class RevisedDualSimplex {
     }
   }
 
+  // the largest exponent of a scale factor, as in HiGHS: beyond it a column's reduced cost within
+  // the tolerance can hide a large change of the objective over its scaled range
+  // (var-smallemery-m6j6: a column scaled by 2^-28, the optimum 1e-4 off)
+  private static final int MAX_SCALE_EXPONENT =
+      Integer.getInteger("org.jacop.jalp.maxScaleExponent", 20);
+
   // the power of two nearest to v > 0
   private static double powerOfTwo(double v) {
     if (!(v > 0) || Double.isInfinite(v)) {
       return 1;
     }
     int e = (int) Math.round(Math.log(v) / Math.log(2));
-    return Math.scalb(1.0, Math.max(-60, Math.min(60, e)));
+    return Math.scalb(1.0, Math.max(-MAX_SCALE_EXPONENT, Math.min(MAX_SCALE_EXPONENT, e)));
   }
 
   private void allocateWork() {
@@ -761,6 +767,9 @@ public final class RevisedDualSimplex {
       updateBeta();
       return -1;
     }
+    if (lu.updates() > 0 && !dualsHold()) {
+      return -1;
+    }
     // a nonbasic column at an artificial bound that the objective pulls on: the bounds are too
     // close
     for (int j = 0; j < cols; j++) {
@@ -774,6 +783,28 @@ public final class RevisedDualSimplex {
       }
     }
     return OPTIMAL;
+  }
+
+  /**
+   * Whether the reduced costs, computed again from the duals of the current factors, still place
+   * every nonbasic column at the bound it is at. The reduced costs kept up by the pivots drift, and
+   * a column whose sign changed would leave the solution not optimal (var-smallemery-m6j6: a column
+   * at its lower bound with reduced cost -1.12, the objective 1e-4 off); when one moved, the basic
+   * values follow and the pivots go on.
+   */
+  private boolean dualsHold() {
+    computeDuals();
+    boolean held = true;
+    for (int j = 0; j < cols; j++) {
+      if (row[j] < 0 && (upper[j] ? d[j] > DUAL_TOL : d[j] < -DUAL_TOL)) {
+        held = false;
+      }
+    }
+    if (!held) {
+      placeNonbasic();
+      updateBeta();
+    }
+    return held;
   }
 
   // enlarges the artificial bounds; false when they are at their largest
