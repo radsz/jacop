@@ -283,6 +283,101 @@ public interface PbModel {
   }
 
   /**
+   * Writes a deterministic layered graph with one source over the variables: a literal per node and
+   * per edge; an edge implies its two nodes and its value, a node needs an incoming and an outgoing
+   * edge, and each value of a variable needs an edge of its level labelled with it. Unit
+   * propagation on them removes every edge that is on no path, which is domain consistency, and the
+   * values of a solution fix every literal.
+   *
+   * @param model the model
+   * @param list the variable of each level
+   * @param levelNodes the number of nodes of each level, levels.length + 1 entries, one at level 0
+   * @param edge four entries per edge: its level, source node, value and target node
+   * @param numEdges the number of edges
+   * @return false when the graph is not deterministic
+   */
+  static boolean layeredGraph(
+      PbModel model, IntVar[] list, int[] levelNodes, int[] edge, int numEdges) {
+    int levels = list.length;
+    long[] first = new long[levels + 1];
+    for (int level = 0; level < levels; level++) {
+      first[level + 1] = first[level] + levelNodes[level];
+    }
+    Map<Long, Integer> next = new HashMap<>();
+    for (int e = 0; e < numEdges; e++) {
+      long key = (first[edge[4 * e]] + edge[4 * e + 1]) << 32 | (edge[4 * e + 2] & 0xFFFFFFFFL);
+      Integer target = next.putIfAbsent(key, edge[4 * e + 3]);
+      if (target != null && target != edge[4 * e + 3]) {
+        return false;
+      }
+    }
+    String[][] node = new String[levels + 1][];
+    List<List<List<String>>> in = new ArrayList<>();
+    List<List<List<String>>> out = new ArrayList<>();
+    for (int level = 0; level <= levels; level++) {
+      int nodes = levelNodes[level];
+      node[level] = new String[nodes];
+      in.add(new ArrayList<>());
+      out.add(new ArrayList<>());
+      for (int k = 0; k < nodes; k++) {
+        node[level][k] = level == 0 ? "1" : model.auxiliary();
+        in.get(level).add(new ArrayList<>());
+        out.get(level).add(new ArrayList<>());
+      }
+    }
+    List<Map<Integer, List<String>>> labelled = new ArrayList<>();
+    for (int level = 0; level < levels; level++) {
+      labelled.add(new HashMap<>());
+    }
+    for (int e = 0; e < numEdges; e++) {
+      int level = edge[4 * e];
+      int source = edge[4 * e + 1];
+      int value = edge[4 * e + 2];
+      int target = edge[4 * e + 3];
+      String equal = model.equalTo(list[level], value);
+      if ("0".equals(equal)) {
+        continue;
+      }
+      String lit = model.auxiliary();
+      model.clause(not(lit), node[level][source]);
+      model.clause(not(lit), node[level + 1][target]);
+      model.clause(not(lit), equal);
+      out.get(level).get(source).add(lit);
+      in.get(level + 1).get(target).add(lit);
+      labelled.get(level).computeIfAbsent(value, v -> new ArrayList<>()).add(lit);
+    }
+    for (int level = 0; level <= levels; level++) {
+      for (int k = 0; k < node[level].length; k++) {
+        if (level < levels) {
+          model.clause(impliedOne(node[level][k], out.get(level).get(k)));
+        }
+        if (level > 0) {
+          model.clause(impliedOne(node[level][k], in.get(level).get(k)));
+        }
+      }
+    }
+    for (int level = 0; level < levels; level++) {
+      for (ValueEnumeration e = model.domain(list[level]).valueEnumeration();
+          e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        String equal = model.equalTo(list[level], v);
+        model.clause(impliedOne(equal, labelled.get(level).getOrDefault(v, List.of())));
+      }
+    }
+    return true;
+  }
+
+  /** The clause that a literal implies one of some literals. */
+  private static String[] impliedOne(String literal, List<String> some) {
+    String[] c = new String[some.size() + 1];
+    c[0] = not(literal);
+    for (int k = 0; k < some.size(); k++) {
+      c[k + 1] = some.get(k);
+    }
+    return c;
+  }
+
+  /**
    * Returns the negation of a literal.
    *
    * @param literal a literal of {@link #equal} or {@link #atLeast}, or "1" or "0"
