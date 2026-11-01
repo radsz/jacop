@@ -155,6 +155,17 @@ final class OpbEncoder implements PbModel {
 
   private final Map<Constraint, CardinalityLines> cardinality = new IdentityHashMap<>();
 
+  /**
+   * The first line of an equality, {@code sum >= c}, which the next line, {@code -sum >= -c},
+   * follows: the lines a proof sums to state the objective through its definitions.
+   */
+  record EqualityLine(LinearForm form, long id) {}
+
+  private final Map<Constraint, EqualityLine> equalities = new IdentityHashMap<>();
+
+  // the id of each variable's first order line, [x >= v] or not [x >= v + 1], for v = min + 1
+  private long[] chainStart;
+
   // the constraint being written
   private Constraint current;
 
@@ -183,6 +194,7 @@ final class OpbEncoder implements PbModel {
 
   /** Writes the literals of every variable and the constraints that define them. */
   void variables() {
+    chainStart = new long[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == null || root[i].singleton()) {
         continue;
@@ -192,6 +204,7 @@ final class OpbEncoder implements PbModel {
       int max = d.max();
       grow((long) max - m);
       numVariables += 2L * (max - m) + 1;
+      chainStart[i] = numConstraints + 1;
       for (int v = m + 1; v < max; v++) {
         line("1 " + ge(i, v) + " 1 ~" + ge(i, v + 1) + " >= 1");
       }
@@ -319,6 +332,9 @@ final class OpbEncoder implements PbModel {
       case LinearForm.LE -> atLeast(f, -1, -f.c());
       case LinearForm.GE -> atLeast(f, 1, f.c());
       case LinearForm.EQ -> {
+        if (guard.isEmpty() && current != null) {
+          equalities.putIfAbsent(current, new EqualityLine(f, numConstraints + 1));
+        }
         atLeast(f, 1, f.c());
         atLeast(f, -1, -f.c());
         channel(f);
@@ -631,6 +647,25 @@ final class OpbEncoder implements PbModel {
    */
   Map<Constraint, CardinalityLines> cardinalityLines() {
     return cardinality;
+  }
+
+  /**
+   * Returns the first line of each equality written unguarded, by its constraint.
+   *
+   * @return the lines
+   */
+  Map<Constraint, EqualityLine> equalityLines() {
+    return equalities;
+  }
+
+  /**
+   * Returns the id of each variable's first order line, {@code [x >= m + 1] or not [x >= m + 2]}
+   * for its root min m, which the lines of the next values follow; 0 for a variable without them.
+   *
+   * @return the ids, by variable
+   */
+  long[] chainLines() {
+    return chainStart;
   }
 
   @Override

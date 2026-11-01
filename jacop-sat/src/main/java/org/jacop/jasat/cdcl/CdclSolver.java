@@ -671,6 +671,15 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the limit of the total number of conflicts.
+   *
+   * @return the conflict count at which {@link #solve} returns {@link #UNKNOWN}
+   */
+  public long conflictLimit() {
+    return conflictLimit;
+  }
+
+  /**
    * Sets when {@link #solve} backtracks chronologically (one level) instead of backjumping, as in
    * CaDiCaL. It is used only by solve calls without assumptions, never by the external-search
    * methods, which keep every literal at the level it was assigned at.

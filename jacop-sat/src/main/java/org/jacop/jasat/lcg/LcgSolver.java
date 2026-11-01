@@ -37,6 +37,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -388,6 +389,8 @@ public final class LcgSolver implements ExternalPropagator {
   private double coreProbeShare;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   private CoreSearch coreSearch;
+  // the conflict limit set before minimize, which its phases keep
+  private long conflictCap = Long.MAX_VALUE;
   // the objective value of the best solution found outside this solver, and the last one imported
   private IntSupplier sharedBound;
   private int importedBound = Integer.MAX_VALUE;
@@ -517,6 +520,13 @@ public final class LcgSolver implements ExternalPropagator {
   private IntDomain[] proofDomains;
   // the lines of the cardinality constraints of the proof model
   private Map<Constraint, OpbEncoder.CardinalityLines> proofCardinality = Map.of();
+  // the equalities of the proof model, the first order line of each variable and the domains the
+  // model states, for the core-guided phase's lower-bound line
+  private Map<Constraint, OpbEncoder.EqualityLine> proofEqualities = Map.of();
+  private long[] proofChains;
+  private IntDomain[] proofModelDomains;
+  // the auxiliary variables the proof defines, named y<number>
+  private final BitSet proofAuxiliaries = new BitSet();
   // the clauses of addClause, for the OPB model
   private final List<IntVar[][]> proofClauses = new ArrayList<>();
 
@@ -536,10 +546,12 @@ public final class LcgSolver implements ExternalPropagator {
    * Writes a VeriPB proof of the search ({@link VeriPbProof}) and the OPB model it is checked
    * against ({@link OpbEncoder}): the model as the store holds it when the search starts, so its
    * root propagation and the translation to the store are not checked. Under a proof, minimisation
-   * is plain branch and bound: core-guided search, lower-bound runs, neighbourhood runs and a
-   * shared bound, which assume what the proof cannot state, are off. Set it right after the solver
-   * is built; {@link #solve} and {@link #minimize} write the model when they start and the
-   * conclusion when they end, and close both outputs.
+   * is branch and bound after the core-guided phase, whose cores, totalizers and lower bounds the
+   * proof derives ({@link CoreProof}) without its at-most-one groups; lower-bound runs,
+   * neighbourhood runs and a shared bound, which assume what the proof cannot state, are off. A
+   * search stopped by a limit concludes the lower bound it proved. Set it right after the solver is
+   * built; {@link #solve} and {@link #minimize} write the model when they start and the conclusion
+   * when they end, and close both outputs.
    *
    * @param model where the OPB model goes
    * @param out where the proof goes
@@ -599,6 +611,9 @@ public final class LcgSolver implements ExternalPropagator {
   private String proofName(int dimacsVar) {
     int i = litVar[dimacsVar];
     if (i < 0) {
+      if (proofAuxiliaries.get(dimacsVar)) {
+        return "y" + dimacsVar;
+      }
       throw new IllegalStateException("an auxiliary variable in a proof");
     }
     return litKind[dimacsVar] == GE_KIND
@@ -730,6 +745,9 @@ public final class LcgSolver implements ExternalPropagator {
       model.clause(clause[0], clause[1]);
     }
     proofCardinality = model.cardinalityLines();
+    proofEqualities = model.equalityLines();
+    proofChains = model.chainLines();
+    proofModelDomains = domains;
     if (!model.unsupported().isEmpty()) {
       throw new UnsupportedOperationException(
           "proof logging does not support " + String.join(", ", model.unsupported()));
@@ -1262,6 +1280,8 @@ public final class LcgSolver implements ExternalPropagator {
       } else {
         proof.concludeUnsatisfiable();
       }
+    } else if (optimising && !rootFailed && result == CdclSolver.UNKNOWN) {
+      concludeLowerBound();
     } else if (rootFailed || result == CdclSolver.UNKNOWN) {
       proof.concludeNothing();
     } else if (!optimising) {
@@ -1281,6 +1301,30 @@ public final class LcgSolver implements ExternalPropagator {
     } catch (IOException e) {
       throw new UncheckedIOException(e);
     }
+  }
+
+  /**
+   * Concludes the bounds a search stopped by a limit proved: the best solution, and the lower bound
+   * of the core-guided phase or of the root, stated over the objective's order literals; unit
+   * propagation derives it from the clause that the objective is at least that bound.
+   */
+  private void concludeLowerBound() {
+    IntDomain d = proofModelDomains == null ? null : proofModelDomains[objective];
+    long lower = root[objective].min();
+    if (coreSearch != null) {
+      lower = Math.max(lower, coreSearch.lowerBound);
+    }
+    String upper = best == null ? null : Integer.toString(best[objective]);
+    if (d == null || d.singleton() || lower <= d.min()) {
+      proof.concludeNothing();
+      return;
+    }
+    StringBuilder s = new StringBuilder("rup");
+    for (int v = d.min() + 1; v <= d.max(); v++) {
+      s.append(" 1 ").append(OpbEncoder.ge(objective, v));
+    }
+    long id = proof.lemma(s.append(" >= ").append(lower - d.min()).append(" ;\n"));
+    proof.concludeBounds(lower + " : " + id, upper);
   }
 
   // ------------------------------------------------------------------------------- literals
@@ -1712,6 +1756,18 @@ public final class LcgSolver implements ExternalPropagator {
     } finally {
       store.setReturnAfterPruning(false);
     }
+    if (proof != null && result == CdclSolver.UNSAT && assumed.length > 0 && sat.isOk()) {
+      // the clause that one of the failed assumptions is false, which unit propagation derives
+      // from the clauses the solver has, as conflict analysis did
+      int[] failed = sat.failedAssumptions();
+      int[] clause = new int[failed.length];
+      for (int k = 0; k < failed.length; k++) {
+        clause[k] = -failed[k];
+      }
+      if (clause.length > 0) {
+        proof.lemma(proofClause(clause));
+      }
+    }
     // the solver leaves its last assignment without notifying; the store goes back to the root
     notifyBacktrack(0);
     return result;
@@ -1729,8 +1785,14 @@ public final class LcgSolver implements ExternalPropagator {
   public int minimize(IntVar objective) {
     this.objective = trail.id(objective);
     best = null;
-    coreSearch = coreShare > 0 && proof == null ? CoreSearch.of(this, objective) : null;
+    if (proof != null && coreShare > 0) {
+      // the core-guided phase sums the model's lines, so the proof starts before it
+      startProof();
+    }
+    coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
     int result;
+    // a conflict limit set before bounds the core-guided phase and branch and bound
+    conflictCap = sat.conflictLimit();
     try {
       if (coreSearch != null) {
         result = minimizeWithCores();
@@ -1740,6 +1802,7 @@ public final class LcgSolver implements ExternalPropagator {
     } finally {
       this.objective = -1;
       sat.setConflictLimit(Long.MAX_VALUE);
+      conflictCap = Long.MAX_VALUE;
     }
     solution = best;
     if (proof != null) {
@@ -1864,7 +1927,7 @@ public final class LcgSolver implements ExternalPropagator {
     } finally {
       coreMode = false;
       sat.setDeadline(deadline);
-      sat.setConflictLimit(Long.MAX_VALUE);
+      sat.setConflictLimit(conflictCap);
     }
   }
 
@@ -1908,7 +1971,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (deadline != Long.MAX_VALUE) {
       sat.setDeadline(now + (long) (coreDelayShare * Math.max(0, deadline - now)));
     } else {
-      sat.setConflictLimit(sat.conflicts + coreDelayBudget);
+      sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
     }
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
@@ -1928,7 +1991,7 @@ public final class LcgSolver implements ExternalPropagator {
     } finally {
       coreMode = false;
       sat.setDeadline(deadline);
-      sat.setConflictLimit(Long.MAX_VALUE);
+      sat.setConflictLimit(conflictCap);
     }
   }
 
@@ -1944,8 +2007,97 @@ public final class LcgSolver implements ExternalPropagator {
     if (v <= vars[objective].min()) {
       return false;
     }
-    sat.addClause(-geLit(objective, v)); // objective <= v - 1
+    addProvedClause(-geLit(objective, v)); // objective <= v - 1
     return true;
+  }
+
+  // ------------------------------------------------------- proof of the core-guided phase
+
+  /** Whether a proof is written. */
+  boolean proving() {
+    return proof != null;
+  }
+
+  /**
+   * Adds a clause that unit propagation derives, writing it to the proof as a {@code rup} step: the
+   * solver writes only the clauses it derives itself.
+   *
+   * @param lits the clause, DIMACS literals
+   * @return false when the solver is unsatisfiable at the root
+   */
+  boolean addProvedClause(int... lits) {
+    if (proof != null) {
+      proof.lemma(proofClause(lits));
+    }
+    return sat.addClause(lits);
+  }
+
+  // the rup step of a clause
+  private String proofClause(int... lits) {
+    StringBuilder s = new StringBuilder("rup");
+    for (int l : lits) {
+      s.append(" 1 ").append(proofLiteral(l));
+    }
+    return s.append(" >= 1 ;\n").toString();
+  }
+
+  /** The proof's name of a DIMACS literal, with {@code ~} when negative. */
+  String proofLiteral(int lit) {
+    String name = proofName(Math.abs(lit));
+    return lit < 0 ? "~" + name : name;
+  }
+
+  /** Names an auxiliary variable in the proof, which then defines it. */
+  void nameAuxiliary(int d) {
+    proofAuxiliaries.set(d);
+  }
+
+  /**
+   * The id of the order line {@code [x >= v] or not [x >= v + 1]} of variable i in the proof's
+   * model, or 0 when the model has no such line.
+   */
+  long proofChainLine(int i, int v) {
+    IntDomain d = proofModelDomains[i];
+    if (d == null || d.singleton() || v <= d.min() || v >= d.max() || proofChains[i] == 0) {
+      return 0;
+    }
+    return proofChains[i] + (v - d.min() - 1);
+  }
+
+  /**
+   * The ids of the model's lines {@code sum >= c} and {@code sum <= c} of an equality, for the sum
+   * and constant of the given form, or null when the model does not have them.
+   */
+  long[] proofEquality(Constraint c, LinearForm f) {
+    OpbEncoder.EqualityLine line = proofEqualities.get(c);
+    if (line == null) {
+      return null;
+    }
+    int sign = sameSum(f, line.form());
+    if (sign == 0) {
+      return null;
+    }
+    return sign > 0 ? new long[] {line.id(), line.id() + 1} : new long[] {line.id() + 1, line.id()};
+  }
+
+  // 1 when the forms are the same sum and constant, -1 when one is the other negated, else 0
+  private static int sameSum(LinearForm f, LinearForm g) {
+    Map<IntVar, Long> a = terms(f);
+    Map<IntVar, Long> b = terms(g);
+    if (a.equals(b) && f.c() == g.c()) {
+      return 1;
+    }
+    b.replaceAll((x, w) -> -w);
+    return a.equals(b) && f.c() == -g.c() ? -1 : 0;
+  }
+
+  private static Map<IntVar, Long> terms(LinearForm f) {
+    Map<IntVar, Long> terms = new HashMap<>();
+    for (int k = 0; k < f.vars().length; k++) {
+      terms.merge(f.vars()[k], f.weights()[k], Long::sum);
+    }
+    terms.values().removeIf(w -> w == 0);
+    return terms;
   }
 
   /**
@@ -1994,6 +2146,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   CdclSolver solver() {
     return sat;
+  }
+
+  /** The conflict limit set before {@link #minimize}, which the core-guided phase keeps. */
+  long conflictCap() {
+    return conflictCap;
   }
 
   /** The index of a variable of the store, or -1 when it is not one of the solver's variables. */

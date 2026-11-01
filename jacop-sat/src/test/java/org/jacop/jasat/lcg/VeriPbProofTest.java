@@ -35,7 +35,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
@@ -92,7 +96,22 @@ class VeriPbProofTest {
     return lcg;
   }
 
+  /**
+   * The OPB model; with the system property {@code veripb.dump} set to a directory, the model and
+   * the proof are also written there, named after the test, for a check by VeriPB itself.
+   */
   private String opb() {
+    String dir = System.getProperty("veripb.dump");
+    if (dir != null) {
+      String name =
+          StackWalker.getInstance().walk(f -> f.skip(1).findFirst().orElseThrow().getMethodName());
+      try {
+        Files.writeString(Path.of(dir, name + ".opb"), model.toString(StandardCharsets.US_ASCII));
+        Files.writeString(Path.of(dir, name + ".pbp"), proof.toString(StandardCharsets.US_ASCII));
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
     return model.toString(StandardCharsets.US_ASCII);
   }
 
@@ -721,6 +740,164 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS -7 -7");
+  }
+
+  // a weighted sum over variables with holes, minimised by core-guided search: the cores relax
+  // order literals, a hole folds two levels into one soft literal, and the negative weight counts
+  // from the upper bound; the optimum is checked by enumeration
+  @Test
+  void coreGuidedOptimumOfIntegersIsProved() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain d = new IntervalDomain(0, 1);
+      d.unionAdapt(3, 4);
+      x[i] = new IntVar(store, "x" + i, d);
+    }
+    int[][] atLeast = {{0, 1, 3}, {1, 2, 4}, {0, 4, 2}};
+    for (int[] r : atLeast) {
+      store.impose(new LinearInt(new IntVar[] {x[r[0]], x[r[1]]}, new int[] {1, 1}, ">=", r[2]));
+    }
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], x[4]}, new int[] {1, 1, 1}, ">=", 5));
+    store.impose(new XneqY(x[3], x[4]));
+    int[] w = {3, 2, 4, -2, 1};
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    IntVar[] all = {x[0], x[1], x[2], x[3], x[4], obj};
+    store.impose(new LinearInt(all, new int[] {w[0], w[1], w[2], w[3], w[4], -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    lcg.setCoreSearch(1.0, 1_000_000, 1_000_000);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    int[] values = {0, 1, 3, 4};
+    int best = Integer.MAX_VALUE;
+    for (int t = 0; t < 1024; t++) {
+      int[] v = new int[5];
+      for (int i = 0; i < 5; i++) {
+        v[i] = values[t >> (2 * i) & 3];
+      }
+      boolean ok = v[0] + v[1] >= 3 && v[1] + v[2] >= 4 && v[0] + v[4] >= 2;
+      ok &= v[2] + v[3] + v[4] >= 5 && v[3] != v[4];
+      if (ok) {
+        best = Math.min(best, w[0] * v[0] + w[1] * v[1] + w[2] * v[2] + w[3] * v[3] + w[4] * v[4]);
+      }
+    }
+    assertThat(lcg.value(obj)).isEqualTo(best);
+    assertThat(lcg.coreSearch()).isNotNull();
+    assertThat(lcg.coreSearch().cores).isPositive();
+    String steps = proof.toString(StandardCharsets.US_ASCII);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), steps)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
+  }
+
+  // a weighted cover of 0/1 variables through two definitions (obj = cost + 5, cost = the sum),
+  // whose cores of several literals add totalizers; the optimum is checked by enumeration
+  @Test
+  void coreGuidedOptimumOfBooleansIsProved() {
+    Store store = new Store();
+    int n = 7;
+    BooleanVar[] b = new BooleanVar[n];
+    for (int i = 0; i < n; i++) {
+      b[i] = new BooleanVar(store, "b" + i);
+    }
+    int[][] sets = {{0, 1, 2}, {1, 3}, {2, 3, 4}, {4, 5}, {5, 6, 0}, {1, 6}, {3, 5}};
+    for (int[] set : sets) {
+      IntVar[] in = new IntVar[set.length];
+      for (int k = 0; k < set.length; k++) {
+        in[k] = b[set[k]];
+      }
+      store.impose(new SumBool(in, ">=", new IntVar(store, 1, 1)));
+    }
+    int[] w = {3, 5, 4, 2, 6, 3, 4};
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    IntVar[] all = new IntVar[n + 1];
+    int[] a = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      all[i] = b[i];
+      a[i] = w[i];
+    }
+    all[n] = cost;
+    a[n] = -1;
+    store.impose(new LinearInt(all, a, "==", 0));
+    IntVar obj = new IntVar(store, "obj", 0, 200);
+    store.impose(new LinearInt(new IntVar[] {obj, cost}, new int[] {1, -1}, "==", 5));
+    LcgSolver lcg = withProof(store);
+    lcg.setCoreSearch(1.0, 1_000_000, 1_000_000);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    int best = Integer.MAX_VALUE;
+    for (int t = 0; t < 1 << n; t++) {
+      boolean ok = true;
+      for (int[] set : sets) {
+        boolean covered = false;
+        for (int i : set) {
+          covered |= (t >> i & 1) == 1;
+        }
+        ok &= covered;
+      }
+      if (ok) {
+        int c = 5;
+        for (int i = 0; i < n; i++) {
+          c += (t >> i & 1) * w[i];
+        }
+        best = Math.min(best, c);
+      }
+    }
+    assertThat(lcg.value(obj)).isEqualTo(best);
+    assertThat(lcg.coreSearch().cores).isPositive();
+    String steps = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(steps).contains("red ");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), steps)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
+  }
+
+  // nine pigeons in eight holes at a cost of 1 each, which 300 conflicts do not refute: a
+  // core per pigeon raises the lower bound to 9, and the proof concludes it, stated over the
+  // objective's literals
+  @Test
+  void lowerBoundOfAStoppedSearchIsProved() {
+    Store store = new Store();
+    int pigeons = 9;
+    int holes = 8;
+    BooleanVar[][] p = new BooleanVar[pigeons][holes];
+    IntVar[] all = new IntVar[pigeons * holes + 1];
+    int[] a = new int[all.length];
+    for (int i = 0; i < pigeons; i++) {
+      for (int h = 0; h < holes; h++) {
+        p[i][h] = new BooleanVar(store, "p" + i + "_" + h);
+        all[i * holes + h] = p[i][h];
+        a[i * holes + h] = 1;
+      }
+      store.impose(new SumBool(p[i], ">=", new IntVar(store, 1, 1)));
+    }
+    for (int h = 0; h < holes; h++) {
+      IntVar[] column = new IntVar[pigeons];
+      for (int i = 0; i < pigeons; i++) {
+        column[i] = p[i][h];
+      }
+      store.impose(new SumBool(column, "<=", new IntVar(store, 0, 1)));
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 1000);
+    all[pigeons * holes] = obj;
+    a[pigeons * holes] = -1;
+    store.impose(new LinearInt(all, a, "==", 0));
+    LcgSolver lcg = withProof(store);
+    lcg.setCoreSearch(0.5, 1_000_000, 1_000_000);
+    lcg.sat().setConflictLimit(300);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
+    long bound = lcg.coreSearch().lowerBound;
+    System.err.println(
+        "DBG cores="
+            + lcg.coreSearch().cores
+            + " root="
+            + lcg.coreSearch().rootCores
+            + " lb="
+            + bound
+            + " proved="
+            + lcg.coreSearch().proved);
+    assertThat(bound).isGreaterThanOrEqualTo(pigeons);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + bound + " INF");
   }
 
   // list[index] = value over variables with holes; the optimum is checked by enumeration

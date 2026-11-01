@@ -78,6 +78,8 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   // whether the header is written, and what comes after it until then
   private boolean started;
   private final StringBuilder early = new StringBuilder();
+  // the id of the constraint the last soli added, or 0
+  private long improvement;
   // deletions written after the next added clause
   private long[] deleted = new long[16];
   private int numDeleted;
@@ -198,6 +200,43 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   }
 
   /**
+   * Writes a {@code red} step, a constraint with a witness, such as the definition of a new
+   * variable.
+   *
+   * @param step the constraint and its witness, such as {@code "1 ~y4 1 x1 >= 1 : y4 -> 0"}
+   * @return its id
+   */
+  long red(CharSequence step) {
+    write("red " + step + " ;\n");
+    steps++;
+    return ++lastId;
+  }
+
+  /**
+   * Deletes constraints this proof derived by steps of its own ({@link #pol}, {@link #red}).
+   *
+   * @param ids their ids
+   */
+  void deleteSteps(long... ids) {
+    line.setLength(0);
+    line.append("del id");
+    for (long id : ids) {
+      line.append(' ').append(id);
+    }
+    write(line.append(" ;\n"));
+    deletions += ids.length;
+  }
+
+  /**
+   * Returns the id of the constraint that the objective improves on the last logged solution.
+   *
+   * @return the id, or 0 when no solution was logged with it
+   */
+  long improvement() {
+    return improvement;
+  }
+
+  /**
    * Logs a solution, given by the literals true in it; with an objective, VeriPB adds the
    * constraint that the objective is smaller.
    *
@@ -213,7 +252,7 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
     line.append(" ;\n");
     write(line);
     if (improve) {
-      lastId++;
+      improvement = ++lastId;
     }
   }
 
@@ -252,11 +291,14 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
   /**
    * Concludes bounds of the objective, of the OPB objective function.
    *
-   * @param lower the lower bound, proved by the contradiction that no solution is better
+   * @param lower the lower bound, proved by the contradiction that no solution is better, or {@code
+   *     "bound : id"} for the bound that the constraint of that id states
    * @param upper the upper bound, the value of a logged solution; null for none
    */
   void concludeBounds(String lower, String upper) {
-    refute();
+    if (lower.indexOf(':') < 0) {
+      refute();
+    }
     conclude("BOUNDS " + lower + " " + (upper == null ? "INF" : upper));
   }
 
