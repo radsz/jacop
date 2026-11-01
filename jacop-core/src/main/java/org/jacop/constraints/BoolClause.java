@@ -43,6 +43,8 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * I defines a boolean clause for 0/1 variables x_i and y_i. The clause is fulfilled if at least one
@@ -53,7 +55,8 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClause>, Monotone {
+public class BoolClause extends PrimitiveConstraint
+    implements Copyable<BoolClause>, Monotone, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -330,6 +333,21 @@ public class BoolClause extends PrimitiveConstraint implements Copyable<BoolClau
    *
    * @return the linear form.
    */
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /** States the clause, or its negation, as its linear form under the literal. */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != BoolClause.class) {
+      return false;
+    }
+    model.guarded(literal, negated ? clauseForm().negated() : clauseForm());
+    return true;
+  }
+
   LinearForm clauseForm() {
     IntVar[] vars = new IntVar[lx + ly];
     long[] weights = new long[lx + ly];

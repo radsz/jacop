@@ -1485,23 +1485,48 @@ Version 5.0 (unreleased)
     soli for improving solutions, deletions, and a conclusion UNSAT, SAT
     or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
     It is off by default, implies --lcg, one thread, bounds consistency
-    and no LP, and runs no core-guided phase and learns no linear sums.
+    and no LP, and learns no linear sums; symmetry breaking and the
+    components solved before search are off under it. The core-guided phase runs
+    without its at-most-one groups: the proof sums the model's lines of
+    the objective's definitions into a lower-bound line, defines each
+    totalizer output by two red steps, derives the totalizer clauses and
+    each core's increase of the bound by pol steps, and hardened literals
+    and the bound clause by rup. A search stopped by a limit concludes
+    BOUNDS with the lower bound it proved (of the cores or of the root);
+    a run that overruns its time-out ends its proof after the last whole
+    step with conclusion NONE.
     Linear constraints (LinearInt, LinearBool and the linear forms of LCG
     explanations), their reifications, equalities with constants,
     ChannelReif, ChannelImply, clauses, element over constants, Count,
     AtMost, AtLeast, CountBounds, Max, Min, tables, regular and MDD
     constraints, Alldifferent, Alldiff, Alldistinct, GCC, CountValues and
     CountValuesBounds are encoded (the flow reasons of the last six by a
-    pol step over a violated cut of their flow network), as are
+    pol step over a violated cut of their flow network), as are In,
+    BoolClause, AllEqual, AbsXeqY, MaxSimple, MinSimple, AndBoolSimple, OrBoolSimple,
+    XorBool, Reified and Implies of these and of AtMost and AtLeast (the
+    encoding under the literal, and for Reified the negation's under its
+    negation), Not of them and of linear constraints, ConditionalSelect
+    (a literal per branch that it is selected, under which y equals the
+    branch), LexOrder (a literal per position that the positions before
+    it are equal), and
     b -> x + c <= z and the time table of CumulativeBasic, with fixed or
     variable durations and resource uses (a time-indexed encoding); under
-    --proof every cumulative is posted as CumulativeBasic, and the
+    --proof a cumulative with fixed durations and uses is posted as
+    Cumulative, its energy and edge-finding reasons derived by a pol step
+    that sums the load lines of an overloaded window with the task cover
+    and order lines, any other cumulative as CumulativeBasic, and the
     redundant constraints the front end adds (unary resources, energy
     precedence, weighted completion, stocking cost, overlapping all
     different) are left out; so are diffn (as Nooverlap without its area
     and count failures, every pair of rectangles a clause of the four
     ways they are apart over order literals), int_times (as a table of
-    the products) and element over variables (ElementVariableFast);
+    the products), element over variables (ElementVariableFast, with a
+    support literal per value and position, so that a bound of the value
+    with the index open is a rup step) and
+    Circuit (forward and backward positions of the nodes; its subtour
+    cut reasons are derived by rup steps, position by position, over a
+    strongly connected component that no arc leaves or none enters, and
+    its dominator reasons are off under --proof);
     for another constraint, or a
     model over 4*10^8 characters, fzn-jacop prints "%% --proof: ..." and
     =====UNKNOWN=====. The proof derives each change of the root

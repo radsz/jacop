@@ -41,6 +41,9 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
@@ -57,7 +60,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class SetMirror extends Constraint implements SatisfiedPresent, Explainable {
+public class SetMirror extends Constraint implements SatisfiedPresent, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -478,5 +481,24 @@ public class SetMirror extends Constraint implements SatisfiedPresent, Explainab
   @Override
   public String toString() {
     return id() + " : setMirror(" + set + ", " + Arrays.toString(mirror) + ")";
+  }
+
+  /** Writes that the cardinality counts the memberships and the elements always in. */
+  @Override
+  public boolean encode(PbModel model) {
+    String[] literals = new String[members.length];
+    long[] ones = new long[members.length];
+    for (int i = 0; i < members.length; i++) {
+      literals[i] = model.atLeast(members[i], 1);
+      ones[i] = 1;
+    }
+    model.sum(
+        literals,
+        ones,
+        new IntVar[] {cardinality},
+        new long[] {-1},
+        LinearForm.EQ,
+        -(long) glb.getSize());
+    return true;
   }
 }

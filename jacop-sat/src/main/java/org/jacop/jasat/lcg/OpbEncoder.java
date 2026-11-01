@@ -45,11 +45,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BooleanSupplier;
 import java.util.function.ToIntFunction;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -155,6 +158,18 @@ final class OpbEncoder implements PbModel {
 
   private final Map<Constraint, CardinalityLines> cardinality = new IdentityHashMap<>();
 
+  /**
+   * The first line of an equality, {@code sum >= c}, which the next line, {@code -sum >= -c},
+   * follows: the lines a proof sums to state the objective through its definitions.
+   */
+  record EqualityLine(LinearForm form, long id) {}
+
+  private final Map<Constraint, EqualityLine> equalities = new IdentityHashMap<>();
+  private final Map<Constraint, List<EqualityLine>> allEqualities = new IdentityHashMap<>();
+
+  // the id of each variable's first order line, [x >= v] or not [x >= v + 1], for v = min + 1
+  private long[] chainStart;
+
   // the constraint being written
   private Constraint current;
 
@@ -183,6 +198,7 @@ final class OpbEncoder implements PbModel {
 
   /** Writes the literals of every variable and the constraints that define them. */
   void variables() {
+    chainStart = new long[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] == null || root[i].singleton()) {
         continue;
@@ -192,6 +208,7 @@ final class OpbEncoder implements PbModel {
       int max = d.max();
       grow((long) max - m);
       numVariables += 2L * (max - m) + 1;
+      chainStart[i] = numConstraints + 1;
       for (int v = m + 1; v < max; v++) {
         line("1 " + ge(i, v) + " 1 ~" + ge(i, v + 1) + " >= 1");
       }
@@ -228,7 +245,13 @@ final class OpbEncoder implements PbModel {
   void constraint(Constraint c) {
     current = c;
     if (!encode(c)) {
-      unsupported.add(c.getClass().getSimpleName());
+      String name = c.getClass().getSimpleName();
+      if (c instanceof AbstractReifiedConstraint r) {
+        name += " of " + r.c.getClass().getSimpleName();
+      } else if (c instanceof Not n) {
+        name += " of " + n.negatedConstraint().getClass().getSimpleName();
+      }
+      unsupported.add(name);
     }
   }
 
@@ -254,12 +277,20 @@ final class OpbEncoder implements PbModel {
     }
     if (c instanceof AbstractReifiedConstraint r
         && (r.getClass() == Reified.class || r.getClass() == Implies.class)) {
-      LinearForm inner = form(r.c);
-      if (inner == null || !isBoolean(r.b)) {
+      if (!isBoolean(r.b)) {
         return false;
       }
-      reified(r.b, inner, r instanceof Reified);
-      return true;
+      LinearForm inner = form(r.c);
+      if (inner != null) {
+        reified(r.b, inner, r instanceof Reified);
+        return true;
+      }
+      String lit = literal(r.b, true);
+      return implied(lit, r.c, false)
+          && (!(r instanceof Reified) || implied(negate(lit), r.c, true));
+    }
+    if (c instanceof Not n && n.getClass() == Not.class) {
+      return implied("1", n.negatedConstraint(), true);
     }
     return false;
   }
@@ -301,7 +332,42 @@ final class OpbEncoder implements PbModel {
       guard.add(lit);
     }
     linear(f);
-    guard.clear();
+    if (!"1".equals(lit)) {
+      guard.remove(guard.size() - 1);
+    }
+  }
+
+  @Override
+  public boolean implied(String lit, BooleanSupplier encoding) {
+    if ("0".equals(lit)) {
+      return true; // the guard is false: nothing to state
+    }
+    if ("1".equals(lit)) {
+      return encoding.getAsBoolean();
+    }
+    guard.add(lit);
+    try {
+      return encoding.getAsBoolean();
+    } catch (IllegalStateException e) {
+      // an encoding the proof derives lines from: the constraint is listed as unsupported, which
+      // stops the proof, so the lines it wrote under the guard do no harm
+      return false;
+    } finally {
+      guard.remove(guard.size() - 1);
+    }
+  }
+
+  // writes that lit implies c, or its negation
+  private boolean implied(String lit, PrimitiveConstraint c, boolean negated) {
+    if (c instanceof Not n && n.getClass() == Not.class) {
+      return implied(lit, n.negatedConstraint(), !negated);
+    }
+    LinearForm f = form(c);
+    if (f != null) {
+      guarded(lit, negated ? f.negated() : f);
+      return true;
+    }
+    return c instanceof PbEncodable p && p.encodeImplied(this, lit, negated);
   }
 
   /**
@@ -319,6 +385,11 @@ final class OpbEncoder implements PbModel {
       case LinearForm.LE -> atLeast(f, -1, -f.c());
       case LinearForm.GE -> atLeast(f, 1, f.c());
       case LinearForm.EQ -> {
+        if (guard.isEmpty() && current != null) {
+          EqualityLine line = new EqualityLine(f, numConstraints + 1);
+          equalities.putIfAbsent(current, line);
+          allEqualities.computeIfAbsent(current, k -> new ArrayList<>()).add(line);
+        }
         atLeast(f, 1, f.c());
         atLeast(f, -1, -f.c());
         channel(f);
@@ -631,6 +702,269 @@ final class OpbEncoder implements PbModel {
    */
   Map<Constraint, CardinalityLines> cardinalityLines() {
     return cardinality;
+  }
+
+  /**
+   * Returns the first line of each equality written unguarded, by its constraint.
+   *
+   * @return the lines
+   */
+  Map<Constraint, EqualityLine> equalityLines() {
+    return equalities;
+  }
+
+  /**
+   * Returns the first lines of all equalities written unguarded, by their constraint, in order.
+   *
+   * @return the lines
+   */
+  Map<Constraint, List<EqualityLine>> allEqualityLines() {
+    return allEqualities;
+  }
+
+  /**
+   * Returns the id of each variable's first order line, {@code [x >= m + 1] or not [x >= m + 2]}
+   * for its root min m, which the lines of the next values follow; 0 for a variable without them.
+   *
+   * @return the ids, by variable
+   */
+  long[] chainLines() {
+    return chainStart;
+  }
+
+  /**
+   * The literals of a circuit's positions, by which the solver derives its cut reasons:
+   * forward[i][k] that node i is k arcs after node 0 along the circuit, reverse[i][k] that it is k
+   * arcs before it, for k from 1 to n - 1, as names or "0" and "1"; node 0 and position n have none
+   * ("0").
+   */
+  static final class CircuitLines {
+    private final int[] variables;
+    private final int offset;
+    private final String[][] forward;
+    private final String[][] reverse;
+
+    CircuitLines(int[] variables, int offset, String[][] forward, String[][] reverse) {
+      this.variables = variables;
+      this.offset = offset;
+      this.forward = forward;
+      this.reverse = reverse;
+    }
+
+    int[] variables() {
+      return variables;
+    }
+
+    int offset() {
+      return offset;
+    }
+
+    String[][] forward() {
+      return forward;
+    }
+
+    String[][] reverse() {
+      return reverse;
+    }
+  }
+
+  private final Map<Constraint, CircuitLines> circuits = new IdentityHashMap<>();
+
+  /**
+   * The lines of a time-indexed cumulative over fixed durations and uses: the trail index of each
+   * task's start, its duration and use, the trail index of the limit, the id of the load line at
+   * each time point, and of each task the id of the line {@code c - [s >= t - d + 1] + [s >= t + 1]
+   * >= 0} that defines its covering literal at a time point, where it has one (elsewhere that
+   * literal is an order literal).
+   */
+  static final class TimetableLines {
+    private final int[] starts;
+    private final int[] durations;
+    private final int[] uses;
+    private final int limit;
+    private final Map<Long, Long> load;
+    private final List<Map<Long, Long>> covers;
+
+    TimetableLines(
+        int[] starts,
+        int[] durations,
+        int[] uses,
+        int limit,
+        Map<Long, Long> load,
+        List<Map<Long, Long>> covers) {
+      this.starts = starts;
+      this.durations = durations;
+      this.uses = uses;
+      this.limit = limit;
+      this.load = load;
+      this.covers = covers;
+    }
+
+    int[] starts() {
+      return starts;
+    }
+
+    int[] durations() {
+      return durations;
+    }
+
+    int[] uses() {
+      return uses;
+    }
+
+    int limit() {
+      return limit;
+    }
+
+    Map<Long, Long> load() {
+      return load;
+    }
+
+    List<Map<Long, Long>> covers() {
+      return covers;
+    }
+  }
+
+  private final Map<Constraint, TimetableLines> timetables = new IdentityHashMap<>();
+
+  /**
+   * Returns the position literals of each circuit.
+   *
+   * @return the literals, by constraint
+   */
+  Map<Constraint, CircuitLines> circuitLines() {
+    return circuits;
+  }
+
+  @Override
+  public void timetable(IntVar[] starts, int[] durations, int[] uses, IntVar limit) {
+    if (!guard.isEmpty()) {
+      throw new IllegalStateException("a time table under a guard");
+    }
+    if (current == null) {
+      return;
+    }
+    int n = starts.length;
+    int[] ids = new int[n];
+    List<Map<Long, Long>> covers = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      ids[i] = id.applyAsInt(starts[i]);
+      covers.add(new HashMap<>());
+    }
+    timetables.put(
+        current,
+        new TimetableLines(
+            ids, durations.clone(), uses.clone(), id.applyAsInt(limit), new HashMap<>(), covers));
+  }
+
+  @Override
+  public void timetableLine(int task, long t) {
+    TimetableLines lines = current == null ? null : timetables.get(current);
+    if (lines != null) {
+      (task < 0 ? lines.load() : lines.covers().get(task)).put(t, numConstraints + 1);
+    }
+  }
+
+  /** The lines of each time-indexed cumulative over fixed durations and uses. */
+  Map<Constraint, TimetableLines> timetableLines() {
+    return timetables;
+  }
+
+  /**
+   * Writes a circuit: all different successors in the range of the nodes, no node its own
+   * successor, each node some node's successor, and two position encodings. Node 0 is at position
+   * 0; an arc i to j with j not 0 puts j one after i, and an arc into 0 puts its tail at n - 1.
+   * Backwards, an arc into 0 puts its tail at 1, an arc i to j with i not 0 puts i one after j, and
+   * the arc out of 0 puts its head at n - 1. Each position is a value of a node, by order literals,
+   * and each arc a clause per position. A set of nodes that no arc leaves, without node 0, then has
+   * no position for its nodes, which steps derive from the last position down; the nodes outside
+   * such a set with node 0 have no backward position.
+   */
+  @Override
+  public void circuit(IntVar[] x, int offset) {
+    if (!guard.isEmpty()) {
+      throw new IllegalStateException("a circuit under a guard");
+    }
+    int n = x.length;
+    int[] variables = new int[n];
+    for (int i = 0; i < n; i++) {
+      variables[i] = id.applyAsInt(x[i]);
+    }
+    allDifferent(x);
+    long arcs = 0;
+    for (int i = 0; i < n; i++) {
+      arcs += root[variables[i]].getSize();
+      clause(atLeast(x[i], offset));
+      clause(PbModel.not(atLeast(x[i], offset + n)));
+      clause(PbModel.not(equalTo(x[i], offset + i)));
+    }
+    grow(6 * arcs * n + 8L * n * n);
+    String[][] forward = positions(n);
+    String[][] reverse = positions(n);
+    for (int j = 0; j < n; j++) {
+      String[] column = new String[n];
+      for (int i = 0; i < n; i++) {
+        column[i] = i == j ? "0" : equalTo(x[i], offset + j);
+      }
+      clause(column);
+    }
+    for (int i = 0; i < n; i++) {
+      IntDomain d = root[variables[i]];
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int w = e.nextElement();
+        long j = (long) w - offset;
+        if (j < 0 || j >= n || j == i) {
+          continue;
+        }
+        String arc = PbModel.not(equalTo(x[i], w));
+        arc(arc, forward, i, (int) j, n);
+        arc(arc, reverse, (int) j, i, n);
+      }
+    }
+    circuits.put(current, new CircuitLines(variables, offset, forward, reverse));
+  }
+
+  // the clauses of an arc that puts node b one after node a (node 0 at 0, and n - 1 before it)
+  private void arc(String notArc, String[][] p, int a, int b, int n) {
+    if (a == 0) {
+      clause(notArc, p[b][1]);
+    } else if (b == 0) {
+      clause(notArc, p[a][n - 1]);
+    } else {
+      for (int k = 1; k < n; k++) {
+        clause(notArc, negate(p[a][k]), p[b][k + 1]);
+      }
+    }
+  }
+
+  // the literals that node i (not 0) is at position k, for k in 1..n - 1, defined by order literals
+  private String[][] positions(int n) {
+    String[][] p = new String[n][n + 1];
+    for (String[] row : p) {
+      Arrays.fill(row, "0");
+    }
+    for (int i = 1; i < n; i++) {
+      // at[k] that the position is at least k: 1 for k = 1, 0 for k = n
+      String[] at = new String[n + 1];
+      at[1] = "1";
+      at[n] = "0";
+      for (int k = 2; k < n; k++) {
+        at[k] = auxiliary();
+        if (k > 2) {
+          clause(negate(at[k]), at[k - 1]);
+        }
+      }
+      for (int k = 1; k < n; k++) {
+        String e = n == 2 ? "1" : auxiliary();
+        p[i][k] = e;
+        if (!"1".equals(e)) {
+          clause(negate(e), at[k]);
+          clause(negate(e), negate(at[k + 1]));
+          clause(e, negate(at[k]), at[k + 1]);
+        }
+      }
+    }
+    return p;
   }
 
   @Override

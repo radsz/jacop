@@ -35,46 +35,100 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Random;
+import java.util.function.BiFunction;
+import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.AlldifferentExcept;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
+import org.jacop.constraints.Circuit;
+import org.jacop.constraints.ConditionalSelect;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.In;
+import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SeqPrecedeChain;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XorBool;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.diffn.Nooverlap;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
+import org.jacop.search.IndomainMin;
 import org.jacop.search.SimpleSelect;
+import org.jacop.set.constraints.AdiffBeqC;
+import org.jacop.set.constraints.AdisjointB;
+import org.jacop.set.constraints.AeqB;
+import org.jacop.set.constraints.AinB;
+import org.jacop.set.constraints.AintersectBeqC;
+import org.jacop.set.constraints.AunionBeqC;
+import org.jacop.set.constraints.CardAeqX;
+import org.jacop.set.constraints.ChannelBoolSet;
+import org.jacop.set.constraints.EinA;
+import org.jacop.set.constraints.ElementSet;
+import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.SetMirror;
+import org.jacop.set.constraints.XinA;
+import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetVar;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -92,7 +146,28 @@ class VeriPbProofTest {
     return lcg;
   }
 
+  /**
+   * The OPB model; with the system property {@code veripb.dump} set to a directory, the model and
+   * the proof are also written there, named after the test, for a check by VeriPB itself.
+   */
   private String opb() {
+    return opb(caller());
+  }
+
+  private static String caller() {
+    return StackWalker.getInstance().walk(f -> f.skip(2).findFirst().orElseThrow().getMethodName());
+  }
+
+  private String opb(String name) {
+    String dir = System.getProperty("veripb.dump");
+    if (dir != null) {
+      try {
+        Files.writeString(Path.of(dir, name + ".opb"), model.toString(StandardCharsets.US_ASCII));
+        Files.writeString(Path.of(dir, name + ".pbp"), proof.toString(StandardCharsets.US_ASCII));
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
     return model.toString(StandardCharsets.US_ASCII);
   }
 
@@ -445,6 +520,73 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS " + lcg.value(obj) + " " + lcg.value(obj));
   }
 
+  /**
+   * Five tasks of length 2 and use 1 start in 0..2 under a capacity of 2: no time point is
+   * overloaded by compulsory parts, but the window [0, 4) needs 10 units of energy and gives 8. The
+   * energy rules of Cumulative find the failure; the proof sums the load lines of the window with
+   * the definitions of the tasks' covering literals and order lines.
+   */
+  @Test
+  void energyOverloadIsRefuted() {
+    Store store = new Store();
+    int n = 5;
+    IntVar[] s = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] res = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 2);
+      dur[i] = new IntVar(store, "d" + i, 2, 2);
+      res[i] = new IntVar(store, "r" + i, 1, 1);
+    }
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.impose(new Cumulative(s, dur, res, new IntVar(store, "cap", 2, 2)));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  // random fixed tasks under Cumulative (edge finding and energy rules): every reason is a rup
+  // step once its overloaded window is summed, and the optimum is the brute-force one
+  @Test
+  void edgeFindingMakespanIsProved() {
+    Random random = new Random(11);
+    for (int run = 0; run < 6; run++) {
+      model.reset();
+      proof.reset();
+      int n = 5;
+      int[] d = new int[n];
+      int[] r = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + random.nextInt(3);
+        r[i] = 1 + random.nextInt(3);
+      }
+      int horizon = 9;
+      Store store = new Store();
+      IntVar[] s = new IntVar[n];
+      IntVar[] dur = new IntVar[n];
+      IntVar[] res = new IntVar[n];
+      IntVar obj = new IntVar(store, "obj", 0, horizon + 3);
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, 0, horizon);
+        dur[i] = new IntVar(store, "d" + i, d[i], d[i]);
+        res[i] = new IntVar(store, "r" + i, r[i], r[i]);
+        store.impose(new LinearInt(new IntVar[] {s[i], obj}, new int[] {1, -1}, "<=", -d[i]));
+      }
+      Cumulative cumulative = new Cumulative(s, dur, res, new IntVar(store, "cap", 3, 3));
+      cumulative.doEdgeFind(true);
+      store.impose(cumulative);
+      LcgSolver lcg = withProof(store);
+      assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(lcg.value(obj)).isEqualTo(shortestMakespan(d, r, 3, horizon));
+      RupChecker checker = new RupChecker();
+      assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII)))
+          .as("run " + run)
+          .isNull();
+    }
+  }
+
   // variable durations and resource uses, from 0: three tasks under a capacity of 3 that should
   // start early, use much and run long but for the last one, which starts late, uses more than
   // the capacity and so has length 0; the solutions logged fix every literal of the encoding
@@ -532,6 +674,499 @@ class VeriPbProofTest {
   }
 
   // the shortest makespan over every start from 0 to horizon of each task
+  // reified, implied and negated In, AllEqual, AtMost, AtLeast, XorBool and AndBoolSimple, and
+  // AbsXeqY, MaxSimple, MinSimple and OrBoolSimple, against the optimum of a depth-first search
+  @Test
+  void reifiedNonLinearConstraintsAreProved() {
+    optimaAreProved(12, VeriPbProofTest::mixedModel);
+  }
+
+  // y = x[k] for the first k with b[k] = 1 (if_then_else_int), over branches with holes
+  @Test
+  void conditionalSelectIsProved() {
+    optimaAreProved(
+        12,
+        (store, random) -> {
+          int n = 3 + random.nextInt(2);
+          IntVar[] b = new IntVar[n];
+          IntVar[] x = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            b[i] = new IntVar(store, "b" + i, 0, 1);
+            x[i] = new IntVar(store, "x" + i, -3, 5);
+            for (int h = 0; h < 3; h++) {
+              x[i].domain.inComplement(0, x[i], random.nextInt(9) - 3);
+            }
+          }
+          IntVar y = new IntVar(store, "y", -2, 4);
+          y.domain.inComplement(0, y, random.nextInt(7) - 2);
+          store.impose(new ConditionalSelect(b, x, y));
+          store.impose(new XneqY(x[0], x[1]));
+          IntVar[] terms = Arrays.copyOf(x, 2 * n + 2);
+          System.arraycopy(b, 0, terms, n, n);
+          terms[2 * n] = y;
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          terms[2 * n + 1] = obj;
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 2 * n + 1; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[2 * n + 1] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // x <=lex y or x <lex y over vectors with holes, twice, against an objective that pulls them
+  // apart
+  @Test
+  void lexOrderIsProved() {
+    optimaAreProved(
+        12,
+        (store, random) -> {
+          int n = 3 + random.nextInt(2);
+          IntVar[][] v = new IntVar[3][n];
+          for (int k = 0; k < 3; k++) {
+            for (int i = 0; i < n; i++) {
+              v[k][i] = new IntVar(store, "v" + k + "_" + i, 0, 4);
+              v[k][i].domain.inComplement(0, v[k][i], random.nextInt(5));
+            }
+          }
+          store.impose(new LexOrder(v[0], v[1], random.nextBoolean()));
+          store.impose(new LexOrder(v[1], v[2], random.nextBoolean()));
+          IntVar[] terms = new IntVar[3 * n + 1];
+          int[] w = new int[terms.length];
+          for (int k = 0; k < 3; k++) {
+            for (int i = 0; i < n; i++) {
+              terms[k * n + i] = v[k][i];
+              w[k * n + i] = (k == 1 ? -1 : 1) * (1 + random.nextInt(3)) * (n - i);
+            }
+          }
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          terms[3 * n] = obj;
+          w[3 * n] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // all different except a set of values, over variables with holes, against a random objective
+  @Test
+  void allDifferentExceptIsProved() {
+    optimaAreProved(
+        30,
+        (store, random) -> {
+          int n = 4 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 0, n - 2);
+          IntervalDomain except = new IntervalDomain(0, 0);
+          if (random.nextBoolean()) {
+            except.unionAdapt(n - 2, n - 2);
+          }
+          store.impose(
+              random.nextBoolean() && except.getSize() == 1
+                  ? new AlldifferentExceptZero(x)
+                  : new AlldifferentExcept(x, except));
+          return weightedSum(store, random, x);
+        });
+  }
+
+  // x[0] <= x[1] <= ... (or <) over variables with holes, alone or with a bounded sum
+  @Test
+  void increasingIsProved() {
+    optimaAreProved(
+        60,
+        (store, random) -> {
+          IntVar[] x = holeyVariables(store, random, 4 + random.nextInt(3), 0, 7);
+          if (random.nextBoolean()) {
+            store.impose(new Increasing(x, random.nextBoolean()));
+          } else {
+            IntVar sum = new IntVar(store, "sum", 0, 10 + random.nextInt(20));
+            store.impose(new IncreasingSum(x, sum, random.nextBoolean()));
+          }
+          return weightedSum(store, random, x);
+        });
+  }
+
+  // seq_precede_chain, value_precede_chain and value_precede against an objective that wants high
+  // values first
+  @Test
+  void precedenceChainsAreProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 5 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 0, 4);
+          switch (random.nextInt(3)) {
+            case 0 -> store.impose(new SeqPrecedeChain(x));
+            case 1 -> store.impose(new SeqPrecedeChain(x, new int[] {3, 1, 4}));
+            default -> store.impose(new ValuePrecede(2, 0, x));
+          }
+          return weightedSum(store, random, x);
+        });
+  }
+
+  // set constraints over sets mirrored as fzn-jacop mirrors them under --lcg, among them reified
+  // and negated ones, against an objective over the memberships and the cardinalities
+  @Test
+  void setConstraintsAreProved() {
+    optimaAreProved(
+        20,
+        (store, random) -> {
+          int n = 3 + random.nextInt(2);
+          SetVar[] s = new SetVar[n];
+          for (int i = 0; i < n; i++) {
+            IntervalDomain lub = new IntervalDomain();
+            for (int e = 0; e <= 5; e++) {
+              if (random.nextInt(6) > 0) {
+                lub.unionAdapt(e, e);
+              }
+            }
+            IntervalDomain glb = new IntervalDomain();
+            if (random.nextInt(3) == 0 && !lub.isEmpty()) {
+              glb.unionAdapt(lub.min(), lub.min());
+            }
+            s[i] = new SetVar(store, "s" + i, new BoundSetDomain(glb, lub));
+          }
+          IntVar x = new IntVar(store, "x", 0, 5);
+          IntVar k = new IntVar(store, "k", 0, 6);
+          IntVar[] b = new IntVar[3];
+          for (int i = 0; i < b.length; i++) {
+            b[i] = new IntVar(store, "b" + i, 0, 1);
+          }
+          for (int c = 0; c < 3; c++) {
+            int i = random.nextInt(n);
+            int j = (i + 1 + random.nextInt(n - 1)) % n;
+            int l = (j + 1) % n == i ? (j + 2) % n : (j + 1) % n;
+            SetVar p = s[i];
+            SetVar q = s[j];
+            SetVar r = s[l];
+            IntVar bc = b[c % b.length];
+            int e = random.nextInt(6);
+            switch (random.nextInt(17)) {
+              case 0 -> store.impose(new AunionBeqC(p, q, r));
+              case 1 -> store.impose(new AintersectBeqC(p, q, r));
+              case 2 -> store.impose(new AdiffBeqC(p, q, r));
+              case 3 -> store.impose(new AinB(p, q));
+              case 4 -> store.impose(new AeqB(p, q));
+              case 5 -> store.impose(new Reified(new EinA(e, p), bc));
+              case 6 -> store.impose(new Reified(new AinB(p, q), bc));
+              case 7 -> store.impose(new Not(new AeqB(p, q)));
+              case 8 -> store.impose(new XinA(x, p));
+              case 9 -> store.impose(new Reified(new XinA(x, p), bc));
+              case 10 -> store.impose(new CardAeqX(p, k));
+              case 11 -> store.impose(new AdisjointB(p, q));
+              case 12 -> {
+                IntDomain[] list = new IntDomain[4];
+                for (int t = 0; t < list.length; t++) {
+                  list[t] = new IntervalDomain(random.nextInt(3), 2 + random.nextInt(4));
+                }
+                store.impose(new ElementSet(x, list, p));
+              }
+              case 13 -> store.impose(new ChannelBoolSet(b, p));
+              case 14 ->
+                  store.impose(new PartitionSet(new SetVar[] {p, q}, new IntervalDomain(0, 5)));
+              case 15 -> store.impose(new Reified(new AeqB(p, q), bc));
+              default -> store.impose(new Not(new EinA(e, p)));
+            }
+          }
+          for (SetVar v : s) {
+            if (!v.singleton()) {
+              store.impose(new SetMirror(v));
+            }
+          }
+          IntVar[] terms =
+              Arrays.stream(store.vars, 0, store.size())
+                  .filter(IntVar.class::isInstance)
+                  .toArray(IntVar[]::new);
+          return weightedSum(store, random, terms);
+        });
+  }
+
+  // the decomposition of a subcircuit that --proof poses, against Subcircuit itself, with an
+  // objective over the successors and the nodes left out
+  @Test
+  void subcircuitDecompositionIsProved() {
+    for (int seed = 0; seed < 25; seed++) {
+      model.reset();
+      proof.reset();
+      int[] best = new int[2];
+      for (int k = 0; k < 2; k++) {
+        Random random = new Random(seed);
+        Store store = new Store();
+        int n = 4 + random.nextInt(3);
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 1, n);
+          for (int h = 0; h < 2; h++) {
+            int v = 1 + random.nextInt(n);
+            if (v != i + 1) {
+              x[i].domain.inComplement(0, x[i], v);
+            }
+          }
+        }
+        store.impose(new Alldistinct(x));
+        IntVar obj = weightedSum(store, random, x);
+        if (k == 0) {
+          store.impose(new Subcircuit(x));
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          boolean feasible =
+              search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), obj);
+          best[0] = feasible ? search.getCostValue() : Integer.MIN_VALUE;
+        } else {
+          for (Constraint c : Subcircuit.decomposition(store, x)) {
+            store.impose(c);
+          }
+          LcgSolver lcg = withProof(store);
+          int status = lcg.minimize(obj);
+          best[1] = status == CdclSolver.SAT ? lcg.value(obj) : Integer.MIN_VALUE;
+        }
+      }
+      assertThat(best[1]).as("seed %d", seed).isEqualTo(best[0]);
+      RupChecker checker = new RupChecker();
+      assertThat(
+              checker.check(
+                  opb("subcircuitDecompositionIsProved" + seed),
+                  proof.toString(StandardCharsets.US_ASCII)))
+          .as("seed %d", seed)
+          .isNull();
+    }
+  }
+
+  // a knapsack without its dynamic program, whose reasons are rows of the two equalities, with
+  // the profit maximised under a capacity bound and a side constraint
+  @Test
+  void knapsackIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 4 + random.nextInt(4);
+          IntVar[] q = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            q[i] = new IntVar(store, "q" + i, 0, 1 + random.nextInt(3));
+          }
+          int[] w = new int[n];
+          int[] p = new int[n];
+          for (int i = 0; i < n; i++) {
+            w[i] = 1 + random.nextInt(9);
+            p[i] = 1 + random.nextInt(9);
+          }
+          IntVar capacity = new IntVar(store, "capacity", 0, 5 + random.nextInt(15));
+          IntVar profit = new IntVar(store, "profit", 0, 200);
+          store.impose(new Knapsack(p, w, q, capacity, profit).dynamicProgramming(false));
+          store.impose(new XneqY(q[0], q[1]));
+          IntVar obj = new IntVar(store, "obj", -200, 0);
+          store.impose(new XplusYeqC(obj, profit, 0));
+          return obj;
+        });
+  }
+
+  // bin packing with the rules of the load sums only, the number of bins used minimised
+  @Test
+  void binpackingIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 5 + random.nextInt(4);
+          int m = 3 + random.nextInt(2);
+          IntVar[] bin = new IntVar[n];
+          int[] w = new int[n];
+          for (int i = 0; i < n; i++) {
+            bin[i] = new IntVar(store, "b" + i, 1, m);
+            w[i] = 1 + random.nextInt(6);
+          }
+          IntVar[] load = new IntVar[m];
+          IntVar[] used = new IntVar[m];
+          int cap = Arrays.stream(w).sum() / m + 2 + random.nextInt(4);
+          for (int j = 0; j < m; j++) {
+            load[j] = new IntVar(store, "l" + j, 0, cap);
+            load[j].domain.inComplement(0, load[j], 1 + random.nextInt(cap));
+            used[j] = new IntVar(store, "u" + j, 0, 1);
+            store.impose(new Reified(new XgtC(load[j], 0), used[j]));
+          }
+          store.impose(new Binpacking(bin, load, w, 1).linearRulesOnly());
+          IntVar obj = new IntVar(store, "obj", 0, m);
+          store.impose(new SumInt(used, "==", obj));
+          return obj;
+        });
+  }
+
+  /** Variables over min..max with two random holes each (the value may be missing already). */
+  private static IntVar[] holeyVariables(Store store, Random random, int n, int min, int max) {
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, min, max);
+      for (int h = 0; h < 2; h++) {
+        x[i].domain.inComplement(0, x[i], min + random.nextInt(max - min + 1));
+      }
+    }
+    return x;
+  }
+
+  /** The objective sum w[i] * x[i] with random weights from -5 to 5. */
+  private static IntVar weightedSum(Store store, Random random, IntVar[] x) {
+    IntVar[] terms = Arrays.copyOf(x, x.length + 1);
+    int[] w = new int[terms.length];
+    for (int i = 0; i < x.length; i++) {
+      w[i] = random.nextInt(11) - 5;
+    }
+    IntVar obj = new IntVar(store, "obj", -1000, 1000);
+    terms[x.length] = obj;
+    w[x.length] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    return obj;
+  }
+
+  // tables of random tuples, among them equal ones, whose literals each solution must fix, and
+  // tuples whose accepted values are removed one by one (lot-sizing pigment20a)
+  @Test
+  void tablesOfValuesAreProved() {
+    optimaAreProved(
+        300,
+        (store, random) -> {
+          IntVar[] x = new IntVar[4];
+          for (int i = 0; i < x.length; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, 7);
+          }
+          for (int k = 0; k < 2; k++) {
+            int[][] tuples = new int[6 + random.nextInt(6)][3];
+            for (int[] t : tuples) {
+              for (int i = 0; i < 3; i++) {
+                t[i] = random.nextInt(8);
+              }
+            }
+            store.impose(new HybridTable(new IntVar[] {x[k], x[k + 1], x[k + 2]}, tuples));
+          }
+          store.impose(new XneqY(x[0], x[3]));
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          IntVar[] terms = {x[0], x[1], x[2], x[3], obj};
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 4; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[4] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // BoolClause, reified and negated
+  @Test
+  void boolClausesAreProved() {
+    optimaAreProved(
+        12,
+        (store, random) -> {
+          IntVar[] b = new IntVar[8];
+          for (int i = 0; i < b.length; i++) {
+            b[i] = new IntVar(store, "b" + i, 0, 1);
+          }
+          for (int k = 0; k < 6; k++) {
+            IntVar[] x = {b[random.nextInt(8)], b[random.nextInt(8)]};
+            IntVar[] y = {b[random.nextInt(8)]};
+            BoolClause c = new BoolClause(x, y);
+            switch (k % 3) {
+              case 0 -> store.impose(c);
+              case 1 -> store.impose(new Reified(c, b[random.nextInt(8)]));
+              default -> store.impose(new Not(c));
+            }
+          }
+          int[] w = new int[9];
+          for (int i = 0; i < 8; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[8] = -1;
+          IntVar obj = new IntVar(store, "obj", -50, 50);
+          IntVar[] terms = Arrays.copyOf(b, 9);
+          terms[8] = obj;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  /**
+   * Minimizes the objective of a model per seed with a proof, checks the proof and compares the
+   * optimum, or that there is no solution, with a depth-first search over the same model.
+   */
+  private void optimaAreProved(int seeds, BiFunction<Store, Random, IntVar> builder) {
+    String test = caller();
+    for (int seed = 0; seed < seeds; seed++) {
+      model.reset();
+      proof.reset();
+      Store reference = new Store();
+      IntVar cost = builder.apply(reference, new Random(seed));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      // the set variables follow the integer variables that mirror them
+      IntVar[] all =
+          Arrays.stream(reference.vars, 0, reference.size())
+              .filter(IntVar.class::isInstance)
+              .toArray(IntVar[]::new);
+      boolean feasible =
+          search.labeling(reference, new SimpleSelect<>(all, null, new IndomainMin<>()), cost);
+      Store store = new Store();
+      IntVar obj = builder.apply(store, new Random(seed));
+      LcgSolver lcg = withProof(store);
+      int status = lcg.minimize(obj);
+      assertThat(status)
+          .as("seed %d", seed)
+          .isEqualTo(feasible ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (feasible) {
+        assertThat(lcg.value(obj)).as("seed %d", seed).isEqualTo(search.getCostValue());
+      }
+      RupChecker checker = new RupChecker();
+      assertThat(checker.check(opb(test + seed), proof.toString(StandardCharsets.US_ASCII)))
+          .as("seed %d", seed)
+          .isNull();
+    }
+  }
+
+  private static IntVar mixedModel(Store store, Random random) {
+    int n = 5;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, -3, 4);
+      for (int h = 0; h < 2; h++) {
+        x[i].domain.inComplement(0, x[i], random.nextInt(8) - 3);
+      }
+    }
+    IntVar[] b = new IntVar[8];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntervalDomain set = new IntervalDomain();
+    for (int v = -3; v <= 4; v++) {
+      if (random.nextBoolean()) {
+        set.unionAdapt(v, v);
+      }
+    }
+    store.impose(new Reified(new In(x[0], set), b[0]));
+    store.impose(new Implies(b[1], new In(x[1], set)));
+    store.impose(new Not(new In(x[4], set)));
+    store.impose(new Reified(new AllEqual(new IntVar[] {x[0], x[2], x[3]}), b[2]));
+    store.impose(new Reified(new AtMost(x, 1 + random.nextInt(2), random.nextInt(4)), b[3]));
+    store.impose(new Implies(b[4], new Not(new AtLeast(x, 2, random.nextInt(4)))));
+    store.impose(new Reified(new XorBool(new IntVar[] {b[0], b[1], b[2]}, b[5]), b[6]));
+    store.impose(new Reified(new AndBoolSimple(b[3], b[4], b[5]), b[7]));
+    IntVar or = new IntVar(store, "or", 0, 1);
+    store.impose(new OrBoolSimple(b[6], b[7], or));
+    IntVar abs = new IntVar(store, "abs", -1, 4);
+    store.impose(new AbsXeqY(x[2], abs));
+    IntVar max = new IntVar(store, "max", -3, 4);
+    store.impose(new MaxSimple(x[3], x[4], max));
+    IntVar min = new IntVar(store, "min", -3, 4);
+    store.impose(new MinSimple(x[0], x[1], min));
+    IntVar[] terms = {x[0], x[1], x[2], x[3], x[4], b[0], b[2], b[5], or, abs, max, min};
+    int[] w = new int[terms.length + 1];
+    for (int i = 0; i < terms.length; i++) {
+      w[i] = random.nextInt(9) - 4;
+    }
+    w[terms.length] = -1;
+    IntVar obj = new IntVar(store, "obj", -500, 500);
+    IntVar[] all = Arrays.copyOf(terms, terms.length + 1);
+    all[terms.length] = obj;
+    store.impose(new LinearInt(all, w, "==", 0));
+    return obj;
+  }
+
   private static int shortestMakespan(int[] d, int[] r, int capacity, int horizon) {
     int n = d.length;
     int[] start = new int[n];
@@ -649,6 +1284,42 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
   }
 
+  // the root propagation fixes b0, so the first clause is the unit b3 and the solver keeps b1 or b2
+  // only of the second: that clause is not a rup step before the root is derived
+  // (balance_partition)
+  @Test
+  void clauseSimplifiedByTheRootIsProved() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2), new IntVar(store, "x2", 1, 4)
+    };
+    IntVar[] b = new IntVar[4];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 10);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    // x2 >= 3 is a pol step, not unit propagation, and gives b0 = 0
+    store.imposeWithConsistency(new Alldistinct(x));
+    store.imposeWithConsistency(
+        new LinearInt(new IntVar[] {b[0], x[2]}, new int[] {1, 1}, "<=", 3));
+    store.imposeWithConsistency(
+        new LinearInt(new IntVar[] {b[1], b[2], obj}, new int[] {2, 1, -1}, "==", 0));
+    assertThat(b[0].max()).isZero();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    lcg.addClause(new IntVar[] {b[0], b[3]}, new IntVar[0]);
+    lcg.addClause(new IntVar[] {b[1], b[2]}, new IntVar[] {b[3]});
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(1);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("root changes derived");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 1 1");
+  }
+
   // five rectangles in a 6 x 4 box, found by search; with each "before" literal as a linear line
   // over the order literals, a reason that moves a bound through it is not a rup step
   @Test
@@ -723,6 +1394,305 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS -7 -7");
   }
 
+  // a weighted sum over variables with holes, minimised by core-guided search: the cores relax
+  // order literals, a hole folds two levels into one soft literal, and the negative weight counts
+  // from the upper bound; the optimum is checked by enumeration
+  @Test
+  void coreGuidedOptimumOfIntegersIsProved() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[5];
+    for (int i = 0; i < x.length; i++) {
+      IntervalDomain d = new IntervalDomain(0, 1);
+      d.unionAdapt(3, 4);
+      x[i] = new IntVar(store, "x" + i, d);
+    }
+    int[][] atLeast = {{0, 1, 3}, {1, 2, 4}, {0, 4, 2}};
+    for (int[] r : atLeast) {
+      store.impose(new LinearInt(new IntVar[] {x[r[0]], x[r[1]]}, new int[] {1, 1}, ">=", r[2]));
+    }
+    store.impose(new LinearInt(new IntVar[] {x[2], x[3], x[4]}, new int[] {1, 1, 1}, ">=", 5));
+    store.impose(new XneqY(x[3], x[4]));
+    int[] w = {3, 2, 4, -2, 1};
+    IntVar obj = new IntVar(store, "obj", -100, 100);
+    IntVar[] all = {x[0], x[1], x[2], x[3], x[4], obj};
+    store.impose(new LinearInt(all, new int[] {w[0], w[1], w[2], w[3], w[4], -1}, "==", 0));
+    LcgSolver lcg = withProof(store);
+    lcg.setCoreSearch(1.0, 1_000_000, 1_000_000);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    int[] values = {0, 1, 3, 4};
+    int best = Integer.MAX_VALUE;
+    for (int t = 0; t < 1024; t++) {
+      int[] v = new int[5];
+      for (int i = 0; i < 5; i++) {
+        v[i] = values[t >> (2 * i) & 3];
+      }
+      boolean ok = v[0] + v[1] >= 3 && v[1] + v[2] >= 4 && v[0] + v[4] >= 2;
+      ok &= v[2] + v[3] + v[4] >= 5 && v[3] != v[4];
+      if (ok) {
+        best = Math.min(best, w[0] * v[0] + w[1] * v[1] + w[2] * v[2] + w[3] * v[3] + w[4] * v[4]);
+      }
+    }
+    assertThat(lcg.value(obj)).isEqualTo(best);
+    assertThat(lcg.coreSearch()).isNotNull();
+    assertThat(lcg.coreSearch().cores).isPositive();
+    String steps = proof.toString(StandardCharsets.US_ASCII);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), steps)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
+  }
+
+  // a weighted cover of 0/1 variables through two definitions (obj = cost + 5, cost = the sum),
+  // whose cores of several literals add totalizers; the optimum is checked by enumeration
+  @Test
+  void coreGuidedOptimumOfBooleansIsProved() {
+    Store store = new Store();
+    int n = 7;
+    BooleanVar[] b = new BooleanVar[n];
+    for (int i = 0; i < n; i++) {
+      b[i] = new BooleanVar(store, "b" + i);
+    }
+    int[][] sets = {{0, 1, 2}, {1, 3}, {2, 3, 4}, {4, 5}, {5, 6, 0}, {1, 6}, {3, 5}};
+    for (int[] set : sets) {
+      IntVar[] in = new IntVar[set.length];
+      for (int k = 0; k < set.length; k++) {
+        in[k] = b[set[k]];
+      }
+      store.impose(new SumBool(in, ">=", new IntVar(store, 1, 1)));
+    }
+    int[] w = {3, 5, 4, 2, 6, 3, 4};
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    IntVar[] all = new IntVar[n + 1];
+    int[] a = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      all[i] = b[i];
+      a[i] = w[i];
+    }
+    all[n] = cost;
+    a[n] = -1;
+    store.impose(new LinearInt(all, a, "==", 0));
+    IntVar obj = new IntVar(store, "obj", 0, 200);
+    store.impose(new LinearInt(new IntVar[] {obj, cost}, new int[] {1, -1}, "==", 5));
+    LcgSolver lcg = withProof(store);
+    lcg.setCoreSearch(1.0, 1_000_000, 1_000_000);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    int best = Integer.MAX_VALUE;
+    for (int t = 0; t < 1 << n; t++) {
+      boolean ok = true;
+      for (int[] set : sets) {
+        boolean covered = false;
+        for (int i : set) {
+          covered |= (t >> i & 1) == 1;
+        }
+        ok &= covered;
+      }
+      if (ok) {
+        int c = 5;
+        for (int i = 0; i < n; i++) {
+          c += (t >> i & 1) * w[i];
+        }
+        best = Math.min(best, c);
+      }
+    }
+    assertThat(lcg.value(obj)).isEqualTo(best);
+    assertThat(lcg.coreSearch().cores).isPositive();
+    String steps = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(steps).contains("red ");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), steps)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
+  }
+
+  // nine pigeons in eight holes at a cost of 1 each, which 300 conflicts do not refute: a
+  // core per pigeon raises the lower bound to 9, and the proof concludes it, stated over the
+  // objective's literals
+  @Test
+  void lowerBoundOfAStoppedSearchIsProved() {
+    Store store = new Store();
+    int pigeons = 9;
+    int holes = 8;
+    BooleanVar[][] p = new BooleanVar[pigeons][holes];
+    IntVar[] all = new IntVar[pigeons * holes + 1];
+    int[] a = new int[all.length];
+    for (int i = 0; i < pigeons; i++) {
+      for (int h = 0; h < holes; h++) {
+        p[i][h] = new BooleanVar(store, "p" + i + "_" + h);
+        all[i * holes + h] = p[i][h];
+        a[i * holes + h] = 1;
+      }
+      store.impose(new SumBool(p[i], ">=", new IntVar(store, 1, 1)));
+    }
+    for (int h = 0; h < holes; h++) {
+      IntVar[] column = new IntVar[pigeons];
+      for (int i = 0; i < pigeons; i++) {
+        column[i] = p[i][h];
+      }
+      store.impose(new SumBool(column, "<=", new IntVar(store, 0, 1)));
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 1000);
+    all[pigeons * holes] = obj;
+    a[pigeons * holes] = -1;
+    store.impose(new LinearInt(all, a, "==", 0));
+    LcgSolver lcg = withProof(store);
+    lcg.setCoreSearch(0.5, 1_000_000, 1_000_000);
+    lcg.sat().setConflictLimit(300);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
+    long bound = lcg.coreSearch().lowerBound;
+    assertThat(bound).isGreaterThanOrEqualTo(pigeons);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS " + bound + " INF");
+  }
+
+  // the shortest circuit through 7 cities, whose subtours the proof refutes by positions along
+  // the circuit; the optimum is checked by enumeration of the circuits
+  @Test
+  void circuitOptimumIsProved() {
+    int n = 7;
+    int[][] cost = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        cost[i][j] = (7 * i + 3 * j + i * j) % 11 + 1;
+      }
+    }
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    IntVar[] c = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, n);
+      c[i] = new IntVar(store, "c" + i, 0, 12);
+      store.impose(new ElementInteger(x[i], cost[i], c[i], 0));
+    }
+    store.impose(new Circuit(x));
+    IntVar obj = new IntVar(store, "obj", 0, 100);
+    IntVar[] all = new IntVar[n + 1];
+    int[] a = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      all[i] = c[i];
+      a[i] = 1;
+    }
+    all[n] = obj;
+    a[n] = -1;
+    store.impose(new LinearInt(all, a, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(shortestCircuit(cost));
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).startsWith("BOUNDS");
+  }
+
+  // the length of the shortest circuit, over the orders of the nodes after node 0
+  private static int shortestCircuit(int[][] cost) {
+    int n = cost.length;
+    int[] order = new int[n - 1];
+    for (int k = 0; k < n - 1; k++) {
+      order[k] = k + 1;
+    }
+    int best = Integer.MAX_VALUE;
+    while (true) {
+      int length = cost[0][order[0]] + cost[order[n - 2]][0];
+      for (int k = 0; k + 1 < n - 1; k++) {
+        length += cost[order[k]][order[k + 1]];
+      }
+      best = Math.min(best, length);
+      // the next permutation
+      int i = n - 3;
+      while (i >= 0 && order[i] > order[i + 1]) {
+        i--;
+      }
+      if (i < 0) {
+        return best;
+      }
+      int j = n - 2;
+      while (order[j] < order[i]) {
+        j--;
+      }
+      int t = order[i];
+      order[i] = order[j];
+      order[j] = t;
+      for (int l = i + 1, r = n - 2; l < r; l++, r--) {
+        t = order[l];
+        order[l] = order[r];
+        order[r] = t;
+      }
+    }
+  }
+
+  /**
+   * A run that overruns its time-out halts from another thread; the proof then ends after its last
+   * whole step with no conclusion (it was cut in the middle of a step), and later steps are
+   * dropped.
+   */
+  @Test
+  void anAbandonedProofEndsAfterItsLastStep() {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    VeriPbProof p = new VeriPbProof(out, d -> "x" + d);
+    p.start(1);
+    p.lemma("rup 1 x1 >= 1 ;\n");
+    VeriPbProof.abandon();
+    p.lemma("rup 1 x2 >= 1 ;\n");
+    p.concludeNothing();
+    try {
+      p.close();
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+    assertThat(out.toString(StandardCharsets.US_ASCII))
+        .isEqualTo(
+            "pseudo-Boolean proof version 3.0\nf 1 ;\nrup 1 x1 >= 1 ;\n"
+                + "output NONE ;\nconclusion NONE ;\nend pseudo-Boolean proof ;\n");
+  }
+
+  /**
+   * A reason for a bound of the value skips a position whose variable has no value in common with
+   * it while the index still has the position; unit propagation finds that the index is not there
+   * only through the support literals of the value's values.
+   */
+  @Test
+  void elementValueBoundsWithAnOpenIndexAreProved() {
+    // seed 360 of a sweep has such a reason
+    Random random = new Random(360);
+    Store store = new Store();
+    int n = 2 + random.nextInt(4);
+    IntVar[] list = new IntVar[n];
+    for (int k = 0; k < n; k++) {
+      list[k] = new IntVar(store, "x" + k, -5, 8);
+      for (int h = 0; h < 6; h++) {
+        int u = random.nextInt(14) - 5;
+        if (list[k].getSize() > 2) {
+          list[k].domain.inComplement(0, list[k], u);
+        }
+      }
+    }
+    IntVar index = new IntVar(store, "i", 1, n);
+    IntVar value = new IntVar(store, "v", -5, 8);
+    for (int h = 0; h < 6; h++) {
+      value.domain.inComplement(0, value, random.nextInt(14) - 5);
+    }
+    store.impose(new ElementVariableFast(index, list, value));
+    for (int k = 0; k + 1 < n; k++) {
+      store.impose(new XneqY(list[k], list[k + 1]));
+    }
+    IntVar[] terms = new IntVar[n + 3];
+    int[] w = new int[n + 3];
+    for (int k = 0; k < n; k++) {
+      terms[k] = list[k];
+      w[k] = random.nextInt(9) - 4;
+    }
+    terms[n] = value;
+    w[n] = random.nextInt(9) - 4;
+    terms[n + 1] = index;
+    w[n + 1] = random.nextInt(9) - 4;
+    IntVar obj = new IntVar(store, "obj", -500, 500);
+    terms[n + 2] = obj;
+    w[n + 2] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+  }
+
   // list[index] = value over variables with holes; the optimum is checked by enumeration
   @Test
   void elementOfVariablesIsProved() {
@@ -772,6 +1742,71 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
   }
 
+  /**
+   * A LinearBool of 32 terms or more watches values instead of sitting in the domains' constraint
+   * lists, which the store's constraint list is built from; the OPB model left it out (speck
+   * optimisation easy_3), so the proof's steps that need it were not rup.
+   */
+  @Test
+  void aLongBooleanSumIsInTheModel() {
+    Store store = new Store();
+    int n = LinearBool.WATCH_MIN_LENGTH + 2;
+    IntVar[] x = new IntVar[n + 1];
+    int[] ones = new int[n];
+    int[] w = new int[n + 1];
+    Random random = new Random(5);
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      ones[i] = 1;
+      w[i] = 3 + random.nextInt(20);
+    }
+    store.impose(new LinearBool(Arrays.copyOf(x, n), ones, ">=", 2));
+    IntVar obj = new IntVar(store, "obj", 0, 1000);
+    x[n] = obj;
+    w[n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    int[] sorted = Arrays.copyOf(w, n);
+    Arrays.sort(sorted);
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(sorted[0] + sorted[1]);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion)
+        .isEqualTo("BOUNDS " + (sorted[0] + sorted[1]) + " " + (sorted[0] + sorted[1]));
+  }
+
+  /**
+   * A long Boolean sum imposed after the solver propagated the store watches no value before the
+   * search propagates it, so it was in no list of the store when the model was written (hrc
+   * exp1-1-945, whose flattened sums are imposed late); the store now keeps such constraints.
+   */
+  @Test
+  void aLateLongBooleanSumIsInTheModel() {
+    Store store = new Store();
+    int n = LinearBool.WATCH_MIN_LENGTH;
+    IntVar[] x = new IntVar[n];
+    int[] ones = new int[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      ones[i] = 1;
+    }
+    // b = 1 sets ten of them, which the sum refutes: the optimum obj = 1 - b is 1
+    IntVar b = new IntVar(store, "b", 0, 1);
+    for (int i = 0; i < 10; i++) {
+      store.impose(new XeqY(x[3 * i % n], b));
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 1);
+    store.impose(new XplusYeqC(obj, b, 1));
+    LcgSolver lcg = withProof(store);
+    store.impose(new LinearBool(x, ones, "<=", 9));
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(1);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 1 1");
+  }
+
   @Test
   void unsupportedConstraintIsRefused() {
     Store store = new Store();
@@ -779,10 +1814,45 @@ class VeriPbProofTest {
     for (int i = 0; i < x.length; i++) {
       x[i] = new IntVar(store, "x" + i, 1, 3);
     }
-    store.impose(new Not(new XeqY(x[0], x[1])));
+    store.impose(new Not(new Member(new IntVar[] {x[0], x[1]}, x[2])));
     LcgSolver lcg = withProof(store);
     assertThatThrownBy(lcg::solve)
         .isInstanceOf(UnsupportedOperationException.class)
-        .hasMessageContaining("Not");
+        .hasMessageContaining("Not of Member");
+  }
+
+  /**
+   * Elimination rounds during the search delete the learnt clauses satisfied at the root, among
+   * them the binary reasons of root facts that precedences give; the proof keeps those facts as
+   * units of their own, since a deleted reason takes its fact out of a VeriPB database.
+   */
+  @Test
+  void rootFactsOutliveEliminationRounds() {
+    // seed 27 has such a fact (found by a sweep over seeds)
+    Random random = new Random(27);
+    Store store = new Store();
+    int n = 9;
+    IntVar[] s = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    IntVar[] r = new IntVar[n];
+    IntVar end = new IntVar(store, "end", 0, 60);
+    for (int i = 0; i < n; i++) {
+      int duration = 1 + random.nextInt(5);
+      s[i] = new IntVar(store, "s" + i, 0, 60);
+      d[i] = new IntVar(store, duration, duration);
+      int use = 1 + random.nextInt(3);
+      r[i] = new IntVar(store, use, use);
+      store.impose(new XplusClteqZ(s[i], duration, end));
+      if (i > 0 && random.nextBoolean()) {
+        int j = random.nextInt(i);
+        store.impose(new XplusClteqZ(s[j], d[j].min(), s[i]));
+      }
+    }
+    store.impose(new CumulativeBasic(s, d, r, new IntVar(store, "cap", 4, 4)));
+    LcgSolver lcg = withProof(store);
+    lcg.sat().setEliminationInterval(3);
+    assertThat(lcg.minimize(end)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
   }
 }

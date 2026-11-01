@@ -42,10 +42,13 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AbsExplanation;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Constraints |X| #= Y.
@@ -56,7 +59,8 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 @Slf4j
-public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY>, Explainable {
+public class AbsXeqY extends AbstractConstraintXandY
+    implements Copyable<AbsXeqY>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -411,6 +415,40 @@ public class AbsXeqY extends AbstractConstraintXandY implements Copyable<AbsXeqY
   // every reason is checked value by value, so a reason that does not hold is refused
   @Override
   public boolean checksReasons() {
+    return true;
+  }
+
+  /**
+   * States y = |x| by order literals ({@code [y >= v]} is {@code [x >= v]} or not {@code [x >= -v +
+   * 1]}) and value literals (y takes |u| when x takes u, and x takes w or -w when y takes w).
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != AbsXeqY.class) {
+      return false;
+    }
+    IntDomain dx = model.domain(x);
+    IntDomain dy = model.domain(y);
+    model.clause(model.atLeast(y, 0));
+    long hi = Math.max(dy.max(), Math.max((long) dx.max(), -(long) dx.min()));
+    for (int v = 1; v <= hi; v++) {
+      String t = model.atLeast(y, v);
+      String above = model.atLeast(x, v);
+      String notBelow = model.atLeast(x, -v + 1);
+      model.clause(PbModel.not(above), t);
+      model.clause(notBelow, t);
+      model.clause(PbModel.not(t), above, PbModel.not(notBelow));
+    }
+    for (ValueEnumeration e = dx.valueEnumeration(); e.hasMoreElements(); ) {
+      int u = e.nextElement();
+      model.clause(PbModel.not(model.equalTo(x, u)), model.equalTo(y, Math.abs(u)));
+    }
+    for (ValueEnumeration e = dy.valueEnumeration(); e.hasMoreElements(); ) {
+      int w = e.nextElement();
+      if (w >= 0) {
+        model.clause(PbModel.not(model.equalTo(y, w)), model.equalTo(x, w), model.equalTo(x, -w));
+      }
+    }
     return true;
   }
 }

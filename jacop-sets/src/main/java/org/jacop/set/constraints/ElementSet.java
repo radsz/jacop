@@ -30,7 +30,9 @@
 
 package org.jacop.set.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -45,6 +47,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -59,7 +63,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public class ElementSet extends Constraint
-    implements SatisfiedPresent, Copyable<ElementSet>, Explainable {
+    implements SatisfiedPresent, Copyable<ElementSet>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -363,5 +367,51 @@ public class ElementSet extends Constraint
   @Override
   public ElementSet copy(VarMap map) {
     return new ElementSet(map.get(index), list, map.get(value), indexOffset);
+  }
+
+  /**
+   * Writes that an index gives value its set (memberships and cardinality), and that each
+   * membership of value has the support of an index whose set agrees.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != ElementSet.class || !SetPb.stated(value)) {
+      return false;
+    }
+    IntDomain universe = SetPb.lub(value);
+    List<Integer> indexes = new ArrayList<>();
+    for (ValueEnumeration e = model.domain(index).valueEnumeration(); e.hasMoreElements(); ) {
+      int i = e.nextElement();
+      int k = i - 1 - indexOffset;
+      String eq = PbModel.not(model.equalTo(index, i));
+      if (k < 0 || k >= list.length) {
+        model.clause(eq);
+        continue;
+      }
+      indexes.add(i);
+      universe = universe.union(list[k]);
+      int size = list[k].getSize();
+      model.clause(eq, SetPb.cardinalityAtLeast(model, value, size));
+      model.clause(eq, PbModel.not(SetPb.cardinalityAtLeast(model, value, size + 1)));
+    }
+    for (ValueEnumeration e = universe.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      String in = SetPb.in(model, value, v);
+      List<String> withV = new ArrayList<>(List.of(PbModel.not(in)));
+      List<String> withoutV = new ArrayList<>(List.of(in));
+      for (int i : indexes) {
+        String eq = model.equalTo(index, i);
+        if (list[i - 1 - indexOffset].contains(v)) {
+          model.clause(PbModel.not(eq), in);
+          withV.add(eq);
+        } else {
+          model.clause(PbModel.not(eq), PbModel.not(in));
+          withoutV.add(eq);
+        }
+      }
+      model.clause(withV.toArray(new String[0]));
+      model.clause(withoutV.toArray(new String[0]));
+    }
+    return true;
   }
 }

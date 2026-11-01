@@ -36,16 +36,19 @@ import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * A small checker of the VeriPB subset that {@link VeriPbProof} writes, for tests: the OPB model
- * with right implications and an objective, and the rules rup, pol (with + and literal axioms),
- * soli, sol, del id, f and the conclusions. A rup step passes when unit propagation over the
- * database and the step's negation fails, as in VeriPB.
+ * with right implications and an objective, and the rules rup, pol (with +, literal axioms, and
+ * multiplication and division by scalars), red (for constraints whose witness only changes
+ * variables outside the objective), soli, sol, del id, f and the conclusions. A rup step passes
+ * when unit propagation over the database and the step's negation fails, as in VeriPB.
  */
 final class RupChecker {
 
@@ -54,6 +57,8 @@ final class RupChecker {
 
   private final Map<Long, Pb> db = new LinkedHashMap<>();
   private final Map<String, List<Long>> occurrences = new HashMap<>();
+  // the constraints that propagate or fail with no literal assigned, where propagation starts
+  private final Set<Long> eager = new LinkedHashSet<>();
   private long lastId;
   private List<Object[]> objective;
   private long objectiveConstant;
@@ -170,9 +175,11 @@ final class RupChecker {
           steps++;
         }
         case "pol" -> {
-          // postfix: constraint ids, literal axioms (l >= 0) and "+"
+          // postfix: constraint ids, literal axioms (l >= 0), "+", and "k *" and "k d" by scalars
           Deque<Pb> stack = new ArrayDeque<>();
-          for (String t : rest.split("\\s+")) {
+          String[] tokens = rest.split("\\s+");
+          for (int k = 0; k < tokens.length; k++) {
+            String t = tokens[k];
             if (t.equals("+")) {
               Pb b = stack.pop();
               Pb a = stack.pop();
@@ -183,6 +190,16 @@ final class RupChecker {
                 }
               }
               stack.push(normalise(sum, a.degree() + b.degree()));
+            } else if (k + 1 < tokens.length
+                && (tokens[k + 1].equals("*") || tokens[k + 1].equals("d"))) {
+              long scalar = Long.parseLong(t);
+              boolean divide = tokens[++k].equals("d");
+              Pb c = stack.pop();
+              Map<String, Long> scaled = new LinkedHashMap<>();
+              c.terms()
+                  .forEach((l, a) -> scaled.put(l, divide ? Math.ceilDiv(a, scalar) : a * scalar));
+              long degree = Math.max(0, c.degree());
+              stack.push(new Pb(scaled, divide ? Math.ceilDiv(degree, scalar) : degree * scalar));
             } else if (Character.isDigit(t.charAt(0))) {
               Pb c = db.get(Long.parseLong(t));
               if (c == null) {
@@ -197,6 +214,13 @@ final class RupChecker {
             return "bad step " + st;
           }
           add(stack.pop());
+          steps++;
+        }
+        case "red" -> {
+          String problem = redundant(rest);
+          if (problem != null) {
+            return "red step " + (steps + 1) + " fails, " + problem + ": " + st;
+          }
           steps++;
         }
         case "soli", "sol" -> {
@@ -235,6 +259,7 @@ final class RupChecker {
         case "del" -> {
           String[] ids = rest.split("\\s+");
           for (int k = 1; k < ids.length; k++) {
+            eager.remove(Long.parseLong(ids[k]));
             Pb c = db.remove(Long.parseLong(ids[k]));
             if (c == null) {
               return "deleting a missing constraint " + ids[k];
@@ -265,7 +290,15 @@ final class RupChecker {
               }
             }
             case "BOUNDS" -> {
-              if (!contradiction) {
+              if (p.length == 5 && p[2].equals(":")) {
+                // a lower bound stated by a constraint over the objective's literals
+                String problem = lowerBound(Long.parseLong(p[1]), Long.parseLong(p[3]));
+                if (problem != null) {
+                  return problem;
+                }
+                conclusion = "BOUNDS " + p[1] + " " + p[4];
+                p = conclusion.split("\\s+");
+              } else if (!contradiction) {
                 return "no contradiction for the lower bound";
               }
               if (!p[2].equals("INF") && (best == null || best > Long.parseLong(p[2]))) {
@@ -288,8 +321,126 @@ final class RupChecker {
     return "no end";
   }
 
+  /**
+   * Checks a red step {@code C : x -> v ...} and adds C: C and each constraint of the database on
+   * the witness's variables, under the witness, must be satisfied or follow by unit propagation
+   * from the database and the negation of C. The witness may not change the objective.
+   */
+  private String redundant(String step) {
+    int colon = step.indexOf(':');
+    if (colon < 0) {
+      return "no witness";
+    }
+    Matcher m = INEQUALITY.matcher(step.substring(0, colon).strip());
+    if (!m.matches()) {
+      return "bad constraint";
+    }
+    Pb c = normalise(terms(m.group(1)), Long.parseLong(m.group(3)));
+    Map<String, Boolean> witness = new HashMap<>();
+    String[] w = step.substring(colon + 1).strip().split("\\s+");
+    for (int k = 0; k + 2 < w.length; k += 3) {
+      if (!w[k + 1].equals("->")) {
+        return "bad witness";
+      }
+      witness.put(w[k], w[k + 2].equals("1"));
+    }
+    for (Object[] t : objective == null ? List.<Object[]>of() : objective) {
+      if (witness.containsKey(((String) t[1]).replace("~", ""))) {
+        return "the witness changes the objective";
+      }
+    }
+    Map<String, Long> neg = new HashMap<>();
+    long sum = 0;
+    for (Map.Entry<String, Long> e : c.terms().entrySet()) {
+      neg.put(negate(e.getKey()), e.getValue());
+      sum += e.getValue();
+    }
+    Pb negation = new Pb(neg, sum - c.degree() + 1);
+    List<Pb> goals = new ArrayList<>();
+    goals.add(c);
+    for (String x : witness.keySet()) {
+      for (String l : List.of(x, "~" + x)) {
+        for (long id : occurrences.getOrDefault(l, List.of())) {
+          Pb d = db.get(id);
+          if (d != null) {
+            goals.add(d);
+          }
+        }
+      }
+    }
+    db.put(-1L, negation);
+    eager.add(-1L);
+    for (String l : negation.terms().keySet()) {
+      occurrences.computeIfAbsent(l, k -> new ArrayList<>()).add(-1L);
+    }
+    try {
+      for (Pb d : goals) {
+        // d under the witness
+        Map<String, Long> terms = new HashMap<>();
+        long degree = d.degree();
+        for (Map.Entry<String, Long> e : d.terms().entrySet()) {
+          Boolean v = truth(e.getKey(), witness);
+          if (v == null) {
+            terms.put(e.getKey(), e.getValue());
+          } else if (v) {
+            degree -= e.getValue();
+          }
+        }
+        if (degree <= 0 || implies(negation, terms, degree)) {
+          continue;
+        }
+        Map<String, Long> goalNegation = new HashMap<>();
+        long total = 0;
+        for (Map.Entry<String, Long> e : terms.entrySet()) {
+          goalNegation.put(negate(e.getKey()), e.getValue());
+          total += e.getValue();
+        }
+        Pb extra = new Pb(goalNegation, total - degree + 1);
+        if (propagate(extra, new HashMap<>()) != null) {
+          return "a constraint under the witness does not follow";
+        }
+      }
+    } finally {
+      db.remove(-1L);
+      eager.remove(-1L);
+    }
+    add(c);
+    return null;
+  }
+
+  // whether h implies sum of terms >= degree by weakening: what h has beyond the terms is no more
+  // than its degree is above the goal's, as VeriPB checks a red step's goals
+  private static boolean implies(Pb h, Map<String, Long> terms, long degree) {
+    long excess = 0;
+    for (Map.Entry<String, Long> e : h.terms().entrySet()) {
+      excess += Math.max(0, e.getValue() - terms.getOrDefault(e.getKey(), 0L));
+    }
+    return excess <= h.degree() - degree;
+  }
+
+  // whether the constraint of the id is the objective at least the bound
+  private String lowerBound(long bound, long id) {
+    Pb c = db.get(id);
+    if (c == null || objective == null) {
+      return "no constraint " + id + " for the lower bound";
+    }
+    List<Object[]> terms = new ArrayList<>();
+    for (Object[] o : objective) {
+      terms.add(new Object[] {o[0], o[1]});
+    }
+    Pb goal = normalise(terms, bound - objectiveConstant);
+    if (!c.terms().equals(goal.terms()) || c.degree() < goal.degree()) {
+      return "constraint " + id + " does not state the lower bound " + bound;
+    }
+    return null;
+  }
+
   private void add(Pb c) {
     db.put(++lastId, c);
+    long slack = slack(c, Map.of(), false);
+    if (slack < 0 || c.terms().values().stream().anyMatch(a -> a > slack)) {
+      eager.add(lastId);
+    }
     for (String l : c.terms().keySet()) {
       occurrences.computeIfAbsent(l, k -> new ArrayList<>()).add(lastId);
     }
@@ -359,7 +510,9 @@ final class RupChecker {
    * @return the values at the fixpoint, or null on a conflict
    */
   private Map<String, Boolean> propagate(Pb extra, Map<String, Boolean> value) {
-    ArrayDeque<Long> queue = new ArrayDeque<>(db.keySet());
+    // a constraint that does not propagate at first waits for a literal of its to be falsified;
+    // given values, every constraint may
+    ArrayDeque<Long> queue = new ArrayDeque<>(value.isEmpty() ? eager : db.keySet());
     if (extra != null) {
       queue.add(0L);
     }

@@ -119,6 +119,9 @@ public class Store {
   /** The constraints imposed so far, in imposition order, when recording is on; otherwise null. */
   private List<Constraint> model;
 
+  /** The constraints imposed without a place in any domain's constraint list, in order. */
+  private final List<Constraint> unlisted = new ArrayList<>();
+
   /** Constraints by the level of their first consistency call, in the order of the levels. */
   private Constraint[] firstRuns = new Constraint[64];
 
@@ -1728,6 +1731,27 @@ public class Store {
     result.append("\n*** Constraints for evaluation:\n{").append(toStringChangedEl()).append(" }");
 
     return result.toString();
+  }
+
+  /**
+   * Records a constraint imposed without registering with its variables' domains (such as a
+   * LinearBool that watches values, which may watch none yet), so that {@link #unlistedConstraints}
+   * finds it.
+   *
+   * @param c the constraint
+   */
+  public void registerUnlisted(Constraint c) {
+    unlisted.add(c);
+  }
+
+  /**
+   * Returns the constraints imposed without a place in any domain's constraint list ({@link
+   * #registerUnlisted}), which {@link #getConstraints} does not return.
+   *
+   * @return the constraints, in the order they were imposed
+   */
+  public List<Constraint> unlistedConstraints() {
+    return Collections.unmodifiableList(unlisted);
   }
 
   /**
