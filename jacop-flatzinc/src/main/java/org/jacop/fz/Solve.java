@@ -180,6 +180,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   ArrayList<Search<T>> listSeqSearches;
   boolean heuristicSeqSearch;
   Var costVariable;
+  // the best solution and bound of the optimisation, for --gap and the objectiveBound statistic
+  private ObjectiveGap objectiveGap;
   // the variable of the solve item; for maximisation costVariable is its negation
   Var objectiveVariable;
   // restart search
@@ -1773,6 +1775,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       flatzincCost = costVar;
       return false;
     }
+    if (costVar instanceof IntVar cost) {
+      // the root's bound, before the search: every solution has a cost of at least its minimum
+      reportBound(cost.min());
+    }
     try {
       if (dictionary.onRestart != null) {
         // free search runs the built-ins at the root of its own runs, which the annotation's
@@ -1955,6 +1961,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           });
     } else {
       lcg.onSolution(this::printSolution);
+    }
+    if (costVar instanceof IntVar) {
+      LcgSolver solver = lcg;
+      lcg.onBound(
+          lower -> {
+            if (reportBound(lower)) {
+              solver.stop();
+            }
+          });
     }
     boolean free = options.freeSearch();
     if (free && costVar == null && !LcgSolver.FULL_FIXPOINT_SET) {
@@ -3147,6 +3162,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private void printOptimizationResult(
       boolean interrupted, boolean timeoutOccurred, boolean isComplete) {
+    if (gapReached() && !interrupted) {
+      // stopped by --gap: the best solution is optimal only when the bound reached it
+      if (objectiveGap.proved() && relaxedSearchComplete() && clampedDomainsKeepOptimum()) {
+        IO.println(SEPARATOR_LINE);
+      }
+      return;
+    }
     if (!interrupted
         && isComplete
         && !timeoutOccurred
@@ -3177,6 +3199,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private boolean isSearchComplete() {
+    if (gapReached()) {
+      // stopped by --gap: complete only when the bound reached the best solution
+      return objectiveGap.proved();
+    }
     return options.getNumberSolutions() == -1 || options.getNumberSolutions() > numberSolutions;
   }
 
@@ -4223,9 +4249,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lastSolution = printBuffer;
     }
 
+    if (worker == null && costVariable instanceof IntVar c && gap().solution(c.min())) {
+      // the best solution is within --gap of the bound: stop, as at -n, without claiming optimality
+      throw new NumberSolutionsReached();
+    }
     if (options.getNumberSolutions() == numberSolutions) {
       throw new NumberSolutionsReached();
     }
+  }
+
+  private ObjectiveGap gap() {
+    if (objectiveGap == null) {
+      objectiveGap =
+          new ObjectiveGap(options.gap(), !minimize, options.getStatistics() ? IO::println : null);
+    }
+    return objectiveGap;
+  }
+
+  /**
+   * Takes a bound proved on the cost variable: no solution better than the best one has a smaller
+   * cost. A portfolio thread passes it on to the portfolio.
+   *
+   * @param lower the bound
+   * @return true when the best solution is within --gap of the bound, so the search can stop
+   */
+  private boolean reportBound(long lower) {
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker != null) {
+      worker.bound(lower, !minimize);
+      return false;
+    }
+    return gap().bound(lower);
+  }
+
+  /** Whether the search stopped because the best solution came within --gap of the bound. */
+  private boolean gapReached() {
+    return objectiveGap != null && objectiveGap.reached();
   }
 
   /** The names of the model's integer variables, whose values a portfolio thread shares. */

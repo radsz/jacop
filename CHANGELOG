@@ -1680,6 +1680,18 @@ Version 5.0 (unreleased)
      before), Benzenoide-06, MaximumDensityOscillatingLife-6-4 and
      RollerSplat-05c-70 get solutions; no instance lost an answer.
 
+112. New fzn-jacop option --gap <percent> (also in org.jacop.msc): an
+     optimisation stops once the best solution is within <percent> % of
+     the objective's proved bound, |best - bound| <= percent/100 * |best|,
+     as the relative gap of MIP solvers. The best solution is then printed
+     without "==========", unless the bound equals it, which proves it
+     optimal. The bound is the objective's bound at the root before search
+     and, under LCG, at every restart (with the core-guided lower bound);
+     a portfolio (-p) stops on the best solution and bound of all its
+     threads. With -s, each better bound is printed at once as
+     %%%mzn-stat: objectiveBound=<value> in the model's objective, so the
+     time a gap was proved can be read from the output.
+
 Version 4.11
 =============
 

@@ -493,6 +493,92 @@ class LcgSolverTest {
     assertThat(represolves).isGreaterThan(0);
   }
 
+  /**
+   * The bounds minimize reports at its restarts hold: none is above the optimum, and on most
+   * instances learning raises one above the root's. Stopping in the action ends minimize with a
+   * best solution within the gap of the bound, as fzn's --gap does.
+   */
+  @Test
+  void boundsAtRestartsHoldAndStopAtTheGap() {
+    Random rnd = new Random(31);
+    int raised = 0;
+    int stopped = 0;
+    for (int instance = 0; instance < 24; instance++) {
+      long seed = rnd.nextLong();
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 9;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, n - 1);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 4; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(7) - 3;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(10)));
+        }
+        IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = r.nextInt(41) - 20;
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        if (!store.consistency()) {
+          break;
+        }
+        int root = cost.min();
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setSeed(instance);
+        if (instance % 2 == 1) {
+          solver.setLowerBoundSearch(0.5, 50);
+        }
+        if (instance % 4 >= 2) {
+          solver.setCoreSearch(0.5, 10_000, 500);
+        }
+        List<Long> bounds = new ArrayList<>();
+        boolean stop = run == 1;
+        solver.onBound(
+            lower -> {
+              bounds.add(lower);
+              long best = solver.bestObjective();
+              if (stop && best != Long.MAX_VALUE && best - lower <= 0.2 * Math.abs(best)) {
+                solver.stop();
+              }
+            });
+        int status = solver.minimize(cost);
+        if (run == 0) {
+          if (status != CdclSolver.SAT) {
+            break; // no solution: nothing to compare with
+          }
+          int optimum = solver.value(cost);
+          for (long b : bounds) {
+            assertThat(b).as("instance %d", instance).isLessThanOrEqualTo(optimum);
+          }
+          if (bounds.stream().anyMatch(b -> b > root)) {
+            raised++;
+          }
+        } else if (status == CdclSolver.UNKNOWN) {
+          long best = solver.value(cost); // the best solution found
+          long last = bounds.stream().mapToLong(Long::longValue).max().orElseThrow();
+          assertThat(best - last)
+              .as("instance %d", instance)
+              .isLessThanOrEqualTo((long) Math.floor(0.2 * Math.abs(best)));
+          stopped++;
+        }
+      }
+    }
+    assertThat(raised).isGreaterThan(0);
+    assertThat(stopped).isGreaterThan(0);
+  }
+
   // the smallest weighted sum over the assignments of x that satisfy the relations
   private static long minimum(IntVar[] x, List<Relation> relations, int[] w, int[] t, int i) {
     if (i == x.length) {

@@ -145,6 +145,8 @@ final class Portfolio {
   private int running;
   private boolean finished;
   private boolean complete;
+  // the best solution and bound of all threads, for --gap and the objectiveBound statistic
+  private ObjectiveGap gap;
 
   private Portfolio(Options options) {
     this.options = options;
@@ -468,6 +470,9 @@ final class Portfolio {
         if (cost >= bestCost) {
           return;
         }
+        if (gap(maximise).solution(cost)) {
+          gapReached();
+        }
         optimisation = true;
         maximisation = maximise;
         bestCost = cost;
@@ -480,6 +485,43 @@ final class Portfolio {
       if (options.getAll()) {
         stdout.print(text);
         stdout.flush();
+      }
+    }
+  }
+
+  private ObjectiveGap gap(boolean maximise) {
+    if (gap == null) {
+      PrintStream out = stdout;
+      gap =
+          new ObjectiveGap(
+              options.gap(),
+              maximise,
+              options.getStatistics() ? line -> printBound(out, line) : null);
+    }
+    return gap;
+  }
+
+  // under the lock: the best solution is within --gap of the bound, which ends the search
+  private void gapReached() {
+    // a bound at the best solution proves it optimal
+    complete = gap.proved();
+    finished = true;
+    lock.notifyAll();
+  }
+
+  private static void printBound(PrintStream out, String line) {
+    out.println(line);
+    out.flush();
+  }
+
+  /** Takes a bound a thread proved on the minimised cost variable. */
+  private void bound(long lower, boolean maximise) {
+    synchronized (lock) {
+      if (finished) {
+        return;
+      }
+      if (gap(maximise).bound(lower)) {
+        gapReached();
       }
     }
   }
@@ -554,6 +596,17 @@ final class Portfolio {
      */
     void solution(String text, Integer cost, boolean maximise, String[] names, int[] values) {
       Portfolio.this.solution(this, text, cost, maximise, names, values);
+    }
+
+    /**
+     * Reports a bound this thread proved: no solution better than the best one of the portfolio has
+     * a smaller value of the minimised cost variable.
+     *
+     * @param lower the bound
+     * @param maximise whether the cost variable is the negated objective
+     */
+    void bound(long lower, boolean maximise) {
+      Portfolio.this.bound(lower, maximise);
     }
 
     /**

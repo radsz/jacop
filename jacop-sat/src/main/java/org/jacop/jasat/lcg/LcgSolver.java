@@ -51,6 +51,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
+import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -216,6 +217,8 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
+  // takes the objective's bound at the root after each restart of minimize
+  private LongConsumer onBound;
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
@@ -3015,6 +3018,17 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets the action that takes the bound of the objective that {@link #minimize} has proved, at
+   * each restart: no solution better than the best one has a smaller value of the objective. It may
+   * call {@link #stop}.
+   *
+   * @param action the action, given the objective's smallest value at the root
+   */
+  public void onBound(LongConsumer action) {
+    onBound = action;
+  }
+
+  /**
    * Returns the value of a variable in the last solution.
    *
    * @param x a variable of the store
@@ -3242,6 +3256,14 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
+    if (onBound != null && objective >= 0 && store.level == baseLevel) {
+      // at the root: the objective's minimum holds for every solution better than the best one
+      long lower = vars[objective].min();
+      if (coreSearch != null) {
+        lower = Math.max(lower, coreSearch.lowerBound);
+      }
+      onBound.accept(lower);
+    }
     if (restartPresolve > 0 && store.level == baseLevel) {
       presolveAtRestart();
     }
