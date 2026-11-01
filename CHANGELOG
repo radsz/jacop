@@ -1580,7 +1580,7 @@ Version 5.0 (unreleased)
     search solves 141 -> 145, -f 189 -> 194; on 140 generated colouring,
     bin packing and scheduling models 81 -> 91 and 87 -> 95.
 
-105. LCG explanations of set constraints. What a set's domain derives
+106. LCG explanations of set constraints. What a set's domain derives
      after a set operation changes it (a cardinality bound, an element
      forced in or out by a cardinality bound, a cardinality failure) is
      explained by the operation from the elements its relation forces,
@@ -1593,6 +1593,45 @@ Version 5.0 (unreleased)
      wide-set instances with set constraints (60 s, 3 seeds per mode)
      --lcg is 6 better / 2 worse (monomatch n_5 solved in 4 s, which
      timed out; gt-sort 131 to 127) and --lcg -f 7 / 6.
+
+107. The linear relaxation (--lp on, the default) picks its simplex by size:
+    the dense one below 100 rows of the model's linear constraints and the
+    sparse one from 100 rows on, and also for relaxations over the dense
+    size cap (org.jacop.lp.maxTableau), which before got no relaxation at
+    all (roster-shifts-bool, physician-scheduling, table-layout, connect
+    and radiation of the MiniZinc Challenge). With the sparse simplex the
+    rows of non-linear constraints tried at the first solve are at most
+    twice the model's rows plus 100. -Dorg.jacop.lp.sparseRows=N moves the
+    threshold, -1 keeps the dense simplex. The sparse simplex is used only
+    up to 25,000 rows and 30,000 columns (org.jacop.lp.sparseMaxRows and
+    org.jacop.lp.sparseMaxColumns) and its root solve stops after 3 s
+    (org.jacop.lp.sparseRootSeconds) or 4e9 work units
+    (org.jacop.lp.sparseRootWork) in optimisation problems; while the
+    extra rows are on trial, a sparse simplex chosen by size takes the
+    pivot limit of the dense tableau, so it drops the same rows. Each LP
+    deduction is cleaned after its multipliers are rounded: a multiplier
+    whose row lacks the side its sign needs is dropped instead of losing
+    the inequality, the inequality is divided by the gcd of its weights
+    with its side rounded down, and a scale whose bounds reasoning would
+    overflow a long falls back to the next smaller one
+    (-Dorg.jacop.lp.clean=false turns the first two off). A ratio test
+    that meets NaN stops the solve at its limit instead of throwing
+    ArrayIndexOutOfBoundsException.
+
+108. LCG explanations of set_in_reif and array_var_set_element. In
+     (x in a fixed set) and XinA (x in a set variable) explain their
+     pruning, failures and entailment, so a reification of them is no
+     longer generic: a value of x is ruled out by being outside the set
+     (an element out of the set variable, or in it for the negation), an
+     element joins the set when x is fixed to it. ElementSetVariable
+     explains an excluded index by an element its set and the value
+     disagree on, a membership of the value by the sets of the indexes
+     left, and with the index fixed passes memberships and cardinality
+     bounds between the two sets. valve-network: Reified reasons 100 %
+     generic with 84 atoms to 0 % with 15; gt-sort: ElementSetVariable
+     100 % generic with 75 atoms to 0 % with 2. Wide set (220, 60 s):
+     --lcg 12 better / 7 worse (valve-network 90 to 111), --lcg -f
+     22 / 23, solved 139 to 140.
 
 Version 4.11
 =============

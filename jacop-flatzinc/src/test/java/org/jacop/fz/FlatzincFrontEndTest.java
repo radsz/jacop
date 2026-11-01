@@ -1509,6 +1509,43 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void freeSearchTakesAnySearchAnnotationCount() throws IOException {
+    // -f put the model's int_search annotations in one sequence of selections, which held at most
+    // 128: the 2020 code-generator models have 150 and failed with "At most 128 selections".
+    int n = 150;
+    StringBuilder model = new StringBuilder();
+    StringBuilder searches = new StringBuilder();
+    StringBuilder sum = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var 1..3: x").append(i).append(";\n");
+      searches
+          .append(i > 0 ? ", " : "")
+          .append("int_search([x")
+          .append(i)
+          .append("], input_order, indomain_min, complete)");
+      sum.append(i > 0 ? ", " : "").append('x').append(i);
+    }
+    model.append("var 0..1000: total :: output_var;\n");
+    for (int i = 0; i + 1 < n; i++) {
+      model.append("constraint int_le(x").append(i).append(", x").append(i + 1).append(");\n");
+    }
+    model.append("constraint int_le(2, x").append(n - 1).append(");\n");
+    String ones = String.join(",", Collections.nCopies(n, "1"));
+    model.append("constraint int_lin_eq([").append(ones).append(",-1], [").append(sum);
+    model.append(", total], 0);\n");
+    model.append("solve :: seq_search([").append(searches).append("]) minimize total;\n");
+
+    for (String[] options :
+        List.of(new String[0], new String[] {"-f"}, new String[] {"--lcg", "off", "-f"})) {
+      String out = run(model.toString(), options)[0];
+      // x is 1 but for the last one, which is 2
+      assertTrue(
+          out.contains("total = 151;") && out.contains("=========="),
+          String.join(" ", options) + ": " + out);
+    }
+  }
+
+  @Test
   void freeSearchReportsAllSolutionsOncePerAssignmentOfOutputVariables() throws IOException {
     // Free search labelled every variable, so with -a x = 0 was reported once for each value of
     // b, which x = 0 leaves free and which is not an output variable, and the set s, which is not

@@ -40,6 +40,10 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -51,7 +55,7 @@ import org.jacop.lcg.PbModel;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class In extends PrimitiveConstraint implements Copyable<In>, PbEncodable {
+public class In extends PrimitiveConstraint implements Copyable<In>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -125,6 +129,40 @@ public class In extends PrimitiveConstraint implements Copyable<In>, PbEncodable
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
     return Domain.NONE;
+  }
+
+  // the values the constraint (or its negation) rules out need no reason
+  private DomainCover.ValueReason outside(boolean in) {
+    return (v, out) -> dom.contains(v) != in;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == In.class && DomainCover.entry(trail, entry, outside(true), out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == In.class && DomainCover.entry(trail, entry, outside(false), out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == In.class && DomainCover.domain(trail, x, trail.size(), outside(true), out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == In.class
+        && DomainCover.domain(trail, x, trail.size(), outside(false), out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    // entailed: each value between the bounds of x is in dom or out of the domain of x
+    return getClass() == In.class
+        && DomainCover.domain(trail, x, position, outside(!entailed), out);
   }
 
   @Override
