@@ -58,6 +58,7 @@ import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -79,6 +80,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.ValuePrecede;
@@ -877,6 +879,57 @@ class VeriPbProofTest {
                   .toArray(IntVar[]::new);
           return weightedSum(store, random, terms);
         });
+  }
+
+  // the decomposition of a subcircuit that --proof poses, against Subcircuit itself, with an
+  // objective over the successors and the nodes left out
+  @Test
+  void subcircuitDecompositionIsProved() {
+    for (int seed = 0; seed < 25; seed++) {
+      model.reset();
+      proof.reset();
+      int[] best = new int[2];
+      for (int k = 0; k < 2; k++) {
+        Random random = new Random(seed);
+        Store store = new Store();
+        int n = 4 + random.nextInt(3);
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 1, n);
+          for (int h = 0; h < 2; h++) {
+            int v = 1 + random.nextInt(n);
+            if (v != i + 1) {
+              x[i].domain.inComplement(0, x[i], v);
+            }
+          }
+        }
+        store.impose(new Alldistinct(x));
+        IntVar obj = weightedSum(store, random, x);
+        if (k == 0) {
+          store.impose(new Subcircuit(x));
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          boolean feasible =
+              search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), obj);
+          best[0] = feasible ? search.getCostValue() : Integer.MIN_VALUE;
+        } else {
+          for (Constraint c : Subcircuit.decomposition(store, x)) {
+            store.impose(c);
+          }
+          LcgSolver lcg = withProof(store);
+          int status = lcg.minimize(obj);
+          best[1] = status == CdclSolver.SAT ? lcg.value(obj) : Integer.MIN_VALUE;
+        }
+      }
+      assertThat(best[1]).as("seed %d", seed).isEqualTo(best[0]);
+      RupChecker checker = new RupChecker();
+      assertThat(
+              checker.check(
+                  opb("subcircuitDecompositionIsProved" + seed),
+                  proof.toString(StandardCharsets.US_ASCII)))
+          .as("seed %d", seed)
+          .isNull();
+    }
   }
 
   // a knapsack without its dynamic program, whose reasons are rows of the two equalities, with
