@@ -95,13 +95,13 @@ class JalpSimplexTest {
       cost = new double[n];
       if (objective) {
         for (int j = 0; j < n; j++) {
-          cost[j] = rnd.nextInt(5) - 2;
+          cost[j] = rnd.nextInt(5) - 2.0;
         }
       }
       lo = new double[n];
       hi = new double[n];
       for (int j = 0; j < n; j++) {
-        lo[j] = rnd.nextInt(5) - 3;
+        lo[j] = rnd.nextInt(5) - 3.0;
         hi[j] = lo[j] + rnd.nextInt(5);
       }
     }
@@ -177,8 +177,8 @@ class JalpSimplexTest {
       Lp p = new Lp(rnd, m, n, 4.0 / n, true);
       // wide bounds, so that the LP is feasible more often and takes many pivots
       for (int j = 0; j < n; j++) {
-        p.lo[j] = -10 - rnd.nextInt(10);
-        p.hi[j] = 10 + rnd.nextInt(10);
+        p.lo[j] = -10.0 - rnd.nextInt(10);
+        p.hi[j] = 10.0 + rnd.nextInt(10);
       }
       LpSolver sparse = jalp(p.a, p.rowLo, p.rowHi, p.cost);
       LpSolver dense = new DualSimplex(p.a, p.rowLo, p.rowHi, p.cost);

@@ -572,7 +572,7 @@ final class BasisLu {
       nl += lsr[s].length;
       nu += usp[s].length;
     }
-    factorNonzeros = nl + nu + m;
+    factorNonzeros = (long) nl + nu + m;
     lStart = new int[m + 1];
     lRow = new int[nl];
     lVal = new double[nl];

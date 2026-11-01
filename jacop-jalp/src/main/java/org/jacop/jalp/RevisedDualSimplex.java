@@ -154,28 +154,28 @@ public final class RevisedDualSimplex {
 
   private int infeasibleRow = -1;
 
-  // work arrays by row or position, and by column for the row of the tableau
-  private double[] rho;
-  private double[] work;
-  private double[] alphaQ;
-  private double[] tau;
-  private double[] alphaRow;
+  // work arrays by row or position, and by column for the row of the tableau (see allocateWork)
+  private double[] rho = {};
+  private double[] work = {};
+  private double[] alphaQ = {};
+  private double[] tau = {};
+  private double[] alphaRow = {};
 
   // rows left out of the choice of leaving rows for the rest of a solve: their violation had no
   // proof of infeasibility on fresh factors
-  private boolean[] skipped;
+  private boolean[] skipped = {};
   private int skippedRows;
-  private double[] proofAlpha;
-  private int[] touched;
+  private double[] proofAlpha = {};
+  private int[] touched = {};
   private int touchedCount;
-  private boolean[] isTouched;
+  private boolean[] isTouched = {};
 
   // the ratio test: the candidates, their pivots and ratios, and the columns flipped
-  private int[] candidate;
-  private double[] candPivot;
-  private double[] candSlack;
-  private double[] candRange;
-  private int[] flipped;
+  private int[] candidate = {};
+  private double[] candPivot = {};
+  private double[] candSlack = {};
+  private double[] candRange = {};
+  private int[] flipped = {};
   private int flips;
   private boolean artificialProof;
 
@@ -310,6 +310,10 @@ public final class RevisedDualSimplex {
     ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
     lu = null;
     touchedCount = 0;
+    skippedRows = 0;
+    flips = 0;
+    artificialProof = false;
+    feasibility = false;
     allocateWork();
   }
 
@@ -1158,7 +1162,7 @@ public final class RevisedDualSimplex {
    * the largest, up to round-off. A proof that passes needs no fresh factorization.
    */
   private boolean proofHolds(int r) {
-    if (proofAlpha == null || proofAlpha.length < n + m) {
+    if (proofAlpha.length < n + m) {
       proofAlpha = new double[n + m];
     }
     double largest = 0;
@@ -1345,7 +1349,7 @@ public final class RevisedDualSimplex {
 
   // the basic row farthest outside its bounds, by dual steepest edge, or -1
   private void clearSkipped() {
-    if (skipped == null || skipped.length < m) {
+    if (skipped.length < m) {
       skipped = new boolean[m];
     } else if (skippedRows > 0) {
       Arrays.fill(skipped, false);

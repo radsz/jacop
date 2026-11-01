@@ -65,10 +65,10 @@ class RevisedDualSimplexTest {
       double[] rs = new double[m];
       double[] cs = new double[n];
       for (int i = 0; i < m; i++) {
-        rs[i] = Math.pow(10, rnd.nextInt(2 * scaleSpread + 1) - scaleSpread);
+        rs[i] = Math.pow(10, rnd.nextInt(2 * scaleSpread + 1) - (double) scaleSpread);
       }
       for (int j = 0; j < n; j++) {
-        cs[j] = Math.pow(10, rnd.nextInt(2 * scaleSpread + 1) - scaleSpread);
+        cs[j] = Math.pow(10, rnd.nextInt(2 * scaleSpread + 1) - (double) scaleSpread);
       }
       for (int i = 0; i < m; i++) {
         int[] c = new int[n];
@@ -363,8 +363,8 @@ class RevisedDualSimplexTest {
       Lp p = new Lp(rnd, m, n, 4.0 / n, 1);
       for (int j = 0; j < n; j++) {
         // boxed columns, so that most problems are feasible and bounded
-        p.lo[j] = -5 - rnd.nextInt(5);
-        p.hi[j] = 5 + rnd.nextInt(5);
+        p.lo[j] = -5.0 - rnd.nextInt(5);
+        p.hi[j] = 5.0 + rnd.nextInt(5);
       }
       RevisedDualSimplex lp = p.simplex(true);
       for (int step = 0; step < 10; step++) {
