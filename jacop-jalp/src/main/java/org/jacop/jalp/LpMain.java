@@ -72,13 +72,13 @@ public final class LpMain {
         lp.setExact(true);
         int status = lp.solve(limit);
         long t2 = System.nanoTime();
-        double z = lp.objective() + p.costConstant;
+        double z = (p.maximize ? -lp.objective() : lp.objective()) + p.costConstant;
         System.out.printf(
             Locale.ROOT,
             "%s %s %.12g pivots %d factors %d read %.3f solve %.3f%n",
             p.name,
             STATUS[status],
-            p.maximize ? z : z,
+            z,
             lp.pivots(),
             lp.factorizations(),
             (t1 - t0) / 1e9,

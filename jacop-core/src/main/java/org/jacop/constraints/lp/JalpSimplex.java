@@ -42,7 +42,7 @@ import org.jacop.jalp.RevisedDualSimplex;
 final class JalpSimplex implements LpSolver {
 
   /** Whether the sparse and lazy relaxations use JaLP, from {@code org.jacop.lp.engine}. */
-  static final boolean ENABLED = "jalp".equals(System.getProperty("org.jacop.lp.engine", "sparse"));
+  static final boolean ENABLED = "jalp".equals(System.getProperty("org.jacop.lp.engine", "jalp"));
 
   private final RevisedDualSimplex lp;
 

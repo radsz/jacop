@@ -430,6 +430,9 @@ public final class RevisedDualSimplex {
     rowIdx = Arrays.copyOf(rowIdx, m2);
     rowVal = Arrays.copyOf(rowVal, m2);
     rowScale = Arrays.copyOf(rowScale, m2);
+    // the entry of each column in the row being merged, or -1
+    int[] slot = new int[n];
+    Arrays.fill(slot, -1);
     for (int q = 0; q < k; q++) {
       int i = m + q;
       // duplicates merged, zeros dropped
@@ -437,16 +440,17 @@ public final class RevisedDualSimplex {
       double[] ws = weights[q].clone();
       int len = 0;
       for (int e = 0; e < cs.length; e++) {
-        int f = 0;
-        while (f < len && cs[f] != cs[e]) {
-          f++;
-        }
-        if (f < len) {
+        int f = slot[cs[e]];
+        if (f >= 0) {
           ws[f] += ws[e];
         } else {
+          slot[cs[e]] = len;
           cs[len] = cs[e];
           ws[len++] = ws[e];
         }
+      }
+      for (int e = 0; e < len; e++) {
+        slot[cs[e]] = -1;
       }
       int keep = 0;
       for (int e = 0; e < len; e++) {

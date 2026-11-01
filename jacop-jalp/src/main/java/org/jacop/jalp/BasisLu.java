@@ -146,6 +146,9 @@ final class BasisLu {
     private final double[] rowMax = new double[m];
     private final int[][] cIdx = new int[m][];
     private final int[] cLen = new int[m];
+    // the active entries of each column; its list may also hold rows pivoted already and entries
+    // that cancelled, which are skipped (removing them would scan dense columns again and again)
+    private final int[] cCount = new int[m];
     private final boolean[] rowDone = new boolean[m];
     private final boolean[] posDone = new boolean[m];
     // count buckets of the active columns and rows, as doubly linked lists
@@ -185,6 +188,7 @@ final class BasisLu {
             rIdx[i][rLen[i]] = k;
             rVal[i][rLen[i]++] = v;
             cIdx[k][cLen[k]++] = i;
+            cCount[k]++;
           }
         }
         ops += colLen[k];
@@ -231,6 +235,9 @@ final class BasisLu {
         for (int k = colHead[c]; k >= 0; k = colNext[k]) {
           for (int e = 0; e < cLen[k]; e++) {
             int i = cIdx[k][e];
+            if (rowDone[i]) {
+              continue;
+            }
             double v = Math.abs(valueAt(i, k));
             if (v > DROP && v >= THRESHOLD * rowMax[i]) {
               long cost = (long) (rLen[i] - 1) * (c - 1);
@@ -256,7 +263,7 @@ final class BasisLu {
             double v = Math.abs(rVal[i][e]);
             if (v > floor || v == rowMax[i] && v > DROP) {
               int k = rIdx[i][e];
-              long cost = (long) (c - 1) * (cLen[k] - 1);
+              long cost = (long) (c - 1) * (cCount[k] - 1);
               if (cost < bestCost || cost == bestCost && v > bestV) {
                 bestCost = cost;
                 bestRow = i;
@@ -337,7 +344,7 @@ final class BasisLu {
       boolean[] seen = new boolean[u];
       for (int c = 0; c < cl; c++) {
         int i = cIdx[q][c];
-        if (i == p) {
+        if (rowDone[i]) {
           continue;
         }
         unlinkRow(i);
@@ -403,6 +410,7 @@ final class BasisLu {
       lStepRow[s] = Arrays.copyOf(lr, nl);
       lStepVal[s] = Arrays.copyOf(lv, nl);
       cLen[q] = 0;
+      cCount[q] = 0;
       rLen[p] = 0;
     }
 
@@ -454,29 +462,37 @@ final class BasisLu {
     private void addToCol(int k, int i) {
       unlinkCol(k);
       if (cLen[k] == cIdx[k].length) {
-        cIdx[k] = Arrays.copyOf(cIdx[k], cLen[k] * 2);
+        // the rows pivoted already go before the list grows
+        int[] ck = cIdx[k];
+        int keep = 0;
+        for (int e = 0; e < cLen[k]; e++) {
+          if (!rowDone[ck[e]]) {
+            ck[keep++] = ck[e];
+          }
+        }
+        ops += cLen[k];
+        cLen[k] = keep;
+        if (keep * 2 > ck.length) {
+          cIdx[k] = Arrays.copyOf(ck, ck.length * 2);
+        }
       }
       cIdx[k][cLen[k]++] = i;
+      cCount[k]++;
       linkCol(k);
     }
 
+    // the entry of row i leaves column k; the list keeps it until it is compacted
     private void removeFromCol(int k, int i) {
-      int[] ck = cIdx[k];
-      for (int e = 0; e < cLen[k]; e++) {
-        if (ck[e] == i) {
-          unlinkCol(k);
-          ck[e] = ck[--cLen[k]];
-          linkCol(k);
-          return;
-        }
-      }
+      unlinkCol(k);
+      cCount[k]--;
+      linkCol(k);
     }
 
     private void linkCol(int k) {
       if (posDone[k]) {
         return;
       }
-      int c = Math.min(cLen[k], m + 1);
+      int c = Math.min(cCount[k], m + 1);
       colPrev[k] = -1;
       colNext[k] = colHead[c];
       if (colHead[c] >= 0) {
@@ -489,7 +505,7 @@ final class BasisLu {
       if (posDone[k]) {
         return;
       }
-      int c = Math.min(cLen[k], m + 1);
+      int c = Math.min(cCount[k], m + 1);
       if (colPrev[k] >= 0) {
         colNext[colPrev[k]] = colNext[k];
       } else {

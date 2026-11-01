@@ -290,6 +290,12 @@ class RevisedDualSimplexTest {
     return q;
   }
 
+  // without scaling the tolerances apply to rows with entries from 1e-4 to 1e4, which can move the
+  // optimum by more
+  private static double objectiveTolerance(boolean scale) {
+    return scale ? 1e-6 : 1e-3;
+  }
+
   // solves and checks one answer; returns the status
   private static int solveAndCheck(Lp p, RevisedDualSimplex lp, boolean scale, String what) {
     try {
@@ -312,7 +318,8 @@ class RevisedDualSimplexTest {
         assertThat(b)
             .as(what + " boxed optimum")
             .isCloseTo(
-                lp.objective(), org.assertj.core.data.Offset.offset(1e-6 * (1 + Math.abs(b))));
+                lp.objective(),
+                org.assertj.core.data.Offset.offset(objectiveTolerance(scale) * (1 + Math.abs(b))));
       }
       case RevisedDualSimplex.INFEASIBLE -> checkFarkas(p, lp.farkas(), what);
       case RevisedDualSimplex.UNBOUNDED -> {

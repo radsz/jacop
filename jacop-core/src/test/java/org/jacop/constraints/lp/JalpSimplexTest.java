@@ -133,7 +133,10 @@ class JalpSimplexTest {
     if (s == LpSolver.OPTIMAL) {
       // the costs are perturbed by about 1e-7 per column and unit of value
       checkOptimal(sparse, p.a, p.rowLo, p.rowHi, p.cost, p.lo, p.hi, 0, 1e-5 + 1e-5 * p.lo.length);
-      assertThat(sparse.objective()).as(what + " objective").isCloseTo(dense.objective(), CLOSE);
+      // both are optimal for their own perturbation of the costs
+      assertThat(sparse.objective())
+          .as(what + " objective")
+          .isCloseTo(dense.objective(), Offset.offset(1e-5 * (1 + Math.abs(dense.objective()))));
     } else {
       checkFarkas(sparse.farkas(), p.a, p.rowLo, p.rowHi, p.lo, p.hi, 0);
     }
