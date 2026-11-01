@@ -68,7 +68,7 @@ public final class RevisedDualSimplex {
   /** The status of a solve whose objective is unbounded, or that needs values beyond 1e14. */
   public static final int UNBOUNDED = 3;
 
-  /** The primal feasibility tolerance, relative to the bound. */
+  /** The primal feasibility tolerance, absolute in the scaled problem. */
   public static final double PRIMAL_TOL = 1e-6;
 
   /** The dual feasibility tolerance. */
@@ -91,6 +91,7 @@ public final class RevisedDualSimplex {
 
   // a proof holds by itself when its range misses zero by this much relative to its size
   private static final double PROOF_MARGIN = 1e-7;
+  private static final double PROOF_NOISE = 1e-11;
 
   // the artificial bounds: the first, the factor they grow by and the largest
   private static final double BIG_START = 1e6;
@@ -159,6 +160,12 @@ public final class RevisedDualSimplex {
   private double[] alphaQ;
   private double[] tau;
   private double[] alphaRow;
+
+  // rows left out of the choice of leaving rows for the rest of a solve: their violation had no
+  // proof of infeasibility on fresh factors
+  private boolean[] skipped;
+  private int skippedRows;
+  private double[] proofAlpha;
   private int[] touched;
   private int touchedCount;
   private boolean[] isTouched;
@@ -609,6 +616,7 @@ public final class RevisedDualSimplex {
    */
   public int solve(int limit) {
     infeasibleRow = -1;
+    clearSkipped();
     if (feasibility) {
       feasibility = false;
       setCosts(true);
@@ -659,10 +667,18 @@ public final class RevisedDualSimplex {
           }
           continue;
         }
-        if (lu.updates() > 0 && !proofHolds()) {
-          // a proof from updated factors that does not hold on its own: confirm it with fresh
-          // factors and basic values
-          refactor();
+        if (!proofHolds(r)) {
+          if (lu.updates() > 0) {
+            // a proof from updated factors that does not hold on its own: confirm it with fresh
+            // factors and basic values
+            refactor();
+            continue;
+          }
+          // no proof on fresh factors either: the row's violation is round-off (qap15: two equal
+          // rows, rho their difference, the range of the combination [0, 0]); the row is left
+          // out of the choice of leaving rows until the end of the solve
+          skipped[r] = true;
+          skippedRows++;
           continue;
         }
         infeasibleRow = r;
@@ -755,6 +771,14 @@ public final class RevisedDualSimplex {
 
   // at a primal feasible basis: the status to return, or -1 to go on pivoting
   private int atOptimum() {
+    if (skippedRows > 0) {
+      // the rows left out must hold on fresh basic values, or the solve stops at its limit
+      clearSkipped();
+      refactor();
+      if (leavingRow() >= 0) {
+        return LIMIT;
+      }
+    }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
       return UNBOUNDED;
@@ -1127,45 +1151,54 @@ public final class RevisedDualSimplex {
   }
 
   /**
-   * Whether rho, as multipliers of the rows, proves the problem infeasible by itself: the
+   * Whether rho, the row r of the basis inverse, proves the problem infeasible by itself: the
    * combination {@code rho (A x - s)} is zero for every solution, so it is one when the range of
-   * the combination over the true bounds of every column, basic or not, excludes zero. This holds
-   * whatever the round-off of the factors that gave rho, so a proof that passes needs no fresh
-   * factorization.
+   * the combination over the true bounds of the nonbasic columns and of the basic column of row r
+   * excludes zero. The other basic columns are zero in it, and so are the entries below 1e-11 of
+   * the largest, up to round-off. A proof that passes needs no fresh factorization.
    */
-  private boolean proofHolds() {
+  private boolean proofHolds(int r) {
+    if (proofAlpha == null || proofAlpha.length < n + m) {
+      proofAlpha = new double[n + m];
+    }
+    double largest = 0;
+    for (int j = 0; j < n + m; j++) {
+      double a = 0;
+      if (row[j] < 0 || row[j] == r) {
+        if (j < n) {
+          int[] ci = colIdx[j];
+          double[] cv = colVal[j];
+          for (int e = 0; e < colLen[j]; e++) {
+            a += rho[ci[e]] * cv[e];
+          }
+        } else {
+          a = -rho[j - n];
+        }
+      }
+      proofAlpha[j] = a;
+      largest = Math.max(largest, Math.abs(a));
+    }
+    double noise = PROOF_NOISE * largest;
     double min = 0;
     double max = 0;
-    double size = 0;
+    double sizeMin = 0;
+    double sizeMax = 0;
     for (int j = 0; j < n + m; j++) {
-      double a;
-      if (j < n) {
-        int[] ci = colIdx[j];
-        double[] cv = colVal[j];
-        a = 0;
-        for (int e = 0; e < colLen[j]; e++) {
-          a += rho[ci[e]] * cv[e];
-        }
-      } else {
-        a = -rho[j - n];
-      }
-      if (a == 0) {
+      double a = proofAlpha[j];
+      if (Math.abs(a) <= noise) {
         continue;
       }
       double l = boundLo[j];
       double h = boundHi[j];
-      if (a > 0) {
-        min += a * l;
-        max += a * h;
-      } else {
-        min += a * h;
-        max += a * l;
-      }
-      size += Math.abs(a) * Math.max(Math.abs(l), Math.abs(h));
+      double low = a > 0 ? a * l : a * h;
+      double high = a > 0 ? a * h : a * l;
+      min += low;
+      max += high;
+      sizeMin += Math.abs(low);
+      sizeMax += Math.abs(high);
     }
-    // an infinite bound leaves a side unbounded (min or max infinite, or NaN from both)
-    double margin = PROOF_MARGIN * (1 + size);
-    return min > margin || max < -margin;
+    // an infinite bound leaves its side unbounded; each side is judged against its own size
+    return min > PROOF_MARGIN * (1 + sizeMin) || max < -PROOF_MARGIN * (1 + sizeMax);
   }
 
   private void pivotRowByColumns() {
@@ -1311,10 +1344,22 @@ public final class RevisedDualSimplex {
   }
 
   // the basic row farthest outside its bounds, by dual steepest edge, or -1
+  private void clearSkipped() {
+    if (skipped == null || skipped.length < m) {
+      skipped = new boolean[m];
+    } else if (skippedRows > 0) {
+      Arrays.fill(skipped, false);
+    }
+    skippedRows = 0;
+  }
+
   private int leavingRow() {
     int r = -1;
     double worst = 0;
     for (int i = 0; i < m; i++) {
+      if (skippedRows > 0 && skipped[i]) {
+        continue;
+      }
       int p = basis[i];
       double v = beta[i];
       double gap = gap(v, boundLo[p], boundHi[p]);
@@ -1330,9 +1375,9 @@ public final class RevisedDualSimplex {
   }
 
   private static double gap(double v, double lo, double hi) {
-    if (v < lo - PRIMAL_TOL * Math.max(1, Math.abs(lo))) {
+    if (v < lo - PRIMAL_TOL) {
       return lo - v;
-    } else if (v > hi + PRIMAL_TOL * Math.max(1, Math.abs(hi))) {
+    } else if (v > hi + PRIMAL_TOL) {
       return v - hi;
     }
     return 0;
