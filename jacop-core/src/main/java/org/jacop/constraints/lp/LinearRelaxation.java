@@ -424,16 +424,24 @@ public class LinearRelaxation extends Constraint
             }
             yield new DualSimplex(a, lo, hi, cost);
           }
-          case SPARSE -> new SparseDualSimplex(sparseRows(m), doubles(m), lo, hi, cost);
+          case SPARSE -> sparse(sparseRows(m), doubles(m), lo, hi, cost);
           case LAZY -> {
             lpRow = new int[0];
             inLp = new boolean[m];
             inactive = new int[0];
-            yield new SparseDualSimplex(new int[0][], new double[0][], lo, hi, cost);
+            yield sparse(new int[0][], new double[0][], lo, hi, cost);
           }
         };
     queueIndex = 4;
     setScope(x);
+  }
+
+  // the sparse simplex: SparseDualSimplex, or JaLP with org.jacop.lp.engine=jalp
+  private static LpSolver sparse(
+      int[][] columns, double[][] weights, double[] lo, double[] hi, double[] cost) {
+    return JalpSimplex.ENABLED
+        ? new JalpSimplex(columns, weights, lo, hi, cost)
+        : new SparseDualSimplex(columns, weights, lo, hi, cost);
   }
 
   /**
@@ -1157,7 +1165,7 @@ public class LinearRelaxation extends Constraint
         gone[old++] = k;
       }
     }
-    int[] kept = ((SparseDualSimplex) lp).removeRows(gone);
+    int[] kept = lp.removeRows(gone);
     if (kept == null) {
       return;
     }
@@ -1500,7 +1508,7 @@ public class LinearRelaxation extends Constraint
       }
       full = new DualSimplex(a, lo, hi, cost);
     } else {
-      full = new SparseDualSimplex(sparseRows(m + k), doubles(m + k), lo, hi, cost);
+      full = sparse(sparseRows(m + k), doubles(m + k), lo, hi, cost);
     }
     for (int j = 0; j < n; j++) {
       full.setBounds(j, x[j].min(), x[j].max());

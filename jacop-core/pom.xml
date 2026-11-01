@@ -16,4 +16,12 @@
 
     <description>JaCoP Core Constraint Programming Solver</description>
 
+    <dependencies>
+        <dependency>
+            <groupId>org.jacop</groupId>
+            <artifactId>jacop-jalp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
 </project>

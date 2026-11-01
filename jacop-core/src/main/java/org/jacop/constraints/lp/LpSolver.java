@@ -188,6 +188,17 @@ interface LpSolver {
   }
 
   /**
+   * Removes rows whose slacks are basic, keeping the basis of the other rows; a row whose slack is
+   * nonbasic is kept. Only the sparse simplices remove rows.
+   *
+   * @param rows the rows to remove
+   * @return the old row of each new row, or null when no row was removed
+   */
+  default int[] removeRows(int[] rows) {
+    throw new UnsupportedOperationException("rows can only be removed from a sparse simplex");
+  }
+
+  /**
    * Returns a copy with its basis, which goes on independently.
    *
    * @return the copy

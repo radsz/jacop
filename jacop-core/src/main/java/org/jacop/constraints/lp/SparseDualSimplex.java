@@ -549,7 +549,8 @@ final class SparseDualSimplex implements LpSolver {
    * @param rows the rows to remove
    * @return the old row of each new row, or null when no row was removed
    */
-  int[] removeRows(int[] rows) {
+  @Override
+  public int[] removeRows(int[] rows) {
     boolean[] gone = new boolean[m];
     int removed = 0;
     for (int i : rows) {
