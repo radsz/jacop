@@ -2032,9 +2032,9 @@ public class HybridTable extends Constraint
 
   /**
    * Writes the table with a literal per tuple: a tuple implies each of its restrictions on the
-   * values of the root domains, each value needs a tuple that accepts it, and some tuple holds.
-   * Unit propagation on them gives domain consistency. Restrictions between columns are not
-   * written.
+   * values of the root domains and one of the values each accepts, holds when they all do, each
+   * value needs a tuple that accepts it, and some tuple holds. Unit propagation on them gives
+   * domain consistency. Restrictions between columns are not written.
    */
   @Override
   public boolean encode(PbModel model) {
@@ -2055,6 +2055,9 @@ public class HybridTable extends Constraint
     for (int t = 0; t < tupleCount; t++) {
       String lit = model.auxiliary();
       tuple[t] = lit;
+      // the tuple holds when each cell accepts its value, so that a solution fixes lit
+      List<String> holds = new ArrayList<>();
+      holds.add(lit);
       for (int i = 0; i < arity; i++) {
         Restriction r = cells[t * arity + i];
         if (r.kind == Restriction.Kind.ANY) {
@@ -2072,20 +2075,35 @@ public class HybridTable extends Constraint
         }
         if (accepted.isEmpty()) {
           model.clause(PbModel.not(lit));
-          continue;
+          holds = null;
+          break;
         }
         int lo = accepted.get(0);
         int hi = accepted.get(accepted.size() - 1);
+        String above = hi >= domains.get(i).max() ? "0" : model.atLeast(x[i], hi + 1);
         model.clause(PbModel.not(lit), model.atLeast(x[i], lo));
-        model.clause(PbModel.not(lit), PbModel.not(model.atLeast(x[i], hi + 1)));
+        model.clause(PbModel.not(lit), PbModel.not(above));
+        holds.add(PbModel.not(model.atLeast(x[i], lo)));
+        holds.add(above);
         for (int v : rejected) {
           if (v > lo && v < hi) {
             model.clause(PbModel.not(lit), PbModel.not(model.equalTo(x[i], v)));
+            holds.add(model.equalTo(x[i], v));
           }
         }
-        for (int v : accepted) {
-          support.computeIfAbsent(key(i, v), k -> new ArrayList<>()).add(lit);
+        // lit also implies one of the accepted values, which rules the tuple out by unit
+        // propagation once they are removed one by one
+        String[] one = new String[accepted.size() + 1];
+        one[0] = PbModel.not(lit);
+        for (int k = 0; k < accepted.size(); k++) {
+          int v = accepted.get(k);
+          one[k + 1] = model.equalTo(x[i], v);
+          support.computeIfAbsent(key(i, v), key -> new ArrayList<>()).add(lit);
         }
+        model.clause(one);
+      }
+      if (holds != null) {
+        model.clause(holds.toArray(new String[0]));
       }
     }
     model.clause(tuple);

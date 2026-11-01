@@ -36,7 +36,10 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -46,7 +49,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-public class AeqS extends PrimitiveConstraint implements Copyable<AeqS> {
+public class AeqS extends PrimitiveConstraint implements Copyable<AeqS>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -156,5 +159,19 @@ public class AeqS extends PrimitiveConstraint implements Copyable<AeqS> {
   @Override
   public AeqS copy(VarMap map) {
     return new AeqS(map.get(a), set);
+  }
+
+  /** Writes the membership of every element. */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != AeqS.class || !SetPb.stated(a)) {
+      return false;
+    }
+    for (ValueEnumeration e = SetPb.lub(a).union(set).valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      String in = SetPb.in(model, a, v);
+      model.clause(set.contains(v) ? in : PbModel.not(in));
+    }
+    return true;
   }
 }

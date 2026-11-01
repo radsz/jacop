@@ -483,6 +483,7 @@ public class LinearBool extends Constraint
 
     store.addChanged(this);
     store.countConstraint();
+    store.registerUnlisted(this);
   }
 
   /** The value of x[i] at which the literal of x[i] is false on the given side. */

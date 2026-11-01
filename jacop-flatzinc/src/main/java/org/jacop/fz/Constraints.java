@@ -224,7 +224,8 @@ public class Constraints implements ParserTreeConstants {
       cf.poseCounts();
       cf.poseDiffnProjections();
 
-      if (CircuitCostDetector.enabled()) {
+      // its cost constraints are redundant, with bounds a proof does not derive
+      if (CircuitCostDetector.enabled() && options.proof() == null) {
         new CircuitCostDetector(support).detect(astTree);
       }
 

@@ -33,6 +33,8 @@ package org.jacop.set.constraints;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetVar;
 
 /**
@@ -42,7 +44,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-interface ElementwiseExplainable extends Explainable {
+interface ElementwiseExplainable extends Explainable, PbEncodable {
 
   /**
    * Returns the relation of the constraint on the memberships of an element in its sets.
@@ -72,5 +74,17 @@ interface ElementwiseExplainable extends Explainable {
     return r != null
         && (SetExplanation.explainFailure(trail, explainedSets(), r, out)
             || SetExplanation.explainCardinalityFailure(trail, explainedSets(), r, out));
+  }
+
+  /** Writes the relation on the memberships of every element, when it is the whole constraint. */
+  @Override
+  default boolean encode(PbModel model) {
+    SetExplanation.Relation r = relation();
+    SetVar[] sets = explainedSets();
+    if (r == null || !SetPb.stated(sets)) {
+      return false;
+    }
+    SetPb.elementwise(model, sets, r);
+    return true;
   }
 }

@@ -42,8 +42,13 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
@@ -57,7 +62,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 @Slf4j
-public class PartitionSet extends Constraint implements Copyable<PartitionSet> {
+public class PartitionSet extends Constraint implements Copyable<PartitionSet>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -240,5 +245,28 @@ public class PartitionSet extends Constraint implements Copyable<PartitionSet> {
   @Override
   public PartitionSet copy(VarMap map) {
     return new PartitionSet(map.get(s), u);
+  }
+
+  /**
+   * Writes that every element of the universe is in exactly one set and no other element is in any,
+   * with the sum of the cardinalities.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != PartitionSet.class || !SetPb.stated(s)) {
+      return false;
+    }
+    long[] ones = new long[n];
+    java.util.Arrays.fill(ones, 1);
+    for (ValueEnumeration e = SetPb.lub(s).union(u).valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      String[] in = new String[n];
+      for (int i = 0; i < n; i++) {
+        in[i] = SetPb.in(model, s[i], v);
+      }
+      model.sum(in, ones, new IntVar[0], new long[0], LinearForm.EQ, u.contains(v) ? 1 : 0);
+    }
+    SetPb.cardinalities(model, s, ones, new IntVar[0], new long[0], LinearForm.EQ, u.getSize());
+    return true;
   }
 }

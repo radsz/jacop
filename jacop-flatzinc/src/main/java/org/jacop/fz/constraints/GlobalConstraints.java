@@ -64,6 +64,7 @@ import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Deviation;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
@@ -259,9 +260,14 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
     if (support.options.proof() != null) {
-      // --proof: the time table, which unit propagation over the time-indexed encoding states;
-      // the energy and edge-finding rules of the other cumulative constraints it does not
-      support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      // --proof: the time table, which unit propagation over the time-indexed encoding states, and
+      // over fixed tasks the energy and edge-finding rules, whose reasons the proof derives as sums
+      // of the encoding's lines over an overloaded window
+      if (allVarGround(d) && allVarGround(r)) {
+        support.delayedConstraints.add(configureCumulative(new Cumulative(s, d, r, b)));
+      } else {
+        support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      }
       return;
     }
     if (poseInterDistance(s, d, r, b)) {
@@ -550,10 +556,22 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     // successors must all be different, so the same variable (or constant) twice is infeasible
     checkForDuplicateVariables(v);
-    support.pose(new Subcircuit(v));
+    subcircuit(v);
 
     // the successors of a subcircuit are all different too (x[i] = i is unique to i)
     addImpliedAlldistinct(v);
+  }
+
+  // under --proof a decomposition by positions, whose encoding unit propagation follows; the cut
+  // and dominance reasons of Subcircuit it does not
+  private void subcircuit(IntVar[] v) {
+    if (support.options.proof() == null) {
+      support.pose(new Subcircuit(v));
+      return;
+    }
+    for (Constraint c : Subcircuit.decomposition(store, v)) {
+      support.pose(c);
+    }
   }
 
   // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
@@ -563,9 +581,27 @@ class GlobalConstraints implements ParserTreeConstants {
     int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(1)), v.length);
     IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     checkForDuplicateVariables(v);
-    support.pose(new Subcircuit(v));
+    subcircuit(v);
     addImpliedAlldistinct(v);
-    support.pose(new SubcircuitCost(v, costs, cost));
+    if (support.options.proof() == null) {
+      support.pose(new SubcircuitCost(v, costs, cost));
+      return;
+    }
+    // the cost as a sum of elements, which a proof states
+    IntVar[] terms = new IntVar[v.length + 1];
+    int[] weights = new int[v.length + 1];
+    for (int i = 0; i < v.length; i++) {
+      terms[i] =
+          new IntVar(
+              store,
+              Arrays.stream(costs[i]).min().orElse(0),
+              Arrays.stream(costs[i]).max().orElse(0));
+      support.pose(new ElementInteger(v[i], costs[i], terms[i], 0));
+      weights[i] = 1;
+    }
+    terms[v.length] = cost;
+    weights[v.length] = -1;
+    support.pose(new LinearInt(terms, weights, "==", 0));
   }
 
   // jacop_weighted_subcircuits(next, tour, d, tourCost, cost, offset)
@@ -2114,7 +2150,9 @@ class GlobalConstraints implements ParserTreeConstants {
             .quantity(x)
             .knapsackCapacity(W)
             .knapsackProfit(P)
-            .build());
+            .build()
+            // a proof derives the rows of the relaxation, not the prunings of the dynamic program
+            .dynamicProgramming(support.options.proof() == null));
   }
 
   void gen_jacop_sequence(SimpleNode node) {

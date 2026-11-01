@@ -38,6 +38,10 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Constraints forall i != j: x[i] #= x[j].
@@ -47,7 +51,7 @@ import org.jacop.core.TimeStamp;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AllEqual extends PrimitiveConstraint implements Copyable<AllEqual> {
+public class AllEqual extends PrimitiveConstraint implements Copyable<AllEqual>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -195,5 +199,50 @@ public class AllEqual extends PrimitiveConstraint implements Copyable<AllEqual> 
   @Override
   public AllEqual copy(VarMap map) {
     return new AllEqual(map.get(x));
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /**
+   * States x[0] = x[i] for each i, or for the negation a literal per i that x[0] and x[i] differ,
+   * defined by two clauses per value, and a clause that one of them does.
+   */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != AllEqual.class) {
+      return false;
+    }
+    if ("0".equals(literal)) {
+      return true;
+    }
+    if (!negated) {
+      for (int i = 1; i < n; i++) {
+        model.guarded(
+            literal,
+            new LinearForm(new IntVar[] {x[0], x[i]}, new long[] {1, -1}, 0, LinearForm.EQ));
+      }
+      return true;
+    }
+    String[] some = new String[n];
+    some[0] = PbModel.not(literal);
+    for (int i = 1; i < n; i++) {
+      String differ = model.auxiliary();
+      some[i] = differ;
+      IntDomain other = model.domain(x[i]);
+      for (ValueEnumeration e = model.domain(x[0]).valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        String same = model.equalTo(x[i], v);
+        // differ is x[0] != x[i] both ways, so that a solution fixes it
+        model.clause(differ, PbModel.not(model.equalTo(x[0], v)), same);
+        if (other.contains(v)) {
+          model.clause(PbModel.not(differ), PbModel.not(model.equalTo(x[0], v)), PbModel.not(same));
+        }
+      }
+    }
+    model.clause(some);
+    return true;
   }
 }

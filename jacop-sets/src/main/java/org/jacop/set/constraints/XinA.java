@@ -37,11 +37,15 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.DomainCover;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -52,7 +56,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
  * @version 5.0
  */
-public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explainable {
+public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -321,5 +325,38 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explain
   @Override
   public XinA copy(VarMap map) {
     return new XinA(map.get(x), map.get(a), strict);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /** Writes that the value of x is in a (or not in a), and that a is not empty. */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != XinA.class || strict || !SetPb.stated(a)) {
+      return false;
+    }
+    return model.implied(
+        literal,
+        () -> {
+          for (ValueEnumeration e = model.domain(x).valueEnumeration(); e.hasMoreElements(); ) {
+            int v = e.nextElement();
+            String in = SetPb.in(model, a, v);
+            model.clause(PbModel.not(model.equalTo(x, v)), negated ? PbModel.not(in) : in);
+          }
+          if (!negated) {
+            SetPb.cardinalities(
+                model,
+                new SetVar[] {a},
+                new long[] {1},
+                new IntVar[0],
+                new long[0],
+                LinearForm.GE,
+                1);
+          }
+          return true;
+        });
   }
 }

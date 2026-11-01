@@ -245,9 +245,10 @@ public class Options {
                 satisfaction problems asking for more than one solution (-a, -n), and with -sat.
             --proof <prefix> with --lcg (turned on), write a VeriPB 3 proof of the search to
                 <prefix>.pbp and the OPB model it is checked against to <prefix>.opb
-                (veripb <prefix>.opb <prefix>.pbp); one thread, branch and bound without
-                core-guided, lower-bound and neighbourhood runs, --lp off, bounds consistency
-                (as -b). The model is the store
+                (veripb <prefix>.opb <prefix>.pbp); one thread, the core-guided phase (without
+                its at-most-one groups) and branch and bound, without lower-bound and
+                neighbourhood runs, --lp off, bounds consistency (as -b); a search stopped by the
+                time limit concludes the lower bound it proved. The model is the store
                 at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
@@ -1048,12 +1049,12 @@ public class Options {
 
   /**
    * It defines whether the independent components the objective does not depend on are solved
-   * before search (--components).
+   * before search (--components); not under --proof, whose search must derive every value it fixes.
    *
    * @return true by default
    */
   public boolean components() {
-    return components;
+    return components && proof == null;
   }
 
   /**
@@ -1068,12 +1069,13 @@ public class Options {
   /**
    * It defines whether the symmetries of the model are broken (--symmetry), with or without
    * presolve. By default they are, except in a model loaded for the API without search, whose store
-   * keeps the constraints of the model only.
+   * keeps the constraints of the model only, and under --proof, whose lex-leader constraints are
+   * not in the model the proof is checked against.
    *
    * @return true by default
    */
   public boolean symmetry() {
-    if (!symmetry) {
+    if (!symmetry || proof != null) {
       return false;
     }
     if (symmetryGiven || presolve != Presolve.OFF) {
