@@ -2945,22 +2945,24 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Shares clauses with the solvers of the same model in other threads: learnt clauses of at most
    * the given size and LBD over atoms of named variables, and the root bounds of those variables,
-   * go out at restarts, when those of the other solvers come in. The model's constraints must be
-   * implied by the model all solvers share (no symmetry breaking), and the shared bound must be the
-   * cost of a solution all of them know of; see {@link SharedClauses}.
+   * go out at restarts, when those of the other solvers come in. The store holds the model all
+   * solvers share plus the constraints named by {@code added} (such as symmetry breaking), and the
+   * shared bound must be the cost of a solution all of them know of; see {@link SharedClauses}.
    *
    * @param pool the clauses of all solvers
+   * @param added the constraints the store adds to the shared model, the same text for the same
+   *     constraints in every solver; empty when it adds none
    * @param name the name of a variable in the model, or null for a variable of this store only
    * @param size the largest learnt clause shared
    * @param lbd the largest LBD of a learnt clause shared
    */
   public void setSharedClauses(
-      SharedClauses pool, Function<IntVar, String> name, int size, int lbd) {
+      SharedClauses pool, String added, Function<IntVar, String> name, int size, int lbd) {
     if (pool == null || sat.hasProof()) {
       return;
     }
     shared = pool;
-    sharedSource = pool.newSource();
+    sharedSource = pool.newSource(added);
     sharedId = new int[vars.length];
     publishedMin = new int[vars.length];
     publishedMax = new int[vars.length];

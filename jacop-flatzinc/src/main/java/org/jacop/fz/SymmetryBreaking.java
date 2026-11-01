@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -363,10 +364,46 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private boolean largest;
   // whether the search is free search (-f), which does not follow the search annotation
   private boolean free;
+  // the constraints posted, as their kind and variables, for added()
+  private final List<String> postedKinds = new ArrayList<>();
+  private final List<IntVar[][]> postedVariables = new ArrayList<>();
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
     this.dictionary = dictionary;
+  }
+
+  private void note(String kind, IntVar[]... rows) {
+    postedKinds.add(kind);
+    postedVariables.add(rows);
+  }
+
+  /**
+   * Describes the constraints posted by {@link #run}, so that two stores of the same model can tell
+   * whether they added the same ones: the same text means the same constraints.
+   *
+   * @param name the name of a variable of the model, null for any other variable
+   * @return the text, empty when nothing was posted, or null when a constraint has a variable with
+   *     no name
+   */
+  String added(Function<IntVar, String> name) {
+    StringBuilder s = new StringBuilder();
+    for (int k = 0; k < postedKinds.size(); k++) {
+      s.append(postedKinds.get(k));
+      for (IntVar[] row : postedVariables.get(k)) {
+        s.append('[');
+        for (IntVar x : row) {
+          String n = name.apply(x);
+          if (n == null) {
+            return null;
+          }
+          s.append(n).append(',');
+        }
+        s.append(']');
+      }
+      s.append(';');
+    }
+    return s.toString();
   }
 
   /**
@@ -560,6 +597,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
       store.impose(chain);
+      note("chain", columns);
       orbitopes++;
       posted++;
     }
@@ -605,6 +643,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
       store.impose(lex);
+      note(descending ? "lex>" : "lex<", x, y);
       posted++;
     }
     return new Outcome(
@@ -1066,6 +1105,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         SeqPrecedeChain precede = new SeqPrecedeChain(xs, chain);
         precede.setDegreeWeight(0);
         store.impose(precede);
+        note("precede" + Arrays.toString(chain), xs);
         posted++;
       }
       first.addAll(spaces.get(k).vars);

@@ -167,9 +167,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   Tables output;
   // the derivation of the searched store, or null when the loaded store is searched
   Derivation presolve;
-  // whether symmetry breaking ran: its constraints, which the model does not imply, may differ
-  // between portfolio threads, so their learnt clauses are not shared
-  private boolean symmetryBreaking;
+  // the symmetry breaking that ran, or null: its constraints, which the model does not imply, may
+  // differ between portfolio threads, so learnt clauses go only to threads that posted the same
+  private SymmetryBreaking symmetry;
   Options options;
   int initNumberConstraints;
   Timer timer;
@@ -314,7 +314,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * since the objective variable is kept by every symmetry.
    */
   private void breakSymmetries(SimpleNode astTree, ASTSolveItem item, Options opt) {
-    symmetryBreaking = true;
     ASTSolveKind kind = (ASTSolveKind) item.jjtGetChild(item.jjtGetNumChildren() - 1);
     boolean satisfy = getKind(kind.getKind()) == 0;
     if (satisfy && (opt.getAll() || opt.getNumberSolutions() > 1)) {
@@ -357,8 +356,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       budget = Math.min(budget, opt.getRemainingTimeOut() / 20);
     }
     long start = timer.getCpuTime();
+    symmetry = new SymmetryBreaking(store, dictionary);
     SymmetryBreaking.Outcome o =
-        new SymmetryBreaking(store, dictionary)
+        symmetry
             .keepLargest(largestFirst(item))
             .freeSearch(opt.freeSearch())
             .run(
@@ -2396,14 +2396,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Shares short learnt clauses and root bounds with the portfolio's other LCG threads, which solve
-   * the same model; not with presolve on, whose rules may run differently in each thread, nor after
-   * symmetry breaking, which the model does not imply. {@code --free-config share-clauses=<size>}
-   * sets the largest clause shared (default 8, 0 turns sharing off), {@code share-lbd=<lbd>} its
-   * largest LBD (default 2).
+   * the same model; not with presolve on, whose rules may run differently in each thread. After
+   * symmetry breaking, which the model does not imply, the thread reads the clauses of threads that
+   * posted no symmetry breaking or the same, and its own go to the latter only. {@code
+   * --free-config share-clauses=<size>} sets the largest clause shared (default 8, 0 turns sharing
+   * off), {@code share-lbd=<lbd>} its largest LBD (default 2).
    */
   private void shareClauses(Portfolio.Worker worker) {
     int size = Integer.parseInt(options.freeConfig("share-clauses", "8"));
-    if (options.presolve() != Options.Presolve.OFF || symmetryBreaking || size <= 0) {
+    if (options.presolve() != Options.Presolve.OFF || size <= 0) {
       return;
     }
     int lbd = Integer.parseInt(options.freeConfig("share-lbd", "2"));
@@ -2414,7 +2415,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         names.putIfAbsent(x, name);
       }
     }
-    lcg.setSharedClauses(worker.sharedClauses(), names::get, size, lbd);
+    String added = symmetry == null ? "" : symmetry.added(names::get);
+    if (added == null) {
+      return;
+    }
+    lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
   }
 
   private static String sharingStatistics(LcgSolver lcg) {

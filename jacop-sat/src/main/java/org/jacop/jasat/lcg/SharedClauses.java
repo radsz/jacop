@@ -44,8 +44,9 @@ import java.util.Map;
  *
  * <p>A solver's clauses follow from the model and its bound on the objective; that bound is the
  * cost of a solution the solver reported before, so each clause only removes solutions no better
- * than one known to all. Solvers that add constraints the model does not imply (such as symmetry
- * breaking) must not share.
+ * than one known to all. A solver that adds constraints the model does not imply (such as symmetry
+ * breaking) names them when it registers: it then reads the clauses of solvers that added none or
+ * the same ones, and its own clauses go only to solvers that added the same ones.
  *
  * <p>A clause is stored as {@code [source, lbd, id1, kind1, value1, id2, ...]}, with kind {@link
  * #GE} or {@link #EQ}, plus {@link #NEGATED} for a negated atom.
@@ -68,6 +69,10 @@ public final class SharedClauses {
   private static final int CAPACITY = 1 << 20;
 
   private final Map<String, Integer> ids = new HashMap<>();
+  // the models solvers solve: 0 is the shared model, other numbers that model with constraints
+  // added
+  private final Map<String, Integer> models = new HashMap<>(Map.of("", 0));
+  private int[] modelOf = new int[4];
   private int[][] clauses = new int[1024][];
   private int size;
   private int sources;
@@ -85,9 +90,15 @@ public final class SharedClauses {
   /**
    * Registers a solver that shares clauses.
    *
+   * @param added the constraints the solver adds to the shared model, in a text that is the same
+   *     for the same constraints in every solver; empty when it adds none
    * @return the number of the solver, which marks its clauses
    */
-  synchronized int newSource() {
+  synchronized int newSource(String added) {
+    if (sources == modelOf.length) {
+      modelOf = Arrays.copyOf(modelOf, 2 * sources);
+    }
+    modelOf[sources] = models.computeIfAbsent(added, k -> models.size());
     return sources++;
   }
 
@@ -109,7 +120,8 @@ public final class SharedClauses {
   }
 
   /**
-   * Collects the clauses of other solvers added since a position.
+   * Collects the clauses added since a position by other solvers whose clauses hold for the reading
+   * solver: those of solvers that added no constraints or the same ones.
    *
    * @param from the position read up to before
    * @param source the reading solver, whose own clauses are skipped
@@ -117,8 +129,10 @@ public final class SharedClauses {
    * @return the position read up to now
    */
   synchronized int read(int from, int source, List<int[]> out) {
+    int model = modelOf[source];
     for (int k = from; k < size; k++) {
-      if (clauses[k][0] != source) {
+      int c = clauses[k][0];
+      if (c != source && (modelOf[c] == 0 || modelOf[c] == model)) {
         out.add(clauses[k]);
       }
     }

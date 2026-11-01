@@ -3545,6 +3545,32 @@ class LcgSolverTest {
   }
 
   /**
+   * A solver that adds constraints to the shared model (symmetry breaking) reads the clauses of
+   * solvers that added none or the same ones; its own reach only the latter.
+   */
+  @Test
+  void sharedClausesStayWithinTheirModel() {
+    SharedClauses pool = new SharedClauses();
+    int plain = pool.newSource("");
+    int plain2 = pool.newSource("");
+    int lex = pool.newSource("lex[a,b,]");
+    int lex2 = pool.newSource("lex[a,b,]");
+    int other = pool.newSource("lex[b,a,]");
+    for (int source : new int[] {plain, plain2, lex, lex2, other}) {
+      pool.publish(List.of(new int[] {source, 1, pool.id("a"), SharedClauses.GE, 1}));
+    }
+    assertThat(sources(pool, plain)).containsExactly(plain2);
+    assertThat(sources(pool, lex)).containsExactly(plain, plain2, lex2);
+    assertThat(sources(pool, other)).containsExactly(plain, plain2);
+  }
+
+  private static List<Integer> sources(SharedClauses pool, int reader) {
+    List<int[]> in = new ArrayList<>();
+    assertThat(pool.read(0, reader, in)).isEqualTo(pool.size());
+    return in.stream().map(c -> c[0]).toList();
+  }
+
+  /**
    * A solver of makespan problems stops after a few conflicts; a second one, of the same problem in
    * its own store, takes its learnt clauses (of any size and LBD, to share many), its root bounds
    * and its best cost as the bound, as portfolio threads do. Neither finds a solution better than
@@ -3604,7 +3630,7 @@ class LcgSolverTest {
         int w = k;
         LcgSolver solver = new LcgSolver(stores[k]);
         solver.setChecking(true);
-        solver.setSharedClauses(pool, IntVar::id, 64, 64);
+        solver.setSharedClauses(pool, "", IntVar::id, 64, 64);
         solver.setSharedBound(bound::get);
         solver.onSolution(
             () -> {
