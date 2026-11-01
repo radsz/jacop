@@ -726,7 +726,35 @@ final class OpbEncoder implements PbModel {
    * arcs before it, for k from 1 to n - 1, as names or "0" and "1"; node 0 and position n have none
    * ("0").
    */
-  record CircuitLines(int[] variables, int offset, String[][] forward, String[][] reverse) {}
+  static final class CircuitLines {
+    private final int[] variables;
+    private final int offset;
+    private final String[][] forward;
+    private final String[][] reverse;
+
+    CircuitLines(int[] variables, int offset, String[][] forward, String[][] reverse) {
+      this.variables = variables;
+      this.offset = offset;
+      this.forward = forward;
+      this.reverse = reverse;
+    }
+
+    int[] variables() {
+      return variables;
+    }
+
+    int offset() {
+      return offset;
+    }
+
+    String[][] forward() {
+      return forward;
+    }
+
+    String[][] reverse() {
+      return reverse;
+    }
+  }
 
   private final Map<Constraint, CircuitLines> circuits = new IdentityHashMap<>();
 
@@ -737,13 +765,53 @@ final class OpbEncoder implements PbModel {
    * >= 0} that defines its covering literal at a time point, where it has one (elsewhere that
    * literal is an order literal).
    */
-  record TimetableLines(
-      int[] starts,
-      int[] durations,
-      int[] uses,
-      int limit,
-      Map<Long, Long> load,
-      List<Map<Long, Long>> covers) {}
+  static final class TimetableLines {
+    private final int[] starts;
+    private final int[] durations;
+    private final int[] uses;
+    private final int limit;
+    private final Map<Long, Long> load;
+    private final List<Map<Long, Long>> covers;
+
+    TimetableLines(
+        int[] starts,
+        int[] durations,
+        int[] uses,
+        int limit,
+        Map<Long, Long> load,
+        List<Map<Long, Long>> covers) {
+      this.starts = starts;
+      this.durations = durations;
+      this.uses = uses;
+      this.limit = limit;
+      this.load = load;
+      this.covers = covers;
+    }
+
+    int[] starts() {
+      return starts;
+    }
+
+    int[] durations() {
+      return durations;
+    }
+
+    int[] uses() {
+      return uses;
+    }
+
+    int limit() {
+      return limit;
+    }
+
+    Map<Long, Long> load() {
+      return load;
+    }
+
+    List<Map<Long, Long>> covers() {
+      return covers;
+    }
+  }
 
   private final Map<Constraint, TimetableLines> timetables = new IdentityHashMap<>();
 
