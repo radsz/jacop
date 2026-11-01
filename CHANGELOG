@@ -1647,7 +1647,27 @@ Version 5.0 (unreleased)
      --lcg 12 better / 7 worse (valve-network 90 to 111), --lcg -f
      22 / 23, solved 139 to 140.
 
-110. New FlatZinc built-ins jacop_short_table_int(x, t, star), a table
+110. New module jacop-jalp (JaLP, org.jacop.jalp): a sparse revised dual
+     simplex with no dependency on jacop-core. It has a Markowitz LU of
+     the basis with a Forrest-Tomlin update, dual steepest edge pricing, a
+     bound-flipping ratio test, power-of-two scaling and cost
+     perturbation, warm starts after bound changes and added or removed
+     rows, Farkas proofs and the rows of the basis inverse. An MPS reader
+     (free and fixed format, gzip) and a command line
+     (java org.jacop.jalp.LpMain [-noscale] [-limit N] files) solve LP
+     files. The sparse and lazy relaxations of LinearRelaxation
+     (Simplex.SPARSE and LAZY, including the sparse simplex chosen by
+     size) now run on JaLP, which replaces SparseDualSimplex and SparseLu
+     (removed). On the osolpro LP bench (Netlib, MIPLIB 3 and
+     2017, Mittelmann and JaCoP root LPs, golden references from HiGHS,
+     SCIP/SoPlex and GLOP; 687 instances, 300 s) JaLP matches 636
+     references, stops at the time limit on 50 and gives no wrong answer.
+     On the wide set (220, 60 s) with the
+     sparse simplex chosen by size, JaLP against SparseDualSimplex solves
+     130 against 129 (14 better / 14 worse) and with -f 152 against 148
+     (47 / 13).
+
+111. New FlatZinc built-ins jacop_short_table_int(x, t, star), a table
      in which the value star matches any value (posted as HybridTable),
      and jacop_negative_table_int(x, t), forbidden tuples (posted as
      NegativeTable). JaCoP's mznlib uses them for the predicates

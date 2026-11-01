@@ -31,11 +31,10 @@
 package org.jacop.constraints.lp;
 
 /**
- * The dual ratio test with bound flipping and Harris tolerances, shared by {@link DualSimplex} and
- * {@link SparseDualSimplex}: the eligible columns are taken in the order of their dual ratios, and
- * a boxed column whose move to its other bound leaves the basic variable still outside its bound is
- * flipped instead of entering. Among ratios within the tolerance of the smallest, the largest pivot
- * is taken.
+ * The dual ratio test with bound flipping and Harris tolerances, of {@link DualSimplex}: the
+ * eligible columns are taken in the order of their dual ratios, and a boxed column whose move to
+ * its other bound leaves the basic variable still outside its bound is flipped instead of entering.
+ * Among ratios within the tolerance of the smallest, the largest pivot is taken.
  *
  * @author Radoslaw Szymanek
  * @version 5.0

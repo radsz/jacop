@@ -73,12 +73,12 @@ import org.jacop.lcg.LinearReasons;
  * <p>For lazy clause generation each deduction is explained by its inequality ({@link LinearForm}),
  * through the bounds of the other variables, as a linear constraint of the model would be.
  *
- * <p>The simplex is the dense {@link DualSimplex} by default, or the sparse {@link
- * SparseDualSimplex} ({@link Simplex#SPARSE}), which fits large sparse relaxations. With {@link
- * Simplex#LAZY} the sparse simplex starts without rows: each solve adds, in batches, the rows its
- * solution breaks and solves again, and rows that stay inactive for many solves leave the simplex
- * again. The rows the simplex lacks only weaken its deductions; every deduction is still a
- * combination of rows of the model.
+ * <p>The simplex is the dense {@link DualSimplex} by default, or the sparse revised dual simplex of
+ * JaLP ({@link Simplex#SPARSE}, {@code org.jacop.jalp.RevisedDualSimplex} through {@code
+ * JalpSimplex}), which fits large sparse relaxations. With {@link Simplex#LAZY} the sparse simplex
+ * starts without rows: each solve adds, in batches, the rows its solution breaks and solves again,
+ * and rows that stay inactive for many solves leave the simplex again. The rows the simplex lacks
+ * only weaken its deductions; every deduction is still a combination of rows of the model.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -92,7 +92,7 @@ public class LinearRelaxation extends Constraint
   public enum Simplex {
     /** The dense tableau simplex, {@link DualSimplex}. */
     DENSE,
-    /** The sparse revised simplex, {@link SparseDualSimplex}, with every row. */
+    /** The sparse revised dual simplex of JaLP, with every row. */
     SPARSE,
     /** The sparse revised simplex with the rows added and removed lazily. */
     LAZY
@@ -438,16 +438,22 @@ public class LinearRelaxation extends Constraint
             }
             yield new DualSimplex(a, lo, hi, cost);
           }
-          case SPARSE -> new SparseDualSimplex(sparseRows(m), doubles(m), lo, hi, cost);
+          case SPARSE -> sparse(sparseRows(m), doubles(m), lo, hi, cost);
           case LAZY -> {
             lpRow = new int[0];
             inLp = new boolean[m];
             inactive = new int[0];
-            yield new SparseDualSimplex(new int[0][], new double[0][], lo, hi, cost);
+            yield sparse(new int[0][], new double[0][], lo, hi, cost);
           }
         };
     queueIndex = 4;
     setScope(x);
+  }
+
+  // the sparse simplex, JaLP's
+  private static LpSolver sparse(
+      int[][] columns, double[][] weights, double[] lo, double[] hi, double[] cost) {
+    return new JalpSimplex(columns, weights, lo, hi, cost);
   }
 
   /**
@@ -1268,7 +1274,7 @@ public class LinearRelaxation extends Constraint
   }
 
   private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
-    if (!(s instanceof SparseDualSimplex)) {
+    if (s instanceof DualSimplex) {
       return s.solve(pivots);
     }
     long startPivots = s.pivots();
@@ -1420,7 +1426,7 @@ public class LinearRelaxation extends Constraint
         gone[old++] = k;
       }
     }
-    int[] kept = ((SparseDualSimplex) lp).removeRows(gone);
+    int[] kept = lp.removeRows(gone);
     if (kept == null) {
       return;
     }
@@ -1770,7 +1776,7 @@ public class LinearRelaxation extends Constraint
       }
       full = new DualSimplex(a, lo, hi, cost);
     } else {
-      full = new SparseDualSimplex(sparseRows(m + k), doubles(m + k), lo, hi, cost);
+      full = sparse(sparseRows(m + k), doubles(m + k), lo, hi, cost);
     }
     for (int j = 0; j < n; j++) {
       full.setBounds(j, x[j].min(), x[j].max());
