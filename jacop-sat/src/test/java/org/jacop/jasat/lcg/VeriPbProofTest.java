@@ -1409,6 +1409,40 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS " + best + " " + best);
   }
 
+  /**
+   * A LinearBool of 32 terms or more watches values instead of sitting in the domains' constraint
+   * lists, which the store's constraint list is built from; the OPB model left it out (speck
+   * optimisation easy_3), so the proof's steps that need it were not rup.
+   */
+  @Test
+  void aLongBooleanSumIsInTheModel() {
+    Store store = new Store();
+    int n = LinearBool.WATCH_MIN_LENGTH + 2;
+    IntVar[] x = new IntVar[n + 1];
+    int[] ones = new int[n];
+    int[] w = new int[n + 1];
+    Random random = new Random(5);
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      ones[i] = 1;
+      w[i] = 3 + random.nextInt(20);
+    }
+    store.impose(new LinearBool(Arrays.copyOf(x, n), ones, ">=", 2));
+    IntVar obj = new IntVar(store, "obj", 0, 1000);
+    x[n] = obj;
+    w[n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    int[] sorted = Arrays.copyOf(w, n);
+    Arrays.sort(sorted);
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(sorted[0] + sorted[1]);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion)
+        .isEqualTo("BOUNDS " + (sorted[0] + sorted[1]) + " " + (sorted[0] + sorted[1]));
+  }
+
   @Test
   void unsupportedConstraintIsRefused() {
     Store store = new Store();

@@ -627,6 +627,20 @@ public final class LcgSolver implements ExternalPropagator {
         : OpbEncoder.eq(i, litValue[dimacsVar]);
   }
 
+  /**
+   * Returns every constraint of the store, for the OPB model: those of the variables' domains, the
+   * watched-literal constraints and the value watchers (such as a LinearBool of many terms), which
+   * the store's constraint list does not have.
+   */
+  private Set<Constraint> proofConstraints() {
+    Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
+    constraints.addAll(store.watchedLiteralConstraints());
+    for (int i = 0; i < store.size(); i++) {
+      constraints.addAll(store.valueWatchers(store.vars[i]));
+    }
+    return constraints;
+  }
+
   /** Writes the OPB model and starts the proof, once. */
   private void startProof() {
     if (proof == null || proofStarted) {
@@ -635,8 +649,7 @@ public final class LcgSolver implements ExternalPropagator {
     proofStarted = true;
     proofTrail = trail;
     proofDomains = root;
-    Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
-    constraints.addAll(store.watchedLiteralConstraints());
+    Set<Constraint> constraints = proofConstraints();
     for (Constraint c : constraints) {
       if (c instanceof Circuit circuit) {
         // the proof derives cuts of the graph, not dominator reasons
@@ -713,8 +726,7 @@ public final class LcgSolver implements ExternalPropagator {
       failedAtRoot = null;
       domains = root;
       names.setLength(0);
-      constraints = new LinkedHashSet<>(store.getConstraints());
-      constraints.addAll(store.watchedLiteralConstraints());
+      constraints = proofConstraints();
       model = proofModel(domains, constraints, names);
     }
     String objectiveLine = objective >= 0 ? model.objective(vars[objective]) : null;
