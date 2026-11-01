@@ -1507,7 +1507,9 @@ Version 5.0 (unreleased)
     different) are left out; so are diffn (as Nooverlap without its area
     and count failures, every pair of rectangles a clause of the four
     ways they are apart over order literals), int_times (as a table of
-    the products), element over variables (ElementVariableFast) and
+    the products), element over variables (ElementVariableFast, with a
+    support literal per value and position, so that a bound of the value
+    with the index open is a rup step) and
     Circuit (forward and backward positions of the nodes; its subtour
     cut reasons are derived by rup steps, position by position, over a
     strongly connected component that no arc leaves or none enters, and

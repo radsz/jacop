@@ -40,6 +40,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Random;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
@@ -974,6 +975,56 @@ class VeriPbProofTest {
         order[r] = t;
       }
     }
+  }
+
+  /**
+   * A reason for a bound of the value skips a position whose variable has no value in common with
+   * it while the index still has the position; unit propagation finds that the index is not there
+   * only through the support literals of the value's values.
+   */
+  @Test
+  void elementValueBoundsWithAnOpenIndexAreProved() {
+    // seed 360 of a sweep has such a reason
+    Random random = new Random(360);
+    Store store = new Store();
+    int n = 2 + random.nextInt(4);
+    IntVar[] list = new IntVar[n];
+    for (int k = 0; k < n; k++) {
+      list[k] = new IntVar(store, "x" + k, -5, 8);
+      for (int h = 0; h < 6; h++) {
+        int u = random.nextInt(14) - 5;
+        if (list[k].getSize() > 2) {
+          list[k].domain.inComplement(0, list[k], u);
+        }
+      }
+    }
+    IntVar index = new IntVar(store, "i", 1, n);
+    IntVar value = new IntVar(store, "v", -5, 8);
+    for (int h = 0; h < 6; h++) {
+      value.domain.inComplement(0, value, random.nextInt(14) - 5);
+    }
+    store.impose(new ElementVariableFast(index, list, value));
+    for (int k = 0; k + 1 < n; k++) {
+      store.impose(new XneqY(list[k], list[k + 1]));
+    }
+    IntVar[] terms = new IntVar[n + 3];
+    int[] w = new int[n + 3];
+    for (int k = 0; k < n; k++) {
+      terms[k] = list[k];
+      w[k] = random.nextInt(9) - 4;
+    }
+    terms[n] = value;
+    w[n] = random.nextInt(9) - 4;
+    terms[n + 1] = index;
+    w[n + 1] = random.nextInt(9) - 4;
+    IntVar obj = new IntVar(store, "obj", -500, 500);
+    terms[n + 2] = obj;
+    w[n + 2] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
   }
 
   // list[index] = value over variables with holes; the optimum is checked by enumeration
