@@ -131,8 +131,8 @@ class JalpSimplexTest {
     assertThat(s).as(what).isNotEqualTo(LpSolver.LIMIT);
     assertThat(s).as(what + " status").isEqualTo(d);
     if (s == LpSolver.OPTIMAL) {
-      // the costs are perturbed by about 1e-7 per column and unit of value
-      checkOptimal(sparse, p.a, p.rowLo, p.rowHi, p.cost, p.lo, p.hi, 0, 1e-5 + 1e-5 * p.lo.length);
+      // the costs are perturbed by about 1e-6 per column and unit of value
+      checkOptimal(sparse, p.a, p.rowLo, p.rowHi, p.cost, p.lo, p.hi, 0, 1e-5 + 1e-4 * p.lo.length);
       // both are optimal for their own perturbation of the costs
       assertThat(sparse.objective())
           .as(what + " objective")

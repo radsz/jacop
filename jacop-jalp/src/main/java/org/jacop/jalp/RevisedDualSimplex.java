@@ -77,7 +77,11 @@ public final class RevisedDualSimplex {
   /** The smallest pivot the ratio test accepts. */
   public static final double PIVOT_TOL = 1e-9;
 
-  private static final double PERTURBATION = 1e-7;
+  // the relative size of the cost perturbation (org.jacop.jalp.perturbation): 1e-6 takes dano3mip
+  // from 588,569 pivots to 53,405 and the 400 instances of the LP bench from 422 s to 162 s; 1e-7
+  // stalls on dano3mip's dual degeneracy
+  private static final double PERTURBATION =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.perturbation", "1e-6"));
 
   // refactorizations after this many updates, against the growth and drift of the eta file
   private static final int REFACTOR_UPDATES = 100;
