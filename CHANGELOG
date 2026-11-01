@@ -1504,7 +1504,10 @@ Version 5.0 (unreleased)
     pol step over a violated cut of their flow network), as are
     b -> x + c <= z and the time table of CumulativeBasic, with fixed or
     variable durations and resource uses (a time-indexed encoding); under
-    --proof every cumulative is posted as CumulativeBasic, and the
+    --proof a cumulative with fixed durations and uses is posted as
+    Cumulative, its energy and edge-finding reasons derived by a pol step
+    that sums the load lines of an overloaded window with the task cover
+    and order lines, any other cumulative as CumulativeBasic, and the
     redundant constraints the front end adds (unary resources, energy
     precedence, weighted completion, stocking cost, overlapping all
     different) are left out; so are diffn (as Nooverlap without its area

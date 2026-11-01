@@ -70,6 +70,7 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.regular.Regular;
@@ -465,6 +466,73 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS " + lcg.value(obj) + " " + lcg.value(obj));
+  }
+
+  /**
+   * Five tasks of length 2 and use 1 start in 0..2 under a capacity of 2: no time point is
+   * overloaded by compulsory parts, but the window [0, 4) needs 10 units of energy and gives 8. The
+   * energy rules of Cumulative find the failure; the proof sums the load lines of the window with
+   * the definitions of the tasks' covering literals and order lines.
+   */
+  @Test
+  void energyOverloadIsRefuted() {
+    Store store = new Store();
+    int n = 5;
+    IntVar[] s = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] res = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 2);
+      dur[i] = new IntVar(store, "d" + i, 2, 2);
+      res[i] = new IntVar(store, "r" + i, 1, 1);
+    }
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.impose(new Cumulative(s, dur, res, new IntVar(store, "cap", 2, 2)));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  // random fixed tasks under Cumulative (edge finding and energy rules): every reason is a rup
+  // step once its overloaded window is summed, and the optimum is the brute-force one
+  @Test
+  void edgeFindingMakespanIsProved() {
+    Random random = new Random(11);
+    for (int run = 0; run < 6; run++) {
+      model.reset();
+      proof.reset();
+      int n = 5;
+      int[] d = new int[n];
+      int[] r = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + random.nextInt(3);
+        r[i] = 1 + random.nextInt(3);
+      }
+      int horizon = 9;
+      Store store = new Store();
+      IntVar[] s = new IntVar[n];
+      IntVar[] dur = new IntVar[n];
+      IntVar[] res = new IntVar[n];
+      IntVar obj = new IntVar(store, "obj", 0, horizon + 3);
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, 0, horizon);
+        dur[i] = new IntVar(store, "d" + i, d[i], d[i]);
+        res[i] = new IntVar(store, "r" + i, r[i], r[i]);
+        store.impose(new LinearInt(new IntVar[] {s[i], obj}, new int[] {1, -1}, "<=", -d[i]));
+      }
+      Cumulative cumulative = new Cumulative(s, dur, res, new IntVar(store, "cap", 3, 3));
+      cumulative.doEdgeFind(true);
+      store.impose(cumulative);
+      LcgSolver lcg = withProof(store);
+      assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(lcg.value(obj)).isEqualTo(shortestMakespan(d, r, 3, horizon));
+      RupChecker checker = new RupChecker();
+      assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII)))
+          .as("run " + run)
+          .isNull();
+    }
   }
 
   // variable durations and resource uses, from 0: three tasks under a capacity of 3 that should

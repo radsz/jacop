@@ -160,6 +160,27 @@ public interface PbModel {
   void circuit(IntVar[] x, int offset);
 
   /**
+   * Notes, for proofs, a time-indexed cumulative over fixed durations and uses whose lines the
+   * constraint being encoded writes next, each one named first by {@link #timetableLine}.
+   *
+   * @param starts the start of each task
+   * @param durations the duration of each task
+   * @param uses the resource use of each task
+   * @param limit the limit
+   */
+  default void timetable(IntVar[] starts, int[] durations, int[] uses, IntVar limit) {}
+
+  /**
+   * Names the next line the model writes, for the proofs of a {@link #timetable}: the definition
+   * {@code c - [s >= t - d + 1] + [s >= t + 1] >= 0} of the literal of a task covering a time
+   * point, or the load at the time point.
+   *
+   * @param task the task, or -1 for the load
+   * @param t the time point
+   */
+  default void timetableLine(int task, long t) {}
+
+  /**
    * Adds that counters[k] of the variables take values[k] (between low[k] and up[k] when
    * counters[k] is null), and that they take counted values only when closed. The solver writes the
    * counting steps that the flow explanations of such a constraint need.

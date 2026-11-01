@@ -48,6 +48,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.function.IntSupplier;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Circuit;
@@ -527,6 +528,7 @@ public final class LcgSolver implements ExternalPropagator {
   private Map<Constraint, OpbEncoder.EqualityLine> proofEqualities = Map.of();
   // the position literals of the circuits of the proof model
   private Map<Constraint, OpbEncoder.CircuitLines> proofCircuits = Map.of();
+  private Map<Constraint, OpbEncoder.TimetableLines> proofTimetables = Map.of();
   private long[] proofChains;
   private IntDomain[] proofModelDomains;
   // the auxiliary variables the proof defines, named y<number>
@@ -757,6 +759,7 @@ public final class LcgSolver implements ExternalPropagator {
     proofCardinality = model.cardinalityLines();
     proofEqualities = model.equalityLines();
     proofCircuits = model.circuitLines();
+    proofTimetables = model.timetableLines();
     proofChains = model.chainLines();
     proofModelDomains = domains;
     if (!model.unsupported().isEmpty()) {
@@ -799,6 +802,7 @@ public final class LcgSolver implements ExternalPropagator {
       Constraint c = rootTrail.reason(e);
       proofCardinality(c, none, 0, e);
       proofCircuit(c, none, 0, e);
+      proofEnergy(c, none, 0, e);
       proofLinearBounds(c, none, 0, e);
       proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
       reached[i] = next;
@@ -806,6 +810,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (rootFailed && failedAtRoot != null) {
       proofCardinality(failedAtRoot, none, 0, -1);
       proofCircuit(failedAtRoot, none, 0, -1);
+      proofEnergy(failedAtRoot, none, 0, -1);
       proofLinearBounds(failedAtRoot, none, 0, -1);
       rootRefuted = true;
     }
@@ -1115,6 +1120,161 @@ public final class LcgSolver implements ExternalPropagator {
       }
       return 0;
     }
+  }
+
+  /**
+   * Writes the step that makes an energy reason of a time-indexed cumulative a rup step. Under the
+   * hypotheses of the clause each task starts in [lo, hi]; a window [a, b) where the tasks need
+   * more energy than the limit gives is overloaded by the sum of the load lines at its time points,
+   * with each needing task's use times the definitions of its covering literals, which turn its
+   * load into order literals of its start, and times the order lines that pair the literals the
+   * hypotheses leave free, so that only the energy the task needs at least is left. Unit
+   * propagation on the sum finds the overload. A reason that a time point overloaded by the
+   * compulsory parts gives is a rup step as it is.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofEnergy(Constraint c, EntryList atoms, int from, int entry) {
+    OpbEncoder.TimetableLines lines = proofTimetables.get(c);
+    if (lines == null || !proofStarted) {
+      return;
+    }
+    int[] starts = lines.starts();
+    int n = starts.length;
+    int[] variables = Arrays.copyOf(starts, n + 1);
+    variables[n] = lines.limit();
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int j = 0; j <= n; j++) {
+      if (position.put(variables[j], j) != null) {
+        return; // a variable in two places
+      }
+    }
+    IntDomain[] dom = new IntDomain[n + 1];
+    StringBuilder[] literals = new StringBuilder[n + 1];
+    hypotheses(position, variables, atoms, from, entry, dom, literals);
+    for (IntDomain x : dom) {
+      if (x.isEmpty()) {
+        return; // unit propagation empties the domain
+      }
+    }
+    long cap = dom[n].max();
+    int[] d = lines.durations();
+    int[] r = lines.uses();
+    int[] lo = new int[n];
+    int[] hi = new int[n];
+    TreeMap<Long, Long> profile = new TreeMap<>();
+    List<Long> left = new ArrayList<>();
+    List<Long> right = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      lo[i] = dom[i].min();
+      hi[i] = dom[i].max();
+      if (d[i] > 0 && r[i] > 0) {
+        if (hi[i] < (long) lo[i] + d[i]) {
+          profile.merge((long) hi[i], (long) r[i], Long::sum);
+          profile.merge((long) lo[i] + d[i], (long) -r[i], Long::sum);
+        }
+        left.add((long) lo[i]);
+        left.add((long) hi[i]);
+        right.add((long) lo[i] + d[i]);
+        right.add((long) hi[i] + d[i]);
+      }
+    }
+    long load = 0;
+    for (long change : profile.values()) {
+      load += change;
+      if (load > cap) {
+        return; // a time point the compulsory parts overload
+      }
+    }
+    // the narrowest overloaded window
+    long a = 0;
+    long b = 0;
+    for (long x : new TreeSet<>(left)) {
+      for (long y : new TreeSet<>(right)) {
+        if (y <= x || b > a && y - x >= b - a) {
+          continue;
+        }
+        long energy = 0;
+        for (int i = 0; i < n; i++) {
+          if (d[i] > 0 && r[i] > 0) {
+            energy +=
+                (long) r[i] * Math.min(overlap(lo[i], d[i], x, y), overlap(hi[i], d[i], x, y));
+          }
+        }
+        if (energy > cap * (y - x)) {
+          a = x;
+          b = y;
+        }
+      }
+    }
+    if (b <= a) {
+      return;
+    }
+    StringBuilder pol = new StringBuilder();
+    int operands = 0;
+    for (long t = a; t < b; t++) {
+      Long id = lines.load().get(t);
+      if (id != null) {
+        pol.append(operands++ == 0 ? "" : " ").append(id).append(operands > 1 ? " +" : "");
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      if (d[i] <= 0
+          || r[i] <= 0
+          || Math.min(overlap(lo[i], d[i], a, b), overlap(hi[i], d[i], a, b)) <= 0) {
+        continue;
+      }
+      Map<Long, Long> covers = lines.covers().get(i);
+      for (long t = a; t < b; t++) {
+        Long id = covers.get(t);
+        if (id != null) {
+          pol.append(operands++ == 0 ? "" : " ").append(id);
+          pol.append(r[i] == 1 ? "" : " " + r[i] + " *").append(operands > 1 ? " +" : "");
+        }
+      }
+      // the load is r times [s >= u] over u in [a - d + 1, b - d] less those over [a + 1, b]; the
+      // first ones lie before the second ones, and each free second one cancels against a free
+      // first one by the order lines between them
+      List<Long> first = new ArrayList<>();
+      List<Long> second = new ArrayList<>();
+      for (long u = Math.max(a - d[i] + 1, lo[i] + 1L); u <= Math.min(b - d[i], hi[i]); u++) {
+        if (u < a + 1) {
+          first.add(u);
+        }
+      }
+      for (long u = Math.max(a + 1, lo[i] + 1L); u <= Math.min(b, hi[i]); u++) {
+        if (u > b - d[i]) {
+          second.add(u);
+        }
+      }
+      int pairs = Math.min(first.size(), second.size());
+      Map<Long, Long> multiplicity = new TreeMap<>();
+      for (int k = 0; k < pairs; k++) {
+        for (long v = first.get(k); v < second.get(k); v++) {
+          multiplicity.merge(v, 1L, Long::sum);
+        }
+      }
+      for (var e : multiplicity.entrySet()) {
+        long id = proofChainLine(starts[i], (int) (long) e.getKey());
+        if (id == 0) {
+          return;
+        }
+        long k = r[i] * e.getValue();
+        pol.append(operands++ == 0 ? "" : " ").append(id);
+        pol.append(k == 1 ? "" : " " + k + " *").append(operands > 1 ? " +" : "");
+      }
+    }
+    if (operands >= 2) {
+      proof.pol(pol);
+    }
+  }
+
+  // the time a task started at s with duration d spends in [a, b)
+  private static long overlap(long s, long d, long a, long b) {
+    return Math.max(0, Math.min(s + d, b) - Math.max(s, a));
   }
 
   /**
@@ -3398,6 +3558,7 @@ public final class LcgSolver implements ExternalPropagator {
         if (proof != null) {
           proofCardinality(store.recentlyFailedConstraint, atoms, 0, -1);
           proofCircuit(store.recentlyFailedConstraint, atoms, 0, -1);
+          proofEnergy(store.recentlyFailedConstraint, atoms, 0, -1);
           proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
@@ -3434,6 +3595,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (proof != null) {
       proofCardinality(trail.reason(e), out, mark, e);
       proofCircuit(trail.reason(e), out, mark, e);
+      proofEnergy(trail.reason(e), out, mark, e);
       proofLinearBounds(trail.reason(e), out, mark, e);
     }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {

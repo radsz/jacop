@@ -241,7 +241,11 @@ final class OpbEncoder implements PbModel {
   void constraint(Constraint c) {
     current = c;
     if (!encode(c)) {
-      unsupported.add(c.getClass().getSimpleName());
+      String name = c.getClass().getSimpleName();
+      if (c instanceof AbstractReifiedConstraint r) {
+        name += " of " + r.c.getClass().getSimpleName();
+      }
+      unsupported.add(name);
     }
   }
 
@@ -679,12 +683,60 @@ final class OpbEncoder implements PbModel {
   private final Map<Constraint, CircuitLines> circuits = new IdentityHashMap<>();
 
   /**
+   * The lines of a time-indexed cumulative over fixed durations and uses: the trail index of each
+   * task's start, its duration and use, the trail index of the limit, the id of the load line at
+   * each time point, and of each task the id of the line {@code c - [s >= t - d + 1] + [s >= t + 1]
+   * >= 0} that defines its covering literal at a time point, where it has one (elsewhere that
+   * literal is an order literal).
+   */
+  record TimetableLines(
+      int[] starts,
+      int[] durations,
+      int[] uses,
+      int limit,
+      Map<Long, Long> load,
+      List<Map<Long, Long>> covers) {}
+
+  private final Map<Constraint, TimetableLines> timetables = new IdentityHashMap<>();
+
+  /**
    * Returns the position literals of each circuit.
    *
    * @return the literals, by constraint
    */
   Map<Constraint, CircuitLines> circuitLines() {
     return circuits;
+  }
+
+  @Override
+  public void timetable(IntVar[] starts, int[] durations, int[] uses, IntVar limit) {
+    if (current == null) {
+      return;
+    }
+    int n = starts.length;
+    int[] ids = new int[n];
+    List<Map<Long, Long>> covers = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      ids[i] = id.applyAsInt(starts[i]);
+      covers.add(new HashMap<>());
+    }
+    timetables.put(
+        current,
+        new TimetableLines(
+            ids, durations.clone(), uses.clone(), id.applyAsInt(limit), new HashMap<>(), covers));
+  }
+
+  @Override
+  public void timetableLine(int task, long t) {
+    TimetableLines lines = current == null ? null : timetables.get(current);
+    if (lines != null) {
+      (task < 0 ? lines.load() : lines.covers().get(task)).put(t, numConstraints + 1);
+    }
+  }
+
+  /** The lines of each time-indexed cumulative over fixed durations and uses. */
+  Map<Constraint, TimetableLines> timetableLines() {
+    return timetables;
   }
 
   /**
