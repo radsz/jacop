@@ -66,6 +66,7 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
@@ -750,14 +751,19 @@ class VeriPbProofTest {
         });
   }
 
-  // x[0] <= x[1] <= ... (or <) over variables with holes
+  // x[0] <= x[1] <= ... (or <) over variables with holes, alone or with a bounded sum
   @Test
   void increasingIsProved() {
     optimaAreProved(
-        30,
+        60,
         (store, random) -> {
           IntVar[] x = holeyVariables(store, random, 4 + random.nextInt(3), 0, 7);
-          store.impose(new Increasing(x, random.nextBoolean()));
+          if (random.nextBoolean()) {
+            store.impose(new Increasing(x, random.nextBoolean()));
+          } else {
+            IntVar sum = new IntVar(store, "sum", 0, 10 + random.nextInt(20));
+            store.impose(new IncreasingSum(x, sum, random.nextBoolean()));
+          }
           return weightedSum(store, random, x);
         });
   }

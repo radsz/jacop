@@ -42,6 +42,9 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * IncreasingSum constraint: x[0] &le; x[1] &le; ... &le; x[n-1] and x[0] + ... + x[n-1] = s (Petit,
@@ -62,7 +65,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class IncreasingSum extends Constraint
-    implements SatisfiedPresent, Copyable<IncreasingSum>, Explainable {
+    implements SatisfiedPresent, Copyable<IncreasingSum>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -410,5 +413,29 @@ public class IncreasingSum extends Constraint
   @Override
   public IncreasingSum copy(VarMap map) {
     return new IncreasingSum(map.get(x), map.get(sum), strict);
+  }
+
+  /**
+   * Writes the order as clauses [x[i - 1] &gt;= v] implies [x[i] &gt;= v + step] over the order
+   * literals, which unit propagation follows along the chain, and the sum as a line.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != IncreasingSum.class) {
+      return false;
+    }
+    for (int i = 1; i < n; i++) {
+      IntDomain d = model.domain(x[i - 1]);
+      for (int v = d.min(); v <= d.max(); v++) {
+        model.clause(PbModel.not(model.atLeast(x[i - 1], v)), model.atLeast(x[i], v + step));
+      }
+    }
+    IntVar[] vars = Arrays.copyOf(x, n + 1);
+    vars[n] = sum;
+    long[] w = new long[n + 1];
+    Arrays.fill(w, 1);
+    w[n] = -1;
+    model.linear(new LinearForm(vars, w, 0, LinearForm.EQ));
+    return true;
   }
 }
