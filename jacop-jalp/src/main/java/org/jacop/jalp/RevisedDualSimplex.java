@@ -89,6 +89,9 @@ public final class RevisedDualSimplex {
   // the pivot of the row and of the column must agree this closely, or the basis is refactorized
   private static final double PIVOT_AGREEMENT = 1e-7;
 
+  // a proof holds by itself when its range misses zero by this much relative to its size
+  private static final double PROOF_MARGIN = 1e-7;
+
   // the artificial bounds: the first, the factor they grow by and the largest
   private static final double BIG_START = 1e6;
   private static final double BIG_GROWTH = 100;
@@ -650,8 +653,9 @@ public final class RevisedDualSimplex {
           }
           continue;
         }
-        if (lu.updates() > 0) {
-          // a proof from updated factors: confirm it with fresh factors and basic values
+        if (lu.updates() > 0 && !proofHolds()) {
+          // a proof from updated factors that does not hold on its own: confirm it with fresh
+          // factors and basic values
           refactor();
           continue;
         }
@@ -1089,6 +1093,48 @@ public final class RevisedDualSimplex {
         alphaRow[s] = -ri;
       }
     }
+  }
+
+  /**
+   * Whether rho, as multipliers of the rows, proves the problem infeasible by itself: the
+   * combination {@code rho (A x - s)} is zero for every solution, so it is one when the range of
+   * the combination over the true bounds of every column, basic or not, excludes zero. This holds
+   * whatever the round-off of the factors that gave rho, so a proof that passes needs no fresh
+   * factorization.
+   */
+  private boolean proofHolds() {
+    double min = 0;
+    double max = 0;
+    double size = 0;
+    for (int j = 0; j < n + m; j++) {
+      double a;
+      if (j < n) {
+        int[] ci = colIdx[j];
+        double[] cv = colVal[j];
+        a = 0;
+        for (int e = 0; e < colLen[j]; e++) {
+          a += rho[ci[e]] * cv[e];
+        }
+      } else {
+        a = -rho[j - n];
+      }
+      if (a == 0) {
+        continue;
+      }
+      double l = boundLo[j];
+      double h = boundHi[j];
+      if (a > 0) {
+        min += a * l;
+        max += a * h;
+      } else {
+        min += a * h;
+        max += a * l;
+      }
+      size += Math.abs(a) * Math.max(Math.abs(l), Math.abs(h));
+    }
+    // an infinite bound leaves a side unbounded (min or max infinite, or NaN from both)
+    double margin = PROOF_MARGIN * (1 + size);
+    return min > margin || max < -margin;
   }
 
   private void pivotRowByColumns() {
