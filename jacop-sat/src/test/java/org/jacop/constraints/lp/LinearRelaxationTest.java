@@ -53,6 +53,7 @@ import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.LpGuidedSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
@@ -625,5 +626,32 @@ class LinearRelaxationTest {
     search.getSolutionListener().recordSolutions(false);
     search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
     return search.getSolutionListener().solutionsNo();
+  }
+
+  @Test
+  void lpGuidedSelectFollowsTheFractionalSolution() {
+    // three 0/1 variables that conflict pairwise, maximize their sum: the relaxation sets each to
+    // 1/2, so the selection takes one of them and rounds it up
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    for (int i = 0; i < 3; i++) {
+      store.impose(new LinearInt(new IntVar[] {b[i], b[(i + 1) % 3]}, new int[] {1, 1}, "<=", 1));
+    }
+    IntVar sum = new IntVar(store, "sum", 0, 3);
+    store.impose(
+        new LinearInt(new IntVar[] {b[0], b[1], b[2], sum}, new int[] {1, 1, 1, -1}, "==", 0));
+    LinearRelaxation lp = LinearRelaxation.of(store, sum, true);
+    store.impose(lp);
+    LpGuidedSelect select = new LpGuidedSelect(lp, null);
+    assertThat(select.getChoiceVariable(0)).isNull();
+    assertThat(store.consistency()).isTrue();
+    assertThat(sum.max()).isEqualTo(1);
+    Var v = select.getChoiceVariable(0);
+    assertThat(v).isIn((Object[]) b);
+    assertThat(select.getChoiceValue()).isEqualTo(1);
+    assertThat(select.lpDecisions).isEqualTo(1);
   }
 }

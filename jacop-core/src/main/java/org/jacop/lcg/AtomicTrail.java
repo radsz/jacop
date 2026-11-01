@@ -99,6 +99,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // found without a walk along the variable's chain
   private final EntryIndex removals = new EntryIndex();
 
+  // the variables first seen after the trail was created
+  private int lateVariables;
+
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
 
@@ -123,6 +126,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         .forEach(this::slot);
     store.domainChangeRecorder = this;
     store.registerRemoveLevelLateListener(this);
+    lateVariables = 0;
   }
 
   /**
@@ -151,9 +155,21 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     }
   }
 
-  /** Stops recording. */
+  /**
+   * Returns the number of variables first seen after the trail was created, at their first change
+   * or when asked for: their root domain is the domain then, not when they were created.
+   *
+   * @return the number of such variables
+   */
+  public int lateVariables() {
+    return lateVariables;
+  }
+
+  /** Stops recording; a trail attached after this one keeps recording. */
   public void detach() {
-    store.domainChangeRecorder = null;
+    if (store.domainChangeRecorder == this) {
+      store.domainChangeRecorder = null;
+    }
     store.removeLevelLateListeners.remove(this);
   }
 
@@ -196,10 +212,17 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       numBounds = Arrays.copyOf(numBounds, 2 * n);
     }
     if (root[i] == null) {
+      lateVariables++;
       root[i] = x.dom().cloneLight();
       setShadow(i, root[i]);
     }
     return i;
+  }
+
+  // slot(x) first: it may grow the arrays, which root[slot(x)] would read before
+  private IntDomain rootOf(IntVar x) {
+    int i = slot(x);
+    return root[i];
   }
 
   // copies a domain into the shadow: its bounds, and its runs when it has holes
@@ -566,7 +589,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return its initial domain, which must not be changed
    */
   public IntDomain rootDomain(IntVar x) {
-    return root[slot(x)];
+    return rootOf(x);
   }
 
   /**
@@ -631,7 +654,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public long addBoundWithin(IntVar x, int position, boolean lower, long room, EntryList out) {
     int e = latest(x, position, lower ? GE : LE);
-    int now = e >= 0 ? value[e] : lower ? root[slot(x)].min() : root[slot(x)].max();
+    int now = e >= 0 ? value[e] : lower ? rootOf(x).min() : rootOf(x).max();
     int used = addWeakest(x, e, lower, lower ? now - room : now + room, out);
     return Math.abs((long) now - used);
   }
@@ -646,7 +669,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   // adds the earliest entry of e's kind, from e back, that still reaches limit; e < 0 for none
   private int addWeakest(IntVar x, int e, boolean lower, long limit, EntryList out) {
-    int rootBound = lower ? root[slot(x)].min() : root[slot(x)].max();
+    int rootBound = lower ? rootOf(x).min() : rootOf(x).max();
     if (e < 0) {
       return rootBound;
     }
@@ -714,7 +737,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public int minBefore(IntVar x, int position) {
     int e = latest(x, position, GE);
-    return e >= 0 ? value[e] : root[slot(x)].min();
+    return e >= 0 ? value[e] : rootOf(x).min();
   }
 
   /**
@@ -726,7 +749,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public int maxBefore(IntVar x, int position) {
     int e = latest(x, position, LE);
-    return e >= 0 ? value[e] : root[slot(x)].max();
+    return e >= 0 ? value[e] : rootOf(x).max();
   }
 
   /**
@@ -760,7 +783,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   // the bounds of one kind only tighten along a variable's chain
   private int earliest(IntVar x, long v, int position, int k) {
-    IntDomain d = root[slot(x)];
+    IntDomain d = rootOf(x);
     if (k == GE ? d.min() >= v : d.max() <= v) {
       return -1;
     }

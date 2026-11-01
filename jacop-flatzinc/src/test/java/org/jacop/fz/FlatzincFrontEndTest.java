@@ -51,6 +51,8 @@ import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -2525,6 +2527,146 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /**
+   * Random weighted constraint networks over binary tables, as spot5: the cost of each variable is
+   * paid when it takes the value 0. The clique rows of the tables enter the linear relaxation, and
+   * the optimum, with every explanation checked under --lcg, is the one of an enumeration.
+   */
+  @Test
+  void tableCliquesKeepTheOptimumOfBinaryTables() throws IOException {
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      int withRows = 0;
+      for (int seed = 1; seed <= 40; seed++) {
+        Random r = new Random(seed);
+        int n = 6;
+        int[] w = new int[n];
+        List<int[]> pairs = new ArrayList<>();
+        List<boolean[][]> allowed = new ArrayList<>();
+        StringBuilder m = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+          w[i] = 1 + r.nextInt(20);
+          m.append(
+              "var 0..3: p%d :: output_var;\nvar bool: b%d;\nvar 0..1: c%d;\n".formatted(i, i, i));
+        }
+        m.append("var 0..1000: obj :: output_var;\n");
+        for (int t = 0; t < 9; t++) {
+          int i = r.nextInt(n);
+          int j = r.nextInt(n);
+          if (i == j) {
+            continue;
+          }
+          boolean[][] ok = new boolean[4][4];
+          StringBuilder tuples = new StringBuilder();
+          for (int a = 0; a < 4; a++) {
+            for (int b = 0; b < 4; b++) {
+              ok[a][b] = a == 0 || b == 0 || r.nextInt(3) == 0;
+              if (ok[a][b]) {
+                tuples.append(tuples.isEmpty() ? "" : ", ").append(a).append(", ").append(b);
+              }
+            }
+          }
+          pairs.add(new int[] {i, j});
+          allowed.add(ok);
+          m.append("constraint jacop_table_int([p%d, p%d], [%s]);\n".formatted(i, j, tuples));
+        }
+        StringBuilder ws = new StringBuilder("1");
+        StringBuilder cs = new StringBuilder("obj");
+        for (int i = 0; i < n; i++) {
+          m.append(
+              "constraint int_eq_reif(p%d, 0, b%d);\nconstraint bool2int(b%d, c%d);\n"
+                  .formatted(i, i, i, i));
+          ws.append(", -").append(w[i]);
+          cs.append(", c").append(i);
+        }
+        m.append("constraint int_lin_eq([%s], [%s], 0);\nsolve minimize obj;\n".formatted(ws, cs));
+        int best = Integer.MAX_VALUE;
+        for (int code = 0; code < 1 << 2 * n; code++) {
+          int[] p = new int[n];
+          int cost = 0;
+          for (int i = 0; i < n; i++) {
+            p[i] = code >> 2 * i & 3;
+            cost += p[i] == 0 ? w[i] : 0;
+          }
+          boolean feasible = true;
+          for (int t = 0; t < pairs.size() && feasible; t++) {
+            feasible = allowed.get(t)[p[pairs.get(t)[0]]][p[pairs.get(t)[1]]];
+          }
+          if (feasible) {
+            best = Math.min(best, cost);
+          }
+        }
+        for (String[] options :
+            List.of(
+                new String[] {"--search-statistics"}, new String[] {"-f", "--search-statistics"})) {
+          String out = run(m.toString(), options)[0];
+          assertEquals("obj = " + best + ";", objective(out), "seed " + seed + "\n" + m);
+          withRows += out.contains("lpTableCliques=0") || !out.contains("lpTableCliques=") ? 0 : 1;
+        }
+      }
+      assertTrue(withRows > 20, "clique rows in " + withRows + " runs");
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+    }
+  }
+
+  /**
+   * Every infeasible relaxation fails its node: the Farkas multipliers of the simplex carry
+   * round-off far below the multipliers of the proof, and rounding them at a scale of 2^24 lost the
+   * proof on most infeasible relaxations of spot5 2014-42 (2,556 of 4,063).
+   */
+  @Test
+  void anInfeasibleRelaxationFailsItsNode() throws IOException {
+    long infeasible = 0;
+    for (int seed = 1; seed <= 3; seed++) {
+      String model = weightedTables(new Random(seed), 40, 160);
+      String out =
+          run(model, "-f", "--lp", "sparse", "--search-statistics", "--free-config", "lcg-core=0")[
+              0];
+      assertEquals(stat(out, "lpInfeasible"), stat(out, "lpFailures"), "seed " + seed + "\n" + out);
+      infeasible += stat(out, "lpInfeasible");
+    }
+    assertTrue(infeasible > 0, "infeasible relaxations: " + infeasible);
+  }
+
+  // n variables over 0..3 and t random binary tables that allow every pair with a 0; the cost of a
+  // variable, small or in thousands as in spot5, is paid when it is 0
+  private static String weightedTables(Random r, int n, int t) {
+    int[] costs = {1, 2, 3, 1000, 2000, 3000, 5000};
+    StringBuilder m = new StringBuilder();
+    StringBuilder ws = new StringBuilder("1");
+    StringBuilder cs = new StringBuilder("obj");
+    for (int i = 0; i < n; i++) {
+      m.append("var 0..3: p%d :: output_var;\nvar bool: b%d;\nvar 0..1: c%d;\n".formatted(i, i, i));
+      ws.append(", -").append(costs[r.nextInt(costs.length)]);
+      cs.append(", c").append(i);
+    }
+    m.append("var 0..1000000: obj :: output_var;\n");
+    for (int k = 0; k < t; k++) {
+      int i = r.nextInt(n);
+      int j = r.nextInt(n);
+      if (i == j) {
+        continue;
+      }
+      StringBuilder tuples = new StringBuilder();
+      for (int a = 0; a < 4; a++) {
+        for (int b = 0; b < 4; b++) {
+          if (a == 0 || b == 0 || r.nextInt(3) == 0) {
+            tuples.append(tuples.isEmpty() ? "" : ", ").append(a).append(", ").append(b);
+          }
+        }
+      }
+      m.append("constraint jacop_table_int([p%d, p%d], [%s]);\n".formatted(i, j, tuples));
+    }
+    for (int i = 0; i < n; i++) {
+      m.append(
+          "constraint int_eq_reif(p%d, 0, b%d);\nconstraint bool2int(b%d, c%d);\n"
+              .formatted(i, i, i, i));
+    }
+    m.append("constraint int_lin_eq([%s], [%s], 0);\nsolve minimize obj;\n".formatted(ws, cs));
+    return m.toString();
+  }
+
   private static String objective(String out) {
     return out.lines()
         .filter(l -> l.startsWith("obj = ") || l.contains("UNSATISFIABLE"))
@@ -2628,6 +2770,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void symmetryIsBrokenByDefaultWithoutPresolve() {
+    // the test suites run with -Djacop.symmetry=presolve; fzn-jacop runs without it
+    String symmetry = System.clearProperty("jacop.symmetry");
+    try {
+      assertTrue(new Options(new String[] {"model.fzn"}).symmetry());
+      assertTrue(new Options(new String[] {"--presolve", "on", "model.fzn"}).symmetry());
+      assertFalse(new Options(new String[] {"--symmetry", "off", "model.fzn"}).symmetry());
+
+      // a model loaded for the API keeps the constraints of the model only
+      Options loaded = new Options(new String[] {"model.fzn"});
+      loaded.doNotRunSearch();
+      assertFalse(loaded.symmetry());
+      Options asked = new Options(new String[] {"--symmetry", "on", "model.fzn"});
+      asked.doNotRunSearch();
+      assertTrue(asked.symmetry());
+
+      System.setProperty("jacop.symmetry", "presolve");
+      assertFalse(new Options(new String[] {"model.fzn"}).symmetry());
+      assertTrue(new Options(new String[] {"--presolve", "on", "model.fzn"}).symmetry());
+      assertTrue(new Options(new String[] {"--symmetry", "on", "model.fzn"}).symmetry());
+    } finally {
+      restoreProperty("jacop.symmetry", symmetry);
+    }
+  }
+
+  @Test
   void defaultLcgIsLeftOutForFloatModelsAndAllSolutionsOfSatisfactionProblems() throws IOException {
     // LCG on by default must not change how a model it cannot solve is solved: no "--lcg ignored"
     // message, and the Boolean constraints are not turned into clauses
@@ -2688,8 +2856,10 @@ class FlatzincFrontEndTest {
       System.setOut(originalOut);
       System.setErr(originalErr);
     }
+    // IO.println ends lines with the platform separator ("\r\n" on Windows); the checks expect "\n"
     return new String[] {
-      out.toString(StandardCharsets.UTF_8), err.toString(StandardCharsets.UTF_8)
+      out.toString(StandardCharsets.UTF_8).replace("\r\n", "\n"),
+      err.toString(StandardCharsets.UTF_8).replace("\r\n", "\n")
     };
   }
 
@@ -2721,5 +2891,216 @@ class FlatzincFrontEndTest {
                         .collect(Collectors.toCollection(TreeSet::new))))
         .filter(s -> !s.isEmpty() && !s.startsWith("=========="))
         .toList();
+  }
+
+  /**
+   * Three difference constraints in a cycle over wide domains: posting them propagates until the
+   * bounds have crept across the whole domain, which took 27 s with -t 2000, as prop_stress (2009)
+   * never left the parser. A command-line run ends a second after its time-out, with UNKNOWN.
+   */
+  @Test
+  void commandLineRunEndsAtItsTimeOutWhilePosting() throws IOException, InterruptedException {
+    // coefficients 2 and -2, so that DifferenceBoundsDetector leaves the creeping cycle alone
+    Path fzn = tmp.resolve("creep.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var -500000000..500000000: x:: output_var;
+        var -500000000..500000000: y:: output_var;
+        var -500000000..500000000: z:: output_var;
+        constraint int_lin_le([2,-2],[x,y],-1);
+        constraint int_lin_le([2,-2],[y,z],-1);
+        constraint int_lin_le([2,-2],[z,x],-1);
+        solve satisfy;
+        """);
+    Path java = Path.of(System.getProperty("java.home"), "bin", "java");
+    ProcessBuilder pb =
+        new ProcessBuilder(
+            java.toString(),
+            "-cp",
+            System.getProperty("java.class.path"),
+            "org.jacop.fz.Fz2jacop",
+            "-t",
+            "1000",
+            fzn.toString());
+    pb.redirectErrorStream(true);
+    long start = System.nanoTime();
+    Process p = pb.start();
+    String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    boolean ended = p.waitFor(60, TimeUnit.SECONDS);
+    if (!ended) {
+      p.destroyForcibly();
+    }
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(ended, out);
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+    assertTrue(out.contains("%% =====TIME-OUT====="), out);
+    // the time-out, the grace of a second, and the start of a JVM
+    assertTrue(millis < 15_000, "ended after " + millis + " ms");
+  }
+
+  /** What the watchdog prints when it fires, by what the solver printed before. */
+  @Test
+  void timeLimitWatchdogPrintsWhatTheRunLacks() throws InterruptedException {
+    PrintStream saved = System.out;
+    try {
+      assertEquals("=====UNKNOWN=====\n%% =====TIME-OUT=====\n", watchdogOutput("", true));
+      assertEquals(
+          "x = 1;\n----------\n%% =====TIME-OUT=====\n",
+          watchdogOutput("x = 1;\n----------\n", true));
+      // a run that printed its status ends on its own
+      assertEquals("=====UNSATISFIABLE=====\n", watchdogOutput("=====UNSATISFIABLE=====\n", false));
+      assertEquals(
+          "x = 1;\n----------\n==========\n",
+          watchdogOutput("x = 1;\n----------\n==========\n", false));
+      // lines that only start like a solution or a status are neither
+      assertEquals(
+          "-- note\n== x\n=====UNKNOWN=====\n%% =====TIME-OUT=====\n",
+          watchdogOutput("-- note\n== x\n", true));
+      // the statistics of a search print its status as well, but the watchdog printed it already
+      assertEquals(
+          "=====UNKNOWN=====\n%% =====TIME-OUT=====\n%%%mzn-stat: nodes=7\n%%%mzn-stat-end\n",
+          watchdogOutput(
+              "",
+              "",
+              "=====UNKNOWN=====\n%% =====TIME-OUT=====\n%%%mzn-stat: nodes=7\n%%%mzn-stat-end\n",
+              true));
+      // the solution kept back without -a, unless the run printed it already as it ended
+      assertEquals(
+          "x = 2;\n----------\n%% =====TIME-OUT=====\n",
+          watchdogOutput("", "x = 2;\n----------\n", "", true));
+      assertEquals(
+          "x = 2;\n----------\n%% =====TIME-OUT=====\n",
+          watchdogOutput("x = 2;\n----------\n", "x = 2;\n----------\n", "", true));
+    } finally {
+      System.setOut(saved);
+    }
+  }
+
+  // the output of a run that printed printed and was still going 0.2 s later, when a watchdog fired
+  private static String watchdogOutput(String printed, boolean halts) throws InterruptedException {
+    return watchdogOutput(printed, "", "", halts);
+  }
+
+  // the same, with the statistics the run would print when interrupted
+  private static String watchdogOutput(
+      String printed, String kept, String statistics, boolean halts) throws InterruptedException {
+    ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(bytes, true, StandardCharsets.UTF_8));
+    CountDownLatch halted = new CountDownLatch(1);
+    TimeLimitWatchdog w =
+        TimeLimitWatchdog.start(
+            200 - TimeLimitWatchdog.GRACE,
+            new TimeLimitWatchdog.Report() {
+              @Override
+              public boolean printKeptSolution() {
+                System.out.print(kept);
+                return !kept.isEmpty();
+              }
+
+              @Override
+              public void printStatistics() {
+                System.out.print(statistics);
+              }
+            },
+            halted::countDown);
+    System.out.print(printed);
+    assertEquals(halts, halted.await(halts ? 5000 : 1000, TimeUnit.MILLISECONDS), printed);
+    w.cancel();
+    return bytes.toString(StandardCharsets.UTF_8);
+  }
+
+  @Test
+  void negativeCycleOfDifferencesFailsWithoutCreeping() {
+    // 2009 prop_stress in small: y0 <= y1 + 1, y1 <= x0 <= x1, x1 <= y0 - 2. Bounds propagation
+    // moves the bounds by 1 each time round the cycle, 5 * 10^8 times over these domains.
+    String model =
+        """
+        array [1..2] of int: a = [1,-1];
+        var 0..500000000: y0:: output_var;
+        var 0..500000000: y1:: output_var;
+        var 0..500000000: x0:: output_var;
+        var 0..500000000: x1:: output_var;
+        constraint int_lin_le(a,[y0,y1],1);
+        constraint int_le(y1,x0);
+        constraint int_lin_le(a,[x0,x1],0);
+        constraint int_lin_le(a,[x1,y0],-2);
+        solve satisfy;
+        """;
+    String out = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> run(model, "-s")[0]);
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void differenceBoundsKeepEverySolution() throws IOException {
+    Random r = new Random(20261031);
+    for (int run = 0; run < 150; run++) {
+      int n = 2 + r.nextInt(3);
+      int[] lo = new int[n];
+      int[] hi = new int[n];
+      StringBuilder model = new StringBuilder("array [1..2] of int: a = [1,-1];\n");
+      model.append("array [1..2] of int: b = [-1,1];\narray [1..2] of int: c = [2,1];\n");
+      for (int i = 0; i < n; i++) {
+        lo[i] = r.nextInt(9) - 4;
+        hi[i] = lo[i] + r.nextInt(6);
+        model.append("var %d..%d: x%d:: output_var;\n".formatted(lo[i], hi[i], i));
+      }
+      List<java.util.function.Predicate<int[]>> checks = new ArrayList<>();
+      for (int k = 1 + r.nextInt(5); k > 0; k--) {
+        int p = r.nextInt(n);
+        int q = (p + 1 + r.nextInt(n - 1)) % n;
+        int d = r.nextInt(7) - 3;
+        switch (r.nextInt(6)) {
+          case 0 -> {
+            model.append("constraint int_lin_le(a,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> v[p] - v[q] <= d);
+          }
+          case 1 -> {
+            model.append("constraint int_lin_le(b,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> v[q] - v[p] <= d);
+          }
+          case 2 -> {
+            model.append("constraint int_lin_eq(a,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> v[p] - v[q] == d);
+          }
+          case 3 -> {
+            model.append("constraint int_le(x%d,x%d);\n".formatted(p, q));
+            checks.add(v -> v[p] <= v[q]);
+          }
+          case 4 -> {
+            model.append("constraint int_lt(x%d,x%d);\n".formatted(p, q));
+            checks.add(v -> v[p] < v[q]);
+          }
+          default -> {
+            model.append("constraint int_lin_le(c,[x%d,x%d],%d);\n".formatted(p, q, d));
+            checks.add(v -> 2 * v[p] + v[q] <= d);
+          }
+        }
+      }
+      model.append("solve satisfy;\n");
+      int solutions = 0;
+      int[] v = lo.clone();
+      while (true) {
+        int[] t = v;
+        if (checks.stream().allMatch(ch -> ch.test(t))) {
+          solutions++;
+        }
+        int i = 0;
+        while (i < n && v[i] == hi[i]) {
+          v[i] = lo[i];
+          i++;
+        }
+        if (i == n) {
+          break;
+        }
+        v[i]++;
+      }
+      String out = run(model.toString(), "-a")[0];
+      long found = out.lines().filter(l -> l.equals("----------")).count();
+      assertEquals(solutions, found, model + out);
+      if (solutions == 0) {
+        assertTrue(out.contains("=====UNSATISFIABLE====="), model + out);
+      }
+    }
   }
 }

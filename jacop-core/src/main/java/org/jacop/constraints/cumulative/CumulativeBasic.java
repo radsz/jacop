@@ -32,9 +32,12 @@ package org.jacop.constraints.cumulative;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
@@ -51,6 +54,9 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * CumulativeBasic implements the cumulative constraint using time tabling algorithm.
@@ -60,7 +66,7 @@ import org.jacop.lcg.Explainable;
  */
 @Slf4j
 public class CumulativeBasic extends Constraint
-    implements Simplifiable, Copyable<CumulativeBasic>, Explainable, Violation {
+    implements Simplifiable, Copyable<CumulativeBasic>, Explainable, Violation, PbEncodable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -378,6 +384,166 @@ public class CumulativeBasic extends Constraint
   public CumulativeBasic copy(VarMap map) {
     IntVar[][] t = taskVariables(map);
     return new CumulativeBasic(t[0], t[1], t[2], map.get(limit));
+  }
+
+  /**
+   * Writes the time-indexed encoding: for each task and each time point t it may cover, a literal c
+   * equal to the task covering t, and at each time point the resource uses of the tasks covering it
+   * summed to at most the limit, a variable use r counted as c * [r &gt;= 1] + c * [r &gt;= 2] +
+   * .... With a fixed duration d, c is [s &gt;= t - d + 1] - [s &gt;= t + 1]; with a variable one,
+   * c follows from [s &gt;= t - k + 1], not [s &gt;= t + 1] and [d &gt;= k] for each k, and implies
+   * s &lt;= t &lt; s + d. A solution of the store thus fixes every literal of the encoding, as the
+   * solutions a proof logs need. Unit propagation over it is the time table, which every
+   * explanation of this class states. The subclasses, whose rules unit propagation does not reach,
+   * are not encoded.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != CumulativeBasic.class) {
+      return false;
+    }
+    // time point -> the literals of the uses at it and their coefficients
+    TreeMap<Integer, List<String>> literals = new TreeMap<>();
+    Map<Integer, List<Long>> coefficients = new HashMap<>();
+    // time point -> the tasks of variable use at it: {first term, end of its terms, task}, and c
+    Map<Integer, List<int[]>> variableUses = new HashMap<>();
+    Map<Integer, List<String>> variableCovers = new HashMap<>();
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      IntDomain dd = model.domain(task.dur);
+      IntDomain rd = model.domain(task.res);
+      IntDomain sd = model.domain(task.start);
+      int dmin = Math.max(1, dd.min());
+      if (dd.max() <= 0 || rd.max() <= 0) {
+        continue;
+      }
+      for (long t = sd.min(); t <= (long) sd.max() + dd.max() - 1; t++) {
+        String c = dd.singleton() ? fixedCover(model, task.start, dd.value(), t) : null;
+        long kmin = Math.max(dmin, t - sd.max() + 1);
+        // the smallest k from which [s >= t - k + 1] holds at the root is the last one needed
+        long kmax = Math.min(dd.max(), Math.max(kmin, t - sd.min() + 1));
+        if (!dd.singleton() && kmin <= kmax) {
+          c = model.auxiliary();
+          // the task covers t with a duration of at least k, started from t - k + 1 to t
+          String after = model.atLeast(task.start, (int) (t + 1));
+          for (long k = kmin; k <= kmax; k++) {
+            model.clause(
+                c,
+                PbModel.not(model.atLeast(task.start, (int) (t - k + 1))),
+                after,
+                PbModel.not(model.atLeast(task.dur, (int) k)));
+          }
+          // and c only then: s <= t, and s >= j or d >= t + 2 - j for each j up to t + 1, so that a
+          // solution fixes c
+          model.clause(PbModel.not(c), PbModel.not(after));
+          for (long j = (long) sd.min() + 1; j <= t + 1; j++) {
+            model.clause(
+                PbModel.not(c),
+                model.atLeast(task.start, (int) j),
+                model.atLeast(task.dur, (int) (t + 2 - j)));
+          }
+        }
+        if (c == null || "0".equals(c)) {
+          continue;
+        }
+        List<String> l = literals.computeIfAbsent((int) t, k -> new ArrayList<>());
+        List<Long> a = coefficients.computeIfAbsent((int) t, k -> new ArrayList<>());
+        int base = Math.max(rd.min(), 0);
+        int first = l.size();
+        if (base > 0) {
+          l.add(c);
+          a.add((long) base);
+        }
+        for (int v = base + 1; v <= rd.max(); v++) {
+          String u = model.auxiliary();
+          String atLeast = model.atLeast(task.res, v);
+          model.clause(u, PbModel.not(c), PbModel.not(atLeast));
+          model.clause(PbModel.not(u), c);
+          model.clause(PbModel.not(u), atLeast);
+          l.add(u);
+          a.add(1L);
+        }
+        // unit propagation does not see that c and [r >= v] together give u, which a use of 0
+        // or 1 alone needs not
+        if (!rd.singleton() && (base > 0 || rd.max() > 1)) {
+          variableUses
+              .computeIfAbsent((int) t, k -> new ArrayList<>())
+              .add(new int[] {first, l.size(), i});
+          variableCovers.computeIfAbsent((int) t, k -> new ArrayList<>()).add(c);
+        }
+      }
+    }
+    IntVar[] cap = {limit};
+    long[] minus = {-1};
+    for (var e : literals.entrySet()) {
+      List<String> l = e.getValue();
+      List<Long> a = coefficients.get(e.getKey());
+      model.sum(l.toArray(new String[0]), unboxed(a), cap, minus, LinearForm.LE, 0);
+      List<int[]> uses = variableUses.getOrDefault(e.getKey(), List.of());
+      for (int k = 0; k < uses.size(); k++) {
+        ownUse(model, l, a, uses.get(k), variableCovers.get(e.getKey()).get(k));
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Adds, for a task of variable use r at a time point, the others' uses + r * c &lt;= limit as the
+   * others' uses + rmax * c + sum [r &gt;= v] &lt;= limit + rmax - rmin over the values v above the
+   * root minimum rmin of r, which holds whether c is 1 or 0. Unit propagation then takes c to 0
+   * once the others' uses and the minimum of r exceed the limit.
+   */
+  private void ownUse(PbModel model, List<String> l, List<Long> a, int[] use, String c) {
+    TaskView task = taskNormal[use[2]];
+    IntDomain rd = model.domain(task.res);
+    int base = Math.max(rd.min(), 0);
+    List<String> terms = new ArrayList<>();
+    List<Long> weights = new ArrayList<>();
+    for (int k = 0; k < l.size(); k++) {
+      if (k < use[0] || k >= use[1]) {
+        terms.add(l.get(k));
+        weights.add(a.get(k));
+      }
+    }
+    terms.add(c);
+    weights.add((long) rd.max());
+    for (int v = base + 1; v <= rd.max(); v++) {
+      terms.add(model.atLeast(task.res, v));
+      weights.add(1L);
+    }
+    model.sum(
+        terms.toArray(new String[0]),
+        unboxed(weights),
+        new IntVar[] {limit},
+        new long[] {-1},
+        LinearForm.LE,
+        (long) rd.max() - base);
+  }
+
+  private static long[] unboxed(List<Long> a) {
+    return a.stream().mapToLong(Long::longValue).toArray();
+  }
+
+  // [s <= t < s + d] for a fixed duration d: [s >= t - d + 1] - [s >= t + 1]
+  private static String fixedCover(PbModel model, IntVar s, int d, long t) {
+    String from = model.atLeast(s, (int) (t - d + 1));
+    String after = model.atLeast(s, (int) (t + 1));
+    if ("0".equals(from) || "1".equals(after)) {
+      return "0";
+    } else if ("0".equals(after)) {
+      return from;
+    } else if ("1".equals(from)) {
+      return PbModel.not(after);
+    }
+    String covers = model.auxiliary();
+    model.sum(
+        new String[] {covers, from, after},
+        new long[] {1, -1, 1},
+        new IntVar[0],
+        new long[0],
+        LinearForm.EQ,
+        0);
+    return covers;
   }
 
   /**

@@ -85,6 +85,8 @@ public class Options {
   // whether --lcg was given; without it, LCG is left out for models it does not support
   boolean lcgGiven;
   boolean lp = true;
+  // --proof: the path prefix of the VeriPB proof (.pbp) and its OPB model (.opb), or null
+  String proof;
   LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.DENSE;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
@@ -96,7 +98,12 @@ public class Options {
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean presolveImplied;
   boolean symmetry = true;
+  // whether --symmetry was given; without it, the system property jacop.symmetry ("on", or
+  // "presolve" to break symmetries only with presolve, as the FlatZinc test suites do) decides
+  boolean symmetryGiven;
   boolean presolveDual = true;
+  // solve the independent components the objective does not depend on before search
+  boolean components = !"off".equals(System.getProperty("jacop.components", "on"));
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
   Rule.Timing presolveLevel =
       Objects.requireNonNullElse(
@@ -189,6 +196,11 @@ public class Options {
                 and auto),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
+                lcg-slow-rate=<conflicts per second> (with --lcg and an objective: LCG
+                that makes fewer conflicts per second by lcg-slow-at, and has a solution,
+                gives way to free search without learning, default 50; 0 = off),
+                lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
+                checked, default 0.1),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
@@ -231,6 +243,12 @@ public class Options {
                 the annotation (see lcg-branching of --free-config). On by default ("--lcg off"
                 turns it off); left out by default for models with float variables, for
                 satisfaction problems asking for more than one solution (-a, -n), and with -sat.
+            --proof <prefix> with --lcg (turned on), write a VeriPB 3 proof of the search to
+                <prefix>.pbp and the OPB model it is checked against to <prefix>.opb
+                (veripb <prefix>.opb <prefix>.pbp); one thread, branch and bound without
+                core-guided, lower-bound and neighbourhood runs, --lp off, bounds consistency
+                (as -b). The model is the store
+                at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default, the dense simplex), "off",
@@ -245,12 +263,16 @@ public class Options {
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
                 all-different constraints (sum bounds); "off" (default) or "on"
-            --symmetry <value> with presolve, break the symmetries of the model: variable
+            --symmetry <value> break the symmetries of the model: variable
                 symmetries with lex-leader constraints (a lex chain for interchangeable columns),
                 interchangeable values with value precedence; one of "on" (default), "off". Off
                 when a satisfaction problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
+            --components <value> before search, find one solution of each independent part of
+                the model that the objective does not depend on, and fix it (for satisfaction,
+                of each part but the largest); "on" (default) or "off". Off when a satisfaction
+                problem asks for more than one solution (-a, -n).
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
             --presolve-level <value> the costliest presolve rules to run: "fast" (linear
@@ -332,11 +354,13 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(args, i);
       case "--lp" -> i = handleLp(args, i);
+      case "--proof" -> i = handleProof(args, i);
       case "-p", "--parallel" -> i = handleParallel(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
+      case "--components" -> i = handleComponents(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
       case "--presolve-level" -> i = handlePresolveLevel(args, i);
       case "--presolve-abort" -> i = handlePresolveAbort(args, i);
@@ -433,6 +457,13 @@ public class Options {
     return i + 1;
   }
 
+  private int handleProof(String[] args, int i) {
+    proof = args[++i];
+    lcg = true;
+    lcgGiven = true;
+    return i + 1;
+  }
+
   private int handleSat(int i) {
     useSat = true;
     // -sat solves with CP and a SAT solver for the Boolean constraints, not with LCG
@@ -498,8 +529,14 @@ public class Options {
   private int handleSymmetry(String[] args, int i) {
     String mode = args[++i];
     switch (mode) {
-      case "on" -> symmetry = true;
-      case "off" -> symmetry = false;
+      case "on" -> {
+        symmetry = true;
+        symmetryGiven = true;
+      }
+      case "off" -> {
+        symmetry = false;
+        symmetryGiven = true;
+      }
       default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
     }
     return i + 1;
@@ -510,6 +547,15 @@ public class Options {
       case "on" -> presolveDual = true;
       case "off" -> presolveDual = false;
       default -> System.err.println("%% Presolve dual mode " + args[i] + " not known; ignored");
+    }
+    return i + 1;
+  }
+
+  private int handleComponents(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> components = true;
+      case "off" -> components = false;
+      default -> System.err.println("%% Components mode " + args[i] + " not known; ignored");
     }
     return i + 1;
   }
@@ -886,7 +932,8 @@ public class Options {
    * @return true if bound consistency prefered, false otherwise (defult).
    */
   public boolean getBoundConsistency() {
-    return boundConsistency;
+    // a proof states each explanation by unit propagation, which derives bounds, not domains
+    return boundConsistency || proof != null;
   }
 
   /**
@@ -943,7 +990,18 @@ public class Options {
    * @return false when --lp off was given
    */
   public boolean lp() {
-    return lp;
+    // LP deductions combine rows, which a proof's unit propagation does not derive
+    return lp && proof == null;
+  }
+
+  /**
+   * The path prefix of the VeriPB proof that --proof asks for: the proof goes to prefix.pbp and the
+   * OPB model it is checked against to prefix.opb.
+   *
+   * @return the prefix, or null without --proof
+   */
+  public String proof() {
+    return proof;
   }
 
   /**
@@ -961,7 +1019,7 @@ public class Options {
    * @return the number of threads
    */
   public int threads() {
-    return threads;
+    return proof == null ? threads : 1;
   }
 
   /** The portfolio thread this model is solved in, or null outside a portfolio. */
@@ -989,21 +1047,39 @@ public class Options {
   }
 
   /**
+   * It defines whether the independent components the objective does not depend on are solved
+   * before search (--components).
+   *
+   * @return true by default
+   */
+  public boolean components() {
+    return components;
+  }
+
+  /**
    * It defines whether presolve posts implied constraints (--presolve-implied).
    *
-   * @return false by default
+   * @return true if it does
    */
   public boolean presolveImplied() {
     return presolveImplied;
   }
 
   /**
-   * It defines whether presolve breaks the symmetries of the model (--symmetry).
+   * It defines whether the symmetries of the model are broken (--symmetry), with or without
+   * presolve. By default they are, except in a model loaded for the API without search, whose store
+   * keeps the constraints of the model only.
    *
    * @return true by default
    */
   public boolean symmetry() {
-    return symmetry;
+    if (!symmetry) {
+      return false;
+    }
+    if (symmetryGiven || presolve != Presolve.OFF) {
+      return true;
+    }
+    return runSearch && !"presolve".equals(System.getProperty("jacop.symmetry"));
   }
 
   /**

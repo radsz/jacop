@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,9 +46,12 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Constraint X * Y #= Z.
@@ -58,7 +62,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class XmulYeqZ extends AbstractXopYeqZ
-    implements Functional, Violation, Simplifiable, Copyable<XmulYeqZ>, Explainable {
+    implements Functional, Violation, Simplifiable, Copyable<XmulYeqZ>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -272,5 +276,41 @@ public class XmulYeqZ extends AbstractXopYeqZ
   public int functionalValue(ToIntFunction<IntVar> value) {
     long xy = (long) value.applyAsInt(x) * value.applyAsInt(y);
     return (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, xy));
+  }
+
+  /** The most tuples of x * y = z that {@link #encode} writes as a table. */
+  private static final int TABLE_TUPLES = 1 << 16;
+
+  /**
+   * Writes x * y = z as the table of its tuples over the root domains, whose support encoding unit
+   * propagation makes domain consistent, which covers the bounds reasons. A product over more than
+   * {@link #TABLE_TUPLES} pairs is not encoded.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != XmulYeqZ.class) {
+      return false;
+    }
+    IntDomain dx = model.domain(x);
+    IntDomain dy = model.domain(y);
+    IntDomain dz = model.domain(z);
+    if ((long) dx.getSize() * dy.getSize() > TABLE_TUPLES) {
+      return false;
+    }
+    List<int[]> tuples = new ArrayList<>();
+    for (ValueEnumeration a = dx.valueEnumeration(); a.hasMoreElements(); ) {
+      int u = a.nextElement();
+      for (ValueEnumeration b = dy.valueEnumeration(); b.hasMoreElements(); ) {
+        int v = b.nextElement();
+        long p = (long) u * v;
+        // the same variable twice takes one value
+        boolean same = (x != y || u == v) && (x != z || u == p) && (y != z || v == p);
+        if (same && p >= dz.min() && p <= dz.max() && dz.contains((int) p)) {
+          tuples.add(new int[] {u, v, (int) p});
+        }
+      }
+    }
+    PbModel.table(model, new IntVar[] {x, y, z}, tuples);
+    return true;
   }
 }

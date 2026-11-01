@@ -50,6 +50,8 @@ import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearExplanation;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.util.VarIntMap;
 
 /**
@@ -87,7 +89,7 @@ import org.jacop.util.VarIntMap;
  * @version 5.0
  */
 public class LinearBool extends Constraint
-    implements SatisfiedPresent, Copyable<LinearBool>, Explainable {
+    implements SatisfiedPresent, Copyable<LinearBool>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -678,5 +680,11 @@ public class LinearBool extends Constraint
           default -> LinearForm.GE;
         };
     return new LinearForm(vars, weights, z == null ? c : 0, rel);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    model.linear(linearForm());
+    return true;
   }
 }

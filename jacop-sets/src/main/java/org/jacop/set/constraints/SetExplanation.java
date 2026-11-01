@@ -134,6 +134,151 @@ final class SetExplanation {
     return false;
   }
 
+  /**
+   * Adds to {@code out} the reason of a bound of a set's cardinality, or of a membership, that the
+   * elements the relation forces into the set (or out of it) give with the other bound, when the
+   * mirror alone does not: the constraint changed the set and its domain derived the atom.
+   *
+   * @param trail the trail
+   * @param entry the entry of the atom
+   * @param sets the sets of the constraint, by argument position
+   * @param relation the relation the constraint implies on every element
+   * @param out where the reason entries are added
+   * @return false when the forced memberships do not give the atom
+   */
+  static boolean explainCardinality(
+      AtomicTrail trail, int entry, SetVar[] sets, Relation relation, EntryList out) {
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    for (SetVar s : sets) {
+      SetMirror m = mirrorOf(s);
+      if (m == null || !m.covers(y)) {
+        continue;
+      }
+      IntVar[] vars = m.mirrorVariables();
+      IntVar card = vars[vars.length - 1];
+      int mark = out.size();
+      if (y == card && kind != AtomicTrail.NE) {
+        boolean in = kind == AtomicTrail.GE;
+        int count = forced(trail, entry, sets, relation, m, in, null, null);
+        if (in ? count >= trail.value(entry) : count <= trail.value(entry)) {
+          forced(trail, entry, sets, relation, m, in, null, out);
+          return true;
+        }
+      } else if (y != card) {
+        boolean in = kind == AtomicTrail.GE || (kind == AtomicTrail.NE && trail.value(entry) == 0);
+        // in: the others that may be in only reach the minimum; out: those in reach the maximum
+        int count = forced(trail, entry, sets, relation, m, !in, y, null);
+        if (in
+            ? count <= trail.minBefore(card, entry) - 1
+            : count >= trail.maxBefore(card, entry)) {
+          if (in) {
+            trail.addLowerBound(card, entry, out);
+          } else {
+            trail.addUpperBound(card, entry, out);
+          }
+          forced(trail, entry, sets, relation, m, !in, y, out);
+          return true;
+        }
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  /*
+   * The elements of m's set just before the position that the relation forces in (in) and those
+   * fixed in when the mirror was made, or, for in false, the elements not forced out; skip's element
+   * is left out. With out, the atoms forcing the counted (in) or excluded (not in) elements are
+   * added.
+   */
+  private static int forced(
+      AtomicTrail trail,
+      int position,
+      SetVar[] sets,
+      Relation relation,
+      SetMirror m,
+      boolean in,
+      IntVar skip,
+      EntryList out) {
+    int[] elements = m.elements();
+    int count = m.rootGlbSize() + (in ? 0 : elements.length - (skip == null ? 0 : 1));
+    for (int e : elements) {
+      IntVar x = m.member(e);
+      if (x == skip) {
+        continue;
+      }
+      int[] state = states(trail, sets, e, position);
+      if (!satisfiable(sets, state, relation, e, x, !in)) {
+        count += in ? 1 : -1;
+        if (out != null) {
+          minimize(sets, state, relation, e, x, !in);
+          addAtoms(trail, sets, state, e, position, out);
+        }
+      }
+    }
+    return count;
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure on a set's cardinality: the elements the relation
+   * forces into the set (or out of it), with those already in (or out), exceed its maximum
+   * cardinality (or leave fewer than its minimum). The failing change itself is not on the trail,
+   * so the memberships the relation forces count as well.
+   *
+   * @param trail the trail
+   * @param sets the sets of the constraint, by argument position
+   * @param relation the relation the constraint implies on every element
+   * @param out where the reason entries are added
+   * @return false when no set's cardinality fails this way
+   */
+  static boolean explainCardinalityFailure(
+      AtomicTrail trail, SetVar[] sets, Relation relation, EntryList out) {
+    int position = trail.size();
+    for (SetVar s : sets) {
+      SetMirror m = mirrorOf(s);
+      if (m == null) {
+        continue;
+      }
+      IntVar[] vars = m.mirrorVariables();
+      IntVar card = vars[vars.length - 1];
+      int[] elements = m.elements();
+      for (boolean in : new boolean[] {true, false}) {
+        // in: elements in, against the maximum; out: elements that may be in, against the minimum
+        int count = m.rootGlbSize() + (in ? 0 : elements.length);
+        int[][] forced = new int[elements.length][];
+        for (int k = 0; k < elements.length; k++) {
+          int e = elements[k];
+          IntVar x = m.member(e);
+          int[] state = states(trail, sets, e, position);
+          if (!satisfiable(sets, state, relation, e, x, !in)) {
+            forced[k] = state;
+            count += in ? 1 : -1;
+          }
+        }
+        boolean fails =
+            in ? count > trail.maxBefore(card, position) : count < trail.minBefore(card, position);
+        if (!fails) {
+          continue;
+        }
+        if (in) {
+          trail.addUpperBound(card, position, out);
+        } else {
+          trail.addLowerBound(card, position, out);
+        }
+        for (int k = 0; k < elements.length; k++) {
+          if (forced[k] != null) {
+            IntVar x = m.member(elements[k]);
+            minimize(sets, forced[k], relation, elements[k], x, !in);
+            addAtoms(trail, sets, forced[k], elements[k], position, out);
+          }
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static boolean explainElement(
       AtomicTrail trail, int entry, SetVar[] sets, Relation relation, int e, EntryList out) {
     IntVar x = trail.variable(entry);

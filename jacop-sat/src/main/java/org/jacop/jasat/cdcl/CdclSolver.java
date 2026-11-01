@@ -298,7 +298,7 @@ public final class CdclSolver {
   private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
-  private DratWriter proof;
+  private ProofOutput proof;
   // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
   private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
@@ -731,11 +731,12 @@ public final class CdclSolver {
   }
 
   /**
-   * Writes a DRAT proof of every derived and deleted clause. Set it before adding clauses.
+   * Writes a proof of every derived and deleted clause, such as a {@link DratWriter}. Set it before
+   * adding clauses.
    *
    * @param writer the proof output, or null for none
    */
-  public void setProof(DratWriter writer) {
+  public void setProof(ProofOutput writer) {
     proof = writer;
   }
 
@@ -754,7 +755,13 @@ public final class CdclSolver {
     return dimacs > 0 ? 2 * (dimacs - 1) : 2 * (-dimacs - 1) + 1;
   }
 
-  static int toDimacs(int lit) {
+  /**
+   * Returns the DIMACS literal of an internal literal, as a {@link ProofOutput} gets them.
+   *
+   * @param lit the internal literal
+   * @return its DIMACS literal
+   */
+  public static int toDimacs(int lit) {
     return (lit & 1) == 0 ? (lit >> 1) + 1 : -((lit >> 1) + 1);
   }
 
@@ -900,6 +907,9 @@ public final class CdclSolver {
       if (r >= STACK_REF) {
         rwasted += HEADER + rstack[r - STACK_REF + SIZE];
         reason[v] = NO_REASON;
+        if (proof != null) {
+          proof.delete(rstack, r - STACK_REF + HEADER, rstack[r - STACK_REF + SIZE]);
+        }
       }
       savedSign[v] = (byte) (lit & 1);
       order.insert(v);
@@ -1336,6 +1346,9 @@ public final class CdclSolver {
       if (n == 0 || c[n - 1] != c[i]) {
         c[n++] = c[i];
       }
+    }
+    if (proof != null) {
+      proof.add(c, 0, n);
     }
     if (n == 1) {
       r = UNIT_REASON;
@@ -2565,6 +2578,10 @@ public final class CdclSolver {
         implied = toLit(lit);
         if (vals[implied] == 0) {
           assign(implied, EXTERNAL_REASON);
+          if (proof != null && decisionLevel == 0) {
+            // conflict analysis never asks for the reasons of root facts, which a proof needs
+            reasonRef(implied >> 1);
+          }
           continue;
         }
         c = external.reason(lit);
@@ -3438,6 +3455,10 @@ public final class CdclSolver {
             int v = mem[ref + HEADER] >> 1;
             if (reason[v] == ref) {
               reason[v] = NO_REASON;
+              if (proof != null && vals[mem[ref + HEADER]] > 0 && level[v] == 0) {
+                // the root fact outlives its reason in the proof as well
+                proof.add(mem, ref + HEADER, 1);
+              }
             }
             deleteClause(ref);
             break;

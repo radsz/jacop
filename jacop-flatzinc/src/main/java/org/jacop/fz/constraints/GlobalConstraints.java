@@ -116,6 +116,7 @@ import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
@@ -255,6 +256,12 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
     if (s.length == 0) {
+      return;
+    }
+    if (support.options.proof() != null) {
+      // --proof: the time table, which unit propagation over the time-indexed encoding states;
+      // the energy and edge-finding rules of the other cumulative constraints it does not
+      support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
       return;
     }
     if (poseInterDistance(s, d, r, b)) {
@@ -994,7 +1001,10 @@ class GlobalConstraints implements ParserTreeConstants {
       System.arraycopy(v, 4 * i, r[i], 0, 4);
     }
 
-    support.pose(new Diffn(r, false));
+    support.pose(
+        support.options.proof() != null
+            ? new Nooverlap(r, false).pairwiseOnly()
+            : new Diffn(r, false));
   }
 
   void gen_jacop_diff2_strict(SimpleNode node) {
@@ -1003,9 +1013,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(true).build());
+    support.pose(diffn(x, y, lx, ly, true));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  // under --proof the pairwise rule alone, which unit propagation over its encoding reaches; the
+  // profile and area rules of Diffn it does not
+  private Constraint diffn(IntVar[] x, IntVar[] y, IntVar[] lx, IntVar[] ly, boolean strict) {
+    if (support.options.proof() != null) {
+      return new Nooverlap(x, y, lx, ly, strict).pairwiseOnly();
+    }
+    return Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(strict).build();
   }
 
   void gen_jacop_list_diff2(SimpleNode node) {
@@ -1014,8 +1032,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
+    support.pose(diffn(x, y, lx, ly, false));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
   }
 
@@ -1551,6 +1568,9 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      if (v.length == 2) {
+        support.dictionary.addBinaryTable(v, t);
+      }
       poseTableBySize(v, t);
     }
   }
@@ -1907,7 +1927,7 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < alphabetSize; j++) {
         if (d[i * alphabetSize + j] != 0) {
-          addTransitionValue(condition, d[i * alphabetSize + j] - minIndex, j + minIndex);
+          addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -2061,8 +2081,10 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < S.getSize(); j++) {
         int valTran = valueTransition.nextElement();
+        // d holds 1-based next states (0 is the failure state); min_index is the smallest
+        // symbol of the alphabet, not of the states
         if (d[i * S.getSize() + j] != 0) {
-          addTransitionValue(condition, d[i * S.getSize() + j] - minIndex, valTran);
+          addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);

@@ -61,12 +61,16 @@ interface ElementwiseExplainable extends Explainable {
   @Override
   default boolean explain(AtomicTrail trail, int entry, EntryList out) {
     SetExplanation.Relation r = relation();
-    return r != null && SetExplanation.explain(trail, entry, explainedSets(), r, out);
+    return r != null
+        && (SetExplanation.explain(trail, entry, explainedSets(), r, out)
+            || SetExplanation.explainCardinality(trail, entry, explainedSets(), r, out));
   }
 
   @Override
   default boolean explainFailure(AtomicTrail trail, EntryList out) {
     SetExplanation.Relation r = relation();
-    return r != null && SetExplanation.explainFailure(trail, explainedSets(), r, out);
+    return r != null
+        && (SetExplanation.explainFailure(trail, explainedSets(), r, out)
+            || SetExplanation.explainCardinalityFailure(trail, explainedSets(), r, out));
   }
 }
