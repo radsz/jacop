@@ -45,11 +45,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.BooleanSupplier;
 import java.util.function.ToIntFunction;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Not;
+import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -244,6 +247,8 @@ final class OpbEncoder implements PbModel {
       String name = c.getClass().getSimpleName();
       if (c instanceof AbstractReifiedConstraint r) {
         name += " of " + r.c.getClass().getSimpleName();
+      } else if (c instanceof Not n) {
+        name += " of " + n.negatedConstraint().getClass().getSimpleName();
       }
       unsupported.add(name);
     }
@@ -271,12 +276,20 @@ final class OpbEncoder implements PbModel {
     }
     if (c instanceof AbstractReifiedConstraint r
         && (r.getClass() == Reified.class || r.getClass() == Implies.class)) {
-      LinearForm inner = form(r.c);
-      if (inner == null || !isBoolean(r.b)) {
+      if (!isBoolean(r.b)) {
         return false;
       }
-      reified(r.b, inner, r instanceof Reified);
-      return true;
+      LinearForm inner = form(r.c);
+      if (inner != null) {
+        reified(r.b, inner, r instanceof Reified);
+        return true;
+      }
+      String lit = literal(r.b, true);
+      return implied(lit, r.c, false)
+          && (!(r instanceof Reified) || implied(negate(lit), r.c, true));
+    }
+    if (c instanceof Not n && n.getClass() == Not.class) {
+      return implied("1", n.negatedConstraint(), true);
     }
     return false;
   }
@@ -318,7 +331,42 @@ final class OpbEncoder implements PbModel {
       guard.add(lit);
     }
     linear(f);
-    guard.clear();
+    if (!"1".equals(lit)) {
+      guard.remove(guard.size() - 1);
+    }
+  }
+
+  @Override
+  public boolean implied(String lit, BooleanSupplier encoding) {
+    if ("0".equals(lit)) {
+      return true; // the guard is false: nothing to state
+    }
+    if ("1".equals(lit)) {
+      return encoding.getAsBoolean();
+    }
+    guard.add(lit);
+    try {
+      return encoding.getAsBoolean();
+    } catch (IllegalStateException e) {
+      // an encoding the proof derives lines from: the constraint is listed as unsupported, which
+      // stops the proof, so the lines it wrote under the guard do no harm
+      return false;
+    } finally {
+      guard.remove(guard.size() - 1);
+    }
+  }
+
+  // writes that lit implies c, or its negation
+  private boolean implied(String lit, PrimitiveConstraint c, boolean negated) {
+    if (c instanceof Not n && n.getClass() == Not.class) {
+      return implied(lit, n.negatedConstraint(), !negated);
+    }
+    LinearForm f = form(c);
+    if (f != null) {
+      guarded(lit, negated ? f.negated() : f);
+      return true;
+    }
+    return c instanceof PbEncodable p && p.encodeImplied(this, lit, negated);
   }
 
   /**
@@ -710,6 +758,9 @@ final class OpbEncoder implements PbModel {
 
   @Override
   public void timetable(IntVar[] starts, int[] durations, int[] uses, IntVar limit) {
+    if (!guard.isEmpty()) {
+      throw new IllegalStateException("a time table under a guard");
+    }
     if (current == null) {
       return;
     }

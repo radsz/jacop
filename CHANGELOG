@@ -1501,7 +1501,11 @@ Version 5.0 (unreleased)
     AtMost, AtLeast, CountBounds, Max, Min, tables, regular and MDD
     constraints, Alldifferent, Alldiff, Alldistinct, GCC, CountValues and
     CountValuesBounds are encoded (the flow reasons of the last six by a
-    pol step over a violated cut of their flow network), as are
+    pol step over a violated cut of their flow network), as are In,
+    AllEqual, AbsXeqY, MaxSimple, MinSimple, AndBoolSimple, OrBoolSimple,
+    XorBool, Reified and Implies of these and of AtMost and AtLeast (the
+    encoding under the literal, and for Reified the negation's under its
+    negation), Not of them and of linear constraints, and
     b -> x + c <= z and the time table of CumulativeBasic, with fixed or
     variable durations and resource uses (a time-indexed encoding); under
     --proof a cumulative with fixed durations and uses is posted as

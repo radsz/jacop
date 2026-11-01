@@ -40,10 +40,15 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Random;
+import java.util.function.BiFunction;
+import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelImply;
@@ -54,11 +59,16 @@ import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.In;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Not;
+import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.XeqC;
@@ -68,6 +78,7 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
@@ -81,7 +92,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
+import org.jacop.search.IndomainMin;
 import org.jacop.search.SimpleSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
@@ -105,10 +118,16 @@ class VeriPbProofTest {
    * the proof are also written there, named after the test, for a check by VeriPB itself.
    */
   private String opb() {
+    return opb(caller());
+  }
+
+  private static String caller() {
+    return StackWalker.getInstance().walk(f -> f.skip(2).findFirst().orElseThrow().getMethodName());
+  }
+
+  private String opb(String name) {
     String dir = System.getProperty("veripb.dump");
     if (dir != null) {
-      String name =
-          StackWalker.getInstance().walk(f -> f.skip(1).findFirst().orElseThrow().getMethodName());
       try {
         Files.writeString(Path.of(dir, name + ".opb"), model.toString(StandardCharsets.US_ASCII));
         Files.writeString(Path.of(dir, name + ".pbp"), proof.toString(StandardCharsets.US_ASCII));
@@ -622,6 +641,93 @@ class VeriPbProofTest {
   }
 
   // the shortest makespan over every start from 0 to horizon of each task
+  // reified, implied and negated In, AllEqual, AtMost, AtLeast, XorBool and AndBoolSimple, and
+  // AbsXeqY, MaxSimple, MinSimple and OrBoolSimple, against the optimum of a depth-first search
+  @Test
+  void reifiedNonLinearConstraintsAreProved() {
+    optimaAreProved(12, VeriPbProofTest::mixedModel);
+  }
+
+  /**
+   * Minimizes the objective of a model per seed with a proof, checks the proof and compares the
+   * optimum with that of a depth-first search over the same model.
+   */
+  private void optimaAreProved(int seeds, BiFunction<Store, Random, IntVar> builder) {
+    String test = caller();
+    for (int seed = 0; seed < seeds; seed++) {
+      model.reset();
+      proof.reset();
+      Store store = new Store();
+      IntVar obj = builder.apply(store, new Random(seed));
+      LcgSolver lcg = withProof(store);
+      assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      Store reference = new Store();
+      IntVar cost = builder.apply(reference, new Random(seed));
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] all = new IntVar[reference.size()];
+      for (int i = 0; i < all.length; i++) {
+        all[i] = (IntVar) reference.vars[i];
+      }
+      assertThat(
+              search.labeling(reference, new SimpleSelect<>(all, null, new IndomainMin<>()), cost))
+          .isTrue();
+      assertThat(lcg.value(obj)).as("seed %d", seed).isEqualTo(search.getCostValue());
+      RupChecker checker = new RupChecker();
+      assertThat(checker.check(opb(test + seed), proof.toString(StandardCharsets.US_ASCII)))
+          .as("seed %d", seed)
+          .isNull();
+    }
+  }
+
+  private static IntVar mixedModel(Store store, Random random) {
+    int n = 5;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, -3, 4);
+      for (int h = 0; h < 2; h++) {
+        x[i].domain.inComplement(0, x[i], random.nextInt(8) - 3);
+      }
+    }
+    IntVar[] b = new IntVar[8];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntervalDomain set = new IntervalDomain();
+    for (int v = -3; v <= 4; v++) {
+      if (random.nextBoolean()) {
+        set.unionAdapt(v, v);
+      }
+    }
+    store.impose(new Reified(new In(x[0], set), b[0]));
+    store.impose(new Implies(b[1], new In(x[1], set)));
+    store.impose(new Not(new In(x[4], set)));
+    store.impose(new Reified(new AllEqual(new IntVar[] {x[0], x[2], x[3]}), b[2]));
+    store.impose(new Reified(new AtMost(x, 1 + random.nextInt(2), random.nextInt(4)), b[3]));
+    store.impose(new Implies(b[4], new Not(new AtLeast(x, 2, random.nextInt(4)))));
+    store.impose(new Reified(new XorBool(new IntVar[] {b[0], b[1], b[2]}, b[5]), b[6]));
+    store.impose(new Reified(new AndBoolSimple(b[3], b[4], b[5]), b[7]));
+    IntVar or = new IntVar(store, "or", 0, 1);
+    store.impose(new OrBoolSimple(b[6], b[7], or));
+    IntVar abs = new IntVar(store, "abs", -1, 4);
+    store.impose(new AbsXeqY(x[2], abs));
+    IntVar max = new IntVar(store, "max", -3, 4);
+    store.impose(new MaxSimple(x[3], x[4], max));
+    IntVar min = new IntVar(store, "min", -3, 4);
+    store.impose(new MinSimple(x[0], x[1], min));
+    IntVar[] terms = {x[0], x[1], x[2], x[3], x[4], b[0], b[2], b[5], or, abs, max, min};
+    int[] w = new int[terms.length + 1];
+    for (int i = 0; i < terms.length; i++) {
+      w[i] = random.nextInt(9) - 4;
+    }
+    w[terms.length] = -1;
+    IntVar obj = new IntVar(store, "obj", -500, 500);
+    IntVar[] all = Arrays.copyOf(terms, terms.length + 1);
+    all[terms.length] = obj;
+    store.impose(new LinearInt(all, w, "==", 0));
+    return obj;
+  }
+
   private static int shortestMakespan(int[] d, int[] r, int capacity, int horizon) {
     int n = d.length;
     int[] start = new int[n];

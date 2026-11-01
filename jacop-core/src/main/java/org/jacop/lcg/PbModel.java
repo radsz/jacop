@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BooleanSupplier;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -158,6 +159,18 @@ public interface PbModel {
    * @param offset the value that points to node 0
    */
   void circuit(IntVar[] x, int offset);
+
+  /**
+   * Writes the lines of an encoding under a literal, so that they need to hold only when it does.
+   * Encodings whose lines proofs derive from (such as {@link #allDifferent}) cannot be guarded.
+   *
+   * @param literal the literal, "1" for none and "0" for one that never holds
+   * @param encoding writes the lines and returns whether it could
+   * @return false when the encoding cannot be written under the literal
+   */
+  default boolean implied(String literal, BooleanSupplier encoding) {
+    return "1".equals(literal) && encoding.getAsBoolean();
+  }
 
   /**
    * Notes, for proofs, a time-indexed cumulative over fixed durations and uses whose lines the

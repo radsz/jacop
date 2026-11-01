@@ -36,8 +36,12 @@ import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Constraints X to belong to a specified domain.
@@ -47,7 +51,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class In extends PrimitiveConstraint implements Copyable<In> {
+public class In extends PrimitiveConstraint implements Copyable<In>, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -146,5 +150,36 @@ public class In extends PrimitiveConstraint implements Copyable<In> {
   @Override
   public In copy(VarMap map) {
     return new In(map.get(x), dom);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /**
+   * States the domain, or its negation, by a clause per interval of values x cannot take: the
+   * intervals outside the domain, or those of the domain when negated.
+   */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != In.class) {
+      return false;
+    }
+    if ("0".equals(literal)) {
+      return true;
+    }
+    IntDomain root = model.domain(x);
+    IntDomain excluded = negated ? dom : domComplement;
+    for (IntervalEnumeration e = excluded.intervalEnumeration(); e.hasMoreElements(); ) {
+      Interval i = e.nextElement();
+      if (i.max() < root.min() || i.min() > root.max()) {
+        continue;
+      }
+      // not (l <= x <= u)
+      String above = i.max() >= root.max() ? "0" : model.atLeast(x, i.max() + 1);
+      model.clause(PbModel.not(literal), PbModel.not(model.atLeast(x, i.min())), above);
+    }
+    return true;
   }
 }

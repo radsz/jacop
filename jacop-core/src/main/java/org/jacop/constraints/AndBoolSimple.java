@@ -41,6 +41,8 @@ import org.jacop.api.Violation;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * If both a and b are equal 1 then result variable is equal 1 too. Otherwise, result variable is
@@ -50,7 +52,12 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class AndBoolSimple extends AbstractBoolSimple
-    implements Functional, Violation, Copyable<AndBoolSimple>, Monotone, MonotoneDefinition {
+    implements Functional,
+        Violation,
+        Copyable<AndBoolSimple>,
+        Monotone,
+        MonotoneDefinition,
+        PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -164,5 +171,32 @@ public class AndBoolSimple extends AbstractBoolSimple
   @Override
   public int functionalValue(ToIntFunction<IntVar> value) {
     return value.applyAsInt(a) & value.applyAsInt(b);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /** States result = a and b by three clauses, or with result negated for the negation. */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != AndBoolSimple.class) {
+      return false;
+    }
+    return model.implied(
+        literal,
+        () -> {
+          String r = model.atLeast(result, 1);
+          if (negated) {
+            r = PbModel.not(r);
+          }
+          String p = model.atLeast(a, 1);
+          String q = model.atLeast(b, 1);
+          model.clause(PbModel.not(r), p);
+          model.clause(PbModel.not(r), q);
+          model.clause(r, PbModel.not(p), PbModel.not(q));
+          return true;
+        });
   }
 }
