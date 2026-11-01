@@ -1594,7 +1594,21 @@ Version 5.0 (unreleased)
      --lcg is 6 better / 2 worse (monomatch n_5 solved in 4 s, which
      timed out; gt-sort 131 to 127) and --lcg -f 7 / 6.
 
-107. The linear relaxation (--lp on, the default) picks its simplex by size:
+107. The LCG threads of fzn-jacop -p share short learnt clauses and the
+     bounds of the model's variables at the root, as atoms over FlatZinc
+     names, at restarts and at the start and end of each solve. A thread
+     adds the clauses of the others as learnt clauses (a clause of two or
+     more atoms only when all its literals already exist there). Clauses
+     hold under the model and a bound that is the cost of a solution the
+     portfolio already has, so no better solution is lost. Nothing is
+     shared with --presolve on or with a proof; after symmetry breaking a
+     thread reads only threads that posted none or the same constraints.
+     --free-config share-clauses=<size> (default 8, 0 = off) and
+     share-lbd=<lbd> (default 2) set what is shared. At -f -p 4 (two LCG
+     threads) it is neutral: 169 hard instances, 2 interleaved rounds,
+     95 -> 95 solved; wide set 169 -> 169 solved, 29 better / 25 worse.
+
+108. The linear relaxation (--lp on, the default) picks its simplex by size:
     the dense one below 100 rows of the model's linear constraints and the
     sparse one from 100 rows on, and also for relaxations over the dense
     size cap (org.jacop.lp.maxTableau), which before got no relaxation at
@@ -1618,7 +1632,7 @@ Version 5.0 (unreleased)
     that meets NaN stops the solve at its limit instead of throwing
     ArrayIndexOutOfBoundsException.
 
-108. LCG explanations of set_in_reif and array_var_set_element. In
+109. LCG explanations of set_in_reif and array_var_set_element. In
      (x in a fixed set) and XinA (x in a set variable) explain their
      pruning, failures and entailment, so a reification of them is no
      longer generic: a value of x is ruled out by being outside the set
