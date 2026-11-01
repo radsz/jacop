@@ -87,7 +87,7 @@ public class Options {
   boolean lp = true;
   // --proof: the path prefix of the VeriPB proof (.pbp) and its OPB model (.opb), or null
   String proof;
-  LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.SPARSE;
+  LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.DENSE;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
   Portfolio.Worker portfolioWorker;
@@ -248,9 +248,9 @@ public class Options {
                 at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
-                rows, explained under --lcg; one of "on" (default) or "sparse" (the revised
-                dual simplex of JaLP), "off", "dense" (the dense tableau simplex), "lazy" (the
-                sparse simplex with rows added and removed lazily).
+                rows, explained under --lcg; one of "on" (default, the dense simplex), "off",
+                "sparse" (the sparse simplex, for large sparse relaxations), "lazy" (the sparse
+                simplex with rows added and removed lazily).
             -p <value>, --parallel <value> solve with a portfolio of <value> threads: the
                 options given, then free search and lazy clause generation with other
                 settings; they share the objective value of the best solution. One thread
@@ -483,15 +483,15 @@ public class Options {
 
   private int handleLp(String[] args, int i) {
     switch (args[++i]) {
-      case "on", "sparse" -> {
-        lp = true;
-        lpSimplex = LinearRelaxation.Simplex.SPARSE;
-      }
-      case "dense" -> {
+      case "on" -> {
         lp = true;
         lpSimplex = LinearRelaxation.Simplex.DENSE;
       }
       case "off" -> lp = false;
+      case "sparse" -> {
+        lp = true;
+        lpSimplex = LinearRelaxation.Simplex.SPARSE;
+      }
       case "lazy" -> {
         lp = true;
         lpSimplex = LinearRelaxation.Simplex.LAZY;
@@ -1002,7 +1002,7 @@ public class Options {
   }
 
   /**
-   * It defines the simplex of the linear relaxation (--lp on, sparse, dense or lazy).
+   * It defines the simplex of the linear relaxation (--lp on, sparse or lazy).
    *
    * @return the simplex
    */
