@@ -1581,7 +1581,9 @@ Version 5.0 (unreleased)
     up to 25,000 rows and 30,000 columns (org.jacop.lp.sparseMaxRows and
     org.jacop.lp.sparseMaxColumns) and its root solve stops after 3 s
     (org.jacop.lp.sparseRootSeconds) or 4e9 work units
-    (org.jacop.lp.sparseRootWork) in optimisation problems. Each LP
+    (org.jacop.lp.sparseRootWork) in optimisation problems; while the
+    extra rows are on trial, a sparse simplex chosen by size takes the
+    pivot limit of the dense tableau, so it drops the same rows. Each LP
     deduction is cleaned after its multipliers are rounded: a multiplier
     whose row lacks the side its sign needs is dropped instead of losing
     the inequality, the inequality is divided by the gcd of its weights
