@@ -42,6 +42,8 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.In;
+import org.jacop.constraints.Reified;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -67,6 +69,7 @@ import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
 import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.constraints.SumWeightedSet;
+import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.junit.jupiter.api.Test;
@@ -1002,6 +1005,94 @@ class SingleConstraintTest {
       }
     }
     assertThat(explained).isGreaterThanOrEqualTo(2);
+    trail.detach();
+  }
+
+  @Test
+  void elementSetVariableHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    SetVar s1 = new SetVar(store, "s1", 1, 3);
+    SetVar s2 = new SetVar(store, "s2", 1, 3);
+    // a fixed set has no mirror
+    SetVar s3 =
+        new SetVar(
+            store, "s3", new BoundSetDomain(new IntervalDomain(4, 4), new IntervalDomain(4, 4)));
+    SetVar value = new SetVar(store, "value", 1, 3);
+    ElementSetVariable element = new ElementSetVariable(index, new SetVar[] {s1, s2, s3}, value);
+    store.impose(element);
+    for (SetVar s : new SetVar[] {s1, s2, value}) {
+      store.impose(new SetMirror(s));
+    }
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    s1.domain.inGlb(store.level, s1, 1);
+    value.domain.inLubComplement(store.level, value, 1);
+    s2.domain.inGlb(store.level, s2, 2);
+    assertThat(store.consistency()).isTrue();
+    // index 1 disagrees on element 1, so index is 2 and value gets element 2 of s2
+    assertThat(index.singleton(2)).isTrue();
+    assertThat(value.domain.glb().contains(2)).isTrue();
+    EntryList reason = new EntryList();
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == element) {
+        reason.clear();
+        assertThat(element.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        if (trail.variable(e) == index && trail.kind(e) == AtomicTrail.NE) {
+          assertThat(reasonVariables(trail, reason))
+              .containsExactlyInAnyOrder(s1.lcgMirror().member(1), value.lcgMirror().member(1));
+        }
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(2);
+    trail.detach();
+  }
+
+  @Test
+  void reifiedMembershipsHaveTheirOwnReasons() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    SetVar a = new SetVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 1, 4);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    Reified inSet = new Reified(new XinA(x, a), b);
+    Reified inValues = new Reified(new In(y, new IntervalDomain(1, 1).union(3)), c);
+    store.impose(inSet);
+    store.impose(inValues);
+    store.impose(new SetMirror(a));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 1, 1);
+    a.domain.inLubComplement(store.level, a, 2);
+    y.domain.inComplement(store.level, y, 1);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    // x in a: x is not 2 and a has 1; y misses both values of {1, 3}, so c is 0
+    assertThat(x.domain.contains(2)).isFalse();
+    assertThat(a.domain.glb().contains(1)).isTrue();
+    assertThat(c.singleton(0)).isTrue();
+    EntryList reason = new EntryList();
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      Constraint r = trail.reason(e);
+      if (r == inSet || r == inValues) {
+        reason.clear();
+        assertThat(((Reified) r).explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        if (trail.variable(e) == c) {
+          assertThat(reasonVariables(trail, reason)).containsExactly(y);
+        }
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(3);
     trail.detach();
   }
 

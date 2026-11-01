@@ -1555,7 +1555,7 @@ Version 5.0 (unreleased)
     search solves 141 -> 145, -f 189 -> 194; on 140 generated colouring,
     bin packing and scheduling models 81 -> 91 and 87 -> 95.
 
-105. LCG explanations of set constraints. What a set's domain derives
+106. LCG explanations of set constraints. What a set's domain derives
      after a set operation changes it (a cardinality bound, an element
      forced in or out by a cardinality bound, a cardinality failure) is
      explained by the operation from the elements its relation forces,
@@ -1568,6 +1568,21 @@ Version 5.0 (unreleased)
      wide-set instances with set constraints (60 s, 3 seeds per mode)
      --lcg is 6 better / 2 worse (monomatch n_5 solved in 4 s, which
      timed out; gt-sort 131 to 127) and --lcg -f 7 / 6.
+
+107. LCG explanations of set_in_reif and array_var_set_element. In
+     (x in a fixed set) and XinA (x in a set variable) explain their
+     pruning, failures and entailment, so a reification of them is no
+     longer generic: a value of x is ruled out by being outside the set
+     (an element out of the set variable, or in it for the negation), an
+     element joins the set when x is fixed to it. ElementSetVariable
+     explains an excluded index by an element its set and the value
+     disagree on, a membership of the value by the sets of the indexes
+     left, and with the index fixed passes memberships and cardinality
+     bounds between the two sets. valve-network: Reified reasons 100 %
+     generic with 84 atoms to 0 % with 15; gt-sort: ElementSetVariable
+     100 % generic with 75 atoms to 0 % with 2. Wide set (220, 60 s):
+     --lcg 12 better / 7 worse (valve-network 90 to 111), --lcg -f
+     22 / 23, solved 139 to 140.
 
 Version 4.11
 =============
