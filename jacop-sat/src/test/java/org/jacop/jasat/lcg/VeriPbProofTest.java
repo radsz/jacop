@@ -68,6 +68,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Not;
@@ -1203,15 +1204,6 @@ class VeriPbProofTest {
     lcg.sat().setConflictLimit(300);
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
     long bound = lcg.coreSearch().lowerBound;
-    System.err.println(
-        "DBG cores="
-            + lcg.coreSearch().cores
-            + " root="
-            + lcg.coreSearch().rootCores
-            + " lb="
-            + bound
-            + " proved="
-            + lcg.coreSearch().proved);
     assertThat(bound).isGreaterThanOrEqualTo(pigeons);
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
@@ -1424,11 +1416,11 @@ class VeriPbProofTest {
     for (int i = 0; i < x.length; i++) {
       x[i] = new IntVar(store, "x" + i, 1, 3);
     }
-    store.impose(new Not(new XeqY(x[0], x[1])));
+    store.impose(new Not(new Member(new IntVar[] {x[0], x[1]}, x[2])));
     LcgSolver lcg = withProof(store);
     assertThatThrownBy(lcg::solve)
         .isInstanceOf(UnsupportedOperationException.class)
-        .hasMessageContaining("Not");
+        .hasMessageContaining("Not of Member");
   }
 
   /**
