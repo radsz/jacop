@@ -506,6 +506,92 @@ class AtomicTrailTest {
   }
 
   /**
+   * Products with one factor wider than the supports enumerated for it (wordpress): the narrower
+   * factor or z is enumerated instead, and the reasons must still imply the propagated atoms.
+   */
+  @Test
+  void productsEnumerateTheNarrowerRange() {
+    Random rnd = new Random(17);
+    int checked = 0;
+    for (int instance = 0; instance < 8; instance++) {
+      checked +=
+          dive(
+              s -> {
+                IntVar[] v = {
+                  holey(s, "x", 1, 1100, rnd),
+                  new IntVar(s, "y", -2, 2),
+                  new IntVar(s, "z", -30, 30)
+                };
+                return new Model(new XmulYeqZ(v[0], v[1], v[2]), t -> t[0] * t[1] == t[2], v);
+              },
+              rnd);
+      checked +=
+          dive(
+              s -> {
+                IntVar[] v = {
+                  new IntVar(s, "b", 0, 1), holey(s, "x", 1, 1100, rnd), new IntVar(s, "z", 0, 60)
+                };
+                return new Model(new XmulYeqZ(v[0], v[1], v[2]), t -> t[0] * t[1] == t[2], v);
+              },
+              rnd);
+    }
+    assertThat(checked).isGreaterThan(50);
+  }
+
+  private static IntVar holey(Store s, String name, int lo, int hi, Random rnd) {
+    IntVar x = new IntVar(s, name, lo, hi);
+    for (int k = 0; k < 60; k++) {
+      int v = lo + 1 + rnd.nextInt(Math.min(80, hi - lo - 1));
+      x.domain.subtractAdapt(v);
+    }
+    x.refreshBounds();
+    return x;
+  }
+
+  /**
+   * x * b = z with x in 1..5000 (wordpress): b >= 1, then x != 100 removes 100 from z. Supports of
+   * z = 100 are enumerated over b, the narrower factor, so the reason is b >= 1 and x != 100, not
+   * the generic one (x is wider than the supports enumerated for it).
+   */
+  @Test
+  void productWithAWideFactorHasItsOwnReason() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 5000);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar z = new IntVar(store, "z", 0, 5000);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XmulYeqZ(x, b, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    b.domain.inMin(store.level, b, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inComplement(store.level, x, 100);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.domain.contains(100)).isFalse();
+    int removal = -1;
+    int hole = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == z && trail.kind(e) == AtomicTrail.NE && trail.value(e) == 100) {
+        removal = e;
+      }
+      if (trail.variable(e) == x && trail.kind(e) == AtomicTrail.NE && trail.value(e) == 100) {
+        hole = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(removal, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by XmulYeqZ, not by its replay").isFalse();
+    boolean citesHole = false;
+    for (int k = 0; k < reason.size(); k++) {
+      citesHole |= reason.get(k) == hole;
+      assertThat(trail.variable(reason.get(k))).isNotSameAs(z);
+    }
+    assertThat(citesHole).isTrue();
+    trail.detach();
+  }
+
+  /**
    * y = |x| with x in -1,000,000..1,000,000: y >= 500,000 leaves x its bounds while a trail
    * records, instead of a gap of 999,999 values that would each be a {@code !=} atom (city-position
    * learnt clauses of thousands of literals). x moves past the gap once a bound falls in it.
