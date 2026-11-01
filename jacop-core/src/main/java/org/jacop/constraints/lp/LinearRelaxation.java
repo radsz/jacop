@@ -268,6 +268,9 @@ public class LinearRelaxation extends Constraint
   private long extraLimits;
   private static final int EXTRA_LIMITS = 3;
 
+  // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
+  private boolean bySize;
+
   // MIR cuts at the root: rounds, cuts per round, and the share of the rows they may add
   private static final boolean CUTS_ENABLED =
       !"false".equals(System.getProperty("org.jacop.lp.cuts"));
@@ -598,6 +601,7 @@ public class LinearRelaxation extends Constraint
     // can take a minute and then drop them all)
     fitsSimplex(forms, candidates, simplex, auto, further);
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
+    r.bySize = auto && simplex == Simplex.SPARSE;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -1046,6 +1050,15 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = Math.max(1, lp.pivotWork());
+    if (beforeExtra != null && bySize) {
+      // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense
+      // tableau they would make, as before the choice: a sparse work unit takes two to four times
+      // a dense entry, and the sparse limit alone keeps rows that slow every solve (slnb7x7)
+      long dense = (long) lp.rows() * (lp.rows() + lp.columns() + 1);
+      if (dense <= MAX_TABLEAU) {
+        size = Math.max(size, dense);
+      }
+    }
     int limit =
         calls == 1
             ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
