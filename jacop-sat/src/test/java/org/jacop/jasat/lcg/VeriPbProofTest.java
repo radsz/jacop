@@ -54,6 +54,7 @@ import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -646,6 +647,41 @@ class VeriPbProofTest {
   @Test
   void reifiedNonLinearConstraintsAreProved() {
     optimaAreProved(12, VeriPbProofTest::mixedModel);
+  }
+
+  // y = x[k] for the first k with b[k] = 1 (if_then_else_int), over branches with holes
+  @Test
+  void conditionalSelectIsProved() {
+    optimaAreProved(
+        12,
+        (store, random) -> {
+          int n = 3 + random.nextInt(2);
+          IntVar[] b = new IntVar[n];
+          IntVar[] x = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            b[i] = new IntVar(store, "b" + i, 0, 1);
+            x[i] = new IntVar(store, "x" + i, -3, 5);
+            for (int h = 0; h < 3; h++) {
+              x[i].domain.inComplement(0, x[i], random.nextInt(9) - 3);
+            }
+          }
+          IntVar y = new IntVar(store, "y", -2, 4);
+          y.domain.inComplement(0, y, random.nextInt(7) - 2);
+          store.impose(new ConditionalSelect(b, x, y));
+          store.impose(new XneqY(x[0], x[1]));
+          IntVar[] terms = Arrays.copyOf(x, 2 * n + 2);
+          System.arraycopy(b, 0, terms, n, n);
+          terms[2 * n] = y;
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          terms[2 * n + 1] = obj;
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 2 * n + 1; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[2 * n + 1] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
   }
 
   /**
