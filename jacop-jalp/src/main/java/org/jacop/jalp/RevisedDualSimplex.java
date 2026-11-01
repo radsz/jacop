@@ -655,7 +655,7 @@ public final class RevisedDualSimplex {
         return INFEASIBLE;
       }
       column(q, work);
-      lu.ftran(work, alphaQ);
+      lu.ftranColumn(work, alphaQ);
       double fromRow = alphaRow[q];
       double fromColumn = alphaQ[r];
       if (lu.updates() > 0
@@ -717,14 +717,16 @@ public final class RevisedDualSimplex {
       }
       weight[r] = Math.max(wr / (fromColumn * fromColumn), 1e-12);
       clearTouched();
-      lu.update(r, alphaQ);
+      boolean stable = lu.update(r);
       basis[r] = q;
       row[q] = r;
       row[p] = -1;
       upper[p] = !toLower;
       at[p] = bound;
       totalPivots++;
-      if (lu.updates() >= REFACTOR_UPDATES || lu.updateNonzeros() > 2 * (lu.factorNonzeros + m)) {
+      if (!stable
+          || lu.updates() >= REFACTOR_UPDATES
+          || lu.updateNonzeros() > 2 * (lu.factorNonzeros + m)) {
         refactor();
       }
     }

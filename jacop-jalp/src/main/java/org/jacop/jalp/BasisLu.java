@@ -75,22 +75,39 @@ final class BasisLu {
   private int[] lrStep;
   private double[] lrVal;
 
-  // U by step (the positions pivoted later in the pivot row) and by position (the earlier steps
-  // with an entry in the position)
-  private int[] uStart;
-  private int[] uPos;
-  private double[] uVal;
-  private int[] ucStart;
-  private int[] ucStep;
-  private double[] ucVal;
+  // U by step (the positions of the steps after it in the order, with the entries of its row) and
+  // by position (the steps before it with an entry in its column). The Forrest-Tomlin update
+  // changes one column and one row of U at a time, so both are kept as lists
+  private int[][] urPos;
+  private double[][] urVal;
+  private int[] urLen;
+  private int[][] ucStep;
+  private double[][] ucVal;
+  private int[] ucLen;
+  private long uNonzeros;
 
-  // the product-form updates: the replaced position, its pivot and the other entries of B^-1 a_q
+  // the step of each position, which an update keeps
+  private int[] posStep;
+
+  // the order of the steps in U: an update moves a step to the end, its old slot is dead (the rank
+  // of the step is no longer the slot)
+  private int[] order;
+  private int orderLen;
+  private int[] rank;
+
+  // the row transformations of the updates: the step whose row was eliminated, and the multipliers
+  // of the rows of the steps that eliminated it
   private int etas;
-  private int[] etaPos = new int[16];
-  private double[] etaPivot = new double[16];
+  private int[] etaStep = new int[16];
   private int[] etaStart = new int[17];
   private int[] etaIdx = new int[64];
   private double[] etaVal = new double[64];
+
+  // the spike of the last column solved with ftranColumn: L^-1 a_q after the row transformations
+  private double[] spike;
+
+  // scatter of a row of U by position, for the update
+  private double[] rowWork;
 
   /** The entries the factorization and the solves have touched, a measure of their work. */
   long ops;
@@ -135,8 +152,10 @@ final class BasisLu {
    * @return the nonzeros
    */
   long updateNonzeros() {
-    return etaStart[etas];
+    return etaStart[etas] + Math.max(0, uNonzeros - initialUNonzeros);
   }
+
+  private long initialUNonzeros;
 
   // the elimination, with its active matrix by row (positions and values) and by position (rows)
   private final class Factor {
@@ -547,12 +566,6 @@ final class BasisLu {
 
   // the factors as flat arrays by step, by row (L) and by position (U)
   private void pack(int[][] lsr, double[][] lsv, int[][] usp, double[][] usv) {
-    int[] rowStep = new int[m];
-    int[] posStep = new int[m];
-    for (int s = 0; s < m; s++) {
-      rowStep[pivotRow[s]] = s;
-      posStep[pivotPos[s]] = s;
-    }
     int nl = 0;
     int nu = 0;
     for (int s = 0; s < m; s++) {
@@ -587,33 +600,45 @@ final class BasisLu {
         lrVal[fill[i]++] = lVal[e];
       }
     }
-    uStart = new int[m + 1];
-    uPos = new int[nu];
-    uVal = new double[nu];
-    int[] posCount = new int[m + 1];
-    for (int s = 0, e = 0; s < m; s++) {
-      uStart[s] = e;
-      for (int f = 0; f < usp[s].length; f++, e++) {
-        uPos[e] = usp[s][f];
-        uVal[e] = usv[s][f];
-        posCount[usp[s][f]]++;
+    posStep = new int[m];
+    for (int t = 0; t < m; t++) {
+      posStep[pivotPos[t]] = t;
+    }
+    urPos = new int[m][];
+    urVal = new double[m][];
+    urLen = new int[m];
+    int[] posCount = new int[m];
+    for (int t = 0; t < m; t++) {
+      urPos[t] = usp[t];
+      urVal[t] = usv[t];
+      urLen[t] = usp[t].length;
+      for (int k : usp[t]) {
+        posCount[k]++;
       }
     }
-    uStart[m] = nu;
-    ucStart = new int[m + 1];
+    ucStep = new int[m][];
+    ucVal = new double[m][];
+    ucLen = new int[m];
     for (int k = 0; k < m; k++) {
-      ucStart[k + 1] = ucStart[k] + posCount[k];
+      ucStep[k] = new int[Math.max(1, posCount[k])];
+      ucVal[k] = new double[Math.max(1, posCount[k])];
     }
-    ucStep = new int[nu];
-    ucVal = new double[nu];
-    fill = Arrays.copyOf(ucStart, m);
-    for (int s = 0; s < m; s++) {
-      for (int e = uStart[s]; e < uStart[s + 1]; e++) {
-        int k = uPos[e];
-        ucStep[fill[k]] = s;
-        ucVal[fill[k]++] = uVal[e];
+    for (int t = 0; t < m; t++) {
+      for (int e = 0; e < usp[t].length; e++) {
+        int k = usp[t][e];
+        ucStep[k][ucLen[k]] = t;
+        ucVal[k][ucLen[k]++] = usv[t][e];
       }
     }
+    uNonzeros = nu;
+    initialUNonzeros = nu;
+    order = new int[m + 16];
+    rank = new int[m];
+    for (int t = 0; t < m; t++) {
+      order[t] = t;
+      rank[t] = t;
+    }
+    orderLen = m;
     ops += 2L * (nl + nu) + m;
   }
 
@@ -624,7 +649,22 @@ final class BasisLu {
    * @param y the solution, by position
    */
   void ftran(double[] x, double[] y) {
-    ops += 2L * m;
+    ftran(x, y, false);
+  }
+
+  /**
+   * Solves {@code B y = x} for a column that may enter the basis, and keeps its spike for {@link
+   * #update}. x is overwritten.
+   *
+   * @param x the column, by row
+   * @param y the solution, by position
+   */
+  void ftranColumn(double[] x, double[] y) {
+    ftran(x, y, true);
+  }
+
+  private void ftran(double[] x, double[] y, boolean keep) {
+    ops += 2L * m + orderLen;
     for (int s = 0; s < m; s++) {
       double v = x[pivotRow[s]];
       if (v != 0) {
@@ -635,31 +675,40 @@ final class BasisLu {
         ops += end - lStart[s];
       }
     }
-    for (int s = m - 1; s >= 0; s--) {
+    for (int e = 0; e < etas; e++) {
+      int p = pivotRow[etaStep[e]];
+      double v = x[p];
+      int end = etaStart[e + 1];
+      for (int f = etaStart[e]; f < end; f++) {
+        v -= etaVal[f] * x[pivotRow[etaIdx[f]]];
+      }
+      x[p] = v;
+      ops += end - etaStart[e];
+    }
+    if (keep) {
+      if (spike == null) {
+        spike = new double[m];
+      }
+      System.arraycopy(x, 0, spike, 0, m);
+    }
+    for (int idx = orderLen - 1; idx >= 0; idx--) {
+      int s = order[idx];
+      if (rank[s] != idx) {
+        continue;
+      }
       int p = pivotRow[s];
       int q = pivotPos[s];
       double t = x[p] / diag[s];
       x[p] = 0;
       y[q] = t;
       if (t != 0) {
-        int end = ucStart[q + 1];
-        for (int e = ucStart[q]; e < end; e++) {
-          x[pivotRow[ucStep[e]]] -= ucVal[e] * t;
+        int[] cs = ucStep[q];
+        double[] cv = ucVal[q];
+        int end = ucLen[q];
+        for (int e = 0; e < end; e++) {
+          x[pivotRow[cs[e]]] -= cv[e] * t;
         }
-        ops += end - ucStart[q];
-      }
-    }
-    for (int e = 0; e < etas; e++) {
-      int r = etaPos[e];
-      double yr = y[r];
-      if (yr != 0) {
-        yr /= etaPivot[e];
-        y[r] = yr;
-        int end = etaStart[e + 1];
-        for (int f = etaStart[e]; f < end; f++) {
-          y[etaIdx[f]] -= etaVal[f] * yr;
-        }
-        ops += end - etaStart[e];
+        ops += end;
       }
     }
   }
@@ -671,28 +720,34 @@ final class BasisLu {
    * @param y the solution, by row
    */
   void btran(double[] z, double[] y) {
-    ops += 2L * m;
-    for (int e = etas - 1; e >= 0; e--) {
-      int r = etaPos[e];
-      double v = z[r];
-      int end = etaStart[e + 1];
-      for (int f = etaStart[e]; f < end; f++) {
-        v -= etaVal[f] * z[etaIdx[f]];
+    ops += 2L * m + orderLen;
+    for (int idx = 0; idx < orderLen; idx++) {
+      int s = order[idx];
+      if (rank[s] != idx) {
+        continue;
       }
-      ops += end - etaStart[e];
-      z[r] = v / etaPivot[e];
-    }
-    for (int s = 0; s < m; s++) {
       int q = pivotPos[s];
       double t = z[q] / diag[s];
       z[q] = 0;
       y[pivotRow[s]] = t;
       if (t != 0) {
-        int end = uStart[s + 1];
-        for (int e = uStart[s]; e < end; e++) {
-          z[uPos[e]] -= uVal[e] * t;
+        int[] rp = urPos[s];
+        double[] rv = urVal[s];
+        int end = urLen[s];
+        for (int e = 0; e < end; e++) {
+          z[rp[e]] -= rv[e] * t;
         }
-        ops += end - uStart[s];
+        ops += end;
+      }
+    }
+    for (int e = etas - 1; e >= 0; e--) {
+      double w = y[pivotRow[etaStep[e]]];
+      if (w != 0) {
+        int end = etaStart[e + 1];
+        for (int f = etaStart[e]; f < end; f++) {
+          y[pivotRow[etaIdx[f]]] -= etaVal[f] * w;
+        }
+        ops += end - etaStart[e];
       }
     }
     for (int s = m - 1; s >= 0; s--) {
@@ -709,40 +764,158 @@ final class BasisLu {
   }
 
   /**
-   * Replaces the column of B at position r by the column whose solve {@code B^-1 a_q} is alpha.
+   * Replaces the column of B at position r by the column last solved with {@link #ftranColumn}
+   * (Forrest-Tomlin): the spike becomes column r of U, the row of its step is eliminated by the
+   * rows of the later steps (a row transformation kept with the updates), and the step moves to the
+   * end of the order with the new pivot.
    *
    * @param r the position
-   * @param alpha {@code B^-1 a_q}, by position
+   * @return false when the new pivot is too small, so the basis must be factorized again
    */
-  void update(int r, double[] alpha) {
-    int start = etaStart[etas];
-    int nz = 0;
-    for (int i = 0; i < m; i++) {
-      if (i != r && Math.abs(alpha[i]) > DROP) {
-        nz++;
-      }
+  boolean update(int r) {
+    int t = posStep[r];
+    // the old column r leaves the rows of U
+    for (int e = 0; e < ucLen[r]; e++) {
+      removeFromRow(ucStep[r][e], r);
     }
-    if (etas + 1 >= etaPos.length) {
-      etaPos = Arrays.copyOf(etaPos, etaPos.length * 2);
-      etaPivot = Arrays.copyOf(etaPivot, etaPivot.length * 2);
+    uNonzeros -= ucLen[r];
+    ucLen[r] = 0;
+    // the row of t, scattered, leaves the columns of U
+    if (rowWork == null) {
+      rowWork = new double[m];
+    }
+    for (int e = 0; e < urLen[t]; e++) {
+      int k = urPos[t][e];
+      rowWork[k] = urVal[t][e];
+      removeFromColumn(k, t);
+    }
+    uNonzeros -= urLen[t];
+    ops += urLen[t] + m;
+    urLen[t] = 0;
+    // eliminate it with the rows of the steps after t, in their order; the spike entries of those
+    // rows give the new pivot
+    double pivot = spike[pivotRow[t]];
+    if (etas + 1 >= etaStep.length) {
+      etaStep = Arrays.copyOf(etaStep, etaStep.length * 2);
       etaStart = Arrays.copyOf(etaStart, etaStart.length * 2 + 1);
     }
-    if (start + nz > etaIdx.length) {
-      int size = Math.max(etaIdx.length * 2, start + nz);
-      etaIdx = Arrays.copyOf(etaIdx, size);
-      etaVal = Arrays.copyOf(etaVal, size);
-    }
-    int f = start;
-    for (int i = 0; i < m; i++) {
-      if (i != r && Math.abs(alpha[i]) > DROP) {
-        etaIdx[f] = i;
-        etaVal[f++] = alpha[i];
+    int f = etaStart[etas];
+    for (int idx = rank[t] + 1; idx < orderLen; idx++) {
+      int u = order[idx];
+      if (rank[u] != idx) {
+        continue;
       }
+      int k = pivotPos[u];
+      double v = rowWork[k];
+      if (v == 0) {
+        continue;
+      }
+      rowWork[k] = 0;
+      double mu = v / diag[u];
+      if (Math.abs(mu) <= DROP) {
+        continue;
+      }
+      if (f == etaIdx.length) {
+        etaIdx = Arrays.copyOf(etaIdx, f * 2);
+        etaVal = Arrays.copyOf(etaVal, f * 2);
+      }
+      etaIdx[f] = u;
+      etaVal[f++] = mu;
+      int[] rp = urPos[u];
+      double[] rv = urVal[u];
+      for (int e = 0; e < urLen[u]; e++) {
+        rowWork[rp[e]] -= mu * rv[e];
+      }
+      ops += urLen[u];
+      pivot -= mu * spike[pivotRow[u]];
     }
-    etaPos[etas] = r;
-    etaPivot[etas] = alpha[r];
+    etaStep[etas] = t;
     etas++;
     etaStart[etas] = f;
-    ops += m;
+    // the spike is the new column r, above the pivot of t, which is last now
+    for (int idx = 0; idx < orderLen; idx++) {
+      int s = order[idx];
+      if (rank[s] != idx || s == t) {
+        continue;
+      }
+      double v = spike[pivotRow[s]];
+      if (Math.abs(v) > DROP) {
+        addToColumn(r, s, v);
+        addToRow(s, r, v);
+        uNonzeros++;
+      }
+    }
+    ops += orderLen;
+    diag[t] = pivot;
+    if (orderLen == order.length) {
+      compactOrder();
+    }
+    order[orderLen] = t;
+    rank[t] = orderLen++;
+    return Math.abs(pivot) > 1e-11;
+  }
+
+  // drops the dead slots of the order
+  private void compactOrder() {
+    int k = 0;
+    for (int idx = 0; idx < orderLen; idx++) {
+      int s = order[idx];
+      if (rank[s] == idx) {
+        order[k] = s;
+        rank[s] = k++;
+      }
+    }
+    orderLen = k;
+    if (orderLen + 1 >= order.length) {
+      order = Arrays.copyOf(order, order.length * 2);
+    }
+  }
+
+  private void removeFromRow(int s, int k) {
+    int[] rp = urPos[s];
+    for (int e = 0; e < urLen[s]; e++) {
+      if (rp[e] == k) {
+        int last = --urLen[s];
+        rp[e] = rp[last];
+        urVal[s][e] = urVal[s][last];
+        ops += e;
+        return;
+      }
+    }
+    ops += urLen[s];
+  }
+
+  private void removeFromColumn(int k, int s) {
+    int[] cs = ucStep[k];
+    for (int e = 0; e < ucLen[k]; e++) {
+      if (cs[e] == s) {
+        int last = --ucLen[k];
+        cs[e] = cs[last];
+        ucVal[k][e] = ucVal[k][last];
+        ops += e;
+        return;
+      }
+    }
+    ops += ucLen[k];
+  }
+
+  private void addToRow(int s, int k, double v) {
+    if (urLen[s] == urPos[s].length) {
+      int size = Math.max(4, urLen[s] * 2);
+      urPos[s] = Arrays.copyOf(urPos[s], size);
+      urVal[s] = Arrays.copyOf(urVal[s], size);
+    }
+    urPos[s][urLen[s]] = k;
+    urVal[s][urLen[s]++] = v;
+  }
+
+  private void addToColumn(int k, int s, double v) {
+    if (ucLen[k] == ucStep[k].length) {
+      int size = Math.max(4, ucLen[k] * 2);
+      ucStep[k] = Arrays.copyOf(ucStep[k], size);
+      ucVal[k] = Arrays.copyOf(ucVal[k], size);
+    }
+    ucStep[k][ucLen[k]] = s;
+    ucVal[k][ucLen[k]++] = v;
   }
 }
