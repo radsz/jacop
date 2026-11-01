@@ -136,6 +136,12 @@ public final class VeriPbProof implements ProofOutput, AutoCloseable {
 
   @Override
   public void add(int[] lits, int from, int n) {
+    if (!started && n > 0) {
+      // a clause simplified by the units of the root before the proof starts: those units are
+      // derived only after the model, so the clause is left as the model states it, which unit
+      // propagation with them uses the same way
+      return;
+    }
     line.setLength(0);
     line.append("rup");
     for (int k = from; k < from + n; k++) {

@@ -1137,6 +1137,42 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
   }
 
+  // the root propagation fixes b0, so the first clause is the unit b3 and the solver keeps b1 or b2
+  // only of the second: that clause is not a rup step before the root is derived
+  // (balance_partition)
+  @Test
+  void clauseSimplifiedByTheRootIsProved() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 2), new IntVar(store, "x1", 1, 2), new IntVar(store, "x2", 1, 4)
+    };
+    IntVar[] b = new IntVar[4];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 10);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    // x2 >= 3 is a pol step, not unit propagation, and gives b0 = 0
+    store.imposeWithConsistency(new Alldistinct(x));
+    store.imposeWithConsistency(
+        new LinearInt(new IntVar[] {b[0], x[2]}, new int[] {1, 1}, "<=", 3));
+    store.imposeWithConsistency(
+        new LinearInt(new IntVar[] {b[1], b[2], obj}, new int[] {2, 1, -1}, "==", 0));
+    assertThat(b[0].max()).isZero();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    lcg.addClause(new IntVar[] {b[0], b[3]}, new IntVar[0]);
+    lcg.addClause(new IntVar[] {b[1], b[2]}, new IntVar[] {b[3]});
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(1);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("root changes derived");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 1 1");
+  }
+
   // five rectangles in a 6 x 4 box, found by search; with each "before" literal as a linear line
   // over the order literals, a reason that moves a bound through it is not a rup step
   @Test
