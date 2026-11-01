@@ -79,9 +79,11 @@ import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
@@ -91,6 +93,7 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.diffn.Nooverlap;
@@ -801,6 +804,36 @@ class VeriPbProofTest {
           store.impose(new XneqY(q[0], q[1]));
           IntVar obj = new IntVar(store, "obj", -200, 0);
           store.impose(new XplusYeqC(obj, profit, 0));
+          return obj;
+        });
+  }
+
+  // bin packing with the rules of the load sums only, the number of bins used minimised
+  @Test
+  void binpackingIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 5 + random.nextInt(4);
+          int m = 3 + random.nextInt(2);
+          IntVar[] bin = new IntVar[n];
+          int[] w = new int[n];
+          for (int i = 0; i < n; i++) {
+            bin[i] = new IntVar(store, "b" + i, 1, m);
+            w[i] = 1 + random.nextInt(6);
+          }
+          IntVar[] load = new IntVar[m];
+          IntVar[] used = new IntVar[m];
+          int cap = Arrays.stream(w).sum() / m + 2 + random.nextInt(4);
+          for (int j = 0; j < m; j++) {
+            load[j] = new IntVar(store, "l" + j, 0, cap);
+            load[j].domain.inComplement(0, load[j], 1 + random.nextInt(cap));
+            used[j] = new IntVar(store, "u" + j, 0, 1);
+            store.impose(new Reified(new XgtC(load[j], 0), used[j]));
+          }
+          store.impose(new Binpacking(bin, load, w, 1).linearRulesOnly());
+          IntVar obj = new IntVar(store, "obj", 0, m);
+          store.impose(new SumInt(used, "==", obj));
           return obj;
         });
   }
