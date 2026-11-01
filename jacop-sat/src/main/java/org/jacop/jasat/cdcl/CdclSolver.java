@@ -296,6 +296,8 @@ public final class CdclSolver {
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
   private ProofOutput proof;
+  // the root facts at the start of the trail that the proof has as units of their own
+  private int rootFactsLogged;
   // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
   private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
@@ -3133,8 +3135,13 @@ public final class CdclSolver {
       }
     }
     for (int i = 0; i < trailSize; i++) {
+      if (proof != null && i >= rootFactsLogged) {
+        // the root facts outlive their reasons, which elimination and keepLearnts may delete
+        proof.add(trail, i, 1);
+      }
       reason[trail[i] >> 1] = NO_REASON;
     }
+    rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);

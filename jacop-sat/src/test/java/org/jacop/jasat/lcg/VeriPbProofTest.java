@@ -68,6 +68,7 @@ import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.diffn.Nooverlap;
@@ -1090,4 +1091,38 @@ class VeriPbProofTest {
         .hasMessageContaining("Not");
   }
 
+  /**
+   * Elimination rounds during the search delete the learnt clauses satisfied at the root, among
+   * them the binary reasons of root facts that precedences give; the proof keeps those facts as
+   * units of their own, since a deleted reason takes its fact out of a VeriPB database.
+   */
+  @Test
+  void rootFactsOutliveEliminationRounds() {
+    // seed 27 has such a fact (found by a sweep over seeds)
+    Random random = new Random(27);
+    Store store = new Store();
+    int n = 9;
+    IntVar[] s = new IntVar[n];
+    IntVar[] d = new IntVar[n];
+    IntVar[] r = new IntVar[n];
+    IntVar end = new IntVar(store, "end", 0, 60);
+    for (int i = 0; i < n; i++) {
+      int duration = 1 + random.nextInt(5);
+      s[i] = new IntVar(store, "s" + i, 0, 60);
+      d[i] = new IntVar(store, duration, duration);
+      int use = 1 + random.nextInt(3);
+      r[i] = new IntVar(store, use, use);
+      store.impose(new XplusClteqZ(s[i], duration, end));
+      if (i > 0 && random.nextBoolean()) {
+        int j = random.nextInt(i);
+        store.impose(new XplusClteqZ(s[j], d[j].min(), s[i]));
+      }
+    }
+    store.impose(new CumulativeBasic(s, d, r, new IntVar(store, "cap", 4, 4)));
+    LcgSolver lcg = withProof(store);
+    lcg.sat().setEliminationInterval(3);
+    assertThat(lcg.minimize(end)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+  }
 }
