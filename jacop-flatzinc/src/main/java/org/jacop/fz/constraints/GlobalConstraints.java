@@ -1576,6 +1576,122 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   /**
+   * It posts a short table: x is one of the rows of the table, where the value star in a row
+   * matches any value. The rows that cannot match the domains are dropped and a variable that
+   * occurs twice is kept once, so HybridTable sees distinct variables.
+   *
+   * @param node the constraint node: x, the rows flattened row by row, and star.
+   */
+  void gen_jacop_short_table_int(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int star = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int size = v.length;
+    if (size == 0) {
+      if (tbl.length == 0) {
+        throw Store.failException;
+      }
+      return;
+    }
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      position.putIfAbsent(x, position.size());
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] row = new int[nv.length];
+      Arrays.fill(row, star);
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        if (value == star) {
+          continue;
+        }
+        int k = position.get(v[j]);
+        if (!v[j].domain.contains(value) || row[k] != star && row[k] != value) {
+          possible = false;
+        }
+        row[k] = value;
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty()) {
+      throw Store.failException;
+    }
+    for (int[] row : kept) {
+      if (Arrays.stream(row).allMatch(value -> value == star)) {
+        // a row of stars matches every assignment
+        return;
+      }
+    }
+    if (nv.length == 1) {
+      IntervalDomain d = new IntervalDomain();
+      for (int[] row : kept) {
+        d.unionAdapt(row[0], row[0]);
+      }
+      nv[0].domain.in(store.level, nv[0], d);
+      return;
+    }
+    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+  }
+
+  /**
+   * It posts a negative table: x is none of the rows of the table. The rows that cannot match the
+   * domains are dropped and a variable that occurs twice is kept once.
+   *
+   * @param node the constraint node: x and the rows flattened row by row.
+   */
+  void gen_jacop_negative_table_int(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int size = v.length;
+    if (size == 0) {
+      if (tbl.length > 0) {
+        throw Store.failException;
+      }
+      return;
+    }
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      position.putIfAbsent(x, position.size());
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] row = new int[nv.length];
+      boolean[] set = new boolean[nv.length];
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        int k = position.get(v[j]);
+        if (!v[j].domain.contains(value) || set[k] && row[k] != value) {
+          possible = false;
+        }
+        row[k] = value;
+        set[k] = true;
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty()) {
+      return;
+    }
+    if (nv.length == 1) {
+      IntervalDomain d = new IntervalDomain();
+      for (int[] row : kept) {
+        d.unionAdapt(row[0], row[0]);
+      }
+      nv[0].domain.in(store.level, nv[0], nv[0].domain.subtract(d));
+      return;
+    }
+    support.pose(new NegativeTable(nv, deduplicateTableRows(kept.toArray(new int[0][]))));
+  }
+
+  /**
    * It posts a reified (b = 1 if and only if x is a tuple) or half-reified (b = 1 implies that x is
    * a tuple) table constraint.
    *
