@@ -84,6 +84,7 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -1441,6 +1442,37 @@ class VeriPbProofTest {
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion)
         .isEqualTo("BOUNDS " + (sorted[0] + sorted[1]) + " " + (sorted[0] + sorted[1]));
+  }
+
+  /**
+   * A long Boolean sum imposed after the solver propagated the store watches no value before the
+   * search propagates it, so it was in no list of the store when the model was written (hrc
+   * exp1-1-945, whose flattened sums are imposed late); the store now keeps such constraints.
+   */
+  @Test
+  void aLateLongBooleanSumIsInTheModel() {
+    Store store = new Store();
+    int n = LinearBool.WATCH_MIN_LENGTH;
+    IntVar[] x = new IntVar[n];
+    int[] ones = new int[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      ones[i] = 1;
+    }
+    // b = 1 sets ten of them, which the sum refutes: the optimum obj = 1 - b is 1
+    IntVar b = new IntVar(store, "b", 0, 1);
+    for (int i = 0; i < 10; i++) {
+      store.impose(new XeqY(x[3 * i % n], b));
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 1);
+    store.impose(new XplusYeqC(obj, b, 1));
+    LcgSolver lcg = withProof(store);
+    store.impose(new LinearBool(x, ones, "<=", 9));
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(1);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 1 1");
   }
 
   @Test

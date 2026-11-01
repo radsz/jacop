@@ -629,8 +629,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   /**
    * Returns every constraint of the store, for the OPB model: those of the variables' domains, the
-   * watched-literal constraints and the value watchers (such as a LinearBool of many terms), which
-   * the store's constraint list does not have.
+   * watched-literal constraints, the value watchers and the constraints registered as unlisted
+   * (such as a LinearBool of many terms, which watches values only once it propagates), which the
+   * store's constraint list does not have.
    */
   private Set<Constraint> proofConstraints() {
     Set<Constraint> constraints = new LinkedHashSet<>(store.getConstraints());
@@ -638,6 +639,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (int i = 0; i < store.size(); i++) {
       constraints.addAll(store.valueWatchers(store.vars[i]));
     }
+    constraints.addAll(store.unlistedConstraints());
     return constraints;
   }
 
@@ -3792,7 +3794,7 @@ public final class LcgSolver implements ExternalPropagator {
       for (int k = 0; k < clause.length; k++) {
         internal[k] = clause[k] > 0 ? 2 * (clause[k] - 1) : 2 * (-clause[k] - 1) + 1;
       }
-      proof.comment("conflict clause");
+      proof.comment("conflict clause of " + store.recentlyFailedConstraint);
       proof.add(internal, 0, internal.length);
     }
     pushedReason = clause;
