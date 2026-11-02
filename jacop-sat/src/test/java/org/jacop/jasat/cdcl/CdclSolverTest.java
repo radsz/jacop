@@ -114,6 +114,14 @@ class CdclSolverTest {
   }
 
   @Test
+  void vivificationDoesNotLeaveADeletedClauseAsAReason() throws IOException {
+    // A clause that vivification shortened was deleted but kept its watches until the end of the
+    // round, so the propagations of the round could still make it the reason of a literal: the
+    // self-check reported "reason of -36 deleted" (CdclFuzzTest, seed 7263191).
+    assertEquals(CdclSolver.SAT, CdclFuzzTest.replay(7_263_191L));
+  }
+
+  @Test
   void randomFormulasAgreeWithBruteForce() {
     Random rnd = new Random(42);
     for (int run = 0; run < 3000; run++) {
