@@ -39,6 +39,10 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
@@ -51,7 +55,8 @@ import org.jacop.lcg.PbModel;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class AllEqual extends PrimitiveConstraint implements Copyable<AllEqual>, PbEncodable {
+public class AllEqual extends PrimitiveConstraint
+    implements Copyable<AllEqual>, PbEncodable, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -99,6 +104,82 @@ public class AllEqual extends PrimitiveConstraint implements Copyable<AllEqual>,
 
       x[i].domain.in(store.level, x[i], x[i + 1].domain);
     }
+  }
+
+  /**
+   * Explains an atom of one variable by the others: a removed value is out of another variable, a
+   * moved bound passed only values out of other variables (one variable's bound when it covers them
+   * all).
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar v = trail.variable(entry);
+    int kind = trail.kind(entry);
+    if (kind != AtomicTrail.NE) {
+      // a single other variable whose bound already passes the new one
+      int b = trail.value(entry);
+      for (IntVar y : x) {
+        if (y != v
+            && (kind == AtomicTrail.GE
+                ? trail.minBefore(y, entry) >= b
+                : trail.maxBefore(y, entry) <= b)) {
+          if (kind == AtomicTrail.GE) {
+            trail.addLowerBound(y, entry, out);
+          } else {
+            trail.addUpperBound(y, entry, out);
+          }
+          return true;
+        }
+      }
+    }
+    return DomainCover.entry(trail, entry, (u, o) -> excludedElsewhere(trail, v, u, entry, o), out);
+  }
+
+  /**
+   * Explains a failure: the bounds that leave the largest minimum above the smallest maximum, or
+   * every value between them out of some variable.
+   */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (n < 2) {
+      return false;
+    }
+    int position = trail.size();
+    IntVar low = x[0];
+    IntVar high = x[0];
+    for (IntVar y : x) {
+      if (trail.minBefore(y, position) > trail.minBefore(low, position)) {
+        low = y;
+      }
+      if (trail.maxBefore(y, position) < trail.maxBefore(high, position)) {
+        high = y;
+      }
+    }
+    int lo = trail.minBefore(low, position);
+    int hi = trail.maxBefore(high, position);
+    trail.addLowerBound(low, position, out);
+    trail.addUpperBound(high, position, out);
+    final IntVar first = low;
+    return lo > hi
+        || DomainCover.range(
+            trail,
+            low,
+            position,
+            lo,
+            hi,
+            (u, o) -> excludedElsewhere(trail, first, u, position, o),
+            out);
+  }
+
+  // whether some variable other than v excludes u before the position; its entry goes to out
+  private boolean excludedElsewhere(
+      AtomicTrail trail, IntVar v, int u, int position, EntryList out) {
+    for (IntVar y : x) {
+      if (y != v && trail.excludedBefore(y, u, position, out)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
