@@ -75,6 +75,8 @@ public class Options {
   boolean interval;
   boolean precisionDefined;
   double precision;
+  // --gap, as a fraction; negative when off
+  double gap = -1;
   double format;
   boolean boundConsistency;
   boolean runSearch = true;
@@ -170,6 +172,12 @@ public class Options {
                 lns*, ls*, symmetry*, probe*, portfolio*, ...). -debug together with -s does the same.
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
+            --gap <percent>
+                optimisation: stop once the best solution is within <percent> % of the
+                objective's proved bound, |best - bound| <= percent/100 * |best|, as MIP solvers'
+                relative gap. The best solution is printed without "==========", since it is not
+                proved optimal. With -s, every improvement of the bound is printed at once as
+                %%%mzn-stat: objectiveBound=<value>.
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "new" (default), "legacy"
             --default-search <value> search for a model without search annotation; one of
@@ -371,6 +379,7 @@ public class Options {
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
+      case "--gap" -> i = handleGap(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
       case "--precision" -> i = handlePrecision(args, i);
@@ -698,6 +707,24 @@ public class Options {
     return i + 1;
   }
 
+  private int handleGap(String[] args, int i) {
+    if (i + 1 >= args.length) {
+      throw new IllegalArgumentException("--gap needs a percentage");
+    }
+    double percent;
+    try {
+      percent = Double.parseDouble(args[++i]);
+    } catch (NumberFormatException _) {
+      throw new IllegalArgumentException("--gap " + args[i] + ": not a number");
+    }
+    if (percent < 0 || Double.isNaN(percent) || Double.isInfinite(percent)) {
+      throw new IllegalArgumentException(
+          "--gap " + args[i] + ": must be a percentage of 0 or more");
+    }
+    gap = percent / 100;
+    return i + 1;
+  }
+
   private int handleFormat(String[] args, int i) {
     format = Double.parseDouble(args[++i]);
     if (format >= 0) {
@@ -838,6 +865,15 @@ public class Options {
    */
   public boolean getVerbose() {
     return verbose;
+  }
+
+  /**
+   * The relative optimality gap at which optimisation stops (--gap), as a fraction.
+   *
+   * @return the gap, or a negative number when there is none
+   */
+  public double gap() {
+    return gap;
   }
 
   /**
