@@ -1680,6 +1680,19 @@ Version 5.0 (unreleased)
      before), Benzenoide-06, MaximumDensityOscillatingLife-6-4 and
      RollerSplat-05c-70 get solutions; no instance lost an answer.
 
+112. LCG explanations of XmulYeqZ with one wide factor. A removed value of
+     z looked for supports over x even when y was narrower, and a removed
+     value of a factor over the other factor even when z was narrower, so
+     a factor wider than 1,024 values made the reason generic (wordpress:
+     price in 116..4600 times a 0..1 occupancy, 98k generic reasons of
+     1,355 atoms on average in 30 s). The narrower range is enumerated
+     now, and removals of more than 64 values are explained value by value
+     while that stays under 65,536 support checks. wordpress: generic
+     reasons 0, 2 atoms on average, and with --lcg the optimum 3580 is
+     proved in 57 s (4406, unproved, at 60 s before). Wide set (220,
+     60 s): --lcg 4 better / 4 worse, solved 117 to 118, --lcg -f 14 / 14,
+     solved 138 to 140.
+
 Version 4.11
 =============
 
