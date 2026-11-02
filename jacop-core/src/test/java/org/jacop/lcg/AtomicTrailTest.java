@@ -39,6 +39,7 @@ import java.util.Random;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.ArgMax;
@@ -387,6 +388,11 @@ class AtomicTrailTest {
                   t -> Arrays.stream(t).filter(w -> w == value).count() > counter,
                   v);
         });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
+          return new Model(new AllEqual(v), t -> t[0] == t[1] && t[1] == t[2], v);
+        });
     return m;
   }
 
@@ -626,6 +632,45 @@ class AtomicTrailTest {
     assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
     assertThat(reason.size()).isEqualTo(1);
     assertThat(reason.get(0)).isEqualTo(decision);
+    trail.detach();
+  }
+
+  /**
+   * all_equal(a, b, c) (generalized-peacable-queens): a != 2 removes 2 from b and c, and b >= 3
+   * moves a and c to 3. Each atom is explained by the same atom of one other variable instead of
+   * the generic reason that cites the domains of all three.
+   */
+  @Test
+  void allEqualHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar b = new IntVar(store, "b", 0, 5);
+    IntVar c = new IntVar(store, "c", 0, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new AllEqual(new IntVar[] {a, b, c}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a.domain.inComplement(store.level, a, 2);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    b.domain.inMin(store.level, b, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.min()).isEqualTo(3);
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == null || trail.variable(e) == a && trail.kind(e) == AtomicTrail.NE) {
+        continue;
+      }
+      if (trail.variable(e) == b && trail.kind(e) == AtomicTrail.GE) {
+        continue;
+      }
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(e, reason)).isTrue();
+      assertThat(trail.replayed()).as("explained by AllEqual, not by its replay").isFalse();
+      reason.sortUnique(0);
+      assertThat(reason.size()).as("reason of %s", trail.atomString(e)).isEqualTo(1);
+      assertThat(trail.kind(reason.get(0))).isEqualTo(trail.kind(e));
+      assertThat(trail.value(reason.get(0))).isEqualTo(trail.value(e));
+    }
     trail.detach();
   }
 
