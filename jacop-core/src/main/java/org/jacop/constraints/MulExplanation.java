@@ -60,6 +60,12 @@ final class MulExplanation {
   /** The widest range of a variable enumerated for supports. */
   private static final int RANGE_LIMIT = 1024;
 
+  /**
+   * The most support checks of one explanation when more than {@link #REMOVED_LIMIT} values are
+   * removed: removed values times the range enumerated for each.
+   */
+  private static final long WORK_LIMIT = 1 << 16;
+
   private final AtomicTrail trail;
   private final IntVar x;
   private final IntVar y;
@@ -105,7 +111,7 @@ final class MulExplanation {
     if (boundsExclude(roles, lo, hi, out)) {
       return true;
     }
-    if (hi - lo >= REMOVED_LIMIT) {
+    if (hi - lo >= REMOVED_LIMIT && (hi - lo + 1) * width(roles) > WORK_LIMIT) {
       out.truncate(mark);
       return false;
     }
@@ -134,10 +140,10 @@ final class MulExplanation {
     for (IntVar v : vars) {
       int lo = trail.minBefore(v, position);
       int hi = trail.maxBefore(v, position);
-      if ((long) hi - lo >= REMOVED_LIMIT) {
+      int roles = (v == z ? 1 : 0) | (v == x ? 2 : 0) | (v == y ? 4 : 0);
+      if ((long) hi - lo >= REMOVED_LIMIT && ((long) hi - lo + 1) * width(roles) > WORK_LIMIT) {
         continue;
       }
-      int roles = (v == z ? 1 : 0) | (v == x ? 2 : 0) | (v == y ? 4 : 0);
       addBounds(v, out);
       boolean all = true;
       for (int w = lo; w <= hi && all; w++) {
@@ -279,20 +285,22 @@ final class MulExplanation {
     return unsupportedFactor(w, (roles & 2) == 0 ? x : y, out);
   }
 
-  // z = w: for each value a of x, y = w / a is gone
+  // z = w: for each value a of the narrower factor, the other factor's w / a is gone
   private boolean unsupportedProduct(int w, EntryList out) {
-    int xl = trail.minBefore(x, position);
-    int xh = trail.maxBefore(x, position);
-    if ((long) xh - xl >= RANGE_LIMIT) {
+    IntVar f = range(y) < range(x) ? y : x;
+    IntVar g = f == x ? y : x;
+    int fl = trail.minBefore(f, position);
+    int fh = trail.maxBefore(f, position);
+    if ((long) fh - fl >= RANGE_LIMIT) {
       return false;
     }
-    addBounds(x, out);
-    for (int a = xl; a <= xh; a++) {
+    addBounds(f, out);
+    for (int a = fl; a <= fh; a++) {
       if (a == 0 ? w == 0 : w % a == 0) {
-        if (trail.excludedBefore(x, a, position, out)) {
+        if (trail.excludedBefore(f, a, position, out)) {
           continue;
         }
-        if (a == 0 || !trail.excludedBefore(y, w / a, position, out)) {
+        if (a == 0 || !trail.excludedBefore(g, w / a, position, out)) {
           return false;
         }
       }
@@ -300,10 +308,14 @@ final class MulExplanation {
     return true;
   }
 
-  // the factor is w, other is the other factor: for each value b of other, z = w * b is gone
+  // the factor is w, other is the other factor: for each value b of other, z = w * b is gone; or,
+  // when z is narrower, for each value c of z that w divides, other's c / w is gone
   private boolean unsupportedFactor(int w, IntVar other, EntryList out) {
     int ol = trail.minBefore(other, position);
     int oh = trail.maxBefore(other, position);
+    if (w != 0 && range(z) < (long) oh - ol) {
+      return unsupportedQuotient(w, other, out);
+    }
     if ((long) oh - ol >= RANGE_LIMIT) {
       return false;
     }
@@ -321,6 +333,38 @@ final class MulExplanation {
       }
     }
     return true;
+  }
+
+  // the factor is w != 0: for each value c of z that w divides, other = c / w is gone
+  private boolean unsupportedQuotient(int w, IntVar other, EntryList out) {
+    int zl = trail.minBefore(z, position);
+    int zh = trail.maxBefore(z, position);
+    if ((long) zh - zl >= RANGE_LIMIT) {
+      return false;
+    }
+    addBounds(z, out);
+    for (int c = zl; c <= zh; c++) {
+      if (c % w != 0 || trail.excludedBefore(z, c, position, out)) {
+        continue;
+      }
+      if (!trail.excludedBefore(other, c / w, position, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // the width of the range enumerated to check one value of the variable in the given roles
+  private long width(int roles) {
+    if ((roles & 1) != 0) {
+      return Math.min(range(x), range(y)) + 1;
+    }
+    IntVar other = (roles & 2) == 0 ? x : y;
+    return Math.min(range(other), range(z)) + 1;
+  }
+
+  private long range(IntVar v) {
+    return (long) trail.maxBefore(v, position) - trail.minBefore(v, position);
   }
 
   private void addBounds(IntVar v, EntryList out) {
