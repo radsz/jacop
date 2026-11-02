@@ -561,6 +561,9 @@ public class InterDistance extends Constraint implements SatisfiedPresent, Copya
     int need = 2 * ni + nt;
     if (coords.length < need) {
       coords = new long[need];
+    }
+    // skip has one entry more than the coordinates, the end of the last segment
+    if (skip.length < need + 1) {
       skip = new int[need + 1];
     }
     nc = 0;
