@@ -52,6 +52,7 @@ import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
@@ -393,6 +394,13 @@ class AtomicTrailTest {
           IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
           return new Model(new AllEqual(v), t -> t[0] == t[1] && t[1] == t[2], v);
         });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "e", rnd)};
+          IntVar[] list =
+              rnd.nextBoolean() ? new IntVar[] {v[0], v[1]} : new IntVar[] {v[0], v[1], v[0]};
+          return new Model(new Member(list, v[2]), t -> t[2] == t[0] || t[2] == t[1], v);
+        });
     return m;
   }
 
@@ -671,6 +679,49 @@ class AtomicTrailTest {
       assertThat(trail.kind(reason.get(0))).isEqualTo(trail.kind(e));
       assertThat(trail.value(reason.get(0))).isEqualTo(trail.value(e));
     }
+    trail.detach();
+  }
+
+  /**
+   * Member([a, b, c], e): c's bounds and holes bound e, and once a and b are apart from e, c is the
+   * last candidate and takes e's bounds. Each reason is one decision, not the generic one.
+   */
+  @Test
+  void memberHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 2);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar c = new IntVar(store, "c", 0, 9);
+    IntVar e = new IntVar(store, "e", 0, 9);
+    AtomicTrail trail = new AtomicTrail(store);
+    Member member = new Member(new IntVar[] {a, b, c}, e);
+    store.impose(member);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    c.domain.inMax(store.level, c, 5);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    c.domain.inComplement(store.level, c, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    e.domain.inMin(store.level, e, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(e.max()).isEqualTo(5);
+    assertThat(e.domain.contains(3)).isFalse();
+    assertThat(c.min()).isEqualTo(4);
+    int explained = 0;
+    for (int entry = 0; entry < trail.size(); entry++) {
+      if (trail.reason(entry) != member) {
+        continue;
+      }
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(entry, reason)).isTrue();
+      assertThat(trail.replayed()).as("explained by Member, not by its replay").isFalse();
+      reason.sortUnique(0);
+      assertThat(reason.size()).as("reason of %s", trail.atomString(entry)).isEqualTo(1);
+      explained++;
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(3);
     trail.detach();
   }
 
