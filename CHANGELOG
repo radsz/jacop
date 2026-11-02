@@ -1705,7 +1705,7 @@ Version 5.0 (unreleased)
      60 s): --lcg 4 better / 4 worse, solved 117 to 118, --lcg -f 14 / 14,
      solved 138 to 140.
 
-113. LCG explanations of LexChain with a wide variable. The explanation
+114. LCG explanations of LexChain with a wide variable. The explanation
      read each vector's domains by enumerating the root domains and gave
      up on a variable of more than 10,000 values, so the symmetry-breaking
      chain of wordpress (prices up to 21,278) had only generic reasons of
@@ -1714,6 +1714,17 @@ Version 5.0 (unreleased)
      0, failures 35 atoms instead of 11,600, --lcg optimum proved in 33 s
      instead of 46 s. Wide set (220, 60 s): on the 10 instances that use
      LexChain --lcg 2 better / 0 worse, --lcg -f unchanged.
+
+115. LCG explanations of AllEqual. A removed value or moved bound of one
+     variable is explained by the same atom of another variable (one
+     bound when it covers the values passed, else the removal of each
+     value elsewhere), a failure by the bounds that cross or the values
+     between them removed elsewhere. Before, every reason was generic
+     (the domains of all variables). generalized-peacable-queens: AllEqual
+     reasons 94 % generic with 9.4 atoms to 0 % with 1.0, failures 8.1 to
+     2.0 atoms, 6 % more nodes in 30 s. Wide set (220, 60 s): --lcg
+     6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
+     instance using AllEqual keeps its objective in both modes.
 
 Version 4.11
 =============
