@@ -47,6 +47,7 @@ import org.jacop.constraints.AtMost;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
@@ -588,6 +589,43 @@ class AtomicTrailTest {
       assertThat(trail.variable(reason.get(k))).isNotSameAs(z);
     }
     assertThat(citesHole).isTrue();
+    trail.detach();
+  }
+
+  /**
+   * [a0, a1] lex<= [b0, b1] with a1 in 0..20000 (wordpress: prices in the symmetry-breaking chain):
+   * a0 >= 2 propagates b0 >= 2, explained by the chain from the domains on the trail. Before, a
+   * vector with more than 10,000 root values made every reason generic.
+   */
+  @Test
+  void lexChainWithAWideVariableHasItsOwnReason() {
+    Store store = new Store();
+    IntVar a0 = new IntVar(store, "a0", 0, 3);
+    IntVar a1 = new IntVar(store, "a1", 0, 20000);
+    IntVar b0 = new IntVar(store, "b0", 0, 3);
+    IntVar b1 = new IntVar(store, "b1", 0, 3);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(new IntVar[][] {{a0, a1}, {b0, b1}}, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a0.domain.inMin(store.level, a0, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.min()).isEqualTo(2);
+    int bound = -1;
+    int decision = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == b0 && trail.kind(e) == AtomicTrail.GE) {
+        bound = e;
+      }
+      if (trail.variable(e) == a0 && trail.kind(e) == AtomicTrail.GE) {
+        decision = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(bound, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(decision);
     trail.detach();
   }
 

@@ -32,7 +32,6 @@ package org.jacop.lcg;
 
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.IntervalDomain;
 
 /**
  * Explanations of a chain of lexicographically ordered vectors x[0] &lt;= x[1] &lt;= ... (or &lt;)
@@ -51,7 +50,7 @@ import org.jacop.core.IntervalDomain;
  */
 public final class LexChainExplanation {
 
-  // domains larger than this are left to the generic reason
+  // more removed values than this are left to the generic reason
   private static final int MAX_VALUES = 10_000;
 
   private final AtomicTrail trail;
@@ -61,7 +60,6 @@ public final class LexChainExplanation {
   private final int n;
   private final int position;
   private final IntDomain[][] domain;
-  private final EntryList scratch = new EntryList();
 
   private LexChainExplanation(AtomicTrail trail, IntVar[][] x, boolean strict, int position) {
     this.trail = trail;
@@ -143,7 +141,7 @@ public final class LexChainExplanation {
     if (lo > hi) {
       return true;
     }
-    if (root.getSize() > MAX_VALUES) {
+    if (root.intersect(lo, hi).getSize() > MAX_VALUES) {
       return false;
     }
     // the bounds of x[i] from the vectors before and after it
@@ -285,7 +283,7 @@ public final class LexChainExplanation {
     return null;
   }
 
-  /** Reads the domains of x[i] before the position; false when one is too large or empty. */
+  /** Reads the domains of x[i] before the position; false when one is empty. */
   private boolean read(int i) {
     if (domain[i] != null) {
       return true;
@@ -293,21 +291,16 @@ public final class LexChainExplanation {
     IntDomain[] d = new IntDomain[n];
     for (int k = 0; k < n; k++) {
       IntVar v = x[i][k];
-      IntDomain root = trail.rootDomain(v);
-      if (root.getSize() > MAX_VALUES) {
-        return false;
-      }
       int lo = trail.minBefore(v, position);
       int hi = trail.maxBefore(v, position);
-      IntDomain r = new IntervalDomain();
-      for (var e = root.valueEnumeration(); e.hasMoreElements(); ) {
-        int u = e.nextElement();
-        if (u >= lo && u <= hi) {
-          int mark = scratch.size();
-          if (!trail.excludedBefore(v, u, position, scratch)) {
-            r.unionAdapt(u, u);
-          }
-          scratch.truncate(mark);
+      if (lo > hi) {
+        return false;
+      }
+      // the root values within the bounds, less the values removed one by one before the position
+      IntDomain r = trail.rootDomain(v).intersect(lo, hi).cloneLight();
+      for (int e = trail.lastEntry(v, position); e >= 0; e = trail.previousEntry(e)) {
+        if (trail.kind(e) == AtomicTrail.NE) {
+          r.subtractAdapt(trail.value(e));
         }
       }
       if (r.isEmpty()) {
