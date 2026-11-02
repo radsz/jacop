@@ -127,6 +127,9 @@ final class ObjectiveGap {
    * @return the bound, or null while there is none
    */
   synchronized Long objectiveBound() {
-    return bound == Long.MIN_VALUE ? null : maximise ? -bound : bound;
+    if (bound == Long.MIN_VALUE) {
+      return null;
+    }
+    return maximise ? -bound : bound;
   }
 }

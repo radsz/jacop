@@ -717,7 +717,7 @@ public class Options {
     } catch (NumberFormatException _) {
       throw new IllegalArgumentException("--gap " + args[i] + ": not a number");
     }
-    if (!(percent >= 0) || Double.isInfinite(percent)) {
+    if (percent < 0 || Double.isNaN(percent) || Double.isInfinite(percent)) {
       throw new IllegalArgumentException(
           "--gap " + args[i] + ": must be a percentage of 0 or more");
     }

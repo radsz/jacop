@@ -501,29 +501,19 @@ final class Portfolio {
     return gap;
   }
 
-  // under the lock: the best solution is within --gap of the bound, which ends the search
+  // the best solution is within --gap of the bound, which ends the search
   private void gapReached() {
-    // a bound at the best solution proves it optimal
-    complete = gap.proved();
-    finished = true;
-    lock.notifyAll();
+    synchronized (lock) {
+      // a bound at the best solution proves it optimal
+      complete = gap.proved();
+      finished = true;
+      lock.notifyAll();
+    }
   }
 
   private static void printBound(PrintStream out, String line) {
     out.println(line);
     out.flush();
-  }
-
-  /** Takes a bound a thread proved on the minimised cost variable. */
-  private void bound(long lower, boolean maximise) {
-    synchronized (lock) {
-      if (finished) {
-        return;
-      }
-      if (gap(maximise).bound(lower)) {
-        gapReached();
-      }
-    }
   }
 
   private void ended(boolean searchComplete) {
@@ -606,7 +596,11 @@ final class Portfolio {
      * @param maximise whether the cost variable is the negated objective
      */
     void bound(long lower, boolean maximise) {
-      Portfolio.this.bound(lower, maximise);
+      synchronized (lock) {
+        if (!finished && gap(maximise).bound(lower)) {
+          gapReached();
+        }
+      }
     }
 
     /**

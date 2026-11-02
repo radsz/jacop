@@ -180,10 +180,9 @@ class ObjectiveGapFlatzincTest {
 
   @Test
   void portfolioStopsWithinTheGap() throws IOException {
-    for (String model : new String[] {MINIMISE, MAXIMISE, PAIRS}) {
-      String out = solve(model, "-p", "3", "-s", "--gap", "10");
-      assertGapHolds(out, 0.1, model == MAXIMISE);
-    }
+    assertGapHolds(solve(MINIMISE, "-p", "3", "-s", "--gap", "10"), 0.1, false);
+    assertGapHolds(solve(MAXIMISE, "-p", "3", "-s", "--gap", "10"), 0.1, true);
+    assertGapHolds(solve(PAIRS, "-p", "3", "-s", "--gap", "10"), 0.1, false);
   }
 
   @Test
