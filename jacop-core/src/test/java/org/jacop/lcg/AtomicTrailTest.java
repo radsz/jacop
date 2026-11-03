@@ -66,6 +66,7 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -678,6 +679,43 @@ class AtomicTrailTest {
       assertThat(reason.size()).as("reason of %s", trail.atomString(e)).isEqualTo(1);
       assertThat(trail.kind(reason.get(0))).isEqualTo(trail.kind(e));
       assertThat(trail.value(reason.get(0))).isEqualTo(trail.value(e));
+    }
+    trail.detach();
+  }
+
+  /**
+   * The dynamic program of Knapsack removes the capacities no item choice reaches. While LCG
+   * records the changes each would be a {@code !=} atom whose only reason is every item (mknap2-1:
+   * 13,000 generic reasons of 178 atoms), so the capacity then keeps only its bounds.
+   */
+  @Test
+  void knapsackCapacityKeepsItsBoundsWhileRecorded() {
+    int[] profits = {1, 1};
+    int[] weights = {3, 5};
+    Store plain = new Store();
+    IntVar[] q = {new IntVar(plain, "a", 0, 1), new IntVar(plain, "b", 0, 1)};
+    IntVar capacity = new IntVar(plain, "capacity", 0, 8);
+    plain.impose(
+        new KnapsackDP(profits, weights, q, capacity, new IntVar(plain, "profit", 0, 2))
+            .adaptive(false));
+    assertThat(plain.consistency()).isTrue();
+    assertThat(capacity.getSize()).as("holes without a trail").isEqualTo(4);
+
+    Store store = new Store();
+    IntVar[] r = {new IntVar(store, "a", 0, 1), new IntVar(store, "b", 0, 1)};
+    IntVar recorded = new IntVar(store, "capacity", 0, 8);
+    IntVar profit = new IntVar(store, "profit", 0, 2);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new KnapsackDP(profits, weights, r, recorded, profit).adaptive(false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r[0].domain.in(store.level, r[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(recorded.min()).isEqualTo(3);
+    for (int entry = 0; entry < trail.size(); entry++) {
+      assertThat(trail.variable(entry) == recorded && trail.kind(entry) == AtomicTrail.NE)
+          .as("hole %s", trail.atomString(entry))
+          .isFalse();
     }
     trail.detach();
   }
