@@ -1737,6 +1737,16 @@ Version 5.0 (unreleased)
      -f 8 / 11, solved -1 under -f; the two instances using Member keep
      their objectives in both modes.
 
+117. KnapsackDP keeps only the bounds of the capacity while LCG records the
+     changes. Each capacity it removed between the bounds (no item choice
+     reaches that weight with enough profit) was a != atom whose only
+     reason is every item. The item supports do not need these holes, as
+     they check reachability and the profit bounds themselves. mknap2-1
+     (30 s, --lcg): generic reasons 22 % to 0.2 %, 75 to 8.6 atoms per
+     reason, same nodes and time. Wide set (220, 60 s): --lcg 4 better / 3
+     worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
+     instance changes its result.
+
 Version 4.11
 =============
 
