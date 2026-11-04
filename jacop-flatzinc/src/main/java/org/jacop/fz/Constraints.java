@@ -49,6 +49,7 @@ import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
@@ -169,6 +170,16 @@ public class Constraints implements ParserTreeConstants {
         } else {
           replaced = new HashSet<>(replaced);
           replaced.addAll(alldifferent.replaced());
+        }
+      }
+
+      // the tables check their rows against the domains, and --proof does not encode them
+      if (ElementTableDetector.enabled() && options.proof() == null) {
+        ElementTableDetector elements = new ElementTableDetector(support);
+        elements.detect(astTree);
+        if (!elements.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(elements.replaced());
         }
       }
 
