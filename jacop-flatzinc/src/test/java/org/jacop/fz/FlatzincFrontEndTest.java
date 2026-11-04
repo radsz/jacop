@@ -1109,6 +1109,16 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void portfolioAnswersByTheTimeOutOfTheRun() {
+    Options opt = new Options(new String[] {"-p", "4", "-t", "8000", "model.fzn"});
+    opt.startedEarlier(6000);
+    long now = System.currentTimeMillis();
+    long at = Portfolio.timeOutAt(opt, now);
+    assertTrue(at > now && at <= now + 2000, "time-out in " + (at - now) + " ms");
+    assertEquals(0, Portfolio.timeOutAt(new Options(new String[] {"-p", "4", "model.fzn"}), now));
+  }
+
+  @Test
   void freeSearchDoesNotTakeOverFromLcgAtTheEndOfTheTimeOut() throws IOException, ParseException {
     // free search without learning took over from slow LCG free search even after the time-out:
     // the check was that some time was left, which always held. nside MEDIUM_1000_100 gave way
