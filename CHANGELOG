@@ -1747,6 +1747,17 @@ Version 5.0 (unreleased)
      worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
      instance changes its result.
 
+118. LCG explanations of LexChain cite only the leading positions the
+     ordering depends on. The reason of a pruning or failure used to cite
+     every atom of every vector of the chain; positions after the shortest
+     prefix that still forces the entry (found by binary search, later
+     positions taken at their root domains) are now left out. Wordpress12
+     Offers500 (--lcg): 10,976 to 37 atoms per reason, optimum proved in
+     22 s instead of 28 s on the wide set; aircraft-disassembly 115 to 87
+     atoms. Wide set (220, 60 s): --lcg S = +3, --lcg -f S = +1 (osolpro
+     #231 scoring); the other 13 LexChain instances keep their results
+     (a connect -f difference did not reproduce in four reruns).
+
 Version 4.11
 =============
 
