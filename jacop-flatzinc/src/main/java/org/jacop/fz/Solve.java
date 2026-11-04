@@ -2801,6 +2801,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
+      // refuted probes and nogoods raise the bound at the root between runs
+      builder.onBound(
+          lower -> {
+            if (reportBound(lower)) {
+              freeSearch.stop();
+            }
+          });
       // one failure in twenty goes to runs with the objective at or near its lower bound
       builder.probeObjective(
           Double.parseDouble(options.freeConfig("probe", "0.05")),

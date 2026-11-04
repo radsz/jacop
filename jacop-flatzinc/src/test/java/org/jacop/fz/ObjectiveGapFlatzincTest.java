@@ -199,6 +199,17 @@ class ObjectiveGapFlatzincTest {
     assertTrue(bounds.size() > 2, out);
     // the bound comes with the time it was proved
     assertTrue(out.contains("%%%mzn-stat: objectiveBoundTime="), out);
+    // free search without LCG: refuted probes and nogoods raise the root's bound between runs
+    for (String seed : new String[] {"1", "2", "3"}) {
+      out = solve(RISING, "--lcg=off", "-f", "-s", "-r", seed);
+      assertEquals(3, lastObjective(out), out);
+      bounds = all(BOUND, out);
+      for (int k = 0; k < bounds.size(); k++) {
+        assertTrue(bounds.get(k) <= 3, out);
+        assertTrue(k == 0 || bounds.get(k) > bounds.get(k - 1), out);
+      }
+      assertEquals(3L, bounds.get(bounds.size() - 1), out);
+    }
   }
 
   @Test

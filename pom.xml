@@ -244,7 +244,7 @@ setup to run configuration. -->
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
-                                <include>**/DepthFirstSearchBoundTest.java</include>
+                                <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
@@ -397,7 +397,7 @@ setup to run configuration. -->
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
-                                <include>**/DepthFirstSearchBoundTest.java</include>
+                                <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
@@ -551,7 +551,7 @@ setup to run configuration. -->
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
-                                <include>**/DepthFirstSearchBoundTest.java</include>
+                                <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
@@ -705,7 +705,7 @@ setup to run configuration. -->
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
                                 <include>**/SimpleSelectTieBreakTest.java</include>
-                                <include>**/DepthFirstSearchBoundTest.java</include>
+                                <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
@@ -1212,7 +1212,7 @@ setup to run configuration. -->
                         <include>**/OrBoolWatchedTest.java</include>
                         <include>**/AccumulatedFailureCountTest.java</include>
                         <include>**/SimpleSelectTieBreakTest.java</include>
-                                <include>**/DepthFirstSearchBoundTest.java</include>
+                                <include>**/SearchBoundTest.java</include>
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
