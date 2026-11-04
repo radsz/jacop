@@ -736,6 +736,47 @@ class AtomicTrailTest {
   }
 
   /**
+   * lex_chain over six 0..1 vectors (Cutstock): x5[0] <= 0 moves every x[k][0] down to 0. LexChain
+   * prunes them from x4 down to x0, so the reason of each x[k][0] <= 0 is the same atom of x[k + 1]
+   * and no reason reads the whole chain.
+   */
+  @Test
+  void lexChainPrunesTowardsTheChainItFollows() {
+    Store store = new Store();
+    int m = 6;
+    IntVar[][] x = new IntVar[m][2];
+    for (int i = 0; i < m; i++) {
+      for (int k = 0; k < 2; k++) {
+        x[i][k] = new IntVar(store, "x" + i + "_" + k, 0, 1);
+      }
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(x, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[m - 1][0].domain.inMax(store.level, x[m - 1][0], 0);
+    assertThat(store.consistency()).isTrue();
+    int[] atom = new int[m];
+    for (int e = 0; e < trail.size(); e++) {
+      for (int i = 0; i < m; i++) {
+        if (trail.variable(e) == x[i][0] && trail.kind(e) == AtomicTrail.LE) {
+          atom[i] = e;
+        }
+      }
+    }
+    for (int i = 0; i < m - 1; i++) {
+      assertThat(x[i][0].max()).isZero();
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(atom[i], reason)).isTrue();
+      assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+      reason.sortUnique(0);
+      assertThat(reason.size()).as("reason of x%d_0 <= 0", i).isEqualTo(1);
+      assertThat(reason.get(0)).as("reason of x%d_0 <= 0", i).isEqualTo(atom[i + 1]);
+    }
+    trail.detach();
+  }
+
+  /**
    * all_equal(a, b, c) (generalized-peacable-queens): a != 2 removes 2 from b and c, and b >= 3
    * moves a and c to 3. Each atom is explained by the same atom of one other variable instead of
    * the generic reason that cites the domains of all three.

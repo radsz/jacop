@@ -60,6 +60,8 @@ public final class LexChainExplanation {
   private final int n;
   private final int position;
   private final IntDomain[][] domain;
+  // whether a vector read has no atom before the position, so its domains are the root ones
+  private final boolean[] untouched;
 
   // positions beyond it are read as their root domains, a weaker view whose reason is shorter
   private int limit;
@@ -72,6 +74,7 @@ public final class LexChainExplanation {
     this.n = m == 0 ? 0 : x[0].length;
     this.position = position;
     this.domain = new IntDomain[m][];
+    this.untouched = new boolean[m];
     this.limit = n - 1;
   }
 
@@ -91,12 +94,29 @@ public final class LexChainExplanation {
     for (int i = 0; i < x.length; i++) {
       for (int j = 0; j < x[i].length; j++) {
         if (x[i][j] == v) {
-          return new LexChainExplanation(trail, x, strict, entry)
-              .explainValues(i, j, trail.removedMin(entry), trail.removedMax(entry), out);
+          return explain(trail, entry, x, strict, i, j, out);
         }
       }
     }
     return false;
+  }
+
+  /**
+   * Adds to {@code out} the reason of an atom the constraint propagated on x[i][j].
+   *
+   * @param trail the trail
+   * @param entry the entry of the atom, on x[i][j]
+   * @param x the vectors, with no variable twice
+   * @param strict whether the order is strict
+   * @param i the vector of the atom's variable
+   * @param j its position in the vector
+   * @param out where the reason entries are added
+   * @return false when one side of the chain does not give the atom
+   */
+  public static boolean explain(
+      AtomicTrail trail, int entry, IntVar[][] x, boolean strict, int i, int j, EntryList out) {
+    return new LexChainExplanation(trail, x, strict, entry)
+        .explainValues(i, j, trail.removedMin(entry), trail.removedMax(entry), out);
   }
 
   /**
@@ -240,31 +260,46 @@ public final class LexChainExplanation {
       }
     }
     int[] values = java.util.Arrays.copyOf(left, count);
-    // the nearest vectors whose chain already rules out the values: x[i - 1], x[i - 2], x[i - 4],
-    // ... before x[i], or the same after it, so that a long chain is read only near x[i]
+    // the nearest vectors whose chain already rules out the values: up to the 1st, 2nd, 4th, ...
+    // vector before x[i] that has an atom (or the same after it), so that a long chain is read only
+    // near x[i]; the vectors still at their root domains in between cost no atom
     boolean lower = i > 0;
     boolean upper = i < m - 1;
+    int from = i;
+    int to = i;
     for (int span = 1; lower || upper; span *= 2) {
       if (lower) {
-        int from = Math.max(0, i - span);
-        if (!readRows(from, i - 1)) {
-          out.truncate(mark);
-          return false;
+        for (int found = 0; from > 0 && found < span; ) {
+          from--;
+          if (!read(from)) {
+            out.truncate(mark);
+            return false;
+          }
+          if (!untouched[from]) {
+            found++;
+          }
         }
-        if (noneAbove(from, i, j, values)) {
-          addRows(from, i, i, j, shortestPrefix(p -> noneAbove(from, i, j, values)), out);
+        int start = from;
+        if (noneAbove(start, i, j, values)) {
+          addRows(start, i, i, j, shortestPrefix(p -> noneAbove(start, i, j, values)), out);
           return true;
         }
         lower = from > 0;
       }
       if (upper) {
-        int to = Math.min(m - 1, i + span);
-        if (!readRows(i + 1, to)) {
-          out.truncate(mark);
-          return false;
+        for (int found = 0; to < m - 1 && found < span; ) {
+          to++;
+          if (!read(to)) {
+            out.truncate(mark);
+            return false;
+          }
+          if (!untouched[to]) {
+            found++;
+          }
         }
-        if (noneBelow(to, i, j, values)) {
-          addRows(i, to, i, j, shortestPrefix(p -> noneBelow(to, i, j, values)), out);
+        int end = to;
+        if (noneBelow(end, i, j, values)) {
+          addRows(i, end, i, j, shortestPrefix(p -> noneBelow(end, i, j, values)), out);
           return true;
         }
         upper = to < m - 1;
@@ -272,16 +307,6 @@ public final class LexChainExplanation {
     }
     out.truncate(mark);
     return false;
-  }
-
-  /** Reads the domains of x[from..to]; false when one is empty. */
-  private boolean readRows(int from, int to) {
-    for (int k = from; k <= to; k++) {
-      if (!read(k)) {
-        return false;
-      }
-    }
-    return true;
   }
 
   // whether, in the current view, no tuple of x[i] with one of the values at j is above the bound
@@ -369,7 +394,7 @@ public final class LexChainExplanation {
       q++;
     }
     if (q == n && !strict) {
-      return bound.clone();
+      return bound;
     }
     for (int p = Math.min(q, n - 1); p >= 0; p--) {
       if (dom(i, p).max() > bound[p]) {
@@ -398,7 +423,7 @@ public final class LexChainExplanation {
       q++;
     }
     if (q == n && !strict) {
-      return bound.clone();
+      return bound;
     }
     for (int p = Math.min(q, n - 1); p >= 0; p--) {
       if (dom(i, p).min() < bound[p]) {
@@ -419,8 +444,15 @@ public final class LexChainExplanation {
       return true;
     }
     IntDomain[] d = new IntDomain[n];
+    boolean atRoot = true;
     for (int k = 0; k < n; k++) {
       IntVar v = x[i][k];
+      int lastEntry = trail.lastEntry(v, position);
+      if (lastEntry < 0) {
+        d[k] = trail.rootDomain(v);
+        continue;
+      }
+      atRoot = false;
       int lo = trail.minBefore(v, position);
       int hi = trail.maxBefore(v, position);
       if (lo > hi) {
@@ -428,7 +460,7 @@ public final class LexChainExplanation {
       }
       // the root values within the bounds, less the values removed one by one before the position
       IntDomain r = trail.rootDomain(v).intersect(lo, hi).cloneLight();
-      for (int e = trail.lastEntry(v, position); e >= 0; e = trail.previousEntry(e)) {
+      for (int e = lastEntry; e >= 0; e = trail.previousEntry(e)) {
         if (trail.kind(e) == AtomicTrail.NE) {
           r.subtractAdapt(trail.value(e));
         }
@@ -439,6 +471,7 @@ public final class LexChainExplanation {
       d[k] = r;
     }
     domain[i] = d;
+    untouched[i] = atRoot;
     return true;
   }
 
