@@ -1726,6 +1726,21 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
+116. Restarts under search annotations with --lcg (fixed search, the
+     default mode). Before, the annotation was followed down each branch
+     without restarts, so learnt clauses pruned but never reordered the
+     search. Now the solver restarts and its runs take turns between the
+     annotation, the SAT solver's own decisions on literals and activity
+     branching, keeping the learnt clauses; activity completes an
+     annotation that leaves variables unfixed. --free-config
+     fixed-restarts=turns|alternate|replay|off chooses (off is the old
+     behaviour), fixed-restarts-from=solution restarts only after a first
+     solution. Wide set (220, 60 s, default mode, interleaved with the
+     old build): 162 against 131 solved, score +163 (89 instances
+     better, 12 worse, no wrong answers), 11 of 12 families better.
+     Against OR-Tools CP-SAT 9.15 -p 1 -i (fixed search) the same set
+     goes from level (S = -2) to JaCoP ahead (S = -176).
+
 Version 4.11
 =============
 

@@ -308,6 +308,21 @@ public final class LcgSolver implements ExternalPropagator {
     ALTERNATE
   }
 
+  /** Restarts under fixed search: how the runs between restarts branch. */
+  public enum FixedRestarts {
+    /** No restarts: the annotation is followed down each branch, as without learning. */
+    OFF,
+    /** Every run follows the annotation from its first variable, with the learnt clauses kept. */
+    REPLAY,
+    /** Runs take turns at each restart: the annotation, then activity branching. */
+    ALTERNATE,
+    /**
+     * Runs take turns at each restart: the annotation, the SAT solver's own decisions on literals,
+     * then activity branching, as {@link Branching#ALTERNATE} does under free search.
+     */
+    TURNS
+  }
+
   /** Conflicts without a solution after which {@link Branching#AUTO} uses activity branching. */
   public static final long AUTO_CONFLICTS = 1000;
 
@@ -365,6 +380,10 @@ public final class LcgSolver implements ExternalPropagator {
   private int numAnnotationIndices;
   private static final int ANNOTATION_DONE = -1;
   private boolean annotationRun;
+  // restarts under fixed search, see setFixedRestarts
+  private FixedRestarts fixedRestarts = FixedRestarts.OFF;
+  // restarts wait for the first solution
+  private boolean restartsAfterSolution;
 
   private double lowerBoundShare;
   private long lowerBoundBudget;
@@ -2954,6 +2973,22 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets restarts under fixed search (an annotation set with free false). Without them the solver
+   * never restarts, so its learnt clauses prune but never reorder the search. With them the solver
+   * restarts on its own schedule; each run follows the annotation (REPLAY) or the runs take turns
+   * between the annotation and activity branching (ALTERNATE). In every run activity branching
+   * completes the assignment once the annotation has fixed its variables. Set it before solving.
+   *
+   * @param mode how runs branch, or OFF for no restarts
+   * @param afterSolution true to restart only once a first solution is found
+   */
+  public void setFixedRestarts(FixedRestarts mode, boolean afterSolution) {
+    fixedRestarts = mode;
+    restartsAfterSolution = mode != FixedRestarts.OFF && afterSolution;
+    sat.setRestarts(mode != FixedRestarts.OFF && !afterSolution);
+  }
+
+  /**
    * Adds a clause over 0/1 variables: one of the positive variables is 1 or one of the negative
    * ones is 0. It goes to the SAT solver as a clause of {@code [x >= 1]} literals, so it is
    * propagated and explained by the solver itself. Add clauses before solving.
@@ -3283,6 +3318,12 @@ public final class LcgSolver implements ExternalPropagator {
       activityBranching = !activityBranching;
     } else if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
+    } else if (annotation != null && fixedRestarts == FixedRestarts.ALTERNATE) {
+      annotationRun = !annotationRun;
+    } else if (annotation != null && fixedRestarts == FixedRestarts.TURNS) {
+      runs++;
+      annotationRun = runs % 3 == 0;
+      activityBranching = runs % 3 != 1;
     }
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
@@ -4441,6 +4482,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (onSolution != null && improving) {
       onSolution.run();
+    }
+    if (restartsAfterSolution) {
+      restartsAfterSolution = false;
+      sat.setRestarts(true);
     }
     if (objective < 0) {
       return true;

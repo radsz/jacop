@@ -439,6 +439,97 @@ class LcgSolverTest {
   }
 
   /**
+   * Restarts under a fixed search annotation (each run replays it, or runs take turns with activity
+   * branching, from the start or from the first solution) keep the brute-force optimum of a
+   * weighted sum under random side constraints.
+   */
+  @Test
+  void fixedRestartsAgreeWithBruteForce() {
+    Random rnd = new Random(31);
+    int proved = 0;
+    long restarts = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      LcgSolver.FixedRestarts mode =
+          instance % 2 == 0 ? LcgSolver.FixedRestarts.REPLAY : LcgSolver.FixedRestarts.ALTERNATE;
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(9) - 4;
+      }
+      long best = minimum(x, relations, w, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      int[] weights = Arrays.copyOf(w, n + 1);
+      weights[n] = -1;
+      store.impose(new LinearInt(terms, weights, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      // the annotation covers part of the variables: activity completes the assignment
+      IntVar[] annotated = Arrays.copyOf(x, n - instance % 3);
+      solver.setAnnotation(new SimpleSelect<>(annotated, null, new IndomainMin<>()), false);
+      solver.setFixedRestarts(mode, instance % 4 >= 2);
+      solver.setSeed(instance % 3);
+      int status = solver.minimize(cost);
+      restarts += solver.sat().restarts;
+      if (best == Long.MAX_VALUE) {
+        assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
+        continue;
+      }
+      assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(cost)).as("instance %d", instance).isEqualTo(best);
+      int[] t = new int[n];
+      for (int i = 0; i < n; i++) {
+        t[i] = solver.value(x[i]);
+      }
+      for (Relation r : relations) {
+        assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+      }
+      proved++;
+    }
+    assertThat(proved).isGreaterThan(100);
+    // the optimum of n pairwise different values from 0 takes many conflicts to prove: the runs
+    // restart and keep it
+    for (int k = 0; k < 2; k++) {
+      Store store = new Store();
+      int n = 8;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, n + 1);
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 1000);
+      store.impose(new SumInt(x, "==", cost));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), false);
+      solver.setFixedRestarts(
+          k == 0 ? LcgSolver.FixedRestarts.REPLAY : LcgSolver.FixedRestarts.ALTERNATE, k == 1);
+      assertThat(solver.minimize(cost)).as("run %d", k).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).as("run %d", k).isEqualTo(n * (n - 1) / 2);
+      restarts += solver.sat().restarts;
+      System.out.println(
+          "restarts " + k + " " + solver.sat().restarts + " " + solver.sat().conflicts);
+    }
+    assertThat(restarts).isPositive();
+  }
+
+  /**
    * Presolving the root again at every restart that learnt a root fact, which leaves out the
    * constraints the root satisfies, keeps the optimum: random weighted sums over a permutation with
    * random side constraints, solved with and without it.
