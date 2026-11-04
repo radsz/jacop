@@ -1726,6 +1726,22 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
+116. fzn-jacop ends by -t on its own on large models. The time-out was not
+     kept in five places: LCG search counted the whole -t from its own
+     start; free search took over from slow LCG free search even after the
+     time-out (and was set up for seconds on large models); free search
+     after LCG counted its limit from its first node, not from when the
+     time left was read; the model was read and scanned by the detectors
+     without looking at the clock; and -p answered 2 s after -t. New
+     FreeSearch.Builder.deadline(epochMillis). With the watchdog off, -f,
+     -t 60 s, on the 24 instances of the Challenge bench that overran:
+     19 ended after 62 s (up to 90.6 s, ma-path-finding 2022, rcpsp-wet-
+     diverse j90 83 s, nside HARD 77 s), now none (60.9 s at most). Wide
+     set (220, 60 s, -f): solved 151 to 153, 25 better / 23 worse; the two
+     solutions lost were luck on rerun. wide-quick in default mode: same
+     solved and solutions. -p 4 -t 20 s on flowshop-workers 8s_ex3 answered
+     at 32.3 s, now 20.2 s.
+
 Version 4.11
 =============
 
