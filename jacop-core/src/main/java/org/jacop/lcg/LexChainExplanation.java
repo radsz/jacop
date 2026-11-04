@@ -123,7 +123,8 @@ public final class LexChainExplanation {
       bound = e.smallestAbove(i, bound);
       if (bound == null) {
         int last = i;
-        e.addRows(0, i, -1, -1, e.shortestPrefix(p -> e.chainFails(0, last)), out);
+        int first = e.nearestFailingStart(last);
+        e.addRows(first, last, -1, -1, e.shortestPrefix(p -> e.chainFails(first, last)), out);
         return true;
       }
     }
@@ -132,7 +133,8 @@ public final class LexChainExplanation {
       bound = e.largestBelow(i, bound);
       if (bound == null) {
         int first = i;
-        e.addRows(i, m - 1, -1, -1, e.shortestPrefix(p -> e.chainFails(first, m - 1)), out);
+        int last = e.nearestFailingEnd(first);
+        e.addRows(first, last, -1, -1, e.shortestPrefix(p -> e.chainFailsDown(first, last)), out);
         return true;
       }
     }
@@ -162,6 +164,41 @@ public final class LexChainExplanation {
     return high;
   }
 
+  /**
+   * The largest start, among last - 1, last - 2, last - 4, ..., 0, of vectors that have no chain of
+   * tuples up to x[last]; the vectors before it are then not needed.
+   */
+  private int nearestFailingStart(int last) {
+    for (int span = 1; ; span *= 2) {
+      int from = Math.max(0, last - span);
+      if (from == 0 || chainFails(from, last)) {
+        return from;
+      }
+    }
+  }
+
+  /** Symmetric to {@link #nearestFailingStart} with the chain of largest tuples from x[first]. */
+  private int nearestFailingEnd(int first) {
+    for (int span = 1; ; span *= 2) {
+      int to = Math.min(m - 1, first + span);
+      if (to == m - 1 || chainFailsDown(first, to)) {
+        return to;
+      }
+    }
+  }
+
+  /** Whether the vectors from..to have no chain of largest tuples from x[to] down. */
+  private boolean chainFailsDown(int from, int to) {
+    int[] bound = null;
+    for (int i = to; i >= from; i--) {
+      bound = largestBelow(i, bound);
+      if (bound == null) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Whether the vectors from..to have no chain of tuples in the current view of the domains. */
   private boolean chainFails(int from, int to) {
     int[] bound = null;
@@ -185,43 +222,14 @@ public final class LexChainExplanation {
     if (root.intersect(lo, hi).getSize() > MAX_VALUES) {
       return false;
     }
-    // the bounds of x[i] from the vectors before and after it
-    int[] below = null;
-    for (int k = 0; k < i; k++) {
-      if (!read(k)) {
-        return false;
-      }
-      below = smallestAbove(k, below);
-      if (below == null) {
-        return false;
-      }
-    }
-    int[] above = null;
-    for (int k = m - 1; k > i; k--) {
-      if (!read(k)) {
-        return false;
-      }
-      above = largestBelow(k, above);
-      if (above == null) {
-        return false;
-      }
-    }
     if (!read(i)) {
       return false;
     }
-    boolean lower = below != null;
-    boolean upper = above != null;
     int mark = out.size();
     int[] left = new int[16];
     int count = 0;
     for (int u = root.contains(lo) ? lo : root.nextValue(lo); u <= hi; u = root.nextValue(u)) {
       if (!trail.excludedBefore(x[i][j], u, position, out)) {
-        lower &= !reachesAbove(i, j, u, below);
-        upper &= !reachesBelow(i, j, u, above);
-        if (!lower && !upper) {
-          out.truncate(mark);
-          return false;
-        }
         if (count == left.length) {
           left = java.util.Arrays.copyOf(left, 2 * count);
         }
@@ -232,19 +240,55 @@ public final class LexChainExplanation {
       }
     }
     int[] values = java.util.Arrays.copyOf(left, count);
-    if (lower) {
-      addRows(0, i, i, j, shortestPrefix(p -> noneAbove(i, j, values)), out);
-    } else if (upper) {
-      addRows(i, m - 1, i, j, shortestPrefix(p -> noneBelow(i, j, values)), out);
+    // the nearest vectors whose chain already rules out the values: x[i - 1], x[i - 2], x[i - 4],
+    // ... before x[i], or the same after it, so that a long chain is read only near x[i]
+    boolean lower = i > 0;
+    boolean upper = i < m - 1;
+    for (int span = 1; lower || upper; span *= 2) {
+      if (lower) {
+        int from = Math.max(0, i - span);
+        if (!readRows(from, i - 1)) {
+          out.truncate(mark);
+          return false;
+        }
+        if (noneAbove(from, i, j, values)) {
+          addRows(from, i, i, j, shortestPrefix(p -> noneAbove(from, i, j, values)), out);
+          return true;
+        }
+        lower = from > 0;
+      }
+      if (upper) {
+        int to = Math.min(m - 1, i + span);
+        if (!readRows(i + 1, to)) {
+          out.truncate(mark);
+          return false;
+        }
+        if (noneBelow(to, i, j, values)) {
+          addRows(i, to, i, j, shortestPrefix(p -> noneBelow(to, i, j, values)), out);
+          return true;
+        }
+        upper = to < m - 1;
+      }
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  /** Reads the domains of x[from..to]; false when one is empty. */
+  private boolean readRows(int from, int to) {
+    for (int k = from; k <= to; k++) {
+      if (!read(k)) {
+        return false;
+      }
     }
     return true;
   }
 
   // whether, in the current view, no tuple of x[i] with one of the values at j is above the bound
-  // of the vectors before it (or the vectors before it have no chain at all)
-  private boolean noneAbove(int i, int j, int[] values) {
+  // of the vectors from..i-1 (or those vectors have no chain at all)
+  private boolean noneAbove(int from, int i, int j, int[] values) {
     int[] bound = null;
-    for (int k = 0; k < i; k++) {
+    for (int k = from; k < i; k++) {
       bound = smallestAbove(k, bound);
       if (bound == null) {
         return true;
@@ -258,10 +302,10 @@ public final class LexChainExplanation {
     return true;
   }
 
-  // symmetric to noneAbove with the vectors after x[i]
-  private boolean noneBelow(int i, int j, int[] values) {
+  // symmetric to noneAbove with the vectors x[i+1..to]
+  private boolean noneBelow(int to, int i, int j, int[] values) {
     int[] bound = null;
-    for (int k = m - 1; k > i; k--) {
+    for (int k = to; k > i; k--) {
       bound = largestBelow(k, bound);
       if (bound == null) {
         return true;
