@@ -38,6 +38,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -185,6 +186,10 @@ public final class FreeSearch {
   private long lnsRuns;
   // MiniZinc's on_restart: code that fixes variables at the root of every run
   private final RestartHook hook;
+
+  // takes the objective's bound at the root, each time a run ends with a better one
+  private final IntConsumer onBound;
+  private long lastBound;
   private int hookStatus = RestartHook.START;
   // the run fixes variables at its root, so what it explores holds only under them
   private boolean conditionalRun;
@@ -254,6 +259,8 @@ public final class FreeSearch {
     maxNogoods = builder.maxNogoods;
     maxNogoodLength = builder.maxNogoodLength;
     hook = builder.hook;
+    // the model's own runs fix variables at the root of each run, which may cut off solutions
+    onBound = hook == null && cost != null && !builder.allSolutions ? builder.onBound : null;
     // the model's own neighbourhoods replace those of large neighbourhood search and probes
     lns = hook == null && cost != null && restarts != null ? builder.lns : null;
     lnsShare = builder.lnsShare;
@@ -350,7 +357,11 @@ public final class FreeSearch {
 
   /** Runs until a run explores its whole tree (returns true) or the search stops (false). */
   private boolean runs() {
+    lastBound = maximize ? Long.MAX_VALUE : Long.MIN_VALUE;
     while (true) {
+      if (onBound != null && store.level == rootLevel) {
+        rootBound();
+      }
       runFailures = 0;
       runSolutions = 0;
       if (hook != null && hook.completeMarked()) {
@@ -482,6 +493,19 @@ public final class FreeSearch {
     // the bound of the probe is imposed at a level of its own, removed when the probe ends
     store.setLevel(rootLevel + 1);
     return true;
+  }
+
+  /**
+   * Passes on the objective's bound at the root when it is better than the last one passed: the
+   * root keeps only what holds for every solution better than the best one (the bound of branch and
+   * bound, nogoods of whole runs, refuted probes), so a solution not found yet is within it.
+   */
+  private void rootBound() {
+    int b = maximize ? cost.max() : cost.min();
+    if (maximize ? b < lastBound : b > lastBound) {
+      lastBound = b;
+      onBound.accept(b);
+    }
   }
 
   /**
@@ -1155,6 +1179,7 @@ public final class FreeSearch {
     private double lnsShare;
     private long lnsFailLimit;
     private RestartHook hook;
+    private IntConsumer onBound;
 
     private Builder(Store store, SelectChoicePoint<? extends Var> select) {
       this.store = store;
@@ -1447,6 +1472,20 @@ public final class FreeSearch {
      */
     public Builder sharedBound(IntSupplier bound) {
       this.sharedBound = bound;
+      return this;
+    }
+
+    /**
+     * Sets the action that takes the objective's bound proved at the root, at the start and after
+     * each run that improved it: no solution better than the best one has the objective below it
+     * when minimising (above it when maximising). Nothing is reported with a restart hook, whose
+     * runs fix variables at their root, nor when all solutions are searched.
+     *
+     * @param action the action, given the objective's minimum (maximum when maximising) at the root
+     * @return this builder.
+     */
+    public Builder onBound(IntConsumer action) {
+      this.onBound = action;
       return this;
     }
 
