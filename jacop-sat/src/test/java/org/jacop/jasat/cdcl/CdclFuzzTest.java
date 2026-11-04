@@ -231,6 +231,19 @@ class CdclFuzzTest {
     }
   }
 
+  /**
+   * Solves, with every check, the first formula of the given fuzz seed.
+   *
+   * @param seed the seed, as a failure prints it
+   * @return the answer
+   */
+  static int replay(long seed) throws IOException {
+    Random rnd = new Random(seed);
+    int[] vars = new int[1];
+    List<int[]> f = randomFormula(rnd, vars);
+    return solveChecked(f, vars[0], seed);
+  }
+
   @Test
   void fuzz() throws IOException {
     long runs = Long.getLong("fuzz.runs", 2000);
