@@ -1747,6 +1747,25 @@ Version 5.0 (unreleased)
      worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
      instance changes its result.
 
+118. LCG objective shaving (fzn-jacop -f, --free-config lcg-shave=on, now
+     the default). The lower-bound runs that alternate with branch and
+     bound assumed obj <= lb and raised the bound by 1 per proof. They now
+     try obj <= lb + step - 1: the step doubles after each proof (the run
+     goes on within its conflicts) and halves after a run that ran out of
+     conflicts, as the non-LCG free search does since #294. A solution
+     found under the assumption ends the run as before; a proof that
+     comes after a solution at or below the target is optimality. New
+     option lcg-lb-growth=<factor> (default 1) lets the share of the
+     lower-bound runs grow after rounds without a better solution; 2 cost
+     branch and bound too much on the wide set and stays off. New
+     statistics lcgLowerBoundRuns and lcgLowerBoundRaised. On the 68
+     instances where CP-SAT proves a 10 % gap and JaCoP -f did not (60 s):
+     bound within 10 % of the incumbent on 6 instead of 2, median gap
+     0.41 to 0.29 (graph-clear 0.75 to 0.20, depot-placement 0.88 to
+     0.24, train.12 0.12 to 0.05). Wide set (220, 60 s, -f): 26 better /
+     16 worse, solved 150 to 151, score +5, Borda +9; fixed search is
+     unchanged (the options apply under -f only).
+
 Version 4.11
 =============
 

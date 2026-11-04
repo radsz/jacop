@@ -204,6 +204,12 @@ public class Options {
                 and auto),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
+                lcg-shave=on|off (with --lcg: a lower-bound run tries obj <= lb + step - 1,
+                the step doubling after each proof and halving after a run out of conflicts,
+                instead of raising the bound by 1 per run; default on),
+                lcg-lb-growth=<factor> (with --lcg: the lower-bound share grows by this factor
+                after each round without a better solution, up to 4, and resets on one;
+                default 1 = fixed share),
                 lcg-slow-rate=<conflicts per second> (with --lcg and an objective: LCG
                 that makes fewer conflicts per second by lcg-slow-at, and has a solution,
                 gives way to free search without learning, default 50; 0 = off),

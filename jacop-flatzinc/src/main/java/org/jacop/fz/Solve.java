@@ -2047,7 +2047,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
       // objective shaving in those runs: each assumes the objective a growing step above its bound
-      lcg.setShaving("on".equals(options.freeConfig("lcg-shave", "off")));
+      lcg.setShaving("on".equals(options.freeConfig("lcg-shave", "on")));
       lcg.setLowerBoundGrowth(Double.parseDouble(options.freeConfig("lcg-lb-growth", "1")));
       // core-guided search for a sum objective before branch and bound: its share of the time,
       // and the conflicts one call of the solver may take before it stops. With cost variables
