@@ -3378,6 +3378,10 @@ public final class CdclSolver {
       return refuted();
     }
     deleteClause(ref);
+    // unwatched at once: the next propagation, of d[0] or of the next clause tried, must not use
+    // it as a reason, which would keep pointing at a deleted clause
+    removeWatch(mem[lits], ref);
+    removeWatch(mem[lits + 1], ref);
     if (n == 1) {
       assign(d[0], NO_REASON);
       return propagate() == NO_CONFLICT || refuted();
