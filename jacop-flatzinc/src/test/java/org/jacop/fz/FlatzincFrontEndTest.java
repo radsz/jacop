@@ -33,6 +33,7 @@ package org.jacop.fz;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,6 +58,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.Support;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -1146,6 +1150,55 @@ class FlatzincFrontEndTest {
     late.startedEarlier(19_000);
     String out = runInThisJvm(late, fzn);
     assertFalse(out.contains("free search without learning"), out);
+  }
+
+  @Test
+  void readingTheModelStopsAtTheTimeOut() throws IOException, ParseException {
+    // the time-out was checked only while the constraints were posted, after the whole file was
+    // read: rcpsp-wet-diverse j90_48_4 (470 MB) read for a minute and ended 18 s after -t 60 s
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3000; i++) {
+      model.append("var 0..9: x").append(i).append(";\n");
+    }
+    model.append("constraint int_le(x0, x1);\nsolve satisfy;\n");
+    Path fzn = tmp.resolve("long.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "1000", fzn.toString()});
+    opt.startedEarlier(2000);
+    try (java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      assertThrows(ModelTimeOut.class, parser::model);
+      assertTrue(parser.getStore().size() < 10, parser.getStore().size() + " variables read");
+    }
+  }
+
+  @Test
+  void modelDetectorsStopAtTheTimeOut() throws IOException, ParseException {
+    // the detectors scan every constraint of the model before any is posted, without looking at
+    // the clock: on rcpsp-wet-diverse j90_48_4 the scans alone took 10 s past the time-out
+    Path fzn = tmp.resolve("detect.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x;\nvar 0..9: y;\nconstraint int_le(x, y);\nsolve satisfy;\n",
+        StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "60000", fzn.toString()});
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      SimpleNode tree = (SimpleNode) parser.jjtree.rootNode();
+      opt.startedEarlier(120_000);
+      Support support = parser.cc.support;
+      assertThrows(ModelTimeOut.class, () -> new PartialCopyDetector(support).detect(tree));
+      assertThrows(ModelTimeOut.class, () -> new AlldifferentDetector(support).detect(tree));
+    } finally {
+      System.setOut(originalOut);
+    }
   }
 
   // the output of a run of the model with the given options, in this JVM (no watchdog)
