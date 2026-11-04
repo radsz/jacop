@@ -2076,7 +2076,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.sat().setRestarts(false);
     }
     if (options.getTimeOut() > 0) {
-      lcg.sat().setDeadline(System.nanoTime() + options.getTimeOut() * 1_000_000L);
+      // the time-out covers the whole run: reading and setting up the model took part of it
+      lcg.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);

@@ -69,7 +69,7 @@ public class Options {
   int timeOut;
 
   /** The time the options were read; the time-out counts from it. */
-  private final long startTime = System.currentTimeMillis();
+  private long startTime = System.currentTimeMillis();
 
   int numberSolutions = -1;
   boolean interval;
@@ -916,6 +916,15 @@ public class Options {
       return 0;
     }
     return (int) Math.max(1, timeOut - (System.currentTimeMillis() - startTime));
+  }
+
+  /**
+   * Moves the start of the run back, as if reading the model had taken that long (for tests).
+   *
+   * @param millis the milliseconds the run started earlier
+   */
+  void startedEarlier(long millis) {
+    startTime -= millis;
   }
 
   /**

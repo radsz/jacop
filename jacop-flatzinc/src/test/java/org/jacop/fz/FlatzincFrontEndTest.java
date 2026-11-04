@@ -1071,6 +1071,60 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgSearchStopsAtTheTimeOutOfTheRun() throws IOException, ParseException {
+    // LCG's deadline was the whole -t counted from the start of LCG search, so a run whose model
+    // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
+    // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
+    // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
+    // s.
+    Random r = new Random(1);
+    int n = 400;
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var bool: x").append(i).append(";\n");
+    }
+    for (int c = 0; c < 1720; c++) {
+      StringJoiner pos = new StringJoiner(",");
+      StringJoiner neg = new StringJoiner(",");
+      Set<Integer> vars = new TreeSet<>();
+      while (vars.size() < 3) {
+        vars.add(r.nextInt(n));
+      }
+      for (int v : vars) {
+        (r.nextBoolean() ? pos : neg).add("x" + v);
+      }
+      model.append("constraint bool_clause([%s],[%s]);\n".formatted(pos, neg));
+    }
+    model.append("solve satisfy;\n");
+    Path fzn = tmp.resolve("sat3.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    // reading the model took 6 s of the 8 s
+    Options opt = new Options(new String[] {"--lcg", "-f", "-t", "8000", fzn.toString()});
+    opt.startedEarlier(6000);
+    long start = System.nanoTime();
+    String out = runInThisJvm(opt, fzn);
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+    assertTrue(millis < 5000, "the run took " + millis + " ms with 2 s left");
+  }
+
+  // the output of a run of the model with the given options, in this JVM (no watchdog)
+  private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+    } finally {
+      System.setOut(originalOut);
+    }
+    return out.toString(StandardCharsets.UTF_8);
+  }
+
+  @Test
   void proofTurnsOffSymmetryBreakingAndComponents() {
     // lex-leader constraints are not in the model a proof is checked against, and a component
     // solved before search fixes values the proof does not derive: wide-set proofs used both
