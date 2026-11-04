@@ -70,6 +70,14 @@ public class Parser {
 	return store;
     }
 
+    // reading a model with millions of items takes a minute (rcpsp-wet-diverse j90_48_4, 470 MB):
+    // the time-out is checked after each item
+    private void checkTimeOut() {
+	if (options != null && options.timeOutPassed()) {
+	    throw new ModelTimeOut();
+	}
+    }
+
     Tables getTables() {
 	return dict;
     }
@@ -280,7 +288,7 @@ void pred_decl_items() :
 void var_decl_items() #VarDeclItems:
 {}
 {
-    ( var_decl_item() <SC> )*
+    ( var_decl_item() <SC> { checkTimeOut(); } )*
  	{   //jjtThis.dump("");
 	    // jjtThis.removeChildren();
 	    dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
@@ -297,7 +305,7 @@ void var_decl_items() #VarDeclItems:
 void constraint_items() #ConstraintItems:
 {}
 {
-    ( constraint_item() <SC> )*
+    ( constraint_item() <SC> { checkTimeOut(); } )*
  	{  //jjtThis.dump("");
 
 	    // cc.poseDelayedConstraints();

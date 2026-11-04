@@ -44,6 +44,10 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Member constraint implements the membership of element e on list x.
@@ -51,7 +55,7 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Member extends PrimitiveConstraint implements Copyable<Member> {
+public class Member extends PrimitiveConstraint implements Copyable<Member>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -360,6 +364,78 @@ public class Member extends PrimitiveConstraint implements Copyable<Member> {
     result.append(e).append(" )");
 
     return result.toString();
+  }
+
+  /**
+   * Explains a value removed from e because no list variable holds it, or from the last candidate
+   * because e excludes it while every other list variable is disjoint from e.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (aliased()) {
+      return false;
+    }
+    IntVar v = trail.variable(entry);
+    if (v == e) {
+      return DomainCover.entry(trail, entry, (u, o) -> excludedFromAll(trail, u, entry, o), out);
+    }
+    for (IntVar y : x) {
+      if (y != v && !disjoint(trail, y, entry, out)) {
+        return false;
+      }
+    }
+    return DomainCover.entry(trail, entry, (u, o) -> trail.excludedBefore(e, u, entry, o), out);
+  }
+
+  /** Explains a failure: every list variable is disjoint from e. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (aliased()) {
+      return false;
+    }
+    int position = trail.size();
+    for (IntVar y : x) {
+      if (!disjoint(trail, y, position, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean excludedFromAll(AtomicTrail trail, int u, int position, EntryList out) {
+    for (IntVar y : x) {
+      if (!trail.excludedBefore(y, u, position, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Adds the reason that a list variable and e had no common value just before a position: their
+   * bounds when these are apart, otherwise each value of the narrower one excluded from the other.
+   */
+  private boolean disjoint(AtomicTrail trail, IntVar y, int position, EntryList out) {
+    int yMin = trail.minBefore(y, position);
+    int yMax = trail.maxBefore(y, position);
+    int eMin = trail.minBefore(e, position);
+    int eMax = trail.maxBefore(e, position);
+    if (yMax < eMin) {
+      trail.addUpperBound(y, position, out);
+      trail.addLowerBound(e, position, out);
+      return true;
+    }
+    if (eMax < yMin) {
+      trail.addUpperBound(e, position, out);
+      trail.addLowerBound(y, position, out);
+      return true;
+    }
+    if ((long) yMax - yMin <= (long) eMax - eMin) {
+      return DomainCover.domain(
+          trail, y, position, (w, o) -> trail.excludedBefore(e, w, position, o), out);
+    }
+    return DomainCover.domain(
+        trail, e, position, (w, o) -> trail.excludedBefore(y, w, position, o), out);
   }
 
   @Override

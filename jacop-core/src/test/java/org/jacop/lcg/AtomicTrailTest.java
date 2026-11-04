@@ -52,6 +52,7 @@ import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
@@ -65,6 +66,7 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -393,6 +395,13 @@ class AtomicTrailTest {
           IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
           return new Model(new AllEqual(v), t -> t[0] == t[1] && t[1] == t[2], v);
         });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "e", rnd)};
+          IntVar[] list =
+              rnd.nextBoolean() ? new IntVar[] {v[0], v[1]} : new IntVar[] {v[0], v[1], v[0]};
+          return new Model(new Member(list, v[2]), t -> t[2] == t[0] || t[2] == t[1], v);
+        });
     return m;
   }
 
@@ -671,6 +680,86 @@ class AtomicTrailTest {
       assertThat(trail.kind(reason.get(0))).isEqualTo(trail.kind(e));
       assertThat(trail.value(reason.get(0))).isEqualTo(trail.value(e));
     }
+    trail.detach();
+  }
+
+  /**
+   * The dynamic program of Knapsack removes the capacities no item choice reaches. While LCG
+   * records the changes each would be a {@code !=} atom whose only reason is every item (mknap2-1:
+   * 13,000 generic reasons of 178 atoms), so the capacity then keeps only its bounds.
+   */
+  @Test
+  void knapsackCapacityKeepsItsBoundsWhileRecorded() {
+    int[] profits = {1, 1};
+    int[] weights = {3, 5};
+    Store plain = new Store();
+    IntVar[] q = {new IntVar(plain, "a", 0, 1), new IntVar(plain, "b", 0, 1)};
+    IntVar capacity = new IntVar(plain, "capacity", 0, 8);
+    plain.impose(
+        new KnapsackDP(profits, weights, q, capacity, new IntVar(plain, "profit", 0, 2))
+            .adaptive(false));
+    assertThat(plain.consistency()).isTrue();
+    assertThat(capacity.getSize()).as("holes without a trail").isEqualTo(4);
+
+    Store store = new Store();
+    IntVar[] r = {new IntVar(store, "a", 0, 1), new IntVar(store, "b", 0, 1)};
+    IntVar recorded = new IntVar(store, "capacity", 0, 8);
+    IntVar profit = new IntVar(store, "profit", 0, 2);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new KnapsackDP(profits, weights, r, recorded, profit).adaptive(false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r[0].domain.in(store.level, r[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(recorded.min()).isEqualTo(3);
+    for (int entry = 0; entry < trail.size(); entry++) {
+      assertThat(trail.variable(entry) == recorded && trail.kind(entry) == AtomicTrail.NE)
+          .as("hole %s", trail.atomString(entry))
+          .isFalse();
+    }
+    trail.detach();
+  }
+
+  /**
+   * Member([a, b, c], e): c's bounds and holes bound e, and once a and b are apart from e, c is the
+   * last candidate and takes e's bounds. Each reason is one decision, not the generic one.
+   */
+  @Test
+  void memberHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 2);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar c = new IntVar(store, "c", 0, 9);
+    IntVar e = new IntVar(store, "e", 0, 9);
+    AtomicTrail trail = new AtomicTrail(store);
+    Member member = new Member(new IntVar[] {a, b, c}, e);
+    store.impose(member);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    c.domain.inMax(store.level, c, 5);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    c.domain.inComplement(store.level, c, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    e.domain.inMin(store.level, e, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(e.max()).isEqualTo(5);
+    assertThat(e.domain.contains(3)).isFalse();
+    assertThat(c.min()).isEqualTo(4);
+    int explained = 0;
+    for (int entry = 0; entry < trail.size(); entry++) {
+      if (trail.reason(entry) != member) {
+        continue;
+      }
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(entry, reason)).isTrue();
+      assertThat(trail.replayed()).as("explained by Member, not by its replay").isFalse();
+      reason.sortUnique(0);
+      assertThat(reason.size()).as("reason of %s", trail.atomString(entry)).isEqualTo(1);
+      explained++;
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(3);
     trail.detach();
   }
 

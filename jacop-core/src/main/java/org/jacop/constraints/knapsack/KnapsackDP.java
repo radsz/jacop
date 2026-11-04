@@ -391,7 +391,15 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent, Copyable
       useMin = profitMax < bestProfit;
     }
 
-    knapsackCapacity.domain.in(store.level, knapsackCapacity, capacities);
+    // While LCG records the changes, each capacity removed between the bounds would be a != atom
+    // whose only reason is the whole item assignment. The capacity keeps only its bounds then;
+    // the supports of the items need no holes of unreachable capacities or of too little profit,
+    // as they check reachability and the profit bounds themselves.
+    if (store.domainChangeRecorder != null) {
+      knapsackCapacity.domain.in(store.level, knapsackCapacity, capacities.min(), capacities.max());
+    } else {
+      knapsackCapacity.domain.in(store.level, knapsackCapacity, capacities);
+    }
     knapsackProfit.domain.in(
         store.level,
         knapsackProfit,
@@ -403,7 +411,7 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent, Copyable
     if (useMin) {
       minSide.updateBackward(c);
     }
-    Window window = new Window(knapsackCapacity.dom(), baseWeight, c);
+    Window window = new Window(knapsackCapacity.dom().intersect(capacities), baseWeight, c);
     for (int i = 0; i < n; i++) {
       if (quantity[i].singleton()) {
         continue;
