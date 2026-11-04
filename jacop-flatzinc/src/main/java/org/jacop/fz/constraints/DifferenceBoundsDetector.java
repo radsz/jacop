@@ -102,7 +102,7 @@ public class DifferenceBoundsDetector implements ParserTreeConstants {
    * @throws FailException when the difference constraints have no solution in the domains.
    */
   public void detect(SimpleNode astTree) {
-    Support.forEachConstraint(astTree, this::collect);
+    support.forEachConstraint(astTree, this::collect);
     if (edges == 0) {
       return;
     }

@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import java.lang.management.ManagementFactory;
 import java.util.function.Consumer;
 
 /**
@@ -37,8 +38,9 @@ import java.util.function.Consumer;
  * variable (the negated objective under maximisation), and the relative gap between them: option
  * --gap stops the search once {@code best - bound <= gap * |best|}, as the relative gap of MIP
  * solvers. Each improvement of the bound is printed, when a printer is given, as the statistic
- * {@code objectiveBound} in the model's own objective, so a run's bounds can be read with the time
- * they were proved.
+ * {@code objectiveBound} in the model's own objective, with {@code objectiveBoundTime}, the
+ * wall-clock seconds since the JVM started, so a run's bounds can be read with the time they were
+ * proved.
  *
  * <p>A bound is a value that no solution better than the best one goes below. The solver's bounds
  * hold under the bound of branch and bound, which removes the solutions no better than the best:
@@ -77,11 +79,25 @@ final class ObjectiveGap {
     if (lower > bound) {
       bound = lower;
       if (printer != null) {
+        double time =
+            (System.currentTimeMillis() - ManagementFactory.getRuntimeMXBean().getStartTime())
+                / 1000.0;
         printer.accept(
-            "%%%mzn-stat: objectiveBound=" + (maximise ? -lower : lower) + "\n%%%mzn-stat-end");
+            "%%%mzn-stat: objectiveBound="
+                + (maximise ? -lower : lower)
+                + "\n%%%mzn-stat: objectiveBoundTime="
+                + time
+                + "\n%%%mzn-stat-end");
       }
     }
     return check();
+  }
+
+  /** Takes the end of a search that proved the best solution optimal: its cost is the bound. */
+  synchronized void optimal() {
+    if (best != Long.MAX_VALUE) {
+      bound(best);
+    }
   }
 
   /**
