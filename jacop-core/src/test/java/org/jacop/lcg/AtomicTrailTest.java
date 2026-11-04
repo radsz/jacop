@@ -42,6 +42,7 @@ import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
@@ -53,6 +54,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Span;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
@@ -354,6 +356,132 @@ class AtomicTrailTest {
                   resources,
                   new IntVar(s, 1, 1),
                   Arrays.copyOfRange(v, 3, 6)),
+              fits,
+              v);
+        });
+    // alternative over two optional intervals: p0, s0, d0, then p, s, d of each
+    m.add(
+        s -> {
+          IntVar[] v = {
+            new IntVar(s, "p0", 0, 1),
+            new IntVar(s, "s0", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d0", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p1", 0, 1),
+            new IntVar(s, "s1", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d1", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p2", 0, 1),
+            new IntVar(s, "s2", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d2", rnd.nextInt(2), 1 + rnd.nextInt(2))
+          };
+          Predicate<int[]> alternative =
+              t -> {
+                int present = -1;
+                for (int k = 3; k < 9; k += 3) {
+                  if (t[k] == 1) {
+                    if (present >= 0) {
+                      return false;
+                    }
+                    present = k;
+                  }
+                }
+                if (present < 0) {
+                  return t[0] == 0 && t[2] == 0;
+                }
+                return t[0] == 1 && t[1] == t[present + 1] && t[2] == t[present + 2];
+              };
+          return new Model(
+              new Alternative(
+                  v[0],
+                  v[1],
+                  v[2],
+                  new IntVar[] {v[3], v[6]},
+                  new IntVar[] {v[4], v[7]},
+                  new IntVar[] {v[5], v[8]}),
+              alternative,
+              v);
+        });
+    // span over two optional intervals: p0, s0, d0, then p, s, d of each
+    m.add(
+        s -> {
+          IntVar[] v = {
+            new IntVar(s, "p0", 0, 1),
+            new IntVar(s, "s0", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d0", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p1", 0, 1),
+            new IntVar(s, "s1", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d1", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p2", 0, 1),
+            new IntVar(s, "s2", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d2", rnd.nextInt(2), 1 + rnd.nextInt(2))
+          };
+          Predicate<int[]> span =
+              t -> {
+                boolean any = false;
+                int start = Integer.MAX_VALUE;
+                int end = Integer.MIN_VALUE;
+                for (int k = 3; k < 9; k += 3) {
+                  if (t[k] == 1) {
+                    any = true;
+                    start = Math.min(start, t[k + 1]);
+                    end = Math.max(end, t[k + 1] + t[k + 2]);
+                  }
+                }
+                if (!any) {
+                  return t[0] == 0 && t[2] == 0;
+                }
+                return t[0] == 1 && t[1] == start && t[1] + t[2] == end;
+              };
+          return new Model(
+              new Span(
+                  v[0],
+                  v[1],
+                  v[2],
+                  new IntVar[] {v[3], v[6]},
+                  new IntVar[] {v[4], v[7]},
+                  new IntVar[] {v[5], v[8]}),
+              span,
+              v);
+        });
+    // a unary resource whose uses 0 or 1 are the presences of optional tasks: a task that fits in
+    // no gap of the others' compulsory parts gets use 0
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            newVar(s, "e", rnd),
+            new IntVar(s, "p", 0, 1),
+            new IntVar(s, "q", 0, 1),
+            new IntVar(s, "r", 0, 1)
+          };
+          int[] d = {
+            1 + rnd.nextInt(3), 1 + rnd.nextInt(3), 1 + rnd.nextInt(3), 1 + rnd.nextInt(3)
+          };
+          IntVar[] durations = new IntVar[4];
+          IntVar[] resources = {v[4], v[5], v[6], new IntVar(s, 1, 1)};
+          for (int k = 0; k < 4; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+          }
+          Predicate<int[]> fits =
+              t -> {
+                for (int time = -10; time < 16; time++) {
+                  int load = 0;
+                  for (int k = 0; k < 4; k++) {
+                    int use = k < 3 ? t[4 + k] : 1;
+                    if (t[k] <= time && time < t[k] + d[k]) {
+                      load += use;
+                    }
+                  }
+                  if (load > 1) {
+                    return false;
+                  }
+                }
+                return true;
+              };
+          return new Model(
+              new CumulativeUnary(
+                  Arrays.copyOf(v, 4), durations, resources, new IntVar(s, 1, 1), true, true),
               fits,
               v);
         });
@@ -1360,6 +1488,46 @@ class AtomicTrailTest {
       }
     }
     throw new IllegalStateException(x + " is not in the model");
+  }
+
+  /**
+   * Alternative explains its atoms itself: the chosen interval fixes the others and gives the
+   * master its start and duration; candidates that cannot meet the master are absent.
+   */
+  @Test
+  void alternativeExplainsItsAtoms() {
+    Store store = new Store();
+    IntVar p0 = new IntVar(store, "p0", 0, 1);
+    IntVar s0 = new IntVar(store, "s0", 0, 20);
+    IntVar d0 = new IntVar(store, "d0", 0, 9);
+    IntVar[] p = {new IntVar(store, "p1", 0, 1), new IntVar(store, "p2", 0, 1)};
+    IntVar[] s = {new IntVar(store, "s1", 0, 20), new IntVar(store, "s2", 0, 20)};
+    IntVar[] d = {new IntVar(store, "d1", 3, 3), new IntVar(store, "d2", 5, 5)};
+    Alternative alternative = new Alternative(p0, s0, d0, p, s, d);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(alternative);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    s0.domain.in(store.level, s0, 0, 4);
+    s[1].domain.inMin(store.level, s[1], 7);
+    assertThat(store.consistency()).isTrue();
+    // s2 >= 7 cannot meet s0 <= 4
+    assertThat(p[1].max()).isZero();
+    store.setLevel(store.level + 1);
+    p0.domain.in(store.level, p0, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p[0].min()).isEqualTo(1);
+    assertThat(d0.value()).isEqualTo(3);
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == alternative) {
+        EntryList reason = new EntryList();
+        assertThat(alternative.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(4);
+    trail.detach();
   }
 
   /**

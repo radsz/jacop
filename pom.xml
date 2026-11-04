@@ -193,6 +193,7 @@ setup to run configuration. -->
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
                                 <balance.trials>300</balance.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
+                                <intervals.trials>20</intervals.trials>
                                 <multicumulative.trials>100</multicumulative.trials>
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
                                 <subcircuitcost.instances>300</subcircuitcost.instances>
@@ -263,6 +264,7 @@ setup to run configuration. -->
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
+                                <include>**/IntervalVarTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/GeostBruteForceTest.java</include>
@@ -415,6 +417,7 @@ setup to run configuration. -->
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
+                                <include>**/IntervalVarTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -568,6 +571,7 @@ setup to run configuration. -->
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
+                                <include>**/IntervalVarTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -721,6 +725,7 @@ setup to run configuration. -->
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
+                                <include>**/IntervalVarTest.java</include>
                                 <include>**/GlobalConstraintBruteForceTest.java</include>
                                 <include>**/BalanceConstraintTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>

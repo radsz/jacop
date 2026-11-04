@@ -110,6 +110,8 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
@@ -2872,6 +2874,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
+    if (optionalAsUse()) {
+      // a task uses its resource when present: the cumulative over these uses explains its
+      // pruning under lazy clause generation
+      IntVar[] use = new IntVar[res.length];
+      for (int i = 0; i < res.length; i++) {
+        use[i] = presentUse(res[i], opt[i]);
+      }
+      cumulativeTasks.add(taskKey(str, dur, use));
+      poseCumulative(str, dur, use, b);
+      return;
+    }
     CumulativeOptional c = configureCumulative(new CumulativeOptional(str, dur, res, b, opt));
     String p = System.getProperty("fz_cumulative_optional_overload");
     if (p != null) {
@@ -2900,6 +2913,12 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
     IntVar one = support.dictionary.getConstant(1);
+    if (optionalAsUse()) {
+      // a task's presence is its use of the unary resource: CumulativeUnary explains its pruning
+      // under lazy clause generation and makes absent the tasks that fit nowhere
+      poseCumulative(str, dur, opt, one);
+      return;
+    }
     IntVar[] ones = createFilledArray(one, str.length);
 
     CumulativeUnaryOptional c = new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true);
@@ -2907,6 +2926,37 @@ class GlobalConstraints implements ParserTreeConstants {
     c.doOptionalOverload(
         Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
+  }
+
+  // the use of a task with resource r and presence o: r when present, 0 otherwise
+  private IntVar presentUse(IntVar r, IntVar o) {
+    if (o.min() == 1 || r.singleton(0)) {
+      return r;
+    }
+    if (o.max() == 0) {
+      return support.dictionary.getConstant(0);
+    }
+    if (r.singleton()) {
+      int c = r.value();
+      IntVar use = new IntVar(support.store, 0, 0);
+      use.addDom(c, c);
+      support.pose(new XmulCeqZ(o, c, use));
+      return use;
+    }
+    IntVar use = new IntVar(support.store, Math.min(0, r.min()), Math.max(0, r.max()));
+    support.pose(new XmulYeqZ(r, o, use));
+    return use;
+  }
+
+  /**
+   * Whether optional tasks on a unary resource are posted with their presences as resource uses,
+   * from the system property {@code org.jacop.fz.optionalAsUse}: {@code lcg} (the default) under
+   * lazy clause generation only, {@code true} always, {@code false} never
+   * (CumulativeUnaryOptional).
+   */
+  private boolean optionalAsUse() {
+    String mode = System.getProperty("org.jacop.fz.optionalAsUse", "lcg").toLowerCase();
+    return "true".equals(mode) || ("lcg".equals(mode) && support.options.lcg());
   }
 
   void gen_jacop_disjunctive_setup(SimpleNode node) {
