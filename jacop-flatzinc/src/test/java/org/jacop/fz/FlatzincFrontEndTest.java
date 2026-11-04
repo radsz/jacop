@@ -1108,6 +1108,36 @@ class FlatzincFrontEndTest {
     assertTrue(millis < 5000, "the run took " + millis + " ms with 2 s left");
   }
 
+  @Test
+  void freeSearchDoesNotTakeOverFromLcgAtTheEndOfTheTimeOut() throws IOException, ParseException {
+    // free search without learning took over from slow LCG free search even after the time-out:
+    // the check was that some time was left, which always held. nside MEDIUM_1000_100 gave way
+    // 0.5 s before -t 20 s and ended 2.9 s after it, setting up free search on 169,000 variables
+    StringBuilder model = new StringBuilder();
+    model.append("array[1..10] of var 1..10: x :: output_array([1..10]);\n");
+    model.append("var 0..1000: o :: output_var;\n");
+    for (int i = 1; i <= 10; i++) {
+      for (int j = i + 1; j <= 10; j++) {
+        model.append("constraint int_ne(x[%d],x[%d]);\n".formatted(i, j));
+      }
+    }
+    model.append(
+        "constraint int_lin_eq([1,2,3,4,5,6,7,8,9,10,-1],[x[1],x[2],x[3],x[4],x[5],x[6],x[7],"
+            + "x[8],x[9],x[10],o],0);\nsolve minimize o;\n");
+    Path fzn = tmp.resolve("late.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    String[] args = {
+      "--lcg", "-f", "-debug", "--free-config", "lcg-slow-at=0", "-t", "20000", fzn.toString()
+    };
+    // lcg-slow-at=0 gives way at once, after LCG's root propagation
+    assertTrue(runInThisJvm(new Options(args), fzn).contains("free search without learning"));
+    // with 5 % of the time-out left it is too late
+    Options late = new Options(args);
+    late.startedEarlier(19_000);
+    String out = runInThisJvm(late, fzn);
+    assertFalse(out.contains("free search without learning"), out);
+  }
+
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
