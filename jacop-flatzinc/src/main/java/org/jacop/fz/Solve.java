@@ -2076,14 +2076,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.sat().setRestarts(false);
     }
     if (options.getTimeOut() > 0) {
-      lcg.sat().setDeadline(System.nanoTime() + options.getTimeOut() * 1_000_000L);
+      // the time-out covers the whole run: reading and setting up the model took part of it
+      lcg.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
-    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && options.getRemainingTimeOut() > 0) {
+    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch()) {
       return continueWithoutLcg(costVar);
     }
     return numberSolutions > 0;
@@ -2094,6 +2095,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the LCG solver free search took over from, for the statistics
   private LcgSolver slowLcg;
   private long lcgStart;
+
+  // the part of the time-out that must be left for LCG free search to give way to free search
+  // without learning
+  private static final double SLOW_LCG_MIN_LEFT = 0.1;
+
+  // Setting up free search on a large model takes seconds: nside MEDIUM_1000_100 gave way 0.5 s
+  // before a time-out of 20 s and ended 2.9 s after it. The check used to be that some time was
+  // left, which always held, so free search also started after the time-out.
+  private boolean tooLateForFreeSearch() {
+    return options.getTimeOut() > 0
+        && options.getRemainingTimeOut() < SLOW_LCG_MIN_LEFT * options.getTimeOut();
+  }
 
   /**
    * Starts the check of LCG free search's speed: at a share of the time limit (lcg-slow-at), a
@@ -2137,6 +2150,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 // made again until LCG has one or is no longer slow. cutstock type16 TEST9
                 // found its first solution with LCG at 37 s and none without
                 while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
+                  if (tooLateForFreeSearch()) {
+                    return;
+                  }
                   if (solutionFound) {
                     lcgSlow = true;
                     solver.stop();
@@ -2797,7 +2813,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.mainBranchingFirst(true);
     }
     if (options.getTimeOut() > 0) {
-      builder.timeLimit(Duration.ofMillis(options.getRemainingTimeOut()));
+      // the time left now, not when the search starts: building the neighbourhoods and the
+      // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
+      builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
