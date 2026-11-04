@@ -110,7 +110,7 @@ public class BalanceDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
-    Support.forEachConstraint(astTree, this::collect);
+    support.forEachConstraint(astTree, this::collect);
     if (absolute.isEmpty() && square.isEmpty()) {
       return;
     }

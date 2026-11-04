@@ -579,6 +579,69 @@ class LcgSolverTest {
     assertThat(stopped).isGreaterThan(0);
   }
 
+  /**
+   * Without restarts, as under a fixed search annotation, the bounds come from the backjumps to the
+   * root: each must hold (never above the optimum), they must rise, and some must rise above the
+   * root's bound before the search ends.
+   */
+  @Test
+  void boundsWithoutRestartsComeFromBackjumpsToTheRoot() {
+    Random rnd = new Random(37);
+    int raised = 0;
+    for (int instance = 0; instance < 24; instance++) {
+      Store store = new Store();
+      int n = 9;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, n - 1);
+      }
+      store.impose(new Alldistinct(x));
+      for (int c = 0; c < 4; c++) {
+        int[] a = new int[n];
+        for (int i = 0; i < n; i++) {
+          a[i] = rnd.nextInt(7) - 3;
+        }
+        store.impose(new LinearInt(x, a, "<=", rnd.nextInt(10)));
+      }
+      IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      int[] weights = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        weights[i] = rnd.nextInt(41) - 20;
+      }
+      weights[n] = -1;
+      store.impose(new LinearInt(terms, weights, "==", 0));
+      if (!store.consistency()) {
+        continue;
+      }
+      int root = cost.min();
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setSeed(instance);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), false);
+      solver.sat().setRestarts(false);
+      List<Long> bounds = new ArrayList<>();
+      solver.onBound(bounds::add);
+      int status = solver.minimize(cost);
+      assertThat(solver.sat().restarts).isZero();
+      if (status != CdclSolver.SAT) {
+        continue;
+      }
+      int optimum = solver.value(cost);
+      for (int k = 0; k < bounds.size(); k++) {
+        assertThat(bounds.get(k)).as("instance %d", instance).isLessThanOrEqualTo(optimum);
+        if (k > 0) {
+          assertThat(bounds.get(k)).isGreaterThan(bounds.get(k - 1));
+        }
+      }
+      if (bounds.stream().anyMatch(b -> b > root)) {
+        raised++;
+      }
+    }
+    assertThat(raised).isGreaterThan(0);
+  }
+
   // the smallest weighted sum over the assignments of x that satisfy the relations
   private static long minimum(IntVar[] x, List<Relation> relations, int[] w, int[] t, int i) {
     if (i == x.length) {
