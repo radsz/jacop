@@ -1742,6 +1742,27 @@ Version 5.0 (unreleased)
      solved and solutions. -p 4 -t 20 s on flowshop-workers 8s_ex3 answered
      at 32.3 s, now 20.2 s.
 
+117. LCG explanations of Member. A value removed from e is explained by
+     its removal from every list variable, a value removed from the last
+     candidate by its removal from e and the other list variables being
+     disjoint from e (their bounds when apart, else each value of the
+     narrower of the two removed from the other), a failure by every list
+     variable being disjoint from e. Before, every reason was generic.
+     handball19 (30 s): Member reasons 63 % generic with 11.2 atoms to
+     0 % with 6.3. Wide set (220, 60 s): --lcg 5 better / 5 worse, --lcg
+     -f 8 / 11, solved -1 under -f; the two instances using Member keep
+     their objectives in both modes.
+
+118. KnapsackDP keeps only the bounds of the capacity while LCG records the
+     changes. Each capacity it removed between the bounds (no item choice
+     reaches that weight with enough profit) was a != atom whose only
+     reason is every item. The item supports do not need these holes, as
+     they check reachability and the profit bounds themselves. mknap2-1
+     (30 s, --lcg): generic reasons 22 % to 0.2 %, 75 to 8.6 atoms per
+     reason, same nodes and time. Wide set (220, 60 s): --lcg 4 better / 3
+     worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
+     instance changes its result.
+
 Version 4.11
 =============
 
