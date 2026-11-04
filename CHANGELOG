@@ -1726,7 +1726,22 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
-116. fzn-jacop ends by -t on its own on large models. The time-out was not
+116. Restarts under search annotations with --lcg (fixed search, the
+     default mode). Before, the annotation was followed down each branch
+     without restarts, so learnt clauses pruned but never reordered the
+     search. Now the solver restarts and its runs take turns between the
+     annotation, the SAT solver's own decisions on literals and activity
+     branching, keeping the learnt clauses; activity completes an
+     annotation that leaves variables unfixed. --free-config
+     fixed-restarts=turns|alternate|replay|off chooses (off is the old
+     behaviour), fixed-restarts-from=solution restarts only after a first
+     solution. Wide set (220, 60 s, default mode, interleaved with the
+     old build): 162 against 131 solved, score +163 (89 instances
+     better, 12 worse, no wrong answers), 11 of 12 families better.
+     Against OR-Tools CP-SAT 9.15 -p 1 -i (fixed search) the same set
+     goes from level (S = -2) to JaCoP ahead (S = -176).
+
+117. fzn-jacop ends by -t on its own on large models. The time-out was not
      kept in five places: LCG search counted the whole -t from its own
      start; free search took over from slow LCG free search even after the
      time-out (and was set up for seconds on large models); free search
@@ -1742,7 +1757,7 @@ Version 5.0 (unreleased)
      solved and solutions. -p 4 -t 20 s on flowshop-workers 8s_ex3 answered
      at 32.3 s, now 20.2 s.
 
-117. LCG explanations of Member. A value removed from e is explained by
+118. LCG explanations of Member. A value removed from e is explained by
      its removal from every list variable, a value removed from the last
      candidate by its removal from e and the other list variables being
      disjoint from e (their bounds when apart, else each value of the
@@ -1753,7 +1768,7 @@ Version 5.0 (unreleased)
      -f 8 / 11, solved -1 under -f; the two instances using Member keep
      their objectives in both modes.
 
-118. KnapsackDP keeps only the bounds of the capacity while LCG records the
+119. KnapsackDP keeps only the bounds of the capacity while LCG records the
      changes. Each capacity it removed between the bounds (no item choice
      reaches that weight with enough profit) was a != atom whose only
      reason is every item. The item supports do not need these holes, as
@@ -1763,7 +1778,7 @@ Version 5.0 (unreleased)
      worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
      instance changes its result.
 
-119. The MIR cut rounds of LinearRelaxation at the root are linear in the
+120. The MIR cut rounds of LinearRelaxation at the root are linear in the
      size of each row. Every model row was combined as a dense unit
      multiplier over all rows and a coefficient array over all columns,
      and MirCut walked every column, so a round cost rows x (rows +
@@ -1773,7 +1788,7 @@ Version 5.0 (unreleased)
      and cut bounds identical on all 184 instances with an LP; solved 130
      to 131 (default) and 152 to 156 (-f, timing).
 
-120. fzn-jacop prints the objective's bound (-s, objectiveBound) whenever
+121. fzn-jacop prints the objective's bound (-s, objectiveBound) whenever
      it improves during the search, not only at the root and at LCG
      restarts: under LCG at every return to the root (backjumps too, so
      fixed search, which has no restarts, gets rising bounds), in
@@ -1793,7 +1808,7 @@ Version 5.0 (unreleased)
      instances in default mode (none before) and on 144 under -f (116);
      solved and objectives unchanged within noise.
 
-121. New constraint Routes(tails, heads, literals[, demands, capacity]):
+122. New constraint Routes(tails, heads, literals[, demands, capacity]):
      the arcs at 1 form routes that leave node 0 (the depot) and come
      back to it, each other node is visited once or skipped by its self
      loop, and the demands on a route sum to at most the capacity. It
@@ -1809,7 +1824,7 @@ Version 5.0 (unreleased)
      0.999), -f 11 / 11 (1.006). No other Challenge instance has the
      pattern.
 
-122. The LP relaxation encodes the variables of all-different-except
+123. The LP relaxation encodes the variables of all-different-except
      constraints (alldifferent_except_0, alldifferent_except) by values
      over LP-only columns: x = sum v x_v, sum x_v <= 1 per variable and
      per value, and b = sum x_v for each reified or implied comparison
