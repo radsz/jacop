@@ -81,7 +81,35 @@ public class ElementTableDetector implements ParserTreeConstants {
   private int tables;
 
   /** One element: value = array[index - first]. */
-  private record Element(ASTConstElem node, int[] array, int first, IntVar value) {}
+  private static final class Element {
+    private final ASTConstElem node;
+    private final int[] array;
+    private final int first;
+    private final IntVar value;
+
+    Element(ASTConstElem node, int[] array, int first, IntVar value) {
+      this.node = node;
+      this.array = array;
+      this.first = first;
+      this.value = value;
+    }
+
+    ASTConstElem node() {
+      return node;
+    }
+
+    int[] array() {
+      return array;
+    }
+
+    int first() {
+      return first;
+    }
+
+    IntVar value() {
+      return value;
+    }
+  }
 
   /**
    * It creates a detector reading variables through the given support.
