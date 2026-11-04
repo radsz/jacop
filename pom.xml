@@ -324,6 +324,7 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
@@ -486,6 +487,7 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
@@ -643,6 +645,7 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
