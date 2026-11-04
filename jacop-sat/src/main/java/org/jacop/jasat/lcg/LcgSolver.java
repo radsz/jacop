@@ -43,7 +43,6 @@ import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.function.IntSupplier;
-import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -384,9 +383,6 @@ public final class LcgSolver implements ExternalPropagator {
   private CoreSearch coreSearch;
   // the objective value of the best solution found outside this solver, and the last one imported
   private IntSupplier sharedBound;
-  // told each larger lower bound of the objective this solver proves, and the last one told
-  private LongConsumer lowerBoundSink;
-  private long reportedLowerBound = Long.MIN_VALUE;
   private int importedBound = Integer.MAX_VALUE;
   // a shared bound at or below the objective's smallest value: no better solution exists
   private boolean sharedBoundUnreachable;
@@ -1289,7 +1285,6 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       int lb = vars[objective].min(); // after solve the domains are those of level 0
-      reportLowerBound(lb);
       if (lowerBoundShare > 0 && best != null && lb < best[objective]) {
         int lit = -geLit(objective, lb + 1); // objective <= lb
         limit = sat.conflicts + (long) (budget * lowerBoundShare);
@@ -1305,7 +1300,6 @@ public final class LcgSolver implements ExternalPropagator {
           }
           sat.addClause(-lit); // objective >= lb + 1
           lowerBoundRaised++;
-          reportLowerBound(lb + 1L);
         } else if (sat.conflicts < limit) {
           return result;
         }
@@ -1815,9 +1809,6 @@ public final class LcgSolver implements ExternalPropagator {
     if (restartPresolve > 0 && store.level == baseLevel) {
       presolveAtRestart();
     }
-    if (objective >= 0 && store.level == baseLevel) {
-      reportLowerBound(vars[objective].min());
-    }
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {
@@ -2068,29 +2059,6 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public void setSharedBound(IntSupplier bound) {
     sharedBound = bound;
-  }
-
-  /**
-   * Tells the given consumer each larger lower bound of the objective that {@link #minimize}
-   * proves: by core-guided search, by lower-bound runs, or as the objective's bound at the root. A
-   * bound b means that no solution better than the best one found here or given by {@link
-   * #setSharedBound} has an objective value below b, so a parallel portfolio whose best solution
-   * costs at most b has its optimum. The consumer is called from the solver's thread.
-   *
-   * @param sink the consumer of the bounds
-   */
-  public void setLowerBoundSink(LongConsumer sink) {
-    lowerBoundSink = sink;
-  }
-
-  /**
-   * Tells the lower bound to the consumer of {@link #setLowerBoundSink} when it is a larger one.
-   */
-  void reportLowerBound(long bound) {
-    if (lowerBoundSink != null && bound > reportedLowerBound) {
-      reportedLowerBound = bound;
-      lowerBoundSink.accept(bound);
-    }
   }
 
   /**

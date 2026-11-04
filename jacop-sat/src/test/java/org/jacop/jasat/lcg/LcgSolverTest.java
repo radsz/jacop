@@ -3578,42 +3578,6 @@ class LcgSolverTest {
   }
 
   @Test
-  void reportedLowerBoundsHold() {
-    Random rnd = new Random(29);
-    int reachedOptimum = 0;
-    int checked = 0;
-    for (int instance = 0; instance < 200; instance++) {
-      long seed = rnd.nextLong();
-      Integer optimum = coreModelOptimum(seed, -1, new long[3]);
-      if (optimum == null) {
-        continue;
-      }
-      checked++;
-      for (int mode = 0; mode < 4; mode++) {
-        long[] lower = new long[1];
-        coreModelOptimum(seed, mode, new long[3], null, lower);
-        assertThat(lower[0])
-            .as("instance %d (seed %d), mode %d", instance, seed, mode)
-            .isLessThanOrEqualTo(optimum);
-        if (mode == 0 && lower[0] == optimum) {
-          reachedOptimum++;
-        }
-        // a bound found elsewhere: no solution below it, so the bound reported may pass it, but
-        // the smaller of the two never passes the optimum
-        for (int shared : new int[] {optimum, optimum + 1}) {
-          coreModelOptimum(seed, mode, new long[3], shared, lower);
-          assertThat(Math.min(lower[0], shared))
-              .as("instance %d (seed %d), mode %d, shared %d", instance, seed, mode, shared)
-              .isLessThanOrEqualTo(optimum);
-        }
-      }
-    }
-    assertThat(checked).isPositive();
-    // core-guided search raises its bound to the optimum on some instances
-    assertThat(reachedOptimum).isPositive();
-  }
-
-  @Test
   void coreGuidedSearchStopsAtTheSharedBound() {
     Random rnd = new Random(23);
     int provedElsewhere = 0;
@@ -3961,12 +3925,6 @@ class LcgSolverTest {
 
   /** As above, with the objective value of a solution found elsewhere as a shared bound. */
   private static Integer coreModelOptimum(long seed, int mode, long[] stats, Integer shared) {
-    return coreModelOptimum(seed, mode, stats, shared, null);
-  }
-
-  /** As above; lower[0] gets the largest lower bound the solver reports, if lower is given. */
-  private static Integer coreModelOptimum(
-      long seed, int mode, long[] stats, Integer shared, long[] lower) {
     Random rnd = new Random(seed);
     Store store = new Store();
     int n = 4 + rnd.nextInt(5);
@@ -4042,10 +4000,6 @@ class LcgSolverTest {
     }
     if (shared != null) {
       solver.setSharedBound(() -> shared);
-    }
-    if (lower != null) {
-      lower[0] = Long.MIN_VALUE;
-      solver.setLowerBoundSink(b -> lower[0] = Math.max(lower[0], b));
     }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);

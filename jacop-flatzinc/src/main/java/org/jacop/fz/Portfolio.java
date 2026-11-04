@@ -129,10 +129,6 @@ final class Portfolio {
 
   // the objective value (of the minimised cost variable) of the best solution, read by all threads
   private volatile int bestCost = Integer.MAX_VALUE;
-  // the largest lower bound of the minimised cost variable that a thread proved: the best solution
-  // is optimal once its cost reaches it, also when no thread completes its own search
-  private int bestLower = Integer.MIN_VALUE;
-  private Worker lowerWorker;
   private String bestSolution;
   // the values of the model's variables in the best solution, by name; UNKNOWN when not fixed
   private String[] bestNames;
@@ -313,13 +309,6 @@ final class Portfolio {
           if (imports > 0) {
             s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
           }
-          if (lowerWorker != null) {
-            s.append("%%%mzn-stat: portfolioLowerBound=")
-                .append(objective(bestLower))
-                .append("\n%%%mzn-stat: portfolioLowerBoundBy=")
-                .append(lowerWorker.name)
-                .append('\n');
-          }
         }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {
@@ -484,32 +473,7 @@ final class Portfolio {
         stdout.print(text);
         stdout.flush();
       }
-      if (cost != null && cost <= bestLower) {
-        provedByBound();
-      }
     }
-  }
-
-  /** Takes a lower bound of the minimised cost variable that a thread proved. */
-  private void lowerBound(Worker w, long bound) {
-    int b = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, bound));
-    synchronized (lock) {
-      if (finished || b <= bestLower) {
-        return;
-      }
-      bestLower = b;
-      lowerWorker = w;
-      if (bestCost != Integer.MAX_VALUE && bestCost <= b) {
-        provedByBound();
-      }
-    }
-  }
-
-  // the best solution costs no more than a proved lower bound: it is optimal
-  private void provedByBound() {
-    complete = true;
-    finished = true;
-    lock.notifyAll();
   }
 
   private void ended(boolean searchComplete) {
@@ -582,17 +546,6 @@ final class Portfolio {
      */
     void solution(String text, Integer cost, boolean maximise, String[] names, int[] values) {
       Portfolio.this.solution(this, text, cost, maximise, names, values);
-    }
-
-    /**
-     * Reports a lower bound of the minimised cost variable: no solution better than the best one of
-     * the portfolio costs less. The portfolio ends with the best solution as optimal once its cost
-     * reaches the bound.
-     *
-     * @param bound the lower bound
-     */
-    void lowerBound(long bound) {
-      Portfolio.this.lowerBound(this, bound);
     }
 
     /**
