@@ -102,6 +102,26 @@ class ObjectiveGapFlatzincTest {
     PAIRS = s.toString();
   }
 
+  // four different values up to obj: optimum 3, which the root does not see; the annotation
+  // refutes obj = 0, 1 and 2 in turn
+  private static final String RISING =
+      """
+      var 0..10: obj :: output_var;
+      array [1..4] of var 0..10: y :: output_array([1..4]);
+      constraint int_ne(y[1],y[2]);
+      constraint int_ne(y[1],y[3]);
+      constraint int_ne(y[1],y[4]);
+      constraint int_ne(y[2],y[3]);
+      constraint int_ne(y[2],y[4]);
+      constraint int_ne(y[3],y[4]);
+      constraint int_le(y[1],obj);
+      constraint int_le(y[2],obj);
+      constraint int_le(y[3],obj);
+      constraint int_le(y[4],obj);
+      solve :: int_search([obj,y[1],y[2],y[3],y[4]], input_order, indomain_min, complete)
+        minimize obj;
+      """;
+
   private static final Pattern OBJECTIVE = Pattern.compile("(?m)^obj = (-?\\d+);");
   private static final Pattern BOUND = Pattern.compile("%%%mzn-stat: objectiveBound=(-?\\d+)");
 
@@ -162,6 +182,46 @@ class ObjectiveGapFlatzincTest {
   }
 
   @Test
+  void boundsRiseDuringTheSearchWithoutRestarts() throws IOException {
+    // depth-first search: each refuted obj = v leaves the subtree obj > v, whose minimum is a bound
+    String out = solve(RISING, "--lcg=off", "-s");
+    assertEquals(3, lastObjective(out), out);
+    assertEquals(List.of(0L, 1L, 2L, 3L), all(BOUND, out), out);
+    // LCG under the annotation, without restarts: the backjumps to the root raise the bound
+    out = solve(RISING, "--lcg=on", "-s");
+    assertEquals(3, lastObjective(out), out);
+    List<Long> bounds = all(BOUND, out);
+    for (int k = 0; k < bounds.size(); k++) {
+      assertTrue(bounds.get(k) <= 3, out);
+      assertTrue(k == 0 || bounds.get(k) > bounds.get(k - 1), out);
+    }
+    assertEquals(3L, bounds.get(bounds.size() - 1), out);
+    assertTrue(bounds.size() > 2, out);
+    // the bound comes with the time it was proved
+    assertTrue(out.contains("%%%mzn-stat: objectiveBoundTime="), out);
+  }
+
+  @Test
+  void anOptimalEndPrintsTheOptimumAsTheBound() throws IOException {
+    // maximise 100 + x: the root's bound 110 is reached only by the last solution
+    String model =
+        """
+        var 0..10: x :: output_var;
+        var 0..200: obj :: output_var;
+        constraint int_lin_eq([1,-1],[obj,x],100);
+        constraint int_ne(x,10);
+        solve :: int_search([x], input_order, indomain_min, complete) maximize obj;
+        """;
+    for (String engine : new String[] {"--lcg=off", "--lcg=on"}) {
+      String out = solve(model, engine, "-s");
+      assertEquals(109, lastObjective(out), out);
+      assertTrue(out.contains("=========="), out);
+      List<Long> bounds = all(BOUND, out);
+      assertEquals(109L, bounds.get(bounds.size() - 1), out);
+    }
+  }
+
+  @Test
   void learntBoundsHoldAndRise() throws IOException {
     for (String seed : new String[] {"1", "2", "3"}) {
       String out = solve(PAIRS, "-f", "-s", "-r", seed);
@@ -214,7 +274,12 @@ class ObjectiveGapFlatzincTest {
     ObjectiveGap max = new ObjectiveGap(0.1, true, printed::add);
     assertFalse(max.bound(-100));
     assertEquals(100L, max.objectiveBound());
-    assertEquals("%%%mzn-stat: objectiveBound=100\n%%%mzn-stat-end", printed.get(0));
+    assertTrue(
+        printed
+            .get(0)
+            .matches(
+                "%%%mzn-stat: objectiveBound=100\n%%%mzn-stat: objectiveBoundTime=[0-9.]+\n%%%mzn-stat-end"),
+        printed.get(0));
     assertFalse(max.solution(-90));
     assertTrue(max.solution(-91));
 

@@ -85,6 +85,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   // the cost of the best solution found outside this search, read at each node
   private IntSupplier sharedBound;
 
+  // run at each node, after propagation, whose subtree is all that is left of the search
+  private Runnable lastSubtreeListener;
+
+  // the nodes on the path to the current one whose right branch is still to come
+  private int openRightBranches;
+
   private static final String SOLUTION_COST_IS = "Solution cost is {}";
   private static final String TIMEOUT_S = "Time-out {}s";
   private static final String NO_SOLUTION_FOUND = "No solution found.";
@@ -630,6 +636,20 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     sharedBound = bound;
   }
 
+  /**
+   * Sets an action run at each node, after its propagation, whose subtree is all that is left of
+   * the search: every node on its path is in its right branch, the last one, so the search has
+   * explored everything outside this subtree. Under optimisation each solution not found yet is in
+   * the subtree, so the minimum of the cost variable at the node is a bound that no solution better
+   * than the best one goes below, and the bounds rise from one such node to the next. The action is
+   * not run while an exit child listener may skip right branches.
+   *
+   * @param action the action, or null for none
+   */
+  public void setLastSubtreeListener(Runnable action) {
+    lastSubtreeListener = action;
+  }
+
   private void notifyConsistencyListener(boolean consistent) {
     if (consistencyListener != null) {
       consistencyListener.executeAfterConsistency(consistent);
@@ -880,6 +900,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       failedDecision(decision);
       return false;
     }
+    if (lastSubtreeListener != null && openRightBranches == 0 && exitChildListener == null) {
+      lastSubtreeListener.run();
+    }
 
     store.setLevel(++depth);
     maxDepth = Math.max(depth, maxDepth);
@@ -906,7 +929,12 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     if (heuristic instanceof LastConflictSelect) {
       leftDecision = fdv != null ? fdv : singleVariable(choice);
     }
-    consistent = label(heuristic.getIndex());
+    openRightBranches++;
+    try {
+      consistent = label(heuristic.getIndex());
+    } finally {
+      openRightBranches--;
+    }
 
     if (shouldExitAfterLeftChild(fdv, val, choice, consistent)) {
       store.removeLevel(depth);

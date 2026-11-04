@@ -3057,6 +3057,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     stopInPortfolio();
     importBoundInPortfolio(label, costVar);
+    if (costVar instanceof IntVar cost) {
+      // a node whose subtree is all that is left bounds the solutions not found yet
+      label.setLastSubtreeListener(
+          () -> {
+            if (reportBound(cost.min())) {
+              throw new NumberSolutionsReached();
+            }
+          });
+    }
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
@@ -3175,6 +3184,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && isSearchComplete()
         && relaxedSearchComplete()
         && clampedDomainsKeepOptimum()) {
+      if (objectiveGap != null) {
+        // the search proved the best solution optimal
+        objectiveGap.optimal();
+      }
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -4274,6 +4287,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return true when the best solution is within --gap of the bound, so the search can stop
    */
   private boolean reportBound(long lower) {
+    if (!clampedDomainsKeepOptimum()) {
+      return false; // domains cut to the integer range may have cut off better solutions
+    }
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
       worker.bound(lower, !minimize);

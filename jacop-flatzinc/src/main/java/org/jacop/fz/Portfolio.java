@@ -293,6 +293,9 @@ final class Portfolio {
           s.append(bestSolution);
         }
         if (complete && optimisation) {
+          if (gap != null) {
+            gap.optimal(); // a thread proved the best solution optimal
+          }
           s.append(COMPLETE).append('\n');
         } else if (timedOut) {
           s.append("%% =====TIME-OUT=====\n");
