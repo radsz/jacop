@@ -654,6 +654,35 @@ class FreeSearchTest {
   }
 
   @Test
+  void deadlineCountsFromWhenItIsGiven() throws InterruptedException {
+    // a time limit counts from solve(); fzn-jacop built the search for 2.1 s on ma-path-finding
+    // ins_g16_p10_a20 after reading the time left, and overran -t by as much. A deadline holds
+    // however long the search takes to build.
+    Store store = new Store();
+    IntVar[] x = new IntVar[12];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, 0, x.length - 2);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(x, null, new IndomainMin<>()))
+            .timeLimit(Duration.ofSeconds(60))
+            .deadline(System.currentTimeMillis() + 100)
+            .build();
+    Thread.sleep(300);
+    long start = System.currentTimeMillis();
+    Status status = search.solve();
+    long elapsed = System.currentTimeMillis() - start;
+    assertTrue(search.limitReached());
+    assertEquals(Status.UNKNOWN, status);
+    assertTrue(elapsed < 1000, "stopped after " + elapsed + " ms");
+  }
+
+  @Test
   void deepSearchDoesNotUseTheJavaStack() throws InterruptedException {
     // a recursive search needs several stack frames per decision; 5000 decisions do not fit in a
     // 128 KB thread stack

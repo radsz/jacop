@@ -2813,7 +2813,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.mainBranchingFirst(true);
     }
     if (options.getTimeOut() > 0) {
-      builder.timeLimit(Duration.ofMillis(options.getRemainingTimeOut()));
+      // the time left now, not when the search starts: building the neighbourhoods and the
+      // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
+      builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
