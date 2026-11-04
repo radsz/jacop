@@ -1726,6 +1726,26 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
+116. fzn-jacop prints the objective's bound (-s, objectiveBound) whenever
+     it improves during the search, not only at the root and at LCG
+     restarts: under LCG at every return to the root (backjumps too, so
+     fixed search, which has no restarts, gets rising bounds), in
+     depth-first search without LCG at each node whose subtree is all
+     that is left (DepthFirstSearch.setLastSubtreeListener), and in free
+     search, also after LCG stopped as slow, at the root between runs,
+     where refuted objective probes and nogoods raise it
+     (FreeSearch.Builder.onBound). A search that proves its best solution
+     optimal prints it as the last bound, a portfolio too. Each bound line
+     comes with objectiveBoundTime, the wall-clock seconds since the JVM
+     started. No bound is printed when domains were narrowed to JaCoP's
+     integer range beyond the objective's worse side, since better
+     solutions may have been cut off. --gap stops on these bounds as well.
+     jp-encoding data1700 (-f, 60 s): bound 0 to 53273 against the
+     incumbent 58599, within 10 %. Wide set (220, 60 s): no bound past a
+     known optimum; the bound moves during the search on 105 optimisation
+     instances in default mode (none before) and on 144 under -f (116);
+     solved and objectives unchanged within noise.
+
 Version 4.11
 =============
 
