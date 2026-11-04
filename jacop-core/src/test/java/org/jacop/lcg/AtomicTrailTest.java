@@ -645,6 +645,50 @@ class AtomicTrailTest {
   }
 
   /**
+   * [a0, a1, a2] lex<= [b0, b1, b2]: a0 >= 2 propagates b0 >= 2 whatever a1 and a2 are, so its
+   * reason is the a0 bound alone. Before, a reason cited every atom of the vectors up to the pruned
+   * one (wordpress: 11,000 atoms per reason).
+   */
+  @Test
+  void lexChainReasonCitesOnlyTheNeededPrefix() {
+    Store store = new Store();
+    IntVar[] a = {
+      new IntVar(store, "a0", 0, 3), new IntVar(store, "a1", 0, 3), new IntVar(store, "a2", 0, 3)
+    };
+    IntVar[] b = {
+      new IntVar(store, "b0", 0, 3), new IntVar(store, "b1", 0, 3), new IntVar(store, "b2", 0, 3)
+    };
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(new IntVar[][] {a, b}, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a[1].domain.inMax(store.level, a[1], 2);
+    a[2].domain.inMin(store.level, a[2], 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a[0].domain.inMin(store.level, a[0], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b[0].min()).isEqualTo(2);
+    int bound = -1;
+    int decision = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == b[0] && trail.kind(e) == AtomicTrail.GE) {
+        bound = e;
+      }
+      if (trail.variable(e) == a[0] && trail.kind(e) == AtomicTrail.GE) {
+        decision = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(bound, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+    reason.sortUnique(0);
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(decision);
+    trail.detach();
+  }
+
+  /**
    * all_equal(a, b, c) (generalized-peacable-queens): a != 2 removes 2 from b and c, and b >= 3
    * moves a and c to 3. Each atom is explained by the same atom of one other variable instead of
    * the generic reason that cites the domains of all three.

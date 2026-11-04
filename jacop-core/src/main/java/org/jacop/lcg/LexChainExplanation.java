@@ -61,6 +61,9 @@ public final class LexChainExplanation {
   private final int position;
   private final IntDomain[][] domain;
 
+  // positions beyond it are read as their root domains, a weaker view whose reason is shorter
+  private int limit;
+
   private LexChainExplanation(AtomicTrail trail, IntVar[][] x, boolean strict, int position) {
     this.trail = trail;
     this.x = x;
@@ -69,6 +72,7 @@ public final class LexChainExplanation {
     this.n = m == 0 ? 0 : x[0].length;
     this.position = position;
     this.domain = new IntDomain[m][];
+    this.limit = n - 1;
   }
 
   /**
@@ -118,7 +122,8 @@ public final class LexChainExplanation {
       }
       bound = e.smallestAbove(i, bound);
       if (bound == null) {
-        e.addRows(0, i, -1, -1, out);
+        int last = i;
+        e.addRows(0, i, -1, -1, e.shortestPrefix(p -> e.chainFails(0, last)), out);
         return true;
       }
     }
@@ -126,7 +131,43 @@ public final class LexChainExplanation {
     for (int i = m - 1; i >= 0; i--) {
       bound = e.largestBelow(i, bound);
       if (bound == null) {
-        e.addRows(i, m - 1, -1, -1, out);
+        int first = i;
+        e.addRows(i, m - 1, -1, -1, e.shortestPrefix(p -> e.chainFails(first, m - 1)), out);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The shortest prefix of positions whose atoms keep the reason: the smallest limit for which the
+   * check holds when the positions beyond it are read as their root domains. Weaker domains give
+   * weaker bounds along the chain, so the check holds for every limit above one where it holds; it
+   * holds for the whole vectors.
+   */
+  private int shortestPrefix(java.util.function.IntPredicate holds) {
+    int low = 0;
+    int high = n - 1;
+    while (low < high) {
+      int mid = (low + high) >>> 1;
+      limit = mid;
+      boolean ok = holds.test(mid);
+      limit = n - 1;
+      if (ok) {
+        high = mid;
+      } else {
+        low = mid + 1;
+      }
+    }
+    return high;
+  }
+
+  /** Whether the vectors from..to have no chain of tuples in the current view of the domains. */
+  private boolean chainFails(int from, int to) {
+    int[] bound = null;
+    for (int i = from; i <= to; i++) {
+      bound = smallestAbove(i, bound);
+      if (bound == null) {
         return true;
       }
     }
@@ -171,6 +212,8 @@ public final class LexChainExplanation {
     boolean lower = below != null;
     boolean upper = above != null;
     int mark = out.size();
+    int[] left = new int[16];
+    int count = 0;
     for (int u = root.contains(lo) ? lo : root.nextValue(lo); u <= hi; u = root.nextValue(u)) {
       if (!trail.excludedBefore(x[i][j], u, position, out)) {
         lower &= !reachesAbove(i, j, u, below);
@@ -179,17 +222,62 @@ public final class LexChainExplanation {
           out.truncate(mark);
           return false;
         }
+        if (count == left.length) {
+          left = java.util.Arrays.copyOf(left, 2 * count);
+        }
+        left[count++] = u;
       }
       if (u >= root.max()) {
         break;
       }
     }
+    int[] values = java.util.Arrays.copyOf(left, count);
     if (lower) {
-      addRows(0, i, i, j, out);
+      addRows(0, i, i, j, shortestPrefix(p -> noneAbove(i, j, values)), out);
     } else if (upper) {
-      addRows(i, m - 1, i, j, out);
+      addRows(i, m - 1, i, j, shortestPrefix(p -> noneBelow(i, j, values)), out);
     }
     return true;
+  }
+
+  // whether, in the current view, no tuple of x[i] with one of the values at j is above the bound
+  // of the vectors before it (or the vectors before it have no chain at all)
+  private boolean noneAbove(int i, int j, int[] values) {
+    int[] bound = null;
+    for (int k = 0; k < i; k++) {
+      bound = smallestAbove(k, bound);
+      if (bound == null) {
+        return true;
+      }
+    }
+    for (int u : values) {
+      if (reachesAbove(i, j, u, bound)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // symmetric to noneAbove with the vectors after x[i]
+  private boolean noneBelow(int i, int j, int[] values) {
+    int[] bound = null;
+    for (int k = m - 1; k > i; k--) {
+      bound = largestBelow(k, bound);
+      if (bound == null) {
+        return true;
+      }
+    }
+    for (int u : values) {
+      if (reachesBelow(i, j, u, bound)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** The domain of x[i][k] in the current view: read, or the root domain beyond the limit. */
+  private IntDomain dom(int i, int k) {
+    return k <= limit ? domain[i][k] : trail.rootDomain(x[i][k]);
   }
 
   /** Whether some tuple of x[i] with u at j is above (or equal to, unless strict) the bound. */
@@ -198,7 +286,7 @@ public final class LexChainExplanation {
       return true;
     }
     for (int k = 0; k < n; k++) {
-      int t = k == j ? u : domain[i][k].max();
+      int t = k == j ? u : dom(i, k).max();
       if (t != bound[k]) {
         return t > bound[k];
       }
@@ -212,7 +300,7 @@ public final class LexChainExplanation {
       return true;
     }
     for (int k = 0; k < n; k++) {
-      int t = k == j ? u : domain[i][k].min();
+      int t = k == j ? u : dom(i, k).min();
       if (t != bound[k]) {
         return t < bound[k];
       }
@@ -225,27 +313,26 @@ public final class LexChainExplanation {
    * tuple of x[i] when the bound is null; null when there is none.
    */
   private int[] smallestAbove(int i, int[] bound) {
-    IntDomain[] d = domain[i];
     int[] t = new int[n];
     if (bound == null) {
       for (int k = 0; k < n; k++) {
-        t[k] = d[k].min();
+        t[k] = dom(i, k).min();
       }
       return t;
     }
     int q = 0;
-    while (q < n && d[q].contains(bound[q])) {
+    while (q < n && dom(i, q).contains(bound[q])) {
       q++;
     }
     if (q == n && !strict) {
       return bound.clone();
     }
     for (int p = Math.min(q, n - 1); p >= 0; p--) {
-      if (d[p].max() > bound[p]) {
+      if (dom(i, p).max() > bound[p]) {
         System.arraycopy(bound, 0, t, 0, p);
-        t[p] = bound[p] < d[p].min() ? d[p].min() : d[p].nextValue(bound[p]);
+        t[p] = bound[p] < dom(i, p).min() ? dom(i, p).min() : dom(i, p).nextValue(bound[p]);
         for (int k = p + 1; k < n; k++) {
-          t[k] = d[k].min();
+          t[k] = dom(i, k).min();
         }
         return t;
       }
@@ -255,27 +342,26 @@ public final class LexChainExplanation {
 
   /** The largest tuple of x[i] below the bound, symmetric to {@link #smallestAbove}. */
   private int[] largestBelow(int i, int[] bound) {
-    IntDomain[] d = domain[i];
     int[] t = new int[n];
     if (bound == null) {
       for (int k = 0; k < n; k++) {
-        t[k] = d[k].max();
+        t[k] = dom(i, k).max();
       }
       return t;
     }
     int q = 0;
-    while (q < n && d[q].contains(bound[q])) {
+    while (q < n && dom(i, q).contains(bound[q])) {
       q++;
     }
     if (q == n && !strict) {
       return bound.clone();
     }
     for (int p = Math.min(q, n - 1); p >= 0; p--) {
-      if (d[p].min() < bound[p]) {
+      if (dom(i, p).min() < bound[p]) {
         System.arraycopy(bound, 0, t, 0, p);
-        t[p] = bound[p] > d[p].max() ? d[p].max() : d[p].previousValue(bound[p]);
+        t[p] = bound[p] > dom(i, p).max() ? dom(i, p).max() : dom(i, p).previousValue(bound[p]);
         for (int k = p + 1; k < n; k++) {
-          t[k] = d[k].max();
+          t[k] = dom(i, k).max();
         }
         return t;
       }
@@ -312,10 +398,13 @@ public final class LexChainExplanation {
     return true;
   }
 
-  /** Adds the atoms of the vectors from..to, except the variable x[skipRow][skipColumn]. */
-  private void addRows(int from, int to, int skipRow, int skipColumn, EntryList out) {
+  /**
+   * Adds the atoms of positions 0..last of the vectors from..to, except the variable
+   * x[skipRow][skipColumn].
+   */
+  private void addRows(int from, int to, int skipRow, int skipColumn, int last, EntryList out) {
     for (int i = from; i <= to; i++) {
-      for (int k = 0; k < n; k++) {
+      for (int k = 0; k <= last; k++) {
         if (i != skipRow || k != skipColumn) {
           trail.atomsBefore(x[i][k], position, out);
         }
