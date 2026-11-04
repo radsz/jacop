@@ -176,7 +176,7 @@ final class UnaryTimetable {
         if (s.max() < est + dur[i]) {
           pruneUse(store, i, s.max(), est + dur[i], parts, limitMax);
         }
-        if (PRESENCE_FIT && use[i].max() > 0) {
+        if (presenceFit && use[i].max() > 0) {
           pruneUseByFit(store, i, est, s.max(), parts, limitMax);
         }
       }
@@ -186,8 +186,21 @@ final class UnaryTimetable {
 
   // a task that may use nothing gets use 0 where it fits nowhere, unless
   // -Djacop.cumulative.presenceFit=false
-  private static final boolean PRESENCE_FIT =
+  private static boolean presenceFit =
       !"false".equals(System.getProperty("jacop.cumulative.presenceFit"));
+
+  /**
+   * Switches the presence rule of {@link #pruneUseByFit} on or off, for tests that compare the
+   * time-table with the sweep, which has no such rule.
+   *
+   * @param on whether a task that may use nothing gets use 0 where it fits nowhere
+   * @return the previous setting
+   */
+  static boolean setPresenceFit(boolean on) {
+    boolean old = presenceFit;
+    presenceFit = on;
+    return old;
+  }
 
   /**
    * Task i may use nothing, as an optional task whose use is its presence: wherever it starts
