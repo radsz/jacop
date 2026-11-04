@@ -25,6 +25,7 @@
 
 package org.jacop.constraints.diffn;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
@@ -37,10 +38,14 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.util.VarIntMap;
 
 /**
@@ -51,7 +56,8 @@ import org.jacop.util.VarIntMap;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explainable, Stateful {
+public class Nooverlap extends Constraint
+    implements Copyable<Nooverlap>, Explainable, Stateful, PbEncodable {
 
   static final int X = 0;
   static final int Y = 1;
@@ -62,6 +68,9 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
    * between other rectangles strict = false these rectangles can be anywhere.
    */
   boolean strict = true;
+
+  // whether pruning also fails on the area and the count of the rectangles that may overlap one
+  private boolean energyCheck = true;
 
   Store store;
 
@@ -296,6 +305,18 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     this.strict = strict;
   }
 
+  /**
+   * Turns off the failures on the area and the count of the rectangles that may overlap one, so
+   * that every failure and pruning follows from a pair of rectangles. A proof of the pairwise
+   * encoding then follows each step by unit propagation.
+   *
+   * @return this constraint
+   */
+  public Nooverlap pairwiseOnly() {
+    energyCheck = false;
+    return this;
+  }
+
   @Override
   public void consistency(Store store) {
 
@@ -354,7 +375,9 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
         overlapping[j].update(o);
       }
 
-      energyCheck(j, o);
+      if (energyCheck) {
+        energyCheck(j, o);
+      }
 
       prune(r, o);
     }
@@ -766,6 +789,86 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
     return true;
   }
 
+  /**
+   * Writes each pair of rectangles as the disjunction of the four ways they are apart, i left of,
+   * right of, below or above j, each a literal equal to its inequality ({@code o_i + l_i <= o_j}
+   * and so on); without strict, a rectangle of length 0 in either dimension may be anywhere. Unit
+   * propagation over it is the pairwise pruning, which the explanations state. Diffn, which also
+   * prunes by profiles and areas, is not encoded.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Nooverlap.class) {
+      return false;
+    }
+    for (int i = 0; i < rectangle.length; i++) {
+      for (int j = i + 1; j < rectangle.length; j++) {
+        List<String> apart = new ArrayList<>();
+        for (int d = 0; d < 2; d++) {
+          apart.add(before(model, rectangle[i], rectangle[j], d));
+          apart.add(before(model, rectangle[j], rectangle[i], d));
+          if (!strict) {
+            apart.add(PbModel.not(model.atLeast(rectangle[i].length[d], 1)));
+            apart.add(PbModel.not(model.atLeast(rectangle[j].length[d], 1)));
+          }
+        }
+        model.clause(apart.toArray(new String[0]));
+      }
+    }
+    return true;
+  }
+
+  /** The most clauses written for one literal "a ends before b starts" before a linear line. */
+  private static final int BEFORE_CLAUSES = 1 << 14;
+
+  // a literal equal to a ending before b starts in dimension d, o_a + l_a <= o_b, so that a
+  // solution
+  // fixes it; as clauses over the order literals, for each value of o_a (or o_b) and of l_a, unit
+  // propagation over it gives the bounds of the pairwise pruning, which a linear line over the
+  // order
+  // literals derives only one value at a time
+  private static String before(PbModel model, Rectangle a, Rectangle b, int d) {
+    String lit = model.auxiliary();
+    IntVar oa = a.origin[d];
+    IntVar la = a.length[d];
+    IntVar ob = b.origin[d];
+    int[] originsA = values(model.domain(oa));
+    int[] lengths = values(model.domain(la));
+    int[] originsB = values(model.domain(ob));
+    if ((long) (originsA.length + originsB.length) * lengths.length > BEFORE_CLAUSES) {
+      LinearForm f =
+          new LinearForm(new IntVar[] {oa, la, ob}, new long[] {1, 1, -1}, 0, LinearForm.LE);
+      model.guarded(lit, f);
+      model.guarded(PbModel.not(lit), f.negated());
+      return lit;
+    }
+    String notLit = PbModel.not(lit);
+    for (int k : lengths) {
+      String longEnough = PbModel.not(model.atLeast(la, k));
+      String shortEnough = model.atLeast(la, k + 1);
+      // lit, o_a >= v and l_a >= k: o_b >= v + k
+      for (int v : originsA) {
+        model.clause(
+            notLit, PbModel.not(model.atLeast(oa, v)), longEnough, model.atLeast(ob, v + k));
+      }
+      // not lit, o_b >= w and l_a <= k: o_a >= w + 1 - k
+      for (int w : originsB) {
+        model.clause(
+            lit, PbModel.not(model.atLeast(ob, w)), shortEnough, model.atLeast(oa, w + 1 - k));
+      }
+    }
+    return lit;
+  }
+
+  private static int[] values(IntDomain dom) {
+    int[] v = new int[dom.getSize()];
+    int n = 0;
+    for (ValueEnumeration e = dom.valueEnumeration(); e.hasMoreElements(); ) {
+      v[n++] = e.nextElement();
+    }
+    return v;
+  }
+
   // a subclass may prune by other rules, so only the classes explained here give reasons
   private boolean explainable() {
     Class<?> type = getClass();
@@ -774,6 +877,8 @@ public class Nooverlap extends Constraint implements Copyable<Nooverlap>, Explai
 
   @Override
   public Nooverlap copy(VarMap map) {
-    return new Nooverlap(rectangleVariables(map), strict);
+    Nooverlap c = new Nooverlap(rectangleVariables(map), strict);
+    c.energyCheck = energyCheck;
+    return c;
   }
 }

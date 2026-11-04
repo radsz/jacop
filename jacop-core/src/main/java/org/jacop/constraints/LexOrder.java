@@ -48,6 +48,9 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.util.VarIntMap;
 
 /**
@@ -67,7 +70,8 @@ public class LexOrder extends Constraint
         SatisfiedPresent,
         RemoveLevelLate,
         Copyable<LexOrder>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   static final boolean DEBUG = false;
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -620,6 +624,37 @@ public class LexOrder extends Constraint
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return suffixAtLeast(trail, trail.size(), 0, out);
+  }
+
+  /**
+   * States the order by a literal per position that the positions before it are equal, defined both
+   * ways: under it x[i] <= y[i], and with x[i] >= m >= y[i] for some m the next one holds; for a
+   * strict order the last one does not hold.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != LexOrder.class) {
+      return false;
+    }
+    String prefix = "1";
+    for (int i = 0; i < n; i++) {
+      IntVar[] pair = {x[i], y[i]};
+      model.guarded(prefix, new LinearForm(pair, new long[] {1, -1}, 0, LinearForm.LE));
+      String next = model.auxiliary();
+      model.clause(PbModel.not(next), prefix);
+      model.guarded(next, new LinearForm(pair, new long[] {1, -1}, 0, LinearForm.GE));
+      int lo = Math.max(model.domain(x[i]).min(), model.domain(y[i]).min());
+      int hi = Math.min(model.domain(x[i]).max(), model.domain(y[i]).max());
+      for (int m = lo; m <= hi; m++) {
+        String above = m >= model.domain(y[i]).max() ? "0" : model.atLeast(y[i], m + 1);
+        model.clause(PbModel.not(prefix), PbModel.not(model.atLeast(x[i], m)), above, next);
+      }
+      prefix = next;
+    }
+    if (lexLt) {
+      model.clause(PbModel.not(prefix));
+    }
+    return true;
   }
 
   @Override

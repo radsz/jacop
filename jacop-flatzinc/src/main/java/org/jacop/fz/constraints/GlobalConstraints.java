@@ -64,6 +64,7 @@ import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Deviation;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
@@ -116,6 +117,7 @@ import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
@@ -255,6 +257,17 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
     if (s.length == 0) {
+      return;
+    }
+    if (support.options.proof() != null) {
+      // --proof: the time table, which unit propagation over the time-indexed encoding states, and
+      // over fixed tasks the energy and edge-finding rules, whose reasons the proof derives as sums
+      // of the encoding's lines over an overloaded window
+      if (allVarGround(d) && allVarGround(r)) {
+        support.delayedConstraints.add(configureCumulative(new Cumulative(s, d, r, b)));
+      } else {
+        support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      }
       return;
     }
     if (poseInterDistance(s, d, r, b)) {
@@ -543,10 +556,22 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     // successors must all be different, so the same variable (or constant) twice is infeasible
     checkForDuplicateVariables(v);
-    support.pose(new Subcircuit(v));
+    subcircuit(v);
 
     // the successors of a subcircuit are all different too (x[i] = i is unique to i)
     addImpliedAlldistinct(v);
+  }
+
+  // under --proof a decomposition by positions, whose encoding unit propagation follows; the cut
+  // and dominance reasons of Subcircuit it does not
+  private void subcircuit(IntVar[] v) {
+    if (support.options.proof() == null) {
+      support.pose(new Subcircuit(v));
+      return;
+    }
+    for (Constraint c : Subcircuit.decomposition(store, v)) {
+      support.pose(c);
+    }
   }
 
   // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
@@ -556,9 +581,27 @@ class GlobalConstraints implements ParserTreeConstants {
     int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(1)), v.length);
     IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     checkForDuplicateVariables(v);
-    support.pose(new Subcircuit(v));
+    subcircuit(v);
     addImpliedAlldistinct(v);
-    support.pose(new SubcircuitCost(v, costs, cost));
+    if (support.options.proof() == null) {
+      support.pose(new SubcircuitCost(v, costs, cost));
+      return;
+    }
+    // the cost as a sum of elements, which a proof states
+    IntVar[] terms = new IntVar[v.length + 1];
+    int[] weights = new int[v.length + 1];
+    for (int i = 0; i < v.length; i++) {
+      terms[i] =
+          new IntVar(
+              store,
+              Arrays.stream(costs[i]).min().orElse(0),
+              Arrays.stream(costs[i]).max().orElse(0));
+      support.pose(new ElementInteger(v[i], costs[i], terms[i], 0));
+      weights[i] = 1;
+    }
+    terms[v.length] = cost;
+    weights[v.length] = -1;
+    support.pose(new LinearInt(terms, weights, "==", 0));
   }
 
   // jacop_weighted_subcircuits(next, tour, d, tourCost, cost, offset)
@@ -994,7 +1037,10 @@ class GlobalConstraints implements ParserTreeConstants {
       System.arraycopy(v, 4 * i, r[i], 0, 4);
     }
 
-    support.pose(new Diffn(r, false));
+    support.pose(
+        support.options.proof() != null
+            ? new Nooverlap(r, false).pairwiseOnly()
+            : new Diffn(r, false));
   }
 
   void gen_jacop_diff2_strict(SimpleNode node) {
@@ -1003,9 +1049,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(true).build());
+    support.pose(diffn(x, y, lx, ly, true));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  // under --proof the pairwise rule alone, which unit propagation over its encoding reaches; the
+  // profile and area rules of Diffn it does not
+  private Constraint diffn(IntVar[] x, IntVar[] y, IntVar[] lx, IntVar[] ly, boolean strict) {
+    if (support.options.proof() != null) {
+      return new Nooverlap(x, y, lx, ly, strict).pairwiseOnly();
+    }
+    return Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(strict).build();
   }
 
   void gen_jacop_list_diff2(SimpleNode node) {
@@ -1014,8 +1068,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
+    support.pose(diffn(x, y, lx, ly, false));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
   }
 
@@ -1551,8 +1604,127 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      if (v.length == 2) {
+        support.dictionary.addBinaryTable(v, t);
+      }
       poseTableBySize(v, t);
     }
+  }
+
+  /**
+   * It posts a short table: x is one of the rows of the table, where the value star in a row
+   * matches any value. The rows that cannot match the domains are dropped and a variable that
+   * occurs twice is kept once, so HybridTable sees distinct variables.
+   *
+   * @param node the constraint node: x, the rows flattened row by row, and star.
+   */
+  void gen_jacop_short_table_int(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int star = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int size = v.length;
+    if (size == 0) {
+      if (tbl.length == 0) {
+        throw Store.failException;
+      }
+      return;
+    }
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      position.putIfAbsent(x, position.size());
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] row = new int[nv.length];
+      Arrays.fill(row, star);
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        if (value == star) {
+          continue;
+        }
+        int k = position.get(v[j]);
+        if (!v[j].domain.contains(value) || row[k] != star && row[k] != value) {
+          possible = false;
+        }
+        row[k] = value;
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty()) {
+      throw Store.failException;
+    }
+    for (int[] row : kept) {
+      if (Arrays.stream(row).allMatch(value -> value == star)) {
+        // a row of stars matches every assignment
+        return;
+      }
+    }
+    if (nv.length == 1) {
+      IntervalDomain d = new IntervalDomain();
+      for (int[] row : kept) {
+        d.unionAdapt(row[0], row[0]);
+      }
+      nv[0].domain.in(store.level, nv[0], d);
+      return;
+    }
+    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+  }
+
+  /**
+   * It posts a negative table: x is none of the rows of the table. The rows that cannot match the
+   * domains are dropped and a variable that occurs twice is kept once.
+   *
+   * @param node the constraint node: x and the rows flattened row by row.
+   */
+  void gen_jacop_negative_table_int(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int size = v.length;
+    if (size == 0) {
+      if (tbl.length > 0) {
+        throw Store.failException;
+      }
+      return;
+    }
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      position.putIfAbsent(x, position.size());
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] row = new int[nv.length];
+      boolean[] set = new boolean[nv.length];
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        int k = position.get(v[j]);
+        if (!v[j].domain.contains(value) || set[k] && row[k] != value) {
+          possible = false;
+        }
+        row[k] = value;
+        set[k] = true;
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty()) {
+      return;
+    }
+    if (nv.length == 1) {
+      IntervalDomain d = new IntervalDomain();
+      for (int[] row : kept) {
+        d.unionAdapt(row[0], row[0]);
+      }
+      nv[0].domain.in(store.level, nv[0], nv[0].domain.subtract(d));
+      return;
+    }
+    support.pose(new NegativeTable(nv, deduplicateTableRows(kept.toArray(new int[0][]))));
   }
 
   /**
@@ -1907,7 +2079,7 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < alphabetSize; j++) {
         if (d[i * alphabetSize + j] != 0) {
-          addTransitionValue(condition, d[i * alphabetSize + j] - minIndex, j + minIndex);
+          addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -2061,8 +2233,10 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < S.getSize(); j++) {
         int valTran = valueTransition.nextElement();
+        // d holds 1-based next states (0 is the failure state); min_index is the smallest
+        // symbol of the alphabet, not of the states
         if (d[i * S.getSize() + j] != 0) {
-          addTransitionValue(condition, d[i * S.getSize() + j] - minIndex, valTran);
+          addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -2092,7 +2266,9 @@ class GlobalConstraints implements ParserTreeConstants {
             .quantity(x)
             .knapsackCapacity(W)
             .knapsackProfit(P)
-            .build());
+            .build()
+            // a proof derives the rows of the relaxation, not the prunings of the dynamic program
+            .dynamicProgramming(support.options.proof() == null));
   }
 
   void gen_jacop_sequence(SimpleNode node) {

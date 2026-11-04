@@ -39,6 +39,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ReifiedExplanation;
 
 /**
@@ -51,7 +53,7 @@ import org.jacop.lcg.ReifiedExplanation;
  * @version 5.0
  */
 public class XplusClteqZImplied extends PrimitiveConstraint
-    implements Copyable<XplusClteqZImplied>, Explainable {
+    implements Copyable<XplusClteqZImplied>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -211,5 +213,17 @@ public class XplusClteqZImplied extends PrimitiveConstraint
         && b != x
         && b != z
         && ReifiedExplanation.explainFailure(trail, b, nested(), false, out);
+  }
+
+  // b -> x + c <= z, as the inequality under the guard b
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != XplusClteqZImplied.class
+        || model.domain(b).min() < 0
+        || model.domain(b).max() > 1) {
+      return false;
+    }
+    model.reified(b, nested().linearForm(), false);
+    return true;
   }
 }

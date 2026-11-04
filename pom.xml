@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
 
     <modules>
+        <module>jacop-jalp</module>
         <module>jacop-core</module>
         <module>jacop-floats</module>
         <module>jacop-sets</module>
@@ -223,12 +224,16 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
+                                <include>**/RevisedDualSimplexTest.java</include>
+                                <include>**/JalpSimplexTest.java</include>
+                                <include>**/MpsReaderTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -297,6 +302,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -305,6 +311,7 @@ setup to run configuration. -->
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
+                                <include>**/ObjectiveGapFlatzincTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/MultiObjectiveTest.java</include>
@@ -313,6 +320,8 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/RegularSetFlatzincTest.java</include>
+                                <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
@@ -367,12 +376,16 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
+                                <include>**/RevisedDualSimplexTest.java</include>
+                                <include>**/JalpSimplexTest.java</include>
+                                <include>**/MpsReaderTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -446,6 +459,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -455,6 +469,7 @@ setup to run configuration. -->
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
+                                <include>**/ObjectiveGapFlatzincTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/MultiObjectiveTest.java</include>
@@ -463,6 +478,8 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/RegularSetFlatzincTest.java</include>
+                                <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
@@ -512,12 +529,16 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
+                                <include>**/RevisedDualSimplexTest.java</include>
+                                <include>**/JalpSimplexTest.java</include>
+                                <include>**/MpsReaderTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -591,6 +612,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -600,6 +622,7 @@ setup to run configuration. -->
                                 <include>**/MznlibGlobalsTest.java</include>
                                 <include>**/PresolveFlatzincTest.java</include>
                                 <include>**/FlatzincFrontEndTest.java</include>
+                                <include>**/ObjectiveGapFlatzincTest.java</include>
                                 <include>**/GlobalConstraintsTest.java</include>
                                 <include>**/RestartSearchTest.java</include>
                                 <include>**/MultiObjectiveTest.java</include>
@@ -608,6 +631,8 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/RegularSetFlatzincTest.java</include>
+                                <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
@@ -657,12 +682,16 @@ setup to run configuration. -->
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
+                                <include>**/RevisedDualSimplexTest.java</include>
+                                <include>**/JalpSimplexTest.java</include>
+                                <include>**/MpsReaderTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
                                 <include>**/ModelConstraintsTest.java</include>
                                 <include>**/TrailedIntsTest.java</include>
@@ -734,6 +763,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
+                                <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -1157,6 +1187,9 @@ setup to run configuration. -->
                         <!-- the FlatZinc tests' expected outputs were recorded without LCG,
                              which fzn-jacop runs by default; tests that need it ask for it -->
                         <jacop.lcg>off</jacop.lcg>
+                        <!-- and without the default symmetry breaking (presolve-off runs); with
+                             presolve the tests break symmetries as before -->
+                        <jacop.symmetry>presolve</jacop.symmetry>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>

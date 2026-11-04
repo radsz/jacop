@@ -124,6 +124,8 @@ public final class CoreSearch {
   private final int objective;
   private final List<Soft> softs = new ArrayList<>();
   private final Map<Integer, Soft> byLiteral = new HashMap<>();
+  // the proof of the cores, or null without a proof
+  private CoreProof proof;
 
   /** Statistics: cores found. */
   public long cores;
@@ -216,13 +218,14 @@ public final class CoreSearch {
     terms.put(objective, 1L);
     Set<Constraint> used = new HashSet<>();
     long[] constant = new long[1];
+    List<CoreProof.Definition> definitions = new ArrayList<>();
     for (int round = 0; round < 4 && terms.size() == 1; round++) {
       Map.Entry<Integer, Long> only = terms.entrySet().iterator().next();
-      LinearForm f = definition(lcg.variable(only.getKey()), only.getValue(), used);
-      if (f == null) {
+      Constraint c = definition(lcg.variable(only.getKey()), only.getValue(), used);
+      if (c == null) {
         break;
       }
-      if (!substitute(lcg, terms, only.getKey(), only.getValue(), f, constant)) {
+      if (!substitute(lcg, terms, only.getKey(), only.getValue(), c, constant, definitions)) {
         return null;
       }
     }
@@ -231,6 +234,7 @@ public final class CoreSearch {
     }
     Map<Integer, Long> blocks = new HashMap<>(terms);
     long blocksConstant = constant[0];
+    List<CoreProof.Definition> blockDefinitions = new ArrayList<>(definitions);
     // a term that is only a sum defined for the objective, such as a block of a long sum split for
     // shorter explanations, is replaced by its own terms
     for (int round = 0; round < 4; round++) {
@@ -241,9 +245,9 @@ public final class CoreSearch {
         if (t == objective || weight == null || otherConstraints(y, used) != 1) {
           continue;
         }
-        LinearForm f = definition(y, 0, used);
-        if (f != null) {
-          if (!substitute(lcg, terms, t, weight, f, constant)) {
+        Constraint c = definition(y, 0, used);
+        if (c != null) {
+          if (!substitute(lcg, terms, t, weight, c, constant, definitions)) {
             return null;
           }
           changed = true;
@@ -257,16 +261,45 @@ public final class CoreSearch {
     // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
     // terms, 151 cores on its 3 sums against 2,285 on the terms)
     if (span(lcg, terms) > span(lcg, blocks)) {
-      return new CoreSearch(lcg, objective, blocks, blocksConstant);
+      CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
+      return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    if (!search.startProof(definitions)) {
+      return null;
+    }
     if (!terms.equals(blocks)) {
       // grouped now, as before #313's rework: the probes then have the time of the whole run, not
       // the share of the phase (spot5 28: 58 groups and a proof in 7 s, against 6 groups)
       search.addTermSofts();
-      search.relaxAtMostOnes();
+      search.group();
     }
     return search;
+  }
+
+  /**
+   * Starts the proof of the cores when the solver writes one: the line of the objective's lower
+   * bound, from the definitions. Returns false when the model does not state them, so the phase
+   * cannot be proved.
+   */
+  private boolean startProof(List<CoreProof.Definition> definitions) {
+    if (!lcg.proving()) {
+      return true;
+    }
+    proof = CoreProof.of(lcg, definitions);
+    return proof != null;
+  }
+
+  /**
+   * Relaxes the at-most-one groups ({@link #relaxAtMostOnes}), except under a proof, which does not
+   * define the groups' literals; returns false when the solver is unsatisfiable at the root.
+   */
+  private boolean group() {
+    if (proof != null) {
+      grouped = true;
+      return true;
+    }
+    return relaxAtMostOnes();
   }
 
   /** The number of levels of the terms' variables, summed. */
@@ -285,7 +318,14 @@ public final class CoreSearch {
    * Returns false when a z_j is not a variable of the solver.
    */
   private static boolean substitute(
-      LcgSolver lcg, Map<Integer, Long> terms, int y, long weight, LinearForm f, long[] constant) {
+      LcgSolver lcg,
+      Map<Integer, Long> terms,
+      int y,
+      long weight,
+      Constraint c,
+      long[] constant,
+      List<CoreProof.Definition> definitions) {
+    LinearForm f = LinearForms.of(c);
     IntVar yv = lcg.variable(y);
     long a = 0;
     for (int k = 0; k < f.vars().length; k++) {
@@ -295,6 +335,7 @@ public final class CoreSearch {
     }
     terms.remove(y);
     long scale = weight * a; // a is its own inverse
+    definitions.add(new CoreProof.Definition(c, f, scale));
     for (int k = 0; k < f.vars().length; k++) {
       IntVar z = f.vars()[k];
       if (z == yv) {
@@ -345,7 +386,7 @@ public final class CoreSearch {
    * (jp-encoding data1000: a root bound of 30,874 on the cost variables, 0 on the 0-1 terms of the
    * blocks).
    */
-  private static LinearForm definition(IntVar x, long weight, Set<Constraint> used) {
+  private static Constraint definition(IntVar x, long weight, Set<Constraint> used) {
     IntDomain dom = x.dom();
     if (dom.modelConstraints == null) {
       return null;
@@ -370,7 +411,7 @@ public final class CoreSearch {
         }
         if (weight == 0) {
           used.add(c);
-          return f;
+          return c;
         }
         long bound = rootBound(x, weight * a, f);
         if (found == null || bound > foundBound) {
@@ -383,7 +424,7 @@ public final class CoreSearch {
     if (foundConstraint != null) {
       used.add(foundConstraint);
     }
-    return found;
+    return foundConstraint;
   }
 
   /** The coefficient of x in f, or 0 when x occurs other than once. */
@@ -452,7 +493,7 @@ public final class CoreSearch {
       if (!grouped) {
         addTermSofts();
       }
-      if (!grouped && !relaxAtMostOnes()) {
+      if (!grouped && !group()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
@@ -477,7 +518,8 @@ public final class CoreSearch {
         }
       }
       long cap = sat.conflicts + callLimit;
-      sat.setConflictLimit(Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap));
+      sat.setConflictLimit(
+          Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
       int result = lcg.solveUnder(assumed.stream().mapToInt(Integer::intValue).toArray());
       if (result == CdclSolver.UNKNOWN) {
         if (sat.conflicts < cap || cap >= phaseLimit || !rising()) {
@@ -533,13 +575,23 @@ public final class CoreSearch {
       return true;
     }
     long gap = best - lowerBound;
-    for (Soft s : softs) {
-      if (!s.hard && s.weight > gap) {
-        s.hard = true;
-        hardened++;
-        if (!sat.addClause(-s.lit)) {
-          return false;
+    long line = -1; // the proof's line of the gap, written before the first literal hardened
+    try {
+      for (Soft s : softs) {
+        if (!s.hard && s.weight > gap) {
+          s.hard = true;
+          hardened++;
+          if (proof != null && line < 0) {
+            line = proof.gap();
+          }
+          if (!lcg.addProvedClause(-s.lit)) {
+            return false;
+          }
         }
+      }
+    } finally {
+      if (line > 0) {
+        proof.delete(line);
       }
     }
     return true;
@@ -963,12 +1015,12 @@ public final class CoreSearch {
       int level = from + step;
       int lit = termLiteral(t, level);
       long cap = sat.conflicts + PROBE_CONFLICTS;
-      sat.setConflictLimit(Math.min(phaseLimit, cap));
+      sat.setConflictLimit(Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap)));
       probes++;
       if (lcg.solveUnder(-lit) != CdclSolver.UNSAT || sat.failedAssumptions().length != 1) {
         return;
       }
-      sat.addClause(lit);
+      lcg.addProvedClause(lit);
       termProven[t] = level;
     }
   }
@@ -1015,12 +1067,16 @@ public final class CoreSearch {
         }
       }
     }
-    // one of the core's literals holds in every solution
-    if (!sat.addClause(lits)) {
+    // one of the core's literals holds in every solution; the solver's cores are in the proof
+    if (!(bound ? sat.addClause(lits) : lcg.addProvedClause(lits))) {
       return false;
     }
     if (lits.length > 1) {
-      addTotalizerSoft(new Totalizer(lits, min), 2);
+      Totalizer tot = new Totalizer(lits, min);
+      addTotalizerSoft(tot, 2);
+      if (proof != null) {
+        proof.core(tot.outputs, min);
+      }
     }
     return !bound || boundObjective();
   }
@@ -1034,7 +1090,7 @@ public final class CoreSearch {
     if (lowerBound > x.max()) {
       return false;
     }
-    return sat.addClause(lcg.geLiteral(objective, (int) lowerBound));
+    return lcg.addProvedClause(lcg.geLiteral(objective, (int) lowerBound));
   }
 
   /**
@@ -1049,6 +1105,9 @@ public final class CoreSearch {
     }
     int to = nextLevel(t, level);
     int lit = termLiteral(t, to);
+    if (proof != null) {
+      proof.fold(termVar[t], termUp[t], termBase[t], level, to, weight);
+    }
     addSoft(new Soft(lit, weight * (to - level + 1), t, to, null, 0));
   }
 
@@ -1075,7 +1134,9 @@ public final class CoreSearch {
       return;
     }
     if (count > tot.outputs.length) {
-      tot.outputs = encode(tot.inputs, Math.min(tot.inputs.length, Math.max(4, 2 * count)));
+      // all outputs under a proof, whose definitions an encoding with more outputs would repeat
+      int limit = proof != null ? tot.inputs.length : Math.max(4, 2 * count);
+      tot.outputs = encode(tot.inputs, Math.min(tot.inputs.length, limit));
     }
     addSoft(new Soft(tot.outputs[count - 1], tot.weight, -1, 0, tot, count));
   }
@@ -1110,6 +1171,9 @@ public final class CoreSearch {
     for (int k = 0; k < n; k++) {
       out[k] = lcg.newAuxiliary();
     }
+    if (proof != null) {
+      proof.define(out, inputs, from, to);
+    }
     for (int i = 0; i <= a.length; i++) {
       for (int j = 0; j <= b.length && i + j <= n; j++) {
         if (i + j == 0) {
@@ -1124,6 +1188,13 @@ public final class CoreSearch {
           clause[k++] = -b[j - 1];
         }
         clause[k] = out[i + j - 1];
+        if (proof != null) {
+          // a child of one input is a leaf, not an output with definitions
+          proof.totalizerClause(
+              i > 0 && mid - from > 1 ? a[i - 1] : 0,
+              j > 0 && to - mid > 1 ? b[j - 1] : 0,
+              clause[k]);
+        }
         sat.addClause(clause);
       }
     }

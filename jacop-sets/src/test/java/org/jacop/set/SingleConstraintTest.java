@@ -42,14 +42,19 @@ import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.In;
+import org.jacop.constraints.Reified;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
+import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.AleB;
 import org.jacop.set.constraints.AllDisjoint;
 import org.jacop.set.constraints.AltB;
@@ -62,7 +67,9 @@ import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.ElementSetVariable;
 import org.jacop.set.constraints.Match;
 import org.jacop.set.constraints.PartitionSet;
+import org.jacop.set.constraints.SetMirror;
 import org.jacop.set.constraints.SumWeightedSet;
+import org.jacop.set.constraints.XinA;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 import org.junit.jupiter.api.Test;
@@ -891,5 +898,211 @@ class SingleConstraintTest {
       result.add(IntStream.rangeClosed(1, max).filter(v -> (m & 1 << v - 1) != 0).toArray());
     }
     return result;
+  }
+
+  /**
+   * Under LCG, an intersection whose result reaches its maximum cardinality: what the result's
+   * domain derives from it (the other elements out) is explained by the intersection, from the
+   * cardinality bound and the element in. It was the generic reason.
+   */
+  @Test
+  void intersectionExplainsWhatTheCardinalityDerives() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", 1, 3);
+    SetVar b = new SetVar(store, "b", 1, 3);
+    SetVar c = new SetVar(store, "c", 1, 3);
+    AintersectBeqC intersect = new AintersectBeqC(a, b, c);
+    store.impose(intersect);
+    for (SetVar s : new SetVar[] {a, b, c}) {
+      store.impose(new SetMirror(s));
+    }
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    c.domain.inCardinality(store.level, c, 0, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a.domain.inGlb(store.level, a, new IntervalDomain(1, 1));
+    b.domain.inGlb(store.level, b, new IntervalDomain(1, 1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.domain.lub().contains(2)).isFalse();
+    IntVar has2 = c.lcgMirror().member(2);
+    int entry = trail.lastEntry(has2, trail.size());
+    assertThat(trail.reason(entry)).isSameAs(intersect);
+    EntryList reason = new EntryList();
+    assertThat(intersect.explain(trail, entry, reason)).isTrue();
+    IntVar[] cMirror = c.lcgMirror().mirrorVariables();
+    assertThat(reasonVariables(trail, reason))
+        .containsExactlyInAnyOrder(cMirror[cMirror.length - 1], c.lcgMirror().member(1));
+    trail.detach();
+  }
+
+  /**
+   * Under LCG, set_card fixes a set once its cardinality variable reaches the elements left: the
+   * memberships are explained by that bound and the elements out, and the bound of the variable by
+   * the set's cardinality. CardAeqX had no explanations of its own.
+   */
+  @Test
+  void cardinalityEqualityHasItsOwnReasons() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", 1, 4);
+    IntVar k = new IntVar(store, "k", 0, 4);
+    CardAeqX card = new CardAeqX(a, k);
+    store.impose(card);
+    store.impose(new SetMirror(a));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    k.domain.inMin(store.level, k, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a.domain.inLub(store.level, a, new IntervalDomain(1, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.domain.glb().contains(1)).isTrue();
+    EntryList reason = new EntryList();
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == card) {
+        reason.clear();
+        assertThat(card.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        explained++;
+      }
+    }
+    assertThat(explained).isPositive();
+    trail.detach();
+  }
+
+  /**
+   * Under LCG, array_set_element with the index narrowed to sets that all hold an element: the
+   * membership is explained by the excluded indexes, and an index whose set holds an element out of
+   * the value by that element. ElementSet had no explanations of its own.
+   */
+  @Test
+  void elementSetHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    SetVar value = new SetVar(store, "value", 1, 4);
+    IntDomain[] sets = {
+      new IntervalDomain(1, 2), new IntervalDomain(1, 3), new IntervalDomain(3, 4)
+    };
+    ElementSet element = new ElementSet(index, sets, value);
+    store.impose(element);
+    store.impose(new SetMirror(value));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    value.domain.inLub(store.level, value, new IntervalDomain(1, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.domain.contains(3)).isFalse();
+    assertThat(value.domain.glb().contains(1)).isTrue();
+    EntryList reason = new EntryList();
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == element) {
+        reason.clear();
+        assertThat(element.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(2);
+    trail.detach();
+  }
+
+  @Test
+  void elementSetVariableHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 3);
+    SetVar s1 = new SetVar(store, "s1", 1, 3);
+    SetVar s2 = new SetVar(store, "s2", 1, 3);
+    // a fixed set has no mirror
+    SetVar s3 =
+        new SetVar(
+            store, "s3", new BoundSetDomain(new IntervalDomain(4, 4), new IntervalDomain(4, 4)));
+    SetVar value = new SetVar(store, "value", 1, 3);
+    ElementSetVariable element = new ElementSetVariable(index, new SetVar[] {s1, s2, s3}, value);
+    store.impose(element);
+    for (SetVar s : new SetVar[] {s1, s2, value}) {
+      store.impose(new SetMirror(s));
+    }
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    s1.domain.inGlb(store.level, s1, 1);
+    value.domain.inLubComplement(store.level, value, 1);
+    s2.domain.inGlb(store.level, s2, 2);
+    assertThat(store.consistency()).isTrue();
+    // index 1 disagrees on element 1, so index is 2 and value gets element 2 of s2
+    assertThat(index.singleton(2)).isTrue();
+    assertThat(value.domain.glb().contains(2)).isTrue();
+    EntryList reason = new EntryList();
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == element) {
+        reason.clear();
+        assertThat(element.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        if (trail.variable(e) == index && trail.kind(e) == AtomicTrail.NE) {
+          assertThat(reasonVariables(trail, reason))
+              .containsExactlyInAnyOrder(s1.lcgMirror().member(1), value.lcgMirror().member(1));
+        }
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(2);
+    trail.detach();
+  }
+
+  @Test
+  void reifiedMembershipsHaveTheirOwnReasons() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    SetVar a = new SetVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 1, 4);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    Reified inSet = new Reified(new XinA(x, a), b);
+    Reified inValues = new Reified(new In(y, new IntervalDomain(1, 1).union(3)), c);
+    store.impose(inSet);
+    store.impose(inValues);
+    store.impose(new SetMirror(a));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 1, 1);
+    a.domain.inLubComplement(store.level, a, 2);
+    y.domain.inComplement(store.level, y, 1);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    // x in a: x is not 2 and a has 1; y misses both values of {1, 3}, so c is 0
+    assertThat(x.domain.contains(2)).isFalse();
+    assertThat(a.domain.glb().contains(1)).isTrue();
+    assertThat(c.singleton(0)).isTrue();
+    EntryList reason = new EntryList();
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      Constraint r = trail.reason(e);
+      if (r == inSet || r == inValues) {
+        reason.clear();
+        assertThat(((Reified) r).explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        if (trail.variable(e) == c) {
+          assertThat(reasonVariables(trail, reason)).containsExactly(y);
+        }
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(3);
+    trail.detach();
+  }
+
+  private static List<IntVar> reasonVariables(AtomicTrail trail, EntryList reason) {
+    List<IntVar> vars = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      if (!vars.contains(trail.variable(reason.get(k)))) {
+        vars.add(trail.variable(reason.get(k)));
+      }
+    }
+    return vars;
   }
 }

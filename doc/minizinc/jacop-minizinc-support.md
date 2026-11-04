@@ -40,8 +40,8 @@ What actually breaks for a user out of the box is the **packaging**: `org.jacop.
 8. **FlatZinc predicate items with defaults** (`predicate foo(var int: x, var int: y = 5);`, 2.10 named args). JaCoP's parser fails on `=`. Gecode's parser fails too, and it only appears for user-declared native predicates, so it is low priority.
 
 ### C. JaCoP bugs found by the suite (not version-related, same on 2.8.7)
-9. `regression/test_bug53`: nested `seq_search` of an ignored annotation → NPE in `Solve.getLastSearch` (`Solve.java:1284`). Gecode solves it.
-10. `types/tuple_if_then_else`: tiny model with `jacop_if_then_else_bool(..., true)` → JVM stack overflow, UNKNOWN. Gecode finds both solutions.
+9. *Fixed (PR #105): a `seq_search` whose annotations were all ignored now falls back to the default search; test `FlatzincFrontEndTest#seqSearchOfIgnoredAnnotationsFallsBackToDefaultSearch`.* `regression/test_bug53`: nested `seq_search` of an ignored annotation → NPE in `Solve.getLastSearch` (`Solve.java:1284`). Gecode solves it.
+10. *Fixed (PR #105): the default search bisects integer variables instead of trying one value after another; test `FlatzincFrontEndTest#defaultSearchReachesValuesOfUnboundedVariables`.* `types/tuple_if_then_else`: tiny model with `jacop_if_then_else_bool(..., true)` → JVM stack overflow, UNKNOWN. Gecode finds both solutions.
 11. *Fixed.* `regression/bug284`: a 2-column `table` with 250,164 tuples → out of memory (default `-Xmx12G` script). Cause: `GlobalConstraints.deduplicateTableRows` allocates each row as `new ArrayList<>(t.length)`, which is quadratic in the number of tuples (see `globals-and-extensional.md`). With the capacity fixed, JaCoP solves it in about a second.
 12. `general/multidim_array_concat`: MiniZinc 2.10.1 emits FlatZinc referencing an undeclared array (`X_INTRODUCED_43_`) when JaCoP's `jacop_strictly_increasing` is used. This looks like a MiniZinc compiler bug triggered by JaCoP's library; worth a minimal repro upstream.
 

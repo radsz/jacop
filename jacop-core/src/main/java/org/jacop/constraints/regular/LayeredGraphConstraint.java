@@ -45,6 +45,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Generalized arc consistency for a layered graph: a directed acyclic graph with one layer of edges
@@ -75,7 +77,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public abstract class LayeredGraphConstraint extends Constraint
-    implements UsesQueueVariable, Stateful, Explainable {
+    implements UsesQueueVariable, Stateful, Explainable, PbEncodable {
 
   /** Array of the variables of the graph levels. */
   public final IntVar[] list;
@@ -494,6 +496,27 @@ public abstract class LayeredGraphConstraint extends Constraint
     LayeredGraphExplanation.Graph graph = explanationGraph();
     return graph != null
         && new LayeredGraphExplanation(trail, list, graph, trail.size()).explainFailure(out);
+  }
+
+  /**
+   * Writes the graph with a literal per node and per edge: an edge implies its two nodes and its
+   * value, a node needs an incoming and an outgoing edge, and each value of a variable needs an
+   * edge of its level labelled with it. Unit propagation on them removes every edge that is on no
+   * path, which is domain consistency. Only a deterministic graph with one source is written, so
+   * that the values of a solution fix every literal by unit propagation.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (description != null && description.levelNodes[0] == 0) {
+      // no path is left over the domains the graph was built from: the constraint fails
+      model.clause();
+      return true;
+    }
+    if (description == null || description.levelNodes[0] != 1) {
+      return false;
+    }
+    return PbModel.layeredGraph(
+        model, list, description.levelNodes, description.edges, description.size);
   }
 
   private LayeredGraphExplanation.Graph explanationGraph() {

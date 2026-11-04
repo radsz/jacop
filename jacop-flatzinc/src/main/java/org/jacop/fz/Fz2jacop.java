@@ -39,6 +39,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.jasat.lcg.VeriPbProof;
 
 /**
  * An executable to parse and execute the flatzinc file.
@@ -48,6 +49,10 @@ import org.jacop.floats.core.FloatDomain;
  */
 @Slf4j
 public class Fz2jacop {
+
+  // whether a run with a time-out is ended by a TimeLimitWatchdog (only on the command line, since
+  // it halts the JVM)
+  private boolean watchdog;
 
   /**
    * Parses and solves the model like the command line does, without exiting the JVM.
@@ -67,6 +72,8 @@ public class Fz2jacop {
    *     as options for problem solving.
    */
   void main(String[] args) {
+    // a run from the command line ends at its time-out even where the solver does not check it
+    watchdog = true;
     int status = run(args);
     // a model JaCoP cannot read or solve must not look like a successful run to MiniZinc or a
     // script, which go by the exit status
@@ -138,6 +145,50 @@ public class Fz2jacop {
       Runtime.getRuntime().addShutdownHook(t);
     }
 
+    TimeLimitWatchdog watch = null;
+    if (watchdog && opt.getTimeOut() > 0 && opt.portfolioWorker() == null) {
+      watch =
+          TimeLimitWatchdog.start(
+              opt.getRemainingTimeOut(),
+              report(opt, parser),
+              () -> {
+                // a proof ends after its last whole step, so that it still checks
+                VeriPbProof.abandon();
+                Runtime.getRuntime().halt(0);
+              });
+    }
+    try {
+      return solve(opt, parser, t);
+    } finally {
+      if (watch != null) {
+        watch.cancel();
+      }
+    }
+  }
+
+  // what the watchdog prints when the run overruns its time-out
+  private static TimeLimitWatchdog.Report report(Options opt, Parser parser) {
+    return new TimeLimitWatchdog.Report() {
+      @Override
+      public boolean printKeptSolution() {
+        StringBuffer kept = parser.solver.lastSolution;
+        if (!opt.getAll() && kept != null) {
+          parser.solver.helperSolutionPrinter(kept.toString());
+          return true;
+        }
+        return false;
+      }
+
+      @Override
+      public void printStatistics() {
+        if (opt.getStatistics()) {
+          parser.solver.printStatisticsIterrupt();
+        }
+      }
+    };
+  }
+
+  private int solve(Options opt, Parser parser, RunWhenShuttingDown t) {
     int status = 1;
     try {
       parser.model();
@@ -145,6 +196,13 @@ public class Fz2jacop {
     } catch (FailException _) {
       handleFailException(opt, parser);
       status = 0;
+    } catch (UnsupportedOperationException e) {
+      if (opt.proof() == null) {
+        throw e;
+      }
+      // a model that --proof cannot write: no answer rather than one without its proof
+      IO.println("%% --proof: " + e.getMessage());
+      IO.println("=====UNKNOWN=====");
     } catch (ArithmeticException e) {
       handleArithmeticException(e);
     } catch (IllegalArgumentException e) {
@@ -179,6 +237,10 @@ public class Fz2jacop {
       IO.println("=====UNKNOWN=====");
     } else {
       IO.println("=====UNSATISFIABLE=====");
+    }
+    if (opt.proof() != null && !parser.getTables().rootFailureProved) {
+      // the model failed while it was translated, before the propagation the proof derives
+      IO.println("%% --proof: no proof written, the model fails while it is translated");
     }
     if (!opt.getOutputFilename().isEmpty() && !parser.getTables().domainsClamped()) {
       try {

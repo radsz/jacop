@@ -278,6 +278,9 @@ public final class CdclSolver {
   // the propagator is told about levels and assignments (only in the search of solve())
   private boolean notifying;
   private int[] queuedExternal;
+  // learnt clauses up to this size and LBD go to the propagator's notifyLearnt (0: none)
+  private int exportSize;
+  private int exportLbd;
   // variables observed after they were assigned, notified at the next propagation
   private int[] lateObserved = new int[4];
   private int numLateObserved;
@@ -295,7 +298,9 @@ public final class CdclSolver {
   private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
   private long conflictLimit = Long.MAX_VALUE;
-  private DratWriter proof;
+  private ProofOutput proof;
+  // the root facts at the start of the trail that the proof has as units of their own
+  private int rootFactsLogged;
   // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
   private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
@@ -671,6 +676,15 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the limit of the total number of conflicts.
+   *
+   * @return the conflict count at which {@link #solve} returns {@link #UNKNOWN}
+   */
+  public long conflictLimit() {
+    return conflictLimit;
+  }
+
+  /**
    * Sets when {@link #solve} backtracks chronologically (one level) instead of backjumping, as in
    * CaDiCaL. It is used only by solve calls without assumptions, never by the external-search
    * methods, which keep every literal at the level it was assigned at.
@@ -695,6 +709,18 @@ public final class CdclSolver {
   }
 
   /**
+   * Passes each clause learnt from now on that has at most the given size and LBD to the external
+   * propagator's {@link ExternalPropagator#notifyLearnt}, for other solvers to import.
+   *
+   * @param size the largest clause passed; 0 turns it off
+   * @param lbd the largest LBD passed
+   */
+  public void setLearntExport(int size, int lbd) {
+    exportSize = Math.max(0, size);
+    exportLbd = lbd;
+  }
+
+  /**
    * Turns all-UIP shrinking of learnt clauses on or off (on by default).
    *
    * @param on whether to shrink
@@ -716,11 +742,12 @@ public final class CdclSolver {
   }
 
   /**
-   * Writes a DRAT proof of every derived and deleted clause. Set it before adding clauses.
+   * Writes a proof of every derived and deleted clause, such as a {@link DratWriter}. Set it before
+   * adding clauses.
    *
    * @param writer the proof output, or null for none
    */
-  public void setProof(DratWriter writer) {
+  public void setProof(ProofOutput writer) {
     proof = writer;
   }
 
@@ -739,7 +766,13 @@ public final class CdclSolver {
     return dimacs > 0 ? 2 * (dimacs - 1) : 2 * (-dimacs - 1) + 1;
   }
 
-  static int toDimacs(int lit) {
+  /**
+   * Returns the DIMACS literal of an internal literal, as a {@link ProofOutput} gets them.
+   *
+   * @param lit the internal literal
+   * @return its DIMACS literal
+   */
+  public static int toDimacs(int lit) {
     return (lit & 1) == 0 ? (lit >> 1) + 1 : -((lit >> 1) + 1);
   }
 
@@ -885,6 +918,9 @@ public final class CdclSolver {
       if (r >= STACK_REF) {
         rwasted += HEADER + rstack[r - STACK_REF + SIZE];
         reason[v] = NO_REASON;
+        if (proof != null) {
+          proof.delete(rstack, r - STACK_REF + HEADER, rstack[r - STACK_REF + SIZE]);
+        }
       }
       savedSign[v] = (byte) (lit & 1);
       order.insert(v);
@@ -1321,6 +1357,9 @@ public final class CdclSolver {
       if (n == 0 || c[n - 1] != c[i]) {
         c[n++] = c[i];
       }
+    }
+    if (proof != null) {
+      proof.add(c, 0, n);
     }
     if (n == 1) {
       r = UNIT_REASON;
@@ -2534,6 +2573,12 @@ public final class CdclSolver {
       }
       int implied = -1;
       if (c == null) {
+        c = external.importedClause();
+        if (c != null) {
+          implied = IMPORTED;
+        }
+      }
+      if (c == null) {
         int lit = external.propagate();
         while (lit != 0 && vals[toLit(lit)] > 0) {
           lit = external.propagate();
@@ -2544,6 +2589,10 @@ public final class CdclSolver {
         implied = toLit(lit);
         if (vals[implied] == 0) {
           assign(implied, EXTERNAL_REASON);
+          if (proof != null && decisionLevel == 0) {
+            // conflict analysis never asks for the reasons of root facts, which a proof needs
+            reasonRef(implied >> 1);
+          }
           continue;
         }
         c = external.reason(lit);
@@ -2562,6 +2611,9 @@ public final class CdclSolver {
    *
    * @return a conflict, with at least two literals at the (new) current level, or NO_CONFLICT
    */
+  // the implied literal of addExternal for a clause learnt elsewhere, added as a learnt clause
+  private static final int IMPORTED = -2;
+
   private int addExternal(int[] dimacs, int implied) {
     int[] c = new int[dimacs.length];
     for (int i = 0; i < c.length; i++) {
@@ -2614,12 +2666,12 @@ public final class CdclSolver {
     orderForWatches(c);
     int ref = BINARY;
     if (size == 2) {
-      if (implied >= 0) {
+      if (implied >= 0 || implied == IMPORTED) {
         addLearntBinary(c[0], c[1]);
       } else {
         addOriginalBinary(c[0], c[1]);
       }
-    } else if (implied >= 0) {
+    } else if (implied >= 0 || implied == IMPORTED) {
       ref = allocate(c, size, true, size);
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
@@ -2906,6 +2958,13 @@ public final class CdclSolver {
       bumpClause(ref);
       assignAt(learnt[0], ref, level[learnt[1] >> 1]);
     }
+    if (learntSize <= exportSize && lbd <= exportLbd && external != null) {
+      int[] dimacs = new int[learntSize];
+      for (int i = 0; i < learntSize; i++) {
+        dimacs[i] = toDimacs(learnt[i]);
+      }
+      external.notifyLearnt(dimacs, lbd);
+    }
     lbdSum += lbd;
     emaFastBeta *= 1 - 0.03;
     emaSlowBeta *= 1 - 1e-5;
@@ -3107,8 +3166,13 @@ public final class CdclSolver {
       }
     }
     for (int i = 0; i < trailSize; i++) {
+      if (proof != null && i >= rootFactsLogged) {
+        // the root facts outlive their reasons, which elimination and keepLearnts may delete
+        proof.add(trail, i, 1);
+      }
       reason[trail[i] >> 1] = NO_REASON;
     }
+    rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
@@ -3314,6 +3378,10 @@ public final class CdclSolver {
       return refuted();
     }
     deleteClause(ref);
+    // unwatched at once: the next propagation, of d[0] or of the next clause tried, must not use
+    // it as a reason, which would keep pointing at a deleted clause
+    removeWatch(mem[lits], ref);
+    removeWatch(mem[lits + 1], ref);
     if (n == 1) {
       assign(d[0], NO_REASON);
       return propagate() == NO_CONFLICT || refuted();
@@ -3407,6 +3475,10 @@ public final class CdclSolver {
             int v = mem[ref + HEADER] >> 1;
             if (reason[v] == ref) {
               reason[v] = NO_REASON;
+              if (proof != null && vals[mem[ref + HEADER]] > 0 && level[v] == 0) {
+                // the root fact outlives its reason in the proof as well
+                proof.add(mem, ref + HEADER, 1);
+              }
             }
             deleteClause(ref);
             break;

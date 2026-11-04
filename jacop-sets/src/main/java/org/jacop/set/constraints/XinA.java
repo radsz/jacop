@@ -37,7 +37,15 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -48,7 +56,7 @@ import org.jacop.set.core.SetVar;
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski.
  * @version 5.0
  */
-public class XinA extends PrimitiveConstraint implements Copyable<XinA> {
+public class XinA extends PrimitiveConstraint implements Copyable<XinA>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -230,6 +238,85 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA> {
     throw new IllegalStateException("Not implemented as more precise variant exists.");
   }
 
+  // the explanations cover x in a (or x not in a) only, with a mirrored
+  private SetMirror mirror() {
+    return getClass() == XinA.class && !strict ? a.lcgMirror() : null;
+  }
+
+  // a value of x is ruled out by its element being out of a (in a for the negation)
+  private DomainCover.ValueReason elementOut(AtomicTrail trail, int position, boolean in) {
+    return (v, out) -> SetExplanation.membership(trail, a, v, position, !in, out);
+  }
+
+  // the element whose membership variable is y, or null
+  private static Integer elementOf(SetMirror m, IntVar y) {
+    for (int e : m.elements()) {
+      if (m.member(e) == y) {
+        return e;
+      }
+    }
+    return null;
+  }
+
+  // an atom of x (values ruled out by the set), of a membership (x fixed to the element) or of the
+  // cardinality (at least one element, from the constraint alone)
+  private boolean explainEntry(AtomicTrail trail, int entry, boolean in, EntryList out) {
+    SetMirror m = mirror();
+    if (m == null) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    if (y == x) {
+      return DomainCover.entry(trail, entry, elementOut(trail, entry, in), out);
+    }
+    int kind = trail.kind(entry);
+    if (y == m.cardinality()) {
+      return in && kind == AtomicTrail.GE && trail.value(entry) <= 1;
+    }
+    Integer e = elementOf(m, y);
+    boolean member = kind == AtomicTrail.GE || kind == AtomicTrail.NE && trail.value(entry) == 0;
+    if (e == null
+        || member != in
+        || trail.minBefore(x, entry) != e
+        || trail.maxBefore(x, entry) != e) {
+      return false;
+    }
+    trail.addLowerBound(x, entry, out);
+    trail.addUpperBound(x, entry, out);
+    return true;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explainEntry(trail, entry, true, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    return explainEntry(trail, entry, false, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    int now = trail.size();
+    return mirror() != null && DomainCover.domain(trail, x, now, elementOut(trail, now, true), out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    int now = trail.size();
+    return mirror() != null
+        && DomainCover.domain(trail, x, now, elementOut(trail, now, false), out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    // entailed: each value between the bounds of x is in a or out of the domain of x
+    return mirror() != null
+        && DomainCover.domain(trail, x, position, elementOut(trail, position, !entailed), out);
+  }
+
   @Override
   public String toString() {
     return id() + " : XinA(" + x + ", " + a + " )";
@@ -238,5 +325,38 @@ public class XinA extends PrimitiveConstraint implements Copyable<XinA> {
   @Override
   public XinA copy(VarMap map) {
     return new XinA(map.get(x), map.get(a), strict);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /** Writes that the value of x is in a (or not in a), and that a is not empty. */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != XinA.class || strict || !SetPb.stated(a)) {
+      return false;
+    }
+    return model.implied(
+        literal,
+        () -> {
+          for (ValueEnumeration e = model.domain(x).valueEnumeration(); e.hasMoreElements(); ) {
+            int v = e.nextElement();
+            String in = SetPb.in(model, a, v);
+            model.clause(PbModel.not(model.equalTo(x, v)), negated ? PbModel.not(in) : in);
+          }
+          if (!negated) {
+            SetPb.cardinalities(
+                model,
+                new SetVar[] {a},
+                new long[] {1},
+                new IntVar[0],
+                new long[0],
+                LinearForm.GE,
+                1);
+          }
+          return true;
+        });
   }
 }

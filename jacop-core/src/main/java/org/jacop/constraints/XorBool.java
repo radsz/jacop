@@ -43,6 +43,8 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Constraint ( x_0 xor x_1 xor ... xor x_n ){@literal <=>} y
@@ -51,7 +53,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class XorBool extends PrimitiveConstraint
-    implements Functional, Violation, Copyable<XorBool> {
+    implements Functional, Violation, Copyable<XorBool>, PbEncodable {
 
   /*
    * The logical XOR (exclusive OR) function gives True if an odd number of its arguments
@@ -264,5 +266,49 @@ public class XorBool extends PrimitiveConstraint
       xor ^= value.applyAsInt(v);
     }
     return xor;
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /**
+   * States the parity by a chain of literals, each the parity of a prefix of x by four clauses, the
+   * last one y, or not y for the negation.
+   */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != XorBool.class) {
+      return false;
+    }
+    return model.implied(
+        literal,
+        () -> {
+          String target = model.atLeast(y, 1);
+          if (negated) {
+            target = PbModel.not(target);
+          }
+          if (x.length == 0) {
+            model.clause(PbModel.not(target));
+            return true;
+          }
+          String prefix = model.atLeast(x[0], 1);
+          for (int i = 1; i < x.length; i++) {
+            String next = i == x.length - 1 ? target : model.auxiliary();
+            String xi = model.atLeast(x[i], 1);
+            // next = prefix xor xi
+            model.clause(PbModel.not(next), prefix, xi);
+            model.clause(PbModel.not(next), PbModel.not(prefix), PbModel.not(xi));
+            model.clause(next, PbModel.not(prefix), xi);
+            model.clause(next, prefix, PbModel.not(xi));
+            prefix = next;
+          }
+          if (x.length == 1) {
+            model.clause(PbModel.not(prefix), target);
+            model.clause(prefix, PbModel.not(target));
+          }
+          return true;
+        });
   }
 }

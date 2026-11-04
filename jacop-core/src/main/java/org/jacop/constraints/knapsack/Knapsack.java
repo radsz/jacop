@@ -56,6 +56,9 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * It specifies a knapsack constraint. This implementation was inspired by the paper by Irit
@@ -80,7 +83,8 @@ public class Knapsack extends Constraint
         SatisfiedPresent,
         RemoveLevelLate,
         Copyable<Knapsack>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   /** It specifies if any debugging information should be printed. */
   public static final boolean DEBUG_ALL = false;
@@ -170,6 +174,9 @@ public class Knapsack extends Constraint
 
   /** Whether the dynamic program is used next to the relaxation. */
   private boolean useDynamicProgramming = true;
+
+  // the ratio of the row of the last reason, for proofs
+  private long[] lastRatio;
 
   /** The dynamic program propagating with this constraint, or null when it is not used. */
   private KnapsackDP dynamicProgram;
@@ -1054,12 +1061,78 @@ public class Knapsack extends Constraint
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == Knapsack.class && explanation().explain(trail, entry, out);
+    lastRatio = null;
+    if (getClass() != Knapsack.class) {
+      return false;
+    }
+    KnapsackExplanation e = explanation();
+    boolean explained = e.explain(trail, entry, out);
+    lastRatio = e.ratio;
+    return explained;
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == Knapsack.class && explanation().explainFailure(trail, out);
+    lastRatio = null;
+    if (getClass() != Knapsack.class) {
+      return false;
+    }
+    KnapsackExplanation e = explanation();
+    boolean explained = e.explainFailure(trail, out);
+    lastRatio = e.ratio;
+    return explained;
+  }
+
+  /**
+   * Returns the ratio {a, b} of the row b * (sum(p[i] * q[i]) - profit) - a * (sum(w[i] * q[i]) -
+   * capacity) = 0 whose bounds gave the last reason of {@link #explain} or {@link #explainFailure},
+   * for proofs; null when the reason was not one of a row.
+   *
+   * @return the ratio, or null
+   */
+  public long[] explanationRatio() {
+    return lastRatio;
+  }
+
+  /**
+   * Returns the two equalities of the constraint, sum(w[i] * q[i]) - capacity = 0 and sum(p[i] *
+   * q[i]) - profit = 0.
+   *
+   * @return the weight row and the profit row
+   */
+  public LinearForm[] rows() {
+    int n = items.length;
+    IntVar[] vars = new IntVar[n + 1];
+    long[] w = new long[n + 1];
+    long[] p = new long[n + 1];
+    for (int i = 0; i < n; i++) {
+      vars[i] = items[i].quantity;
+      w[i] = items[i].weight;
+      p[i] = items[i].profit;
+    }
+    vars[n] = knapsackCapacity;
+    w[n] = -1;
+    IntVar[] profitVars = Arrays.copyOf(vars, n + 1);
+    profitVars[n] = knapsackProfit;
+    p[n] = -1;
+    return new LinearForm[] {
+      new LinearForm(vars, w, 0, LinearForm.EQ), new LinearForm(profitVars, p, 0, LinearForm.EQ)
+    };
+  }
+
+  /**
+   * Writes the two equalities; the proof derives the row of each reason from them. The dynamic
+   * program prunes values that no row implies, so a constraint that uses it is not written.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Knapsack.class || useDynamicProgramming) {
+      return false;
+    }
+    for (LinearForm row : rows()) {
+      model.linear(row);
+    }
+    return true;
   }
 
   @Override

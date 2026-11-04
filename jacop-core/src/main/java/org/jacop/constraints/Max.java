@@ -46,6 +46,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.MaxExplanation;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Max constraint implements the Maximum/2 constraint. It provides the maximum variable from all
@@ -57,7 +59,7 @@ import org.jacop.lcg.MaxExplanation;
  * @version 5.0
  */
 public class Max extends AbstractMinMax
-    implements Functional, Violation, Simplifiable, Copyable<Max>, Explainable {
+    implements Functional, Violation, Simplifiable, Copyable<Max>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -219,5 +221,31 @@ public class Max extends AbstractMinMax
       max = Math.max(max, value.applyAsInt(v));
     }
     return max;
+  }
+
+  // [x >= v] -> [max >= v] for each x, and [max >= v] -> one [x >= v], for every threshold v
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Max.class) {
+      return false;
+    }
+    int lo = model.domain(target).min();
+    int hi = model.domain(target).max();
+    for (IntVar x : list) {
+      lo = Math.min(lo, model.domain(x).min());
+      hi = Math.max(hi, model.domain(x).max());
+    }
+    for (int v = lo + 1; v <= hi; v++) {
+      String t = model.atLeast(target, v);
+      String[] some = new String[list.length + 1];
+      some[0] = PbModel.not(t);
+      for (int i = 0; i < list.length; i++) {
+        String a = model.atLeast(list[i], v);
+        model.clause(PbModel.not(a), t);
+        some[i + 1] = a;
+      }
+      model.clause(some);
+    }
+    return true;
   }
 }

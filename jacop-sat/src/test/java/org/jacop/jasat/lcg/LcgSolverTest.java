@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import org.jacop.constraints.AbsXeqY;
@@ -490,6 +491,92 @@ class LcgSolverTest {
       assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
     }
     assertThat(represolves).isGreaterThan(0);
+  }
+
+  /**
+   * The bounds minimize reports at its restarts hold: none is above the optimum, and on most
+   * instances learning raises one above the root's. Stopping in the action ends minimize with a
+   * best solution within the gap of the bound, as fzn's --gap does.
+   */
+  @Test
+  void boundsAtRestartsHoldAndStopAtTheGap() {
+    Random rnd = new Random(31);
+    int raised = 0;
+    int stopped = 0;
+    for (int instance = 0; instance < 24; instance++) {
+      long seed = rnd.nextLong();
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 9;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, n - 1);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 4; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(7) - 3;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(10)));
+        }
+        IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = r.nextInt(41) - 20;
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        if (!store.consistency()) {
+          break;
+        }
+        int root = cost.min();
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setSeed(instance);
+        if (instance % 2 == 1) {
+          solver.setLowerBoundSearch(0.5, 50);
+        }
+        if (instance % 4 >= 2) {
+          solver.setCoreSearch(0.5, 10_000, 500);
+        }
+        List<Long> bounds = new ArrayList<>();
+        boolean stop = run == 1;
+        solver.onBound(
+            lower -> {
+              bounds.add(lower);
+              long best = solver.bestObjective();
+              if (stop && best != Long.MAX_VALUE && best - lower <= 0.2 * Math.abs(best)) {
+                solver.stop();
+              }
+            });
+        int status = solver.minimize(cost);
+        if (run == 0) {
+          if (status != CdclSolver.SAT) {
+            break; // no solution: nothing to compare with
+          }
+          int optimum = solver.value(cost);
+          for (long b : bounds) {
+            assertThat(b).as("instance %d", instance).isLessThanOrEqualTo(optimum);
+          }
+          if (bounds.stream().anyMatch(b -> b > root)) {
+            raised++;
+          }
+        } else if (status == CdclSolver.UNKNOWN) {
+          long best = solver.value(cost); // the best solution found
+          long last = bounds.stream().mapToLong(Long::longValue).max().orElseThrow();
+          assertThat(best - last)
+              .as("instance %d", instance)
+              .isLessThanOrEqualTo((long) Math.floor(0.2 * Math.abs(best)));
+          stopped++;
+        }
+      }
+    }
+    assertThat(raised).isGreaterThan(0);
+    assertThat(stopped).isGreaterThan(0);
   }
 
   // the smallest weighted sum over the assignments of x that satisfy the relations
@@ -3541,6 +3628,120 @@ class LcgSolverTest {
       runs += solver.lnsRuns;
     }
     assertThat(runs).isPositive();
+  }
+
+  /**
+   * A solver that adds constraints to the shared model (symmetry breaking) reads the clauses of
+   * solvers that added none or the same ones; its own reach only the latter.
+   */
+  @Test
+  void sharedClausesStayWithinTheirModel() {
+    SharedClauses pool = new SharedClauses();
+    int plain = pool.newSource("");
+    int plain2 = pool.newSource("");
+    int lex = pool.newSource("lex[a,b,]");
+    int lex2 = pool.newSource("lex[a,b,]");
+    int other = pool.newSource("lex[b,a,]");
+    for (int source : new int[] {plain, plain2, lex, lex2, other}) {
+      pool.publish(List.of(new int[] {source, 1, pool.id("a"), SharedClauses.GE, 1}));
+    }
+    assertThat(sources(pool, plain)).containsExactly(plain2);
+    assertThat(sources(pool, lex)).containsExactly(plain, plain2, lex2);
+    assertThat(sources(pool, other)).containsExactly(plain, plain2);
+  }
+
+  private static List<Integer> sources(SharedClauses pool, int reader) {
+    List<int[]> in = new ArrayList<>();
+    assertThat(pool.read(0, reader, in)).isEqualTo(pool.size());
+    return in.stream().map(c -> c[0]).toList();
+  }
+
+  /**
+   * A solver of makespan problems stops after a few conflicts; a second one, of the same problem in
+   * its own store, takes its learnt clauses (of any size and LBD, to share many), its root bounds
+   * and its best cost as the bound, as portfolio threads do. Neither finds a solution better than
+   * the optimum of depth-first search, and the better of their solutions is optimal.
+   */
+  @Test
+  void sharedClausesKeepTheOptimum() {
+    Random rnd = new Random(31);
+    long imported = 0;
+    for (int instance = 0; instance < SCHEDULING_INSTANCES / 4; instance++) {
+      int n = 6 + rnd.nextInt(3);
+      int[] d = new int[n];
+      int[] r = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + rnd.nextInt(4);
+        r[i] = 1 + rnd.nextInt(3);
+      }
+      int limit = 3 + rnd.nextInt(2);
+      IntVar[][] starts = new IntVar[3][];
+      IntVar[] makespans = new IntVar[3];
+      Store[] stores = new Store[3];
+      for (int k = 0; k < 3; k++) {
+        stores[k] = new Store();
+        starts[k] = new IntVar[n];
+        IntVar[] durations = new IntVar[n];
+        IntVar[] resources = new IntVar[n];
+        IntVar[] ends = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          starts[k][i] = new IntVar(stores[k], "s" + i, 0, 20 - d[i]);
+          ends[i] = new IntVar(stores[k], "e" + i, d[i], 20);
+          stores[k].impose(new XplusCeqZ(starts[k][i], d[i], ends[i]));
+          durations[i] = new IntVar(stores[k], d[i], d[i]);
+          resources[i] = new IntVar(stores[k], r[i], r[i]);
+        }
+        makespans[k] = new IntVar(stores[k], "makespan", 0, 20);
+        stores[k].impose(new Max(ends, makespans[k]));
+        stores[k].impose(
+            new Cumulative(starts[k], durations, resources, new IntVar(stores[k], limit, limit)));
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(
+              search.labeling(
+                  stores[0],
+                  new SimpleSelect<>(starts[0], null, new IndomainMin<>()),
+                  makespans[0]))
+          .isTrue();
+      int optimum = search.getCostValue();
+
+      // the first solver stops after a few conflicts, the second takes its clauses and its best
+      // solution's cost as the bound, as a portfolio thread does from another one
+      SharedClauses pool = new SharedClauses();
+      AtomicInteger bound = new AtomicInteger(Integer.MAX_VALUE);
+      int[] found = {Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE};
+      int[] results = new int[3];
+      for (int k = 1; k < 3; k++) {
+        int w = k;
+        LcgSolver solver = new LcgSolver(stores[k]);
+        solver.setChecking(true);
+        solver.setSharedClauses(pool, "", IntVar::id, 64, 64);
+        solver.setSharedBound(bound::get);
+        solver.onSolution(
+            () -> {
+              int cost = makespans[w].value();
+              found[w] = Math.min(found[w], cost);
+              bound.accumulateAndGet(cost, Math::min);
+            });
+        if (k == 1) {
+          solver.sat().setConflictLimit(5 + rnd.nextInt(60));
+        }
+        results[k] = solver.minimize(makespans[k]);
+        if (k == 2) {
+          imported += solver.clausesImported;
+        }
+      }
+      for (int k = 1; k < 3; k++) {
+        assertThat(found[k])
+            .as("instance %d, solver %d", instance, k)
+            .isGreaterThanOrEqualTo(optimum);
+      }
+      // the second solver ends its search: the better of the two solutions is optimal
+      assertThat(results[2]).as("instance %d", instance).isNotEqualTo(CdclSolver.UNKNOWN);
+      assertThat(bound.get()).as("instance %d", instance).isEqualTo(optimum);
+    }
+    assertThat(imported).isPositive();
   }
 
   @Test

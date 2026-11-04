@@ -42,6 +42,7 @@ import java.util.TreeSet;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ValueIndicator;
 
 /**
  * Linear rows implied by constraints that are not linear relations themselves, for the linear
@@ -78,31 +79,15 @@ public final class Linearizations {
 
   /**
    * Returns the value encodings of the variables in the constraints: for each variable x with
-   * Booleans {@code b_v <-> x = v} (from {@link ChannelReif} or {@link Reified} {@link XeqC}) for
-   * two or more values, {@code sum b_v <= 1}, and when the values cover the domain of x, {@code sum
-   * b_v = 1} and {@code x = sum v b_v}; then also {@code y = sum a[v] b_v} for each {@link
-   * ElementInteger} {@code y = a[x]}.
+   * Booleans {@code b_v <-> x = v} (from {@link #valueBooleans}) for two or more values, {@code sum
+   * b_v <= 1}, and when the values cover the domain of x, {@code sum b_v = 1} and {@code x = sum v
+   * b_v}; then also {@code y = sum a[v] b_v} for each {@link ElementInteger} {@code y = a[x]}.
    *
    * @param constraints the constraints
    * @return the rows
    */
   public static List<LinearForm> encodings(Collection<Constraint> constraints) {
-    // in the order of the constraints, so that the rows do not depend on identity hash codes
-    Map<IntVar, Map<Integer, IntVar>> byVar = new LinkedHashMap<>();
-    for (Constraint c : constraints) {
-      if (c.getClass() == ChannelReif.class) {
-        ChannelReif ch = (ChannelReif) c;
-        Map<Integer, IntVar> m = byVar.computeIfAbsent(ch.x, k -> new LinkedHashMap<>());
-        for (AbstractChannel.Item it : ch.item) {
-          m.putIfAbsent(it.value(), it.b());
-        }
-      } else if (c.getClass() == Reified.class
-          && ((Reified) c).c.getClass() == XeqC.class
-          && boolean01(((Reified) c).b)) {
-        XeqC e = (XeqC) ((Reified) c).c;
-        byVar.computeIfAbsent(e.x, k -> new LinkedHashMap<>()).putIfAbsent(e.c, ((Reified) c).b);
-      }
-    }
+    Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
     List<LinearForm> out = new ArrayList<>();
     Map<IntVar, Map<Integer, IntVar>> covering = new IdentityHashMap<>();
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
@@ -169,6 +154,41 @@ public final class Linearizations {
       }
     }
     return out;
+  }
+
+  /**
+   * Returns the Booleans {@code b_v <-> x = v} of the constraints, from {@link ChannelReif}, {@link
+   * Reified} {@link XeqC} and {@link ValueIndicator} equivalences, by variable and value, in the
+   * order of the constraints (so that rows made from them do not depend on identity hash codes);
+   * the first Boolean of a value wins.
+   *
+   * @param constraints the constraints
+   * @return the Booleans of each variable by value
+   */
+  public static Map<IntVar, Map<Integer, IntVar>> valueBooleans(
+      Collection<Constraint> constraints) {
+    Map<IntVar, Map<Integer, IntVar>> byVar = new LinkedHashMap<>();
+    for (Constraint c : constraints) {
+      if (c.getClass() == ChannelReif.class) {
+        ChannelReif ch = (ChannelReif) c;
+        Map<Integer, IntVar> m = byVar.computeIfAbsent(ch.x, k -> new LinkedHashMap<>());
+        for (AbstractChannel.Item it : ch.item) {
+          m.putIfAbsent(it.value(), it.b());
+        }
+      } else if (c.getClass() == Reified.class
+          && ((Reified) c).c.getClass() == XeqC.class
+          && boolean01(((Reified) c).b)) {
+        XeqC e = (XeqC) ((Reified) c).c;
+        byVar.computeIfAbsent(e.x, k -> new LinkedHashMap<>()).putIfAbsent(e.c, ((Reified) c).b);
+      } else if (c instanceof ValueIndicator vi
+          && vi.indicator() != null
+          && boolean01(vi.indicator())) {
+        byVar
+            .computeIfAbsent(vi.variable(), k -> new LinkedHashMap<>())
+            .putIfAbsent(vi.value(), vi.indicator());
+      }
+    }
+    return byVar;
   }
 
   private static void rows(Constraint c, List<LinearForm> out) {

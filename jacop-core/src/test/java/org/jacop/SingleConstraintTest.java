@@ -107,6 +107,7 @@ import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
@@ -8756,5 +8757,31 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(c.consistencyCalls()).isGreaterThan(calls);
     assertThat(store.numberConsistencyCalls).isGreaterThanOrEqualTo(c.consistencyCalls());
+  }
+
+  @Test
+  void interDistanceSixteenCoordinates() {
+    // Found on XCSP3 Hsp-table-14409 (a cumulative of tasks of length 22 posted as InterDistance):
+    // the interval sweep has exactly 16 distinct coordinates, and the segment array, which needs
+    // one entry more, still had its initial length 16 (ArrayIndexOutOfBoundsException in adjust).
+    int[][] dom = {
+      {0, 0}, {88, 110}, {22, 44}, {88, 154}, {198, 198},
+      {220, 522}, {22, 534}, {22, 525}, {22, 516}, {22, 507}
+    };
+    Store store = new Store();
+    IntVar[] x = new IntVar[dom.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, dom[i][0], dom[i][1]);
+    }
+    store.impose(new InterDistance(x, 22));
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()))).isTrue();
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        assertThat(Math.abs(x[i].value() - x[j].value())).isGreaterThanOrEqualTo(22);
+      }
+    }
   }
 }

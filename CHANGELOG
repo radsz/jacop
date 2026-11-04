@@ -1452,6 +1452,280 @@ Version 5.0 (unreleased)
     restarts, the SAT solver's restarts (as lcgRestarts). Before, both
     were always 0.
 
+100. The FlatZinc front end solves the independent parts of a model that
+    the objective does not depend on (for a satisfaction model, every
+    part but the largest) once at the root, and fixes them. Each part
+    gets a depth-first search in annotation order with a 2 s budget
+    (-Djacop.components.budget, in ms); a part without a solution makes
+    the model infeasible, and a part that runs out of time is left to
+    the main search. It is skipped with -a, with -n > 1 for satisfaction
+    and with on_restart. --components off turns it off. Constraints
+    that watch only some of their variables (long Boolean sums, clauses)
+    link all their variables. 92 of the 1,781 MiniZinc Challenge
+    instances split into several parts; on the 109 checked, 60 s: same
+    statuses, ghoulomb 3-7-20 and 3-8-20 prove their optimum in 2 s
+    instead of 15 s, 3-10-20 in 15 s instead of 38 s, 2013 4-9-20 in
+    4 s instead of 17 s, and cable_tree_wiring R046 ends at its optimum
+    143,534 instead of 284,142; other objectives move by noise.
+
+101. Presolve dual reductions also find dominated columns: if raising x
+    by one and lowering y by one keeps every constraint and the
+    objective, the clause x = max(x) or y = min(y) is added (x >= y for
+    0-1 variables). It is left out with -a, since it can remove some of
+    the improving solutions printed on the way to the optimum (the
+    optimum stays). -Djacop.presolve.domcol=false turns it off. It fires
+    on 37 Challenge instances (train, table-layout, connect,
+    unit-commitment, wmsmc-int) and is neutral on them at 60 s.
+
+102. fzn-jacop --proof <prefix> writes a VeriPB 3 certificate of an LCG
+    search: <prefix>.opb is the model as pseudo-Boolean constraints over
+    the order encoding of the domains the FlatZinc translation gives the
+    variables, before the constraints propagate, and <prefix>.pbp the proof (rup steps for learnt clauses and lazy
+    reasons, pol steps for the flow reasons of cardinality constraints,
+    soli for improving solutions, deletions, and a conclusion UNSAT, SAT
+    or BOUNDS lb ub) for veripb <prefix>.opb <prefix>.pbp.
+    It is off by default, implies --lcg, one thread, bounds consistency
+    and no LP, and learns no linear sums; symmetry breaking and the
+    components solved before search are off under it. The core-guided phase runs
+    without its at-most-one groups: the proof sums the model's lines of
+    the objective's definitions into a lower-bound line, defines each
+    totalizer output by two red steps, derives the totalizer clauses and
+    each core's increase of the bound by pol steps, and hardened literals
+    and the bound clause by rup. A search stopped by a limit concludes
+    BOUNDS with the lower bound it proved (of the cores or of the root);
+    a run that overruns its time-out ends its proof after the last whole
+    step with conclusion NONE.
+    Linear constraints (LinearInt, LinearBool and the linear forms of LCG
+    explanations), their reifications, equalities with constants,
+    ChannelReif, ChannelImply, clauses, element over constants, Count,
+    AtMost, AtLeast, CountBounds, Max, Min, tables, regular and MDD
+    constraints, Alldifferent, Alldiff, Alldistinct, GCC, CountValues and
+    CountValuesBounds are encoded (the flow reasons of the last six by a
+    pol step over a violated cut of their flow network), as are In,
+    BoolClause, AllEqual, AbsXeqY, MaxSimple, MinSimple, AndBoolSimple, OrBoolSimple,
+    XorBool, Reified and Implies of these and of AtMost and AtLeast (the
+    encoding under the literal, and for Reified the negation's under its
+    negation), Not of them and of linear constraints, ConditionalSelect
+    (a literal per branch that it is selected, under which y equals the
+    branch), LexOrder (a literal per position that the positions before
+    it are equal), and
+    b -> x + c <= z and the time table of CumulativeBasic, with fixed or
+    variable durations and resource uses (a time-indexed encoding); under
+    --proof a cumulative with fixed durations and uses is posted as
+    Cumulative, its energy and edge-finding reasons derived by a pol step
+    that sums the load lines of an overloaded window with the task cover
+    and order lines, any other cumulative as CumulativeBasic, and the
+    redundant constraints the front end adds (unary resources, energy
+    precedence, weighted completion, stocking cost, overlapping all
+    different) are left out; so are diffn (as Nooverlap without its area
+    and count failures, every pair of rectangles a clause of the four
+    ways they are apart over order literals), int_times (as a table of
+    the products), element over variables (ElementVariableFast, with a
+    support literal per value and position, so that a bound of the value
+    with the index open is a rup step) and
+    Circuit (forward and backward positions of the nodes; its subtour
+    cut reasons are derived by rup steps, position by position, over a
+    strongly connected component that no arc leaves or none enters, and
+    its dominator reasons are off under --proof);
+    for another constraint, or a
+    model over 4*10^8 characters, fzn-jacop prints "%% --proof: ..." and
+    =====UNKNOWN=====. The proof derives each change of the root
+    propagation as a unit from its reason, and a failure of the root
+    propagation, or a clause false at the root, as UNSAT; changes without a reason (domains narrowed by
+    the translation) or by a constraint that cannot be encoded narrow the
+    model's domains instead. The FlatZinc translation is not certified.
+
+103. FlatZinc regular with a set alphabet (jacop_regular_set) read the
+    next states of its transition table shifted by the smallest symbol
+    instead of by 1. With an alphabet such as 0..1 it crashed with an
+    ArrayIndexOutOfBoundsException; with one from 2 it could map
+    transitions to the wrong state and report UNSAT for satisfiable
+    models. Alphabets from 1 (the usual case) were not affected.
+
+104. LCG explanations of GCC, GlobalCardinality and CountValues first try
+     counting reasons: a counter's upper bound from the variables that
+     exclude its value or from the lower bounds of the other counters, a
+     counter's lower bound from the variables fixed to its value, and a
+     value removed (or a bound moved past values) because other variables
+     fixed to it reach its counter's bound. Only when none applies is the
+     flow network built, which has a time share and gave the generic
+     reason beyond it (93 % of GCC reasons on fillomino 7x7_0).
+     -Djacop.lcg.cardinalityCounts=false turns them off. ArgMax and ArgMin
+     reasons skip values outside the initial domain, where a bound across
+     a wide hole gave the generic reason (47 % on tower). On the wide
+     benchmark set (220 instances, 60 s) --lcg is 10 better / 6 worse and
+     --lcg -f solves 140 instead of 136; on the 17 instances with these
+     constraints 22 better / 6 worse over 5 runs (fillomino 7x7_0 solved,
+     league 15.4 s to 8.8 s).
+
+105. fzn-jacop breaks symmetries by default, also without --presolve:
+    lex-leader constraints for variable symmetries, lex chains for
+    interchangeable columns and value precedence for interchangeable
+    values, as --presolve on did (--symmetry off turns it off). It is
+    left out for all solutions of satisfaction problems and for models
+    loaded with FlatzincLoader. When the search annotation tries the
+    largest values first (indomain_max, indomain_reverse_split), the
+    lex-leader keeps the largest solution of each orbit, so the search
+    meets it first. Free search (-f) leaves value precedence out of
+    models that minimize the largest load of a bin packing (P||Cmax),
+    where it multiplied the failures of --lcg -f (pcmax n41-m7-s18:
+    30,015 to 214; 20 instances, 30 s: 16 to 19 proved). The second
+    given to symmetry detection now also
+    bounds reading the model and building its graphs, which took up to
+    7.5 s on groupsplitter and ma-path-finding. The FlatZinc test suites
+    run with -Djacop.symmetry=presolve, which keeps the old behaviour.
+    Symmetry constraints are posted on 431 of the 1,781 MiniZinc
+    Challenge instances (2008-2025); detection takes at most 1 s,
+    median 0.1 s. On the 376 of them not solved in 2 s, 30 s: fixed
+    search solves 141 -> 145, -f 189 -> 194; on 140 generated colouring,
+    bin packing and scheduling models 81 -> 91 and 87 -> 95.
+
+106. LCG explanations of set constraints. What a set's domain derives
+     after a set operation changes it (a cardinality bound, an element
+     forced in or out by a cardinality bound, a cardinality failure) is
+     explained by the operation from the elements its relation forces,
+     instead of the generic reason. set_card (CardAeqX) explains by the
+     set's cardinality rules with the cardinality variable, and
+     array_set_element (ElementSet) by the elements or the cardinality
+     that exclude an index and by the indexes left. The generic share of
+     these constraints on monomatch, vaccine, gt-sort and valve-network
+     falls to 0 (valve-network: 99.8 % of ElementSet reasons). On the 8
+     wide-set instances with set constraints (60 s, 3 seeds per mode)
+     --lcg is 6 better / 2 worse (monomatch n_5 solved in 4 s, which
+     timed out; gt-sort 131 to 127) and --lcg -f 7 / 6.
+
+107. The LCG threads of fzn-jacop -p share short learnt clauses and the
+     bounds of the model's variables at the root, as atoms over FlatZinc
+     names, at restarts and at the start and end of each solve. A thread
+     adds the clauses of the others as learnt clauses (a clause of two or
+     more atoms only when all its literals already exist there). Clauses
+     hold under the model and a bound that is the cost of a solution the
+     portfolio already has, so no better solution is lost. Nothing is
+     shared with --presolve on or with a proof; after symmetry breaking a
+     thread reads only threads that posted none or the same constraints.
+     --free-config share-clauses=<size> (default 8, 0 = off) and
+     share-lbd=<lbd> (default 2) set what is shared. At -f -p 4 (two LCG
+     threads) it is neutral: 169 hard instances, 2 interleaved rounds,
+     95 -> 95 solved; wide set 169 -> 169 solved, 29 better / 25 worse.
+
+108. The linear relaxation (--lp on, the default) picks its simplex by size:
+    the dense one below 100 rows of the model's linear constraints and the
+    sparse one from 100 rows on, and also for relaxations over the dense
+    size cap (org.jacop.lp.maxTableau), which before got no relaxation at
+    all (roster-shifts-bool, physician-scheduling, table-layout, connect
+    and radiation of the MiniZinc Challenge). With the sparse simplex the
+    rows of non-linear constraints tried at the first solve are at most
+    twice the model's rows plus 100. -Dorg.jacop.lp.sparseRows=N moves the
+    threshold, -1 keeps the dense simplex. The sparse simplex is used only
+    up to 25,000 rows and 30,000 columns (org.jacop.lp.sparseMaxRows and
+    org.jacop.lp.sparseMaxColumns) and its root solve stops after 3 s
+    (org.jacop.lp.sparseRootSeconds) or 4e9 work units
+    (org.jacop.lp.sparseRootWork) in optimisation problems; while the
+    extra rows are on trial, a sparse simplex chosen by size takes the
+    pivot limit of the dense tableau, so it drops the same rows. Each LP
+    deduction is cleaned after its multipliers are rounded: a multiplier
+    whose row lacks the side its sign needs is dropped instead of losing
+    the inequality, the inequality is divided by the gcd of its weights
+    with its side rounded down, and a scale whose bounds reasoning would
+    overflow a long falls back to the next smaller one
+    (-Dorg.jacop.lp.clean=false turns the first two off). A ratio test
+    that meets NaN stops the solve at its limit instead of throwing
+    ArrayIndexOutOfBoundsException.
+
+109. LCG explanations of set_in_reif and array_var_set_element. In
+     (x in a fixed set) and XinA (x in a set variable) explain their
+     pruning, failures and entailment, so a reification of them is no
+     longer generic: a value of x is ruled out by being outside the set
+     (an element out of the set variable, or in it for the negation), an
+     element joins the set when x is fixed to it. ElementSetVariable
+     explains an excluded index by an element its set and the value
+     disagree on, a membership of the value by the sets of the indexes
+     left, and with the index fixed passes memberships and cardinality
+     bounds between the two sets. valve-network: Reified reasons 100 %
+     generic with 84 atoms to 0 % with 15; gt-sort: ElementSetVariable
+     100 % generic with 75 atoms to 0 % with 2. Wide set (220, 60 s):
+     --lcg 12 better / 7 worse (valve-network 90 to 111), --lcg -f
+     22 / 23, solved 139 to 140.
+
+110. New module jacop-jalp (JaLP, org.jacop.jalp): a sparse revised dual
+     simplex with no dependency on jacop-core. It has a Markowitz LU of
+     the basis with a Forrest-Tomlin update, dual steepest edge pricing, a
+     bound-flipping ratio test, power-of-two scaling and cost
+     perturbation, warm starts after bound changes and added or removed
+     rows, Farkas proofs and the rows of the basis inverse. An MPS reader
+     (free and fixed format, gzip) and a command line
+     (java org.jacop.jalp.LpMain [-noscale] [-limit N] files) solve LP
+     files. The sparse and lazy relaxations of LinearRelaxation
+     (Simplex.SPARSE and LAZY, including the sparse simplex chosen by
+     size) now run on JaLP, which replaces SparseDualSimplex and SparseLu
+     (removed). On the osolpro LP bench (Netlib, MIPLIB 3 and
+     2017, Mittelmann and JaCoP root LPs, golden references from HiGHS,
+     SCIP/SoPlex and GLOP; 687 instances, 300 s) JaLP matches 636
+     references, stops at the time limit on 50 and gives no wrong answer.
+     On the wide set (220, 60 s) with the
+     sparse simplex chosen by size, JaLP against SparseDualSimplex solves
+     130 against 129 (14 better / 14 worse) and with -f 152 against 148
+     (47 / 13).
+
+111. New FlatZinc built-ins jacop_short_table_int(x, t, star), a table
+     in which the value star matches any value (posted as HybridTable),
+     and jacop_negative_table_int(x, t), forbidden tuples (posted as
+     NegativeTable). JaCoP's mznlib uses them for the predicates
+     xcsp_short_table and xcsp_negative_table of the XCSP3 bench in
+     osolpro benchmarks/xcsp3, whose default decompositions are
+     disjunctions of conjunctions. On the 28 instances of the XCSP3
+     quick set that use them (60 s): Fillomino-6-1 solved in 17 s
+     (no answer before, 24 MB FlatZinc to 1.3 MB), Tal-02 optimum in
+     3 s instead of 36 s, FoolSolitaire-dec2-0-3 optimum (no answer
+     before), Benzenoide-06, MaximumDensityOscillatingLife-6-4 and
+     RollerSplat-05c-70 get solutions; no instance lost an answer.
+
+112. New fzn-jacop option --gap <percent> (also in org.jacop.msc): an
+     optimisation stops once the best solution is within <percent> % of
+     the objective's proved bound, |best - bound| <= percent/100 * |best|,
+     as the relative gap of MIP solvers. The best solution is then printed
+     without "==========", unless the bound equals it, which proves it
+     optimal. The bound is the objective's bound at the root before search
+     and, under LCG, at every restart (with the core-guided lower bound);
+     a portfolio (-p) stops on the best solution and bound of all its
+     threads. With -s, each better bound is printed at once as
+     %%%mzn-stat: objectiveBound=<value> in the model's objective, so the
+     time a gap was proved can be read from the output.
+
+113. LCG explanations of XmulYeqZ with one wide factor. A removed value of
+     z looked for supports over x even when y was narrower, and a removed
+     value of a factor over the other factor even when z was narrower, so
+     a factor wider than 1,024 values made the reason generic (wordpress:
+     price in 116..4600 times a 0..1 occupancy, 98k generic reasons of
+     1,355 atoms on average in 30 s). The narrower range is enumerated
+     now, and removals of more than 64 values are explained value by value
+     while that stays under 65,536 support checks. wordpress: generic
+     reasons 0, 2 atoms on average, and with --lcg the optimum 3580 is
+     proved in 57 s (4406, unproved, at 60 s before). Wide set (220,
+     60 s): --lcg 4 better / 4 worse, solved 117 to 118, --lcg -f 14 / 14,
+     solved 138 to 140.
+
+114. LCG explanations of LexChain with a wide variable. The explanation
+     read each vector's domains by enumerating the root domains and gave
+     up on a variable of more than 10,000 values, so the symmetry-breaking
+     chain of wordpress (prices up to 21,278) had only generic reasons of
+     11,000 to 17,000 atoms. The domains are now read from the bounds and
+     the removed values on the trail. wordpress: LexChain generic reasons
+     0, failures 35 atoms instead of 11,600, --lcg optimum proved in 33 s
+     instead of 46 s. Wide set (220, 60 s): on the 10 instances that use
+     LexChain --lcg 2 better / 0 worse, --lcg -f unchanged.
+
+115. LCG explanations of AllEqual. A removed value or moved bound of one
+     variable is explained by the same atom of another variable (one
+     bound when it covers the values passed, else the removal of each
+     value elsewhere), a failure by the bounds that cross or the values
+     between them removed elsewhere. Before, every reason was generic
+     (the domains of all variables). generalized-peacable-queens: AllEqual
+     reasons 94 % generic with 9.4 atoms to 0 % with 1.0, failures 8.1 to
+     2.0 atoms, 6 % more nodes in 30 s. Wide set (220, 60 s): --lcg
+     6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
+     instance using AllEqual keeps its objective in both modes.
+
 Version 4.11
 =============
 

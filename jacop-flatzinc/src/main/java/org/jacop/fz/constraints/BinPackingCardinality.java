@@ -120,8 +120,10 @@ final class BinPackingCardinality {
 
   /** It builds a bin packing constraint, to be posted with the delayed constraints. */
   Constraint binPacking(IntVar[] bin, IntVar[] load, int[] w, int minBin) {
-    Constraint c =
+    Binpacking b =
         Binpacking.builder().bin(bin).load(load).w(w).minBin(minBin).lbPruning(true).build();
+    // a proof derives the rules of the load sums only
+    Constraint c = support.options.proof() == null ? b : b.linearRulesOnly();
     packings.add(new Packing(bin.clone(), load, w.clone(), minBin, c));
     return c;
   }
@@ -131,7 +133,7 @@ final class BinPackingCardinality {
    * global cardinality constraint by one with the counters as the numbers of items of the bins.
    */
   void attach() {
-    if (!enabled()) {
+    if (!enabled() || support.options.proof() != null) {
       return;
     }
     int found = 0;

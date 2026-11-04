@@ -45,6 +45,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.MaxExplanation;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * MaxSimple constraint implements the Maximum/2 constraint. It provides the maximum variable from
@@ -56,7 +58,7 @@ import org.jacop.lcg.MaxExplanation;
  * @version 5.0
  */
 public class MaxSimple extends Constraint
-    implements Simplifiable, SatisfiedPresent, Copyable<MaxSimple>, Explainable {
+    implements Simplifiable, SatisfiedPresent, Copyable<MaxSimple>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -174,5 +176,26 @@ public class MaxSimple extends Constraint
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return getClass() == MaxSimple.class
         && MaxExplanation.explainFailure(trail, new IntVar[] {x1, x2}, max, true, out);
+  }
+
+  /** States the relation by order literals: [max >= v] is [x1 >= v] or [x2 >= v]. */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != MaxSimple.class) {
+      return false;
+    }
+    int lo =
+        Math.min(model.domain(max).min(), Math.min(model.domain(x1).min(), model.domain(x2).min()));
+    int hi =
+        Math.max(model.domain(max).max(), Math.max(model.domain(x1).max(), model.domain(x2).max()));
+    for (int v = lo + 1; v <= hi; v++) {
+      String t = model.atLeast(max, v);
+      String a1 = model.atLeast(x1, v);
+      String a2 = model.atLeast(x2, v);
+      model.clause(PbModel.not(a1), t);
+      model.clause(PbModel.not(a2), t);
+      model.clause(PbModel.not(t), a1, a2);
+    }
+    return true;
   }
 }
