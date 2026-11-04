@@ -2071,9 +2071,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lns-share", "3")),
           Long.parseLong(options.freeConfig("lns-conflicts", "200")));
     }
-    if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
-      // the annotation is followed down each branch, as without learning
-      lcg.sat().setRestarts(false);
+    if (!free && annotated != null) {
+      // restarts under the annotation: off (followed down each branch, as without learning),
+      // replay (each run follows it again, with the learnt clauses) or alternate (runs take turns
+      // with activity branching); fixed-restarts-from=solution restarts only after a first solution
+      String restarts = options.freeConfig("fixed-restarts", "turns");
+      String from = options.freeConfig("fixed-restarts-from", "start");
+      if (!"start".equals(from) && !"solution".equals(from)) {
+        throw new IllegalArgumentException("fixed-restarts-from=" + from);
+      }
+      lcg.setFixedRestarts(
+          LcgSolver.FixedRestarts.valueOf(restarts.toUpperCase(Locale.ROOT)),
+          "solution".equals(from));
     }
     if (options.getTimeOut() > 0) {
       // the time-out covers the whole run: reading and setting up the model took part of it
