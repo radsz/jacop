@@ -1747,6 +1747,23 @@ Version 5.0 (unreleased)
      worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
      instance changes its result.
 
+118. The FlatZinc front end merges element constraints over constant
+     arrays that share one index variable into one table (HybridTable),
+     the index as the last column. MiniZinc flattens a row lookup
+     x[j] = t[row, j] into one element per column; each element only
+     sees the index, so under LCG a removed value of x[j] was explained
+     by one row != i atom per dead row (crosswords grid-05.04: learnt
+     clauses of 2,551 literals on average, 45 with the table).
+     TableExplanation now reads != atoms and bounds from the trail
+     directly (AtomicTrail.notEqualEntry, boundEntry) instead of walking
+     a column's entries. -Dorg.jacop.fz.elementTable=false turns the
+     merge off; it is off with --proof. 28 of the 220 wide set instances
+     have such groups. Wide set (220, 60 s): fixed search 16 better / 17
+     worse, 5 / 1 on the 28 with groups (cgt -6534 to -30996, crosswords
+     65 to 68, stable-goods 6368 to 5900, pillars-and-planks 23 to 12 s,
+     wordpress 38 to 25 s); -f 24 / 26, 5 / 5 on the 28, solved +1, where
+     repeated seeds put tppv, crosswords and diameterc-mst in the noise.
+
 Version 4.11
 =============
 
