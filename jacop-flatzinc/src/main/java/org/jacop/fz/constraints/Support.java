@@ -75,6 +75,7 @@ import org.jacop.fz.ASTIntFlatExpr;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.ASTSetLiteral;
 import org.jacop.fz.FzConsole;
+import org.jacop.fz.ModelTimeOut;
 import org.jacop.fz.Options;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
@@ -739,22 +740,36 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
-   * Calls the action on every constraint of a parsed model, in the order of the model.
+   * Calls the action on every constraint of a parsed model, in the order of the model. It stops
+   * with {@link ModelTimeOut} once the time-out has passed: a scan of a model with millions of
+   * constraints takes seconds (rcpsp-wet-diverse j90_48_4, 470 MB).
    *
    * @param astTree the root of the parsed model.
    * @param action what is done with each constraint.
    */
-  static void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
+  void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          checkTimeOut();
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
             action.accept((ASTConstElem) item);
           }
         }
       }
+    }
+  }
+
+  /**
+   * Stops building the model once the time-out has passed.
+   *
+   * @throws ModelTimeOut when it has passed
+   */
+  void checkTimeOut() {
+    if (options != null && options.timeOutPassed()) {
+      throw new ModelTimeOut();
     }
   }
 

@@ -2071,19 +2071,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lns-share", "3")),
           Long.parseLong(options.freeConfig("lns-conflicts", "200")));
     }
-    if (!free && annotated != null && !Boolean.getBoolean("jacop.lcg.fixedRestarts")) {
-      // the annotation is followed down each branch, as without learning
-      lcg.sat().setRestarts(false);
+    if (!free && annotated != null) {
+      // restarts under the annotation: off (followed down each branch, as without learning),
+      // replay (each run follows it again, with the learnt clauses) or alternate (runs take turns
+      // with activity branching); fixed-restarts-from=solution restarts only after a first solution
+      String restarts = options.freeConfig("fixed-restarts", "turns");
+      String from = options.freeConfig("fixed-restarts-from", "start");
+      if (!"start".equals(from) && !"solution".equals(from)) {
+        throw new IllegalArgumentException("fixed-restarts-from=" + from);
+      }
+      lcg.setFixedRestarts(
+          LcgSolver.FixedRestarts.valueOf(restarts.toUpperCase(Locale.ROOT)),
+          "solution".equals(from));
     }
     if (options.getTimeOut() > 0) {
-      lcg.sat().setDeadline(System.nanoTime() + options.getTimeOut() * 1_000_000L);
+      // the time-out covers the whole run: reading and setting up the model took part of it
+      lcg.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
-    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && options.getRemainingTimeOut() > 0) {
+    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch()) {
       return continueWithoutLcg(costVar);
     }
     return numberSolutions > 0;
@@ -2094,6 +2104,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the LCG solver free search took over from, for the statistics
   private LcgSolver slowLcg;
   private long lcgStart;
+
+  // the part of the time-out that must be left for LCG free search to give way to free search
+  // without learning
+  private static final double SLOW_LCG_MIN_LEFT = 0.1;
+
+  // Setting up free search on a large model takes seconds: nside MEDIUM_1000_100 gave way 0.5 s
+  // before a time-out of 20 s and ended 2.9 s after it. The check used to be that some time was
+  // left, which always held, so free search also started after the time-out.
+  private boolean tooLateForFreeSearch() {
+    return options.getTimeOut() > 0
+        && options.getRemainingTimeOut() < SLOW_LCG_MIN_LEFT * options.getTimeOut();
+  }
 
   /**
    * Starts the check of LCG free search's speed: at a share of the time limit (lcg-slow-at), a
@@ -2137,6 +2159,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 // made again until LCG has one or is no longer slow. cutstock type16 TEST9
                 // found its first solution with LCG at 37 s and none without
                 while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
+                  if (tooLateForFreeSearch()) {
+                    return;
+                  }
                   if (solutionFound) {
                     lcgSlow = true;
                     solver.stop();
@@ -2797,10 +2822,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.mainBranchingFirst(true);
     }
     if (options.getTimeOut() > 0) {
-      builder.timeLimit(Duration.ofMillis(options.getRemainingTimeOut()));
+      // the time left now, not when the search starts: building the neighbourhoods and the
+      // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
+      builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
+      // refuted probes and nogoods raise the bound at the root between runs
+      builder.onBound(
+          lower -> {
+            if (reportBound(lower)) {
+              freeSearch.stop();
+            }
+          });
       // one failure in twenty goes to runs with the objective at or near its lower bound
       builder.probeObjective(
           Double.parseDouble(options.freeConfig("probe", "0.05")),
@@ -3057,6 +3091,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     stopInPortfolio();
     importBoundInPortfolio(label, costVar);
+    if (costVar instanceof IntVar cost) {
+      // a node whose subtree is all that is left bounds the solutions not found yet
+      label.setLastSubtreeListener(
+          () -> {
+            if (reportBound(cost.min())) {
+              throw new NumberSolutionsReached();
+            }
+          });
+    }
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
@@ -3175,6 +3218,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && isSearchComplete()
         && relaxedSearchComplete()
         && clampedDomainsKeepOptimum()) {
+      if (objectiveGap != null) {
+        // the search proved the best solution optimal
+        objectiveGap.optimal();
+      }
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -4274,6 +4321,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return true when the best solution is within --gap of the bound, so the search can stop
    */
   private boolean reportBound(long lower) {
+    if (!clampedDomainsKeepOptimum()) {
+      return false; // domains cut to the integer range may have cut off better solutions
+    }
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
       worker.bound(lower, !minimize);
