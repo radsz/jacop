@@ -4276,7 +4276,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean reportBound(long lower) {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
-      worker.bound(lower, !minimize);
+      // a bound that reaches the best solution proves it optimal only when it is a bound of the
+      // model itself, not of narrowed domains or of the restarts of on_restart
+      boolean exact =
+          clampedDomainsKeepOptimum() && relaxVars == null && dictionary.onRestart == null;
+      worker.bound(lower, !minimize, exact);
       return false;
     }
     return gap().bound(lower);

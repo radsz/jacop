@@ -557,6 +557,7 @@ public final class CoreSearch {
       if (unit != null && unit.term >= 0) {
         probe(unit.term, unit.level, phaseLimit);
       }
+      lcg.reportBound(lowerBound);
       if (tooSlow()) {
         return CdclSolver.UNKNOWN;
       }

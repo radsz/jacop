@@ -219,6 +219,7 @@ public final class LcgSolver implements ExternalPropagator {
   private Runnable onSolution;
   // takes the objective's bound at the root after each restart of minimize
   private LongConsumer onBound;
+  private long reportedBound = Long.MIN_VALUE;
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
@@ -2735,6 +2736,7 @@ public final class LcgSolver implements ExternalPropagator {
           }
           sat.addClause(-lit); // objective >= lb + 1
           lowerBoundRaised++;
+          reportBound(lb + 1L);
         } else if (sat.conflicts < limit) {
           return result;
         }
@@ -3029,6 +3031,18 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Gives a bound of the objective proved at the root, under the bound of branch and bound, to the
+   * action of {@link #onBound} when it is larger than the last one given: by a restart, a
+   * lower-bound run or a core of the core-guided phase.
+   */
+  void reportBound(long lower) {
+    if (onBound != null && objective >= 0 && lower > reportedBound) {
+      reportedBound = lower;
+      onBound.accept(lower);
+    }
+  }
+
+  /**
    * Returns the value of a variable in the last solution.
    *
    * @param x a variable of the store
@@ -3262,7 +3276,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (coreSearch != null) {
         lower = Math.max(lower, coreSearch.lowerBound);
       }
-      onBound.accept(lower);
+      reportBound(lower);
     }
     if (restartPresolve > 0 && store.level == baseLevel) {
       presolveAtRestart();
