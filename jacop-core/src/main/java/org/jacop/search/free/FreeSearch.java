@@ -155,6 +155,7 @@ public final class FreeSearch {
   private final long solutionLimit;
   private final long failLimit;
   private final long timeLimitMillis;
+  private final long deadlineMillis;
   private final Var[] recorded;
   private final Set<Var> projection;
   private final List<SearchMonitor> monitors;
@@ -238,6 +239,7 @@ public final class FreeSearch {
     solutionLimit = builder.solutionLimit;
     failLimit = builder.failLimit;
     timeLimitMillis = builder.timeLimitMillis;
+    deadlineMillis = builder.deadlineMillis;
     recorded = builder.recorded == null ? new Var[0] : builder.recorded;
     projection =
         builder.projection == null ? null : Collections.newSetFromMap(new IdentityHashMap<>());
@@ -306,6 +308,9 @@ public final class FreeSearch {
    */
   public Status solve() {
     deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
+    if (deadlineMillis > 0) {
+      deadline = Math.min(deadline, deadlineMillis);
+    }
     int startLevel = store.level;
     boolean exhausted = false;
     try {
@@ -1134,6 +1139,7 @@ public final class FreeSearch {
     private long solutionLimit;
     private long failLimit;
     private long timeLimitMillis;
+    private long deadlineMillis;
     private Var[] recorded;
     private Var[] projection;
     private final List<SearchMonitor> monitors = new ArrayList<>();
@@ -1378,6 +1384,19 @@ public final class FreeSearch {
      */
     public Builder timeLimit(Duration limit) {
       this.timeLimitMillis = limit.toMillis();
+      return this;
+    }
+
+    /**
+     * Stops at the given wall-clock time, however long building the search took. A {@link
+     * #timeLimit} counts from the start of {@link FreeSearch#solve()} instead; with both, the
+     * search stops at the earlier.
+     *
+     * @param epochMillis the time, as {@link System#currentTimeMillis()}; 0 for none.
+     * @return this builder.
+     */
+    public Builder deadline(long epochMillis) {
+      this.deadlineMillis = epochMillis;
       return this;
     }
 

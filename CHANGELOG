@@ -1726,7 +1726,23 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
-116. LCG explanations of Member. A value removed from e is explained by
+116. fzn-jacop ends by -t on its own on large models. The time-out was not
+     kept in five places: LCG search counted the whole -t from its own
+     start; free search took over from slow LCG free search even after the
+     time-out (and was set up for seconds on large models); free search
+     after LCG counted its limit from its first node, not from when the
+     time left was read; the model was read and scanned by the detectors
+     without looking at the clock; and -p answered 2 s after -t. New
+     FreeSearch.Builder.deadline(epochMillis). With the watchdog off, -f,
+     -t 60 s, on the 24 instances of the Challenge bench that overran:
+     19 ended after 62 s (up to 90.6 s, ma-path-finding 2022, rcpsp-wet-
+     diverse j90 83 s, nside HARD 77 s), now none (60.9 s at most). Wide
+     set (220, 60 s, -f): solved 151 to 153, 25 better / 23 worse; the two
+     solutions lost were luck on rerun. wide-quick in default mode: same
+     solved and solutions. -p 4 -t 20 s on flowshop-workers 8s_ex3 answered
+     at 32.3 s, now 20.2 s.
+
+117. LCG explanations of Member. A value removed from e is explained by
      its removal from every list variable, a value removed from the last
      candidate by its removal from e and the other list variables being
      disjoint from e (their bounds when apart, else each value of the
@@ -1737,7 +1753,7 @@ Version 5.0 (unreleased)
      -f 8 / 11, solved -1 under -f; the two instances using Member keep
      their objectives in both modes.
 
-117. KnapsackDP keeps only the bounds of the capacity while LCG records the
+118. KnapsackDP keeps only the bounds of the capacity while LCG records the
      changes. Each capacity it removed between the bounds (no item choice
      reaches that weight with enough profit) was a != atom whose only
      reason is every item. The item supports do not need these holes, as
