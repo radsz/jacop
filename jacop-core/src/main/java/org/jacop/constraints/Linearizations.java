@@ -38,7 +38,9 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.TreeSet;
+import org.jacop.constraints.lp.LpColumn;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
@@ -154,6 +156,225 @@ public final class Linearizations {
       }
     }
     return out;
+  }
+
+  // value encodings over LP-only columns: on or off, the largest domain encoded, and the most
+  // columns made for a model
+  private static final boolean VALUE_COLUMNS =
+      !"false".equals(System.getProperty("org.jacop.lp.valueColumns"));
+  private static final int VALUE_COLUMNS_DOMAIN =
+      Integer.getInteger("org.jacop.lp.valueColumnsDomain", 128);
+  private static final int VALUE_COLUMNS_MAX =
+      Integer.getInteger("org.jacop.lp.valueColumnsMax", 20_000);
+
+  /**
+   * Returns the value encodings of the variables of all-different-except constraints over auxiliary
+   * columns of the relaxation ({@link LpColumn}), the rows that make the constraints per value, and
+   * the rows that tie the reified comparisons of those variables with constants to the encodings.
+   *
+   * <p>Each variable x gets a column {@code x_v = [x = v]} for each value v of its domain other
+   * than 0 (the Boolean of the model when it has one, from {@link #valueBooleans}), with {@code sum
+   * x_v <= 1} (or {@code = 1} when 0 is not in the domain) and {@code x = sum v x_v}. Each
+   * constraint gets {@code sum x_v <= 1} over its variables for each value v it does not exempt.
+   * Each {@code b <-> x op c} (and {@code b -> x op c}) gets {@code b = sum x_v} ({@code b <= sum
+   * x_v}) over the values v of the domain that satisfy it, or {@code b = 1 - sum x_v} over those
+   * that do not when 0 satisfies it. These are the rows of the assignment model of a MIP, such as
+   * the per-hall interval-clique rows of the capacitated concert hall problem, which the model
+   * variables alone cannot state. The rows hold for every solution with the columns at the
+   * indicators of its values; they are made at the root and hold for the whole search.
+   *
+   * <p>Only variables with at most {@code org.jacop.lp.valueColumnsDomain} (128) values are
+   * encoded, and at most {@code org.jacop.lp.valueColumnsMax} (20,000) columns are made; {@code
+   * -Dorg.jacop.lp.valueColumns=false} turns the rows off.
+   *
+   * @param constraints the constraints
+   * @return the rows, empty when no constraint qualifies
+   */
+  public static List<LinearForm> valueColumns(Collection<Constraint> constraints) {
+    if (!VALUE_COLUMNS) {
+      return List.of();
+    }
+    List<AlldifferentExcept> lists = new ArrayList<>();
+    for (Constraint c : constraints) {
+      if ((c.getClass() == AlldifferentExcept.class || c.getClass() == AlldifferentExceptZero.class)
+          && encodable((AlldifferentExcept) c)) {
+        lists.add((AlldifferentExcept) c);
+      }
+    }
+    if (lists.isEmpty()) {
+      return List.of();
+    }
+    Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
+    // the columns of each encoded variable by value; 0 is left implicit
+    Map<IntVar, Map<Integer, IntVar>> encoded = new LinkedHashMap<>();
+    List<LinearForm> out = new ArrayList<>();
+    int made = 0;
+    for (AlldifferentExcept a : lists) {
+      for (IntVar x : a.list) {
+        if (x.singleton() || encoded.containsKey(x)) {
+          continue;
+        }
+        Map<Integer, IntVar> booleans = given.getOrDefault(x, Map.of());
+        int fresh = 0;
+        for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); ) {
+          int v = en.nextElement();
+          fresh += v != 0 && !booleans.containsKey(v) ? 1 : 0;
+        }
+        if (made + fresh > VALUE_COLUMNS_MAX) {
+          continue;
+        }
+        made += fresh;
+        Map<Integer, IntVar> m = new LinkedHashMap<>();
+        for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); ) {
+          int v = en.nextElement();
+          IntVar b = booleans.get(v);
+          if (b == null && v != 0) {
+            b = new LpColumn(x, v);
+          }
+          if (b != null) {
+            m.put(v, b);
+          }
+        }
+        encoded.put(x, m);
+        encode(x, m, out);
+      }
+    }
+    for (AlldifferentExcept a : lists) {
+      perValue(a, encoded, out);
+    }
+    for (Constraint c : constraints) {
+      if (c instanceof AbstractReifiedConstraint r
+          && (c.getClass() == Reified.class || c.getClass() == Implies.class)
+          && r.c instanceof AbstractXcompC cmp
+          && comparison(cmp)
+          && boolean01(r.b)) {
+        Map<Integer, IntVar> m = encoded.get(cmp.x);
+        if (m != null && m.get(cmp.c) != r.b) {
+          link(cmp, r.b, c.getClass() == Reified.class, m, out);
+        }
+      }
+    }
+    return out;
+  }
+
+  // a list of distinct variables with small domains
+  private static boolean encodable(AlldifferentExcept a) {
+    if (a.list.length < 2 || Arrays.stream(a.list).distinct().count() != a.list.length) {
+      return false;
+    }
+    for (IntVar x : a.list) {
+      if (x.getSize() > VALUE_COLUMNS_DOMAIN) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // sum x_v <= 1 (= 1 without the value 0) and x = sum v x_v
+  private static void encode(IntVar x, Map<Integer, IntVar> m, List<LinearForm> out) {
+    int k = m.size();
+    if (k == 0) {
+      return;
+    }
+    boolean zero = x.domain.contains(0) && !m.containsKey(0);
+    IntVar[] bs = m.values().toArray(new IntVar[0]);
+    long[] ones = new long[k];
+    Arrays.fill(ones, 1);
+    out.add(new LinearForm(bs, ones, 1, zero ? LinearForm.LE : LinearForm.EQ));
+    IntVar[] vars = Arrays.copyOf(bs, k + 1);
+    long[] w = new long[k + 1];
+    int i = 0;
+    for (int v : m.keySet()) {
+      w[i++] = v;
+    }
+    vars[k] = x;
+    w[k] = -1;
+    out.add(new LinearForm(vars, w, 0, LinearForm.EQ));
+  }
+
+  // sum x_v <= 1 over the variables of the constraint, for each value it does not exempt
+  private static void perValue(
+      AlldifferentExcept a, Map<IntVar, Map<Integer, IntVar>> encoded, List<LinearForm> out) {
+    Map<Integer, List<IntVar>> byValue = new TreeMap<>();
+    for (IntVar x : a.list) {
+      Map<Integer, IntVar> m = encoded.get(x);
+      if (m == null) {
+        continue;
+      }
+      for (Map.Entry<Integer, IntVar> e : m.entrySet()) {
+        if (!a.s.contains(e.getKey())) {
+          byValue.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(e.getValue());
+        }
+      }
+    }
+    for (List<IntVar> bs : byValue.values()) {
+      if (bs.size() >= 2) {
+        long[] ones = new long[bs.size()];
+        Arrays.fill(ones, 1);
+        out.add(new LinearForm(bs.toArray(new IntVar[0]), ones, 1, LinearForm.LE));
+      }
+    }
+  }
+
+  // b <-> x op c (or b -> x op c) over the encoding of x: b = sum x_v over the values v that
+  // satisfy it, or b = 1 - sum x_v over those that do not when the implicit value 0 satisfies it
+  private static void link(
+      AbstractXcompC cmp, IntVar b, boolean both, Map<Integer, IntVar> m, List<LinearForm> out) {
+    IntVar x = cmp.x;
+    boolean zeroHolds = false;
+    List<IntVar> in = new ArrayList<>();
+    List<IntVar> notIn = new ArrayList<>();
+    for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); ) {
+      int v = en.nextElement();
+      boolean holds = holds(cmp, v);
+      IntVar xv = m.get(v);
+      if (xv == null) {
+        zeroHolds = holds; // the implicit value 0
+      } else {
+        (holds ? in : notIn).add(xv);
+      }
+    }
+    // b - sum_in x_v = 0 (b <= sum_in), or b + sum_notIn x_v = 1 (b + sum_notIn <= 1)
+    List<IntVar> side = zeroHolds ? notIn : in;
+    IntVar[] vars = new IntVar[side.size() + 1];
+    long[] w = new long[vars.length];
+    vars[0] = b;
+    w[0] = 1;
+    for (int k = 0; k < side.size(); k++) {
+      vars[k + 1] = side.get(k);
+      w[k + 1] = zeroHolds ? 1 : -1;
+    }
+    int relation = both ? LinearForm.EQ : LinearForm.LE;
+    out.add(new LinearForm(vars, w, zeroHolds ? 1 : 0, relation));
+  }
+
+  private static boolean comparison(AbstractXcompC cmp) {
+    Class<?> k = cmp.getClass();
+    return k == XeqC.class
+        || k == XneqC.class
+        || k == XltC.class
+        || k == XlteqC.class
+        || k == XgtC.class
+        || k == XgteqC.class;
+  }
+
+  private static boolean holds(AbstractXcompC cmp, int v) {
+    int c = cmp.c;
+    Class<?> k = cmp.getClass();
+    if (k == XeqC.class) {
+      return v == c;
+    } else if (k == XneqC.class) {
+      return v != c;
+    } else if (k == XltC.class) {
+      return v < c;
+    } else if (k == XlteqC.class) {
+      return v <= c;
+    } else if (k == XgtC.class) {
+      return v > c;
+    } else if (k == XgteqC.class) {
+      return v >= c;
+    }
+    throw new IllegalArgumentException(k.getName());
   }
 
   /**

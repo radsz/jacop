@@ -37,8 +37,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
@@ -266,6 +268,81 @@ class LinearizationsTest {
         .containsEntry(0, notX);
   }
 
+  /**
+   * The value encodings over LP-only columns: for random all-different-except constraints and
+   * reified comparisons, every row holds in every solution with each column at the indicator of its
+   * value.
+   */
+  @Test
+  void valueColumnsHoldForEverySolution() {
+    Random rnd = new Random(13);
+    int rows = 0;
+    int columns = 0;
+    for (int run = 0; run < 600; run++) {
+      Store store = new Store();
+      int n = 3 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int lo = rnd.nextInt(3) == 0 ? -1 : 0;
+        x[i] = new IntVar(store, "x" + i, lo, lo + 2 + rnd.nextInt(3));
+        if (rnd.nextBoolean()) {
+          x[i].domain.inComplement(0, x[i], x[i].min() + 1 + rnd.nextInt(x[i].getSize() - 1));
+        }
+      }
+      List<Constraint> cs = new ArrayList<>();
+      for (int a = 0; a < 2; a++) {
+        List<IntVar> pool = new ArrayList<>(List.of(x));
+        IntVar[] list = new IntVar[2 + rnd.nextInt(n - 1)];
+        for (int i = 0; i < list.length; i++) {
+          list[i] = pool.remove(rnd.nextInt(pool.size()));
+        }
+        cs.add(
+            switch (rnd.nextInt(3)) {
+              case 0 -> new AlldifferentExceptZero(list);
+              case 1 -> new AlldifferentExcept(list, new IntervalDomain(1, 1));
+              default -> new AlldifferentExcept(list, new IntervalDomain(0, 1));
+            });
+      }
+      List<IntVar> scope = new ArrayList<>(List.of(x));
+      for (int r = 0; r < 4; r++) {
+        IntVar b = new IntVar(store, "b" + r, 0, 1);
+        scope.add(b);
+        IntVar y = x[rnd.nextInt(n)];
+        int c = rnd.nextInt(5) - 1;
+        PrimitiveConstraint cmp =
+            switch (rnd.nextInt(6)) {
+              case 0 -> new XeqC(y, c);
+              case 1 -> new XneqC(y, c);
+              case 2 -> new XltC(y, c);
+              case 3 -> new XlteqC(y, c);
+              case 4 -> new XgtC(y, c);
+              default -> new XgteqC(y, c);
+            };
+        cs.add(rnd.nextBoolean() ? new Reified(cmp, b) : new Implies(b, cmp));
+      }
+      List<LinearForm> made = Linearizations.valueColumns(cs);
+      rows += made.size();
+      for (LinearForm f : made) {
+        for (IntVar v : f.vars()) {
+          columns += v instanceof LpColumn ? 1 : 0;
+        }
+      }
+      for (Constraint c : cs) {
+        store.impose(c);
+      }
+      IntVar[] all = scope.toArray(new IntVar[0]);
+      for (long[] solution : solutions(store, all)) {
+        for (LinearForm f : made) {
+          assertThat(holds(f, all, solution))
+              .as("run %d %s at %s", run, f, Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(rows).isGreaterThan(3000);
+    assertThat(columns).isGreaterThan(3000);
+  }
+
   // the assignments of x[k..] in the domains of x that every table allows, given a[0..k)
   private static long count(IntVar[] x, List<TableCliques.Table> tables, int[] a, int k) {
     if (k == x.length) {
@@ -289,6 +366,14 @@ class LinearizationsTest {
   private static boolean holds(LinearForm f, IntVar[] scope, long[] value) {
     Function<IntVar, Long> v =
         var -> {
+          if (var instanceof LpColumn c) {
+            // [x = v], from the value of x
+            for (int i = 0; i < scope.length; i++) {
+              if (scope[i] == c.variable()) {
+                return (long) c.valueIn((int) value[i]);
+              }
+            }
+          }
           for (int i = 0; i < scope.length; i++) {
             if (scope[i] == var) {
               return value[i];
