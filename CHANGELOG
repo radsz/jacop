@@ -1747,6 +1747,16 @@ Version 5.0 (unreleased)
      worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
      instance changes its result.
 
+118. The MIR cut rounds of LinearRelaxation at the root are linear in the
+     size of each row. Every model row was combined as a dense unit
+     multiplier over all rows and a coefficient array over all columns,
+     and MirCut walked every column, so a round cost rows x (rows +
+     columns). The combinations are now sparse and the cuts are the same.
+     nside EASY_200_50 with --lp sparse (57,504 rows): LP time 57.7 s to
+     4.1 s, same bound, cuts and nodes. Wide set (220, 60 s): cuts, root
+     and cut bounds identical on all 184 instances with an LP; solved 130
+     to 131 (default) and 152 to 156 (-f, timing).
+
 Version 4.11
 =============
 
