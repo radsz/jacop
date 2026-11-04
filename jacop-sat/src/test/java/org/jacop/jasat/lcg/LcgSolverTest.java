@@ -494,6 +494,74 @@ class LcgSolverTest {
   }
 
   /**
+   * Objective shaving keeps the optimum and raises the lower bound by steps of more than one: the
+   * sum of pairwise different values, whose root bound is far below the optimum, is minimised with
+   * and without shaving, on random linear side constraints, and both find the same optimum.
+   */
+  @Test
+  void shavingKeepsTheOptimumAndRaisesTheBoundInSteps() {
+    Random rnd = new Random(53);
+    int jumps = 0;
+    for (int instance = 0; instance < 8; instance++) {
+      long seed = rnd.nextLong();
+      int[] status = new int[2];
+      int[] optimum = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 7;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 2 * n);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 2; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(5) - 2;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(6)));
+        }
+        IntVar cost = new IntVar(store, "cost", 0, 1000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = 1 + r.nextInt(5);
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        if (!store.consistency()) {
+          break;
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setSeed(instance);
+        solver.setLowerBoundSearch(1, 5);
+        solver.setShaving(run == 1);
+        solver.setLowerBoundGrowth(run == 1 ? 2 : 1);
+        List<Long> bounds = new ArrayList<>();
+        solver.onBound(bounds::add);
+        status[run] = solver.minimize(cost);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(cost);
+          for (long b : bounds) {
+            assertThat(b).as("instance %d", instance).isLessThanOrEqualTo(optimum[run]);
+          }
+        }
+        for (int k = 1; run == 1 && k < bounds.size(); k++) {
+          if (bounds.get(k) > bounds.get(k - 1) + 1) {
+            jumps++;
+          }
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(jumps).isGreaterThan(0);
+  }
+
+  /**
    * The bounds minimize reports at its restarts hold: none is above the optimum, and on most
    * instances learning raises one above the root's. Stopping in the action ends minimize with a
    * best solution within the gap of the bound, as fzn's --gap does.
@@ -539,6 +607,9 @@ class LcgSolverTest {
         solver.setSeed(instance);
         if (instance % 2 == 1) {
           solver.setLowerBoundSearch(0.5, 50);
+          // objective shaving in half of them
+          solver.setShaving(instance % 8 >= 4);
+          solver.setLowerBoundGrowth(instance % 16 >= 8 ? 2 : 1);
         }
         if (instance % 4 >= 2) {
           solver.setCoreSearch(0.5, 10_000, 500);
