@@ -1747,6 +1747,22 @@ Version 5.0 (unreleased)
      worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
      instance changes its result.
 
+118. New constraint Routes(tails, heads, literals[, demands, capacity]):
+     the arcs at 1 form routes that leave node 0 (the depot) and come
+     back to it, each other node is visited once or skipped by its self
+     loop, and the demands on a route sum to at most the capacity. It
+     keeps the paths of fixed arcs incrementally, removes an arc that
+     would close a circuit without the depot or join two paths over the
+     capacity, and keeps the in and out degrees (setDegrees(false) leaves
+     them to other constraints). Every pruning and failure has an LCG
+     explanation. The FlatZinc front end can post it as a redundant
+     constraint on two-index arc models with Miller-Tucker-Zemlin load
+     rows (vrp), with -Dorg.jacop.fz.routes=true; it is off by default,
+     because on the 25 vrp instances of the Challenge (60 s) it leaves
+     the results level: default 12 better / 9 worse (objective geomean
+     0.999), -f 11 / 11 (1.006). No other Challenge instance has the
+     pattern.
+
 Version 4.11
 =============
 
