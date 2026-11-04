@@ -217,8 +217,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
-  // takes the objective's bound at the root after each restart of minimize
+  // takes the objective's bound at the root each time minimize leaves the root with a better one
   private LongConsumer onBound;
+  private long lastBound = Long.MIN_VALUE;
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
@@ -308,6 +309,21 @@ public final class LcgSolver implements ExternalPropagator {
     ALTERNATE
   }
 
+  /** Restarts under fixed search: how the runs between restarts branch. */
+  public enum FixedRestarts {
+    /** No restarts: the annotation is followed down each branch, as without learning. */
+    OFF,
+    /** Every run follows the annotation from its first variable, with the learnt clauses kept. */
+    REPLAY,
+    /** Runs take turns at each restart: the annotation, then activity branching. */
+    ALTERNATE,
+    /**
+     * Runs take turns at each restart: the annotation, the SAT solver's own decisions on literals,
+     * then activity branching, as {@link Branching#ALTERNATE} does under free search.
+     */
+    TURNS
+  }
+
   /** Conflicts without a solution after which {@link Branching#AUTO} uses activity branching. */
   public static final long AUTO_CONFLICTS = 1000;
 
@@ -365,6 +381,10 @@ public final class LcgSolver implements ExternalPropagator {
   private int numAnnotationIndices;
   private static final int ANNOTATION_DONE = -1;
   private boolean annotationRun;
+  // restarts under fixed search, see setFixedRestarts
+  private FixedRestarts fixedRestarts = FixedRestarts.OFF;
+  // restarts wait for the first solution
+  private boolean restartsAfterSolution;
 
   private double lowerBoundShare;
   private long lowerBoundBudget;
@@ -2255,6 +2275,7 @@ public final class LcgSolver implements ExternalPropagator {
   public int minimize(IntVar objective) {
     this.objective = trail.id(objective);
     best = null;
+    lastBound = Long.MIN_VALUE;
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
@@ -2954,6 +2975,22 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets restarts under fixed search (an annotation set with free false). Without them the solver
+   * never restarts, so its learnt clauses prune but never reorder the search. With them the solver
+   * restarts on its own schedule; each run follows the annotation (REPLAY) or the runs take turns
+   * between the annotation and activity branching (ALTERNATE). In every run activity branching
+   * completes the assignment once the annotation has fixed its variables. Set it before solving.
+   *
+   * @param mode how runs branch, or OFF for no restarts
+   * @param afterSolution true to restart only once a first solution is found
+   */
+  public void setFixedRestarts(FixedRestarts mode, boolean afterSolution) {
+    fixedRestarts = mode;
+    restartsAfterSolution = mode != FixedRestarts.OFF && afterSolution;
+    sat.setRestarts(mode != FixedRestarts.OFF && !afterSolution);
+  }
+
+  /**
    * Adds a clause over 0/1 variables: one of the positive variables is 1 or one of the negative
    * ones is 0. It goes to the SAT solver as a clause of {@code [x >= 1]} literals, so it is
    * propagated and explained by the solver itself. Add clauses before solving.
@@ -3018,9 +3055,11 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Sets the action that takes the bound of the objective that {@link #minimize} has proved, at
-   * each restart: no solution better than the best one has a smaller value of the objective. It may
-   * call {@link #stop}.
+   * Sets the action that takes the bound of the objective that {@link #minimize} has proved: no
+   * solution better than the best one has a smaller value of the objective. It is called whenever
+   * the search leaves the root with a better bound than before, after the root's propagation, so a
+   * search without restarts reports the bounds that backjumps to the root prove. It may call {@link
+   * #stop}.
    *
    * @param action the action, given the objective's smallest value at the root
    */
@@ -3074,7 +3113,26 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyNewDecisionLevel() {
+    if (onBound != null && objective >= 0 && store.level == baseLevel) {
+      rootBound();
+    }
     store.setLevel(store.level + 1);
+  }
+
+  /**
+   * Passes on the objective's bound at the root, at a fixpoint, when it is better than the last one
+   * passed: the root holds the bound of branch and bound, so the objective's minimum there holds
+   * for every solution better than the best one, and so does the bound of the core-guided phase.
+   */
+  private void rootBound() {
+    long lower = vars[objective].min();
+    if (coreSearch != null) {
+      lower = Math.max(lower, coreSearch.lowerBound);
+    }
+    if (lower > lastBound) {
+      lastBound = lower;
+      onBound.accept(lower);
+    }
   }
 
   @Override
@@ -3257,12 +3315,7 @@ public final class LcgSolver implements ExternalPropagator {
   @Override
   public void notifyRestart() {
     if (onBound != null && objective >= 0 && store.level == baseLevel) {
-      // at the root: the objective's minimum holds for every solution better than the best one
-      long lower = vars[objective].min();
-      if (coreSearch != null) {
-        lower = Math.max(lower, coreSearch.lowerBound);
-      }
-      onBound.accept(lower);
+      rootBound();
     }
     if (restartPresolve > 0 && store.level == baseLevel) {
       presolveAtRestart();
@@ -3283,6 +3336,12 @@ public final class LcgSolver implements ExternalPropagator {
       activityBranching = !activityBranching;
     } else if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
+    } else if (annotation != null && fixedRestarts == FixedRestarts.ALTERNATE) {
+      annotationRun = !annotationRun;
+    } else if (annotation != null && fixedRestarts == FixedRestarts.TURNS) {
+      runs++;
+      annotationRun = runs % 3 == 0;
+      activityBranching = runs % 3 != 1;
     }
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
@@ -4441,6 +4500,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (onSolution != null && improving) {
       onSolution.run();
+    }
+    if (restartsAfterSolution) {
+      restartsAfterSolution = false;
+      sat.setRestarts(true);
     }
     if (objective < 0) {
       return true;

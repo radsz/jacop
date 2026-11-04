@@ -103,6 +103,7 @@ public class MinOfSumsDetector implements ParserTreeConstants {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          support.checkTimeOut();
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
             collect((ASTConstElem) item);
