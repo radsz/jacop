@@ -172,11 +172,71 @@ final class UnaryTimetable {
         if (!s.singleton()) {
           pruneTask(store, i, est, lct, parts);
         }
-      } else if (use[i].max() > 0 && s.max() < est + dur[i]) {
-        pruneUse(store, i, s.max(), est + dur[i], parts, limitMax);
+      } else if (use[i].max() > 0 && dur[i] > 0) {
+        if (s.max() < est + dur[i]) {
+          pruneUse(store, i, s.max(), est + dur[i], parts, limitMax);
+        }
+        if (presenceFit && use[i].max() > 0) {
+          pruneUseByFit(store, i, est, s.max(), parts, limitMax);
+        }
       }
     }
     return true;
+  }
+
+  // a task that may use nothing gets use 0 where it fits nowhere, unless
+  // -Djacop.cumulative.presenceFit=false
+  private static boolean presenceFit =
+      !"false".equals(System.getProperty("jacop.cumulative.presenceFit"));
+
+  /**
+   * Switches the presence rule of {@link #pruneUseByFit} on or off, for tests that compare the
+   * time-table with the sweep, which has no such rule.
+   *
+   * @param on whether a task that may use nothing gets use 0 where it fits nowhere
+   * @return the previous setting
+   */
+  static boolean setPresenceFit(boolean on) {
+    boolean old = presenceFit;
+    presenceFit = on;
+    return old;
+  }
+
+  /**
+   * Task i may use nothing, as an optional task whose use is its presence: wherever it starts
+   * within its bounds, it overlaps compulsory parts of other tasks, and its use leaves room for the
+   * highest of them. Its use is at most the limit less the least such height over its starts; with
+   * uses 0 and 1 on a limit of 1, a task with no gap left in its window is absent.
+   */
+  private void pruneUseByFit(Store store, int i, int est, int lst, int parts, int limitMax) {
+    int d = dur[i];
+    int room = limitMax - use[i].max();
+    int least = Integer.MAX_VALUE;
+    int p = firstPartAfter(est, parts);
+    // the highest part over a start changes only where a part ends, so the starts tried are the
+    // earliest one and the ends of the parts within the bounds
+    int s = est;
+    while (true) {
+      int highest = 0;
+      for (int q = firstPartAfter(s, parts); q < parts && partStart[q] < s + d; q++) {
+        highest = Math.max(highest, minUse(partTask[q]));
+        if (highest >= least) {
+          break;
+        }
+      }
+      least = Math.min(least, highest);
+      if (least <= room) {
+        return;
+      }
+      while (p < parts && partEnd[p] <= s) {
+        p++;
+      }
+      if (p == parts || partEnd[p] > lst) {
+        break;
+      }
+      s = partEnd[p];
+    }
+    use[i].domain.inMax(store.level, use[i], limitMax - least);
   }
 
   private int minUse(int i) {

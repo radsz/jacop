@@ -1333,8 +1333,30 @@ public class CumulativeBasic extends Constraint
           overloaded(trail, entry, i, t, limitMax - w - 1, out);
           return true;
         }
+        if (explainNoFit(trail, entry, i, w, out)) {
+          return true;
+        }
       }
     }
+    return false;
+  }
+
+  // explains that task i, with a use above w, has no start left within its bounds (an optional
+  // task, whose use is its presence, that fits nowhere)
+  private boolean explainNoFit(AtomicTrail trail, int entry, int i, int w, EntryList out) {
+    TaskView task = taskNormal[i];
+    if (w == Integer.MAX_VALUE) {
+      return false;
+    }
+    int mark = out.size();
+    trail.addLowerBound(task.dur, entry, out);
+    trail.addLowerBound(task.start, entry, out);
+    trail.addUpperBound(task.start, entry, out);
+    if (explainStartsBelow(
+        trail, entry, i, est(task), lst(task) + 1, dmin(entry, task), limitMax - w - 1, out)) {
+      return true;
+    }
+    out.truncate(mark);
     return false;
   }
 
