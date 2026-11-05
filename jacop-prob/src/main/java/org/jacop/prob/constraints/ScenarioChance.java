@@ -712,13 +712,36 @@ public class ScenarioChance extends Constraint
       this.hypothesisVar = var;
       this.hypothesisLower = lower;
       this.hypothesis = hypothesis;
+      // each bound is looked up on the trail once, not once per scenario
+      xMin = new long[x.length];
+      xMax = new long[x.length];
+      for (int i = 0; i < x.length; i++) {
+        xMin[i] = min(x[i]);
+        xMax[i] = max(x[i]);
+      }
+      if (ok != null) {
+        okMin = new long[ok.length];
+        okMax = new long[ok.length];
+        for (int s = 0; s < ok.length; s++) {
+          okMin[s] = min(ok[s]);
+          okMax[s] = max(ok[s]);
+        }
+      } else {
+        okMin = null;
+        okMax = null;
+      }
     }
 
-    long min(IntVar v) {
+    final long[] xMin;
+    final long[] xMax;
+    final long[] okMin;
+    final long[] okMax;
+
+    private long min(IntVar v) {
       return v == hypothesisVar && hypothesisLower ? hypothesis : trail.minBefore(v, position);
     }
 
-    long max(IntVar v) {
+    private long max(IntVar v) {
       return v == hypothesisVar && !hypothesisLower ? hypothesis : trail.maxBefore(v, position);
     }
 
@@ -728,8 +751,8 @@ public class ScenarioChance extends Constraint
       int[] idx = rowIndex[s];
       long[] coef = rowCoef[s];
       for (int t = 0; t < idx.length; t++) {
-        IntVar v = x[idx[t]];
-        act += coef[t] * ((coef[t] > 0) == upper ? max(v) : min(v));
+        int i = idx[t];
+        act += coef[t] * ((coef[t] > 0) == upper ? xMax[i] : xMin[i]);
       }
       return act;
     }
@@ -765,7 +788,7 @@ public class ScenarioChance extends Constraint
         IntVar v = x[idx[t]];
         long c = sign * coef[t];
         boolean lower = c > 0;
-        now[t] = lower ? min(v) : max(v);
+        now[t] = lower ? xMin[idx[t]] : xMax[idx[t]];
         if (v == hypothesisVar && hypothesisLower == lower) {
           activity += c * now[t];
           continue;
@@ -804,14 +827,14 @@ public class ScenarioChance extends Constraint
       if (ok != null) {
         // a scenario that must hold is dead, or one that must not hold is sure
         for (int s = 0; s < scenarios; s++) {
-          if (min(ok[s]) == 1 && lowAct[s] > b[s]) {
+          if (okMin[s] == 1 && lowAct[s] > b[s]) {
             addBound(ok[s], true, out);
             addRowReason(s, false, out);
             return true;
           }
         }
         for (int s = 0; s < scenarios; s++) {
-          if (max(ok[s]) == 0 && activity(s, true) <= b[s]) {
+          if (okMax[s] == 0 && activity(s, true) <= b[s]) {
             addBound(ok[s], false, out);
             addRowReason(s, true, out);
             return true;
@@ -822,7 +845,7 @@ public class ScenarioChance extends Constraint
       // an excluded one by its indicator
       List<Integer> lost = new ArrayList<>();
       for (int s = 0; s < scenarios; s++) {
-        if (lowAct[s] > b[s] || ok != null && max(ok[s]) == 0) {
+        if (lowAct[s] > b[s] || ok != null && okMax[s] == 0) {
           lost.add(s);
         }
       }
@@ -838,7 +861,7 @@ public class ScenarioChance extends Constraint
       }
       for (int k = 0; k < used; k++) {
         int s = lost.get(k);
-        if (ok != null && max(ok[s]) == 0) {
+        if (ok != null && okMax[s] == 0) {
           addBound(ok[s], false, out);
         } else {
           addRowReason(s, false, out);
