@@ -1051,6 +1051,7 @@ public final class RevisedDualSimplex {
     weightsFrom = b.weightsKnown;
     factorValid = false;
     betaValid = false;
+    outsideValid = false;
     infeasibleRow = -1;
     return true;
   }

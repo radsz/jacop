@@ -1986,7 +1986,7 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
-131. The linear relaxation keeps the basis of the last optimal solve at
+132. The linear relaxation keeps the basis of the last optimal solve at
      each level of the current branch (JaLP, the sparse simplex) and
      restores the deepest one kept when the search jumps back two or
      more levels (a restart, an LCG backjump), instead of going on from
