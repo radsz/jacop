@@ -268,10 +268,106 @@ public final class LinearExplanation {
     } else if (greaterOrEqual && largest < c) {
       upperSide = false;
     } else {
-      return false;
+      return lessOrEqual && greaterOrEqual && explainHoleFailure(trail, vars, weights, c, out);
     }
     addLiftedBounds(trail, now, vars, weights, -1, null, upperSide, slack, out);
     return true;
+  }
+
+  /**
+   * Adds the reason of a failure of an equality whose bounds violate neither side: one variable has
+   * no value left between the bounds the others give it, so the reason is the removal of those
+   * values and the others' bounds on both sides, lifted to what still keeps that window. The
+   * variable with the narrowest window is tried first. False when no variable's window is empty of
+   * root values that need at most 4096 atoms, or a variable occurs more than once.
+   */
+  private static boolean explainHoleFailure(
+      AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
+    int now = trail.size();
+    int n = vars.length;
+    long[] keys = new long[n];
+    long[] lows = new long[n];
+    long[] highs = new long[n];
+    int m = 0;
+    try {
+      long smallest = 0;
+      long largest = 0;
+      for (int i = 0; i < n; i++) {
+        if (ownOccurrence(vars, weights, vars[i]) != i) {
+          return false;
+        }
+        long lo = Math.multiplyExact(weights[i], trail.minBefore(vars[i], now));
+        long hi = Math.multiplyExact(weights[i], trail.maxBefore(vars[i], now));
+        lows[i] = Math.min(lo, hi);
+        highs[i] = Math.max(lo, hi);
+        smallest = Math.addExact(smallest, lows[i]);
+        largest = Math.addExact(largest, highs[i]);
+      }
+      for (int i = 0; i < n; i++) {
+        long w = weights[i];
+        if (w == 0) {
+          continue;
+        }
+        // the others leave w * x between restLow and restHigh
+        long restHigh = Math.subtractExact(c, Math.subtractExact(smallest, lows[i]));
+        long restLow = Math.subtractExact(c, Math.subtractExact(largest, highs[i]));
+        long from = w > 0 ? -Math.floorDiv(-restLow, w) : -Math.floorDiv(restHigh, -w);
+        long to = w > 0 ? Math.floorDiv(restHigh, w) : Math.floorDiv(-restLow, -w);
+        lows[i] = from;
+        highs[i] = to;
+        long width = Math.max(0, Math.subtractExact(to, from));
+        keys[m++] = Math.min(width, Integer.MAX_VALUE) << 32 | i;
+      }
+    } catch (ArithmeticException overflow) {
+      return false;
+    }
+    Arrays.sort(keys, 0, m);
+    int mark = out.size();
+    for (int k = 0; k < m; k++) {
+      int i = (int) keys[k];
+      IntVar x = vars[i];
+      long from = lows[i];
+      long to = highs[i];
+      int min = trail.minBefore(x, now);
+      int max = trail.maxBefore(x, now);
+      if (from < min) {
+        trail.addLowerBound(x, now, out);
+      }
+      if (to > max) {
+        trail.addUpperBound(x, now, out);
+      }
+      if (!holesBetween(trail, now, x, Math.max(from, min), Math.min(to, max), out)) {
+        out.truncate(mark);
+        continue;
+      }
+      long w = weights[i];
+      try {
+        // the values next to the window, which each side's bounds must keep out
+        long above =
+            Math.multiplyExact(w, w > 0 ? Math.addExact(to, 1) : Math.subtractExact(from, 1));
+        long below =
+            Math.multiplyExact(w, w > 0 ? Math.subtractExact(from, 1) : Math.addExact(to, 1));
+        long restHigh = c;
+        long restLow = c;
+        for (int j = 0; j < n; j++) {
+          if (j != i) {
+            long lo = Math.multiplyExact(weights[j], trail.minBefore(vars[j], now));
+            long hi = Math.multiplyExact(weights[j], trail.maxBefore(vars[j], now));
+            restHigh = Math.subtractExact(restHigh, Math.min(lo, hi));
+            restLow = Math.subtractExact(restLow, Math.max(lo, hi));
+          }
+        }
+        long upperSlack = Math.subtractExact(Math.subtractExact(above, 1), restHigh);
+        long lowerSlack = Math.subtractExact(Math.subtractExact(restLow, 1), below);
+        addLiftedBounds(trail, now, vars, weights, i, null, true, upperSlack, out);
+        addLiftedBounds(trail, now, vars, weights, i, null, false, lowerSlack, out);
+      } catch (ArithmeticException overflow) {
+        out.truncate(mark);
+        return false;
+      }
+      return true;
+    }
+    return false;
   }
 
   /**

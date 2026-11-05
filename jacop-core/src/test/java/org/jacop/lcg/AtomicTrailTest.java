@@ -56,6 +56,7 @@ import org.jacop.constraints.Max;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Span;
+import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
@@ -168,6 +169,12 @@ class AtomicTrailTest {
           IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
           int[] w = {1, 2, -1};
           return new Model(new LinearInt(v, w, "==", 0), t -> t[0] + 2 * t[1] - t[2] == 0, v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
+          int[] w = {2, 3, -1};
+          return new Model(new SumWeight(v, w, 1), t -> 2 * t[0] + 3 * t[1] - t[2] == 1, v);
         });
     m.add(
         s -> {
@@ -1454,6 +1461,33 @@ class AtomicTrailTest {
       assertThat(index.get((int) (e.getKey() >>> 32), (int) (long) e.getKey()))
           .isEqualTo(e.getValue());
     }
+  }
+
+  /**
+   * x + y = 5 with x in {0, 5} and y in 1..4: the bounds allow the sum (1..9), but x has no value
+   * in the window 1..4 that y leaves it. SumWeight fails in its pruning of x, and the failure is
+   * explained by y's two bounds alone (x's holes are in its root domain), not by the generic
+   * reason.
+   */
+  @Test
+  void sumWeightExplainsAFailureInAHole() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 0);
+    x.addDom(5, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    SumWeight sum = new SumWeight(new IntVar[] {x, y}, new int[] {1, 1}, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(sum);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 1, 4);
+    EntryList out = new EntryList();
+    assertThat(sum.explainFailure(trail, out)).isTrue();
+    assertThat(out.size()).isEqualTo(2);
+    for (int k = 0; k < out.size(); k++) {
+      assertThat(trail.variable(out.get(k))).isSameAs(y);
+    }
+    trail.detach();
   }
 
   @Test
