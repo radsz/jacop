@@ -818,6 +818,61 @@ class LinearRelaxationTest {
     assertThat(checked).isPositive();
   }
 
+  /**
+   * On a relaxation with value columns the LP-guided selection decides store variables only: a
+   * value column [x = v] becomes the decision x = v, never a decision on the column, and the value
+   * is in the domain. The selection that follows the root solution decides the same at the root.
+   */
+  @Test
+  void lpGuidedSelectDecidesTheValuesOfValueColumns() {
+    int halls = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      Halls h = new Halls(run);
+      LinearRelaxation r = LinearRelaxation.of(h.store, h.objective, true);
+      h.store.impose(r);
+      LpGuidedSelect last = new LpGuidedSelect(r, null);
+      LpGuidedSelect root = new LpGuidedSelect(r, null, true);
+      assertThat(root.getChoiceVariable(0)).isNull(); // no solution yet
+      assertThat(h.store.consistency()).as("seed %d", run).isTrue();
+      assertThat(r.rootSolutionColumns()).as("seed %d", run).isEqualTo(r.solutionColumns());
+      for (LpGuidedSelect select : List.of(last, root)) {
+        Var v = select.getChoiceVariable(0);
+        if (v == null) {
+          continue;
+        }
+        assertThat(v).as("seed %d", run).isNotInstanceOf(LpColumn.class);
+        IntVar x = (IntVar) v;
+        assertThat(x.singleton()).as("seed %d", run).isFalse();
+        assertThat(x.domain.contains(select.getChoiceValue())).as("seed %d", run).isTrue();
+        halls += Arrays.asList(h.assign).contains(x) && select.getChoiceValue() > 0 ? 1 : 0;
+      }
+    }
+    // the decision is often a hall for an offer, from a value column
+    assertThat(halls).isPositive();
+  }
+
+  /**
+   * Fixed search with restarts whose activity runs start from the relaxation's root solution keeps
+   * the optimum of hall assignments, with the explanation checker on. Most of these models are
+   * solved before the first activity run; the guide's decisions are checked on the selection above.
+   */
+  @Test
+  void activityRunsGuidedByTheRelaxationKeepTheOptimum() {
+    for (int run = 0; run < RUNS / 5; run++) {
+      long expected = new Halls(run).optimum();
+      Halls h = new Halls(run);
+      LinearRelaxation l = LinearRelaxation.of(h.store, h.objective, true);
+      h.store.impose(l);
+      LcgSolver solver = new LcgSolver(h.store);
+      solver.setChecking(true);
+      solver.setAnnotation(new SimpleSelect<>(h.assign, null, new IndomainMin<>()), false);
+      solver.setFixedRestarts(LcgSolver.FixedRestarts.TURNS, false);
+      solver.setActivityGuide(new LpGuidedSelect(l, null, true));
+      assertThat(solver.minimize(h.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(h.objective)).as("seed %d", run).isEqualTo(expected);
+    }
+  }
+
   /** A copy of a relaxation with LP-only columns gets its own columns over the copied variables. */
   @Test
   void copyMakesItsOwnValueColumns() {

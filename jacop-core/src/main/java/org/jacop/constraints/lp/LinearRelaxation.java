@@ -915,6 +915,31 @@ public class LinearRelaxation extends Constraint
     return solution[j];
   }
 
+  // the last optimal solution of the simplex at the lowest store level solved, and that level
+  private double[] rootSolution = new double[0];
+  private int rootSolutionLevel = Integer.MAX_VALUE;
+
+  /**
+   * Returns the number of columns of the root solution (see {@link #rootSolutionValue}).
+   *
+   * @return the columns of the root solution, 0 before the first one
+   */
+  public int rootSolutionColumns() {
+    return rootSolution.length;
+  }
+
+  /**
+   * Returns the value of a column in the last optimal solution of the simplex at the lowest store
+   * level it solved at, usually the root: unlike {@link #solutionValue}, it does not follow the
+   * branches of the search. Kept only after {@link #keepSolutions()}.
+   *
+   * @param j the column, below {@link #rootSolutionColumns()}
+   * @return its value
+   */
+  public double rootSolutionValue(int j) {
+    return rootSolution[j];
+  }
+
   /**
    * Returns the store level of the last optimal solution of the simplex.
    *
@@ -1160,6 +1185,10 @@ public class LinearRelaxation extends Constraint
         solution[j] = lp.value(j);
       }
       solutionLevel = store.level;
+      if (store.level <= rootSolutionLevel) {
+        rootSolution = solution.clone();
+        rootSolutionLevel = store.level;
+      }
     }
     double[] y;
     if (status == DualSimplex.INFEASIBLE) {

@@ -4463,6 +4463,34 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * Whether the core-guided phase could reach the objective's root bound: at three times the rate
+   * of its lower bound per unit of the solver's work since the mark, within the work given. Before
+   * a mark, and once the bound is there, it could.
+   */
+  @Test
+  void coreSearchReachesAValueAtThreeTimesItsRate() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 30);
+    store.impose(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 1, 1, -1}, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    CoreSearch cores = CoreSearch.of(solver, obj);
+    assertThat(cores).isNotNull();
+    long lb = cores.lowerBound;
+    assertThat(cores.canReach(lb + 100, 0)).isTrue(); // nothing measured yet
+    cores.mark();
+    assertThat(cores.canReach(lb, 0)).isTrue();
+    assertThat(cores.canReach(lb + 1, 1_000_000)).isFalse(); // the bound has not risen
+    cores.lowerBound += 10; // in no work: a rate of 10 per unit
+    assertThat(cores.canReach(lb + 10 + 30, 1)).isTrue();
+    assertThat(cores.canReach(lb + 10 + 31, 1)).isFalse();
+  }
+
   @Test
   void coreGuidedSearchJumpsOverHolesOfTheTerms() {
     // cost variables of two values, 0 and 10, as jp-encoding's: a soft literal per level would

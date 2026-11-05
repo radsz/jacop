@@ -56,6 +56,7 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
 
   private final LinearRelaxation lp;
   private final SelectChoicePoint<? extends Var> fallback;
+  private final boolean root;
 
   // the last decision: from the relaxation, or of the other selection
   private boolean fromLp;
@@ -71,8 +72,22 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
    * @param fallback the selection when the relaxation gives no decision, or null for none
    */
   public LpGuidedSelect(LinearRelaxation lp, SelectChoicePoint<? extends Var> fallback) {
+    this(lp, fallback, false);
+  }
+
+  /**
+   * Creates the selection.
+   *
+   * @param lp the linear relaxation
+   * @param fallback the selection when the relaxation gives no decision, or null for none
+   * @param root true to follow the relaxation's solution at the root (see {@link
+   *     LinearRelaxation#rootSolutionValue}) instead of its last solution
+   */
+  public LpGuidedSelect(
+      LinearRelaxation lp, SelectChoicePoint<? extends Var> fallback, boolean root) {
     this.lp = lp;
     this.fallback = fallback;
+    this.root = root;
     lp.keepSolutions();
   }
 
@@ -82,31 +97,42 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     double bestScore = Double.POSITIVE_INFINITY;
     int bestValue = 0;
     IntVar one = null;
+    int oneValue = 1;
     IntVar objective = lp.objective();
-    for (int j = 0; j < lp.solutionColumns(); j++) {
+    int n = root ? lp.rootSolutionColumns() : lp.solutionColumns();
+    for (int j = 0; j < n; j++) {
       IntVar x = lp.column(j);
-      if (x == objective
-          || x instanceof LpColumn
-          || x.singleton()
-          || x.min() != 0
-          || x.max() != 1) {
+      if (x == objective) {
         continue;
       }
-      double v = lp.solutionValue(j);
+      // a value column [y = w] of the relaxation decides y = w (or y != w when rounded down)
+      IntVar decided = x;
+      int at = 1;
+      if (x instanceof LpColumn c) {
+        decided = c.variable();
+        at = c.value();
+        if (decided.singleton() || !decided.domain.contains(at)) {
+          continue;
+        }
+      } else if (x.singleton() || x.min() != 0 || x.max() != 1) {
+        continue;
+      }
+      double v = root ? lp.rootSolutionValue(j) : lp.solutionValue(j);
       if (v > EPSILON && v < 1 - EPSILON) {
         double score = Math.abs(v - 0.5);
-        if (score < bestScore) {
+        if (score < bestScore && (v >= 0.5 || decided == x)) {
           bestScore = score;
-          best = x;
-          bestValue = v >= 0.5 ? 1 : 0;
+          best = decided;
+          bestValue = v >= 0.5 ? at : 0;
         }
       } else if (one == null && v >= 1 - EPSILON) {
-        one = x;
+        one = decided;
+        oneValue = at;
       }
     }
     if (best == null && one != null) {
       best = one;
-      bestValue = 1;
+      bestValue = oneValue;
     }
     if (best != null) {
       fromLp = true;
