@@ -1836,14 +1836,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private boolean useLcg(Var costVar) {
     if (!options.lcg()) {
+      if (options.lcgIgnored() != null) {
+        // turned off before the model was built
+        reportLcgIgnored(options.lcgIgnored());
+      }
       return false;
     }
     String unsupported = lcgUnsupported(costVar);
     if (unsupported != null) {
-      IO.println("%% --lcg ignored: " + unsupported);
-      if (options.proof() != null) {
-        IO.println("%% --proof ignored: it needs --lcg");
-      }
+      reportLcgIgnored(unsupported);
       if (dictionary.rootTrail != null) {
         dictionary.rootTrail.detach();
         dictionary.rootTrail = null;
@@ -1853,6 +1854,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     mirrorSetVariables();
     return true;
+  }
+
+  private void reportLcgIgnored(String reason) {
+    IO.println("%% --lcg ignored: " + reason);
+    if (options.proof() != null) {
+      IO.println("%% --proof ignored: it needs --lcg");
+    }
   }
 
   /**
