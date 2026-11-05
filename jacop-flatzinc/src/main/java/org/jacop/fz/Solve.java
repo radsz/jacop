@@ -638,6 +638,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraDropped
             + "\n%%%mzn-stat: lpValueColumns="
             + r.valueColumns
+            + "\n%%%mzn-stat: lpJumpSolves="
+            + r.jumpSolves
+            + "\n%%%mzn-stat: lpJumpPivots="
+            + r.jumpPivots
+            + "\n%%%mzn-stat: lpBasisRestores="
+            + r.basisRestores
             + "\n%%%mzn-stat-end");
   }
 

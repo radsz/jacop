@@ -1970,6 +1970,17 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+131. The linear relaxation keeps the basis of the last optimal solve at
+     each level of the current branch (JaLP, the sparse simplex) and
+     restores the deepest one kept when the search jumps back two or
+     more levels (a restart, an LCG backjump), instead of going on from
+     the basis the deeper node left. On LP-heavy -f runs the solves after
+     a jump take 2 to 4 times fewer pivots (train 7.2 to 2.8, still_life2
+     16.8 to 6.6). JaLP gets RevisedDualSimplex.saveBasis/restoreBasis.
+     -Dorg.jacop.lp.keepBases=false turns it off; basisJump (2) and
+     maxBases (32) tune it. Stats lpJumpSolves, lpJumpPivots,
+     lpBasisRestores. The dense simplex (below 100 rows) is unchanged.
+
 Version 4.11
 =============
 

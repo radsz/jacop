@@ -204,4 +204,23 @@ interface LpSolver {
    * @return the copy
    */
   LpSolver copy();
+
+  /**
+   * Saves the current basis, for {@link #restoreBasis}.
+   *
+   * @return the basis, or null when the simplex cannot restore one
+   */
+  default Object saveBasis() {
+    return null;
+  }
+
+  /**
+   * Makes a basis saved by {@link #saveBasis} of this simplex the current one, for the next solve.
+   *
+   * @param basis the basis
+   * @return whether it was restored; false leaves the current basis
+   */
+  default boolean restoreBasis(Object basis) {
+    return false;
+  }
 }
