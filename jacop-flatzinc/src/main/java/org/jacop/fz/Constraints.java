@@ -264,6 +264,11 @@ public class Constraints implements ParserTreeConstants {
       // a redundant Routes over 0/1 arcs, whose rules a proof does not derive
       if (RoutesDetector.enabled() && options.proof() == null) {
         new RoutesDetector(support).detect(astTree);
+      } else if (options.freeSearch()
+          && !"0".equals(options.freeConfig("lns-routes", "1"))
+          && !"0".equals(options.freeConfig("lns", "1"))) {
+        // the routes only guide the neighbourhoods of LNS; Solve passes them on
+        new RoutesDetector(support, false).detect(astTree);
       }
 
       if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {

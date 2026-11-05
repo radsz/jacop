@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
@@ -106,6 +107,9 @@ public class Tables {
 
   // the binary tables of the model, for the clique rows of the linear relaxation
   private final ArrayList<TableCliques.Table> binaryTables = new ArrayList<>();
+
+  // vehicle routes found in the model and not imposed, for the route neighbourhoods of LNS
+  private final ArrayList<Routes> lnsRoutes = new ArrayList<>();
   // IntVar zero, one;
   Store store;
   int numberBoolVariables;
@@ -345,6 +349,7 @@ public class Tables {
     t.definedVariables.addAll(map.get(definedVariables));
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.splitSums.addAll(map.get(splitSums));
+    lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;
@@ -781,6 +786,25 @@ public class Tables {
    */
   public void addBinaryTable(IntVar[] x, int[][] tuples) {
     binaryTables.add(new TableCliques.Table(x, tuples));
+  }
+
+  /**
+   * Records vehicle routes of the model, not imposed, for the route neighbourhoods of large
+   * neighbourhood search.
+   *
+   * @param routes the routes
+   */
+  public void addLnsRoutes(Routes routes) {
+    lnsRoutes.add(routes);
+  }
+
+  /**
+   * Returns the vehicle routes recorded for large neighbourhood search.
+   *
+   * @return the routes
+   */
+  public List<Routes> lnsRoutes() {
+    return lnsRoutes;
   }
 
   /**

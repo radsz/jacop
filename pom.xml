@@ -232,6 +232,7 @@ setup to run configuration. -->
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -394,6 +395,7 @@ setup to run configuration. -->
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -557,6 +559,7 @@ setup to run configuration. -->
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -720,6 +723,7 @@ setup to run configuration. -->
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
