@@ -246,7 +246,9 @@ public class Options {
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
-                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)
+                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
+                these shares are of the solver's work, counted against -t (or lcg-core-time=<ms>
+                without -t, default 60000) at a fixed rate, not of the clock, so runs repeat
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
