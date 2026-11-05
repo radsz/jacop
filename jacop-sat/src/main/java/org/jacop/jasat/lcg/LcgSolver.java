@@ -2352,7 +2352,7 @@ public final class LcgSolver implements ExternalPropagator {
   // -Djacop.lcg.coreSkip=false: the core-guided phase runs after its probe even when the probe's
   // rate could not raise the bound to the objective's root bound
   private static final boolean CORE_SKIP =
-      !"false".equals(System.getProperty("jacop.lcg.coreSkip"));
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreSkip", Boolean.TRUE.toString()));
 
   // the share of the core-guided phase that measures its rate when the objective's root bound is
   // above the cores' lower bound

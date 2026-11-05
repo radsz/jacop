@@ -200,7 +200,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
   private static final boolean LP_GUIDE_ROOT =
-      !"false".equals(System.getProperty("jacop.lcg.lpGuideRoot"));
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.lpGuideRoot", Boolean.TRUE.toString()));
 
   // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
   // turns them off)
