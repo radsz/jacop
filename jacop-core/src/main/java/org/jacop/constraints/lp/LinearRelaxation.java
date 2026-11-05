@@ -1727,6 +1727,9 @@ public class LinearRelaxation extends Constraint
       for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
         long[] lambda = scaled(byRow(lp.inverseRow(lp.basicRow(j))), GOMORY_SCALE);
         if (lambda != null) {
+          if (slackGomory) {
+            slackGomory(lambda, value, lo, hi, found);
+          }
           mir(aggregate(lambda), value, lo, hi, found);
         }
       }
@@ -1784,6 +1787,143 @@ public class LinearRelaxation extends Constraint
       cutBound = lp.value(0);
     }
     return status;
+  }
+
+  private static final boolean SLACK_GOMORY =
+      !"false".equals(System.getProperty("org.jacop.lp.slackGomory"));
+
+  private boolean slackGomory = SLACK_GOMORY;
+
+  /**
+   * Chooses the Gomory cuts of the root: over the rows and their slacks ({@link #slackGomory}, the
+   * default, {@code -Dorg.jacop.lp.slackGomory=false} turns it off) or the MIR of the aggregate of
+   * the rows alone.
+   *
+   * @param on true for the cuts over the slacks
+   */
+  public void setSlackGomory(boolean on) {
+    slackGomory = on;
+  }
+
+  /**
+   * The Gomory mixed-integer cut of a row of the tableau, exact. The row of the basis inverse,
+   * scaled and rounded into integers lambda, gives the integer equality {@code sum_j (lambda A)_j
+   * x_j - sum_i lambda_i s_i = 0} over the columns and the slacks {@code s_i = a_i x} of the rows.
+   * Every slack is an integer, as the rows have integer weights over integer columns, and lies
+   * within the sides of its row (or, for a side the row lacks, the bound its columns imply). The
+   * MIR of that equality, both ways, is taken over the columns and the slacks together, in longs,
+   * and the slacks are then replaced by their rows. Unlike the MIR of the aggregate {@code sum
+   * lambda a x <= sum lambda b}, which puts every slack at a side, a slack keeps its own rounding,
+   * which is what the Gomory cut of the textbook, with its real weights, does; its weights are the
+   * exact rationals of that cut over a common denominator, scaled down safely when large ({@link
+   * MirCut#reduce}).
+   */
+  private void slackGomory(
+      long[] lambda, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    int n = lp.columns();
+    int m = lambda.length;
+    long[] coef = new long[n];
+    int slacks = 0;
+    try {
+      for (int i = 0; i < m; i++) {
+        long l = lambda[i];
+        if (l == 0) {
+          continue;
+        }
+        slacks++;
+        int[] cs = rowColumns[i];
+        long[] ws = rowWeights[i];
+        for (int k = 0; k < cs.length; k++) {
+          coef[cs[k]] = Math.addExact(coef[cs[k]], Math.multiplyExact(l, ws[k]));
+        }
+      }
+      int size = slacks;
+      for (long c : coef) {
+        size += c != 0 ? 1 : 0;
+      }
+      int[] columns = new int[size];
+      long[] weights = new long[size];
+      long[] xlo = Arrays.copyOf(lo, n + m);
+      long[] xhi = Arrays.copyOf(hi, n + m);
+      double[] xv = Arrays.copyOf(value, n + m);
+      int q = 0;
+      for (int j = 0; j < n; j++) {
+        if (coef[j] != 0) {
+          columns[q] = j;
+          weights[q++] = coef[j];
+        }
+      }
+      for (int i = 0; i < m; i++) {
+        if (lambda[i] == 0) {
+          continue;
+        }
+        long least = 0;
+        long most = 0;
+        double v = 0;
+        int[] cs = rowColumns[i];
+        long[] ws = rowWeights[i];
+        for (int k = 0; k < cs.length; k++) {
+          long a = Math.multiplyExact(ws[k], lo[cs[k]]);
+          long b = Math.multiplyExact(ws[k], hi[cs[k]]);
+          least = Math.addExact(least, Math.min(a, b));
+          most = Math.addExact(most, Math.max(a, b));
+          v += ws[k] * value[cs[k]];
+        }
+        xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
+        xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
+        if (xlo[n + i] > xhi[n + i]) {
+          return;
+        }
+        xv[n + i] = v;
+        columns[q] = n + i;
+        weights[q++] = -lambda[i];
+      }
+      long[] neg = new long[size];
+      for (int k = 0; k < size; k++) {
+        neg[k] = Math.negateExact(weights[k]);
+      }
+      for (long[] w : new long[][] {weights, neg}) {
+        long[] g = MirCut.raw(columns, w, 0, xv, xlo, xhi);
+        if (g == null) {
+          continue;
+        }
+        // the slacks replaced by their rows: g_s s_i = g_s a_i x
+        long[] cut = new long[n];
+        for (int k = 0; k < size; k++) {
+          if (g[k] == 0) {
+            continue;
+          }
+          int c = columns[k];
+          if (c < n) {
+            cut[c] = Math.addExact(cut[c], g[k]);
+          } else {
+            int[] cs = rowColumns[c - n];
+            long[] ws = rowWeights[c - n];
+            for (int t = 0; t < cs.length; t++) {
+              cut[cs[t]] = Math.addExact(cut[cs[t]], Math.multiplyExact(g[k], ws[t]));
+            }
+          }
+        }
+        int nz = 0;
+        for (long c : cut) {
+          nz += c != 0 ? 1 : 0;
+        }
+        int[] cc = new int[nz];
+        long[] cw = new long[nz];
+        for (int j = 0, t = 0; j < n; j++) {
+          if (cut[j] != 0) {
+            cc[t] = j;
+            cw[t++] = cut[j];
+          }
+        }
+        MirCut c = MirCut.finish(cc, cw, g[size], value, lo, hi, true);
+        if (c != null) {
+          found.add(c);
+        }
+      }
+    } catch (ArithmeticException overflow) {
+      // no cut from this row
+    }
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen

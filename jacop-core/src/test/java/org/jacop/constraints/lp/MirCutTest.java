@@ -139,6 +139,77 @@ class MirCutTest {
     assertThat(made).isGreaterThan(100);
   }
 
+  @Test
+  void reducedCutKeepsEveryIntegerPointOfTheCut() {
+    Random rnd = new Random(23);
+    int reduced = 0;
+    for (int run = 0; run < 20000; run++) {
+      int n = 2 + rnd.nextInt(3);
+      int[] columns = new int[n];
+      long[] w = new long[n];
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      double[] value = new double[n];
+      for (int j = 0; j < n; j++) {
+        columns[j] = j;
+        // weights far apart and large, as in a Gomory cut over slacks
+        w[j] =
+            (rnd.nextBoolean() ? 1 : -1)
+                * (long) Math.pow(10, rnd.nextInt(7))
+                * (1 + rnd.nextInt(9));
+        lo[j] = rnd.nextInt(7) - 3L;
+        hi[j] = lo[j] + rnd.nextInt(5);
+        value[j] = rnd.nextBoolean() ? lo[j] : hi[j];
+      }
+      long rhs = 0;
+      for (int j = 0; j < n; j++) {
+        rhs += w[j] * (rnd.nextBoolean() ? lo[j] : hi[j]);
+      }
+      long[] q = w.clone();
+      long divisor = 1L << (1 + rnd.nextInt(20));
+      long right = MirCut.reduce(columns, q, rhs, divisor, rnd.nextInt(1000), value, lo, hi);
+      reduced++;
+      long[] p = lo.clone();
+      while (p != null) {
+        long full = 0;
+        long small = 0;
+        for (int j = 0; j < n; j++) {
+          full += w[j] * p[j];
+          small += q[j] * p[j];
+        }
+        if (full <= rhs) {
+          assertThat(small)
+              .as(
+                  "run %d %s / %d at %s",
+                  run, java.util.Arrays.toString(w), divisor, java.util.Arrays.toString(p))
+              .isLessThanOrEqualTo(right);
+        }
+        p = next(p, lo, hi);
+      }
+    }
+    assertThat(reduced).isEqualTo(20000);
+  }
+
+  @Test
+  void finishScalesLargeWeightsDown() {
+    // 100000003 x0 + 7 x1 - 99999999 x2 <= 5 over [0, 3]: weights too large and too far apart
+    int[] columns = {0, 1, 2};
+    long[] g = {100000003, 7, -99999999};
+    long[] lo = {0, 0, 0};
+    long[] hi = {3, 3, 3};
+    double[] value = {1.5, 0, 1};
+    assertThat(MirCut.finish(columns, g, 5, value, lo, hi, false)).isNull();
+    MirCut c = MirCut.finish(columns, g, 5, value, lo, hi, true);
+    assertThat(c).isNotNull();
+    long largest = 0;
+    for (long w : c.weights) {
+      largest = Math.max(largest, Math.abs(w));
+    }
+    assertThat(largest).isLessThanOrEqualTo(1L << 24);
+    assertThat(c.columns).containsExactly(0, 2);
+    assertThat(c.efficacy).isGreaterThan(MirCut.MIN_EFFICACY);
+  }
+
   // the next point of the box in lexicographic order, or null
   private static long[] next(long[] p, long[] lo, long[] hi) {
     for (int j = 0; j < p.length; j++) {
