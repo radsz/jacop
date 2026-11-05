@@ -114,6 +114,14 @@ class CdclSolverTest {
   }
 
   @Test
+  void vivificationDoesNotLeaveADeletedClauseAsAReason() throws IOException {
+    // A clause that vivification shortened was deleted but kept its watches until the end of the
+    // round, so the propagations of the round could still make it the reason of a literal: the
+    // self-check reported "reason of -36 deleted" (CdclFuzzTest, seed 7263191).
+    assertEquals(CdclSolver.SAT, CdclFuzzTest.replay(7_263_191L));
+  }
+
+  @Test
   void randomFormulasAgreeWithBruteForce() {
     Random rnd = new Random(42);
     for (int run = 0; run < 3000; run++) {
@@ -236,6 +244,25 @@ class CdclSolverTest {
     pigeonhole(s, 10);
     s.setConflictLimit(100);
     assertEquals(CdclSolver.UNKNOWN, s.solve());
+  }
+
+  @Test
+  void workLimitStopsTheSearchAtTheSameConflictInEveryRun() {
+    // the core-guided phase of LcgSolver stops by the solver's work, not by the clock, so that a
+    // run
+    // repeats whatever the load of the machine
+    long[] conflicts = new long[2];
+    for (int run = 0; run < 2; run++) {
+      CdclSolver s = new CdclSolver();
+      s.setChecking(true);
+      pigeonhole(s, 10);
+      s.setWorkLimit(20_000);
+      assertEquals(CdclSolver.UNKNOWN, s.solve());
+      assertTrue(s.work() >= 20_000, "work " + s.work());
+      conflicts[run] = s.conflicts;
+    }
+    assertTrue(conflicts[0] > 0);
+    assertEquals(conflicts[0], conflicts[1]);
   }
 
   @Test

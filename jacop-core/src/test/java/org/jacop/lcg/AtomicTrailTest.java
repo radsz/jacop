@@ -42,6 +42,7 @@ import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
@@ -52,7 +53,9 @@ import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.Member;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Span;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
@@ -65,6 +68,7 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -82,6 +86,22 @@ import org.junit.jupiter.api.Test;
 class AtomicTrailTest {
 
   private record Model(Constraint constraint, Predicate<int[]> relation, IntVar[] vars) {}
+
+  // whether tasks starting at start, with the lengths and uses, never load more than limit
+  private static boolean fitsUnder(int[] start, int[] length, int[] use, int limit) {
+    for (int k = 0; k < start.length; k++) {
+      int load = 0;
+      for (int j = 0; j < start.length; j++) {
+        if (start[j] <= start[k] && start[k] < start[j] + length[j]) {
+          load += use[j];
+        }
+      }
+      if (load > limit) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   private static IntVar newVar(Store store, String name, Random rnd) {
     IntVar x = new IntVar(store, name, -4 + rnd.nextInt(3), 3 + rnd.nextInt(3));
@@ -357,6 +377,118 @@ class AtomicTrailTest {
               fits,
               v);
         });
+    // alternative over two optional intervals: p0, s0, d0, then p, s, d of each
+    m.add(
+        s -> {
+          IntVar[] v = {
+            new IntVar(s, "p0", 0, 1),
+            new IntVar(s, "s0", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d0", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p1", 0, 1),
+            new IntVar(s, "s1", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d1", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p2", 0, 1),
+            new IntVar(s, "s2", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d2", rnd.nextInt(2), 1 + rnd.nextInt(2))
+          };
+          Predicate<int[]> alternative =
+              t -> {
+                int present = -1;
+                for (int k = 3; k < 9; k += 3) {
+                  if (t[k] == 1) {
+                    if (present >= 0) {
+                      return false;
+                    }
+                    present = k;
+                  }
+                }
+                if (present < 0) {
+                  return t[0] == 0 && t[2] == 0;
+                }
+                return t[0] == 1 && t[1] == t[present + 1] && t[2] == t[present + 2];
+              };
+          return new Model(
+              new Alternative(
+                  v[0],
+                  v[1],
+                  v[2],
+                  new IntVar[] {v[3], v[6]},
+                  new IntVar[] {v[4], v[7]},
+                  new IntVar[] {v[5], v[8]}),
+              alternative,
+              v);
+        });
+    // span over two optional intervals: p0, s0, d0, then p, s, d of each
+    m.add(
+        s -> {
+          IntVar[] v = {
+            new IntVar(s, "p0", 0, 1),
+            new IntVar(s, "s0", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d0", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p1", 0, 1),
+            new IntVar(s, "s1", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d1", rnd.nextInt(2), 1 + rnd.nextInt(2)),
+            new IntVar(s, "p2", 0, 1),
+            new IntVar(s, "s2", rnd.nextInt(2), 2 + rnd.nextInt(2)),
+            new IntVar(s, "d2", rnd.nextInt(2), 1 + rnd.nextInt(2))
+          };
+          Predicate<int[]> span =
+              t -> {
+                boolean any = false;
+                int start = Integer.MAX_VALUE;
+                int end = Integer.MIN_VALUE;
+                for (int k = 3; k < 9; k += 3) {
+                  if (t[k] == 1) {
+                    any = true;
+                    start = Math.min(start, t[k + 1]);
+                    end = Math.max(end, t[k + 1] + t[k + 2]);
+                  }
+                }
+                if (!any) {
+                  return t[0] == 0 && t[2] == 0;
+                }
+                return t[0] == 1 && t[1] == start && t[1] + t[2] == end;
+              };
+          return new Model(
+              new Span(
+                  v[0],
+                  v[1],
+                  v[2],
+                  new IntVar[] {v[3], v[6]},
+                  new IntVar[] {v[4], v[7]},
+                  new IntVar[] {v[5], v[8]}),
+              span,
+              v);
+        });
+    // a unary resource whose uses 0 or 1 are the presences of optional tasks: a task that fits in
+    // no gap of the others' compulsory parts gets use 0
+    m.add(
+        s -> {
+          IntVar[] v = {
+            newVar(s, "a", rnd),
+            newVar(s, "b", rnd),
+            newVar(s, "c", rnd),
+            newVar(s, "e", rnd),
+            new IntVar(s, "p", 0, 1),
+            new IntVar(s, "q", 0, 1),
+            new IntVar(s, "r", 0, 1)
+          };
+          int[] d = {
+            1 + rnd.nextInt(3), 1 + rnd.nextInt(3), 1 + rnd.nextInt(3), 1 + rnd.nextInt(3)
+          };
+          IntVar[] durations = new IntVar[4];
+          IntVar[] resources = {v[4], v[5], v[6], new IntVar(s, 1, 1)};
+          for (int k = 0; k < 4; k++) {
+            durations[k] = new IntVar(s, d[k], d[k]);
+          }
+          Predicate<int[]> fits =
+              t -> fitsUnder(Arrays.copyOf(t, 4), d, new int[] {t[4], t[5], t[6], 1}, 1);
+          return new Model(
+              new CumulativeUnary(
+                  Arrays.copyOf(v, 4), durations, resources, new IntVar(s, 1, 1), true, true),
+              fits,
+              v);
+        });
     m.add(
         s -> {
           IntVar[] v = {
@@ -392,6 +524,13 @@ class AtomicTrailTest {
         s -> {
           IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
           return new Model(new AllEqual(v), t -> t[0] == t[1] && t[1] == t[2], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "e", rnd)};
+          IntVar[] list =
+              rnd.nextBoolean() ? new IntVar[] {v[0], v[1]} : new IntVar[] {v[0], v[1], v[0]};
+          return new Model(new Member(list, v[2]), t -> t[2] == t[0] || t[2] == t[1], v);
         });
     return m;
   }
@@ -636,6 +775,138 @@ class AtomicTrailTest {
   }
 
   /**
+   * [a0, a1, a2] lex<= [b0, b1, b2]: a0 >= 2 propagates b0 >= 2 whatever a1 and a2 are, so its
+   * reason is the a0 bound alone. Before, a reason cited every atom of the vectors up to the pruned
+   * one (wordpress: 11,000 atoms per reason).
+   */
+  @Test
+  void lexChainReasonCitesOnlyTheNeededPrefix() {
+    Store store = new Store();
+    IntVar[] a = {
+      new IntVar(store, "a0", 0, 3), new IntVar(store, "a1", 0, 3), new IntVar(store, "a2", 0, 3)
+    };
+    IntVar[] b = {
+      new IntVar(store, "b0", 0, 3), new IntVar(store, "b1", 0, 3), new IntVar(store, "b2", 0, 3)
+    };
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(new IntVar[][] {a, b}, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a[1].domain.inMax(store.level, a[1], 2);
+    a[2].domain.inMin(store.level, a[2], 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a[0].domain.inMin(store.level, a[0], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b[0].min()).isEqualTo(2);
+    int bound = -1;
+    int decision = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == b[0] && trail.kind(e) == AtomicTrail.GE) {
+        bound = e;
+      }
+      if (trail.variable(e) == a[0] && trail.kind(e) == AtomicTrail.GE) {
+        decision = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(bound, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+    reason.sortUnique(0);
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(reason.get(0)).isEqualTo(decision);
+    trail.detach();
+  }
+
+  /**
+   * lex_chain over a, b, c, d (Cutstock): a0 >= 1 moves the whole chain up, then c0 >= 2 gives d0
+   * >= 2. The reason of d0 >= 2 cites only c; the vectors before it are not read or cited.
+   */
+  @Test
+  void lexChainReasonReadsOnlyNearbyVectors() {
+    Store store = new Store();
+    IntVar[][] x = new IntVar[4][2];
+    for (int i = 0; i < 4; i++) {
+      for (int k = 0; k < 2; k++) {
+        x[i][k] = new IntVar(store, "x" + i + "_" + k, 0, 3);
+      }
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(x, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0][0].domain.inMin(store.level, x[0][0], 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[2][0].domain.inMin(store.level, x[2][0], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[3][0].min()).isEqualTo(2);
+    int bound = -1;
+    int decision = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == x[3][0] && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 2) {
+        bound = e;
+      }
+      if (trail.variable(e) == x[2][0] && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 2) {
+        decision = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(bound, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+    reason.sortUnique(0);
+    boolean cited = false;
+    for (int r = 0; r < reason.size(); r++) {
+      IntVar v = trail.variable(reason.get(r));
+      assertThat(v).as("x0 and x1 are not cited").isNotIn((Object[]) x[0]).isNotIn((Object[]) x[1]);
+      cited |= reason.get(r) == decision;
+    }
+    assertThat(cited).isTrue();
+    trail.detach();
+  }
+
+  /**
+   * lex_chain over six 0..1 vectors (Cutstock): x5[0] <= 0 moves every x[k][0] down to 0. LexChain
+   * prunes them from x4 down to x0, so the reason of each x[k][0] <= 0 is the same atom of x[k + 1]
+   * and no reason reads the whole chain.
+   */
+  @Test
+  void lexChainPrunesTowardsTheChainItFollows() {
+    Store store = new Store();
+    int m = 6;
+    IntVar[][] x = new IntVar[m][2];
+    for (int i = 0; i < m; i++) {
+      for (int k = 0; k < 2; k++) {
+        x[i][k] = new IntVar(store, "x" + i + "_" + k, 0, 1);
+      }
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(x, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[m - 1][0].domain.inMax(store.level, x[m - 1][0], 0);
+    assertThat(store.consistency()).isTrue();
+    int[] atom = new int[m];
+    for (int e = 0; e < trail.size(); e++) {
+      for (int i = 0; i < m; i++) {
+        if (trail.variable(e) == x[i][0] && trail.kind(e) == AtomicTrail.LE) {
+          atom[i] = e;
+        }
+      }
+    }
+    for (int i = 0; i < m - 1; i++) {
+      assertThat(x[i][0].max()).isZero();
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(atom[i], reason)).isTrue();
+      assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+      reason.sortUnique(0);
+      assertThat(reason.size()).as("reason of x%d_0 <= 0", i).isEqualTo(1);
+      assertThat(reason.get(0)).as("reason of x%d_0 <= 0", i).isEqualTo(atom[i + 1]);
+    }
+    trail.detach();
+  }
+
+  /**
    * all_equal(a, b, c) (generalized-peacable-queens): a != 2 removes 2 from b and c, and b >= 3
    * moves a and c to 3. Each atom is explained by the same atom of one other variable instead of
    * the generic reason that cites the domains of all three.
@@ -671,6 +942,86 @@ class AtomicTrailTest {
       assertThat(trail.kind(reason.get(0))).isEqualTo(trail.kind(e));
       assertThat(trail.value(reason.get(0))).isEqualTo(trail.value(e));
     }
+    trail.detach();
+  }
+
+  /**
+   * The dynamic program of Knapsack removes the capacities no item choice reaches. While LCG
+   * records the changes each would be a {@code !=} atom whose only reason is every item (mknap2-1:
+   * 13,000 generic reasons of 178 atoms), so the capacity then keeps only its bounds.
+   */
+  @Test
+  void knapsackCapacityKeepsItsBoundsWhileRecorded() {
+    int[] profits = {1, 1};
+    int[] weights = {3, 5};
+    Store plain = new Store();
+    IntVar[] q = {new IntVar(plain, "a", 0, 1), new IntVar(plain, "b", 0, 1)};
+    IntVar capacity = new IntVar(plain, "capacity", 0, 8);
+    plain.impose(
+        new KnapsackDP(profits, weights, q, capacity, new IntVar(plain, "profit", 0, 2))
+            .adaptive(false));
+    assertThat(plain.consistency()).isTrue();
+    assertThat(capacity.getSize()).as("holes without a trail").isEqualTo(4);
+
+    Store store = new Store();
+    IntVar[] r = {new IntVar(store, "a", 0, 1), new IntVar(store, "b", 0, 1)};
+    IntVar recorded = new IntVar(store, "capacity", 0, 8);
+    IntVar profit = new IntVar(store, "profit", 0, 2);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new KnapsackDP(profits, weights, r, recorded, profit).adaptive(false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r[0].domain.in(store.level, r[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(recorded.min()).isEqualTo(3);
+    for (int entry = 0; entry < trail.size(); entry++) {
+      assertThat(trail.variable(entry) == recorded && trail.kind(entry) == AtomicTrail.NE)
+          .as("hole %s", trail.atomString(entry))
+          .isFalse();
+    }
+    trail.detach();
+  }
+
+  /**
+   * Member([a, b, c], e): c's bounds and holes bound e, and once a and b are apart from e, c is the
+   * last candidate and takes e's bounds. Each reason is one decision, not the generic one.
+   */
+  @Test
+  void memberHasItsOwnReasons() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 2);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar c = new IntVar(store, "c", 0, 9);
+    IntVar e = new IntVar(store, "e", 0, 9);
+    AtomicTrail trail = new AtomicTrail(store);
+    Member member = new Member(new IntVar[] {a, b, c}, e);
+    store.impose(member);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    c.domain.inMax(store.level, c, 5);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    c.domain.inComplement(store.level, c, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    e.domain.inMin(store.level, e, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(e.max()).isEqualTo(5);
+    assertThat(e.domain.contains(3)).isFalse();
+    assertThat(c.min()).isEqualTo(4);
+    int explained = 0;
+    for (int entry = 0; entry < trail.size(); entry++) {
+      if (trail.reason(entry) != member) {
+        continue;
+      }
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(entry, reason)).isTrue();
+      assertThat(trail.replayed()).as("explained by Member, not by its replay").isFalse();
+      reason.sortUnique(0);
+      assertThat(reason.size()).as("reason of %s", trail.atomString(entry)).isEqualTo(1);
+      explained++;
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(3);
     trail.detach();
   }
 
@@ -977,7 +1328,17 @@ class AtomicTrailTest {
 
   @Test
   void holesAreRecordedOnceForEveryDomainClass() {
-    Random rnd = new Random(11);
+    recordHolesOnce(new Random(11), false);
+  }
+
+  // a backtrack over several levels between beginBacktrack and endBacktrack copies the restored
+  // domains into the shadows once at its end: the entries after it must still each remove a value
+  @Test
+  void holesAreRecordedOnceAfterABatchedBacktrack() {
+    recordHolesOnce(new Random(14), true);
+  }
+
+  private static void recordHolesOnce(Random rnd, boolean batched) {
     int[] spans = {40, 600, LazyBitSetDomain.MAX_SPAN + 10};
     for (int run = 0; run < 300; run++) {
       Store store = new Store();
@@ -996,9 +1357,15 @@ class AtomicTrailTest {
       for (int step = 0; step < 60; step++) {
         if (store.level > 0 && rnd.nextInt(4) == 0) {
           int target = rnd.nextInt(store.level);
+          if (batched) {
+            trail.beginBacktrack();
+          }
           while (store.level > target) {
             store.removeLevel(store.level);
             store.setLevel(store.level - 1);
+          }
+          if (batched) {
+            trail.endBacktrack();
           }
         } else {
           store.setLevel(store.level + 1);
@@ -1360,6 +1727,46 @@ class AtomicTrailTest {
       }
     }
     throw new IllegalStateException(x + " is not in the model");
+  }
+
+  /**
+   * Alternative explains its atoms itself: the chosen interval fixes the others and gives the
+   * master its start and duration; candidates that cannot meet the master are absent.
+   */
+  @Test
+  void alternativeExplainsItsAtoms() {
+    Store store = new Store();
+    IntVar p0 = new IntVar(store, "p0", 0, 1);
+    IntVar s0 = new IntVar(store, "s0", 0, 20);
+    IntVar d0 = new IntVar(store, "d0", 0, 9);
+    IntVar[] p = {new IntVar(store, "p1", 0, 1), new IntVar(store, "p2", 0, 1)};
+    IntVar[] s = {new IntVar(store, "s1", 0, 20), new IntVar(store, "s2", 0, 20)};
+    IntVar[] d = {new IntVar(store, "d1", 3, 3), new IntVar(store, "d2", 5, 5)};
+    Alternative alternative = new Alternative(p0, s0, d0, p, s, d);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(alternative);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    s0.domain.in(store.level, s0, 0, 4);
+    s[1].domain.inMin(store.level, s[1], 7);
+    assertThat(store.consistency()).isTrue();
+    // s2 >= 7 cannot meet s0 <= 4
+    assertThat(p[1].max()).isZero();
+    store.setLevel(store.level + 1);
+    p0.domain.in(store.level, p0, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p[0].min()).isEqualTo(1);
+    assertThat(d0.value()).isEqualTo(3);
+    int explained = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == alternative) {
+        EntryList reason = new EntryList();
+        assertThat(alternative.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        explained++;
+      }
+    }
+    assertThat(explained).isGreaterThanOrEqualTo(4);
+    trail.detach();
   }
 
   /**

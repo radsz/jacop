@@ -57,6 +57,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -69,12 +70,14 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.ExplanationMinimality;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
+import org.jacop.lcg.MirroredChoice;
 import org.jacop.lcg.PbModel;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.lns.AdaptiveLns;
@@ -217,8 +220,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] propagated = new int[16]; // per DIMACS variable pushed as an atom: its entry
   private int[] solution;
   private Runnable onSolution;
-  // takes the objective's bound at the root after each restart of minimize
+  // takes the objective's bound at the root each time minimize leaves the root with a better one
   private LongConsumer onBound;
+  private long lastBound = Long.MIN_VALUE;
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
@@ -308,6 +312,21 @@ public final class LcgSolver implements ExternalPropagator {
     ALTERNATE
   }
 
+  /** Restarts under fixed search: how the runs between restarts branch. */
+  public enum FixedRestarts {
+    /** No restarts: the annotation is followed down each branch, as without learning. */
+    OFF,
+    /** Every run follows the annotation from its first variable, with the learnt clauses kept. */
+    REPLAY,
+    /** Runs take turns at each restart: the annotation, then activity branching. */
+    ALTERNATE,
+    /**
+     * Runs take turns at each restart: the annotation, the SAT solver's own decisions on literals,
+     * then activity branching, as {@link Branching#ALTERNATE} does under free search.
+     */
+    TURNS
+  }
+
   /** Conflicts without a solution after which {@link Branching#AUTO} uses activity branching. */
   public static final long AUTO_CONFLICTS = 1000;
 
@@ -365,6 +384,10 @@ public final class LcgSolver implements ExternalPropagator {
   private int numAnnotationIndices;
   private static final int ANNOTATION_DONE = -1;
   private boolean annotationRun;
+  // restarts under fixed search, see setFixedRestarts
+  private FixedRestarts fixedRestarts = FixedRestarts.OFF;
+  // restarts wait for the first solution
+  private boolean restartsAfterSolution;
 
   private double lowerBoundShare;
   private long lowerBoundBudget;
@@ -374,6 +397,14 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: lower-bound runs that raised the lower bound. */
   public long lowerBoundRaised;
+
+  // objective shaving: a lower-bound run assumes the objective at most its lower bound plus this
+  // step minus one; the step doubles when the run proves that impossible and halves when the run
+  // runs out of conflicts. 0 turns shaving off: each run assumes the lower bound itself
+  private long shaveStep;
+  private boolean shaving;
+  // the factor by which the lower-bound runs' share grows after a round without a better solution
+  private double shaveGrowth = 1;
 
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
@@ -396,6 +427,11 @@ public final class LcgSolver implements ExternalPropagator {
   private long coreDelayBudget;
   private double coreProbeShare;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
+  // the run's time limit in milliseconds as given, 0 for none: the core-guided phase and the branch
+  // and bound before it take their shares of its work (see WORK_PER_MS), not of the clock
+  private long timeLimitMillis;
+  // the work (CdclSolver#work) at which the core-guided schedule counts the run as over
+  private long workEnd = Long.MAX_VALUE;
   private CoreSearch coreSearch;
   // the conflict limit set before minimize, which its phases keep
   private long conflictCap = Long.MAX_VALUE;
@@ -462,6 +498,7 @@ public final class LcgSolver implements ExternalPropagator {
     // against 20.2 on the OR-Tools set and 18.9 against 19.1 on the Challenge sample, and proved
     // one more instance in each
     sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
+    sat.setExternalWork(() -> WORK_PER_CALL * store.numberConsistencyCalls);
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -2211,6 +2248,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private int solve(int... assumed) {
+    encodeGraphs();
     startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
@@ -2253,8 +2291,10 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
+    encodeGraphs();
     this.objective = trail.id(objective);
     best = null;
+    lastBound = Long.MIN_VALUE;
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
@@ -2302,6 +2342,11 @@ public final class LcgSolver implements ExternalPropagator {
   private static final int MAX_CORE_EXTENSIONS = 8;
 
   private int minimizeWithCores() {
+    long millis = timeLimitMillis;
+    if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
+      millis = Math.max(1, (sat.deadline() - System.nanoTime()) / 1_000_000L);
+    }
+    workEnd = millis > 0 ? sat.work() + millis * WORK_PER_MS : Long.MAX_VALUE;
     int result;
     if (coreDelayShare > 0) {
       if (coreProbeShare > 0) {
@@ -2343,45 +2388,41 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
-   * deadline. A later run picks up where this one stopped. When extend is set, a run that stopped
-   * while its lower bound, at its rate so far, would meet the best solution before the deadline
-   * gets another share of the time left. So does a run that stopped as too slow for the time left
-   * of its share once the run brought its lower bound half way to the best solution (jp-encoding
-   * data1000 stopped after 94 cores, 1,800 below the best solution and 2,800 above the bound the
-   * run started from, and is proved in 2 s more); further from it, branch and bound needs the time
-   * more (concert-hall-cap, 18,500 below and 3,500 above, lost its proof). A run that did not raise
-   * the bound is not extended (concert-hall-cap spent two extensions, half of the time left each,
-   * at one bound).
+   * Runs core-guided search for a share of the work left (see {@link #setTimeLimit}), or a number
+   * of conflicts when there is neither a time limit nor a deadline. A later run picks up where this
+   * one stopped. When extend is set, a run that stopped while its lower bound, at its rate so far,
+   * would meet the best solution before the end of the run gets another share of the work left. So
+   * does a run that stopped as too slow for the work left of its share once the run brought its
+   * lower bound half way to the best solution (jp-encoding data1000 stopped after 94 cores, 1,800
+   * below the best solution and 2,800 above the bound the run started from, and is proved in 2 s
+   * more); further from it, branch and bound needs the time more (concert-hall-cap, 18,500 below
+   * and 3,500 above, lost its proof). A run that did not raise the bound is not extended
+   * (concert-hall-cap spent two extensions, half of the time left each, at one bound).
    */
   private int runCores(double share, long conflicts, boolean extend) {
     long deadline = sat.deadline();
-    long now = System.nanoTime();
-    long phaseLimit = Long.MAX_VALUE;
-    if (deadline != Long.MAX_VALUE) {
-      sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
-    } else {
-      phaseLimit = sat.conflicts + conflicts;
-    }
     coreMode = true;
-    int result;
     try {
-      long full = sat.deadline();
-      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+      if (workEnd == Long.MAX_VALUE) {
+        return coreSearch.run(sat.conflicts + conflicts, coreCallLimit);
+      }
+      long full = setPhaseLimits(share, deadline);
+      int result;
+      if (CORE_NO_SOLUTION > 0) {
         // without a solution of its own by this share of the phase, branch and bound gets the time
-        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
-        sat.setDeadline(first);
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && System.nanoTime() >= first) {
+        long now = sat.work();
+        sat.setWorkLimit(now + (long) (CORE_NO_SOLUTION * (full - now)));
+        result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && sat.work() >= sat.workLimit()) {
           if (ownSolution()) {
-            sat.setDeadline(full);
-            result = coreSearch.run(phaseLimit, coreCallLimit);
+            sat.setWorkLimit(full);
+            result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
           } else {
             coreSearch.noSolutionStops++;
           }
         }
       } else {
-        result = coreSearch.run(phaseLimit, coreCallLimit);
+        result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
       }
       for (int extension = 0;
           extend
@@ -2389,17 +2430,72 @@ public final class LcgSolver implements ExternalPropagator {
               && result == CdclSolver.UNKNOWN
               && extendCores(deadline);
           extension++) {
-        now = System.nanoTime();
-        sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
-        result = coreSearch.run(phaseLimit, coreCallLimit);
+        setPhaseLimits(share, deadline);
+        result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
       }
       return result;
     } finally {
       coreMode = false;
-      sat.setDeadline(deadline);
-      sat.setConflictLimit(conflictCap);
+      endPhase(deadline);
     }
   }
+
+  /**
+   * Gives a phase of the core-guided schedule its share of the work left (see {@link #workLeft}):
+   * the solver's work limit, and, with a deadline, a deadline at {@link #CLOCK_SLACK} times that
+   * share of the time left, which stops the phase only where the work is much slower than {@link
+   * #WORK_PER_MS}.
+   *
+   * @return the work limit set
+   */
+  private long setPhaseLimits(double share, long deadline) {
+    if (deadline != Long.MAX_VALUE) {
+      long now = System.nanoTime();
+      double slack = Math.min(1, CLOCK_SLACK * share);
+      sat.setDeadline(now + (long) (slack * Math.max(0, deadline - now)));
+    }
+    long limit = sat.work() + (long) (share * workLeft());
+    sat.setWorkLimit(limit);
+    return limit;
+  }
+
+  /** Restores the limits of the run after a phase of the core-guided schedule. */
+  private void endPhase(long deadline) {
+    if (sat.deadline() < deadline && System.nanoTime() > sat.deadline()) {
+      clockStops++;
+    }
+    sat.setDeadline(deadline);
+    sat.setWorkLimit(Long.MAX_VALUE);
+    sat.setConflictLimit(conflictCap);
+  }
+
+  /** The work left before the end of the run, as the core-guided schedule counts it. */
+  private long workLeft() {
+    return Math.max(0, workEnd - sat.work());
+  }
+
+  /** The work at which the core-guided schedule counts the run as over. */
+  long workEnd() {
+    return workEnd;
+  }
+
+  /**
+   * The work of the solver per millisecond of a time limit, from which the core-guided phase and
+   * the branch and bound before it take their shares, so that a run repeats with the same limit
+   * whatever the load of the machine. The work is the propagated literals plus {@link
+   * #WORK_PER_CALL} per consistency call of a constraint.
+   */
+  static final long WORK_PER_MS = Long.getLong("jacop.lcg.workPerMs", 2_000);
+
+  // the work of one consistency call of a constraint, in propagated literals
+  static final long WORK_PER_CALL = Long.getLong("jacop.lcg.workPerCall", 3);
+
+  // a phase also stops at this many times its share of the time left, where the work is slower
+  private static final double CLOCK_SLACK =
+      Double.parseDouble(System.getProperty("jacop.lcg.clockSlack", "1.5"));
+
+  /** Statistics: phases of the core-guided schedule stopped by the clock, not by their work. */
+  public long clockStops;
 
   // -Djacop.lcg.coreAnySolution=true: the old test, any best solution, also one of branch and
   // bound before the phase
@@ -2421,10 +2517,10 @@ public final class LcgSolver implements ExternalPropagator {
    * given deadline, as {@link #runCores} describes.
    */
   private boolean extendCores(long deadline) {
-    if (deadline == Long.MAX_VALUE || !coreSearch.rose() || !coreSearch.closing(deadline)) {
+    if (System.nanoTime() > deadline || !coreSearch.rose() || !coreSearch.closing(workEnd)) {
       return false;
     }
-    return System.nanoTime() >= sat.deadline() || !coreSearch.exhausted() && coreSearch.halfWay();
+    return sat.work() >= sat.workLimit() || !coreSearch.exhausted() && coreSearch.halfWay();
   }
 
   /**
@@ -2437,9 +2533,8 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int minimizeBeforeCores() {
     long deadline = sat.deadline();
-    long now = System.nanoTime();
-    if (deadline != Long.MAX_VALUE) {
-      sat.setDeadline(now + (long) (coreDelayShare * Math.max(0, deadline - now)));
+    if (workEnd != Long.MAX_VALUE) {
+      setPhaseLimits(coreDelayShare, deadline);
     } else {
       sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
     }
@@ -2460,8 +2555,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } finally {
       coreMode = false;
-      sat.setDeadline(deadline);
-      sat.setConflictLimit(conflictCap);
+      endPhase(deadline);
     }
   }
 
@@ -2604,6 +2698,20 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets the time limit of the run, from which the core-guided phase of {@link #minimize} and the
+   * branch and bound before it take their shares as work ({@link CdclSolver#work}, {@link
+   * #WORK_PER_MS} per millisecond), so that a run repeats with the same limit whatever the load of
+   * the machine. Without it they take shares of the deadline's time left, counted as work at the
+   * start of {@link #minimize}, or, without a deadline either, their budgets of conflicts. It does
+   * not stop the run: the deadline does.
+   *
+   * @param millis the time limit in milliseconds, 0 for none
+   */
+  public void setTimeLimit(long millis) {
+    timeLimitMillis = Math.max(0, millis);
+  }
+
+  /**
    * Returns the core-guided phase of the last {@link #minimize}, for its statistics.
    *
    * @return the phase, or null when it did not run
@@ -2705,7 +2813,9 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
+    double share = lowerBoundShare;
     while (true) {
+      long before = best == null ? Long.MAX_VALUE : best[objective];
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
       long start = System.nanoTime();
@@ -2719,27 +2829,67 @@ public final class LcgSolver implements ExternalPropagator {
           return result;
         }
       }
-      int lb = vars[objective].min(); // after solve the domains are those of level 0
-      if (lowerBoundShare > 0 && best != null && lb < best[objective]) {
-        int lit = -geLit(objective, lb + 1); // objective <= lb
-        limit = sat.conflicts + (long) (budget * lowerBoundShare);
-        sat.setConflictLimit(limit);
-        lowerBoundRuns++;
-        result = solve(lit);
-        if (result == CdclSolver.SAT) {
-          return result; // a solution at the smallest value of the objective
+      if (lowerBoundShare > 0 && best != null) {
+        if (shaveGrowth > 1) {
+          // a round that did not improve the best solution gives the bound more of the next one
+          share = best[objective] < before ? lowerBoundShare : Math.min(share * shaveGrowth, 4);
         }
-        if (result == CdclSolver.UNSAT) {
-          if (sat.failedAssumptions().length == 0) {
-            return result; // no better solution at all
-          }
-          sat.addClause(-lit); // objective >= lb + 1
-          lowerBoundRaised++;
-        } else if (sat.conflicts < limit) {
+        result = lowerBoundRun((long) (budget * share));
+        if (result != CdclSolver.UNKNOWN) {
           return result;
         }
       }
       budget += budget / 2;
+    }
+  }
+
+  /**
+   * One lower-bound run of {@link #minimizeWithLowerBoundSearch}: assumes the objective at most a
+   * target and, when that is impossible, raises its lower bound above the target by a clause. The
+   * target is the lower bound itself, or with shaving a step above it; with shaving, the conflicts
+   * a proof leaves go to the next, doubled step.
+   *
+   * @return {@link CdclSolver#UNKNOWN} to go on, or the result of the search when the run proved
+   *     the best solution optimal or that there is none
+   */
+  private int lowerBoundRun(long conflicts) {
+    long limit = sat.conflicts + conflicts;
+    int raised = Integer.MIN_VALUE; // the bound this call proved, which the root may not show yet
+    while (true) {
+      // after solve the domains are those of level 0
+      int lb = Math.max(vars[objective].min(), raised);
+      if (best == null || lb >= best[objective]) {
+        return CdclSolver.UNKNOWN;
+      }
+      // objective <= target: the lower bound itself, or a step above it when shaving
+      int target = shaving ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
+      int lit = -geLit(objective, target + 1);
+      sat.setConflictLimit(limit);
+      lowerBoundRuns++;
+      int result = solve(lit);
+      if (result == CdclSolver.SAT) {
+        return result; // a solution at the smallest value of the objective
+      }
+      if (result != CdclSolver.UNSAT) {
+        if (sat.conflicts < limit) {
+          return result; // stopped by the deadline
+        }
+        shaveStep = Math.max(1, shaveStep / 2);
+        return CdclSolver.UNKNOWN;
+      }
+      if (sat.failedAssumptions().length == 0 || best[objective] <= target) {
+        // no better solution at all; or the run found one within the target and then none
+        // better, and every better one would be within the target too
+        return result;
+      }
+      sat.addClause(-lit); // objective >= target + 1
+      lowerBoundRaised++;
+      raised = target + 1;
+      reportBound(target + 1L);
+      if (!shaving) {
+        return CdclSolver.UNKNOWN;
+      }
+      shaveStep = Math.min(2 * shaveStep, 1L << 30);
     }
   }
 
@@ -2833,6 +2983,31 @@ public final class LcgSolver implements ExternalPropagator {
   public void setLowerBoundSearch(double share, long firstRun) {
     lowerBoundShare = share;
     lowerBoundBudget = Math.max(1, firstRun);
+  }
+
+  /**
+   * Turns objective shaving on in the lower-bound runs of {@link #setLowerBoundSearch}: instead of
+   * the objective at its lower bound, each run assumes it at most a step above the bound. A run
+   * that proves the assumption impossible raises the bound by the whole step and doubles it; a run
+   * that runs out of conflicts halves it. The bound then closes on the best solution by large steps
+   * when the steps are easy to prove, as CP-SAT's objective shaving does.
+   *
+   * @param on whether to shave
+   */
+  public void setShaving(boolean on) {
+    shaving = on;
+    shaveStep = 1;
+  }
+
+  /**
+   * Makes the share of conflicts that lower-bound runs get grow by the given factor after each
+   * round of branch and bound that did not improve the best solution, up to four times the
+   * conflicts of branch and bound; an improving round sets it back.
+   *
+   * @param growth the factor, 1 for a fixed share
+   */
+  public void setLowerBoundGrowth(double growth) {
+    shaveGrowth = Math.max(1, growth);
   }
 
   /**
@@ -2954,6 +3129,22 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets restarts under fixed search (an annotation set with free false). Without them the solver
+   * never restarts, so its learnt clauses prune but never reorder the search. With them the solver
+   * restarts on its own schedule; each run follows the annotation (REPLAY) or the runs take turns
+   * between the annotation and activity branching (ALTERNATE). In every run activity branching
+   * completes the assignment once the annotation has fixed its variables. Set it before solving.
+   *
+   * @param mode how runs branch, or OFF for no restarts
+   * @param afterSolution true to restart only once a first solution is found
+   */
+  public void setFixedRestarts(FixedRestarts mode, boolean afterSolution) {
+    fixedRestarts = mode;
+    restartsAfterSolution = mode != FixedRestarts.OFF && afterSolution;
+    sat.setRestarts(mode != FixedRestarts.OFF && !afterSolution);
+  }
+
+  /**
    * Adds a clause over 0/1 variables: one of the positive variables is 1 or one of the negative
    * ones is 0. It goes to the SAT solver as a clause of {@code [x >= 1]} literals, so it is
    * propagated and explained by the solver itself. Add clauses before solving.
@@ -2988,6 +3179,75 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Whether layered-graph constraints (regular, mdd) become clauses of the solver in place of their
+   * propagation and explanations by cuts of the graph; the system property {@code
+   * jacop.lcg.graphClauses} turns it off.
+   */
+  private static final boolean GRAPH_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.graphClauses", "true"));
+
+  private boolean graphClauses = GRAPH_CLAUSES;
+
+  /** Whether {@link #encodeGraphs} ran. */
+  private boolean graphsEncoded;
+
+  /**
+   * Sets whether layered-graph constraints (regular, mdd) become clauses of the solver, before it
+   * starts; on by default.
+   *
+   * @param on true for clauses, false to propagate and explain the constraints themselves
+   */
+  public void setGraphClauses(boolean on) {
+    graphClauses = on;
+  }
+
+  /** Statistics: layered-graph constraints given to the solver as clauses. */
+  public long graphConstraintsEncoded;
+
+  /**
+   * Gives the solver every layered-graph constraint of the store as clauses ({@link
+   * LayeredGraphConstraint#encodeClauses}) and removes the constraint from the store. Unit
+   * propagation over the clauses is domain consistent, as the constraint is, and explains itself:
+   * explaining by cuts of the graph made the conflicts of regular-heavy models slow and their
+   * clauses long. Not under a proof, whose model has no auxiliary variables.
+   */
+  private void encodeGraphs() {
+    if (graphsEncoded) {
+      return;
+    }
+    graphsEncoded = true;
+    if (!graphClauses || proof != null || rootFailed) {
+      return;
+    }
+    ClauseModel model =
+        new ClauseModel() {
+          @Override
+          public int newLiteral() {
+            return newAuxiliary();
+          }
+
+          @Override
+          public int valueLiteral(IntVar x, int v) {
+            return eqVar(trail.id(x), v);
+          }
+
+          @Override
+          public void clause(int[] literals, int size) {
+            if (!rootFailed && !sat.addClause(Arrays.copyOf(literals, size))) {
+              rootFailed = true;
+              clauseFailedAtRoot = true;
+            }
+          }
+        };
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
+        g.removeConstraint();
+        graphConstraintsEncoded++;
+      }
+    }
+  }
+
+  /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
    * store, and a wrong one stops the solver with an {@link IllegalStateException}. The system
    * property {@code jacop.lcg.check=true} turns it on for every solver.
@@ -3018,14 +3278,28 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Sets the action that takes the bound of the objective that {@link #minimize} has proved, at
-   * each restart: no solution better than the best one has a smaller value of the objective. It may
-   * call {@link #stop}.
+   * Sets the action that takes the bound of the objective that {@link #minimize} has proved: no
+   * solution better than the best one has a smaller value of the objective. It is called whenever
+   * the search leaves the root with a better bound than before, after the root's propagation, so a
+   * search without restarts reports the bounds that backjumps to the root prove. It may call {@link
+   * #stop}.
    *
    * @param action the action, given the objective's smallest value at the root
    */
   public void onBound(LongConsumer action) {
     onBound = action;
+  }
+
+  /**
+   * Gives a bound of the objective proved at the root, under the bound of branch and bound, to the
+   * action of {@link #onBound} when it is larger than the last one given: by a restart, a
+   * lower-bound run or a core of the core-guided phase.
+   */
+  void reportBound(long lower) {
+    if (onBound != null && objective >= 0 && lower > lastBound) {
+      lastBound = lower;
+      onBound.accept(lower);
+    }
   }
 
   /**
@@ -3074,7 +3348,23 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyNewDecisionLevel() {
+    if (onBound != null && objective >= 0 && store.level == baseLevel) {
+      rootBound();
+    }
     store.setLevel(store.level + 1);
+  }
+
+  /**
+   * Passes on the objective's bound at the root, at a fixpoint, when it is better than the last one
+   * passed: the root holds the bound of branch and bound, so the objective's minimum there holds
+   * for every solution better than the best one, and so does the bound of the core-guided phase.
+   */
+  private void rootBound() {
+    long lower = vars[objective].min();
+    if (coreSearch != null) {
+      lower = Math.max(lower, coreSearch.lowerBound);
+    }
+    reportBound(lower);
   }
 
   @Override
@@ -3084,9 +3374,14 @@ public final class LcgSolver implements ExternalPropagator {
       backtrackConflicts = sat.conflicts;
       conflictVar = decisionVar;
     }
-    while (store.level > baseLevel + level) {
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
+    trail.beginBacktrack();
+    try {
+      while (store.level > baseLevel + level) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    } finally {
+      trail.endBacktrack();
     }
     // a variable fixed at the decision level it was taken off at, or below, may be free again
     while (numPopped > 0 && poppedLevel[numPopped - 1] > level) {
@@ -3257,12 +3552,7 @@ public final class LcgSolver implements ExternalPropagator {
   @Override
   public void notifyRestart() {
     if (onBound != null && objective >= 0 && store.level == baseLevel) {
-      // at the root: the objective's minimum holds for every solution better than the best one
-      long lower = vars[objective].min();
-      if (coreSearch != null) {
-        lower = Math.max(lower, coreSearch.lowerBound);
-      }
-      onBound.accept(lower);
+      rootBound();
     }
     if (restartPresolve > 0 && store.level == baseLevel) {
       presolveAtRestart();
@@ -3283,6 +3573,12 @@ public final class LcgSolver implements ExternalPropagator {
       activityBranching = !activityBranching;
     } else if (annotation != null && freeSearch) {
       annotationRun = !annotationRun;
+    } else if (annotation != null && fixedRestarts == FixedRestarts.ALTERNATE) {
+      annotationRun = !annotationRun;
+    } else if (annotation != null && fixedRestarts == FixedRestarts.TURNS) {
+      runs++;
+      annotationRun = runs % 3 == 0;
+      activityBranching = runs % 3 != 1;
     }
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
@@ -4346,6 +4642,11 @@ public final class LcgSolver implements ExternalPropagator {
     annotationIndex[numAnnotationIndices] =
         v != null || c != null ? annotation.getIndex() : ANNOTATION_DONE;
     annotationLevel[numAnnotationIndices++] = sat.decisionLevel();
+    if (c instanceof MirroredChoice mc) {
+      // an element of a set variable out of the set first (outdomain)
+      int i = idOf(mc.mirrored().decisionVariable(mc.value()));
+      return i < 0 ? 0 : assignLit(i, mc.holds() ? 1 : 0);
+    }
     if (v instanceof Mirrored m) {
       // the left branch on a set variable's element is that the element is in the set
       int i = idOf(m.decisionVariable(annotation.getChoiceValue()));
@@ -4441,6 +4742,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (onSolution != null && improving) {
       onSolution.run();
+    }
+    if (restartsAfterSolution) {
+      restartsAfterSolution = false;
+      sat.setRestarts(true);
     }
     if (objective < 0) {
       return true;

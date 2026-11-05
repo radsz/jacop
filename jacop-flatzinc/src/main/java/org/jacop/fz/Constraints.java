@@ -49,12 +49,14 @@ import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
+import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
+import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
@@ -121,7 +123,14 @@ public class Constraints implements ParserTreeConstants {
     Options options = support.options;
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
-    if (manySolutions || hasFloatVariables()) {
+    if (hasFloatVariables()) {
+      // the model is built as without LCG, also when --lcg was given: LcgSolver has no atoms for
+      // float variables, and a model built for LCG (clauses, split sums, no views) and then solved
+      // by search is not the model solved without --lcg
+      options.dropLcg("the model has float variables");
+    } else if (options.getAll() && satisfaction(astTree)) {
+      options.dropLcg("all solutions are not supported");
+    } else if (manySolutions) {
       // LCG on by default is left out where it would be ignored; the model is solved as before
       options.dropDefaultLcg();
     }
@@ -169,6 +178,16 @@ public class Constraints implements ParserTreeConstants {
         } else {
           replaced = new HashSet<>(replaced);
           replaced.addAll(alldifferent.replaced());
+        }
+      }
+
+      // the tables check their rows against the domains, and --proof does not encode them
+      if (ElementTableDetector.enabled() && options.proof() == null) {
+        ElementTableDetector elements = new ElementTableDetector(support);
+        elements.detect(astTree);
+        if (!elements.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(elements.replaced());
         }
       }
 
@@ -227,6 +246,11 @@ public class Constraints implements ParserTreeConstants {
       // its cost constraints are redundant, with bounds a proof does not derive
       if (CircuitCostDetector.enabled() && options.proof() == null) {
         new CircuitCostDetector(support).detect(astTree);
+      }
+
+      // a redundant Routes over 0/1 arcs, whose rules a proof does not derive
+      if (RoutesDetector.enabled() && options.proof() == null) {
+        new RoutesDetector(support).detect(astTree);
       }
 
       if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {

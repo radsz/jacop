@@ -423,11 +423,55 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         removals.remove(i, value[size]);
       }
       if (last[i] < 0 || level[last[i]] < removedLevel) {
-        setShadow(i, x.dom()); // the variable's last removed entry: its domain is restored
+        // the variable's last removed entry: its domain is restored
+        if (deferring) {
+          if (!stale[i]) {
+            stale[i] = true;
+            if (numStale == staleVars.length) {
+              staleVars = Arrays.copyOf(staleVars, 2 * numStale);
+            }
+            staleVars[numStale++] = x;
+          }
+        } else {
+          setShadow(i, x.dom());
+        }
       }
       entryVar[size] = null;
       reason[size] = null;
     }
+  }
+
+  // while a backtrack over several levels is under way, the shadows of the variables it restores
+  // are copied once at its end instead of at each level: a variable with many holes changed at
+  // each of thousands of levels made the final backtrack of debruijn_binary 04_06 copy its runs
+  // at every level (60 % of a 40 s run)
+  private boolean deferring;
+  private boolean[] stale = new boolean[0];
+  private IntVar[] staleVars = new IntVar[16];
+  private int numStale;
+
+  /**
+   * Starts a backtrack over several levels: until {@link #endBacktrack}, the levels removed copy no
+   * domain into the shadows, and no domain may change.
+   */
+  public void beginBacktrack() {
+    if (stale.length < numRuns.length) {
+      stale = Arrays.copyOf(stale, numRuns.length);
+    }
+    deferring = true;
+  }
+
+  /** Ends a backtrack begun by {@link #beginBacktrack}: the restored domains go to the shadows. */
+  public void endBacktrack() {
+    deferring = false;
+    for (int k = 0; k < numStale; k++) {
+      IntVar x = staleVars[k];
+      staleVars[k] = null;
+      int i = id(x);
+      stale[i] = false;
+      setShadow(i, x.dom());
+    }
+    numStale = 0;
   }
 
   /**
@@ -530,6 +574,20 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public int lastEntry(IntVar x, int position) {
     return lastBefore(x, position);
+  }
+
+  /**
+   * Returns the entry that removed a value of a variable before a trail position, looked up in the
+   * index of removed values rather than by walking the variable's entries.
+   *
+   * @param x the variable
+   * @param v the value
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the value's {@link #NE} entry, or -1 when it has none before the position
+   */
+  public int notEqualEntry(IntVar x, int v, int position) {
+    int f = removals.get(slot(x), v);
+    return f < position ? f : -1;
   }
 
   /**
@@ -726,6 +784,19 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public void setWeakerBounds(WeakerBounds bounds) {
     weakerBounds = bounds;
+  }
+
+  /**
+   * Returns the entry of a variable's lower or upper bound just before a trail position, found by a
+   * binary search among its bound entries, without walking its other entries.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param lower true for the lower bound, false for the upper one
+   * @return the entry, or -1 when the bound is the initial one
+   */
+  public int boundEntry(IntVar x, int position, boolean lower) {
+    return latest(x, position, lower ? GE : LE);
   }
 
   /**

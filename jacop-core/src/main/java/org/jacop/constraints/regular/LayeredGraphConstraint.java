@@ -31,6 +31,7 @@
 package org.jacop.constraints.regular;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import org.jacop.api.Stateful;
@@ -43,6 +44,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.PbEncodable;
@@ -517,6 +519,318 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     return PbModel.layeredGraph(
         model, list, description.levelNodes, description.edges, description.size);
+  }
+
+  /**
+   * Gives a lazy clause generation solver the graph over the current domains as clauses, so that it
+   * propagates and explains this constraint by unit propagation instead of by cuts of the graph.
+   * The edges between the same two nodes become one arc. There is a literal per node and per arc,
+   * except where one stands for another: a level with one node has none, and an arc that is the
+   * only one entering its target, or leaving its source, is that node. The clauses: an arc implies
+   * its two nodes and one of its values; a node implies an arc entering it and an arc leaving it; a
+   * value implies an arc of its level labelled with it; a node and a value imply an arc leaving the
+   * node labelled with the value. Unit propagation then removes every value on no path (domain
+   * consistency), and a solution fixes every literal.
+   *
+   * @param model where the clauses go
+   * @return false when the paths of the graph are not exactly the solutions of the constraint
+   */
+  public boolean encodeClauses(ClauseModel model) {
+    if (description == null || !explainedByPaths()) {
+      return false;
+    }
+    new GraphClauses(model).encode();
+    return true;
+  }
+
+  /** The clauses of {@link #encodeClauses}. */
+  private final class GraphClauses {
+
+    // the constant literals; a clause holding TRUE is dropped and FALSE is left out of a clause
+    static final int TRUE = Integer.MAX_VALUE;
+    static final int FALSE = -TRUE;
+
+    final ClauseModel model;
+    final int levels = list.length;
+    final int[] edge = description.edges;
+    int[] clause = new int[16];
+
+    GraphClauses(ClauseModel model) {
+      this.model = model;
+    }
+
+    void encode() {
+      int[] levelNodes = description.levelNodes;
+      int[] first = new int[levels + 2];
+      for (int level = 0; level <= levels; level++) {
+        first[level + 1] = first[level] + levelNodes[level];
+      }
+      // the usable edges in level order, and the nodes on a path from level 0 to the last level
+      int[] levelEdges = new int[levels + 1];
+      for (int e = 0; e < description.size; e++) {
+        levelEdges[edge[4 * e] + 1]++;
+      }
+      for (int level = 0; level < levels; level++) {
+        levelEdges[level + 1] += levelEdges[level];
+      }
+      int[] order = new int[description.size];
+      int[] fill = Arrays.copyOf(levelEdges, levels);
+      for (int e = 0; e < description.size; e++) {
+        int level = edge[4 * e];
+        if (list[level].domain.contains(edge[4 * e + 2])) {
+          order[fill[level]++] = e;
+        }
+      }
+      boolean[] reached = new boolean[first[levels + 1]];
+      boolean[] kept = new boolean[first[levels + 1]];
+      Arrays.fill(reached, 0, first[1], true);
+      for (int level = 0; level < levels; level++) {
+        for (int k = levelEdges[level]; k < fill[level]; k++) {
+          int e = order[k];
+          if (reached[first[level] + edge[4 * e + 1]]) {
+            reached[first[level + 1] + edge[4 * e + 3]] = true;
+          }
+        }
+      }
+      System.arraycopy(reached, first[levels], kept, first[levels], levelNodes[levels]);
+      for (int level = levels - 1; level >= 0; level--) {
+        for (int k = levelEdges[level]; k < fill[level]; k++) {
+          int e = order[k];
+          int source = first[level] + edge[4 * e + 1];
+          if (reached[source] && kept[first[level + 1] + edge[4 * e + 3]]) {
+            kept[source] = true;
+          }
+        }
+      }
+
+      // the arcs: the kept edges grouped by level, source and target
+      int[] arcOf = new int[description.size];
+      Arrays.fill(arcOf, -1);
+      int[] arcLevel = new int[description.size];
+      int[] arcSource = new int[description.size];
+      int[] arcTarget = new int[description.size];
+      int arcs = 0;
+      int[] outDegree = new int[first[levels + 1]];
+      int[] inDegree = new int[first[levels + 1]];
+      Map<Long, Integer> arcIndex = new HashMap<>();
+      for (int level = 0; level < levels; level++) {
+        arcIndex.clear();
+        for (int k = levelEdges[level]; k < fill[level]; k++) {
+          int e = order[k];
+          int source = first[level] + edge[4 * e + 1];
+          int target = first[level + 1] + edge[4 * e + 3];
+          arcOf[e] = -1;
+          if (!kept[source] || !kept[target]) {
+            continue;
+          }
+          long key = (long) source << 32 | target;
+          Integer a = arcIndex.get(key);
+          if (a == null) {
+            a = arcs++;
+            arcIndex.put(key, a);
+            arcLevel[a] = level;
+            arcSource[a] = source;
+            arcTarget[a] = target;
+            outDegree[source]++;
+            inDegree[target]++;
+          }
+          arcOf[e] = a;
+        }
+      }
+
+      // node literals: none for the only node of a level, which every path passes
+      int[] node = new int[first[levels + 1]];
+      boolean empty = false;
+      for (int level = 0; level <= levels; level++) {
+        int count = 0;
+        for (int n = first[level]; n < first[level + 1]; n++) {
+          count += kept[n] ? 1 : 0;
+        }
+        if (count == 0) {
+          empty = true;
+        }
+        for (int n = first[level]; n < first[level + 1]; n++) {
+          node[n] = !kept[n] ? FALSE : count == 1 ? TRUE : model.newLiteral();
+        }
+      }
+      if (empty) {
+        model.clause(clause, 0);
+        return;
+      }
+      // a path starts at a node of level 0
+      int size = 0;
+      for (int n = first[0]; n < first[1]; n++) {
+        if (kept[n]) {
+          size = add(size, node[n]);
+        }
+      }
+      emit(size);
+
+      int[] arc = new int[arcs];
+      for (int a = 0; a < arcs; a++) {
+        if (inDegree[arcTarget[a]] == 1) {
+          arc[a] = node[arcTarget[a]];
+        } else if (outDegree[arcSource[a]] == 1) {
+          arc[a] = node[arcSource[a]];
+        } else {
+          arc[a] = model.newLiteral();
+        }
+      }
+
+      // the values of each arc, the arcs leaving and entering each node, the arcs of each value
+      int[][] arcValues = collect(arcs, arcOf);
+      int[][] leaving = adjacency(arcSource, outDegree, arcs);
+      int[][] entering = adjacency(arcTarget, inDegree, arcs);
+
+      for (int a = 0; a < arcs; a++) {
+        emit(add(add(0, -arc[a]), node[arcSource[a]]));
+        emit(add(add(0, -arc[a]), node[arcTarget[a]]));
+        size = add(0, -arc[a]);
+        for (int v : arcValues[a]) {
+          size = add(size, valueLiteral(arcLevel[a], v));
+        }
+        emit(size);
+      }
+      for (int n = 0; n < first[levels + 1]; n++) {
+        if (!kept[n]) {
+          continue;
+        }
+        if (n < first[levels]) {
+          size = add(0, -node[n]);
+          for (int a : leaving[n]) {
+            size = add(size, arc[a]);
+          }
+          emit(size);
+        }
+        if (n >= first[1]) {
+          size = add(0, -node[n]);
+          for (int a : entering[n]) {
+            size = add(size, arc[a]);
+          }
+          emit(size);
+        }
+      }
+      // a value needs an arc of its level labelled with it, and from a node, one leaving it
+      int[][] labelled = new int[description.size][];
+      for (int level = 0; level < levels; level++) {
+        int m = 0;
+        for (int k = levelEdges[level]; k < fill[level]; k++) {
+          int e = order[k];
+          if (arcOf[e] >= 0) {
+            labelled[m++] = new int[] {edge[4 * e + 2], arcSource[arcOf[e]], arcOf[e]};
+          }
+        }
+        Arrays.sort(
+            labelled,
+            0,
+            m,
+            (p, q) -> p[0] != q[0] ? Integer.compare(p[0], q[0]) : Integer.compare(p[1], q[1]));
+        int i = 0;
+        for (var it = list[level].domain.valueEnumeration(); it.hasMoreElements(); ) {
+          int v = it.nextElement();
+          while (i < m && labelled[i][0] < v) {
+            i++;
+          }
+          int end = i;
+          while (end < m && labelled[end][0] == v) {
+            end++;
+          }
+          size = add(0, -valueLiteral(level, v));
+          for (int k = i; k < end; k++) {
+            size = add(size, arc[labelled[k][2]]);
+          }
+          emit(size);
+          for (int k = i; k < end; ) {
+            int source = labelled[k][1];
+            int j = k;
+            while (j < end && labelled[j][1] == source) {
+              j++;
+            }
+            if (leaving[source].length > 1) {
+              size = add(add(0, -node[source]), -valueLiteral(level, v));
+              for (int r = k; r < j; r++) {
+                size = add(size, arc[labelled[r][2]]);
+              }
+              emit(size);
+            }
+            k = j;
+          }
+          i = end;
+        }
+      }
+    }
+
+    /** The values of each arc, distinct, from the edges grouped into it. */
+    private int[][] collect(int arcs, int[] arcOf) {
+      int[] count = new int[arcs];
+      for (int e = 0; e < description.size; e++) {
+        if (arcOf[e] >= 0 && list[edge[4 * e]].domain.contains(edge[4 * e + 2])) {
+          count[arcOf[e]]++;
+        }
+      }
+      int[][] values = new int[arcs][];
+      for (int a = 0; a < arcs; a++) {
+        values[a] = new int[count[a]];
+        count[a] = 0;
+      }
+      for (int e = 0; e < description.size; e++) {
+        if (arcOf[e] >= 0 && list[edge[4 * e]].domain.contains(edge[4 * e + 2])) {
+          values[arcOf[e]][count[arcOf[e]]++] = edge[4 * e + 2];
+        }
+      }
+      return values;
+    }
+
+    private int[][] adjacency(int[] end, int[] degree, int arcs) {
+      int[][] adj = new int[degree.length][];
+      for (int n = 0; n < degree.length; n++) {
+        adj[n] = new int[degree[n]];
+        degree[n] = 0;
+      }
+      for (int a = 0; a < arcs; a++) {
+        adj[end[a]][degree[end[a]]++] = a;
+      }
+      return adj;
+    }
+
+    private int valueLiteral(int level, int v) {
+      IntVar x = list[level];
+      return x.singleton() ? TRUE : model.valueLiteral(x, v);
+    }
+
+    /** Appends a literal to the clause being built and returns its new size. */
+    private int add(int size, int literal) {
+      if (size == clause.length) {
+        clause = Arrays.copyOf(clause, 2 * size);
+      }
+      clause[size] = literal;
+      return size + 1;
+    }
+
+    /** Adds the clause being built, without constants, duplicates and tautologies. */
+    private void emit(int size) {
+      int n = 0;
+      for (int k = 0; k < size; k++) {
+        int l = clause[k];
+        if (l == TRUE) {
+          return;
+        }
+        if (l == FALSE) {
+          continue;
+        }
+        boolean seen = false;
+        for (int j = 0; j < n; j++) {
+          if (clause[j] == -l) {
+            return;
+          }
+          seen |= clause[j] == l;
+        }
+        if (!seen) {
+          clause[n++] = l;
+        }
+      }
+      model.clause(clause, n);
+    }
   }
 
   private LayeredGraphExplanation.Graph explanationGraph() {

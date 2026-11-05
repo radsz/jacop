@@ -109,6 +109,9 @@ final class Portfolio {
   /** The value shared for a variable that is not fixed in a solution. */
   static final int UNKNOWN = Integer.MIN_VALUE;
 
+  /** How long after the time-out the portfolio answers when a thread has not stopped yet. */
+  private static final long STOP_MARGIN_MILLIS = 300;
+
   /** How long the portfolio waits for its stopped threads to end after printing the answer. */
   private static final long JOIN_MILLIS = 10_000;
 
@@ -147,9 +150,18 @@ final class Portfolio {
   private boolean complete;
   // the best solution and bound of all threads, for --gap and the objectiveBound statistic
   private ObjectiveGap gap;
+  // a thread's bound holds only for the restarts of relax and reconstruct or on_restart
+  private boolean inexactBound;
 
-  private Portfolio(Options options) {
+  Portfolio(Options options) {
     this.options = options;
+  }
+
+  /** Whether the portfolio has ended with its search complete: its best solution is optimal. */
+  boolean provedComplete() {
+    synchronized (lock) {
+      return finished && complete;
+    }
   }
 
   /**
@@ -221,6 +233,7 @@ final class Portfolio {
 
   private int run(String[] args, PrintStream out) {
     long start = System.currentTimeMillis();
+    long timeOutAt = timeOutAt(options, start);
     List<String> base = baseArguments(args);
     int threads = Math.min(options.threads(), MAX_THREADS);
     boolean satisfaction = isSatisfaction(readModel(options));
@@ -240,7 +253,7 @@ final class Portfolio {
       w.thread = t;
       t.start();
     }
-    boolean timedOut = await(start);
+    boolean timedOut = await(timeOutAt);
     for (Worker w : workers) {
       w.stop();
     }
@@ -258,15 +271,31 @@ final class Portfolio {
     return 0;
   }
 
-  /** Waits until a thread finishes its search or all threads end. Returns true on a time-out. */
-  private boolean await(long start) {
-    long timeOut = options.getTimeOut();
+  /**
+   * When the time-out of the run passes. It counts from the start of the run, as in one thread; it
+   * counted from the start of the portfolio, and the portfolio answered 2 s after it.
+   *
+   * @param options the options given
+   * @param now the current time (System.currentTimeMillis())
+   * @return the time, or 0 without a time-out
+   */
+  static long timeOutAt(Options options, long now) {
+    return options.getTimeOut() > 0 ? now + options.getRemainingTimeOut() : 0;
+  }
+
+  /**
+   * Waits until a thread finishes its search or all threads end. Returns true on a time-out.
+   *
+   * @param timeOutAt when the time-out passes (System.currentTimeMillis()), 0 without one
+   */
+  private boolean await(long timeOutAt) {
     synchronized (lock) {
       while (!finished && running > 0) {
         long wait = 0;
-        if (timeOut > 0) {
-          // the threads stop at the time-out themselves; this is a safety margin
-          wait = start + timeOut + 2000 - System.currentTimeMillis();
+        if (timeOutAt > 0) {
+          // the threads stop at the time-out themselves; a thread that overruns it does not hold
+          // back the answer, which MiniZinc takes only up to a second after the time-out
+          wait = timeOutAt + STOP_MARGIN_MILLIS - System.currentTimeMillis();
           if (wait <= 0) {
             finished = true;
             return true;
@@ -281,7 +310,7 @@ final class Portfolio {
         }
       }
       finished = true;
-      return !complete && timeOut > 0 && System.currentTimeMillis() - start >= timeOut;
+      return !complete && timeOutAt > 0 && System.currentTimeMillis() >= timeOutAt;
     }
   }
 
@@ -293,6 +322,9 @@ final class Portfolio {
           s.append(bestSolution);
         }
         if (complete && optimisation) {
+          if (gap != null) {
+            gap.optimal(); // a thread proved the best solution optimal
+          }
           s.append(COMPLETE).append('\n');
         } else if (timedOut) {
           s.append("%% =====TIME-OUT=====\n");
@@ -437,7 +469,8 @@ final class Portfolio {
 
   private static boolean objectiveSetting(String key) {
     return key.startsWith("lcg-core")
-        || "lcg-lb".equals(key)
+        || key.startsWith("lcg-lb")
+        || "lcg-shave".equals(key)
         || key.startsWith("lns")
         || key.startsWith("probe");
   }
@@ -470,7 +503,7 @@ final class Portfolio {
         if (cost >= bestCost) {
           return;
         }
-        if (gap(maximise).solution(cost)) {
+        if (gap(maximise).solution(cost) || provedByBound()) {
           gapReached();
         }
         optimisation = true;
@@ -501,11 +534,15 @@ final class Portfolio {
     return gap;
   }
 
-  // the best solution is within --gap of the bound, which ends the search
+  // a bound at the best solution proves it optimal, with or without --gap
+  private boolean provedByBound() {
+    return !inexactBound && gap.proved();
+  }
+
+  // the best solution is within --gap of the bound, or at a bound, which ends the search
   private void gapReached() {
     synchronized (lock) {
-      // a bound at the best solution proves it optimal
-      complete = gap.proved();
+      complete = provedByBound();
       finished = true;
       lock.notifyAll();
     }
@@ -594,10 +631,13 @@ final class Portfolio {
      *
      * @param lower the bound
      * @param maximise whether the cost variable is the negated objective
+     * @param exact false for a bound of the restarts of relax and reconstruct or on_restart, which
+     *     ends the search at --gap but never proves a solution optimal
      */
-    void bound(long lower, boolean maximise) {
+    void bound(long lower, boolean maximise, boolean exact) {
       synchronized (lock) {
-        if (!finished && gap(maximise).bound(lower)) {
+        inexactBound |= !exact;
+        if (!finished && (gap(maximise).bound(lower) || provedByBound())) {
           gapReached();
         }
       }

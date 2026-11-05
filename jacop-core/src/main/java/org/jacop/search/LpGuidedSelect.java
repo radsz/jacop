@@ -33,6 +33,7 @@ package org.jacop.search;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.lp.LinearRelaxation;
+import org.jacop.constraints.lp.LpColumn;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 
@@ -84,7 +85,11 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     IntVar objective = lp.objective();
     for (int j = 0; j < lp.solutionColumns(); j++) {
       IntVar x = lp.column(j);
-      if (x == objective || x.singleton() || x.min() != 0 || x.max() != 1) {
+      if (x == objective
+          || x instanceof LpColumn
+          || x.singleton()
+          || x.min() != 0
+          || x.max() != 1) {
         continue;
       }
       double v = lp.solutionValue(j);

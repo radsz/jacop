@@ -1726,6 +1726,250 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
+116. Restarts under search annotations with --lcg (fixed search, the
+     default mode). Before, the annotation was followed down each branch
+     without restarts, so learnt clauses pruned but never reordered the
+     search. Now the solver restarts and its runs take turns between the
+     annotation, the SAT solver's own decisions on literals and activity
+     branching, keeping the learnt clauses; activity completes an
+     annotation that leaves variables unfixed. --free-config
+     fixed-restarts=turns|alternate|replay|off chooses (off is the old
+     behaviour), fixed-restarts-from=solution restarts only after a first
+     solution. Wide set (220, 60 s, default mode, interleaved with the
+     old build): 162 against 131 solved, score +163 (89 instances
+     better, 12 worse, no wrong answers), 11 of 12 families better.
+     Against OR-Tools CP-SAT 9.15 -p 1 -i (fixed search) the same set
+     goes from level (S = -2) to JaCoP ahead (S = -176).
+
+117. fzn-jacop ends by -t on its own on large models. The time-out was not
+     kept in five places: LCG search counted the whole -t from its own
+     start; free search took over from slow LCG free search even after the
+     time-out (and was set up for seconds on large models); free search
+     after LCG counted its limit from its first node, not from when the
+     time left was read; the model was read and scanned by the detectors
+     without looking at the clock; and -p answered 2 s after -t. New
+     FreeSearch.Builder.deadline(epochMillis). With the watchdog off, -f,
+     -t 60 s, on the 24 instances of the Challenge bench that overran:
+     19 ended after 62 s (up to 90.6 s, ma-path-finding 2022, rcpsp-wet-
+     diverse j90 83 s, nside HARD 77 s), now none (60.9 s at most). Wide
+     set (220, 60 s, -f): solved 151 to 153, 25 better / 23 worse; the two
+     solutions lost were luck on rerun. wide-quick in default mode: same
+     solved and solutions. -p 4 -t 20 s on flowshop-workers 8s_ex3 answered
+     at 32.3 s, now 20.2 s.
+
+118. LCG explanations of Member. A value removed from e is explained by
+     its removal from every list variable, a value removed from the last
+     candidate by its removal from e and the other list variables being
+     disjoint from e (their bounds when apart, else each value of the
+     narrower of the two removed from the other), a failure by every list
+     variable being disjoint from e. Before, every reason was generic.
+     handball19 (30 s): Member reasons 63 % generic with 11.2 atoms to
+     0 % with 6.3. Wide set (220, 60 s): --lcg 5 better / 5 worse, --lcg
+     -f 8 / 11, solved -1 under -f; the two instances using Member keep
+     their objectives in both modes.
+
+119. KnapsackDP keeps only the bounds of the capacity while LCG records the
+     changes. Each capacity it removed between the bounds (no item choice
+     reaches that weight with enough profit) was a != atom whose only
+     reason is every item. The item supports do not need these holes, as
+     they check reachability and the profit bounds themselves. mknap2-1
+     (30 s, --lcg): generic reasons 22 % to 0.2 %, 75 to 8.6 atoms per
+     reason, same nodes and time. Wide set (220, 60 s): --lcg 4 better / 3
+     worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
+     instance changes its result.
+
+120. The MIR cut rounds of LinearRelaxation at the root are linear in the
+     size of each row. Every model row was combined as a dense unit
+     multiplier over all rows and a coefficient array over all columns,
+     and MirCut walked every column, so a round cost rows x (rows +
+     columns). The combinations are now sparse and the cuts are the same.
+     nside EASY_200_50 with --lp sparse (57,504 rows): LP time 57.7 s to
+     4.1 s, same bound, cuts and nodes. Wide set (220, 60 s): cuts, root
+     and cut bounds identical on all 184 instances with an LP; solved 130
+     to 131 (default) and 152 to 156 (-f, timing).
+
+121. fzn-jacop prints the objective's bound (-s, objectiveBound) whenever
+     it improves during the search, not only at the root and at LCG
+     restarts: under LCG at every return to the root (backjumps too, so
+     fixed search, which has no restarts, gets rising bounds), in
+     depth-first search without LCG at each node whose subtree is all
+     that is left (DepthFirstSearch.setLastSubtreeListener), and in free
+     search, also after LCG stopped as slow, at the root between runs,
+     where refuted objective probes and nogoods raise it
+     (FreeSearch.Builder.onBound). A search that proves its best solution
+     optimal prints it as the last bound, a portfolio too. Each bound line
+     comes with objectiveBoundTime, the wall-clock seconds since the JVM
+     started. No bound is printed when domains were narrowed to JaCoP's
+     integer range beyond the objective's worse side, since better
+     solutions may have been cut off. --gap stops on these bounds as well.
+     jp-encoding data1700 (-f, 60 s): bound 0 to 53273 against the
+     incumbent 58599, within 10 %. Wide set (220, 60 s): no bound past a
+     known optimum; the bound moves during the search on 105 optimisation
+     instances in default mode (none before) and on 144 under -f (116);
+     solved and objectives unchanged within noise.
+
+122. New constraint Routes(tails, heads, literals[, demands, capacity]):
+     the arcs at 1 form routes that leave node 0 (the depot) and come
+     back to it, each other node is visited once or skipped by its self
+     loop, and the demands on a route sum to at most the capacity. It
+     keeps the paths of fixed arcs incrementally, removes an arc that
+     would close a circuit without the depot or join two paths over the
+     capacity, and keeps the in and out degrees (setDegrees(false) leaves
+     them to other constraints). Every pruning and failure has an LCG
+     explanation. The FlatZinc front end can post it as a redundant
+     constraint on two-index arc models with Miller-Tucker-Zemlin load
+     rows (vrp), with -Dorg.jacop.fz.routes=true; it is off by default,
+     because on the 25 vrp instances of the Challenge (60 s) it leaves
+     the results level: default 12 better / 9 worse (objective geomean
+     0.999), -f 11 / 11 (1.006). No other Challenge instance has the
+     pattern.     
+
+123. LCG explanations of LexChain cite only the vectors and positions the
+     ordering depends on. The reason of a pruning or failure used to cite
+     every atom of every vector of the chain. Now the chain starts at the
+     nearest vectors that still force the entry (windows of changed vectors
+     around it, doubled until they suffice; vectors still at their root
+     domains are skipped), and positions after the shortest prefix that
+     still forces it (binary search) are left out. LexChain also prunes the
+     vectors in the direction its bounds moved, so a bound pushed up the
+     chain is explained by its neighbour instead of the far end. Cutstock
+     (XCSP3 2025, 15 instances, 60 s): 5 to 10 solved. Wordpress12
+     Offers500: 5,768 to 96 atoms per reason (--lcg -f); --lcg proves the optimum
+     in 8 s instead of 19 s. Wide set (220, 60 s, osolpro #231 scoring):
+     --lcg S = +32; --lcg -f S = -22, all outside LexChain except
+     wordpress, where LCG is now fast enough that it no longer gives way to
+     search without learning at 6 s, which proves it in 3 s (9 s to 50 s;
+     with lcg-slow-rate=0 LCG proves it in 31 s instead of failing to in 60 s).
+     
+124. Under LCG, Regular (and the other layered-graph constraints explained
+     by paths, ExtensionalSupportMdd) is encoded as clauses before the
+     search and removed from the store: a literal per node and per arc
+     of the layered graph (an arc groups the edges between two nodes and
+     reuses a node literal when it is the only arc in or out), arcs imply
+     their nodes and values, nodes imply a leaving and an entering arc,
+     values imply an arc of their layer. Unit propagation then keeps the
+     domains consistent and every pruning has a short clause reason,
+     instead of the path explanations of LayeredGraphExplanation that
+     took 80 % of pentominoes' time. jacop.lcg.graphClauses=false turns
+     it off; it is skipped under --proof. 122 Challenge instances with
+     regular (60 s, every solution checked): default 13 more solved, 0
+     fewer, -f 7 / 2; pentominoes 05 and 07 5-20x faster, 04 solved.
+     Wide set (220, 60 s): the 10 instances with regular are better or
+     equal in both modes (rotating-workforce Example1242 solved in the
+     default mode); solved 132 -> 134 default, 154 -> 152 -f, where the
+     -f changes are all on instances without regular.
+     pattern.     
+
+125. LCG objective shaving (fzn-jacop -f, --free-config lcg-shave=on, now
+     the default). The lower-bound runs that alternate with branch and
+     bound assumed obj <= lb and raised the bound by 1 per proof. They now
+     try obj <= lb + step - 1: the step doubles after each proof (the run
+     goes on within its conflicts) and halves after a run that ran out of
+     conflicts, as the non-LCG free search does since #294. A solution
+     found under the assumption ends the run as before; a proof that
+     comes after a solution at or below the target is optimality. New
+     option lcg-lb-growth=<factor> (default 1) lets the share of the
+     lower-bound runs grow after rounds without a better solution; 2 cost
+     branch and bound too much on the wide set and stays off. New
+     statistics lcgLowerBoundRuns and lcgLowerBoundRaised. On the 68
+     instances where CP-SAT proves a 10 % gap and JaCoP -f did not (60 s):
+     bound within 10 % of the incumbent on 6 instead of 2, median gap
+     0.41 to 0.29 (graph-clear 0.75 to 0.20, depot-placement 0.88 to
+     0.24, train.12 0.12 to 0.05). Wide set (220, 60 s, -f): 26 better /
+     16 worse, solved 150 to 151, score +5, Borda +9; fixed search is
+     unchanged (the options apply under -f only).
+
+126. The FlatZinc front end merges element constraints over constant
+     arrays that share one index variable into one table (HybridTable),
+     the index as the last column. MiniZinc flattens a row lookup
+     x[j] = t[row, j] into one element per column; each element only
+     sees the index, so under LCG a removed value of x[j] was explained
+     by one row != i atom per dead row (crosswords grid-05.04: learnt
+     clauses of 2,551 literals on average, 45 with the table).
+     TableExplanation now reads != atoms and bounds from the trail
+     directly (AtomicTrail.notEqualEntry, boundEntry) instead of walking
+     a column's entries. -Dorg.jacop.fz.elementTable=false turns the
+     merge off; it is off with --proof. 28 of the 220 wide set instances
+     have such groups. Wide set (220, 60 s): fixed search 16 better / 17
+     worse, 5 / 1 on the 28 with groups (cgt -6534 to -30996, crosswords
+     65 to 68, stable-goods 6368 to 5900, pillars-and-planks 23 to 12 s,
+     wordpress 38 to 25 s); -f 24 / 26, 5 / 5 on the 28, solved +1, where
+     repeated seeds put tppv, crosswords and diameterc-mst in the noise.
+
+127. The LP relaxation encodes the variables of all-different-except
+     constraints (alldifferent_except_0, alldifferent_except) by values
+     over LP-only columns: x = sum v x_v, sum x_v <= 1 per variable and
+     per value, and b = sum x_v for each reified or implied comparison
+     of x with a constant. The columns are not store variables: every
+     deduced inequality removes them at the bound that keeps it valid,
+     so LCG reasons stay over model variables. Encodings of 100 rows and
+     more use the sparse simplex and are never dropped in search.
+     -Dorg.jacop.lp.valueColumns=false turns this off (domain cap
+     valueColumnsDomain 128, valueColumnsMax 20,000 columns); stat
+     lpValueColumns. concert-hall-cap (9 instances, 60 s): the root bound
+     is the optimum on 8; proofs 2 -> 8 under -f and 0 -> 6 in default
+     mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
+     concert-hall-cap changes its LP) and 126 -> 128 in default mode.
+
+128. Set search and set builtins, checked by a new brute-force test
+     (SetBuiltinsFuzzTest, setfuzz.trials) on random FlatZinc models of
+     all set builtins and jacop_* set globals, against enumeration of
+     their MiniZinc meaning, with plain search, LCG, free search and
+     presolve. Fixes:
+     - set_search with outdomain_min or outdomain_max decided the element
+       into the set first, as indomain_min, with a warning. It now leaves
+       the smallest (largest) undecided element out of the set first, as
+       Gecode's SET_VAL_MIN_EXC (SET_VAL_MAX_EXC), with plain search and
+       under LCG (new OutdomainSetSelect; choice SetElementChoice).
+     - array_var_set_element with an array literal of set variables, such
+       as [a, b], failed with "var_set_element with list of set variables
+       is not available".
+     - jacop_link_set_to_booleans with a Boolean variable repeated in b
+       failed (ChannelBoolSet rejects repeated variables); the repeated
+       one now gets an equal copy.
+     - set_search with smallest (largest) chose the set with the smallest
+       glb (largest lub) cardinality. It now chooses the set with the
+       smallest (largest) undecided element, as Gecode's
+       SET_VAR_MIN_MIN (SET_VAR_MAX_MAX). most_constrained, which used the
+       smallest glb cardinality, now chooses the fewest undecided elements
+       with ties broken by the most constraints, as MiniZinc defines it
+       (Gecode ignores it on sets). hakank_ramsey_partition, which uses
+       smallest, finds the same 18 solutions in a new order.
+     indomain_min and indomain_max keep the include-first order of Gecode
+     (SET_VAL_MIN_INC, SET_VAL_MAX_INC). OR-Tools CP-SAT reads indomain_min
+     on sets as exclude-first (the smallest value of the element Booleans).
+
+129. Under --lcg -f the core-guided phase no longer depends on the clock.
+     Its probe, the branch and bound before it, the phase itself, its
+     extensions, its "no solution of its own" stop, the lower bound's
+     rate stops and the at-most-one probes took shares of the wall-clock
+     time left, so the cores found differed between runs of one build
+     (wide-quick, 60 s: core counts differed on 18 of 33 instances
+     between two runs). They now take shares of the solver's work
+     (CdclSolver.work: propagated literals plus 3 per constraint
+     consistency call; CdclSolver.setWorkLimit stops the search at a
+     conflict or decision), counted against -t at 2,000 per millisecond
+     (LcgSolver.setTimeLimit; without -t, --free-config
+     lcg-core-time=60000). A phase is still cut by the clock at 1.5x
+     its share of the time left, which only happens where the work is
+     much slower than the nominal rate (stat lcgCoreClockStops).
+     -Djacop.lcg.workPerMs, workPerCall and clockSlack change the
+     constants. wide-quick, two paired rounds: core counts differ on 6
+     of 32 (all clock-capped). Wide set (220, 60 s, -f): solved 150 ->
+     152, 33 better / 25 worse, 7 of 12 families better and 4 worse.
+
+130. A parallel portfolio (-p) ends as soon as a thread proves a bound at
+     the cost of the best solution, which it prints as optimal. Before,
+     the threads' bounds stopped the portfolio only with --gap, so a
+     proved optimum waited until one thread completed its own search.
+     LCG also passes on the bounds that its lower-bound runs and the
+     cores of the core-guided phase raise, not only those at the root.
+     A bound under relax and reconstruct or on_restart still stops the
+     search at --gap, but proves nothing. Wide set (220, -f -p 4, 60 s,
+     two interleaved rounds): solved 173 to 173 and 174 to 171, 20 / 7
+     and 12 / 20 better / worse, within the noise of two runs of the
+     same build.
+
 Version 4.11
 =============
 

@@ -95,6 +95,7 @@ import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
@@ -104,6 +105,8 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -874,6 +877,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xx = distinctCopies(x, seen);
     IntVar vv = distinctCopies(new IntVar[] {v}, seen)[0];
 
+    if (zeroOneCount(x, s.contains(0), s.contains(1), v)) {
+      return;
+    }
+
     IntervalDomain setImpl = new IntervalDomain();
     for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements(); ) {
       int val = e.nextElement();
@@ -882,6 +889,48 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.pose(new Among(xx, setImpl, vv));
+  }
+
+  /**
+   * Counts over 0/1 variables as a sum: n = sum(x) when the ones are counted, n = |x| - sum(x) when
+   * the zeros are. Among and Count propagate the same bounds, but the linear relaxation reads only
+   * linear constraints, and the counts are the rows of set partitioning and covering models (XCSP3
+   * BusScheduling: among(x, {1}) = 1 over 3,829 Booleans, minimize sum(x)), where the root LP is
+   * what proves the optimum. Lists with a variable twice, or with the count among them, keep the
+   * counting propagators.
+   *
+   * @param x the variables
+   * @param zero whether value 0 is counted
+   * @param one whether value 1 is counted
+   * @param n the count
+   * @return false, posting nothing, when some variable is not 0/1
+   */
+  private boolean zeroOneCount(IntVar[] x, boolean zero, boolean one, IntVar n) {
+    if (x.length < 2 || "false".equalsIgnoreCase(System.getProperty("org.jacop.fz.zeroOneCount"))) {
+      return false;
+    }
+    Set<IntVar> distinct = new HashSet<>();
+    for (IntVar xi : x) {
+      if (xi.min() < 0 || xi.max() > 1 || xi == n || !distinct.add(xi)) {
+        return false;
+      }
+    }
+    if (zero == one) {
+      int c = zero ? x.length : 0;
+      n.domain.inValue(store.level, n, c);
+      return true;
+    }
+    if (one) {
+      support.pose(new SumBool(x, "==", n));
+    } else {
+      // the zeros: sum(x) + n = |x|
+      IntVar[] vars = Arrays.copyOf(x, x.length + 1);
+      vars[x.length] = n;
+      int[] w = new int[vars.length];
+      Arrays.fill(w, 1);
+      support.pose(new LinearInt(vars, w, "==", x.length));
+    }
+    return true;
   }
 
   void gen_jacop_gcc(SimpleNode node) {
@@ -1208,6 +1257,10 @@ class GlobalConstraints implements ParserTreeConstants {
       for (IntVar v : x) {
         v.domain.inValue(store.level, v, y);
       }
+      return;
+    }
+
+    if ((y == 0 || y == 1) && zeroOneCount(x, y == 0, y == 1, c)) {
       return;
     }
 
@@ -2872,6 +2925,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
+    if (optionalAsUse()) {
+      // a task uses its resource when present: the cumulative over these uses explains its
+      // pruning under lazy clause generation
+      IntVar[] use = new IntVar[res.length];
+      for (int i = 0; i < res.length; i++) {
+        use[i] = presentUse(res[i], opt[i]);
+      }
+      cumulativeTasks.add(taskKey(str, dur, use));
+      poseCumulative(str, dur, use, b);
+      return;
+    }
     CumulativeOptional c = configureCumulative(new CumulativeOptional(str, dur, res, b, opt));
     String p = System.getProperty("fz_cumulative_optional_overload");
     if (p != null) {
@@ -2900,6 +2964,12 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
     IntVar one = support.dictionary.getConstant(1);
+    if (optionalAsUse()) {
+      // a task's presence is its use of the unary resource: CumulativeUnary explains its pruning
+      // under lazy clause generation and makes absent the tasks that fit nowhere
+      poseCumulative(str, dur, opt, one);
+      return;
+    }
     IntVar[] ones = createFilledArray(one, str.length);
 
     CumulativeUnaryOptional c = new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true);
@@ -2907,6 +2977,37 @@ class GlobalConstraints implements ParserTreeConstants {
     c.doOptionalOverload(
         Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
+  }
+
+  // the use of a task with resource r and presence o: r when present, 0 otherwise
+  private IntVar presentUse(IntVar r, IntVar o) {
+    if (o.min() == 1 || r.singleton(0)) {
+      return r;
+    }
+    if (o.max() == 0) {
+      return support.dictionary.getConstant(0);
+    }
+    if (r.singleton()) {
+      int c = r.value();
+      IntVar use = new IntVar(support.store, 0, 0);
+      use.addDom(c, c);
+      support.pose(new XmulCeqZ(o, c, use));
+      return use;
+    }
+    IntVar use = new IntVar(support.store, Math.min(0, r.min()), Math.max(0, r.max()));
+    support.pose(new XmulYeqZ(r, o, use));
+    return use;
+  }
+
+  /**
+   * Whether optional tasks on a unary resource are posted with their presences as resource uses,
+   * from the system property {@code org.jacop.fz.optionalAsUse}: {@code lcg} (the default) under
+   * lazy clause generation only, {@code true} always, {@code false} never
+   * (CumulativeUnaryOptional).
+   */
+  private boolean optionalAsUse() {
+    String mode = System.getProperty("org.jacop.fz.optionalAsUse", "lcg").toLowerCase();
+    return "true".equals(mode) || ("lcg".equals(mode) && support.options.lcg());
   }
 
   void gen_jacop_disjunctive_setup(SimpleNode node) {

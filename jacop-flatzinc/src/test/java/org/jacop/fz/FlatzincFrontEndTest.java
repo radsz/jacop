@@ -33,6 +33,7 @@ package org.jacop.fz;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -57,6 +58,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.Support;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -1068,6 +1072,149 @@ class FlatzincFrontEndTest {
     assertTrue(opt.timeOutPassed());
     assertEquals(1, opt.getRemainingTimeOut());
     assertEquals(0, new Options(new String[] {"-s", "model.fzn"}).getRemainingTimeOut());
+  }
+
+  @Test
+  void lcgSearchStopsAtTheTimeOutOfTheRun() throws IOException, ParseException {
+    // LCG's deadline was the whole -t counted from the start of LCG search, so a run whose model
+    // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
+    // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
+    // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
+    // s.
+    Random r = new Random(1);
+    int n = 400;
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var bool: x").append(i).append(";\n");
+    }
+    for (int c = 0; c < 1720; c++) {
+      StringJoiner pos = new StringJoiner(",");
+      StringJoiner neg = new StringJoiner(",");
+      Set<Integer> vars = new TreeSet<>();
+      while (vars.size() < 3) {
+        vars.add(r.nextInt(n));
+      }
+      for (int v : vars) {
+        (r.nextBoolean() ? pos : neg).add("x" + v);
+      }
+      model.append("constraint bool_clause([%s],[%s]);\n".formatted(pos, neg));
+    }
+    model.append("solve satisfy;\n");
+    Path fzn = tmp.resolve("sat3.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    // reading the model took 6 s of the 8 s
+    Options opt = new Options(new String[] {"--lcg", "-f", "-t", "8000", fzn.toString()});
+    opt.startedEarlier(6000);
+    long start = System.nanoTime();
+    String out = runInThisJvm(opt, fzn);
+    long millis = (System.nanoTime() - start) / 1_000_000;
+    assertTrue(out.contains("=====UNKNOWN====="), out);
+    assertTrue(millis < 5000, "the run took " + millis + " ms with 2 s left");
+  }
+
+  @Test
+  void portfolioAnswersByTheTimeOutOfTheRun() {
+    Options opt = new Options(new String[] {"-p", "4", "-t", "8000", "model.fzn"});
+    opt.startedEarlier(6000);
+    long now = System.currentTimeMillis();
+    long at = Portfolio.timeOutAt(opt, now);
+    assertTrue(at > now && at <= now + 2000, "time-out in " + (at - now) + " ms");
+    assertEquals(0, Portfolio.timeOutAt(new Options(new String[] {"-p", "4", "model.fzn"}), now));
+  }
+
+  @Test
+  void freeSearchDoesNotTakeOverFromLcgAtTheEndOfTheTimeOut() throws IOException, ParseException {
+    // free search without learning took over from slow LCG free search even after the time-out:
+    // the check was that some time was left, which always held. nside MEDIUM_1000_100 gave way
+    // 0.5 s before -t 20 s and ended 2.9 s after it, setting up free search on 169,000 variables
+    StringBuilder model = new StringBuilder();
+    model.append("array[1..10] of var 1..10: x :: output_array([1..10]);\n");
+    model.append("var 0..1000: o :: output_var;\n");
+    for (int i = 1; i <= 10; i++) {
+      for (int j = i + 1; j <= 10; j++) {
+        model.append("constraint int_ne(x[%d],x[%d]);\n".formatted(i, j));
+      }
+    }
+    model.append(
+        "constraint int_lin_eq([1,2,3,4,5,6,7,8,9,10,-1],[x[1],x[2],x[3],x[4],x[5],x[6],x[7],"
+            + "x[8],x[9],x[10],o],0);\nsolve minimize o;\n");
+    Path fzn = tmp.resolve("late.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    String[] args = {
+      "--lcg", "-f", "-debug", "--free-config", "lcg-slow-at=0", "-t", "20000", fzn.toString()
+    };
+    // lcg-slow-at=0 gives way at once, after LCG's root propagation
+    assertTrue(runInThisJvm(new Options(args), fzn).contains("free search without learning"));
+    // with 5 % of the time-out left it is too late
+    Options late = new Options(args);
+    late.startedEarlier(19_000);
+    String out = runInThisJvm(late, fzn);
+    assertFalse(out.contains("free search without learning"), out);
+  }
+
+  @Test
+  void readingTheModelStopsAtTheTimeOut() throws IOException, ParseException {
+    // the time-out was checked only while the constraints were posted, after the whole file was
+    // read: rcpsp-wet-diverse j90_48_4 (470 MB) read for a minute and ended 18 s after -t 60 s
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < 3000; i++) {
+      model.append("var 0..9: x").append(i).append(";\n");
+    }
+    model.append("constraint int_le(x0, x1);\nsolve satisfy;\n");
+    Path fzn = tmp.resolve("long.fzn");
+    Files.writeString(fzn, model.toString(), StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "1000", fzn.toString()});
+    opt.startedEarlier(2000);
+    try (java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      assertThrows(ModelTimeOut.class, parser::model);
+      assertTrue(parser.getStore().size() < 10, parser.getStore().size() + " variables read");
+    }
+  }
+
+  @Test
+  void modelDetectorsStopAtTheTimeOut() throws IOException, ParseException {
+    // the detectors scan every constraint of the model before any is posted, without looking at
+    // the clock: on rcpsp-wet-diverse j90_48_4 the scans alone took 10 s past the time-out
+    Path fzn = tmp.resolve("detect.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x;\nvar 0..9: y;\nconstraint int_le(x, y);\nsolve satisfy;\n",
+        StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "60000", fzn.toString()});
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      SimpleNode tree = (SimpleNode) parser.jjtree.rootNode();
+      opt.startedEarlier(120_000);
+      Support support = parser.cc.support;
+      assertThrows(ModelTimeOut.class, () -> new PartialCopyDetector(support).detect(tree));
+      assertThrows(ModelTimeOut.class, () -> new AlldifferentDetector(support).detect(tree));
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  // the output of a run of the model with the given options, in this JVM (no watchdog)
+  private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+    } finally {
+      System.setOut(originalOut);
+    }
+    return out.toString(StandardCharsets.UTF_8);
   }
 
   @Test
@@ -2529,6 +2676,63 @@ class FlatzincFrontEndTest {
     String out = run(model, "--lcg")[0];
     assertTrue(out.contains("--lcg ignored"), out);
     assertTrue(out.contains("x = 2;"), out);
+  }
+
+  @Test
+  void lcgAskedForBuildsFloatModelsAsWithoutIt() throws IOException {
+    // --lcg turned the Boolean constraints into clauses and then solved the float model by search,
+    // so it was a different model from the one solved without --lcg: 2 propagators instead of 3
+    String model =
+        """
+        var 0.0..2.0: f:: output_var;
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var bool: c:: output_var;
+        constraint bool_xor(a,b,true);
+        constraint bool_clause([a,c],[b]);
+        constraint float_lin_le([1.0],[f],1.5);
+        solve maximize f;
+        """;
+    String lcg = System.clearProperty("jacop.lcg");
+    try {
+      String with = run(model, "--lcg", "-s", "--precision", "0.5")[0];
+      String without = run(model, "--lcg", "off", "-s", "--precision", "0.5")[0];
+      assertTrue(with.contains("%% --lcg ignored: the model has float variables"), with);
+      for (String stat : new String[] {"propagators=", "nodes=", "propagations="}) {
+        assertEquals(statLine(without, stat), statLine(with, stat), with);
+      }
+    } finally {
+      restoreProperty("jacop.lcg", lcg);
+    }
+  }
+
+  @Test
+  void freeSearchKeepsThePrecisionOfFloatSearch() throws IOException {
+    // golden_search: -f dropped the annotation's precision 0.001, so each better solution was a
+    // few ulps better than the last; after 15 s it was at z = -17.08, far from the optimum -1
+    String model =
+        """
+        array [1..3] of float: c = [1.0,-1.0,1.0];
+        var -1.0..3.0: x:: output_var;
+        var float: z:: output_var:: is_defined_var;
+        var float: e ::var_is_introduced ;
+        constraint float_exp(x,e);
+        constraint float_lin_eq(c,[z,x,e],0.0):: defines_var(z);
+        solve :: float_search([x],0.001,input_order,indomain_split,complete) maximize z;
+        """;
+    String out =
+        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(model, "-f", "-t", "15000")[0]);
+    assertTrue(out.contains("=========="), out);
+    Matcher m = Pattern.compile("(?m)^z = (\\S+);").matcher(out);
+    double z = Double.NaN;
+    while (m.find()) {
+      z = Double.parseDouble(m.group(1));
+    }
+    assertEquals(-1.0, z, 0.01, out);
+  }
+
+  private static String statLine(String out, String stat) {
+    return out.lines().filter(l -> l.contains("mzn-stat: " + stat)).findFirst().orElse(null);
   }
 
   @Test

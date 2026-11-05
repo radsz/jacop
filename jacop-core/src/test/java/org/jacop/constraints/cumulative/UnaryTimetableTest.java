@@ -208,7 +208,13 @@ class UnaryTimetableTest {
     for (int trial = 0; trial < 5 * TRIALS; trial++) {
       Instance inst = instance(random, trial % 2 == 0 ? 8 : 40);
       String sweep = profileOnce(inst, true);
-      assertThat(profileOnce(inst, false)).as("%s", inst).isEqualTo(sweep);
+      // the sweep has no presence rule for tasks that may use nothing
+      boolean fit = UnaryTimetable.setPresenceFit(false);
+      try {
+        assertThat(profileOnce(inst, false)).as("%s", inst).isEqualTo(sweep);
+      } finally {
+        UnaryTimetable.setPresenceFit(fit);
+      }
       if (sweep == null) {
         failures++;
       } else if (!sweep.equals(profileUnpruned(inst))) {

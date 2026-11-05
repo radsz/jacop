@@ -93,6 +93,52 @@ class MirCutTest {
     assertThat(made).isGreaterThan(1000);
   }
 
+  @Test
+  void sparseRowGivesTheCutOfTheCompactRow() {
+    Random rnd = new Random(5);
+    int wide = 1 << 20;
+    double[] value = new double[wide];
+    long[] lo = new long[wide];
+    long[] hi = new long[wide];
+    int made = 0;
+    for (int run = 0; run < 2000; run++) {
+      int n = 2 + rnd.nextInt(4);
+      long[] c = new long[n];
+      long[] clo = new long[n];
+      long[] chi = new long[n];
+      double[] cvalue = new double[n];
+      int[] columns = new int[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(41) - 20L;
+        clo[j] = rnd.nextInt(7) - 3L;
+        chi[j] = clo[j] + rnd.nextInt(5);
+        cvalue[j] = clo[j] + rnd.nextDouble() * ((double) chi[j] - clo[j]);
+        // ascending, spread over the wide range of columns
+        columns[j] = j * (wide / n) + rnd.nextInt(wide / n);
+        lo[columns[j]] = clo[j];
+        hi[columns[j]] = chi[j];
+        value[columns[j]] = cvalue[j];
+      }
+      long b = rnd.nextInt(61) - 30L;
+      MirCut compact = MirCut.of(c, b, cvalue, clo, chi);
+      MirCut sparse = MirCut.of(columns, c, b, value, lo, hi);
+      if (compact == null) {
+        assertThat(sparse).as("run %d", run).isNull();
+        continue;
+      }
+      made++;
+      assertThat(sparse).as("run %d", run).isNotNull();
+      int[] mapped = new int[compact.columns.length];
+      for (int k = 0; k < mapped.length; k++) {
+        mapped[k] = columns[compact.columns[k]];
+      }
+      assertThat(sparse.columns).as("run %d", run).containsExactly(mapped);
+      assertThat(sparse.weights).as("run %d", run).containsExactly(compact.weights);
+      assertThat(sparse.rhs).as("run %d", run).isEqualTo(compact.rhs);
+    }
+    assertThat(made).isGreaterThan(100);
+  }
+
   // the next point of the box in lexicographic order, or null
   private static long[] next(long[] p, long[] lo, long[] hi) {
     for (int j = 0; j < p.length; j++) {
