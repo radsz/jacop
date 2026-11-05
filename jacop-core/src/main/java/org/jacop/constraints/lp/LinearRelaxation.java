@@ -1469,22 +1469,30 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
-   * The combination {@code sum lambda_i a_i x} of the rows, by column, with its two sides: {@code
-   * <= upper} when every row has the side its multiplier needs, and {@code >= lower} likewise.
+   * The combination {@code sum lambda_i a_i x} of the rows, sparse (the columns ascending with
+   * their nonzero weights), with its two sides: {@code <= upper} when every row has the side its
+   * multiplier needs, and {@code >= lower} likewise.
    */
   private static final class Aggregate {
+    private final int[] columns;
     private final long[] coef;
     private final long upper;
     private final boolean hasUpper;
     private final long lower;
     private final boolean hasLower;
 
-    Aggregate(long[] coef, long upper, boolean hasUpper, long lower, boolean hasLower) {
+    Aggregate(
+        int[] columns, long[] coef, long upper, boolean hasUpper, long lower, boolean hasLower) {
+      this.columns = columns;
       this.coef = coef;
       this.upper = upper;
       this.hasUpper = hasUpper;
       this.lower = lower;
       this.hasLower = hasLower;
+    }
+
+    int[] columns() {
+      return columns;
     }
 
     long[] coef() {
@@ -1540,7 +1548,37 @@ public class LinearRelaxation extends Constraint
     } catch (ArithmeticException overflow) {
       return null;
     }
-    return new Aggregate(coef, upper, hasUpper, lower, hasLower);
+    int size = 0;
+    for (long c : coef) {
+      size += c != 0 ? 1 : 0;
+    }
+    int[] columns = new int[size];
+    long[] weights = new long[size];
+    for (int j = 0, k = 0; j < coef.length; j++) {
+      if (coef[j] != 0) {
+        columns[k] = j;
+        weights[k++] = coef[j];
+      }
+    }
+    return new Aggregate(columns, weights, upper, hasUpper, lower, hasLower);
+  }
+
+  // row i alone (lambda the unit vector of i), in time linear in the length of the row
+  private Aggregate rowAggregate(int i) {
+    int[] cs = rowColumns[i];
+    long[] ws = rowWeights[i];
+    Integer[] order = new Integer[cs.length];
+    for (int k = 0; k < cs.length; k++) {
+      order[k] = k;
+    }
+    Arrays.sort(order, Comparator.comparingInt(k -> cs[k]));
+    int[] columns = new int[cs.length];
+    long[] weights = new long[cs.length];
+    for (int k = 0; k < cs.length; k++) {
+      columns[k] = cs[order[k]];
+      weights[k] = ws[order[k]];
+    }
+    return new Aggregate(columns, weights, rowHi[i], hasHi[i], rowLo[i], hasLo[i]);
   }
 
   /**
@@ -1548,23 +1586,17 @@ public class LinearRelaxation extends Constraint
    * (one of them may be null when a row lacks the side it needs).
    */
   private LinearForm[] combine(Aggregate g) {
-    long[] coef = g.coef();
-    int size = 0;
-    for (long c : coef) {
-      size += c != 0 ? 1 : 0;
-    }
+    int[] columns = g.columns();
+    int size = columns.length;
     if (size == 0) {
       return new LinearForm[0];
     }
     IntVar[] vars = new IntVar[size];
-    long[] w = new long[size];
+    long[] w = g.coef().clone();
     long[] neg = new long[size];
-    for (int j = 0, k = 0; j < coef.length; j++) {
-      if (coef[j] != 0) {
-        vars[k] = x[j];
-        w[k] = coef[j];
-        neg[k++] = -coef[j];
-      }
+    for (int k = 0; k < size; k++) {
+      vars[k] = x[columns[k]];
+      neg[k] = -w[k];
     }
     return new LinearForm[] {
       g.hasUpper() ? new LinearForm(vars, w, g.upper(), LinearForm.LE) : null,
@@ -1592,6 +1624,11 @@ public class LinearRelaxation extends Constraint
       hi[j] = x[j].max();
     }
     int original = rows();
+    // the rows themselves, sorted once: each round then costs their length, not rows x columns
+    Aggregate[] unitRows = new Aggregate[original];
+    for (int i = 0; i < original; i++) {
+      unitRows[i] = rowAggregate(i);
+    }
     Set<List<Long>> seen = new HashSet<>();
     int status = DualSimplex.OPTIMAL;
     double[] value = new double[n];
@@ -1615,11 +1652,8 @@ public class LinearRelaxation extends Constraint
           mir(aggregate(lambda), value, lo, hi, found);
         }
       }
-      long[] unit = new long[rows()];
       for (int i = 0; i < original; i++) {
-        unit[i] = 1;
-        mir(aggregate(unit), value, lo, hi, found);
-        unit[i] = 0;
+        mir(unitRows[i], value, lo, hi, found);
       }
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
       List<MirCut> chosen = new ArrayList<>();
@@ -1703,20 +1737,23 @@ public class LinearRelaxation extends Constraint
       return;
     }
     if (g.hasUpper()) {
-      MirCut c = MirCut.of(g.coef(), g.upper(), value, lo, hi);
+      MirCut c = MirCut.of(g.columns(), g.coef(), g.upper(), value, lo, hi);
       if (c != null) {
         found.add(c);
       }
     }
     if (g.hasLower()) {
+      if (g.lower() == Long.MIN_VALUE) {
+        return;
+      }
       long[] neg = new long[g.coef().length];
-      for (int j = 0; j < neg.length; j++) {
-        if (g.coef()[j] == Long.MIN_VALUE || g.lower() == Long.MIN_VALUE) {
+      for (int k = 0; k < neg.length; k++) {
+        if (g.coef()[k] == Long.MIN_VALUE) {
           return;
         }
-        neg[j] = -g.coef()[j];
+        neg[k] = -g.coef()[k];
       }
-      MirCut c = MirCut.of(neg, -g.lower(), value, lo, hi);
+      MirCut c = MirCut.of(g.columns(), neg, -g.lower(), value, lo, hi);
       if (c != null) {
         found.add(c);
       }

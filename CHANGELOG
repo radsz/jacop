@@ -1726,6 +1726,104 @@ Version 5.0 (unreleased)
      6 better / 4 worse, --lcg -f 10 / 11, solved unchanged; the one
      instance using AllEqual keeps its objective in both modes.
 
+116. Restarts under search annotations with --lcg (fixed search, the
+     default mode). Before, the annotation was followed down each branch
+     without restarts, so learnt clauses pruned but never reordered the
+     search. Now the solver restarts and its runs take turns between the
+     annotation, the SAT solver's own decisions on literals and activity
+     branching, keeping the learnt clauses; activity completes an
+     annotation that leaves variables unfixed. --free-config
+     fixed-restarts=turns|alternate|replay|off chooses (off is the old
+     behaviour), fixed-restarts-from=solution restarts only after a first
+     solution. Wide set (220, 60 s, default mode, interleaved with the
+     old build): 162 against 131 solved, score +163 (89 instances
+     better, 12 worse, no wrong answers), 11 of 12 families better.
+     Against OR-Tools CP-SAT 9.15 -p 1 -i (fixed search) the same set
+     goes from level (S = -2) to JaCoP ahead (S = -176).
+
+117. fzn-jacop ends by -t on its own on large models. The time-out was not
+     kept in five places: LCG search counted the whole -t from its own
+     start; free search took over from slow LCG free search even after the
+     time-out (and was set up for seconds on large models); free search
+     after LCG counted its limit from its first node, not from when the
+     time left was read; the model was read and scanned by the detectors
+     without looking at the clock; and -p answered 2 s after -t. New
+     FreeSearch.Builder.deadline(epochMillis). With the watchdog off, -f,
+     -t 60 s, on the 24 instances of the Challenge bench that overran:
+     19 ended after 62 s (up to 90.6 s, ma-path-finding 2022, rcpsp-wet-
+     diverse j90 83 s, nside HARD 77 s), now none (60.9 s at most). Wide
+     set (220, 60 s, -f): solved 151 to 153, 25 better / 23 worse; the two
+     solutions lost were luck on rerun. wide-quick in default mode: same
+     solved and solutions. -p 4 -t 20 s on flowshop-workers 8s_ex3 answered
+     at 32.3 s, now 20.2 s.
+
+118. LCG explanations of Member. A value removed from e is explained by
+     its removal from every list variable, a value removed from the last
+     candidate by its removal from e and the other list variables being
+     disjoint from e (their bounds when apart, else each value of the
+     narrower of the two removed from the other), a failure by every list
+     variable being disjoint from e. Before, every reason was generic.
+     handball19 (30 s): Member reasons 63 % generic with 11.2 atoms to
+     0 % with 6.3. Wide set (220, 60 s): --lcg 5 better / 5 worse, --lcg
+     -f 8 / 11, solved -1 under -f; the two instances using Member keep
+     their objectives in both modes.
+
+119. KnapsackDP keeps only the bounds of the capacity while LCG records the
+     changes. Each capacity it removed between the bounds (no item choice
+     reaches that weight with enough profit) was a != atom whose only
+     reason is every item. The item supports do not need these holes, as
+     they check reachability and the profit bounds themselves. mknap2-1
+     (30 s, --lcg): generic reasons 22 % to 0.2 %, 75 to 8.6 atoms per
+     reason, same nodes and time. Wide set (220, 60 s): --lcg 4 better / 3
+     worse, --lcg -f 8 / 15, solved -1 under -f; neither multi-knapsack
+     instance changes its result.
+
+120. The MIR cut rounds of LinearRelaxation at the root are linear in the
+     size of each row. Every model row was combined as a dense unit
+     multiplier over all rows and a coefficient array over all columns,
+     and MirCut walked every column, so a round cost rows x (rows +
+     columns). The combinations are now sparse and the cuts are the same.
+     nside EASY_200_50 with --lp sparse (57,504 rows): LP time 57.7 s to
+     4.1 s, same bound, cuts and nodes. Wide set (220, 60 s): cuts, root
+     and cut bounds identical on all 184 instances with an LP; solved 130
+     to 131 (default) and 152 to 156 (-f, timing).
+
+121. fzn-jacop prints the objective's bound (-s, objectiveBound) whenever
+     it improves during the search, not only at the root and at LCG
+     restarts: under LCG at every return to the root (backjumps too, so
+     fixed search, which has no restarts, gets rising bounds), in
+     depth-first search without LCG at each node whose subtree is all
+     that is left (DepthFirstSearch.setLastSubtreeListener), and in free
+     search, also after LCG stopped as slow, at the root between runs,
+     where refuted objective probes and nogoods raise it
+     (FreeSearch.Builder.onBound). A search that proves its best solution
+     optimal prints it as the last bound, a portfolio too. Each bound line
+     comes with objectiveBoundTime, the wall-clock seconds since the JVM
+     started. No bound is printed when domains were narrowed to JaCoP's
+     integer range beyond the objective's worse side, since better
+     solutions may have been cut off. --gap stops on these bounds as well.
+     jp-encoding data1700 (-f, 60 s): bound 0 to 53273 against the
+     incumbent 58599, within 10 %. Wide set (220, 60 s): no bound past a
+     known optimum; the bound moves during the search on 105 optimisation
+     instances in default mode (none before) and on 144 under -f (116);
+     solved and objectives unchanged within noise.
+
+122. New constraint Routes(tails, heads, literals[, demands, capacity]):
+     the arcs at 1 form routes that leave node 0 (the depot) and come
+     back to it, each other node is visited once or skipped by its self
+     loop, and the demands on a route sum to at most the capacity. It
+     keeps the paths of fixed arcs incrementally, removes an arc that
+     would close a circuit without the depot or join two paths over the
+     capacity, and keeps the in and out degrees (setDegrees(false) leaves
+     them to other constraints). Every pruning and failure has an LCG
+     explanation. The FlatZinc front end can post it as a redundant
+     constraint on two-index arc models with Miller-Tucker-Zemlin load
+     rows (vrp), with -Dorg.jacop.fz.routes=true; it is off by default,
+     because on the 25 vrp instances of the Challenge (60 s) it leaves
+     the results level: default 12 better / 9 worse (objective geomean
+     0.999), -f 11 / 11 (1.006). No other Challenge instance has the
+     pattern.
+     
 Version 4.11
 =============
 
