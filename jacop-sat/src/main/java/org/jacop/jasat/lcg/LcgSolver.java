@@ -3077,7 +3077,7 @@ public final class LcgSolver implements ExternalPropagator {
           }
 
           @Override
-          public int equal(IntVar x, int v) {
+          public int valueLiteral(IntVar x, int v) {
             return eqVar(trail.id(x), v);
           }
 

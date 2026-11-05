@@ -57,7 +57,7 @@ public interface ClauseModel {
    * @param v a value of its domain
    * @return the literal
    */
-  int equal(IntVar x, int v);
+  int valueLiteral(IntVar x, int v);
 
   /**
    * Adds a clause, which the solver may not keep in this array.

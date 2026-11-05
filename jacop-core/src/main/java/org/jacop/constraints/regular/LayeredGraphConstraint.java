@@ -687,7 +687,7 @@ public abstract class LayeredGraphConstraint extends Constraint
         emit(add(add(0, -arc[a]), node[arcTarget[a]]));
         size = add(0, -arc[a]);
         for (int v : arcValues[a]) {
-          size = add(size, equal(arcLevel[a], v));
+          size = add(size, valueLiteral(arcLevel[a], v));
         }
         emit(size);
       }
@@ -735,7 +735,7 @@ public abstract class LayeredGraphConstraint extends Constraint
           while (end < m && labelled[end][0] == v) {
             end++;
           }
-          size = add(0, -equal(level, v));
+          size = add(0, -valueLiteral(level, v));
           for (int k = i; k < end; k++) {
             size = add(size, arc[labelled[k][2]]);
           }
@@ -747,7 +747,7 @@ public abstract class LayeredGraphConstraint extends Constraint
               j++;
             }
             if (leaving[source].length > 1) {
-              size = add(add(0, -node[source]), -equal(level, v));
+              size = add(add(0, -node[source]), -valueLiteral(level, v));
               for (int r = k; r < j; r++) {
                 size = add(size, arc[labelled[r][2]]);
               }
@@ -793,9 +793,9 @@ public abstract class LayeredGraphConstraint extends Constraint
       return adj;
     }
 
-    private int equal(int level, int v) {
+    private int valueLiteral(int level, int v) {
       IntVar x = list[level];
-      return x.singleton() ? TRUE : model.equal(x, v);
+      return x.singleton() ? TRUE : model.valueLiteral(x, v);
     }
 
     /** Appends a literal to the clause being built and returns its new size. */
