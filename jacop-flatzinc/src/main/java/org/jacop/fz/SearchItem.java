@@ -88,11 +88,11 @@ import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.IndomainSetMin;
 import org.jacop.set.search.IndomainSetRandom;
+import org.jacop.set.search.LargestUnknownElement;
 import org.jacop.set.search.MaxCardDiff;
-import org.jacop.set.search.MaxLubCard;
 import org.jacop.set.search.MinCardDiff;
-import org.jacop.set.search.MinGlbCard;
 import org.jacop.set.search.OutdomainSetSelect;
+import org.jacop.set.search.SmallestUnknownElement;
 
 /**
  * The part of the parser responsible for parsing search part of the flatzinc specification.
@@ -987,7 +987,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case FIRST_FAIL -> new ComparatorsVar<>(new MinCardDiff<>());
-        case SMALLEST -> new ComparatorsVar<>(new MinGlbCard<>());
+        // the smallest and largest undecided element, as Gecode's SET_VAR_MIN_MIN and
+        // SET_VAR_MAX_MAX
+        case SMALLEST -> new ComparatorsVar<>(new SmallestUnknownElement<>());
         case OCCURRENCE -> new ComparatorsVar<>(new MostConstrainedStatic<>());
         case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new MaxCardDiff<>());
         case DOM_W_DEG -> new ComparatorsVar<>(new WeightedDegree<>(store));
@@ -1017,9 +1019,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         case ACTIVITY_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMinDeg<>(store));
+        // the fewest undecided elements, ties to the most constraints
         case MOST_CONSTRAINED ->
-            new ComparatorsVar<>(new MinGlbCard<>(), new MostConstrainedStatic<>());
-        case LARGEST -> new ComparatorsVar<>(new MaxLubCard<>());
+            new ComparatorsVar<>(new MinCardDiff<>(), new MostConstrainedStatic<>());
+        case LARGEST -> new ComparatorsVar<>(new LargestUnknownElement<>());
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(
