@@ -233,7 +233,7 @@ public class Options {
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
                 default 0), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
-                propagation, objective, constraints, scheduling, routing, packing; default all),
+                propagation, objective, constraints, scheduling, packing; default all),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)

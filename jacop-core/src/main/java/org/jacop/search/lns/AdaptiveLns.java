@@ -37,7 +37,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import org.jacop.api.Successors;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -67,8 +66,6 @@ import org.jacop.lcg.LinearForm;
  *       random constraints neighbourhood);
  *   <li>{@link Kind#SCHEDULING}: the tasks of the cumulative and unary resources that start in a
  *       window of time of the best solution, the window placed at random;
- *   <li>{@link Kind#ROUTING}: segments of the routes of the best solution in circuits and
- *       subcircuits, with the arcs into them;
  *   <li>{@link Kind#PACKING}: the rectangles of a non-overlap constraint placed nearest to one
  *       chosen at random in the best solution (CP-SAT's packing neighbourhoods).
  * </ul>
@@ -104,8 +101,6 @@ public final class AdaptiveLns {
     CONSTRAINTS,
     /** The tasks that start in a window of time. */
     SCHEDULING,
-    /** Segments of routes. */
-    ROUTING,
     /** Rectangles near each other. */
     PACKING
   }
@@ -165,11 +160,8 @@ public final class AdaptiveLns {
   private int[] termValues = new int[0];
   private int[] termMin = new int[0];
   private int[] termMax = new int[0];
-  // the tasks of the resources (nodes of their start, duration and resource) and the routes (nodes
-  // of the successor of each node, and the value pointing to the first)
+  // the tasks of the resources (nodes of their start, duration and resource)
   private int[][] tasks = new int[0][];
-  private int[][] routes = new int[0][];
-  private int[] routeOffsets = new int[0];
   // the rectangles of non-overlap constraints, as nodes of x, y, width and height (-1 - value for a
   // constant), one array per constraint
   private int[][][] packings = new int[0][][];
@@ -289,7 +281,6 @@ public final class AdaptiveLns {
           case OBJECTIVE -> graphRelax(relaxed, true);
           case CONSTRAINTS -> constraintsRelax(relaxed);
           case SCHEDULING -> schedulingRelax(relaxed);
-          case ROUTING -> routingRelax(relaxed);
           case PACKING -> packingRelax(relaxed);
           case PROPAGATION -> null;
         };
@@ -412,7 +403,6 @@ public final class AdaptiveLns {
       case OBJECTIVE -> terms.length > 0;
       case CONSTRAINTS -> conVars.length > 0;
       case SCHEDULING -> tasks.length > 1;
-      case ROUTING -> routes.length > 0;
       case PACKING -> packings.length > 0;
       default -> true;
     };
@@ -420,7 +410,7 @@ public final class AdaptiveLns {
 
   /**
    * Returns whether a kind of neighbourhood can be used: it is not turned off and the model has
-   * what it needs (a linear objective, constraints, resources or routes).
+   * what it needs (a linear objective, constraints, resources or rectangles).
    *
    * @param kind the kind.
    * @return true when {@link #neighbourhood()} may choose it.
@@ -551,49 +541,6 @@ public final class AdaptiveLns {
   }
 
   /**
-   * Relaxes segments of the routes of the best solution: from a node chosen at random, the
-   * successors of the nodes along its route and of the node before it, until enough decision
-   * variables are relaxed. Each segment has a random length up to the number still to relax.
-   */
-  private boolean[] routingRelax(int relaxed) {
-    boolean[] relax = new boolean[vars.length];
-    int total = 0;
-    for (int[] r : routes) {
-      total += r.length;
-    }
-    int count = 0;
-    for (int tries = 0; count < relaxed && tries < 4 * total; tries++) {
-      int pick = random.nextInt(total);
-      int r = 0;
-      while (pick >= routes[r].length) {
-        pick -= routes[r].length;
-        r++;
-      }
-      int[] succ = routes[r];
-      int offset = routeOffsets[r];
-      int n = succ.length;
-      // the node before the segment, so that the arc into it can change
-      for (int j = 0; j < n; j++) {
-        if (successor(succ, j, offset) == pick && j != pick) {
-          count += succ[j] >= 0 ? relaxNode(succ[j], relax) : 0;
-          break;
-        }
-      }
-      int length = 1 + random.nextInt(Math.max(1, Math.min(n, relaxed - count)));
-      int node = pick;
-      for (int step = 0; step < length && count < relaxed; step++) {
-        count += succ[node] >= 0 ? relaxNode(succ[node], relax) : 0;
-        int next = successor(succ, node, offset);
-        if (next < 0 || next >= n || next == node || next == pick) {
-          break;
-        }
-        node = next;
-      }
-    }
-    return relax;
-  }
-
-  /**
    * Relaxes the rectangles of a non-overlap constraint nearest, in the best solution, to one chosen
    * at random, nearest first, until enough decision variables are relaxed.
    */
@@ -626,11 +573,6 @@ public final class AdaptiveLns {
   /** The value of a node in the best solution, or the constant coded as -1 - value. */
   private int valueOf(int u) {
     return u >= 0 ? nodeValue[u] : -1 - u;
-  }
-
-  /** The node after node j of a route in the best solution, counted from 0. */
-  private int successor(int[] succ, int j, int offset) {
-    return succ[j] >= 0 ? nodeValue[succ[j]] - offset : -1 - succ[j];
   }
 
   /** The numbers 0 to n - 1 in random order. */
@@ -926,8 +868,6 @@ public final class AdaptiveLns {
     }
     List<int[]> taskList = new ArrayList<>();
     Map<Var, Boolean> taskStarts = new IdentityHashMap<>();
-    List<int[]> routeList = new ArrayList<>();
-    List<Integer> offsetList = new ArrayList<>();
     List<int[][]> packingList = new ArrayList<>();
     for (IntVar x : nodes) {
       for (Constraint c : x.constraintsWithWatches()) {
@@ -935,7 +875,7 @@ public final class AdaptiveLns {
           continue;
         }
         conOf.put(c, -1);
-        readStructure(c, nodeOf, taskList, taskStarts, routeList, offsetList);
+        readStructure(c, nodeOf, taskList, taskStarts);
         if (c instanceof Nooverlap packing) {
           readPacking(packing, nodeOf, packingList);
         }
@@ -966,21 +906,12 @@ public final class AdaptiveLns {
     }
     conVars = conList.toArray(new int[0][]);
     tasks = taskList.toArray(new int[0][]);
-    routes = routeList.toArray(new int[0][]);
-    routeOffsets = offsetList.stream().mapToInt(Integer::intValue).toArray();
     packings = packingList.toArray(new int[0][][]);
     nodeValue = new int[nodes.length];
     near = new int[nodes.length][];
     java.util.BitSet w = new java.util.BitSet(nodes.length);
     for (int[] t : tasks) {
       w.set(t[0]);
-    }
-    for (int[] r : routes) {
-      for (int u : r) {
-        if (u >= 0) {
-          w.set(u);
-        }
-      }
     }
     for (int[][] p : packings) {
       for (int[] r : p) {
@@ -1002,15 +933,10 @@ public final class AdaptiveLns {
 
   /**
    * Records the tasks of a cumulative or unary resource (each start once, as nodes of its start,
-   * duration and resource use, -1 for a constant) and the successors of a circuit or subcircuit.
+   * duration and resource use, -1 for a constant).
    */
   private static void readStructure(
-      Constraint c,
-      Map<Var, Integer> nodeOf,
-      List<int[]> taskList,
-      Map<Var, Boolean> taskStarts,
-      List<int[]> routeList,
-      List<Integer> offsetList) {
+      Constraint c, Map<Var, Integer> nodeOf, List<int[]> taskList, Map<Var, Boolean> taskStarts) {
     if (c instanceof CumulativeBasic resource) {
       IntVar[][] t = resource.tasks();
       for (int i = 0; i < t[0].length; i++) {
@@ -1020,22 +946,6 @@ public final class AdaptiveLns {
         }
         taskList.add(new int[] {start, nodeOrNone(nodeOf, t[1][i]), nodeOrNone(nodeOf, t[2][i])});
       }
-    } else if (c instanceof Successors circuit) {
-      IntVar[] succ = circuit.successors();
-      // the node of each successor, or -1 - its value when it is fixed and not a node
-      int[] route = new int[succ.length];
-      for (int i = 0; i < succ.length; i++) {
-        Integer node = succ[i].singleton() ? null : nodeOf.get(succ[i]);
-        if (node != null) {
-          route[i] = node;
-        } else if (succ[i].singleton() && succ[i].value() - circuit.successorOffset() >= 0) {
-          route[i] = -1 - (succ[i].value() - circuit.successorOffset());
-        } else {
-          return;
-        }
-      }
-      routeList.add(route);
-      offsetList.add(circuit.successorOffset());
     }
   }
 

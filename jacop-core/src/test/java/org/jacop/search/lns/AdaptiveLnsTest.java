@@ -39,7 +39,6 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.Set;
 import org.jacop.constraints.Alldifferent;
-import org.jacop.constraints.Circuit;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
@@ -117,7 +116,7 @@ class AdaptiveLnsTest {
     assertTrue(lns.usable(AdaptiveLns.Kind.OBJECTIVE));
     assertTrue(lns.usable(AdaptiveLns.Kind.CONSTRAINTS));
     assertFalse(lns.usable(AdaptiveLns.Kind.SCHEDULING));
-    assertFalse(lns.usable(AdaptiveLns.Kind.ROUTING));
+    assertFalse(lns.usable(AdaptiveLns.Kind.PACKING));
     for (AdaptiveLns.Kind kind : AdaptiveLns.Kind.values()) {
       assertEquals(
           lns.usable(kind),
@@ -155,59 +154,6 @@ class AdaptiveLnsTest {
       free[i] = false;
     }
     return free;
-  }
-
-  @Test
-  void routingRelaxesSegmentsOfTheRoute() {
-    // a circuit over 10 nodes; the decision variables are the successors
-    Store s = new Store();
-    int n = 10;
-    IntVar[] succ = new IntVar[n];
-    for (int i = 0; i < n; i++) {
-      succ[i] = new IntVar(s, "s" + i, 1, n);
-    }
-    s.impose(new Circuit(succ));
-    IntVar c = new IntVar(s, "c", 0, 1000);
-    AdaptiveLns lns = new AdaptiveLns(s, succ, c, new Random(3));
-    assertTrue(lns.usable(AdaptiveLns.Kind.ROUTING));
-    assertFalse(lns.usable(AdaptiveLns.Kind.SCHEDULING));
-    // the route 1 -> 3 -> 5 -> 7 -> 9 -> 2 -> 4 -> 6 -> 8 -> 10 -> 1 (nodes numbered from 1)
-    int[] order = {0, 2, 4, 6, 8, 1, 3, 5, 7, 9};
-    int[] next = new int[n];
-    for (int k = 0; k < n; k++) {
-      next[order[k]] = order[(k + 1) % n];
-    }
-    s.setLevel(s.level + 1);
-    for (int i = 0; i < n; i++) {
-      succ[i].domain.inValue(s.level, succ[i], next[i] + 1);
-    }
-    assertTrue(s.consistency());
-    lns.solution();
-    s.removeLevel(s.level);
-    s.setLevel(s.level - 1);
-    for (int k = 0; k < 50; k++) {
-      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.ROUTING), n);
-      // the relaxed nodes come in segments of the route: at most one relaxed node (the arc into
-      // the last segment, when the count is reached) has no relaxed node before or after it
-      int isolated = 0;
-      int count = 0;
-      for (int i = 0; i < n; i++) {
-        if (free[i]) {
-          count++;
-          int before = 0;
-          while (next[before] != i) {
-            before++;
-          }
-          if (!free[before] && !free[next[i]]) {
-            isolated++;
-          }
-        }
-      }
-      assertTrue(count >= 2);
-      assertTrue(isolated <= 1, java.util.Arrays.toString(free));
-      lns.outcome(AdaptiveLns.Outcome.LIMIT);
-    }
-    assertTrue(lns.statistics().contains("ROUTING 50/0"), lns.statistics());
   }
 
   @Test
