@@ -117,6 +117,9 @@ public class LinearRelaxation extends Constraint
   // variable of the store, and whether there is any
   private final boolean[] lpOnly;
   private final boolean anyLpOnly;
+  // whether the relaxation holds the all-different-except encodings over auxiliary columns, which
+  // are the relaxation itself and are never dropped (the other encodings are extra rows like any)
+  private boolean keepEncodings;
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -682,6 +685,7 @@ public class LinearRelaxation extends Constraint
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
+    r.keepEncodings = exempt > 0;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -1201,7 +1205,7 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = Math.max(1, lp.pivotWork());
-    if (beforeExtra != null && bySize && !anyLpOnly) {
+    if (beforeExtra != null && bySize && !keepEncodings) {
       // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense
       // tableau they would make, as before the choice: a sparse work unit takes two to four times
       // a dense entry, and the sparse limit alone keeps rows that slow every solve (slnb7x7)
@@ -1248,7 +1252,7 @@ public class LinearRelaxation extends Constraint
       // the value encodings over auxiliary columns are the relaxation: without them it is the
       // model's few linear rows, so they stay, and the back-off of the solves bounds their cost
       if (beforeExtra != null
-          && !anyLpOnly
+          && !keepEncodings
           && extraHits >= EXTRA_LIMITS
           && extraHits * 20 > calls
           && calls >= 20L * EXTRA_LIMITS) {
@@ -2300,6 +2304,7 @@ public class LinearRelaxation extends Constraint
             copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
+    c.keepEncodings = keepEncodings;
     return c;
   }
 
