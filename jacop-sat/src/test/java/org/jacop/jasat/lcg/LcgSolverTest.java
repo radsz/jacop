@@ -4273,6 +4273,56 @@ class LcgSolverTest {
   }
 
   @Test
+  void coreScheduleUnderATimeLimitRepeats() {
+    // under a time limit the probe, branch and bound and core-guided phases took shares of the
+    // clock, so the cores found differed between runs (10 against 35 on the same instance); they
+    // now take shares of the solver's work, and two runs take the same path
+    long[] first = null;
+    for (int run = 0; run < 3; run++) {
+      Random rnd = new Random(7);
+      Store store = new Store();
+      int n = 24;
+      IntVar[] x = new IntVar[n];
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 6);
+        w[i] = 1 + rnd.nextInt(9);
+      }
+      for (int c = 0; c < 12; c++) {
+        IntVar[] vs = new IntVar[5];
+        int[] ws = new int[5];
+        for (int k = 0; k < 5; k++) {
+          vs[k] = x[rnd.nextInt(n)];
+          ws[k] = 1 + rnd.nextInt(4);
+        }
+        store.impose(new LinearInt(vs, ws, ">=", 6 + rnd.nextInt(10)));
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 10_000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(terms, w, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setCoreSearch(0.5, 100_000, 5_000);
+      solver.setTimeLimit(100); // 100 ms of work at the nominal rate
+      // a deadline far away: only the work ends the phases
+      solver.sat().setDeadline(System.nanoTime() + 3_600_000_000_000L);
+      int status = solver.minimize(cost);
+      assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+      long[] trace = {
+        solver.coreSearch().cores, solver.sat().conflicts, solver.value(cost), solver.clockStops
+      };
+      if (first == null) {
+        first = trace;
+      } else {
+        assertThat(trace).containsExactly(first);
+      }
+    }
+    assertThat(first[0]).isPositive();
+    assertThat(first[3]).isZero();
+  }
+
+  @Test
   void atMostOneGroupKeepsTheNextLevelsOfIntegerTerms() {
     // x0 = 0 forces x1 >= 4 and x1 = 0 forces x0 >= 4, so [x0 >= 1] and [x1 >= 1] form a group;
     // the levels above 1 must still cost their weight, or a solution with every soft literal false

@@ -33,6 +33,7 @@ package org.jacop.jasat.cdcl;
 
 import java.util.Arrays;
 import java.util.SplittableRandom;
+import java.util.function.LongSupplier;
 
 /**
  * A CDCL SAT solver built on flat arrays.
@@ -297,6 +298,9 @@ public final class CdclSolver {
   // set when propagateAll stopped at the deadline before reaching a fixpoint
   private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
+  // the work (see work()) at which solve stops, and the work of the external propagator
+  private long workLimit = Long.MAX_VALUE;
+  private LongSupplier externalWork = () -> 0;
   private long conflictLimit = Long.MAX_VALUE;
   private ProofOutput proof;
   // the root facts at the start of the trail that the proof has as units of their own
@@ -664,6 +668,45 @@ public final class CdclSolver {
    */
   public long deadline() {
     return deadline;
+  }
+
+  /**
+   * Limits the work of {@link #solve}, a measure of the search that does not depend on the clock:
+   * the propagated literals plus the external propagator's work (see {@link #setExternalWork}). It
+   * is checked at conflicts and decisions, so a search stops at the same point in every run.
+   *
+   * @param limit the work at which {@link #solve} returns {@link #UNKNOWN}, or {@link
+   *     Long#MAX_VALUE} for none
+   */
+  public void setWorkLimit(long limit) {
+    workLimit = limit;
+  }
+
+  /**
+   * Returns the limit of the work.
+   *
+   * @return the work at which {@link #solve} returns {@link #UNKNOWN}
+   */
+  public long workLimit() {
+    return workLimit;
+  }
+
+  /**
+   * Sets the external propagator's share of {@link #work}.
+   *
+   * @param work its work so far, which never decreases
+   */
+  public void setExternalWork(LongSupplier work) {
+    externalWork = work;
+  }
+
+  /**
+   * Returns the work so far: the propagated literals plus the external propagator's work.
+   *
+   * @return the work so far
+   */
+  public long work() {
+    return propagations + externalWork.getAsLong();
   }
 
   /**
@@ -2438,7 +2481,10 @@ public final class CdclSolver {
         if (!stable && varDecay < 0.95 && conflicts % 5000 == 0) {
           varDecay += 0.01;
         }
-        if (conflicts >= conflictLimit || interrupted || System.nanoTime() > deadline) {
+        if (conflicts >= conflictLimit
+            || interrupted
+            || System.nanoTime() > deadline
+            || workLimit != Long.MAX_VALUE && work() >= workLimit) {
           return UNKNOWN;
         }
         continue;
@@ -2510,6 +2556,9 @@ public final class CdclSolver {
       // under an external propagator one decision can take milliseconds: read the clock on each
       if (((++decisions & 1023) == 0 || external != null)
           && (interrupted || System.nanoTime() > deadline)) {
+        return UNKNOWN;
+      }
+      if (workLimit != Long.MAX_VALUE && work() >= workLimit) {
         return UNKNOWN;
       }
       newSearchLevel();

@@ -2134,6 +2134,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the time-out covers the whole run: reading and setting up the model took part of it
       lcg.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
+    // the core-guided phase and the branch and bound before it take shares of the limit as work,
+    // not as time, so that a run repeats whatever the load of the machine; without -t, shares of a
+    // minute's work, as with -t 60000
+    lcg.setTimeLimit(
+        options.getTimeOut() > 0
+            ? options.getTimeOut()
+            : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (slowCheck != null) {
@@ -2545,6 +2552,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.amoBound
         + "\n%%%mzn-stat: lcgCoreNoSolutionStops="
         + core.noSolutionStops
+        + "\n%%%mzn-stat: lcgCoreClockStops="
+        + lcg.clockStops
+        + "\n%%%mzn-stat: lcgWork="
+        + lcg.sat().work()
+        + "\n%%%mzn-stat: lcgSatPropagations="
+        + lcg.sat().propagations
+        + "\n%%%mzn-stat: lcgConsistencyCalls="
+        + store.numberConsistencyCalls
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
