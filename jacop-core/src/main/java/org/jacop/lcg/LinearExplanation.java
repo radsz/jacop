@@ -277,6 +277,37 @@ public final class LinearExplanation {
       boolean lessOrEqual,
       boolean greaterOrEqual,
       EntryList out) {
+    return explainFailure(trail, vars, weights, c, lessOrEqual, greaterOrEqual, false, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of {@code sum w[i] * x[i] = c} that a propagator
+   * reaching domain consistency detected: as {@link #explainFailure}, and when no variable has an
+   * empty window, the bounds of all variables and the removals inside every window. Only a caller
+   * that knows the domains admit no solution of the equality may use it.
+   *
+   * @param trail the trail
+   * @param vars the variables
+   * @param weights their weights
+   * @param c the right-hand side
+   * @param out where the reason entries are added
+   * @return false when a window needs more than 4096 atoms, a variable occurs twice, or a sum
+   *     overflows a {@code long}
+   */
+  public static boolean explainDomainFailure(
+      AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
+    return explainFailure(trail, vars, weights, c, true, true, true, out);
+  }
+
+  private static boolean explainFailure(
+      AtomicTrail trail,
+      IntVar[] vars,
+      long[] weights,
+      long c,
+      boolean lessOrEqual,
+      boolean greaterOrEqual,
+      boolean allWindows,
+      EntryList out) {
     int now = trail.size();
     long smallest = 0;
     long largest = 0;
@@ -301,7 +332,9 @@ public final class LinearExplanation {
     } else if (greaterOrEqual && largest < c) {
       upperSide = false;
     } else {
-      return lessOrEqual && greaterOrEqual && explainHoleFailure(trail, vars, weights, c, out);
+      return lessOrEqual
+          && greaterOrEqual
+          && explainHoleFailure(trail, vars, weights, c, allWindows, out);
     }
     addLiftedBounds(trail, now, vars, weights, -1, null, upperSide, slack, out);
     return true;
@@ -311,12 +344,13 @@ public final class LinearExplanation {
    * Adds the reason of a failure of an equality whose bounds violate neither side: one variable has
    * no value left between the bounds the others give it, so the reason is the removal of those
    * values and the others' bounds on both sides, lifted to what still keeps that window. The
-   * variable with the narrowest window is tried first. When no window is empty, the reason is the
-   * bounds of all variables and the removals inside every window. False when a window needs more
-   * than 4096 atoms, or a variable occurs more than once.
+   * variable with the narrowest window is tried first. When no window is empty and {@code
+   * allWindows} is set (the caller knows the domains admit no solution), the reason is the bounds
+   * of all variables and the removals inside every window. False otherwise, when a window needs
+   * more than 4096 atoms, or a variable occurs more than once.
    */
   private static boolean explainHoleFailure(
-      AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
+      AtomicTrail trail, IntVar[] vars, long[] weights, long c, boolean allWindows, EntryList out) {
     int now = trail.size();
     int n = vars.length;
     long[] keys = new long[n];
@@ -400,6 +434,9 @@ public final class LinearExplanation {
         return false;
       }
       return true;
+    }
+    if (!allWindows) {
+      return false;
     }
     // no single window is empty, but the values left in the windows admit no sum c: the reason is
     // every bound and every removal inside every window, since no value outside its window can be

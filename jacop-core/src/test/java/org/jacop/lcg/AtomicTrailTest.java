@@ -1501,7 +1501,7 @@ class AtomicTrailTest {
    * x + y = 5 with x and y in {1, 3}: each variable has a value in the window the other leaves it
    * (2..4), but no two values sum to 5. LinearIntDom fails there; the failure is explained by the
    * bounds and the removal of 2 from both, and every solution of x + y = 5 over 0..5 breaks one of
-   * the cited atoms.
+   * the cited atoms. A caller that does not know the domains fail (Knapsack) gets no reason.
    */
   @Test
   void linearFailureWithEveryWindowLeftIsExplained() {
@@ -1515,10 +1515,13 @@ class AtomicTrailTest {
       v.domain.inComplement(store.level, v, 2);
     }
     EntryList out = new EntryList();
-    assertThat(
-            LinearExplanation.explainFailure(
-                trail, new IntVar[] {x, y}, new long[] {1, 1}, 5, true, true, out))
-        .isTrue();
+    IntVar[] vars = {x, y};
+    long[] weights = {1, 1};
+    // without knowing that the domains fail, the windows are no reason
+    assertThat(LinearExplanation.explainFailure(trail, vars, weights, 5, true, true, out))
+        .isFalse();
+    assertThat(out.size()).isZero();
+    assertThat(LinearExplanation.explainDomainFailure(trail, vars, weights, 5, out)).isTrue();
     for (int a = 0; a <= 5; a++) {
       boolean broken = false;
       for (int k = 0; k < out.size(); k++) {
