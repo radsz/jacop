@@ -49,8 +49,13 @@ class JalpSimplexTest {
 
   private static final Offset<Double> CLOSE = Offset.offset(1e-5);
 
-  // JaLP over dense rows
-  private static LpSolver jalp(double[][] a, double[] rowLo, double[] rowHi, double[] cost) {
+  // the sparse simplex under test, JaLP here
+  LpSolver make(int[][] c, double[][] w, double[] rowLo, double[] rowHi, double[] cost) {
+    return new JalpSimplex(c, w, rowLo, rowHi, cost);
+  }
+
+  // the sparse simplex over dense rows
+  private LpSolver jalp(double[][] a, double[] rowLo, double[] rowHi, double[] cost) {
     int n = cost.length;
     int[][] c = new int[a.length][];
     double[][] w = new double[a.length][];
@@ -67,7 +72,7 @@ class JalpSimplexTest {
       c[i] = Arrays.copyOf(c[i], k);
       w[i] = Arrays.copyOf(w[i], k);
     }
-    return new JalpSimplex(c, w, rowLo, rowHi, cost);
+    return make(c, w, rowLo, rowHi, cost);
   }
 
   // a random LP: rows a with sides, costs, column bounds

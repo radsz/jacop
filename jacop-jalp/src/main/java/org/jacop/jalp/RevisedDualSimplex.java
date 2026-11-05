@@ -356,7 +356,10 @@ public final class RevisedDualSimplex {
     clearSkipped();
     factorValid = false;
     betaValid = false;
-    weightsFrom = 0;
+    // the steepest-edge weights start at 1, as for a slack basis: their exact values would take a
+    // BTRAN per row, which on a large LP costs more than the solves that follow
+    Arrays.fill(weight, 0, m, 1);
+    weightsFrom = m;
     infeasibleRow = -1;
   }
 

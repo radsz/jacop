@@ -40,7 +40,10 @@ package org.jacop.constraints.lp;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class HandoffSimplex implements LpSolver {
+class HandoffSimplex implements LpSolver {
+
+  // the most pivots JaLP may take to settle on the basis it got from HiGHS
+  private static final int HANDOFF_PIVOTS = 100_000;
 
   private HighsSimplex highs;
   private LpSolver lp;
@@ -68,6 +71,10 @@ final class HandoffSimplex implements LpSolver {
       highsWork = highs.work();
       lp = new JalpSimplex(highs.toJalp());
       highs = null;
+      // JaLP factorizes the basis of HiGHS and computes its solution now, so that the values,
+      // duals and rows of the inverse it answers with are those of the root; from an optimal
+      // basis this takes no pivot, or a few to repair the round-off of a basis from another code
+      lp.solve(HANDOFF_PIVOTS);
     }
     return this;
   }

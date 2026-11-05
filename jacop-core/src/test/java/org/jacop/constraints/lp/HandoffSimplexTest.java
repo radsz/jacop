@@ -1,0 +1,67 @@
+/*
+ * HighsSimplexTest.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.lp;
+
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import org.jacop.jalp.HighsLp;
+import org.junit.jupiter.api.BeforeAll;
+
+/**
+ * The tests of {@link JalpSimplexTest} on {@link HandoffSimplex}, handed from HiGHS to JaLP after
+ * its first solve, as the relaxation does after its root: the warm-started re-solves, added and
+ * removed rows and copies all run on JaLP from the basis of HiGHS. Skipped when the HiGHS library
+ * is not available ({@code JACOP_HIGHS}).
+ */
+class HandoffSimplexTest extends JalpSimplexTest {
+
+  @BeforeAll
+  static void library() {
+    assumeTrue(HighsLp.available(), "HiGHS library not available: " + HighsLp.loadError());
+  }
+
+  @Override
+  LpSolver make(int[][] c, double[][] w, double[] rowLo, double[] rowHi, double[] cost) {
+    return new HandoffSimplex(c, w, rowLo, rowHi, cost) {
+      private boolean first = true;
+
+      @Override
+      public int solve(int limit) {
+        int status = super.solve(limit);
+        if (first) {
+          first = false;
+          afterRoot();
+        }
+        return status;
+      }
+    };
+  }
+}
