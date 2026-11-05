@@ -136,7 +136,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
    */
   public void detect(SimpleNode astTree) {
     long start = System.nanoTime();
-    Support.forEachConstraint(astTree, this::collect);
+    support.forEachConstraint(astTree, this::collect);
     if (nodes.size() < MIN_CLIQUE_SIZE) {
       return;
     }

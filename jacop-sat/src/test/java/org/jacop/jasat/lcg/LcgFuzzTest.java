@@ -106,6 +106,7 @@ import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
@@ -443,7 +444,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(21)) {
+      return switch (rnd.nextInt(22)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -500,8 +501,40 @@ class LcgFuzzTest {
                 rnd.nextBoolean(),
                 1,
                 rnd.nextBoolean() ? null : pick(b, 3));
+        case 20 -> routes();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // routes from depot 0 over two or three other nodes, two arcs on the shared Booleans (few
+    // fresh literals, so the reference search stays small)
+    private Routes routes() {
+      int n = 3 + rnd.nextInt(2);
+      List<int[]> arcs = new ArrayList<>();
+      for (int t = 0; t < n; t++) {
+        for (int h = 0; h < n; h++) {
+          if (t != h ? rnd.nextInt(3) != 0 : t != 0 && rnd.nextInt(4) == 0) {
+            arcs.add(new int[] {t, h});
+          }
+        }
+      }
+      int[] tails = new int[arcs.size()];
+      int[] heads = new int[arcs.size()];
+      IntVar[] literals = new IntVar[arcs.size()];
+      IntVar[] shared = pick(b, 2);
+      for (int k = 0; k < tails.length; k++) {
+        tails[k] = arcs.get(k)[0];
+        heads[k] = arcs.get(k)[1];
+        literals[k] = k < shared.length ? shared[k] : intVar("ra", 0, 1);
+      }
+      if (rnd.nextBoolean()) {
+        return new Routes(tails, heads, literals);
+      }
+      int[] demands = new int[n];
+      for (int v = 1; v < n; v++) {
+        demands[v] = rnd.nextInt(4);
+      }
+      return new Routes(tails, heads, literals, demands, 2 + rnd.nextInt(5));
     }
 
     // a flow of 0 to 2 units from node 0 to node 3 over five arcs, some on the variables
