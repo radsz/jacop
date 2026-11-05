@@ -54,6 +54,12 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
 
   private static final double EPSILON = 1e-6;
 
+  /**
+   * Following the root solution, the largest share of value columns it may set strictly between 0
+   * and 1: a root solution that is fractional on more of them does not point at a solution.
+   */
+  static final double ROOT_FRACTIONAL = 0.1;
+
   private final LinearRelaxation lp;
   private final SelectChoicePoint<? extends Var> fallback;
   private final boolean root;
@@ -81,7 +87,9 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
    * @param lp the linear relaxation
    * @param fallback the selection when the relaxation gives no decision, or null for none
    * @param root true to follow the relaxation's solution at the root (see {@link
-   *     LinearRelaxation#rootSolutionValue}) instead of its last solution
+   *     LinearRelaxation#rootSolutionValue}) instead of its last solution; it then gives no
+   *     decision unless it has open value columns (see {@link LpColumn}) and at most a tenth of
+   *     them are fractional
    */
   public LpGuidedSelect(
       LinearRelaxation lp, SelectChoicePoint<? extends Var> fallback, boolean root) {
@@ -100,6 +108,8 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     int oneValue = 1;
     IntVar objective = lp.objective();
     int n = root ? lp.rootSolutionColumns() : lp.solutionColumns();
+    int columns = 0;
+    int fractional = 0;
     for (int j = 0; j < n; j++) {
       IntVar x = lp.column(j);
       if (x == objective) {
@@ -118,7 +128,12 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
         continue;
       }
       double v = root ? lp.rootSolutionValue(j) : lp.solutionValue(j);
-      if (v > EPSILON && v < 1 - EPSILON) {
+      boolean isFractional = v > EPSILON && v < 1 - EPSILON;
+      if (x instanceof LpColumn) {
+        columns++;
+        fractional += isFractional ? 1 : 0;
+      }
+      if (isFractional) {
         double score = Math.abs(v - 0.5);
         if (score < bestScore && (v >= 0.5 || decided == x)) {
           bestScore = score;
@@ -129,6 +144,10 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
         one = decided;
         oneValue = at;
       }
+    }
+    if (root && (columns == 0 || fractional > ROOT_FRACTIONAL * columns)) {
+      best = null;
+      one = null;
     }
     if (best == null && one != null) {
       best = one;

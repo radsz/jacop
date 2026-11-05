@@ -2057,8 +2057,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
-    // it
-    // in 60 s
+    // it in 60 s
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null

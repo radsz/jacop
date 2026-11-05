@@ -852,6 +852,34 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Following the root solution, the selection decides only when the relaxation has value columns
+   * and its root solution is near integral on them: on 0/1 columns alone it gives no decision,
+   * where the last solution decides. Seat-moving 2021 sm-10-13-00, whose root solution had none of
+   * its value columns, took twice as long with activity runs started from its 0/1 columns.
+   */
+  @Test
+  void rootGuideNeedsValueColumns() {
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntVar z = new IntVar(store, "z", 0, 10);
+    store.impose(new LinearInt(b, new int[] {1, 1, 1}, "==", 1));
+    store.impose(
+        new LinearInt(new IntVar[] {b[0], b[1], b[2], z}, new int[] {2, 3, 5, -1}, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, z, false);
+    store.impose(r);
+    LpGuidedSelect last = new LpGuidedSelect(r, null);
+    LpGuidedSelect root = new LpGuidedSelect(r, null, true);
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.rootSolutionColumns()).isPositive();
+    assertThat(last.getChoiceVariable(0)).isSameAs(b[0]);
+    assertThat(last.getChoiceValue()).isEqualTo(1);
+    assertThat(root.getChoiceVariable(0)).isNull();
+  }
+
+  /**
    * Fixed search with restarts whose activity runs start from the relaxation's root solution keeps
    * the optimum of hall assignments, with the explanation checker on. Most of these models are
    * solved before the first activity run; the guide's decisions are checked on the selection above.
