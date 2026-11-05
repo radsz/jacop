@@ -2001,6 +2001,15 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+132. JaLP: the solve that moves the basic values after the bound flips of
+     the dual ratio test is hypersparse too. The flipped columns are
+     summed into a listed right-hand side, BasisLu.ftranFlips solves it
+     with a density history of its own, and only the rows of its result
+     change their values and are checked for the leaving row (before: a
+     dense solve, a pass over all rows and a rebuild of the rows outside
+     their bounds). The pivots are the same. LP bench (190 instances of
+     1 to 60 s, one job per engine): geometric mean 1.05x.
+
 Version 4.11
 =============
 
