@@ -115,6 +115,9 @@ public final class LexChainExplanation {
    */
   public static boolean explain(
       AtomicTrail trail, int entry, IntVar[][] x, boolean strict, int i, int j, EntryList out) {
+    if (i < 0 || i >= x.length || j < 0 || j >= x[i].length) {
+      return false;
+    }
     return new LexChainExplanation(trail, x, strict, entry)
         .explainValues(i, j, trail.removedMin(entry), trail.removedMax(entry), out);
   }
@@ -271,7 +274,8 @@ public final class LexChainExplanation {
     int to = i;
     for (long span = 1; lower || upper; span *= 2) {
       if (lower) {
-        for (int found = 0; from > 0 && found < span; ) {
+        int found = 0;
+        while (from > 0 && found < span) {
           from--;
           if (!read(from)) {
             out.truncate(mark);
@@ -289,7 +293,8 @@ public final class LexChainExplanation {
         lower = from > 0;
       }
       if (upper) {
-        for (int found = 0; to < m - 1 && found < span; ) {
+        int found = 0;
+        while (to < m - 1 && found < span) {
           to++;
           if (!read(to)) {
             out.truncate(mark);
