@@ -277,11 +277,11 @@ class LinearizationsTest {
         tables.add(new TableCliques.Table(new IntVar[] {x[i], x[j]}, tuples));
       }
       long before = count(x, tables, new int[n], 0);
-      TableCliques.Result r = TableCliques.rows(store, tables);
+      TableCliques.Result r = TableCliques.rows(tables);
       List<IntVar> scope = new ArrayList<>(List.of(x));
       for (LinearForm f : r.rows()) {
         for (IntVar v : f.vars()) {
-          if (!scope.contains(v)) {
+          if (!(v instanceof LpColumn) && !scope.contains(v)) {
             scope.add(v);
           }
         }
@@ -314,14 +314,20 @@ class LinearizationsTest {
             new TableCliques.Table(new IntVar[] {x, y}, tuples),
             new TableCliques.Table(new IntVar[] {y, z}, tuples),
             new TableCliques.Table(new IntVar[] {x, z}, tuples));
-    TableCliques.Result r = TableCliques.rows(store, tables);
-    // x = 0 has the model's Boolean; x = 1, y = 0, y = 1, z = 0 and z = 1 get new ones
-    assertThat(r.booleans()).isEqualTo(5);
-    assertThat(r.rows()).hasSize(1);
-    assertThat(r.rows().get(0).vars()).hasSize(3);
-    assertThat(r.rows().get(0).vars()).doesNotContain(notX);
-    assertThat(Linearizations.valueBooleans(List.copyOf(x.dom().constraints())).get(x))
-        .containsEntry(0, notX);
+    int before = store.size();
+    TableCliques.Result r = TableCliques.rows(tables);
+    // x = 0 has the model's Boolean; x = 1, y = 0, y = 1, z = 0 and z = 1 get LP-only columns,
+    // and nothing is added to the store
+    assertThat(r.columns()).isEqualTo(5);
+    assertThat(store.size()).isEqualTo(before);
+    List<LinearForm> cliques =
+        r.rows().stream().filter(f -> f.relation() == LinearForm.LE).toList();
+    assertThat(cliques).hasSize(1);
+    assertThat(cliques.get(0).vars()).hasSize(3).doesNotContain(notX);
+    assertThat(cliques.get(0).vars()).allMatch(v -> v instanceof LpColumn c && c.value() == 1);
+    // each variable has sum b = 1 and x = sum v b, x over the model's Boolean for 0
+    assertThat(r.rows()).hasSize(7);
+    assertThat(r.rows().stream().filter(f -> Arrays.asList(f.vars()).contains(notX))).hasSize(2);
   }
 
   /**
@@ -377,6 +383,163 @@ class LinearizationsTest {
         cs.add(rnd.nextBoolean() ? new Reified(cmp, b) : new Implies(b, cmp));
       }
       List<LinearForm> made = Linearizations.valueColumns(cs);
+      rows += made.size();
+      for (LinearForm f : made) {
+        for (IntVar v : f.vars()) {
+          columns += v instanceof LpColumn ? 1 : 0;
+        }
+      }
+      for (Constraint c : cs) {
+        store.impose(c);
+      }
+      IntVar[] all = scope.toArray(new IntVar[0]);
+      for (long[] solution : solutions(store, all)) {
+        for (LinearForm f : made) {
+          assertThat(holds(f, all, solution))
+              .as("run %d %s at %s", run, f, Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(rows).isGreaterThan(3000);
+    assertThat(columns).isGreaterThan(3000);
+  }
+
+  /**
+   * The cliques of tables over three variables, from their projections on pairs: every row holds in
+   * every solution of the tables with each column at the indicator of its value.
+   */
+  @Test
+  void tableCliquesOfTernaryTablesHoldForEverySolution() {
+    Random rnd = new Random(29);
+    int rows = 0;
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      int n = 4;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1 + rnd.nextInt(2));
+      }
+      List<TableCliques.Table> tables = new ArrayList<>();
+      for (int t = 0; t < 2; t++) {
+        List<IntVar> pool = new ArrayList<>(List.of(x));
+        IntVar[] v = new IntVar[3];
+        for (int k = 0; k < 3; k++) {
+          v[k] = pool.remove(rnd.nextInt(pool.size()));
+        }
+        List<int[]> allowed = new ArrayList<>();
+        for (int a = v[0].min(); a <= v[0].max(); a++) {
+          for (int b = v[1].min(); b <= v[1].max(); b++) {
+            for (int c = v[2].min(); c <= v[2].max(); c++) {
+              if (rnd.nextInt(3) == 0) {
+                allowed.add(new int[] {a, b, c});
+              }
+            }
+          }
+        }
+        if (allowed.isEmpty()) {
+          continue;
+        }
+        int[][] tuples = allowed.toArray(new int[0][]);
+        store.impose(new HybridTable(v, tuples));
+        tables.add(new TableCliques.Table(v, tuples));
+      }
+      TableCliques.Result r = TableCliques.rows(tables);
+      for (long[] a : solutions(store, x)) {
+        for (LinearForm f : r.rows()) {
+          assertThat(holds(f, x, a)).as("run %d %s", run, f).isTrue();
+        }
+      }
+      rows += r.rows().size();
+    }
+    assertThat(rows).isGreaterThan(1000);
+  }
+
+  /**
+   * The value encodings of counting, all-different and element constraints over LP-only columns:
+   * for random constraints of each kind, every row holds in every solution with each column at the
+   * indicator of its value.
+   */
+  @Test
+  void valueEncodingsHoldForEverySolution() {
+    Random rnd = new Random(17);
+    int rows = 0;
+    int columns = 0;
+    for (int run = 0; run < 600; run++) {
+      Store store = new Store();
+      int n = 3 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int lo = rnd.nextInt(3) - 1;
+        x[i] = new IntVar(store, "x" + i, lo, lo + 1 + rnd.nextInt(3));
+        if (rnd.nextBoolean() && x[i].getSize() > 2) {
+          // a hole inside the domain
+          x[i].domain.inComplement(0, x[i], x[i].min() + 1 + rnd.nextInt(x[i].getSize() - 2));
+        }
+      }
+      List<IntVar> scope = new ArrayList<>(List.of(x));
+      List<Constraint> cs = new ArrayList<>();
+      for (int k = 0; k < 2; k++) {
+        List<IntVar> pool = new ArrayList<>(List.of(x));
+        IntVar[] list = new IntVar[2 + rnd.nextInt(n - 1)];
+        for (int i = 0; i < list.length; i++) {
+          list[i] = pool.remove(rnd.nextInt(pool.size()));
+        }
+        IntervalDomain union = new IntervalDomain();
+        for (IntVar v : list) {
+          union.unionAdapt(v.dom());
+        }
+        switch (rnd.nextInt(7)) {
+          case 0 -> cs.add(new Alldiff(list));
+          case 1 -> cs.add(new Alldistinct(list));
+          case 2 -> {
+            IntVar[] counters = new IntVar[union.getSize()];
+            for (int v = 0; v < counters.length; v++) {
+              counters[v] = new IntVar(store, "g" + k + "_" + v, 0, list.length);
+              scope.add(counters[v]);
+            }
+            cs.add(new GCC(list, counters));
+          }
+          case 3 -> {
+            int[] values = {union.min(), union.max()};
+            IntVar[] counters = new IntVar[2];
+            for (int v = 0; v < 2; v++) {
+              counters[v] = new IntVar(store, "v" + k + "_" + v, 0, list.length);
+              scope.add(counters[v]);
+            }
+            cs.add(new CountValues(list, counters, values));
+          }
+          case 4 -> {
+            IntVar counter = new IntVar(store, "n" + k, 0, list.length);
+            scope.add(counter);
+            cs.add(
+                new Count(list, counter, union.min() + rnd.nextInt(union.max() - union.min() + 1)));
+          }
+          default -> {
+            IntVar index = list[0];
+            int[] table = new int[index.max() - index.min() + 1];
+            for (int i = 0; i < table.length; i++) {
+              table[i] = rnd.nextInt(7) - 3;
+            }
+            IntVar y = new IntVar(store, "y" + k, -3, 3);
+            scope.add(y);
+            int offset = index.min() - 1;
+            cs.add(
+                rnd.nextBoolean()
+                    ? new ElementInteger(index, table, y, offset)
+                    : new ElementIntegerFast(index, table, y, offset));
+          }
+        }
+      }
+      for (int r = 0; r < 2; r++) {
+        IntVar b = new IntVar(store, "b" + r, 0, 1);
+        scope.add(b);
+        IntVar y = x[rnd.nextInt(n)];
+        int c = rnd.nextInt(5) - 1;
+        PrimitiveConstraint cmp = rnd.nextBoolean() ? new XlteqC(y, c) : new XeqC(y, c);
+        cs.add(rnd.nextBoolean() ? new Reified(cmp, b) : new Implies(b, cmp));
+      }
+      List<LinearForm> made = Linearizations.valueRows(cs, List.of()).tried();
       rows += made.size();
       for (LinearForm f : made) {
         for (IntVar v : f.vars()) {

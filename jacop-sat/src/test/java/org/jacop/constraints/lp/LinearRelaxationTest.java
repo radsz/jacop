@@ -44,11 +44,17 @@ import java.util.TreeMap;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -816,6 +822,138 @@ class LinearRelaxationTest {
     }
     assertThat(tighter).isGreaterThan(RUNS / 50);
     assertThat(checked).isPositive();
+  }
+
+  /**
+   * A random assignment model: tasks get distinct values ({@link Alldiff}, {@link Alldistinct} or a
+   * {@link GCC} with counters of at most 1), each task pays the cost of its value ({@link
+   * ElementInteger} or {@link ElementIntegerFast}), some value is taken a given number of times
+   * ({@link Count}), and the total cost is minimized.
+   */
+  private static final class Assignment {
+    final Store store = new Store();
+    final IntVar[] x;
+    final List<IntVar> searched = new ArrayList<>();
+    final IntVar cost;
+
+    Assignment(long seed) {
+      Random rnd = new Random(seed);
+      int n = 3 + rnd.nextInt(3);
+      int m = n + rnd.nextInt(2);
+      x = new IntVar[n];
+      IntVar[] c = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, m);
+        searched.add(x[i]);
+        int[] costs = new int[m];
+        for (int v = 0; v < m; v++) {
+          costs[v] = rnd.nextInt(20);
+        }
+        c[i] = new IntVar(store, "c" + i, 0, 20);
+        store.impose(
+            rnd.nextBoolean()
+                ? new ElementInteger(x[i], costs, c[i], 0)
+                : new ElementIntegerFast(x[i], costs, c[i], 0));
+      }
+      switch (rnd.nextInt(3)) {
+        case 0 -> store.impose(new Alldiff(x));
+        case 1 -> store.impose(new Alldistinct(x));
+        default -> {
+          IntVar[] counters = new IntVar[m];
+          for (int v = 0; v < m; v++) {
+            counters[v] = new IntVar(store, "n" + v, 0, 1);
+          }
+          store.impose(new GCC(x, counters));
+        }
+      }
+      if (rnd.nextBoolean()) {
+        IntVar[] y = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          y[i] = new IntVar(store, "y" + i, 1, 3);
+          store.impose(new XneqY(y[i], x[i]));
+          searched.add(y[i]);
+        }
+        store.impose(new Count(y, new IntVar(store, "k", 1, 1 + rnd.nextInt(n - 1)), 2));
+      }
+      cost = new IntVar(store, "cost", 0, 20 * n);
+      int[] ones = new int[n + 1];
+      Arrays.fill(ones, 1);
+      ones[n] = -1;
+      IntVar[] vars = Arrays.copyOf(c, n + 1);
+      vars[n] = cost;
+      store.impose(new LinearInt(vars, ones, "==", 0));
+    }
+
+    // the least cost by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] all = searched.toArray(new IntVar[0]);
+      assertThat(search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
+    }
+  }
+
+  /**
+   * The value encodings of counting, all-different and element constraints over LP-only columns:
+   * the relaxation of random assignment models has them, keeps the optimum under depth-first search
+   * and under lazy clause generation with the explanation checker on, and its root bound is often
+   * above that of the model's own rows.
+   */
+  @Test
+  void valueEncodingsKeepTheOptimumOfAssignments() {
+    int tighter = 0;
+    long checked = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      long expected = new Assignment(run).optimum();
+
+      Assignment dfs = new Assignment(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(r.valueColumns).as("seed %d", run).isPositive();
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.rootBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      tighter += r.extraRows > 0 && r.rootBound > r.baseBound + 0.5 ? 1 : 0;
+
+      Assignment lcg = new Assignment(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(tighter).isGreaterThan(RUNS / 50);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * Every task is cheapest at value 1: the bounds of the costs give 4, the assignment polytope of
+   * the value encodings gives the optimum 31, which the root propagation sets as the bound.
+   */
+  @Test
+  void valueEncodingsBoundAnAssignmentByItsOptimum() {
+    Store store = new Store();
+    int n = 4;
+    IntVar[] x = new IntVar[n];
+    IntVar[] vars = new IntVar[n + 1];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, n);
+      vars[i] = new IntVar(store, "c" + i, 0, 10);
+      store.impose(new ElementInteger(x[i], new int[] {1, 10, 10, 10}, vars[i], 0));
+    }
+    store.impose(new Alldiff(x));
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    vars[n] = cost;
+    store.impose(new LinearInt(vars, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, cost, false);
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.baseBound).isEqualTo(4.0);
+    assertThat(cost.min()).isEqualTo(31);
   }
 
   /** A copy of a relaxation with LP-only columns gets its own columns over the copied variables. */

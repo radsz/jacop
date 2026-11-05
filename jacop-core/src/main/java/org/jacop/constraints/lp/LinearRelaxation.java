@@ -616,7 +616,11 @@ public class LinearRelaxation extends Constraint
     // the value encodings over auxiliary columns come first, so that a size cap leaves out other
     // rows before them; they are many rows by nature (a row per value and constraint) and are not
     // held to the trial cap of the sparse simplex chosen by size
-    List<LinearForm> columnRows = LINEARIZE ? Linearizations.valueColumns(constraints) : List.of();
+    Linearizations.ValueRows valueRows =
+        LINEARIZE
+            ? Linearizations.valueRows(constraints, extra)
+            : new Linearizations.ValueRows(List.of(), List.of());
+    List<LinearForm> columnRows = valueRows.kept();
     List<LinearForm> candidates = new ArrayList<>();
     int exempt = 0;
     for (LinearForm f : columnRows) {
@@ -627,11 +631,15 @@ public class LinearRelaxation extends Constraint
     }
     // the rows of the other constraints; rows over a variable that was substituted away are left
     // out
-    for (LinearForm f : relaxed) {
-      if (f.relation() != LinearForm.NE
-          && f.vars().length >= 2
-          && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
-        candidates.add(f);
+    // the value encodings of the counting, all-different and element constraints come last: they
+    // are tried at the first solve like the other rows, and kept only when they help
+    for (List<LinearForm> rows : List.of(relaxed, valueRows.tried())) {
+      for (LinearForm f : rows) {
+        if (f.relation() != LinearForm.NE
+            && f.vars().length >= 2
+            && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
+          candidates.add(f);
+        }
       }
     }
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
