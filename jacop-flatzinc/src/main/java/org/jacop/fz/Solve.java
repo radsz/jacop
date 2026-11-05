@@ -59,6 +59,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XltC;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -1831,6 +1832,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
       if (useLcg(costVar)) {
+        fixedLabel = label;
+        fixedSelect = select;
+        fixedSolveType = solveType;
         return executeLcgSearch(costVar);
       }
       if (useFreeSearchEngine(costVar)) {
@@ -2142,12 +2146,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             ? options.getTimeOut()
             : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
+    Thread giveWay =
+        !free && worker == null && annotated != null && fixedLabel != null
+            ? fixedGiveWayCheck(costVar)
+            : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
+    if (giveWay != null) {
+      giveWay.interrupt();
+    }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch()) {
-      return continueWithoutLcg(costVar);
+      return giveWay != null ? continueFixedWithoutLcg(costVar) : continueWithoutLcg(costVar);
     }
     return numberSolutions > 0;
   }
@@ -2227,6 +2238,81 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  // the model's search without learning, which LCG under fixed search may give way to
+  private DepthFirstSearch<T> fixedLabel;
+  private SelectChoicePoint<T> fixedSelect;
+  private String fixedSolveType;
+  // when the last solution was found, for the stall rule of fixedGiveWayCheck
+  private volatile long lastSolutionNanos;
+
+  /**
+   * Starts the give-way check of LCG under fixed search (prototype): from a share of the time limit
+   * (fixed-lcg-at, 0 = off), once LCG has a solution and has not improved it for a share of the
+   * time limit (fixed-lcg-stall, 0 = at once), LCG stops and the model's search goes on without
+   * learning, bounded by the best solution of LCG.
+   */
+  private Thread fixedGiveWayCheck(Var costVar) {
+    double at = Double.parseDouble(options.freeConfig("fixed-lcg-at", "0"));
+    double stall = Double.parseDouble(options.freeConfig("fixed-lcg-stall", "0"));
+    if (costVar == null || at <= 0 || options.getTimeOut() <= 0) {
+      return null;
+    }
+    long start = System.nanoTime();
+    long limit = options.getRemainingTimeOut() * 1_000_000L;
+    long wait = (long) (at * limit);
+    long stallNanos = (long) (stall * limit);
+    LcgSolver solver = lcg;
+    lastSolutionNanos = start;
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                Thread.sleep(wait / 1_000_000L);
+                while (true) {
+                  if (tooLateForFreeSearch()) {
+                    return;
+                  }
+                  if (solutionFound && System.nanoTime() - lastSolutionNanos >= stallNanos) {
+                    lcgSlow = true;
+                    solver.stop();
+                    return;
+                  }
+                  Thread.sleep(200);
+                }
+              } catch (InterruptedException _) {
+                Thread.currentThread().interrupt();
+              }
+            });
+  }
+
+  /**
+   * Goes on with the model's search without learning after LCG under fixed search gave way: the
+   * store is back at the root, and the search must improve on the best solution of LCG.
+   */
+  private boolean continueFixedWithoutLcg(Var costVar) {
+    slowLcg = lcg;
+    lcg = null;
+    slowLcg.release();
+    postCollectedClauses();
+    if (options.debug()) {
+      IO.println(
+          "%% LCG stopped after "
+              + slowLcg.sat().conflicts
+              + " conflicts; the model's search without learning from cost "
+              + lcgLastCost);
+    }
+    if (numberSolutions > 0 && costVar instanceof IntVar cost) {
+      store.impose(new XltC(cost, lcgLastCost));
+      if (!store.consistency()) {
+        // the best solution of LCG is optimal
+        return true;
+      }
+    }
+    setSearchTimeout(fixedLabel);
+    return executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType)
+        || numberSolutions > 0;
   }
 
   /**
@@ -4328,6 +4414,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
     solutionFound = true;
+    lastSolutionNanos = System.nanoTime();
     if (lcg != null && costVariable instanceof IntVar cost && cost.singleton()) {
       lcgLastCost = cost.value();
     }
