@@ -589,18 +589,87 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     }
   }
 
+  /**
+   * Above this many intervals, a removal from a domain whose holes are kept as intervals builds the
+   * new intervals in one merge instead of copying the intervals once per removed interval.
+   */
+  private static final int BULK_REMOVAL = 4;
+
   @Override
   public void inComplement(int storeLevel, Var v, IntDomain complement) {
     int oldMin = minBound;
     int oldMax = maxBound;
     int oldSize = size;
     int intervals = complement.noIntervals();
+    if (rangeHoles && bits == null && intervals > BULK_REMOVAL) {
+      removeIntervals(storeLevel, v, complement);
+      return;
+    }
     for (int k = 0; k < intervals; k++) {
       removeRange(storeLevel, v, complement.leftElement(k), complement.rightElement(k));
     }
     if (size != oldSize) {
       changed(v, oldMin, oldMax);
     }
+  }
+
+  /**
+   * Removes the values of complement from a domain whose holes are kept as intervals, in one merge
+   * of the domain's intervals with the removed ones. Removing the intervals one by one copies the
+   * domain's intervals for each of them, which is quadratic in the number of holes: a table over
+   * word indexes (XCSP3 WordSquare, 82,049 words) removes thousands of scattered words per
+   * propagation.
+   */
+  private void removeIntervals(int storeLevel, Var v, IntDomain complement) {
+    int[] current = ranges == null ? new int[] {minBound, maxBound} : ranges;
+    int n = current.length >>> 1;
+    int intervals = complement.noIntervals();
+    int[] result = new int[2 * (n + intervals)];
+    int out = 0;
+    int newSize = 0;
+    int k = 0;
+    for (int i = find(current, minBound); i < n && current[2 * i] <= maxBound; i++) {
+      int a = Math.max(minBound, current[2 * i]);
+      int b = Math.min(maxBound, current[2 * i + 1]);
+      while (k < intervals && complement.rightElement(k) < a) {
+        k++;
+      }
+      int start = a;
+      while (k < intervals && complement.leftElement(k) <= b) {
+        int left = complement.leftElement(k);
+        int right = complement.rightElement(k);
+        if (left > start) {
+          result[out++] = start;
+          result[out++] = left - 1;
+          newSize += left - start;
+        }
+        start = Math.max(start, right + 1);
+        if (right > b) {
+          // the removed interval also covers the next intervals of the domain
+          break;
+        }
+        k++;
+      }
+      if (start <= b) {
+        result[out++] = start;
+        result[out++] = b;
+        newSize += b - start + 1;
+      }
+    }
+    if (newSize == size) {
+      return;
+    }
+    if (newSize == 0) {
+      throw failException;
+    }
+    int oldMin = minBound;
+    int oldMax = maxBound;
+    saveLevel(storeLevel, v);
+    minBound = result[0];
+    maxBound = result[out - 1];
+    size = newSize;
+    setRanges(result, out >>> 1);
+    changed(v, oldMin, oldMax);
   }
 
   /** It removes the values lo..hi without informing the variable. */
@@ -649,8 +718,29 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
 
   /** It keeps the values x of this domain for which x - shift is in an interval domain. */
   private void inIntervals(int storeLevel, Var v, IntDomain domain, int shift) {
-    if (domain.noIntervals() == 1) {
+    int intervals = domain.noIntervals();
+    if (intervals == 1) {
       in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+      return;
+    }
+    if (rangeHoles && bits == null && intervals > BULK_REMOVAL) {
+      // the gaps of the shifted domain within the bounds, removed in one merge
+      IntervalDomain gaps = new IntervalDomain(intervals + 1);
+      long from = minBound;
+      for (int k = 0; k < intervals && from <= maxBound; k++) {
+        long left = (long) domain.leftElement(k) + shift;
+        long right = (long) domain.rightElement(k) + shift;
+        if (left > from) {
+          gaps.unionAdapt((int) from, (int) Math.min(left - 1, maxBound));
+        }
+        from = Math.max(from, right + 1);
+      }
+      if (from <= maxBound) {
+        gaps.unionAdapt((int) from, maxBound);
+      }
+      if (!gaps.isEmpty()) {
+        removeIntervals(storeLevel, v, gaps);
+      }
       return;
     }
     // the new bounds: the first and the last value of this domain within domain

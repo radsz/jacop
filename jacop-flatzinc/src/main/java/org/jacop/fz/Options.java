@@ -86,6 +86,8 @@ public class Options {
   boolean lcg = !"off".equals(System.getProperty("jacop.lcg", "on"));
   // whether --lcg was given; without it, LCG is left out for models it does not support
   boolean lcgGiven;
+  // why LCG asked for with --lcg is not used for this model, or null
+  String lcgIgnored;
   boolean lp = true;
   // --proof: the path prefix of the VeriPB proof (.pbp) and its OPB model (.opb), or null
   String proof;
@@ -1044,6 +1046,29 @@ public class Options {
     if (!lcgGiven) {
       lcg = false;
     }
+  }
+
+  /**
+   * Turns off LCG for a model it cannot solve before the model is built, so that the model is built
+   * and solved exactly as without LCG. When --lcg was given, the reason is kept for the solver to
+   * report.
+   *
+   * @param reason why the model cannot be solved with LCG
+   */
+  void dropLcg(String reason) {
+    if (lcg && lcgGiven) {
+      lcgIgnored = reason;
+    }
+    lcg = false;
+  }
+
+  /**
+   * Why LCG, asked for with --lcg, is not used for this model.
+   *
+   * @return the reason, or null when LCG is used or was not asked for
+   */
+  public String lcgIgnored() {
+    return lcgIgnored;
   }
 
   /**
