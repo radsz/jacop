@@ -1894,6 +1894,18 @@ Version 5.0 (unreleased)
      mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
      concert-hall-cap changes its LP) and 126 -> 128 in default mode.
 
+126. A parallel portfolio (-p) ends as soon as a thread proves a bound at
+     the cost of the best solution, which it prints as optimal. Before,
+     the threads' bounds stopped the portfolio only with --gap, so a
+     proved optimum waited until one thread completed its own search.
+     LCG also passes on the bounds that its lower-bound runs and the
+     cores of the core-guided phase raise, not only those at the root.
+     A bound under relax and reconstruct or on_restart still stops the
+     search at --gap, but proves nothing. Wide set (220, -f -p 4, 60 s,
+     two interleaved rounds): solved 173 to 173 and 174 to 171, 20 / 7
+     and 12 / 20 better / worse, within the noise of two runs of the
+     same build.
+
 Version 4.11
 =============
 
