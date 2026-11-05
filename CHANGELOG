@@ -2001,6 +2001,40 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+132. Under LCG an all_different over n variables whose domains hold n
+     values in all adds, for each value, the clause "some variable takes
+     it" over the value literals (Chuffed's alldiff_cheat). Constraints
+     give such clauses through the new ImpliedClauses interface, which
+     LcgSolver.encodeGraphs calls; stat lcgImpliedClauses. Off with
+     -Dorg.jacop.lcg.alldiffCover=false; skipped above 16384 (variable,
+     value) pairs (-Dorg.jacop.lcg.alldiffCoverLimit), since
+     NumberPartitioning-200/260 (40k and 67k pairs) got slower. XCSP3
+     Pentominoes (60 s): 4 -> 10 of 10 solved, Pentominoes-05-18 in 7.8 s
+     (Chuffed 0.6 s). 161 XCSP3 instances with such an all_different:
+     completed 76 -> 83, 22 faster / 16 slower.
+
+133. Increasing, Among and OverlappingAlldiff give their own LCG reasons
+     instead of the generic one, and Values (nvalue) gets a union-of-
+     domains rule so its reasons need no replays. TilingRythmicCanons
+     Increasing reasons 439 -> 2 atoms, SportsScheduling-dummy-14 Among
+     reasons 170 -> 12 atoms (solved in 17 s, before not in 60 s).
+     XmulYeqZ failures try a bounds-only reason and otherwise keep the
+     shortest per-variable reason, not the first: Molnar failure reasons
+     2,297 -> 4 atoms.
+
+134. Element over a variable array bumps on failure the weights of the
+     index, the value and only the list variables whose position is still
+     in the index domain, so dom/wdeg no longer prefers variables that
+     appear in every element (LangfordBin-040: solved with 195 failures,
+     before not in 60 s).
+
+     Changes 132-134 together: 88 XCSP3 instances of the families above
+     (60 s): completed 47 -> 54, 22 faster / 12 slower. Wide set (220,
+     60 s, default): solved 164 -> 166, 22 better / 5 worse, 6 of 12
+     families better and 1 worse; -f: solved 161 -> 162, 12 better /
+     14 worse, 5 families better and 4 worse (within the noise of two
+     runs of one build).
+
 Version 4.11
 =============
 
