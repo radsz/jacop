@@ -533,6 +533,20 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns the entry that removed a value of a variable before a trail position, looked up in the
+   * index of removed values rather than by walking the variable's entries.
+   *
+   * @param x the variable
+   * @param v the value
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the value's {@link #NE} entry, or -1 when it has none before the position
+   */
+  public int notEqualEntry(IntVar x, int v, int position) {
+    int f = removals.get(slot(x), v);
+    return f < position ? f : -1;
+  }
+
+  /**
    * Returns the entry of the same variable recorded before an entry.
    *
    * @param entry the entry
@@ -726,6 +740,19 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public void setWeakerBounds(WeakerBounds bounds) {
     weakerBounds = bounds;
+  }
+
+  /**
+   * Returns the entry of a variable's lower or upper bound just before a trail position, found by a
+   * binary search among its bound entries, without walking its other entries.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @param lower true for the lower bound, false for the upper one
+   * @return the entry, or -1 when the bound is the initial one
+   */
+  public int boundEntry(IntVar x, int position, boolean lower) {
+    return latest(x, position, lower ? GE : LE);
   }
 
   /**
