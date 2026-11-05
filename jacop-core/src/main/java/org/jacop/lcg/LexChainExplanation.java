@@ -189,22 +189,24 @@ public final class LexChainExplanation {
    * tuples up to x[last]; the vectors before it are then not needed.
    */
   private int nearestFailingStart(int last) {
-    for (int span = 1; ; span *= 2) {
-      int from = Math.max(0, last - span);
-      if (from == 0 || chainFails(from, last)) {
+    for (long span = 1; last - span > 0; span *= 2) {
+      int from = (int) (last - span);
+      if (chainFails(from, last)) {
         return from;
       }
     }
+    return 0;
   }
 
   /** Symmetric to {@link #nearestFailingStart} with the chain of largest tuples from x[first]. */
   private int nearestFailingEnd(int first) {
-    for (int span = 1; ; span *= 2) {
-      int to = Math.min(m - 1, first + span);
-      if (to == m - 1 || chainFailsDown(first, to)) {
+    for (long span = 1; first + span < m - 1; span *= 2) {
+      int to = (int) (first + span);
+      if (chainFailsDown(first, to)) {
         return to;
       }
     }
+    return m - 1;
   }
 
   /** Whether the vectors from..to have no chain of largest tuples from x[to] down. */
@@ -267,7 +269,7 @@ public final class LexChainExplanation {
     boolean upper = i < m - 1;
     int from = i;
     int to = i;
-    for (int span = 1; lower || upper; span *= 2) {
+    for (long span = 1; lower || upper; span *= 2) {
       if (lower) {
         for (int found = 0; from > 0 && found < span; ) {
           from--;
