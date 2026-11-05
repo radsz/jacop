@@ -591,7 +591,7 @@ public class LexChain extends Constraint
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    if (hasDuplicates) {
+    if (hasDuplicates || n == 0) {
       return false;
     }
     int slot = varToSlot.get(trail.variable(entry));
