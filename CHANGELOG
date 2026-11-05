@@ -1986,6 +1986,21 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+130. Large neighbourhood search gets two routing neighbourhoods over the
+     vehicle routes of a Routes structure: ROUTES removes the customers
+     of whole routes near each other, RELATED removes customers close to
+     each other by the cost of their arcs in the objective (Shaw
+     removal); the run relaxes the arcs at the removed customers and the
+     loads of the routes they were on, and reinserts them. AdaptiveLns
+     finds imposed Routes constraints, and addRoutes(Routes) gives routes
+     that are not imposed. Under -f the FlatZinc front end now runs the
+     vrp detector and gives the routes it finds to LNS even though the
+     Routes constraint stays off; --free-config lns-routes=0 turns this
+     off. On the 25 Challenge vrp instances (-f, 60 s, three seeds) the
+     mean gap to the best solution found falls from 7.0 % to 2.7 %
+     (17 / 5 better / worse by median objective). No wide-set instance
+     has these routes; its -f round is level (147 to 147 solved).
+
 132. Rounded capacity cuts in the linear relaxation, from each Routes
      with its arcs among the columns: the routes enter a set S of
      customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
