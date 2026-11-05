@@ -2484,13 +2484,14 @@ public final class LcgSolver implements ExternalPropagator {
    * whatever the load of the machine. The work is the propagated literals plus {@link
    * #WORK_PER_CALL} per consistency call of a constraint.
    */
-  static final long WORK_PER_MS = Long.getLong("jacop.lcg.workPerMs", 20_000);
+  static final long WORK_PER_MS = Long.getLong("jacop.lcg.workPerMs", 2_000);
 
   // the work of one consistency call of a constraint, in propagated literals
-  static final long WORK_PER_CALL = Long.getLong("jacop.lcg.workPerCall", 10);
+  static final long WORK_PER_CALL = Long.getLong("jacop.lcg.workPerCall", 3);
 
   // a phase also stops at this many times its share of the time left, where the work is slower
-  private static final double CLOCK_SLACK = 2;
+  private static final double CLOCK_SLACK =
+      Double.parseDouble(System.getProperty("jacop.lcg.clockSlack", "1.5"));
 
   /** Statistics: phases of the core-guided schedule stopped by the clock, not by their work. */
   public long clockStops;
