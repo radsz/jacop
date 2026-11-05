@@ -1986,6 +1986,22 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+132. LCG explains the failures of a linear equality (LinearIntDom, and
+     SumWeight's failure reason) that its bounds do not violate. When the
+     other variables' bounds leave one variable a window with no value
+     in its domain, the reason is that window's removals and the bounds
+     on both sides, lifted. When every window still holds a value but the
+     equality has no solution (LinearIntDom's domain consistency proves
+     it), the reason is every bound and the removals inside every window;
+     only LinearIntDom uses that one, since Knapsack calls the linear
+     reason speculatively. Before, these failures took the generic reason.
+     liner-sf-repositioning tp7_4: generic LinearIntDom failures 45 % to
+     0 % (--lcg) and 18 % to 0 % (--lcg -f); --lcg -f proves the known
+     optimum 150674 in 41 s (before 160071 in 60 s, not proved). Wide set
+     (220, 60 s, osolpro #231 scoring): --lcg S = -10, --lcg -f S = -12;
+     the only decided instance with generic LinearIntDom failures is
+     tp7_4 (-f +1, H1), the others are search-order noise.
+
 Version 4.11
 =============
 
