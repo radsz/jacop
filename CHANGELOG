@@ -1822,9 +1822,26 @@ Version 5.0 (unreleased)
      because on the 25 vrp instances of the Challenge (60 s) it leaves
      the results level: default 12 better / 9 worse (objective geomean
      0.999), -f 11 / 11 (1.006). No other Challenge instance has the
-     pattern.
+     pattern.     
 
-123. Under LCG, Regular (and the other layered-graph constraints explained
+123. LCG explanations of LexChain cite only the vectors and positions the
+     ordering depends on. The reason of a pruning or failure used to cite
+     every atom of every vector of the chain. Now the chain starts at the
+     nearest vectors that still force the entry (windows of changed vectors
+     around it, doubled until they suffice; vectors still at their root
+     domains are skipped), and positions after the shortest prefix that
+     still forces it (binary search) are left out. LexChain also prunes the
+     vectors in the direction its bounds moved, so a bound pushed up the
+     chain is explained by its neighbour instead of the far end. Cutstock
+     (XCSP3 2025, 15 instances, 60 s): 5 to 10 solved. Wordpress12
+     Offers500: 5,768 to 96 atoms per reason (--lcg -f); --lcg proves the optimum
+     in 8 s instead of 19 s. Wide set (220, 60 s, osolpro #231 scoring):
+     --lcg S = +32; --lcg -f S = -22, all outside LexChain except
+     wordpress, where LCG is now fast enough that it no longer gives way to
+     search without learning at 6 s, which proves it in 3 s (9 s to 50 s;
+     with lcg-slow-rate=0 LCG proves it in 31 s instead of failing to in 60 s).
+     
+124. Under LCG, Regular (and the other layered-graph constraints explained
      by paths, ExtensionalSupportMdd) is encoded as clauses before the
      search and removed from the store: a literal per node and per arc
      of the layered graph (an arc groups the edges between two nodes and
@@ -1843,7 +1860,7 @@ Version 5.0 (unreleased)
      -f changes are all on instances without regular.
      pattern.     
 
-124. LCG objective shaving (fzn-jacop -f, --free-config lcg-shave=on, now
+125. LCG objective shaving (fzn-jacop -f, --free-config lcg-shave=on, now
      the default). The lower-bound runs that alternate with branch and
      bound assumed obj <= lb and raised the bound by 1 per proof. They now
      try obj <= lb + step - 1: the step doubles after each proof (the run
@@ -1862,7 +1879,7 @@ Version 5.0 (unreleased)
      16 worse, solved 150 to 151, score +5, Borda +9; fixed search is
      unchanged (the options apply under -f only).
 
-125. The FlatZinc front end merges element constraints over constant
+126. The FlatZinc front end merges element constraints over constant
      arrays that share one index variable into one table (HybridTable),
      the index as the last column. MiniZinc flattens a row lookup
      x[j] = t[row, j] into one element per column; each element only
@@ -1879,7 +1896,7 @@ Version 5.0 (unreleased)
      wordpress 38 to 25 s); -f 24 / 26, 5 / 5 on the 28, solved +1, where
      repeated seeds put tppv, crosswords and diameterc-mst in the noise.
 
-126. The LP relaxation encodes the variables of all-different-except
+127. The LP relaxation encodes the variables of all-different-except
      constraints (alldifferent_except_0, alldifferent_except) by values
      over LP-only columns: x = sum v x_v, sum x_v <= 1 per variable and
      per value, and b = sum x_v for each reified or implied comparison
@@ -1894,7 +1911,7 @@ Version 5.0 (unreleased)
      mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
      concert-hall-cap changes its LP) and 126 -> 128 in default mode.
 
-127. Set search and set builtins, checked by a new brute-force test
+128. Set search and set builtins, checked by a new brute-force test
      (SetBuiltinsFuzzTest, setfuzz.trials) on random FlatZinc models of
      all set builtins and jacop_* set globals, against enumeration of
      their MiniZinc meaning, with plain search, LCG, free search and
@@ -1922,7 +1939,7 @@ Version 5.0 (unreleased)
      (SET_VAL_MIN_INC, SET_VAL_MAX_INC). OR-Tools CP-SAT reads indomain_min
      on sets as exclude-first (the smallest value of the element Booleans).
 
-128. Under --lcg -f the core-guided phase no longer depends on the clock.
+129. Under --lcg -f the core-guided phase no longer depends on the clock.
      Its probe, the branch and bound before it, the phase itself, its
      extensions, its "no solution of its own" stop, the lower bound's
      rate stops and the at-most-one probes took shares of the wall-clock
@@ -1941,7 +1958,7 @@ Version 5.0 (unreleased)
      of 32 (all clock-capped). Wide set (220, 60 s, -f): solved 150 ->
      152, 33 better / 25 worse, 7 of 12 families better and 4 worse.
 
-129. A parallel portfolio (-p) ends as soon as a thread proves a bound at
+130. A parallel portfolio (-p) ends as soon as a thread proves a bound at
      the cost of the best solution, which it prints as optimal. Before,
      the threads' bounds stopped the portfolio only with --gap, so a
      proved optimum waited until one thread completed its own search.
