@@ -172,6 +172,10 @@ public final class RevisedDualSimplex {
   private int tauLen;
   private double[] rhs = {};
   private int[] rhsIdx = {};
+  private boolean[] inRhs = {};
+  // the change of the basic values from the bound flips, zero between pivots, and its nonzeros
+  private double[] flipTau = {};
+  private int[] flipIdx = {};
 
   // the rows whose basic values are outside their bounds, kept up by the pivots (and rows back
   // inside, until the next choice of a leaving row drops them); not valid after any other change
@@ -445,6 +449,9 @@ public final class RevisedDualSimplex {
     tauLen = 0;
     rhs = new double[m];
     rhsIdx = new int[m];
+    inRhs = new boolean[m];
+    flipTau = new double[m];
+    flipIdx = new int[m];
     outside = new int[m];
     outsideRow = new boolean[m];
     outsideLen = 0;
@@ -735,20 +742,7 @@ public final class RevisedDualSimplex {
         continue;
       }
       if (flips > 0) {
-        Arrays.fill(work, 0);
-        for (int k = 0; k < flips; k++) {
-          int j = flipped[k];
-          double old = upper[j] ? hi[j] : lo[j];
-          upper[j] = !upper[j];
-          double now = upper[j] ? hi[j] : lo[j];
-          at[j] = now;
-          addColumn(j, now - old, work);
-        }
-        lu.ftran(work, tau);
-        for (int i = 0; i < m; i++) {
-          beta[i] -= tau[i];
-        }
-        outsideValid = false;
+        flipBounds();
       }
       // the primal step: x_q moves until x_p reaches the bound it leaves at
       double bound = toLower ? lo[p] : hi[p];
@@ -1157,6 +1151,64 @@ public final class RevisedDualSimplex {
     for (int k = 0; k < yn; k++) {
       y[yi[k]] = 0;
     }
+  }
+
+  // the flipped columns move to their other bounds, and the basic values with them: the sum of
+  // the flipped columns is listed in rhs, and its ftran gives the rows whose values move, which
+  // also keep up the rows outside their bounds
+  private void flipBounds() {
+    int len = 0;
+    for (int k = 0; k < flips; k++) {
+      int j = flipped[k];
+      double old = upper[j] ? hi[j] : lo[j];
+      upper[j] = !upper[j];
+      double now = upper[j] ? hi[j] : lo[j];
+      at[j] = now;
+      len = addListed(j, now - old, len);
+    }
+    for (int k = 0; k < len; k++) {
+      inRhs[rhsIdx[k]] = false;
+    }
+    int yn = lu.ftranFlips(rhs, rhsIdx, len, flipTau, flipIdx);
+    for (int k = 0; k < yn; k++) {
+      int i = flipIdx[k];
+      beta[i] -= flipTau[i];
+      flipTau[i] = 0;
+    }
+    if (outsideValid) {
+      for (int k = 0; k < yn; k++) {
+        noteRow(flipIdx[k]);
+      }
+    }
+    ops += len + yn;
+  }
+
+  // rhs += f times the column j of [A -I], as addColumn, with the rows of rhs listed in rhsIdx
+  // (len of them, marked in inRhs); returns the new number of rows listed
+  private int addListed(int j, double f, int len) {
+    if (f == 0) {
+      return len;
+    }
+    if (j < n) {
+      int[] ci = colIdx[j];
+      double[] cv = colVal[j];
+      for (int e = 0; e < colLen[j]; e++) {
+        int i = ci[e];
+        if (!inRhs[i]) {
+          inRhs[i] = true;
+          rhsIdx[len++] = i;
+        }
+        rhs[i] += f * cv[e];
+      }
+    } else {
+      int i = j - n;
+      if (!inRhs[i]) {
+        inRhs[i] = true;
+        rhsIdx[len++] = i;
+      }
+      rhs[i] -= f;
+    }
+    return len;
   }
 
   // the column j of [A -I] into x, zero before; returns the number of its nonzeros, listed in xi
