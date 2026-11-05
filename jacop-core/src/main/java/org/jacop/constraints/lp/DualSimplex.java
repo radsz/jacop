@@ -308,6 +308,114 @@ final class DualSimplex implements LpSolver {
   }
 
   /**
+   * Removes rows whose slacks are basic, keeping the basis of the other rows. With the slack of row
+   * i basic in the tableau row r, the basis inverse of the other rows is that of the whole basis
+   * without row r and column i (the slack's column is a unit column of the tableau), and the
+   * reduced costs of the other columns do not change (a slack has no cost). So the tableau loses
+   * row r and the slack's column, and the basis stays dual feasible. A row whose slack is nonbasic
+   * is kept.
+   *
+   * @param rows the rows to remove
+   * @return the old row of each new row, or null when no row was removed
+   */
+  @Override
+  public int[] removeRows(int[] rows) {
+    boolean[] gone = new boolean[m];
+    int removed = 0;
+    for (int i : rows) {
+      if (i >= 0 && i < m && !gone[i] && row[n + i] >= 0) {
+        gone[i] = true;
+        removed++;
+      }
+    }
+    if (removed == 0) {
+      return null;
+    }
+    int m2 = m - removed;
+    int cols2 = cols - removed;
+    // the new index of each old column, -1 for a removed slack, and the old row of each new row
+    int[] newColumn = new int[cols];
+    int[] oldRow = new int[m2];
+    for (int j = 0, k = 0; j < cols; j++) {
+      newColumn[j] = j >= n && gone[j - n] ? -1 : k++;
+    }
+    for (int i = 0, k = 0; i < m; i++) {
+      if (!gone[i]) {
+        oldRow[k++] = i;
+      }
+    }
+    double[][] a2 = new double[m2][];
+    for (int k = 0; k < m2; k++) {
+      a2[k] = a[oldRow[k]];
+    }
+    double[][] t2 = new double[m2][];
+    int[] basis2 = new int[m2];
+    double[] beta2 = new double[m2];
+    double[] norm2 = new double[m2];
+    boolean[] normValid2 = new boolean[m2];
+    int[] newPosition = new int[m];
+    for (int r = 0, k = 0; r < m; r++) {
+      int p = basis[r];
+      if (newColumn[p] < 0) {
+        newPosition[r] = -1;
+        continue;
+      }
+      newPosition[r] = k;
+      double[] tr = t[r];
+      double[] v = new double[cols2];
+      for (int j = 0; j < cols; j++) {
+        if (newColumn[j] >= 0) {
+          v[newColumn[j]] = tr[j];
+        }
+      }
+      t2[k] = v;
+      basis2[k] = newColumn[p];
+      beta2[k] = beta[r];
+      // the removed slacks' columns are zero in the other rows: the norms stay
+      norm2[k] = norm[r];
+      normValid2[k++] = normValid[r];
+    }
+    double[] cost2 = new double[cols2];
+    double[] lo2 = new double[cols2];
+    double[] hi2 = new double[cols2];
+    double[] d2 = new double[cols2];
+    boolean[] upper2 = new boolean[cols2];
+    int[] row2 = new int[cols2];
+    for (int j = 0; j < cols; j++) {
+      int q = newColumn[j];
+      if (q >= 0) {
+        cost2[q] = cost[j];
+        lo2[q] = lo[j];
+        hi2[q] = hi[j];
+        d2[q] = d[j];
+        upper2[q] = upper[j];
+        row2[q] = row[j] >= 0 ? newPosition[row[j]] : -1;
+      }
+    }
+    a = a2;
+    t = t2;
+    basis = basis2;
+    beta = beta2;
+    norm = norm2;
+    normValid = normValid2;
+    cost = cost2;
+    lo = lo2;
+    hi = hi2;
+    d = d2;
+    upper = upper2;
+    row = row2;
+    at = new double[cols2];
+    moved = new int[cols2];
+    movedBy = new double[cols2];
+    ratioTest.resize(cols2);
+    betaValid = false;
+    infeasibleRow = -1;
+    m = m2;
+    cols = cols2;
+    return oldRow;
+  }
+
+  /**
    * Returns the row of the tableau in which a column is basic.
    *
    * @param j the column

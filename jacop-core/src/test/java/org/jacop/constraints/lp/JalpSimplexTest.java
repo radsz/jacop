@@ -278,6 +278,56 @@ class JalpSimplexTest {
   }
 
   @Test
+  void denseRemovedRowsWithBasicSlacksKeepTheBasis() {
+    Random rnd = new Random(17);
+    int removedRuns = 0;
+    for (int run = 0; run < 2000; run++) {
+      int m = 2 + rnd.nextInt(10);
+      Lp p = new Lp(rnd, m, 2 + rnd.nextInt(10), 0.5, true);
+      LpSolver removed = new DualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
+      p.bounds(removed);
+      if (removed.solve(1000) != LpSolver.OPTIMAL) {
+        continue;
+      }
+      int[] ask = new int[1 + rnd.nextInt(m)];
+      for (int k = 0; k < ask.length; k++) {
+        ask[k] = rnd.nextInt(m);
+      }
+      int[] kept = removed.removeRows(ask);
+      if (kept == null) {
+        continue;
+      }
+      removedRuns++;
+      Lp q = new Lp(rnd, 0, p.cost.length, 0, false);
+      q.cost = p.cost;
+      q.lo = p.lo;
+      q.hi = p.hi;
+      q.a = new double[kept.length][];
+      q.rowLo = new double[kept.length];
+      q.rowHi = new double[kept.length];
+      for (int i = 0; i < kept.length; i++) {
+        q.a[i] = p.a[kept[i]];
+        q.rowLo[i] = p.rowLo[kept[i]];
+        q.rowHi[i] = p.rowHi[kept[i]];
+      }
+      assertThat(removed.rows()).isEqualTo(kept.length);
+      // the basis is still optimal for the rows left: no pivot is needed
+      long before = removed.pivots();
+      LpSolver fresh = new DualSimplex(q.a, q.rowLo, q.rowHi, q.cost);
+      assertThat(compare(q, removed, fresh, "run " + run)).isEqualTo(LpSolver.OPTIMAL);
+      assertThat(removed.pivots()).as("run %d", run).isEqualTo(before);
+      // and goes on from there, through added rows and many pivots (refactorizations)
+      for (int step = 0; step < 6; step++) {
+        q.tighten(rnd);
+        if (compare(q, removed, fresh, "run " + run + " step " + step) != LpSolver.OPTIMAL) {
+          break;
+        }
+      }
+    }
+    assertThat(removedRuns).isGreaterThan(100);
+  }
+
+  @Test
   void aCopyGoesOnIndependently() {
     Random rnd = new Random(17);
     for (int run = 0; run < 500; run++) {
