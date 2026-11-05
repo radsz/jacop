@@ -222,6 +222,9 @@ final class DualSimplex implements LpSolver {
       int p = basis[r];
       boolean toLower = beta[r] < lo[p];
       int q = enteringColumn(r, toLower, toLower ? lo[p] - beta[r] : beta[r] - hi[p]);
+      if (q == RatioTest.NUMERIC) {
+        return LIMIT;
+      }
       if (q < 0) {
         infeasibleRow = r;
         return INFEASIBLE;

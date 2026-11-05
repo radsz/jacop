@@ -1,7 +1,16 @@
 include "fzn_cumulative_opt.mzn";
-include "fzn_cumulatives_decomp.mzn";
+
+predicate jacop_cumulatives_optional(array[int] of var int: start,
+                                     array[int] of var int: duration,
+                                     array[int] of var int: resource,
+                                     array[int] of var int: machine,
+                                     array[int] of var int: bound,
+                                     bool: is_upper_bound,
+                                     int: min_machine,
+                                     array[int] of var bool: present);
 
 % Optional cumulatives: a task is present on machine k iff it occurs and machine[i] = k.
+% Lower bounds and negative requirements go to JaCoP's Cumulatives sweep with presence.
 predicate fzn_cumulatives_opt(array[int] of var opt int: start,
                               array[int] of var int: duration,
                               array[int] of var int: resource,
@@ -22,7 +31,7 @@ predicate fzn_cumulatives_opt(array[int] of var opt int: start,
       endif
     )
   else
-    fzn_cumulatives_decomp([si default 0 | si in start],
-                           [if occurs(start[i]) then duration[i] else 0 endif | i in index_set(start)],
-                           resource, machine, bound, is_upper_bound)
+    jacop_cumulatives_optional([if is_fixed(si) /\ absent(fix(si)) then 0 else deopt(si) endif | si in start],
+                               duration, resource, machine, bound, is_upper_bound, min_machine,
+                               [occurs(si) | si in start])
   endif;

@@ -99,13 +99,104 @@ class SymmetryBreakingFlatzincTest {
     fzn.append("solve satisfy;\n");
     String model = fzn.toString();
 
-    String off = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "on", "--symmetry", "off");
-    String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+    String off =
+        FlatzincTestRunner.run(
+            tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
     assertTrue(off.contains("=====UNSATISFIABLE====="), off);
     assertTrue(on.contains("=====UNSATISFIABLE====="), on);
     // the pigeons and the holes are interchangeable: 7 + 6 generators
     assertEquals(13, generators(on));
     assertTrue(failures(on) * 10 < failures(off), on + "\n" + off);
+  }
+
+  @Test
+  void readingTheModelCountsInTheTimeGiven() throws IOException {
+    // building the graph of a large model took several times the second given to the
+    // automorphism search (groupsplitter: 7 s); it now stops when the time is up
+    String model =
+        """
+        array [1..4] of var 1..4: x :: output_array([1..4]);
+        constraint jacop_alldiff(x);
+        solve satisfy;
+        """;
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+    assertTrue(on.contains("symmetryConstraints=2"), on);
+    String time = System.setProperty("org.jacop.fz.symmetryTime", "0");
+    try {
+      String out = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+      assertTrue(out.contains("symmetryConstraints=0"), out);
+      assertTrue(out.contains("symmetrySearchComplete=false"), out);
+      assertTrue(out.contains("time limit"), out);
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      if (time == null) {
+        System.clearProperty("org.jacop.fz.symmetryTime");
+      } else {
+        System.setProperty("org.jacop.fz.symmetryTime", time);
+      }
+    }
+  }
+
+  @Test
+  void aSearchForTheLargestValuesMeetsTheLargestSolutionFirst() throws IOException {
+    // any two of the four may be 1; the search tries 1 first, so it meets x = [1, 1, 0, 0] first,
+    // which the lex-leader constraints must keep
+    String model =
+        """
+        array [1..4] of var 0..1: x :: output_array([1..4]);
+        constraint int_lin_le([1,1,1,1], x, 2);
+        constraint int_lin_le([-1,-1,-1,-1], x, -2);
+        solve :: int_search(x, input_order, indomain_max, complete) satisfy;
+        """;
+    String out = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+    assertTrue(out.contains("x = array1d(1..4, [1, 1, 0, 0]);"), out);
+    assertTrue(out.contains("failures=0"), out);
+    assertTrue(generators(out) > 0, out);
+  }
+
+  /**
+   * The model with a search annotation over its x variables that tries the largest values first.
+   */
+  private static String largestFirst(String model) {
+    List<String> xs = new ArrayList<>();
+    Matcher m = Pattern.compile("var [^:]+: (x\\d+)").matcher(model);
+    while (m.find()) {
+      xs.add(m.group(1));
+    }
+    return model.replace(
+        "solve ",
+        "solve :: int_search(["
+            + String.join(",", xs)
+            + "], input_order, indomain_max, complete) ");
+  }
+
+  @Test
+  void freeSearchLeavesTheMachinesOfAMakespanUnordered() throws IOException {
+    // identical machines with the largest load minimized (P||Cmax): value precedence on the
+    // machines multiplied the failures of --lcg -f, so free search leaves it out
+    String model =
+        """
+        array [1..6] of var 1..3: mc :: output_array([1..6]);
+        array [1..3] of var 0..30: load;
+        var 0..30: makespan :: output_var;
+        constraint jacop_bin_packing(mc, load, [7, 6, 5, 4, 3, 3], 1);
+        constraint jacop_maximum(makespan, load);
+        solve :: int_search(mc, first_fail, indomain_min, complete) minimize makespan;
+        """;
+    String annotated =
+        FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+    assertTrue(annotated.contains("symmetryValuePrecedences=1"), annotated);
+    for (String[] options :
+        new String[][] {
+          {"--search-statistics", "-f", "--symmetry", "on"},
+          {"--search-statistics", "-f", "--lcg", "--symmetry", "on"}
+        }) {
+      String free = FlatzincTestRunner.run(tmp, model, options);
+      assertTrue(free.contains("symmetryValuePrecedences=0"), free);
+      assertEquals(10, objective(free, "makespan"), free);
+    }
+    assertEquals(10, objective(annotated, "makespan"), annotated);
   }
 
   @Test
@@ -117,7 +208,8 @@ class SymmetryBreakingFlatzincTest {
         constraint int_ne(x, y);
         solve satisfy;
         """;
-    String out = FlatzincTestRunner.run(tmp, model, "-a", "-s", "--presolve", "check");
+    String out =
+        FlatzincTestRunner.run(tmp, model, "-a", "--search-statistics", "--presolve", "check");
     assertEquals(6, FlatzincTestRunner.solutions(out).size(), out);
     assertFalse(out.contains("symmetryGenerators"), out);
   }
@@ -131,12 +223,25 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
-      String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String what = "trial " + trial + "\n" + model + "\n" + on;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), what);
       if (optimise && !unsat) {
         assertEquals(objective(off), objective(on), what);
+      }
+      // without presolve, as fzn-jacop runs by default; compared with LCG without symmetry
+      // breaking, since LCG rejects some of these models (array_int_maximum) that CP refutes
+      String lcgOff = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
+      String lcgOn = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg");
+      // a search for the largest values first keeps the largest solution of each orbit
+      if (trial % 2 == 0) {
+        lcgOn = FlatzincTestRunner.run(tmp, largestFirst(model), "--symmetry", "on", "--lcg");
+      }
+      boolean lcgUnsat = lcgOff.contains("=====UNSATISFIABLE=====");
+      assertEquals(lcgUnsat, lcgOn.contains("=====UNSATISFIABLE====="), what + "\n" + lcgOn);
+      if (optimise && !lcgUnsat) {
+        assertEquals(objective(lcgOff), objective(lcgOn), what + "\n" + lcgOn);
       }
       if (generators(on) > 0) {
         broken++;
@@ -186,7 +291,8 @@ class SymmetryBreakingFlatzincTest {
           .append("],0);\n");
     }
     fzn.append("solve satisfy;\n");
-    String on = FlatzincTestRunner.run(tmp, fzn.toString(), "-s", "--presolve", "check");
+    String on =
+        FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     // value precedence: x0 = 1, and the first other colour is 2
     assertTrue(on.contains("x0 = 1;"), on);
@@ -209,7 +315,8 @@ class SymmetryBreakingFlatzincTest {
       fzn.append("constraint int_lin_le([1,-1],[x").append(i).append(",colours],0);\n");
     }
     fzn.append("solve minimize colours;\n");
-    String on = FlatzincTestRunner.run(tmp, fzn.toString(), "-s", "--presolve", "check");
+    String on =
+        FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     assertEquals(3, objective(on, "colours"), on);
   }
@@ -241,8 +348,10 @@ class SymmetryBreakingFlatzincTest {
         constraint bool_lin_eq([1,1,1,1],[u1,u2,u3,u4],used);
         solve minimize used;
         """;
-    String off = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "on", "--symmetry", "off");
-    String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+    String off =
+        FlatzincTestRunner.run(
+            tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
     assertEquals(objective(off, "used"), objective(on, "used"), on);
     assertEquals(3, objective(on, "used"), on);
     assertEquals(1, precedences(on), on);
@@ -311,7 +420,7 @@ class SymmetryBreakingFlatzincTest {
         constraint jacop_count([x0,x1,x2,x3,x4],3,c3);
         solve satisfy;
         """;
-    String on = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "check");
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     assertTrue(on.contains("x0 = 1;"), on);
   }
@@ -329,7 +438,11 @@ class SymmetryBreakingFlatzincTest {
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
-            {"-s", "--presolve", "check"}, {"-s", "--presolve", "check", "--lcg"},
+            {"--search-statistics", "--presolve", "check"},
+            {"--search-statistics", "--presolve", "check", "--lcg"},
+            // without presolve, as fzn-jacop runs by default, and with the annotation search
+            {"--search-statistics", "--lcg", "--symmetry", "on"},
+            {"--search-statistics", "-f", "--symmetry", "on"},
           }) {
         String on;
         try {
@@ -366,7 +479,11 @@ class SymmetryBreakingFlatzincTest {
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
-            {"-s", "--presolve", "check"}, {"-s", "--presolve", "check", "--lcg"},
+            {"--search-statistics", "--presolve", "check"},
+            {"--search-statistics", "--presolve", "check", "--lcg"},
+            // without presolve, as fzn-jacop runs by default, and with the annotation search
+            {"--search-statistics", "--lcg", "--symmetry", "on"},
+            {"--search-statistics", "-f", "--symmetry", "on"},
           }) {
         String on;
         try {

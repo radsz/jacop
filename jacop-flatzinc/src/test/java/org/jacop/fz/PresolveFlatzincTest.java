@@ -223,12 +223,18 @@ class PresolveFlatzincTest {
     Path optimisation = dir.resolve("dual-max.fzn");
     Files.writeString(optimisation, DUAL_MODEL + "solve maximize obj;\n");
     String reduced =
-        run("-s", "--presolve", "check", "--presolve-probe", "off", optimisation.toString());
+        run(
+            "--search-statistics",
+            "--presolve",
+            "check",
+            "--presolve-probe",
+            "off",
+            optimisation.toString());
     assertThat(reduced).contains("%%%mzn-stat: presolveDualTightened=2");
     assertThat(reduced).contains("obj = 33;").contains("==========");
     assertThat(
             run(
-                "-s",
+                "--search-statistics",
                 "--presolve",
                 "check",
                 "--presolve-probe",
@@ -241,10 +247,10 @@ class PresolveFlatzincTest {
 
     Path satisfaction = dir.resolve("dual-sat.fzn");
     Files.writeString(satisfaction, DUAL_MODEL + "solve satisfy;\n");
-    String all = run("-a", "-s", "--presolve", "check", satisfaction.toString());
+    String all = run("-a", "--search-statistics", "--presolve", "check", satisfaction.toString());
     assertThat(all).doesNotContain("presolveDual");
     assertThat(all.split("----------", -1)).hasSize(80);
-    assertThat(run("-s", "--presolve", "check", satisfaction.toString()))
+    assertThat(run("--search-statistics", "--presolve", "check", satisfaction.toString()))
         .contains("%%%mzn-stat: presolveDualRounds=");
   }
 

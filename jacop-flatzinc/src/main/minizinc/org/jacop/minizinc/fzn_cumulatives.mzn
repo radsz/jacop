@@ -1,9 +1,16 @@
 include "fzn_cumulative_opt.mzn";
-include "fzn_cumulatives_decomp.mzn";
+
+predicate jacop_cumulatives(array[int] of var int: start,
+                            array[int] of var int: duration,
+                            array[int] of var int: resource,
+                            array[int] of var int: machine,
+                            array[int] of var int: bound,
+                            bool: is_upper_bound,
+                            int: min_machine);
 
 % cumulatives with an upper bound and non-negative requirements is posted as one
 % optional cumulative per machine; a task is present on machine k iff machine[i] = k.
-% Lower bounds and negative requirements keep the standard decomposition.
+% Lower bounds and negative requirements go to JaCoP's Cumulatives sweep.
 predicate fzn_cumulatives(array[int] of var int: start,
                           array[int] of var int: duration,
                           array[int] of var int: resource,
@@ -23,5 +30,5 @@ predicate fzn_cumulatives(array[int] of var int: start,
       endif
     )
   else
-    fzn_cumulatives_decomp(start, duration, resource, machine, bound, is_upper_bound)
+    jacop_cumulatives(start, duration, resource, machine, bound, is_upper_bound, min_machine)
   endif;

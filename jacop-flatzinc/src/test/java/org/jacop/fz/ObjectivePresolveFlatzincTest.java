@@ -109,7 +109,7 @@ class ObjectivePresolveFlatzincTest {
 
   @Test
   void theObjectiveIsExpandedAndShifted() throws IOException {
-    String out = FlatzincTestRunner.run(tmp, ASSIGNMENT, "-s", "--presolve", "on");
+    String out = FlatzincTestRunner.run(tmp, ASSIGNMENT, "--search-statistics", "--presolve", "on");
     assertThat(stat(EXPANDED, out)).isEqualTo(3);
     assertThat(stat(SHIFTED, out)).isEqualTo(3);
     // the cheapest of each set: 7 + 4 + 3, but a3 or b1 or m = 2 is required
@@ -168,7 +168,7 @@ class ObjectivePresolveFlatzincTest {
   @Test
   void aCountIsExpandedAndEachByteGetsACostVariable() throws IOException {
     // objective presolve runs without --presolve too
-    String out = FlatzincTestRunner.run(tmp, ENCODING, "-s");
+    String out = FlatzincTestRunner.run(tmp, ENCODING, "--search-statistics");
     assertThat(stat(EXPANDED, out)).isEqualTo(1);
     assertThat(stat(SHIFTED, out)).isEqualTo(3);
     // the equation defining cost is replaced by the reformulated one
@@ -215,7 +215,8 @@ class ObjectivePresolveFlatzincTest {
     String key = "org.jacop.fz.objectivePresolve";
     System.setProperty(key, "false");
     try {
-      String out = FlatzincTestRunner.run(tmp, ASSIGNMENT, "-s", "--presolve", "on");
+      String out =
+          FlatzincTestRunner.run(tmp, ASSIGNMENT, "--search-statistics", "--presolve", "on");
       assertThat(out).doesNotContain("presolveObjective").contains("cost = 14;");
     } finally {
       System.clearProperty(key);
@@ -236,7 +237,7 @@ class ObjectivePresolveFlatzincTest {
       String model = randomModel(random);
       String off = reference(model, "-a");
       assertThat(run(model, "check", "-a")).as(model).isEqualTo(off);
-      String stats = FlatzincTestRunner.run(tmp, model, "-s", "--presolve", "on");
+      String stats = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "on");
       if (stat(SHIFTED, stats) > 0) {
         shifted++;
       }

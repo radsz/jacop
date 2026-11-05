@@ -84,14 +84,23 @@ class LocalSearchFlatzincTest {
   @Test
   void optimumUnderLcg() throws IOException {
     // -a as MiniZinc passes it for optimisation: local search runs and its solutions are printed
-    String out = run(COVER + "solve minimize cost;\n", "--lcg", "-f", "-a", "-s", "-t", "5000");
+    String out =
+        run(
+            COVER + "solve minimize cost;\n",
+            "--lcg",
+            "-f",
+            "-a",
+            "--search-statistics",
+            "-t",
+            "5000");
     assertFalse(out.contains("lsSolutions=0") || !out.contains("lsSolutions="), out);
     checkOptimum(out);
   }
 
   @Test
   void optimumUnderFreeSearch() throws IOException {
-    checkOptimum(run(COVER + "solve minimize cost;\n", "-f", "-a", "-s", "-t", "5000"));
+    checkOptimum(
+        run(COVER + "solve minimize cost;\n", "-f", "-a", "--search-statistics", "-t", "5000"));
   }
 
   @Test
@@ -101,7 +110,7 @@ class LocalSearchFlatzincTest {
             COVER + "constraint int_le(cost,3);\nsolve satisfy;\n",
             "--lcg",
             "-f",
-            "-s",
+            "--search-statistics",
             "-t",
             "5000");
     assertTrue(out.contains("lsSolutions=1"), out);

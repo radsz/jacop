@@ -58,6 +58,11 @@ import org.jacop.core.Store;
  * <p>A rule should be idempotent: run again on a problem it did not change, it changes nothing. A
  * rule that is not makes every round change something, and the rounds then stop at the budget.
  *
+ * <p>Each rule has a {@link Timing timing class}, as SCIP's presolvers do. A round runs the fast
+ * rules; the medium ones join only when a round of the fast ones found little, and the exhaustive
+ * ones only when the medium ones found little too. A round that finds much goes back to the fast
+ * rules alone.
+ *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
@@ -70,6 +75,25 @@ public interface Rule {
    * @param context the parent store and the constraints the child would receive now.
    */
   void apply(Context context);
+
+  /**
+   * Returns the timing class of the rule; {@link Timing#FAST} unless a rule says otherwise.
+   *
+   * @return the timing class.
+   */
+  default Timing timing() {
+    return Timing.FAST;
+  }
+
+  /** How costly a rule is, which decides how often the rounds run it. */
+  enum Timing {
+    /** About linear in the size of the problem: runs in every round. */
+    FAST,
+    /** Pairwise or graph work, run when the fast rules find little. */
+    MEDIUM,
+    /** Search-like work under a time budget, such as probing, run when the others find little. */
+    EXHAUSTIVE
+  }
 
   /** What a rule sees of a derivation in progress. */
   interface Context {

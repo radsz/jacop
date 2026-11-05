@@ -102,38 +102,43 @@ final class MirCut {
    * @return the cut, or null
    */
   static MirCut of(long[] c, long b, double[] value, long[] lo, long[] hi) {
+    int size = 0;
+    for (long w : c) {
+      size += w != 0 ? 1 : 0;
+    }
+    int[] columns = new int[size];
+    long[] weights = new long[size];
+    for (int j = 0, k = 0; j < c.length; j++) {
+      if (c[j] != 0) {
+        columns[k] = j;
+        weights[k++] = c[j];
+      }
+    }
+    return of(columns, weights, b, value, lo, hi);
+  }
+
+  /**
+   * Returns the best MIR cut of {@code sum c_k x_columns[k] <= b}, or null when none is violated
+   * enough or the arithmetic overflows. The work is linear in the length of the row, not in the
+   * number of columns.
+   *
+   * @param columns the columns of the row, ascending, each once (not changed)
+   * @param c the nonzero weights of the columns (not changed)
+   * @param b the right side
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @return the cut, or null
+   */
+  static MirCut of(int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
     try {
-      return cut(c, b, value, lo, hi);
+      return cut(columns, c, b, value, lo, hi);
     } catch (ArithmeticException _) {
       return null;
     }
   }
 
-  /**
-   * Returns the cut {@code sum weights x <= rhs} made elsewhere, or null when the LP solution does
-   * not break it enough.
-   *
-   * @param columns the columns, increasing
-   * @param weights the weights by column of the cut
-   * @param rhs the right side
-   * @param value the LP solution by column
-   * @return the cut, or null
-   */
-  static MirCut row(int[] columns, long[] weights, long rhs, double[] value) {
-    double activity = 0;
-    double norm = 0;
-    for (int k = 0; k < columns.length; k++) {
-      double w = (double) weights[k];
-      activity += w * value[columns[k]];
-      norm += w * w;
-    }
-    double efficacy = (activity - rhs) / Math.sqrt(norm);
-    return efficacy > MIN_EFFICACY
-        ? new MirCut(columns, weights, rhs, efficacy, Math.sqrt(norm))
-        : null;
-  }
-
-  private static MirCut cut(long[] c, long b, double[] value, long[] lo, long[] hi) {
+  private static MirCut cut(int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
     int n = c.length;
     long[] cc = new long[n];
     boolean[] up = new boolean[n];
@@ -143,22 +148,23 @@ final class MirCut {
     int count = 0;
     long side = b;
     int size = 0;
-    for (int j = 0; j < n; j++) {
-      long w = c[j];
+    for (int t = 0; t < n; t++) {
+      long w = c[t];
       if (w == 0) {
         continue;
       }
+      int j = columns[t];
       size++;
       double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
-      up[j] = hi[j] - v < v - lo[j];
-      if (up[j]) {
-        cc[j] = -w;
+      up[t] = hi[j] - v < v - lo[j];
+      if (up[t]) {
+        cc[t] = -w;
         side = Math.subtractExact(side, Math.multiplyExact(w, hi[j]));
-        xs[j] = hi[j] - v;
+        xs[t] = hi[j] - v;
       } else {
-        cc[j] = w;
+        cc[t] = w;
         side = Math.subtractExact(side, Math.multiplyExact(w, lo[j]));
-        xs[j] = v - lo[j];
+        xs[t] = v - lo[j];
       }
       double in = Math.min(v - lo[j], hi[j] - v);
       if (in > 1e-6) {
@@ -211,24 +217,25 @@ final class MirCut {
     long right = Math.multiplyExact(Math.floorDiv(side, d), k);
     long[] g = new long[n];
     int nonzero = 0;
-    for (int j = 0; j < n; j++) {
-      if (cc[j] == 0) {
+    for (int t = 0; t < n; t++) {
+      if (cc[t] == 0) {
         continue;
       }
+      int j = columns[t];
       long gj =
           Math.addExact(
-              Math.multiplyExact(Math.floorDiv(cc[j], d), k),
-              Math.max(0, Math.floorMod(cc[j], d) - r));
+              Math.multiplyExact(Math.floorDiv(cc[t], d), k),
+              Math.max(0, Math.floorMod(cc[t], d) - r));
       if (gj == 0) {
         continue;
       }
-      if (up[j]) {
+      if (up[t]) {
         // gj (hi - x)
-        g[j] = -gj;
+        g[t] = -gj;
         right = Math.subtractExact(right, Math.multiplyExact(gj, hi[j]));
       } else {
         // gj (x - lo)
-        g[j] = gj;
+        g[t] = gj;
         right = Math.addExact(right, Math.multiplyExact(gj, lo[j]));
       }
       nonzero++;
@@ -243,15 +250,16 @@ final class MirCut {
     if (gcd == 0) {
       return null;
     }
-    int[] columns = new int[nonzero];
+    int[] cutColumns = new int[nonzero];
     long[] weights = new long[nonzero];
     double activity = 0;
     double norm = 0;
     int q = 0;
-    for (int j = 0; j < n; j++) {
-      if (g[j] != 0) {
-        columns[q] = j;
-        long w = g[j] / gcd;
+    for (int t = 0; t < n; t++) {
+      if (g[t] != 0) {
+        int j = columns[t];
+        cutColumns[q] = j;
+        long w = g[t] / gcd;
         weights[q] = w;
         q++;
         double weight = (double) w;
@@ -271,7 +279,7 @@ final class MirCut {
     if (!(efficacy > MIN_EFFICACY) || largest > MAX_RATIO * smallest || largest > MAX_WEIGHT) {
       return null;
     }
-    return new MirCut(columns, weights, rhs, efficacy, Math.sqrt(norm));
+    return new MirCut(cutColumns, weights, rhs, efficacy, Math.sqrt(norm));
   }
 
   // the violation over the norm of the cut with divisor d, over x' >= 0

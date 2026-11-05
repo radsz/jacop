@@ -90,20 +90,13 @@ final class TableExplanation {
   private int position;
   private int call;
 
-  // Column snapshots before the position, built on first use: the root domain, the bounds and the
-  // entries that set them (-1 for a root bound), and the != entries, indexed by value for a small
-  // root span (neStamp, neEntry from neBase) and otherwise sorted by value (neValue, neEntry).
+  // Column snapshots before the position, built on first use: the root domain, and the bounds and
+  // the entries that set them (-1 for a root bound).
   private final int[] built;
   private final int[] lo;
   private final int[] hi;
   private final int[] geLatest;
   private final int[] leLatest;
-  private final int[] neBuilt;
-  private final int[][] neValue;
-  private final int[][] neEntry;
-  private final int[] neSize;
-  private final int[][] neStamp;
-  private final int[] neBase;
   private final IntDomain[] roots;
 
   // The status of each value of a column with a small root span, as value() leaves it (ALIVE, FREE
@@ -138,12 +131,6 @@ final class TableExplanation {
     hi = new int[arity];
     geLatest = new int[arity];
     leLatest = new int[arity];
-    neBuilt = new int[arity];
-    neValue = new int[arity][];
-    neEntry = new int[arity][];
-    neSize = new int[arity];
-    neStamp = new int[arity][];
-    neBase = new int[arity];
     roots = new IntDomain[arity];
     columnChosen = new int[arity];
     valueStamp = new int[arity][];
@@ -230,14 +217,8 @@ final class TableExplanation {
     if (call == Integer.MAX_VALUE) {
       call = 1;
       Arrays.fill(built, 0);
-      Arrays.fill(neBuilt, 0);
       Arrays.fill(chosen, 0);
       Arrays.fill(columnChosen, 0);
-      for (int[] stamp : neStamp) {
-        if (stamp != null) {
-          Arrays.fill(stamp, 0);
-        }
-      }
       for (int[] stamp : valueStamp) {
         if (stamp != null) {
           Arrays.fill(stamp, 0);
@@ -655,18 +636,10 @@ final class TableExplanation {
     }
     built[j] = call;
     IntVar y = table.x[j];
-    int g = -1;
-    int l = -1;
-    for (int e = trail.lastEntry(y, position);
-        e >= 0 && (g < 0 || l < 0);
-        e = trail.previousEntry(e)) {
-      int kind = trail.kind(e);
-      if (kind == AtomicTrail.GE && g < 0) {
-        g = e;
-      } else if (kind == AtomicTrail.LE && l < 0) {
-        l = e;
-      }
-    }
+    // a binary search among the bound entries: walking the column's entries back to its bounds
+    // would read every != entry, thousands on the row number column of a merged element group
+    int g = trail.boundEntry(y, position, true);
+    int l = trail.boundEntry(y, position, false);
     geLatest[j] = g;
     leLatest[j] = l;
     IntDomain root = trail.rootDomain(y);
@@ -682,74 +655,12 @@ final class TableExplanation {
     }
   }
 
-  /** The != entry of value v of column j before the position, or -1. */
-  private int notEqual(int j, int v) {
-    if (neBuilt[j] != call) {
-      buildNotEqual(j);
-    }
-    int[] stamp = neStamp[j];
-    if (stamp != null) {
-      int k = v - neBase[j];
-      return k >= 0 && k < stamp.length && stamp[k] == call ? neEntry[j][k] : -1;
-    }
-    int k = Arrays.binarySearch(neValue[j], 0, neSize[j], v);
-    return k >= 0 ? neEntry[j][k] : -1;
-  }
-
   /**
-   * Reads column j's != entries before the position: into arrays indexed by value when the root
-   * domain spans at most DENSE_SPAN values, stamped with the explanation's number so they need no
-   * clearing, otherwise sorted by value.
+   * The != entry of value v of column j before the position, or -1. The trail's index of removed
+   * values answers at once; reading the column's != entries instead costs as many as were removed,
+   * on every explanation, and the row number column of a merged element group loses thousands.
    */
-  private void buildNotEqual(int j) {
-    neBuilt[j] = call;
-    IntVar y = table.x[j];
-    if (neStamp[j] == null && neValue[j] == null) {
-      IntDomain root = trail.rootDomain(y);
-      long span = (long) root.max() - root.min() + 1;
-      if (span <= DENSE_SPAN) {
-        neBase[j] = root.min();
-        neStamp[j] = new int[(int) span];
-        neEntry[j] = new int[(int) span];
-      } else {
-        neValue[j] = new int[8];
-        neEntry[j] = new int[8];
-      }
-    }
-    if (neStamp[j] != null) {
-      int[] stamp = neStamp[j];
-      int[] entry = neEntry[j];
-      int b = neBase[j];
-      for (int e = trail.lastEntry(y, position); e >= 0; e = trail.previousEntry(e)) {
-        if (trail.kind(e) == AtomicTrail.NE) {
-          int k = trail.value(e) - b;
-          if (k >= 0 && k < stamp.length) {
-            stamp[k] = call;
-            entry[k] = e;
-          }
-        }
-      }
-      return;
-    }
-    int c = 0;
-    long[] keys = new long[8];
-    for (int e = trail.lastEntry(y, position); e >= 0; e = trail.previousEntry(e)) {
-      if (trail.kind(e) == AtomicTrail.NE) {
-        if (c == keys.length) {
-          keys = Arrays.copyOf(keys, 2 * c);
-        }
-        keys[c++] = ((long) trail.value(e) << 32) | e;
-      }
-    }
-    Arrays.sort(keys, 0, c);
-    if (neValue[j].length < c) {
-      neValue[j] = new int[c];
-      neEntry[j] = new int[c];
-    }
-    for (int k = 0; k < c; k++) {
-      neValue[j][k] = (int) (keys[k] >> 32);
-      neEntry[j][k] = (int) keys[k];
-    }
-    neSize[j] = c;
+  private int notEqual(int j, int v) {
+    return trail.notEqualEntry(table.x[j], v, position);
   }
 }

@@ -43,8 +43,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -53,6 +57,7 @@ import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.LpGuidedSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
@@ -300,6 +305,63 @@ class LinearRelaxationTest {
     // x = (-3, -3, -2, 2, -3, 3), obj = -7 meets every row
     assertThat(store.consistency()).isTrue();
     assertThat(x2.min()).isLessThanOrEqualTo(-2);
+  }
+
+  /**
+   * The dense simplex is asked for, but a relaxation of 100 rows or more is solved by the sparse
+   * one, and so is one over the dense size cap, which before got no relaxation at all
+   * (roster-shifts-bool, physician-scheduling and table-layout of the Challenge had no LP).
+   */
+  @Test
+  void choosesTheSparseSimplexForLargeRelaxations() {
+    assertThat(chain(5).simplex()).isEqualTo(LinearRelaxation.Simplex.DENSE);
+    assertThat(chain(150).simplex()).isEqualTo(LinearRelaxation.Simplex.SPARSE);
+    // 2,000 rows over 2,001 columns: a dense tableau of 8 million entries, over its cap of 4
+    LinearRelaxation large = chain(2000);
+    assertThat(large).isNotNull();
+    assertThat(large.simplex()).isEqualTo(LinearRelaxation.Simplex.SPARSE);
+    assertThat(large.rows()).isEqualTo(2000);
+  }
+
+  /**
+   * The sparse relaxation over the dense cap proves the bound: x_i + x_(i+1) >= 1 sums to 1,000.
+   */
+  @Test
+  void boundsTheObjectiveOverTheDenseCap() {
+    Store store = new Store();
+    int n = 2000;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    for (int i = 0; i + 1 < n; i += 2) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, n);
+    IntVar[] all = Arrays.copyOf(x, n + 1);
+    all[n] = cost;
+    int[] w = new int[n + 1];
+    Arrays.fill(w, 1);
+    w[n] = -1;
+    store.impose(new LinearInt(all, w, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, cost, false);
+    assertThat(r).isNotNull();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(cost.min()).isEqualTo(n / 2);
+  }
+
+  // rows x_i + x_(i+1) <= 3 over a chain of m + 1 variables
+  private static LinearRelaxation chain(int m) {
+    Store store = new Store();
+    IntVar[] x = new IntVar[m + 1];
+    for (int i = 0; i <= m; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    for (int i = 0; i < m; i++) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, "<=", 3));
+    }
+    return LinearRelaxation.of(store, x[0], true);
   }
 
   // the rows of Max (m >= x_i) tie the objective to the linear constraint: the root bound is 12 / 3
@@ -625,5 +687,170 @@ class LinearRelaxationTest {
     search.getSolutionListener().recordSolutions(false);
     search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
     return search.getSolutionListener().solutionsNo();
+  }
+
+  @Test
+  void lpGuidedSelectFollowsTheFractionalSolution() {
+    // three 0/1 variables that conflict pairwise, maximize their sum: the relaxation sets each to
+    // 1/2, so the selection takes one of them and rounds it up
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    for (int i = 0; i < 3; i++) {
+      store.impose(new LinearInt(new IntVar[] {b[i], b[(i + 1) % 3]}, new int[] {1, 1}, "<=", 1));
+    }
+    IntVar sum = new IntVar(store, "sum", 0, 3);
+    store.impose(
+        new LinearInt(new IntVar[] {b[0], b[1], b[2], sum}, new int[] {1, 1, 1, -1}, "==", 0));
+    LinearRelaxation lp = LinearRelaxation.of(store, sum, true);
+    store.impose(lp);
+    LpGuidedSelect select = new LpGuidedSelect(lp, null);
+    assertThat(select.getChoiceVariable(0)).isNull();
+    assertThat(store.consistency()).isTrue();
+    assertThat(sum.max()).isEqualTo(1);
+    Var v = select.getChoiceVariable(0);
+    assertThat(v).isIn((Object[]) b);
+    assertThat(select.getChoiceValue()).isEqualTo(1);
+    assertThat(select.lpDecisions).isEqualTo(1);
+  }
+
+  /**
+   * A random capacitated concert hall model: offers in halls or declined (hall 0), offers that
+   * overlap at the start of one of them in different halls (all-different except 0), a Boolean per
+   * accepted offer, and the total price of the accepted offers maximized.
+   */
+  private static final class Halls {
+    final Store store = new Store();
+    final IntVar[] assign;
+    final IntVar objective;
+    final IntVar cost;
+
+    Halls(long seed) {
+      Random rnd = new Random(seed);
+      int n = 5 + rnd.nextInt(3);
+      int halls = 2 + rnd.nextInt(2);
+      int[] start = new int[n];
+      int[] end = new int[n];
+      assign = new IntVar[n];
+      IntVar[] accepted = new IntVar[n];
+      int[] price = new int[n + 1];
+      for (int o = 0; o < n; o++) {
+        start[o] = rnd.nextInt(6);
+        end[o] = start[o] + 1 + rnd.nextInt(4);
+        // the halls large enough for the offer: the largest ones
+        int smallest = 1 + rnd.nextInt(halls);
+        assign[o] = new IntVar(store, "a" + o, 0, 0);
+        assign[o].addDom(smallest, halls);
+        accepted[o] = new IntVar(store, "b" + o, 0, 1);
+        price[o] = 1 + rnd.nextInt(20);
+        if (rnd.nextBoolean()) {
+          store.impose(new Reified(new XgteqC(assign[o], 1), accepted[o]));
+        } else {
+          store.impose(new Reified(new XlteqC(assign[o], 0), accepted[o]));
+          price[o] = -price[o];
+        }
+      }
+      for (int o = 0; o < n; o++) {
+        List<IntVar> clique = new ArrayList<>();
+        for (int p = 0; p < n; p++) {
+          if (start[p] <= start[o] && start[o] < end[p]) {
+            clique.add(assign[p]);
+          }
+        }
+        if (clique.size() >= 2) {
+          store.impose(new AlldifferentExceptZero(clique.toArray(new IntVar[0])));
+        }
+      }
+      objective = new IntVar(store, "obj", -200, 200);
+      IntVar[] vars = Arrays.copyOf(accepted, n + 1);
+      vars[n] = objective;
+      price[n] = -1;
+      store.impose(new LinearInt(vars, price, "==", 0));
+      cost = new IntVar(store, "cost", -200, 200);
+      store.impose(new LinearInt(new IntVar[] {objective, cost}, new int[] {1, 1}, "==", 0));
+    }
+
+    // the most objective by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(
+              search.labeling(store, new SimpleSelect<>(assign, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return -search.getCostValue();
+    }
+  }
+
+  /**
+   * The value encodings of all-different-except over LP-only columns (concert-hall-cap): the
+   * relaxation of hall assignments has them, keeps the optimum under depth-first search and under
+   * lazy clause generation with the explanation checker on, and its root bound is often far below
+   * that of the model's own rows.
+   */
+  @Test
+  void valueColumnsKeepTheOptimumOfHallAssignments() {
+    int tighter = 0;
+    long checked = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      long expected = new Halls(run).optimum();
+
+      Halls dfs = new Halls(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.objective, true);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(r.valueColumns).as("seed %d", run).isPositive();
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.rootBound).as("seed %d", run).isGreaterThanOrEqualTo(expected - 1e-6);
+      tighter += r.rootBound < r.baseBound - 0.5 ? 1 : 0;
+
+      Halls lcg = new Halls(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.objective, true);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.objective)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(tighter).isGreaterThan(RUNS / 50);
+    assertThat(checked).isPositive();
+  }
+
+  /** A copy of a relaxation with LP-only columns gets its own columns over the copied variables. */
+  @Test
+  void copyMakesItsOwnValueColumns() {
+    Halls h = new Halls(3);
+    LinearRelaxation r = LinearRelaxation.of(h.store, h.objective, true);
+    h.store.impose(r);
+    assertThat(h.store.consistency()).isTrue();
+    Store target = new Store();
+    Map<Var, Var> copies = new HashMap<>();
+    VarMap map =
+        new VarMap() {
+          @Override
+          public Store target() {
+            return target;
+          }
+
+          @Override
+          @SuppressWarnings("unchecked")
+          public <V extends Var> V get(V v) {
+            return (V)
+                copies.computeIfAbsent(
+                    v, u -> new IntVar(target, u.id(), ((IntVar) u).dom().cloneLight()));
+          }
+        };
+    LinearRelaxation c = r.copy(map);
+    assertThat(c.valueColumns).isEqualTo(r.valueColumns);
+    for (int j = 0; j < c.columns(); j++) {
+      IntVar v = c.column(j);
+      if (v instanceof LpColumn lc) {
+        assertThat(copies).containsValue(lc.variable());
+      } else {
+        assertThat(copies).containsValue(v);
+      }
+    }
   }
 }

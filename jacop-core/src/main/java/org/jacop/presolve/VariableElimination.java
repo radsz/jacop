@@ -103,6 +103,7 @@ final class VariableElimination {
   private final Set<Var> frozen;
   private final boolean defined;
   private final Map<Var, Var> aliases;
+  private final boolean doubletons;
   private final Map<Var, List<Constraint>> occurrences = new IdentityHashMap<>();
   private final Map<Constraint, List<Var>> scope = new IdentityHashMap<>();
   private final Map<Constraint, Boolean> live = new IdentityHashMap<>();
@@ -125,9 +126,22 @@ final class VariableElimination {
    *     child.
    */
   VariableElimination(Set<Var> frozen, boolean defined, Map<Var, Var> aliases) {
+    this(frozen, defined, aliases, true);
+  }
+
+  /**
+   * Creates the rule.
+   *
+   * @param frozen the variables that must keep a counterpart in the child.
+   * @param defined see {@link #VariableElimination(Set, boolean, Map)}.
+   * @param aliases see {@link #VariableElimination(Set, boolean, Map)}.
+   * @param doubletons false to eliminate singleton columns only, without substitutions.
+   */
+  VariableElimination(Set<Var> frozen, boolean defined, Map<Var, Var> aliases, boolean doubletons) {
     this.frozen = frozen;
     this.defined = defined;
     this.aliases = aliases;
+    this.doubletons = doubletons;
   }
 
   /** The variable of the class of a merged variable that stays, or the variable itself. */
@@ -155,7 +169,7 @@ final class VariableElimination {
       List<Constraint> in = occurrences.get(v);
       if (in.size() == 1) {
         singleton((IntVar) v, in.get(0), work);
-      } else if (in.size() == 2) {
+      } else if (in.size() == 2 && doubletons) {
         doubleton((IntVar) v, in.get(0), in.get(1), work);
       }
     }

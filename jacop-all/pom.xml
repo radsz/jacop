@@ -79,6 +79,7 @@
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <artifactSet>
                                 <includes>
+                                    <include>org.jacop:jacop-jalp</include>
                                     <include>org.jacop:jacop-core</include>
                                     <include>org.jacop:jacop-floats</include>
                                     <include>org.jacop:jacop-sets</include>

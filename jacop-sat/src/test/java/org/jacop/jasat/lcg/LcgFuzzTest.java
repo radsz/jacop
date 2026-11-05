@@ -61,6 +61,7 @@ import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -105,6 +106,7 @@ import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
@@ -117,6 +119,7 @@ import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -145,6 +148,7 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
@@ -437,10 +441,10 @@ class LcgFuzzTest {
       return new HybridTable(v, tuples, rnd.nextBoolean());
     }
 
-    // the globals added in 5.0 that have no explanation of their own, explained by replay
+    // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(19)) {
+      return switch (rnd.nextInt(22)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -481,8 +485,56 @@ class LcgFuzzTest {
         case 15 -> new LexOrder(pick(x, 3), pick(x, 3), rnd.nextBoolean());
         case 16 -> network();
         case 17 -> geost();
+        case 18 -> {
+          IntVar[] c = pick(b, 2 + rnd.nextInt(2));
+          IntVar[] v = pick(x, c.length);
+          yield new ConditionalSelect(
+              Arrays.copyOf(c, v.length), v, rnd.nextBoolean() ? one() : p[0]);
+        }
+        case 19 ->
+            new Cumulatives(
+                p,
+                chain("cd", 3, 0, 2),
+                pick(x, 3),
+                pick(x, 3),
+                new IntVar[] {one(), intVar("cb", -1, 2)},
+                rnd.nextBoolean(),
+                1,
+                rnd.nextBoolean() ? null : pick(b, 3));
+        case 20 -> routes();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // routes from depot 0 over two or three other nodes, two arcs on the shared Booleans (few
+    // fresh literals, so the reference search stays small)
+    private Routes routes() {
+      int n = 3 + rnd.nextInt(2);
+      List<int[]> arcs = new ArrayList<>();
+      for (int t = 0; t < n; t++) {
+        for (int h = 0; h < n; h++) {
+          if (t != h ? rnd.nextInt(3) != 0 : t != 0 && rnd.nextInt(4) == 0) {
+            arcs.add(new int[] {t, h});
+          }
+        }
+      }
+      int[] tails = new int[arcs.size()];
+      int[] heads = new int[arcs.size()];
+      IntVar[] literals = new IntVar[arcs.size()];
+      IntVar[] shared = pick(b, 2);
+      for (int k = 0; k < tails.length; k++) {
+        tails[k] = arcs.get(k)[0];
+        heads[k] = arcs.get(k)[1];
+        literals[k] = k < shared.length ? shared[k] : intVar("ra", 0, 1);
+      }
+      if (rnd.nextBoolean()) {
+        return new Routes(tails, heads, literals);
+      }
+      int[] demands = new int[n];
+      for (int v = 1; v < n; v++) {
+        demands[v] = rnd.nextInt(4);
+      }
+      return new Routes(tails, heads, literals, demands, 2 + rnd.nextInt(5));
     }
 
     // a flow of 0 to 2 units from node 0 to node 3 over five arcs, some on the variables
@@ -707,6 +759,12 @@ class LcgFuzzTest {
           IntVar[] ds = rnd.nextInt(4) == 0 ? xs : chain("d", 3, shift, shift + 3);
           posted.add("link " + xs[0].id() + " = " + p[0].id());
           store.impose(new XeqY(xs[0], p[0]));
+          if (ds == xs && rnd.nextBoolean()) {
+            // the same relation, inverse(x, x), on more variables, domain consistent or light
+            IntVar[] ys = chain("y", 3 + rnd.nextInt(3), shift - 1, shift + 4);
+            ys[0] = xs[0];
+            yield new SymmetricAlldifferent(ys, shift, rnd.nextInt(3) > 0);
+          }
           yield new Assignment(xs, ds, shift, shift);
         }
         case 51 -> rnd.nextBoolean() ? new SumInt(q, relation(), one()) : new Sum(q, one());
@@ -988,6 +1046,11 @@ class LcgFuzzTest {
     if (random.nextInt(3) == 0) {
       // short runs, so that the tiny models reach the lower-bound runs
       solver.setLowerBoundSearch(0.25 + random.nextDouble(), 1 + random.nextInt(3));
+      // half of them shave: the runs assume the objective a growing step above its bound
+      if (random.nextBoolean()) {
+        solver.setShaving(true);
+        solver.setLowerBoundGrowth(random.nextBoolean() ? 1 : 2);
+      }
     }
     // one run in three starts with core-guided search, for a few conflicts
     Random core = new Random(seed * 17 + 3);

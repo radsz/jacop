@@ -1,0 +1,393 @@
+/*
+ * PbModel.java
+ * <p>
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.lcg;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.function.BooleanSupplier;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.ValueEnumeration;
+
+/**
+ * The pseudo-Boolean model that {@link PbEncodable} constraints write to. Each integer variable
+ * stands for its order literals {@code [x >= v]} and value literals {@code [x = v]}, so a
+ * constraint is stated over the variables themselves.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+public interface PbModel {
+
+  /**
+   * Adds a linear relation.
+   *
+   * @param form the relation
+   */
+  void linear(LinearForm form);
+
+  /**
+   * Adds a linear relation that holds when a 0/1 variable is 1 and, for an equivalence, whose
+   * negation holds when it is 0.
+   *
+   * @param b the 0/1 variable
+   * @param form the relation
+   * @param equivalence true for b = 1 if and only if the relation holds, false for an implication
+   */
+  void reified(IntVar b, LinearForm form, boolean equivalence);
+
+  /**
+   * Adds a linear relation that holds when a literal is true.
+   *
+   * @param literal a literal of {@link #equalTo}, {@link #atLeast} or {@link #auxiliary}, or "1" or
+   *     "0"
+   * @param form the relation, one of LE, GE and EQ
+   */
+  void guarded(String literal, LinearForm form);
+
+  /**
+   * Adds a clause over 0/1 variables: one of the positive ones is 1 or one of the negative ones is
+   * 0.
+   *
+   * @param positive the variables of which one may be 1
+   * @param negative the variables of which one may be 0
+   */
+  void clause(IntVar[] positive, IntVar[] negative);
+
+  /**
+   * Returns the domain of a variable in the model, which its literals cover.
+   *
+   * @param x the variable
+   * @return its root domain
+   */
+  IntDomain domain(IntVar x);
+
+  /**
+   * Returns the literal {@code [x = v]}: its name, or "1" or "0" when the root domain of x decides
+   * it.
+   *
+   * @param x the variable
+   * @param v the value
+   * @return the literal
+   */
+  String equalTo(IntVar x, int v);
+
+  /**
+   * Returns the literal {@code [x >= v]}: its name, or "1" or "0" when the root domain of x decides
+   * it.
+   *
+   * @param x the variable
+   * @param v the value
+   * @return the literal
+   */
+  String atLeast(IntVar x, int v);
+
+  /**
+   * Returns a new literal of the model alone, which no variable of the store stands for.
+   *
+   * @return its name
+   */
+  String auxiliary();
+
+  /**
+   * Adds a clause over literals of {@link #equal} and {@link #atLeast}, each one negated by {@link
+   * #not}; a literal "1" makes the clause true and a literal "0" is left out.
+   *
+   * @param literals the literals of which one is true
+   */
+  void clause(String... literals);
+
+  /**
+   * Adds the relation {@code sum a[k] * literal[k] + sum w[j] * x[j] relation c}, for a relation
+   * {@link LinearForm#LE}, {@link LinearForm#GE} or {@link LinearForm#EQ}.
+   *
+   * @param literals literals of {@link #equal} and {@link #atLeast}
+   * @param a their coefficients
+   * @param x integer variables
+   * @param w their weights
+   * @param relation the relation
+   * @param c the right hand side
+   */
+  void sum(String[] literals, long[] a, IntVar[] x, long[] w, int relation, long c);
+
+  /**
+   * Adds that the variables take different values: at most one of them takes each value. The solver
+   * writes the counting steps that the explanations of such a constraint need.
+   *
+   * @param x the variables, all different objects
+   */
+  void allDifferent(IntVar[] x);
+
+  /**
+   * Adds that the successors x form one circuit through all nodes: node i points to node j when
+   * x[i] = offset + j. The solver writes the steps that the cut explanations of the constraint
+   * need.
+   *
+   * @param x the successor variables, all different objects
+   * @param offset the value that points to node 0
+   */
+  void circuit(IntVar[] x, int offset);
+
+  /**
+   * Writes the lines of an encoding under a literal, so that they need to hold only when it does.
+   * Encodings whose lines proofs derive from (such as {@link #allDifferent}) cannot be guarded.
+   *
+   * @param literal the literal, "1" for none and "0" for one that never holds
+   * @param encoding writes the lines and returns whether it could
+   * @return false when the encoding cannot be written under the literal
+   */
+  default boolean implied(String literal, BooleanSupplier encoding) {
+    return "1".equals(literal) && encoding.getAsBoolean();
+  }
+
+  /**
+   * Notes, for proofs, a time-indexed cumulative over fixed durations and uses whose lines the
+   * constraint being encoded writes next, each one named first by {@link #timetableLine}.
+   *
+   * @param starts the start of each task
+   * @param durations the duration of each task
+   * @param uses the resource use of each task
+   * @param limit the limit
+   */
+  default void timetable(IntVar[] starts, int[] durations, int[] uses, IntVar limit) {}
+
+  /**
+   * Names the next line the model writes, for the proofs of a {@link #timetable}: the definition
+   * {@code c - [s >= t - d + 1] + [s >= t + 1] >= 0} of the literal of a task covering a time
+   * point, or the load at the time point.
+   *
+   * @param task the task, or -1 for the load
+   * @param t the time point
+   */
+  default void timetableLine(int task, long t) {}
+
+  /**
+   * Adds that counters[k] of the variables take values[k] (between low[k] and up[k] when
+   * counters[k] is null), and that they take counted values only when closed. The solver writes the
+   * counting steps that the flow explanations of such a constraint need.
+   *
+   * @param x the counted variables, all different objects
+   * @param values the counted values, increasing
+   * @param counters the counter of each value, none of them among x, or null entries
+   * @param low the lower bound of each value without a counter, or null
+   * @param up the upper bound of each value without a counter, or null
+   * @param closed whether the variables take counted values only
+   * @param rest the number of variables taking no counted value, or null
+   */
+  void cardinality(
+      IntVar[] x,
+      int[] values,
+      IntVar[] counters,
+      int[] low,
+      int[] up,
+      boolean closed,
+      IntVar rest);
+
+  /**
+   * Adds {@code (number of x[i] = value) - sum y[j] relation c}: the counting constraints.
+   *
+   * @param model the model
+   * @param x the counted variables
+   * @param value the counted value
+   * @param y variables subtracted from the count
+   * @param relation the relation, as in {@link #sum}
+   * @param c the right hand side
+   */
+  static void count(PbModel model, IntVar[] x, int value, IntVar[] y, int relation, long c) {
+    String[] l = new String[x.length];
+    long[] a = new long[x.length];
+    for (int i = 0; i < x.length; i++) {
+      l[i] = model.equalTo(x[i], value);
+      a[i] = 1;
+    }
+    long[] w = new long[y.length];
+    Arrays.fill(w, -1);
+    model.sum(l, a, y, w, relation, c);
+  }
+
+  /**
+   * Adds that the variables take one of the tuples, by the support encoding: a literal per tuple
+   * that holds exactly when its values do, a clause per value of each variable that some tuple with
+   * it holds, and one that some tuple holds. Unit propagation over it reaches domain consistency.
+   *
+   * @param model the model
+   * @param x the variables
+   * @param tuples the allowed tuples, each a value per variable within its root domain
+   */
+  static void table(PbModel model, IntVar[] x, List<int[]> tuples) {
+    String[] some = new String[tuples.size()];
+    List<Map<Integer, List<String>>> support = new ArrayList<>();
+    for (int i = 0; i < x.length; i++) {
+      support.add(new HashMap<>());
+    }
+    for (int t = 0; t < tuples.size(); t++) {
+      String lit = model.auxiliary();
+      some[t] = lit;
+      // lit is the tuple, both ways, so that a solution fixes it even among equal tuples
+      String[] holds = new String[x.length + 1];
+      holds[0] = lit;
+      for (int i = 0; i < x.length; i++) {
+        int v = tuples.get(t)[i];
+        model.clause(not(lit), model.equalTo(x[i], v));
+        holds[i + 1] = not(model.equalTo(x[i], v));
+        support.get(i).computeIfAbsent(v, k -> new ArrayList<>()).add(lit);
+      }
+      model.clause(holds);
+    }
+    model.clause(some);
+    for (int i = 0; i < x.length; i++) {
+      IntDomain d = model.domain(x[i]);
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        List<String> s = support.get(i).getOrDefault(v, List.of());
+        String[] c = new String[s.size() + 1];
+        c[0] = not(model.equalTo(x[i], v));
+        for (int k = 0; k < s.size(); k++) {
+          c[k + 1] = s.get(k);
+        }
+        model.clause(c);
+      }
+    }
+  }
+
+  /**
+   * Writes a deterministic layered graph with one source over the variables: a literal per node and
+   * per edge; an edge implies its two nodes and its value, a node needs an incoming and an outgoing
+   * edge, and each value of a variable needs an edge of its level labelled with it. Unit
+   * propagation on them removes every edge that is on no path, which is domain consistency, and the
+   * values of a solution fix every literal.
+   *
+   * @param model the model
+   * @param list the variable of each level
+   * @param levelNodes the number of nodes of each level, levels.length + 1 entries, one at level 0
+   * @param edge four entries per edge: its level, source node, value and target node
+   * @param numEdges the number of edges
+   * @return false when the graph is not deterministic
+   */
+  static boolean layeredGraph(
+      PbModel model, IntVar[] list, int[] levelNodes, int[] edge, int numEdges) {
+    int levels = list.length;
+    long[] first = new long[levels + 1];
+    for (int level = 0; level < levels; level++) {
+      first[level + 1] = first[level] + levelNodes[level];
+    }
+    Map<Long, Integer> next = new HashMap<>();
+    for (int e = 0; e < numEdges; e++) {
+      long key = (first[edge[4 * e]] + edge[4 * e + 1]) << 32 | (edge[4 * e + 2] & 0xFFFFFFFFL);
+      Integer target = next.putIfAbsent(key, edge[4 * e + 3]);
+      if (target != null && target != edge[4 * e + 3]) {
+        return false;
+      }
+    }
+    String[][] node = new String[levels + 1][];
+    List<List<List<String>>> in = new ArrayList<>();
+    List<List<List<String>>> out = new ArrayList<>();
+    for (int level = 0; level <= levels; level++) {
+      int nodes = levelNodes[level];
+      node[level] = new String[nodes];
+      in.add(new ArrayList<>());
+      out.add(new ArrayList<>());
+      for (int k = 0; k < nodes; k++) {
+        node[level][k] = level == 0 ? "1" : model.auxiliary();
+        in.get(level).add(new ArrayList<>());
+        out.get(level).add(new ArrayList<>());
+      }
+    }
+    List<Map<Integer, List<String>>> labelled = new ArrayList<>();
+    for (int level = 0; level < levels; level++) {
+      labelled.add(new HashMap<>());
+    }
+    for (int e = 0; e < numEdges; e++) {
+      int level = edge[4 * e];
+      int source = edge[4 * e + 1];
+      int value = edge[4 * e + 2];
+      int target = edge[4 * e + 3];
+      String equal = model.equalTo(list[level], value);
+      if ("0".equals(equal)) {
+        continue;
+      }
+      String lit = model.auxiliary();
+      model.clause(not(lit), node[level][source]);
+      model.clause(not(lit), node[level + 1][target]);
+      model.clause(not(lit), equal);
+      out.get(level).get(source).add(lit);
+      in.get(level + 1).get(target).add(lit);
+      labelled.get(level).computeIfAbsent(value, v -> new ArrayList<>()).add(lit);
+    }
+    for (int level = 0; level <= levels; level++) {
+      for (int k = 0; k < node[level].length; k++) {
+        if (level < levels) {
+          model.clause(impliedOne(node[level][k], out.get(level).get(k)));
+        }
+        if (level > 0) {
+          model.clause(impliedOne(node[level][k], in.get(level).get(k)));
+        }
+      }
+    }
+    for (int level = 0; level < levels; level++) {
+      for (ValueEnumeration e = model.domain(list[level]).valueEnumeration();
+          e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        String equal = model.equalTo(list[level], v);
+        model.clause(impliedOne(equal, labelled.get(level).getOrDefault(v, List.of())));
+      }
+    }
+    return true;
+  }
+
+  /** The clause that a literal implies one of some literals. */
+  private static String[] impliedOne(String literal, List<String> some) {
+    String[] c = new String[some.size() + 1];
+    c[0] = not(literal);
+    for (int k = 0; k < some.size(); k++) {
+      c[k + 1] = some.get(k);
+    }
+    return c;
+  }
+
+  /**
+   * Returns the negation of a literal.
+   *
+   * @param literal a literal of {@link #equal} or {@link #atLeast}, or "1" or "0"
+   * @return its negation
+   */
+  static String not(String literal) {
+    return switch (literal) {
+      case "0" -> "1";
+      case "1" -> "0";
+      default -> literal.startsWith("~") ? literal.substring(1) : "~" + literal;
+    };
+  }
+}

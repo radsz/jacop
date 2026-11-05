@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
@@ -510,5 +511,49 @@ public class Subcircuit extends Alldiff {
     copy.useDominance = useDominance;
     copy.maxDominanceSkip = maxDominanceSkip;
     return copy;
+  }
+
+  /**
+   * Returns a decomposition of a subcircuit of successors numbered from 1 into constraints with a
+   * pseudo-Boolean encoding, for a proof that cannot derive the reasons of this propagator. Each
+   * node has a position, 0 for a node out of the circuit (its own successor); the positions of the
+   * nodes in it differ, and an arc puts its target one position after its source unless the target
+   * is at position 1. A second cycle would need another node at position 1. The successors must
+   * also be all different, which the decomposition does not state.
+   *
+   * @param store the store of the auxiliary variables
+   * @param list the successors, numbered from 1
+   * @return the constraints, still to be imposed
+   */
+  public static List<Constraint> decomposition(Store store, IntVar[] list) {
+    int n = list.length;
+    List<Constraint> out = new ArrayList<>();
+    IntVar[] position = new IntVar[n];
+    IntVar[] notFirst = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      position[i] = new IntVar(store, list[i].id() + "_position", 0, n);
+      out.add(new XgteqC(list[i], 1));
+      out.add(new XlteqC(list[i], n));
+      IntVar outside = new IntVar(store, 0, 1);
+      out.add(new Reified(new XeqC(list[i], i + 1), outside));
+      out.add(new Reified(new XeqC(position[i], 0), outside));
+      notFirst[i] = new IntVar(store, 0, 1);
+      out.add(new Reified(new XneqC(position[i], 1), notFirst[i]));
+    }
+    out.add(new AlldifferentExcept(position, new IntervalDomain(0, 0)));
+    for (int i = 0; i < n; i++) {
+      for (ValueEnumeration e = list[i].domain.valueEnumeration(); e.hasMoreElements(); ) {
+        int j = e.nextElement() - 1;
+        if (j < 0 || j >= n || j == i) {
+          continue;
+        }
+        IntVar arc = new IntVar(store, 0, 1);
+        out.add(new Reified(new XeqC(list[i], j + 1), arc));
+        IntVar next = new IntVar(store, 0, 1);
+        out.add(new AndBoolSimple(arc, notFirst[j], next));
+        out.add(new Implies(next, new XplusCeqZ(position[i], 1, position[j])));
+      }
+    }
+    return out;
   }
 }

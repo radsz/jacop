@@ -57,7 +57,7 @@ final class Eliminator {
 
   private final int numVars;
   private final boolean[] frozen;
-  private final DratWriter proof;
+  private final ProofOutput proof;
 
   private int[][] clauses;
   private long[] sigs;
@@ -91,7 +91,7 @@ final class Eliminator {
    * @param frozen the variables that must not be eliminated
    * @param proof the DRAT output, or null
    */
-  Eliminator(int numVars, int[][] input, int numInput, boolean[] frozen, DratWriter proof) {
+  Eliminator(int numVars, int[][] input, int numInput, boolean[] frozen, ProofOutput proof) {
     this.numVars = numVars;
     this.frozen = frozen;
     this.proof = proof;

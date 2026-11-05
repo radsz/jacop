@@ -32,6 +32,7 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -55,6 +56,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Alldistinct constraint assures that all FDVs have different values.
@@ -91,7 +94,8 @@ public class Alldistinct extends Constraint
         Stateful,
         SatisfiedPresent,
         Copyable<Alldistinct>,
-        Explainable {
+        Explainable,
+        PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1464,6 +1468,20 @@ public class Alldistinct extends Constraint
   // The number of values still available equals the number of not grounded variables.
   private boolean isPermutation() {
     return activeValues().size() == notGrounded.value();
+  }
+
+  /**
+   * Writes the constraint as one at-most-one line per value; the solver derives the pigeonhole
+   * steps its Hall set explanations need.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Alldistinct.class
+        || new HashSet<>(Arrays.asList(list)).size() != list.length) {
+      return false;
+    }
+    model.allDifferent(list);
+    return true;
   }
 
   @Override

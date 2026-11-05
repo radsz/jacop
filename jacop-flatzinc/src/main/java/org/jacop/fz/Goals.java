@@ -377,7 +377,9 @@ final class Goals implements MultiObjective.Subsolver<String> {
       case UNKNOWN -> s.append(UNKNOWN).append('\n').append(TIME_OUT).append('\n');
     }
     if (options.getStatistics()) {
-      s.append("%%%mzn-stat: goalSubproblems=").append(mo.subproblems()).append('\n');
+      if (options.searchStatistics()) {
+        s.append("%%%mzn-stat: goalSubproblems=").append(mo.subproblems()).append('\n');
+      }
       for (Map.Entry<String, Long> e : statistics.entrySet()) {
         s.append("%%%mzn-stat: ").append(e.getKey()).append('=').append(e.getValue()).append('\n');
       }

@@ -381,6 +381,15 @@ public class Geost extends Constraint
   /** It specifies the last useful constraint in the array of useful internal constraints. */
   int lastConstraintToCheck;
 
+  /**
+   * It specifies whether the volume of each non-overlapping group is checked (see VolumeCheck). It
+   * can only be changed before the constraint is imposed.
+   */
+  boolean volumeReasoning = true;
+
+  /** The volume checks of the non-overlapping groups, built when the constraint is imposed. */
+  VolumeCheck[] volumeChecks = new VolumeCheck[0];
+
   /** A preallocated array for the lower extreme infeasible point of an internal constraint. */
   private final long[] lowerInfeasible;
 
@@ -1338,6 +1347,10 @@ public class Geost extends Constraint
         }
       }
 
+      for (VolumeCheck check : volumeChecks) {
+        check.check();
+      }
+
       // backtracking data storage
       if (!updatedObjectSet.isEmpty()) {
 
@@ -1633,13 +1646,21 @@ public class Geost extends Constraint
           mapped[k] = copies.get(no.objects[k]);
         }
         constraintCopies[i] = new NonOverlapping(mapped, no.selectedDimensions.clone());
+      } else if (externalConstraints[i] instanceof LexChain lex) {
+        GeostObject[] mapped = new GeostObject[lex.objects.length];
+        for (int k = 0; k < mapped.length; k++) {
+          mapped[k] = copies.get(lex.objects[k]);
+        }
+        constraintCopies[i] = new LexChain(mapped);
       } else {
         InArea in = (InArea) externalConstraints[i];
         constraintCopies[i] = new InArea(in.allowedArea, new ArrayList<>(in.holes));
       }
     }
     // shapes are not changed by the constraint, so the copy shares them
-    return new Geost(objectCopies, constraintCopies, shapeRegister.clone());
+    Geost copy = new Geost(objectCopies, constraintCopies, shapeRegister.clone());
+    copy.volumeReasoning = volumeReasoning;
+    return copy;
   }
 
   /**
@@ -1655,26 +1676,55 @@ public class Geost extends Constraint
         : new IntVar(map.target(), v.min(), v.max());
   }
 
-  /** A copy rebuilds the two kinds of external constraints the library provides. */
+  /** A copy rebuilds the three kinds of external constraints the library provides. */
   @Override
   public boolean canCopy() {
     Set<GeostObject> own = Collections.newSetFromMap(new IdentityHashMap<>());
     own.addAll(Arrays.asList(objects));
     for (ExternalConstraint e : externalConstraints) {
-      if (e.getClass() != NonOverlapping.class && e.getClass() != InArea.class) {
+      if (e.getClass() != NonOverlapping.class
+          && e.getClass() != InArea.class
+          && e.getClass() != LexChain.class) {
         return false;
       }
       if (e instanceof NonOverlapping no && !own.containsAll(Arrays.asList(no.objects))) {
+        return false;
+      }
+      if (e instanceof LexChain lex && !own.containsAll(Arrays.asList(lex.objects))) {
         return false;
       }
     }
     return true;
   }
 
+  /**
+   * It turns the volume reasoning on or off: for every window of a dimension, the objects of a
+   * non-overlapping group that must lie inside it must fit there by volume. It is on by default and
+   * applies to the groups that select every spatial dimension.
+   *
+   * @param volumeReasoning true to check volumes, false not to.
+   */
+  public void setVolumeReasoning(boolean volumeReasoning) {
+    if (store != null) {
+      throw new IllegalStateException("Volume reasoning is set before the constraint is imposed");
+    }
+    this.volumeReasoning = volumeReasoning;
+  }
+
   @Override
   public void impose(Store store) {
 
     super.impose(store);
+
+    if (volumeReasoning) {
+      List<VolumeCheck> checks = new ArrayList<>();
+      for (ExternalConstraint ec : externalConstraints) {
+        if (ec instanceof NonOverlapping no && VolumeCheck.appliesTo(no, dimension)) {
+          checks.add(new VolumeCheck(this, no.objects, VolumeCheck.usesTime(no, dimension)));
+        }
+      }
+      volumeChecks = checks.toArray(new VolumeCheck[0]);
+    }
 
     this.store = store;
 

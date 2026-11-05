@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.binpacking;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
@@ -51,7 +52,6 @@ import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
-import org.jacop.constraints.Linearizations;
 import org.jacop.core.FailException;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -64,6 +64,8 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that items are packed into bins
@@ -84,7 +86,7 @@ public class Binpacking extends Constraint
         SatisfiedPresent,
         Copyable<Binpacking>,
         Explainable,
-        Linearizations.Relaxable {
+        PbEncodable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
   static long LBnumber;
@@ -118,6 +120,9 @@ public class Binpacking extends Constraint
    * benchmarks without cardinalities they cut few failures and cost 10-15% per node with many bins.
    */
   private boolean cardinalityReasoning;
+
+  /** True if only the rules of the load sums run, which a proof derives by unit propagation. */
+  private boolean linearRulesOnly;
 
   private final LinkedHashSet<IntVar> itemQueue = new LinkedHashSet<>();
   private final LinkedHashSet<IntVar> binQueue = new LinkedHashSet<>();
@@ -370,6 +375,62 @@ public class Binpacking extends Constraint
     return this;
   }
 
+  /**
+   * It keeps only the rules that follow from the load sums by bounds reasoning: the loads from the
+   * packed and candidate items, items kept out of a bin they would overload or put into one that
+   * needs them, and the sum of all loads. The subset-sum rules, the bin-count bound and the
+   * cardinality rules are off, so that a VeriPB proof derives every pruning from the sums. It must
+   * be set before the constraint is imposed.
+   *
+   * @return this constraint.
+   */
+  public Binpacking linearRulesOnly() {
+    this.linearRulesOnly = true;
+    this.lbPruning = false;
+    this.cardinalityReasoning = false;
+    return this;
+  }
+
+  /**
+   * Writes, for each bin, the sum of the weights of its items equal to its load, each item in one
+   * of the bins, and the sum of the loads equal to the weight of all items. Only a constraint with
+   * {@link #linearRulesOnly} and without card variables is written.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != Binpacking.class || !linearRulesOnly || card != null) {
+      return false;
+    }
+    int m = load.length;
+    for (int j = 0; j < m; j++) {
+      int binIdx = j + minBinNumber;
+      String[] literals = new String[item.length];
+      long[] a = new long[item.length];
+      for (int i = 0; i < item.length; i++) {
+        literals[i] = model.equalTo(item[i].bin(), binIdx);
+        a[i] = item[i].weight();
+      }
+      model.sum(literals, a, new IntVar[] {load[j]}, new long[] {-1}, LinearForm.EQ, 0);
+    }
+    List<IntVar> bins = new ArrayList<>();
+    for (BinItem it : item) {
+      bins.add(it.bin());
+    }
+    bins.addAll(Arrays.asList(zeroWeightBins));
+    for (IntVar b : bins) {
+      for (ValueEnumeration e = model.domain(b).valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        if (v < minBinNumber || v >= minBinNumber + m) {
+          model.clause(PbModel.not(model.equalTo(b, v)));
+        }
+      }
+    }
+    long[] ones = new long[m];
+    Arrays.fill(ones, 1);
+    model.linear(new LinearForm(load, ones, sizeAllItems, LinearForm.EQ));
+    return true;
+  }
+
   /** Rule "Pack All" -- applied only on first consistency check. */
   private void applyPackAllRule(Store store) {
     if (!packAll.begin(store)) {
@@ -473,9 +534,11 @@ public class Binpacking extends Constraint
     load[i].domain.in(store.level, load[i], clamp(required), clamp(possible));
     applyLoadMaintenanceToCandidates(
         store, i, binIdx, required, possible, candidates, candidatesLength);
-    applyTighteningBounds(store, i, required, weights, candidatesLength);
-    applyEliminationAndCommitment(
-        store, i, binIdx, required, candidates, weights, candidatesLength);
+    if (!linearRulesOnly) {
+      applyTighteningBounds(store, i, required, weights, candidatesLength);
+      applyEliminationAndCommitment(
+          store, i, binIdx, required, candidates, weights, candidatesLength);
+    }
     if (load[i].min() != loadMin || load[i].max() != loadMax) {
       todo.set(i);
     }
@@ -1618,6 +1681,7 @@ public class Binpacking extends Constraint
     }
     Binpacking copy = new Binpacking(bins, map.get(load), w, minBinNumber, lbPruning);
     copy.cardinalityReasoning = cardinalityReasoning;
+    copy.linearRulesOnly = linearRulesOnly;
     return copy;
   }
 
@@ -1625,17 +1689,5 @@ public class Binpacking extends Constraint
   @Override
   public boolean canCopy() {
     return card != null || zeroWeightBins.length == 0 || !packAll.due();
-  }
-
-  /**
-   * Returns the row that every item is in some bin: the loads add up to the weight of all items.
-   *
-   * @return the row
-   */
-  @Override
-  public List<LinearForm> relaxation() {
-    long[] ones = new long[load.length];
-    Arrays.fill(ones, 1);
-    return List.of(new LinearForm(load.clone(), ones, sizeAllItems, LinearForm.EQ));
   }
 }

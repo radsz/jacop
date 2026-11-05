@@ -200,6 +200,11 @@ public final class CumulativeReductions implements Rule {
   }
 
   @Override
+  public Timing timing() {
+    return Timing.MEDIUM;
+  }
+
+  @Override
   public void apply(Context context) {
     List<Resource> resources = new ArrayList<>();
     for (Constraint c : context.constraints()) {

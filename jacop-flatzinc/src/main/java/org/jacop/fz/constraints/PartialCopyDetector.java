@@ -114,6 +114,7 @@ public class PartialCopyDetector implements ParserTreeConstants {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          support.checkTimeOut();
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
             collect((ASTConstElem) item);
@@ -217,9 +218,20 @@ public class PartialCopyDetector implements ParserTreeConstants {
 
   /** It counts the variables of an argument, array elements included. */
   private void count(SimpleNode arg) {
+    countVariables(support, arg, occurrences);
+  }
+
+  /**
+   * It counts the variables of a constraint argument, array elements included.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param arg the argument.
+   * @param occurrences the counts, by variable.
+   */
+  static void countVariables(Support support, SimpleNode arg, Map<IntVar, Integer> occurrences) {
     if (arg.getId() == JJTARRAYLITERAL) {
       for (int i = 0; i < arg.jjtGetNumChildren(); i++) {
-        count((SimpleNode) arg.jjtGetChild(i));
+        countVariables(support, (SimpleNode) arg.jjtGetChild(i), occurrences);
       }
       return;
     }

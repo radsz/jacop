@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
@@ -42,6 +43,8 @@ import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * CountValuesBounds constraint implements the counting over numbers of occurrences of a given
@@ -52,7 +55,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class CountValuesBounds extends AbstractCountValues
-    implements Copyable<CountValuesBounds>, Explainable, Violation {
+    implements Copyable<CountValuesBounds>, Explainable, Violation, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -251,6 +254,20 @@ public class CountValuesBounds extends AbstractCountValues
 
       return min + "(" + lb + ").." + max + "(" + ub + ")";
     }
+  }
+
+  /**
+   * Writes the bounds of the count of each value; the solver derives the cuts its explanations
+   * need.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != CountValuesBounds.class
+        || new HashSet<>(Arrays.asList(list)).size() != list.length) {
+      return false;
+    }
+    model.cardinality(list, values, new IntVar[values.length], lb, ub, false, null);
+    return true;
   }
 
   @Override

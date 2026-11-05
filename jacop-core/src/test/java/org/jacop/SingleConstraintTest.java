@@ -78,6 +78,7 @@ import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -106,6 +107,7 @@ import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
+import org.jacop.constraints.InterDistance;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
@@ -2876,6 +2878,87 @@ class SingleConstraintTest extends TestHelper {
               trial, Arrays.toString(list), rel, v[sumIndex], reified)
           .isEqualTo(expected);
     }
+  }
+
+  @Test
+  void testConditionalSelectCountsMatchBruteForce() {
+
+    Random random = new Random(47);
+    for (int trial = 0; trial < 2000; trial++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(4);
+      IntVar[] b = new IntVar[n];
+      IntVar[] x = new IntVar[n];
+      IntVar y = randomVar(store, "y", -2, 2, random);
+      List<IntVar> all = new ArrayList<>(List.of(y));
+      for (int i = 0; i < n; i++) {
+        int kind = random.nextInt(4);
+        b[i] = new IntVar(store, "b" + i, kind == 0 ? 0 : kind == 1 ? 1 : 0, kind == 0 ? 0 : 1);
+        all.add(b[i]);
+        int share = random.nextInt(6);
+        if (share == 0) {
+          x[i] = y;
+        } else if (share == 1 && i > 0) {
+          x[i] = x[random.nextInt(i)];
+        } else {
+          x[i] = randomVar(store, "x" + i, -2, 2, random);
+          all.add(x[i]);
+        }
+      }
+      IntVar[] vars = all.toArray(new IntVar[0]);
+      int[] bAt = new int[n];
+      int[] xAt = new int[n];
+      for (int i = 0; i < n; i++) {
+        bAt[i] = all.indexOf(b[i]);
+        xAt[i] = all.indexOf(x[i]);
+      }
+      int expected =
+          bruteForce(
+                  vars,
+                  a -> {
+                    for (int i = 0; i < n; i++) {
+                      if (a[bAt[i]] == 1) {
+                        return a[xAt[i]] == a[0];
+                      }
+                    }
+                    return false;
+                  })
+              .size();
+
+      try {
+        store.impose(new ConditionalSelect(b, x, y));
+      } catch (FailException e) {
+        assertThat(expected).as("trial %d: failed at imposition", trial).isZero();
+        continue;
+      }
+      Collections.shuffle(all, random);
+      assertThat(countSolutions(store, all.toArray(new IntVar[0]), random))
+          .as(
+              "trial %d: ConditionalSelect(%s, %s, %s)",
+              trial, Arrays.toString(b), Arrays.toString(x), y)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
+  void conditionalSelectBoundsResultByPossibleBranches() {
+
+    Store store = new Store();
+    BooleanVar c = new BooleanVar(store, "c");
+    IntVar t = new IntVar(store, "t", 3, 5);
+    IntVar e = new IntVar(store, "e", 7, 9);
+    IntVar y = new IntVar(store, "y", 0, 20);
+    store.impose(
+        new ConditionalSelect(new IntVar[] {c, new IntVar(store, 1, 1)}, new IntVar[] {t, e}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(3);
+    assertThat(y.max()).isEqualTo(9);
+
+    // the then branch cannot reach y any more, so the else branch is selected
+    store.impose(new XgtC(y, 6));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+    assertThat(y.dom().toString()).isEqualTo(e.dom().toString());
   }
 
   @Test
@@ -8674,5 +8757,31 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(c.consistencyCalls()).isGreaterThan(calls);
     assertThat(store.numberConsistencyCalls).isGreaterThanOrEqualTo(c.consistencyCalls());
+  }
+
+  @Test
+  void interDistanceSixteenCoordinates() {
+    // Found on XCSP3 Hsp-table-14409 (a cumulative of tasks of length 22 posted as InterDistance):
+    // the interval sweep has exactly 16 distinct coordinates, and the segment array, which needs
+    // one entry more, still had its initial length 16 (ArrayIndexOutOfBoundsException in adjust).
+    int[][] dom = {
+      {0, 0}, {88, 110}, {22, 44}, {88, 154}, {198, 198},
+      {220, 522}, {22, 534}, {22, 525}, {22, 516}, {22, 507}
+    };
+    Store store = new Store();
+    IntVar[] x = new IntVar[dom.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, dom[i][0], dom[i][1]);
+    }
+    store.impose(new InterDistance(x, 22));
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()))).isTrue();
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        assertThat(Math.abs(x[i].value() - x[j].value())).isGreaterThanOrEqualTo(22);
+      }
+    }
   }
 }

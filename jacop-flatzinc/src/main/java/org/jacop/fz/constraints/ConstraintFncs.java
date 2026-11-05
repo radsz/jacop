@@ -775,6 +775,16 @@ public final class ConstraintFncs {
     gc.gen_jacop_table_int(n);
   }
 
+  /** Handles the jacop_short_table_int FlatZinc constraint. */
+  public void jacop_short_table_int(SimpleNode n) {
+    gc.gen_jacop_short_table_int(n);
+  }
+
+  /** Handles the jacop_negative_table_int FlatZinc constraint. */
+  public void jacop_negative_table_int(SimpleNode n) {
+    gc.gen_jacop_negative_table_int(n);
+  }
+
   /** Handles the jacop_table_int_reif FlatZinc constraint. */
   public void jacop_table_int_reif(SimpleNode n) {
     gc.gen_jacop_table_int_reif(n, false);
@@ -1036,6 +1046,16 @@ public final class ConstraintFncs {
   /** Handles the jacop_cumulative_optional FlatZinc constraint. */
   public void jacop_cumulative_optional(SimpleNode n) {
     gc.gen_jacop_cumulative_optional(n);
+  }
+
+  /** Handles the jacop_cumulatives FlatZinc constraint. */
+  public void jacop_cumulatives(SimpleNode n) {
+    gc.gen_jacop_cumulatives(n);
+  }
+
+  /** Handles the jacop_cumulatives_optional FlatZinc constraint. */
+  public void jacop_cumulatives_optional(SimpleNode n) {
+    gc.gen_jacop_cumulatives(n);
   }
 
   /** Handles the jacop_disjunctive_optional FlatZinc constraint. */

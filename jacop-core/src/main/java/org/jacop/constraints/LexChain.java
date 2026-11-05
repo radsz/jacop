@@ -362,6 +362,8 @@ public class LexChain extends Constraint
     // tuples belong to domains that have only shrunk since, so the smallest tuples only grow and a
     // kept tuple that is still in the domains and still above the new one before it stays the
     // smallest. When the kept tuples are not valid (all) every one is recomputed.
+    int lowerChanges = 0;
+    int upperChanges = 0;
     boolean previousSame = true;
     for (int i = first; i < m; i++) {
       boolean same;
@@ -382,6 +384,7 @@ public class LexChain extends Constraint
         same = smallestAbove(x[i], lower[i - 1], lower[i]);
       }
       dirty[i] |= !same;
+      lowerChanges += same ? 0 : 1;
       previousSame = same;
       if (same && i >= last) {
         break;
@@ -408,13 +411,18 @@ public class LexChain extends Constraint
         same = largestBelow(x[i], upper[i + 1], upper[i]);
       }
       dirty[i] |= !same;
+      upperChanges += same ? 0 : 1;
       previousSame = same;
       if (same && i <= first) {
         break;
       }
     }
 
-    for (int i = 0; i < m; i++) {
+    // pruned in the direction the bounds moved, so that under LCG the atoms of a vector follow
+    // those of its neighbour that gave them and a reason needs only the nearby vectors
+    boolean down = upperChanges > lowerChanges;
+    for (int c = 0; c < m; c++) {
+      int i = down ? m - 1 - c : c;
       if (all || dirty[i] || changed[i]) {
         if (Arrays.compare(lower[i], upper[i]) > 0) {
           throw Store.failException;
@@ -583,7 +591,15 @@ public class LexChain extends Constraint
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return !hasDuplicates && LexChainExplanation.explain(trail, entry, x, strict, out);
+    if (hasDuplicates || n == 0) {
+      return false;
+    }
+    int slot = varToSlot.get(trail.variable(entry));
+    if (slot == VarIntMap.ABSENT) {
+      return false;
+    }
+    int cell = varToPositions[slot][0];
+    return LexChainExplanation.explain(trail, entry, x, strict, cell / n, cell % n, out);
   }
 
   @Override

@@ -33,6 +33,7 @@ package org.jacop.jasat.cdcl;
 
 import java.util.Arrays;
 import java.util.SplittableRandom;
+import java.util.function.LongSupplier;
 
 /**
  * A CDCL SAT solver built on flat arrays.
@@ -278,6 +279,9 @@ public final class CdclSolver {
   // the propagator is told about levels and assignments (only in the search of solve())
   private boolean notifying;
   private int[] queuedExternal;
+  // learnt clauses up to this size and LBD go to the propagator's notifyLearnt (0: none)
+  private int exportSize;
+  private int exportLbd;
   // variables observed after they were assigned, notified at the next propagation
   private int[] lateObserved = new int[4];
   private int numLateObserved;
@@ -294,8 +298,13 @@ public final class CdclSolver {
   // set when propagateAll stopped at the deadline before reaching a fixpoint
   private boolean outOfTime;
   private long deadline = Long.MAX_VALUE;
+  // the work (see work()) at which solve stops, and the work of the external propagator
+  private long workLimit = Long.MAX_VALUE;
+  private LongSupplier externalWork = () -> 0;
   private long conflictLimit = Long.MAX_VALUE;
-  private DratWriter proof;
+  private ProofOutput proof;
+  // the root facts at the start of the trail that the proof has as units of their own
+  private int rootFactsLogged;
   // tests: check the propagation invariants at every fixpoint (see checkFixpoint)
   private boolean checking = Boolean.getBoolean("jacop.jasat.check");
 
@@ -310,6 +319,12 @@ public final class CdclSolver {
 
   /** Number of restarts so far. */
   public long restarts;
+
+  /**
+   * Statistics: the deepest decision level the search opened, assumption levels included. Probing
+   * and clause vivification open levels of their own; they do not count.
+   */
+  public int peakDecisionLevel;
 
   /** Number of learnt clause database reductions so far. */
   public long reductions;
@@ -382,6 +397,16 @@ public final class CdclSolver {
       order.insert(v);
     }
     numVars = n;
+  }
+
+  /**
+   * Returns the number of literals assigned at decision level 0: the root facts, which learnt units
+   * add to during search.
+   *
+   * @return the number of root literals.
+   */
+  public int rootAssignments() {
+    return decisionLevel == 0 ? trailSize : trailLim[0];
   }
 
   /**
@@ -646,12 +671,60 @@ public final class CdclSolver {
   }
 
   /**
+   * Limits the work of {@link #solve}, a measure of the search that does not depend on the clock:
+   * the propagated literals plus the external propagator's work (see {@link #setExternalWork}). It
+   * is checked at conflicts and decisions, so a search stops at the same point in every run.
+   *
+   * @param limit the work at which {@link #solve} returns {@link #UNKNOWN}, or {@link
+   *     Long#MAX_VALUE} for none
+   */
+  public void setWorkLimit(long limit) {
+    workLimit = limit;
+  }
+
+  /**
+   * Returns the limit of the work.
+   *
+   * @return the work at which {@link #solve} returns {@link #UNKNOWN}
+   */
+  public long workLimit() {
+    return workLimit;
+  }
+
+  /**
+   * Sets the external propagator's share of {@link #work}.
+   *
+   * @param work its work so far, which never decreases
+   */
+  public void setExternalWork(LongSupplier work) {
+    externalWork = work;
+  }
+
+  /**
+   * Returns the work so far: the propagated literals plus the external propagator's work.
+   *
+   * @return the work so far
+   */
+  public long work() {
+    return propagations + externalWork.getAsLong();
+  }
+
+  /**
    * Limits the total number of conflicts.
    *
    * @param limit the conflict count at which {@link #solve} returns {@link #UNKNOWN}
    */
   public void setConflictLimit(long limit) {
     conflictLimit = limit;
+  }
+
+  /**
+   * Returns the limit of the total number of conflicts.
+   *
+   * @return the conflict count at which {@link #solve} returns {@link #UNKNOWN}
+   */
+  public long conflictLimit() {
+    return conflictLimit;
   }
 
   /**
@@ -679,6 +752,18 @@ public final class CdclSolver {
   }
 
   /**
+   * Passes each clause learnt from now on that has at most the given size and LBD to the external
+   * propagator's {@link ExternalPropagator#notifyLearnt}, for other solvers to import.
+   *
+   * @param size the largest clause passed; 0 turns it off
+   * @param lbd the largest LBD passed
+   */
+  public void setLearntExport(int size, int lbd) {
+    exportSize = Math.max(0, size);
+    exportLbd = lbd;
+  }
+
+  /**
    * Turns all-UIP shrinking of learnt clauses on or off (on by default).
    *
    * @param on whether to shrink
@@ -700,11 +785,12 @@ public final class CdclSolver {
   }
 
   /**
-   * Writes a DRAT proof of every derived and deleted clause. Set it before adding clauses.
+   * Writes a proof of every derived and deleted clause, such as a {@link DratWriter}. Set it before
+   * adding clauses.
    *
    * @param writer the proof output, or null for none
    */
-  public void setProof(DratWriter writer) {
+  public void setProof(ProofOutput writer) {
     proof = writer;
   }
 
@@ -723,7 +809,13 @@ public final class CdclSolver {
     return dimacs > 0 ? 2 * (dimacs - 1) : 2 * (-dimacs - 1) + 1;
   }
 
-  static int toDimacs(int lit) {
+  /**
+   * Returns the DIMACS literal of an internal literal, as a {@link ProofOutput} gets them.
+   *
+   * @param lit the internal literal
+   * @return its DIMACS literal
+   */
+  public static int toDimacs(int lit) {
     return (lit & 1) == 0 ? (lit >> 1) + 1 : -((lit >> 1) + 1);
   }
 
@@ -840,6 +932,14 @@ public final class CdclSolver {
     }
   }
 
+  /** Opens a decision level of the search and records the peak depth. */
+  private void newSearchLevel() {
+    newDecisionLevel();
+    if (decisionLevel > peakDecisionLevel) {
+      peakDecisionLevel = decisionLevel;
+    }
+  }
+
   private void backtrack(int target) {
     if (decisionLevel <= target) {
       return;
@@ -861,6 +961,9 @@ public final class CdclSolver {
       if (r >= STACK_REF) {
         rwasted += HEADER + rstack[r - STACK_REF + SIZE];
         reason[v] = NO_REASON;
+        if (proof != null) {
+          proof.delete(rstack, r - STACK_REF + HEADER, rstack[r - STACK_REF + SIZE]);
+        }
       }
       savedSign[v] = (byte) (lit & 1);
       order.insert(v);
@@ -1297,6 +1400,9 @@ public final class CdclSolver {
       if (n == 0 || c[n - 1] != c[i]) {
         c[n++] = c[i];
       }
+    }
+    if (proof != null) {
+      proof.add(c, 0, n);
     }
     if (n == 1) {
       r = UNIT_REASON;
@@ -1812,7 +1918,7 @@ public final class CdclSolver {
   /** Opens a new decision level. */
   public void newLevel() {
     useExternally();
-    newDecisionLevel();
+    newSearchLevel();
   }
 
   /**
@@ -1844,6 +1950,16 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns the decision level of an assigned literal.
+   *
+   * @param lit a DIMACS literal whose variable is assigned
+   * @return the level it was assigned at
+   */
+  public int levelOf(int lit) {
+    return level[Math.abs(lit) - 1];
+  }
+
+  /**
    * Returns the position of a literal's variable on the trail.
    *
    * @param lit a DIMACS literal
@@ -1851,6 +1967,31 @@ public final class CdclSolver {
    */
   public int trailPosition(int lit) {
     return vals[toLit(lit)] == 0 ? -1 : trailPos[Math.abs(lit) - 1];
+  }
+
+  /**
+   * Returns how an assigned literal got its value: 0 a decision or an assumption, 1 a unit, 2 a
+   * binary clause, 3 a learnt clause (or a kept external reason), 4 an original clause, 5 the
+   * external propagator.
+   *
+   * @param lit the literal, in DIMACS form
+   * @return the kind of its reason
+   */
+  public int reasonKind(int lit) {
+    int r = reason[Math.abs(lit) - 1];
+    if (r == NO_REASON) {
+      return 0;
+    }
+    if (r == UNIT_REASON) {
+      return 1;
+    }
+    if (r == EXTERNAL_REASON || r >= STACK_REF) {
+      return 5;
+    }
+    if (r < NO_REASON) {
+      return 2;
+    }
+    return (mem[r + META] & LEARNT_FLAG) != 0 ? 3 : 4;
   }
 
   /**
@@ -2340,7 +2481,10 @@ public final class CdclSolver {
         if (!stable && varDecay < 0.95 && conflicts % 5000 == 0) {
           varDecay += 0.01;
         }
-        if (conflicts >= conflictLimit || interrupted || System.nanoTime() > deadline) {
+        if (conflicts >= conflictLimit
+            || interrupted
+            || System.nanoTime() > deadline
+            || workLimit != Long.MAX_VALUE && work() >= workLimit) {
           return UNKNOWN;
         }
         continue;
@@ -2377,7 +2521,7 @@ public final class CdclSolver {
       while (decisionLevel < assumptions.length) {
         int a = assumptions[decisionLevel];
         if (vals[a] > 0) {
-          newDecisionLevel();
+          newSearchLevel();
         } else if (vals[a] < 0) {
           analyzeFinal(a ^ 1);
           return UNSAT;
@@ -2414,7 +2558,10 @@ public final class CdclSolver {
           && (interrupted || System.nanoTime() > deadline)) {
         return UNKNOWN;
       }
-      newDecisionLevel();
+      if (workLimit != Long.MAX_VALUE && work() >= workLimit) {
+        return UNKNOWN;
+      }
+      newSearchLevel();
       assign(next, NO_REASON);
     }
   }
@@ -2475,6 +2622,12 @@ public final class CdclSolver {
       }
       int implied = -1;
       if (c == null) {
+        c = external.importedClause();
+        if (c != null) {
+          implied = IMPORTED;
+        }
+      }
+      if (c == null) {
         int lit = external.propagate();
         while (lit != 0 && vals[toLit(lit)] > 0) {
           lit = external.propagate();
@@ -2485,6 +2638,10 @@ public final class CdclSolver {
         implied = toLit(lit);
         if (vals[implied] == 0) {
           assign(implied, EXTERNAL_REASON);
+          if (proof != null && decisionLevel == 0) {
+            // conflict analysis never asks for the reasons of root facts, which a proof needs
+            reasonRef(implied >> 1);
+          }
           continue;
         }
         c = external.reason(lit);
@@ -2503,6 +2660,9 @@ public final class CdclSolver {
    *
    * @return a conflict, with at least two literals at the (new) current level, or NO_CONFLICT
    */
+  // the implied literal of addExternal for a clause learnt elsewhere, added as a learnt clause
+  private static final int IMPORTED = -2;
+
   private int addExternal(int[] dimacs, int implied) {
     int[] c = new int[dimacs.length];
     for (int i = 0; i < c.length; i++) {
@@ -2555,12 +2715,12 @@ public final class CdclSolver {
     orderForWatches(c);
     int ref = BINARY;
     if (size == 2) {
-      if (implied >= 0) {
+      if (implied >= 0 || implied == IMPORTED) {
         addLearntBinary(c[0], c[1]);
       } else {
         addOriginalBinary(c[0], c[1]);
       }
-    } else if (implied >= 0) {
+    } else if (implied >= 0 || implied == IMPORTED) {
       ref = allocate(c, size, true, size);
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
@@ -2847,6 +3007,13 @@ public final class CdclSolver {
       bumpClause(ref);
       assignAt(learnt[0], ref, level[learnt[1] >> 1]);
     }
+    if (learntSize <= exportSize && lbd <= exportLbd && external != null) {
+      int[] dimacs = new int[learntSize];
+      for (int i = 0; i < learntSize; i++) {
+        dimacs[i] = toDimacs(learnt[i]);
+      }
+      external.notifyLearnt(dimacs, lbd);
+    }
     lbdSum += lbd;
     emaFastBeta *= 1 - 0.03;
     emaSlowBeta *= 1 - 1e-5;
@@ -3048,8 +3215,13 @@ public final class CdclSolver {
       }
     }
     for (int i = 0; i < trailSize; i++) {
+      if (proof != null && i >= rootFactsLogged) {
+        // the root facts outlive their reasons, which elimination and keepLearnts may delete
+        proof.add(trail, i, 1);
+      }
       reason[trail[i] >> 1] = NO_REASON;
     }
+    rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
@@ -3255,6 +3427,10 @@ public final class CdclSolver {
       return refuted();
     }
     deleteClause(ref);
+    // unwatched at once: the next propagation, of d[0] or of the next clause tried, must not use
+    // it as a reason, which would keep pointing at a deleted clause
+    removeWatch(mem[lits], ref);
+    removeWatch(mem[lits + 1], ref);
     if (n == 1) {
       assign(d[0], NO_REASON);
       return propagate() == NO_CONFLICT || refuted();
@@ -3348,6 +3524,10 @@ public final class CdclSolver {
             int v = mem[ref + HEADER] >> 1;
             if (reason[v] == ref) {
               reason[v] = NO_REASON;
+              if (proof != null && vals[mem[ref + HEADER]] > 0 && level[v] == 0) {
+                // the root fact outlives its reason in the proof as well
+                proof.add(mem, ref + HEADER, 1);
+              }
             }
             deleteClause(ref);
             break;

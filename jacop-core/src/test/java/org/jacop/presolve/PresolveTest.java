@@ -561,8 +561,9 @@ class PresolveTest {
             .presolve();
 
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
-    // round 2 finds the constraint removed and changes nothing
-    assertThat(derivation.rounds()).isEqualTo(2);
+    // round 2 finds the constraint removed and changes nothing, nor does round 3 of the standard
+    // medium rules
+    assertThat(derivation.rounds()).isEqualTo(3);
     assertThat(derivation.statistics().childConstraints()).isEqualTo(2);
     int[] solutions = {0};
     search(
@@ -590,6 +591,102 @@ class PresolveTest {
     assertThat(derivation.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
     assertThat(derivation.rounds()).isEqualTo(4);
     assertThat(derivation.statistics().childConstraints()).isEqualTo(5);
+  }
+
+  /** A rule of a timing class that counts its calls and fixes x to 4 on its first call. */
+  private static Rule counted(Rule.Timing timing, IntVar x, int[] calls) {
+    return new Rule() {
+      @Override
+      public void apply(Context context) {
+        if (calls[0]++ == 0 && x != null) {
+          x.domain.in(context.level(), x, 4, 4);
+        }
+      }
+
+      @Override
+      public Timing timing() {
+        return timing;
+      }
+    };
+  }
+
+  @Test
+  void costlierRulesRunOnlyAfterARoundOfCheaperOnesFoundLittle() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    store.impose(new XltY(x, y));
+    int[] fast = {0};
+    int[] medium = {0};
+    int[] exhaustive = {0};
+    Derivation derivation =
+        Derivation.of(store)
+            .rule(counted(Rule.Timing.EXHAUSTIVE, null, exhaustive))
+            .rule(counted(Rule.Timing.MEDIUM, x, medium))
+            .rule(counted(Rule.Timing.FAST, null, fast))
+            .derive();
+
+    // fast; medium, which fixes x; fast again; medium; exhaustive, which finds nothing more
+    assertThat(derivation.rounds()).isEqualTo(5);
+    assertThat(derivation.timingRounds()).containsExactly(2, 2, 1);
+    assertThat(fast[0]).isEqualTo(5);
+    assertThat(medium[0]).isEqualTo(3);
+    assertThat(exhaustive[0]).isEqualTo(1);
+    assertThat(derivation.get(y).min()).isEqualTo(5);
+  }
+
+  @Test
+  void theTimingLevelLeavesOutCostlierRules() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    store.impose(new XltY(x, y));
+    int[] medium = {0};
+    int[] exhaustive = {0};
+    Derivation derivation =
+        Derivation.of(store)
+            .timing(Rule.Timing.MEDIUM)
+            .rule(counted(Rule.Timing.EXHAUSTIVE, x, exhaustive))
+            .rule(counted(Rule.Timing.MEDIUM, null, medium))
+            .derive();
+
+    assertThat(exhaustive[0]).isZero();
+    assertThat(medium[0]).isEqualTo(1);
+    assertThat(derivation.timingRounds()).containsExactly(1, 1, 0);
+    assertThat(derivation.get(x).getSize()).isEqualTo(9);
+  }
+
+  @Test
+  void aRoundThatChangesLessThanTheAbortFactorEndsTheRounds() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[10];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+    }
+    store.impose(new XltY(x[0], x[1]));
+    // every round narrows one more variable, a tenth of them
+    Rule narrow =
+        context -> {
+          for (IntVar v : x) {
+            if (v.max() == 9 && v != x[1]) {
+              v.domain.in(context.level(), v, 0, 8);
+              return;
+            }
+          }
+        };
+    assertThat(Derivation.of(store).rule(narrow).abortFactor(0.2).derive().rounds()).isEqualTo(1);
+  }
+
+  @Test
+  void aSpentTimeBudgetStopsTheRoundsAfterTheFirst() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    store.impose(new XltY(x, y));
+    Derivation derivation =
+        Derivation.of(store).budget(0).rule(context -> context.impose(new XltY(x, y))).derive();
+
+    assertThat(derivation.rounds()).isEqualTo(1);
   }
 
   @Test

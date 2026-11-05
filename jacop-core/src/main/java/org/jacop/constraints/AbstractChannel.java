@@ -46,9 +46,12 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 abstract class AbstractChannel extends Constraint
-    implements Violation, SatisfiedPresent, Explainable {
+    implements Violation, SatisfiedPresent, Explainable, PbEncodable {
 
   final IntVar x;
   final int n;
@@ -123,6 +126,27 @@ abstract class AbstractChannel extends Constraint
             constraintName + ": variable " + b + " must have a domain within 0..1");
       }
     }
+  }
+
+  // each item's b is [x = value] (ChannelReif) or implies it (ChannelImply)
+  @Override
+  public boolean encode(PbModel model) {
+    boolean equivalence = getClass() == ChannelReif.class;
+    if (!equivalence && getClass() != ChannelImply.class) {
+      return false;
+    }
+    for (int i = 0; i < n; i++) {
+      if (item[i].b() == x) {
+        return false;
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      model.reified(
+          item[i].b(),
+          new LinearForm(new IntVar[] {x}, new long[] {1}, item[i].value(), LinearForm.EQ),
+          equivalence);
+    }
+    return true;
   }
 
   /** The counterparts of the 0/1 variables, in the order of {@link #itemValues()}. */

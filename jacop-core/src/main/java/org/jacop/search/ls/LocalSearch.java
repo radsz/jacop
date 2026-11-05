@@ -125,6 +125,7 @@ public final class LocalSearch {
   private final long stallSteps;
   private final long patienceMillis;
   private final Collection<? extends Constraint> extra;
+  private final boolean jump;
 
   // the variables, their root domains and current values
   private IntVar[] vars;
@@ -242,6 +243,7 @@ public final class LocalSearch {
     }
     patienceMillis = b.patienceMillis;
     extra = b.extra;
+    jump = b.jump;
   }
 
   /**
@@ -945,12 +947,14 @@ public final class LocalSearch {
       return delta(i, v);
     }
     double before = total;
+    trial = true;
     recording = true;
     undoSize = 0;
     moveDefined(i, v);
     recording = false;
     double change = total - before;
     undo();
+    trial = false;
     return change;
   }
 
@@ -1230,6 +1234,7 @@ public final class LocalSearch {
   }
 
   private void evaluateAll() {
+    invalidateJumps();
     violatedCount = 0;
     Arrays.fill(violatedPos, -1);
     Arrays.fill(viol, 0);
@@ -1392,6 +1397,9 @@ public final class LocalSearch {
     long[] as = occCoef[i];
     for (int k = 0; k < cs.length; k++) {
       int c = cs[k];
+      if (changed != null && !trial) {
+        changed[c] = clock;
+      }
       if (coef[c] != null && as[k] != 0) {
         lhs[c] = sat(lhs[c] + as[k] * ((long) v - old));
       }
@@ -1455,7 +1463,11 @@ public final class LocalSearch {
         lastImprovement = steps;
         continue;
       }
-      step(violated[random.nextInt(violatedCount)], candidates);
+      if (jump) {
+        jumpStep();
+      } else {
+        step(violated[random.nextInt(violatedCount)], candidates);
+      }
     }
   }
 
@@ -1528,10 +1540,269 @@ public final class LocalSearch {
         weight[k] = Math.max(1, weight[k] * 1e-6);
         total += weight[k] * scaled(viol[k]);
       }
+      invalidateJumps();
+    }
+    if (changed != null) {
+      changed[c] = clock;
     }
     if (bestVar >= 0 && random.nextInt(10) == 0) {
       move(bestVar, bestVal);
       tabu[bestVar] = steps + 3 + random.nextInt(8);
+    }
+  }
+
+  // ------------------------------------------------------------ feasibility jump
+
+  // how many variables a jump step samples
+  private static final int JUMP_SAMPLE = 16;
+  // at most this many constraints of a variable give the values its jump tries
+  private static final int JUMP_ROWS = 32;
+
+  // when each constraint last changed its violation, value sum or weight (feasibility jump only)
+  private long[] changed;
+  private long clock;
+  // whether moves are only tried (and undone), which leaves the cached jumps valid
+  private boolean trial;
+  private int[] jumpValue;
+  private double[] jumpScore;
+  // when the jump of a variable was computed, or -1
+  private long[] jumpAt;
+  // the variables whose last computed jump lowered the weighted violation
+  private int[] good;
+  private int[] goodPos;
+  private int goodCount;
+  private int[] jumpValues = new int[64];
+
+  private void invalidateJumps() {
+    if (jumpAt != null) {
+      Arrays.fill(jumpAt, -1);
+    }
+  }
+
+  private void initJumps() {
+    int n = vars.length;
+    changed = new long[m];
+    jumpValue = new int[n];
+    jumpScore = new double[n];
+    jumpAt = new long[n];
+    Arrays.fill(jumpAt, -1);
+    good = new int[n];
+    goodPos = new int[n];
+    Arrays.fill(goodPos, -1);
+    clock = 1;
+  }
+
+  // whether the jump computed for variable i still holds: none of its constraints changed since
+  private boolean jumpValid(int i) {
+    long at = jumpAt[i];
+    if (at < 0 || dependents[i].length > 0) {
+      // a variable that defines others changes their constraints too
+      return false;
+    }
+    for (int c : occ[i]) {
+      if (changed[c] >= at) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private void setGood(int i, boolean isGood) {
+    int p = goodPos[i];
+    if (isGood && p < 0) {
+      goodPos[i] = goodCount;
+      good[goodCount++] = i;
+    } else if (!isGood && p >= 0) {
+      int last = good[--goodCount];
+      good[p] = last;
+      goodPos[last] = p;
+      goodPos[i] = -1;
+    }
+  }
+
+  // the jump of variable i: its value that most lowers the weighted violation, and by how much
+  private double jumpOf(int i) {
+    if (jumpValid(i)) {
+      return jumpScore[i];
+    }
+    int n = jumpCandidates(i);
+    double best = Double.MAX_VALUE;
+    int bestVal = val[i];
+    int ties = 0;
+    for (int k = 0; k < n; k++) {
+      int v = jumpValues[k];
+      double d = tryMove(i, v);
+      if (d < best) {
+        best = d;
+        bestVal = v;
+        ties = 1;
+      } else if (Double.compare(d, best) == 0 && random.nextInt(++ties) == 0) {
+        bestVal = v;
+      }
+    }
+    if (n == 0) {
+      best = 0;
+    }
+    jumpValue[i] = bestVal;
+    jumpScore[i] = best;
+    jumpAt[i] = clock;
+    setGood(i, best < 0);
+    return best;
+  }
+
+  /**
+   * The values a jump of variable i tries: all of a small domain, otherwise the bounds, the
+   * neighbours of its value, and for each linear constraint the values where it starts or stops
+   * being violated. The weighted violation of linear constraints only changes slope there, so with
+   * the bounds these hold the best value over the linear constraints.
+   */
+  private int jumpCandidates(int i) {
+    IntDomain d = domains[i];
+    int old = val[i];
+    if (d.singleton()) {
+      return 0;
+    }
+    int[] cs = occ[i];
+    int need = Math.max(d.getSize() <= SMALL_DOMAIN ? d.getSize() : 0, 4 * JUMP_ROWS + 8);
+    if (jumpValues.length < need) {
+      jumpValues = new int[need];
+    }
+    int[] out = jumpValues;
+    int n = 0;
+    if (d.getSize() <= SMALL_DOMAIN) {
+      for (int k = 0; k < d.getSize(); k++) {
+        int v = d.getElementAt(k);
+        if (v != old) {
+          out[n++] = v;
+        }
+      }
+      return n;
+    }
+    n = addSnapped(d, d.min(), old, out, n);
+    n = addSnapped(d, d.max(), old, out, n);
+    n = addSnapped(d, old + 1L, old, out, n);
+    n = addSnapped(d, old - 1L, old, out, n);
+    boolean other = false;
+    int rows = Math.min(cs.length, JUMP_ROWS);
+    int offset = cs.length > JUMP_ROWS ? random.nextInt(cs.length) : 0;
+    long[] as = occCoef[i];
+    for (int t = 0; t < rows; t++) {
+      int p = (offset + t) % cs.length;
+      int c = cs[p];
+      long a = as[p];
+      if (coef[c] == null) {
+        other = true;
+        continue;
+      }
+      if (a == 0 || enforcer[c] == i) {
+        continue;
+      }
+      long excess = lhs[c] - rhs[c];
+      n = addSnapped(d, (long) old - Math.floorDiv(excess, a), old, out, n);
+      n = addSnapped(d, (long) old - Math.ceilDiv(excess, a), old, out, n);
+    }
+    if (other) {
+      // constraints other than linear ones say nothing about where to go: a random value
+      int r = d.getElementAt(random.nextInt(d.getSize()));
+      if (r != old && !has(out, n, r)) {
+        out[n++] = r;
+      }
+    }
+    return n;
+  }
+
+  // a variable of a random violated constraint that a move can change, or -1
+  private int violatedVariable() {
+    int c = violated[random.nextInt(violatedCount)];
+    int[] s = scope[c];
+    int size = s.length + (enforcer[c] >= 0 && !contains(s, enforcer[c]) ? 1 : 0);
+    if (size == 0) {
+      return -1;
+    }
+    int p = random.nextInt(size);
+    int i = p < s.length ? s[p] : enforcer[c];
+    if (defOf[i] >= 0) {
+      i = upstream(i);
+    }
+    return i < 0 || domains[i].singleton() ? -1 : i;
+  }
+
+  /**
+   * A feasibility jump step: the best jump of a sample of the variables known to have a good jump,
+   * or of variables of violated constraints when none is known. When no jump lowers the weighted
+   * violation, every violated constraint weighs one more.
+   */
+  private void jumpStep() {
+    if (changed == null) {
+      initJumps();
+    }
+    clock++;
+    int bestVar = -1;
+    double best = 0;
+    // the best jump of the variables of violated constraints, even one that does not help
+    int anyVar = -1;
+    double any = Double.MAX_VALUE;
+    for (int t = 0; t < JUMP_SAMPLE && goodCount > 0; t++) {
+      if (t > 0 && expired()) {
+        break;
+      }
+      int i = good[random.nextInt(goodCount)];
+      double s = jumpOf(i);
+      if (s < best) {
+        best = s;
+        bestVar = i;
+      }
+    }
+    if (bestVar < 0) {
+      for (int t = 0; t < JUMP_SAMPLE; t++) {
+        if (t > 0 && expired()) {
+          break;
+        }
+        int i = violatedVariable();
+        if (i < 0) {
+          continue;
+        }
+        double s = jumpOf(i);
+        if (s < best) {
+          best = s;
+          bestVar = i;
+        }
+        if (s < any && jumpValue[i] != val[i]) {
+          any = s;
+          anyVar = i;
+        }
+      }
+    }
+    if (bestVar >= 0) {
+      int v = jumpValue[bestVar];
+      clock++;
+      move(bestVar, v);
+      jumpAt[bestVar] = -1;
+      return;
+    }
+    // a local minimum: every violated constraint weighs more
+    clock++;
+    boolean rescale = false;
+    for (int k = 0; k < violatedCount; k++) {
+      int c = violated[k];
+      weight[c] += 1;
+      total += scaled(viol[c]);
+      changed[c] = clock;
+      rescale |= weight[c] > WEIGHT_LIMIT;
+    }
+    if (rescale) {
+      total = 0;
+      for (int k = 0; k < m; k++) {
+        weight[k] = Math.max(1, weight[k] * 1e-6);
+        total += weight[k] * scaled(viol[k]);
+      }
+      invalidateJumps();
+    }
+    // weights cannot lead out of a minimum of a few large constraints (all different): sometimes
+    // make the least bad jump anyway
+    if (anyVar >= 0 && random.nextInt(10) == 0) {
+      move(anyVar, jumpValue[anyVar]);
+      jumpAt[anyVar] = -1;
     }
   }
 
@@ -1565,6 +1836,7 @@ public final class LocalSearch {
         continue;
       }
       double before = total;
+      trial = true;
       recording = true;
       undoSize = 0;
       moveDefined(i, vj);
@@ -1572,6 +1844,7 @@ public final class LocalSearch {
       recording = false;
       double d = total - before;
       undo();
+      trial = false;
       if (d < best) {
         best = d;
         bi = i;
@@ -1849,6 +2122,9 @@ public final class LocalSearch {
     }
     rhs[boundRow] = bound - 1;
     setViolation(boundRow, currentViolation(boundRow));
+    if (changed != null) {
+      changed[boundRow] = clock;
+    }
   }
 
   private boolean expired() {
@@ -1867,6 +2143,9 @@ public final class LocalSearch {
       if (b != Integer.MAX_VALUE && b - 1L < rhs[boundRow]) {
         rhs[boundRow] = b - 1L;
         setViolation(boundRow, currentViolation(boundRow));
+        if (changed != null) {
+          changed[boundRow] = clock;
+        }
       }
     }
     return false;
@@ -1904,6 +2183,7 @@ public final class LocalSearch {
     private long patienceMillis;
     private Collection<? extends Var> defined;
     private Collection<? extends Constraint> extra;
+    private boolean jump;
 
     private Builder(Store store) {
       this.store = store;
@@ -1990,6 +2270,21 @@ public final class LocalSearch {
      */
     public Builder stallSteps(long steps) {
       this.stallSteps = steps;
+      return this;
+    }
+
+    /**
+     * Chooses the moves as feasibility jump does: each variable of a violated constraint has a jump
+     * value, the value that most lowers the weighted violation of all its constraints, and the best
+     * jump of a sample of variables is made; when none lowers it, every violated constraint weighs
+     * more. Otherwise (the default) a step picks one violated constraint and moves one of its
+     * variables.
+     *
+     * @param jump true for feasibility jump moves.
+     * @return this builder.
+     */
+    public Builder jump(boolean jump) {
+      this.jump = jump;
       return this;
     }
 

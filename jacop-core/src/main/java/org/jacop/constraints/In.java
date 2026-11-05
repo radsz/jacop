@@ -36,8 +36,16 @@ import org.jacop.api.VarMap;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.Interval;
+import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Constraints X to belong to a specified domain.
@@ -47,7 +55,7 @@ import org.jacop.core.Var;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class In extends PrimitiveConstraint implements Copyable<In> {
+public class In extends PrimitiveConstraint implements Copyable<In>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -123,6 +131,40 @@ public class In extends PrimitiveConstraint implements Copyable<In> {
     return Domain.NONE;
   }
 
+  // the values the constraint (or its negation) rules out need no reason
+  private DomainCover.ValueReason outside(boolean in) {
+    return (v, out) -> dom.contains(v) != in;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == In.class && DomainCover.entry(trail, entry, outside(true), out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    return getClass() == In.class && DomainCover.entry(trail, entry, outside(false), out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == In.class && DomainCover.domain(trail, x, trail.size(), outside(true), out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return getClass() == In.class
+        && DomainCover.domain(trail, x, trail.size(), outside(false), out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    // entailed: each value between the bounds of x is in dom or out of the domain of x
+    return getClass() == In.class
+        && DomainCover.domain(trail, x, position, outside(!entailed), out);
+  }
+
   @Override
   public String toString() {
     return id() + " : In(" + x + ", " + dom + " )";
@@ -146,5 +188,36 @@ public class In extends PrimitiveConstraint implements Copyable<In> {
   @Override
   public In copy(VarMap map) {
     return new In(map.get(x), dom);
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    return encodeImplied(model, "1", false);
+  }
+
+  /**
+   * States the domain, or its negation, by a clause per interval of values x cannot take: the
+   * intervals outside the domain, or those of the domain when negated.
+   */
+  @Override
+  public boolean encodeImplied(PbModel model, String literal, boolean negated) {
+    if (getClass() != In.class) {
+      return false;
+    }
+    if ("0".equals(literal)) {
+      return true;
+    }
+    IntDomain root = model.domain(x);
+    IntDomain excluded = negated ? dom : domComplement;
+    for (IntervalEnumeration e = excluded.intervalEnumeration(); e.hasMoreElements(); ) {
+      Interval i = e.nextElement();
+      if (i.max() < root.min() || i.min() > root.max()) {
+        continue;
+      }
+      // not (l <= x <= u)
+      String above = i.max() >= root.max() ? "0" : model.atLeast(x, i.max() + 1);
+      model.clause(PbModel.not(literal), PbModel.not(model.atLeast(x, i.min())), above);
+    }
+    return true;
   }
 }

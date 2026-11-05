@@ -35,6 +35,9 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Span constraint over optional intervals (MiniZinc {@code span}, CP Optimizer {@code span}): the
@@ -53,7 +56,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Span extends AbstractOptionalIntervals implements Copyable<Span> {
+public class Span extends AbstractOptionalIntervals implements Copyable<Span>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -205,6 +208,188 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span> {
         restrict(store, d[ender], endMin - s[ender].max(), endMax - s[ender].min());
       }
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * Explains an atom by the rule of span that gives it, from the bounds just before it: the
+   * presences that fix the master's presence and the others', a candidate that would lie outside
+   * the master, the master's start and duration from the starts and ends of the intervals, and the
+   * bounds of a present interval from the master. Each reason is checked to imply the atom; other
+   * atoms (the master's start through its end, a single possible first or last interval) are left
+   * to the generic reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar y = trail.variable(entry);
+    if (explainPresences(trail, entry, y, out)) {
+      return true;
+    }
+    int mark = out.size();
+    if (y == s0 && explainMasterStart(trail, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (y == d0 && explainMasterDuration(trail, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    for (int i = 0; i < n; i++) {
+      if ((y == s[i] || y == d[i]) && explainWithinMaster(trail, entry, i, y == s[i], out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  /** Explains a failure of a present master whose intervals are all absent. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explainNoCandidate(trail, trail.size(), out);
+  }
+
+  // the master may be present: interval i would start before it or end after it
+  @Override
+  boolean explainAbsence(AtomicTrail trail, int entry, int i, EntryList out) {
+    int startMax = trail.maxBefore(s[i], entry);
+    if (startMax < trail.minBefore(s0, entry)) {
+      trail.addUpperBound(s[i], entry, out);
+      trail.addBoundReaching(s0, entry, true, (long) startMax + 1, out);
+      return true;
+    }
+    long earliestEnd = (long) trail.minBefore(s[i], entry) + trail.minBefore(d[i], entry);
+    if (earliestEnd > (long) trail.maxBefore(s0, entry) + trail.maxBefore(d0, entry)) {
+      trail.addLowerBound(s[i], entry, out);
+      trail.addLowerBound(d[i], entry, out);
+      trail.addUpperBound(s0, entry, out);
+      trail.addUpperBound(d0, entry, out);
+      return true;
+    }
+    return false;
+  }
+
+  private boolean explainMasterStart(AtomicTrail trail, int entry, EntryList out) {
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    if (kind == AtomicTrail.NE) {
+      return false;
+    }
+    boolean lower = kind == AtomicTrail.GE;
+    if (!lower) {
+      // the master starts no later than a present interval
+      for (int i = 0; i < n; i++) {
+        if (presentBefore(trail, p[i], entry) && trail.maxBefore(s[i], entry) <= v) {
+          trail.addLowerBound(p[i], entry, out);
+          trail.addBoundReaching(s[i], entry, false, v, out);
+          return true;
+        }
+      }
+    }
+    // a present master starts at the start of one of the possible intervals
+    if (!presentBefore(trail, p0, entry)) {
+      return false;
+    }
+    trail.addLowerBound(p0, entry, out);
+    return candidatesReach(trail, entry, s, lower, v, out);
+  }
+
+  // every interval not absent has its bound reaching v; adds those bounds and the absences
+  private boolean candidatesReach(
+      AtomicTrail trail, int entry, IntVar[] x, boolean lower, int v, EntryList out) {
+    for (int i = 0; i < n; i++) {
+      if (absentBefore(trail, p[i], entry)) {
+        trail.addUpperBound(p[i], entry, out);
+      } else if (lower ? trail.minBefore(x[i], entry) >= v : trail.maxBefore(x[i], entry) <= v) {
+        trail.addBoundReaching(x[i], entry, lower, v, out);
+      } else {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean explainMasterDuration(AtomicTrail trail, int entry, EntryList out) {
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    if (absentBefore(trail, p0, entry)) {
+      // the duration of an absent master is 0
+      boolean zeroHolds =
+          kind == AtomicTrail.GE ? v <= 0 : kind == AtomicTrail.LE ? v >= 0 : v != 0;
+      if (zeroHolds) {
+        trail.addUpperBound(p0, entry, out);
+      }
+      return zeroHolds;
+    }
+    if (kind == AtomicTrail.NE || !presentBefore(trail, p0, entry)) {
+      return false;
+    }
+    long startMin = trail.minBefore(s0, entry);
+    long startMax = trail.maxBefore(s0, entry);
+    if (kind == AtomicTrail.LE) {
+      // the master ends by the latest end of its possible intervals
+      long endHi = Long.MIN_VALUE;
+      for (int i = 0; i < n; i++) {
+        if (!absentBefore(trail, p[i], entry)) {
+          endHi =
+              Math.max(endHi, (long) trail.maxBefore(s[i], entry) + trail.maxBefore(d[i], entry));
+        }
+      }
+      if (endHi - startMin > v) {
+        return false;
+      }
+      trail.addLowerBound(p0, entry, out);
+      trail.addLowerBound(s0, entry, out);
+      for (int i = 0; i < n; i++) {
+        if (absentBefore(trail, p[i], entry)) {
+          trail.addUpperBound(p[i], entry, out);
+        } else {
+          trail.addUpperBound(s[i], entry, out);
+          trail.addUpperBound(d[i], entry, out);
+        }
+      }
+      return true;
+    }
+    // the master ends no earlier than a present interval
+    for (int i = 0; i < n; i++) {
+      if (presentBefore(trail, p[i], entry)
+          && (long) trail.minBefore(s[i], entry) + trail.minBefore(d[i], entry) - startMax >= v) {
+        trail.addLowerBound(p[i], entry, out);
+        trail.addLowerBound(s[i], entry, out);
+        trail.addLowerBound(d[i], entry, out);
+        trail.addUpperBound(s0, entry, out);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean explainWithinMaster(
+      AtomicTrail trail, int entry, int i, boolean start, EntryList out) {
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    if (kind == AtomicTrail.NE || !presentBefore(trail, p[i], entry)) {
+      return false;
+    }
+    long masterEnd = (long) trail.maxBefore(s0, entry) + trail.maxBefore(d0, entry);
+    if (kind == AtomicTrail.GE) {
+      // a present interval starts no earlier than the master
+      if (!start || trail.minBefore(s0, entry) < v) {
+        return false;
+      }
+      trail.addLowerBound(p[i], entry, out);
+      trail.addBoundReaching(s0, entry, true, v, out);
+      return true;
+    }
+    // and ends no later than it
+    IntVar other = start ? d[i] : s[i];
+    if (masterEnd - trail.minBefore(other, entry) > v) {
+      return false;
+    }
+    trail.addLowerBound(p[i], entry, out);
+    trail.addUpperBound(s0, entry, out);
+    trail.addUpperBound(d0, entry, out);
+    trail.addLowerBound(other, entry, out);
+    return true;
   }
 
   @Override

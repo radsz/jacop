@@ -39,12 +39,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.Routes;
+import org.jacop.constraints.TableCliques;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -58,6 +61,12 @@ import org.jacop.set.core.SetVar;
 public class Tables {
 
   public final Map<IntVar, IntVar> aliasTable = new LinkedHashMap<>();
+
+  /** Under --proof, the trail of the root propagation, which the proof derives; null otherwise. */
+  AtomicTrail rootTrail;
+
+  /** Whether --proof wrote the proof that the root propagation fails. */
+  boolean rootFailureProved;
 
   /** The Boolean variables that integer variables are aliases of (the values of aliasTable). */
   private final Set<IntVar> aliasTargets = new HashSet<>();
@@ -90,8 +99,17 @@ public class Tables {
   // variables named by a defines_var annotation of a constraint
   final ArrayList<Var> definedVariables = new ArrayList<>();
 
+  // variables that no constraint uses any more, such as the sums merged into a minimum
+  final ArrayList<Var> unusedVariables = new ArrayList<>();
+
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
+
+  // the binary tables of the model, for the clique rows of the linear relaxation
+  private final ArrayList<TableCliques.Table> binaryTables = new ArrayList<>();
+
+  // vehicle routes found in the model and not imposed, for the route neighbourhoods of LNS
+  private final ArrayList<Routes> lnsRoutes = new ArrayList<>();
   // IntVar zero, one;
   Store store;
   int numberBoolVariables;
@@ -99,6 +117,18 @@ public class Tables {
   int numberSetVariables;
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
+  // variables whose declared domain reached beyond JaCoP's integer range and was narrowed to it
+  private final ArrayList<ClampedDomain> clampedDomains = new ArrayList<>();
+
+  /**
+   * A variable whose declared domain was narrowed to JaCoP's integer range.
+   *
+   * @param ident the variable's identifier
+   * @param declared the declared bounds, as written in the model
+   * @param low whether the lower bound was raised
+   * @param high whether the upper bound was lowered
+   */
+  record ClampedDomain(String ident, String declared, boolean low, boolean high) {}
 
   /**
    * It constructs the storage object to store different objects, like int, array of ints, sets, ...
@@ -113,6 +143,64 @@ public class Tables {
    */
   public Tables(Store s) {
     this.store = s;
+  }
+
+  void noteClampedDomain(ClampedDomain d) {
+    clampedDomains.add(d);
+  }
+
+  /**
+   * Tells whether a declared domain was narrowed to JaCoP's integer range. The search then covers
+   * only part of the model: its solutions are solutions of the model, but a completed search proves
+   * neither unsatisfiability nor, unless only the objective lost values worse than a solution
+   * found, optimality.
+   *
+   * @return true if a declared domain was narrowed.
+   */
+  public boolean domainsClamped() {
+    return !clampedDomains.isEmpty();
+  }
+
+  /**
+   * Tells whether only the objective was narrowed, and only on its worse side, so that no value cut
+   * off can be better than a solution found.
+   *
+   * @param objective the variable of the objective
+   * @param minimize whether the objective is minimised
+   * @return true if every narrowed domain is the objective's, cut on its worse side.
+   */
+  boolean onlyObjectiveWorseSideClamped(Var objective, boolean minimize) {
+    for (ClampedDomain d : clampedDomains) {
+      if (getVariable(d.ident()) != objective || (minimize ? d.low() : d.high())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the warning about domains narrowed to JaCoP's integer range.
+   *
+   * @return the warning, as a FlatZinc comment line.
+   */
+  String clampedDomainsWarning() {
+    int n = clampedDomains.size();
+    ClampedDomain first = clampedDomains.getFirst();
+    return "%% Warning: "
+        + n
+        + (n == 1 ? " variable domain reaches" : " variable domains reach")
+        + " beyond JaCoP's integer range "
+        + IntDomain.MIN_INT
+        + ".."
+        + IntDomain.MAX_INT
+        + " and "
+        + (n == 1 ? "was" : "were")
+        + " narrowed to it (first: "
+        + first.ident()
+        + " "
+        + first.declared()
+        + "); a completed search is reported as optimal only if the objective alone lost values"
+        + " worse than its solutions, and never as unsatisfiable";
   }
 
   /**
@@ -259,7 +347,9 @@ public class Tables {
     defaultSearchFloatArrays.forEach(a -> t.defaultSearchFloatArrays.add(map.get(a)));
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
+    t.unusedVariables.addAll(map.get(unusedVariables));
     t.splitSums.addAll(map.get(splitSums));
+    lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;
@@ -667,6 +757,44 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records a table over two variables for the clique rows of the linear relaxation.
+   *
+   * @param x the two variables
+   * @param tuples the allowed tuples
+   */
+  public void addBinaryTable(IntVar[] x, int[][] tuples) {
+    binaryTables.add(new TableCliques.Table(x, tuples));
+  }
+
+  /**
+   * Records vehicle routes of the model, not imposed, for the route neighbourhoods of large
+   * neighbourhood search.
+   *
+   * @param routes the routes
+   */
+  public void addLnsRoutes(Routes routes) {
+    lnsRoutes.add(routes);
+  }
+
+  /**
+   * Returns the vehicle routes recorded for large neighbourhood search.
+   *
+   * @return the routes
+   */
+  public List<Routes> lnsRoutes() {
+    return lnsRoutes;
+  }
+
+  /**
+   * Returns the tables over two variables of the model.
+   *
+   * @return the tables
+   */
+  public List<TableCliques.Table> binaryTables() {
+    return binaryTables;
   }
 
   /**

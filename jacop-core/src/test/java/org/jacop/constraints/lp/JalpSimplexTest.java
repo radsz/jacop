@@ -1,5 +1,5 @@
 /*
- * SparseDualSimplexTest.java
+ * JalpSimplexTest.java
  * This file is part of JaCoP.
  * <p>
  * JaCoP is a Java Constraint Programming solver.
@@ -40,13 +40,35 @@ import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests the sparse dual simplex against the dense one on random bounded LPs: the same status, the
- * same optimal objective, and the certificates of {@link DualSimplexTest} for its own duals and
- * Farkas rows, through warm-started re-solves, added rows, removed rows and copies.
+ * Tests the simplex of JaLP, through {@link JalpSimplex}, against the dense one on random bounded
+ * LPs: the same status, the same optimal objective, and the certificates of {@link DualSimplexTest}
+ * for its own duals and Farkas rows, through warm-started re-solves, added rows, removed rows and
+ * copies.
  */
-class SparseDualSimplexTest {
+class JalpSimplexTest {
 
   private static final Offset<Double> CLOSE = Offset.offset(1e-5);
+
+  // JaLP over dense rows
+  private static LpSolver jalp(double[][] a, double[] rowLo, double[] rowHi, double[] cost) {
+    int n = cost.length;
+    int[][] c = new int[a.length][];
+    double[][] w = new double[a.length][];
+    for (int i = 0; i < a.length; i++) {
+      c[i] = new int[n];
+      w[i] = new double[n];
+      int k = 0;
+      for (int j = 0; j < n; j++) {
+        if (a[i][j] != 0) {
+          c[i][k] = j;
+          w[i][k++] = a[i][j];
+        }
+      }
+      c[i] = Arrays.copyOf(c[i], k);
+      w[i] = Arrays.copyOf(w[i], k);
+    }
+    return new JalpSimplex(c, w, rowLo, rowHi, cost);
+  }
 
   // a random LP: rows a with sides, costs, column bounds
   private static final class Lp {
@@ -73,13 +95,13 @@ class SparseDualSimplexTest {
       cost = new double[n];
       if (objective) {
         for (int j = 0; j < n; j++) {
-          cost[j] = rnd.nextInt(5) - 2;
+          cost[j] = rnd.nextInt(5) - 2.0;
         }
       }
       lo = new double[n];
       hi = new double[n];
       for (int j = 0; j < n; j++) {
-        lo[j] = rnd.nextInt(5) - 3;
+        lo[j] = rnd.nextInt(5) - 3.0;
         hi[j] = lo[j] + rnd.nextInt(5);
       }
     }
@@ -109,9 +131,12 @@ class SparseDualSimplexTest {
     assertThat(s).as(what).isNotEqualTo(LpSolver.LIMIT);
     assertThat(s).as(what + " status").isEqualTo(d);
     if (s == LpSolver.OPTIMAL) {
-      // the costs are perturbed by about 1e-7 per column and unit of value
-      checkOptimal(sparse, p.a, p.rowLo, p.rowHi, p.cost, p.lo, p.hi, 0, 1e-5 + 1e-5 * p.lo.length);
-      assertThat(sparse.objective()).as(what + " objective").isCloseTo(dense.objective(), CLOSE);
+      // the costs are perturbed by about 1e-6 per column and unit of value
+      checkOptimal(sparse, p.a, p.rowLo, p.rowHi, p.cost, p.lo, p.hi, 0, 1e-5 + 1e-4 * p.lo.length);
+      // both are optimal for their own perturbation of the costs
+      assertThat(sparse.objective())
+          .as(what + " objective")
+          .isCloseTo(dense.objective(), Offset.offset(1e-5 * (1 + Math.abs(dense.objective()))));
     } else {
       checkFarkas(sparse.farkas(), p.a, p.rowLo, p.rowHi, p.lo, p.hi, 0);
     }
@@ -125,7 +150,7 @@ class SparseDualSimplexTest {
     int infeasible = 0;
     for (int run = 0; run < 3000; run++) {
       Lp p = new Lp(rnd, 1 + rnd.nextInt(6), 2 + rnd.nextInt(7), 0.67, rnd.nextBoolean());
-      LpSolver sparse = new SparseDualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
+      LpSolver sparse = jalp(p.a, p.rowLo, p.rowHi, p.cost);
       LpSolver dense = new DualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
       for (int step = 0; step < 4; step++) {
         if (compare(p, sparse, dense, "run " + run + " step " + step) == LpSolver.OPTIMAL) {
@@ -152,10 +177,10 @@ class SparseDualSimplexTest {
       Lp p = new Lp(rnd, m, n, 4.0 / n, true);
       // wide bounds, so that the LP is feasible more often and takes many pivots
       for (int j = 0; j < n; j++) {
-        p.lo[j] = -10 - rnd.nextInt(10);
-        p.hi[j] = 10 + rnd.nextInt(10);
+        p.lo[j] = -10.0 - rnd.nextInt(10);
+        p.hi[j] = 10.0 + rnd.nextInt(10);
       }
-      SparseDualSimplex sparse = new SparseDualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
+      LpSolver sparse = jalp(p.a, p.rowLo, p.rowHi, p.cost);
       LpSolver dense = new DualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
       for (int step = 0; step < 20; step++) {
         if (compare(p, sparse, dense, "run " + run + " step " + step) != LpSolver.OPTIMAL) {
@@ -182,8 +207,7 @@ class SparseDualSimplexTest {
       int extra = 1 + rnd.nextInt(4);
       Lp p = new Lp(rnd, m + extra, 2 + rnd.nextInt(7), 0.67, true);
       LpSolver sparse =
-          new SparseDualSimplex(
-              Arrays.copyOf(p.a, m), Arrays.copyOf(p.rowLo, m), Arrays.copyOf(p.rowHi, m), p.cost);
+          jalp(Arrays.copyOf(p.a, m), Arrays.copyOf(p.rowLo, m), Arrays.copyOf(p.rowHi, m), p.cost);
       p.bounds(sparse);
       if (sparse.solve(1000) != LpSolver.OPTIMAL) {
         continue;
@@ -210,7 +234,7 @@ class SparseDualSimplexTest {
     for (int run = 0; run < 2000; run++) {
       int m = 2 + rnd.nextInt(10);
       Lp p = new Lp(rnd, m, 2 + rnd.nextInt(10), 0.5, true);
-      SparseDualSimplex sparse = new SparseDualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
+      LpSolver sparse = jalp(p.a, p.rowLo, p.rowHi, p.cost);
       p.bounds(sparse);
       if (sparse.solve(1000) != LpSolver.OPTIMAL) {
         continue;
@@ -258,7 +282,7 @@ class SparseDualSimplexTest {
     Random rnd = new Random(17);
     for (int run = 0; run < 500; run++) {
       Lp p = new Lp(rnd, 2 + rnd.nextInt(8), 2 + rnd.nextInt(8), 0.6, true);
-      LpSolver sparse = new SparseDualSimplex(p.a, p.rowLo, p.rowHi, p.cost);
+      LpSolver sparse = jalp(p.a, p.rowLo, p.rowHi, p.cost);
       p.bounds(sparse);
       if (sparse.solve(1000) != LpSolver.OPTIMAL) {
         continue;

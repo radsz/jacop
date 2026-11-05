@@ -42,6 +42,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.presolve.Derivation;
 import org.jacop.presolve.Probing;
+import org.jacop.presolve.Rule;
 
 /**
  * It parses the options provided to flatzinc parser/executable. It contains information about all
@@ -58,6 +59,7 @@ public class Options {
   boolean all;
   boolean verbose;
   boolean statistics;
+  boolean searchStatistics;
   boolean freeSearch;
   boolean freeSearchWithoutAnnotation = true;
   boolean newFreeSearchEngine = true;
@@ -67,12 +69,14 @@ public class Options {
   int timeOut;
 
   /** The time the options were read; the time-out counts from it. */
-  private final long startTime = System.currentTimeMillis();
+  private long startTime = System.currentTimeMillis();
 
   int numberSolutions = -1;
   boolean interval;
   boolean precisionDefined;
   double precision;
+  // --gap, as a fraction; negative when off
+  double gap = -1;
   double format;
   boolean boundConsistency;
   boolean runSearch = true;
@@ -82,7 +86,11 @@ public class Options {
   boolean lcg = !"off".equals(System.getProperty("jacop.lcg", "on"));
   // whether --lcg was given; without it, LCG is left out for models it does not support
   boolean lcgGiven;
+  // why LCG asked for with --lcg is not used for this model, or null
+  String lcgIgnored;
   boolean lp = true;
+  // --proof: the path prefix of the VeriPB proof (.pbp) and its OPB model (.opb), or null
+  String proof;
   LinearRelaxation.Simplex lpSimplex = LinearRelaxation.Simplex.DENSE;
   int threads = 1;
   // the portfolio thread this model is solved in, or null
@@ -94,8 +102,20 @@ public class Options {
           presolveMode(System.getProperty("jacop.presolve", "off")), Presolve.OFF);
   boolean presolveImplied;
   boolean symmetry = true;
+  // whether --symmetry was given; without it, the system property jacop.symmetry ("on", or
+  // "presolve" to break symmetries only with presolve, as the FlatZinc test suites do) decides
+  boolean symmetryGiven;
   boolean presolveDual = true;
+  // solve the independent components the objective does not depend on before search
+  boolean components = !"off".equals(System.getProperty("jacop.components", "on"));
   int presolveRounds = Derivation.DEFAULT_ROUNDS;
+  Rule.Timing presolveLevel =
+      Objects.requireNonNullElse(
+          presolveLevel(System.getProperty("jacop.presolve.level", "exhaustive")),
+          Rule.Timing.EXHAUSTIVE);
+  double presolveAbort = Derivation.DEFAULT_ABORT_FACTOR;
+  long presolveTime = -1;
+  double presolveRestart;
   boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
@@ -148,8 +168,18 @@ public class Options {
             -t <value>, --time-out <value>
                 <value> - time in milisecond.
             -s, --statistics
+                Print the standard FlatZinc statistics (nodes, failures, restarts, peakDepth, ...).
+            --search-statistics
+                As -s, and also the statistics of JaCoP's own components (lcg*, presolve*, lp*,
+                lns*, ls*, symmetry*, probe*, portfolio*, ...). -debug together with -s does the same.
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
+            --gap <percent>
+                optimisation: stop once the best solution is within <percent> % of the
+                objective's proved bound, |best - bound| <= percent/100 * |best|, as MIP solvers'
+                relative gap. The best solution is printed without "==========", since it is not
+                proved optimal. With -s, every improvement of the bound is printed at once as
+                %%%mzn-stat: objectiveBound=<value>.
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "new" (default), "legacy"
             --default-search <value> search for a model without search annotation; one of
@@ -161,6 +191,9 @@ public class Options {
                 nogoods=0|1 (nogoods from restarts, default 1),
                 impact=<n> (bound-impact values for optimisation, on domains up to n values; 0 = off),
                 impact-until=first|always, impact-every=<k> (probe in the first run and every k-th),
+                value-impact=<n> (optimisation: values chosen by their bound on the objective,
+                ties to the last solution, on domains up to n values; default 64, 0 = off),
+                value-impact-time=<share> (most of the time spent on those probes, default 0.25),
                 restart-reset=0|1 (restart limits start again after each solution; 1 for optimisation),
                 flush=<k> (forget the dom/wdeg weights every k restarts; 0 = never; 32 for optimisation),
                 lcg-branching=alternate|auto|literals|activity (with --lcg: alternate (default)
@@ -171,8 +204,26 @@ public class Options {
                 branching, in runs alternated with the annotation),
                 interleave=restart|solution|none (with --lcg: default restart; none with literals
                 and auto),
+                fixed-restarts=turns|alternate|replay|off (with --lcg, without -f, for a model
+                with a search annotation: turns (default) restarts and takes turns between runs
+                of the annotation, the SAT solver's decisions on literals and activity branching;
+                alternate between the annotation and activity; replay restarts and follows the
+                annotation in every run; off never restarts, as before 5.0),
+                fixed-restarts-from=start|solution (restarts from the start or only after a
+                first solution),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
+                lcg-shave=on|off (with --lcg: a lower-bound run tries obj <= lb + step - 1,
+                the step doubling after each proof and halving after a run out of conflicts,
+                instead of raising the bound by 1 per run; default on),
+                lcg-lb-growth=<factor> (with --lcg: the lower-bound share grows by this factor
+                after each round without a better solution, up to 4, and resets on one;
+                default 1 = fixed share),
+                lcg-slow-rate=<conflicts per second> (with --lcg and an objective: LCG
+                that makes fewer conflicts per second by lcg-slow-at, and has a solution,
+                gives way to free search without learning, default 50; 0 = off),
+                lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
+                checked, default 0.1),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
@@ -183,6 +234,9 @@ public class Options {
                 activity (off); turns changes between the two at each restart),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
+                learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
+                at restarts; share-clauses=0 = off),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
                 blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
@@ -192,24 +246,38 @@ public class Options {
                 lns-share=<share> (propagations of neighbourhood runs per propagation of the other
                 runs, default 0.8; with --lcg time per unit of time, default 3), lns-fails=<failures> (one neighbourhood run, default 100),
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
+                lns-routes=0|1 (route removal and related-customer neighbourhoods over the vehicle
+                routes of two-index vrp models, default 1),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
-                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02)
+                search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
+                these shares are of the solver's work, counted against -t (or lcg-core-time=<ms>
+                without -t, default 60000) at a fixed rate, not of the clock, so runs repeat
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
-                violated constraints, default 1000)
+                violated constraints, default 1000), ls-moves=fj|walk (fj, the default:
+                feasibility jump, the best jump of a sample of variables, all violated constraints
+                weigh more at a minimum; walk: a step moves a variable of one violated constraint)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
                 implementing bounds consistency (default false).
             -sat use SAT solver for boolean constraints.
             --lcg [on|off] solve integer and Boolean models with lazy clause generation (JaSAT
-                as the SAT core); the search annotation is followed without restarts, or with -f
+                as the SAT core); the search annotation takes turns at restarts with the SAT
+                core's decisions and activity branching (see fixed-restarts), or with -f
                 the SAT core's decisions on literals take turns with activity branching and
                 the annotation (see lcg-branching of --free-config). On by default ("--lcg off"
                 turns it off); left out by default for models with float variables, for
                 satisfaction problems asking for more than one solution (-a, -n), and with -sat.
+            --proof <prefix> with --lcg (turned on), write a VeriPB 3 proof of the search to
+                <prefix>.pbp and the OPB model it is checked against to <prefix>.opb
+                (veripb <prefix>.opb <prefix>.pbp); one thread, the core-guided phase (without
+                its at-most-one groups) and branch and bound, without lower-bound and
+                neighbourhood runs, --lp off, bounds consistency (as -b); a search stopped by the
+                time limit concludes the lower bound it proved. The model is the store
+                at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
                 rows, explained under --lcg; one of "on" (default, the dense simplex), "off",
@@ -224,14 +292,32 @@ public class Options {
                 "check" (as "on", and every solution is checked against the loaded model)
             --presolve-implied <value> with presolve, post the constraints implied by
                 all-different constraints (sum bounds); "off" (default) or "on"
-            --symmetry <value> with presolve, break the symmetries of the model: variable
+            --symmetry <value> break the symmetries of the model: variable
                 symmetries with lex-leader constraints (a lex chain for interchangeable columns),
                 interchangeable values with value precedence; one of "on" (default), "off". Off
                 when a satisfaction problem asks for more than one solution (-a, -n).
             --presolve-dual <value> dual reductions in presolve, "on" (default) or "off"; they
                 run only when one solution or an optimum is searched for
+            --components <value> before search, find one solution of each independent part of
+                the model that the objective does not depend on, and fix it (for satisfaction,
+                of each part but the largest); "on" (default) or "off". Off when a satisfaction
+                problem asks for more than one solution (-a, -n).
             --presolve-rounds <value> the most rounds of presolve rules, each followed by
                 propagation, before presolve stops short of a fixpoint (default 10).
+            --presolve-level <value> the costliest presolve rules to run: "fast" (linear
+                rules only), "medium" (also at-most-ones, duplicate and dominated constraints,
+                cumulative reductions) or "exhaustive" (default; also probing, tabling and implied
+                constraints). A costlier class runs only after a round of
+                the cheaper ones found little.
+            --presolve-abort <value> the share of the variables a round of presolve rules must
+                change to go back to the fast rules (default 0.001); below it the rounds move to
+                the next class, and after the costliest class they stop
+            --presolve-restart <value> under --lcg, presolve the root again at a restart once
+                the root facts learnt since the last time number this share of the integer
+                variables (SCIP's restartfac is 0.025): constraints the root satisfies are left
+                out. Default 0 (off); independent of --presolve
+            --presolve-time <ms> time the rounds of presolve rules may take (default a
+                twentieth of the time limit, unlimited without one)
             --presolve-tabling replace small groups of constraints by the tables of their
                 solutions when presolving (default false)
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
@@ -289,6 +375,7 @@ public class Options {
       case "-a", "--all-solutions", "--all" -> i = handleAllSolutions(i);
       case "-t", "--time-out" -> i = handleTimeOut(args, i);
       case "-s", "--statistics" -> i = handleStatistics(i);
+      case "--search-statistics", "-searchStatistics" -> i = handleSearchStatistics(i);
       case "-f", "--free-search" -> i = handleFreeSearch(i);
       case "--free-engine" -> i = handleFreeEngine(args, i);
       case "--free-config" -> i = handleFreeConfig(args, i);
@@ -296,16 +383,23 @@ public class Options {
       case "-sat" -> i = handleSat(i);
       case "--lcg" -> i = handleLcg(args, i);
       case "--lp" -> i = handleLp(args, i);
+      case "--proof" -> i = handleProof(args, i);
       case "-p", "--parallel" -> i = handleParallel(args, i);
       case "--presolve" -> i = handlePresolve(args, i);
       case "--presolve-implied" -> i = handlePresolveImplied(args, i);
       case "--symmetry" -> i = handleSymmetry(args, i);
       case "--presolve-dual" -> i = handlePresolveDual(args, i);
+      case "--components" -> i = handleComponents(args, i);
       case "--presolve-rounds" -> i = handlePresolveRounds(args, i);
+      case "--presolve-level" -> i = handlePresolveLevel(args, i);
+      case "--presolve-abort" -> i = handlePresolveAbort(args, i);
+      case "--presolve-time" -> i = handlePresolveTime(args, i);
+      case "--presolve-restart" -> i = handlePresolveRestart(args, i);
       case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
+      case "--gap" -> i = handleGap(args, i);
       case "-v", "--verbose" -> i = handleVerbose(i);
       case "-i", "--interval" -> i = handleInterval(i);
       case "--precision" -> i = handlePrecision(args, i);
@@ -350,6 +444,12 @@ public class Options {
     return i + 1;
   }
 
+  private int handleSearchStatistics(int i) {
+    statistics = true;
+    searchStatistics = true;
+    return i + 1;
+  }
+
   private int handleFreeSearch(int i) {
     freeSearch = true;
     return i + 1;
@@ -384,6 +484,13 @@ public class Options {
         System.err.println("%% Free search setting " + setting + " not understood; ignored");
       }
     }
+    return i + 1;
+  }
+
+  private int handleProof(String[] args, int i) {
+    proof = args[++i];
+    lcg = true;
+    lcgGiven = true;
     return i + 1;
   }
 
@@ -452,8 +559,14 @@ public class Options {
   private int handleSymmetry(String[] args, int i) {
     String mode = args[++i];
     switch (mode) {
-      case "on" -> symmetry = true;
-      case "off" -> symmetry = false;
+      case "on" -> {
+        symmetry = true;
+        symmetryGiven = true;
+      }
+      case "off" -> {
+        symmetry = false;
+        symmetryGiven = true;
+      }
       default -> System.err.println("%% Symmetry mode " + mode + " not known; ignored");
     }
     return i + 1;
@@ -468,12 +581,71 @@ public class Options {
     return i + 1;
   }
 
+  private int handleComponents(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> components = true;
+      case "off" -> components = false;
+      default -> System.err.println("%% Components mode " + args[i] + " not known; ignored");
+    }
+    return i + 1;
+  }
+
   private int handlePresolveRounds(String[] args, int i) {
     int rounds = Integer.parseInt(args[++i]);
     if (rounds >= 1) {
       presolveRounds = rounds;
     } else {
       System.err.println("%% Presolve rounds must be at least 1; " + rounds + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveLevel(String[] args, int i) {
+    Rule.Timing level = presolveLevel(args[++i]);
+    if (level != null) {
+      presolveLevel = level;
+    }
+    return i + 1;
+  }
+
+  private static Rule.Timing presolveLevel(String level) {
+    return switch (level) {
+      case "fast" -> Rule.Timing.FAST;
+      case "medium" -> Rule.Timing.MEDIUM;
+      case "exhaustive" -> Rule.Timing.EXHAUSTIVE;
+      default -> {
+        System.err.println("%% Presolve level " + level + " not known; ignored");
+        yield null;
+      }
+    };
+  }
+
+  private int handlePresolveAbort(String[] args, int i) {
+    double f = Double.parseDouble(args[++i]);
+    if (f >= 0) {
+      presolveAbort = f;
+    } else {
+      System.err.println("%% Presolve abort factor must be at least 0; " + f + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveTime(String[] args, int i) {
+    long t = Long.parseLong(args[++i]);
+    if (t >= 0) {
+      presolveTime = t;
+    } else {
+      System.err.println("%% Presolve time must be at least 0; " + t + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveRestart(String[] args, int i) {
+    double f = Double.parseDouble(args[++i]);
+    if (f >= 0) {
+      presolveRestart = f;
+    } else {
+      System.err.println("%% Presolve restart factor must be at least 0; " + f + " ignored");
     }
     return i + 1;
   }
@@ -552,6 +724,24 @@ public class Options {
       System.err.println(
           "%% Precisison parameter not correct; using default precision " + precision);
     }
+    return i + 1;
+  }
+
+  private int handleGap(String[] args, int i) {
+    if (i + 1 >= args.length) {
+      throw new IllegalArgumentException("--gap needs a percentage");
+    }
+    double percent;
+    try {
+      percent = Double.parseDouble(args[++i]);
+    } catch (NumberFormatException _) {
+      throw new IllegalArgumentException("--gap " + args[i] + ": not a number");
+    }
+    if (percent < 0 || Double.isNaN(percent) || Double.isInfinite(percent)) {
+      throw new IllegalArgumentException(
+          "--gap " + args[i] + ": must be a percentage of 0 or more");
+    }
+    gap = percent / 100;
     return i + 1;
   }
 
@@ -698,12 +888,32 @@ public class Options {
   }
 
   /**
+   * The relative optimality gap at which optimisation stops (--gap), as a fraction.
+   *
+   * @return the gap, or a negative number when there is none
+   */
+  public double gap() {
+    return gap;
+  }
+
+  /**
    * It returns true if the search statistics are to be displayed.
    *
    * @return true if the search statistics are to be displayed, false otherwise.
    */
   public boolean getStatistics() {
     return statistics;
+  }
+
+  /**
+   * It returns true if the statistics of JaCoP's own components (LCG, presolve, LP, LNS, local
+   * search, symmetry, probing, portfolio) are printed as well as the standard FlatZinc ones: with
+   * --search-statistics, or with -s and -debug.
+   *
+   * @return true if the extra statistics are printed, false otherwise.
+   */
+  public boolean searchStatistics() {
+    return statistics && (searchStatistics || debug);
   }
 
   /**
@@ -726,6 +936,15 @@ public class Options {
       return 0;
     }
     return (int) Math.max(1, timeOut - (System.currentTimeMillis() - startTime));
+  }
+
+  /**
+   * Moves the start of the run back, as if reading the model had taken that long (for tests).
+   *
+   * @param millis the milliseconds the run started earlier
+   */
+  void startedEarlier(long millis) {
+    startTime -= millis;
   }
 
   /**
@@ -779,7 +998,8 @@ public class Options {
    * @return true if bound consistency prefered, false otherwise (defult).
    */
   public boolean getBoundConsistency() {
-    return boundConsistency;
+    // a proof states each explanation by unit propagation, which derives bounds, not domains
+    return boundConsistency || proof != null;
   }
 
   /**
@@ -831,12 +1051,46 @@ public class Options {
   }
 
   /**
+   * Turns off LCG for a model it cannot solve before the model is built, so that the model is built
+   * and solved exactly as without LCG. When --lcg was given, the reason is kept for the solver to
+   * report.
+   *
+   * @param reason why the model cannot be solved with LCG
+   */
+  void dropLcg(String reason) {
+    if (lcg && lcgGiven) {
+      lcgIgnored = reason;
+    }
+    lcg = false;
+  }
+
+  /**
+   * Why LCG, asked for with --lcg, is not used for this model.
+   *
+   * @return the reason, or null when LCG is used or was not asked for
+   */
+  public String lcgIgnored() {
+    return lcgIgnored;
+  }
+
+  /**
    * It defines whether the linear relaxation is added as a propagator (--lp).
    *
    * @return false when --lp off was given
    */
   public boolean lp() {
-    return lp;
+    // LP deductions combine rows, which a proof's unit propagation does not derive
+    return lp && proof == null;
+  }
+
+  /**
+   * The path prefix of the VeriPB proof that --proof asks for: the proof goes to prefix.pbp and the
+   * OPB model it is checked against to prefix.opb.
+   *
+   * @return the prefix, or null without --proof
+   */
+  public String proof() {
+    return proof;
   }
 
   /**
@@ -854,7 +1108,7 @@ public class Options {
    * @return the number of threads
    */
   public int threads() {
-    return threads;
+    return proof == null ? threads : 1;
   }
 
   /** The portfolio thread this model is solved in, or null outside a portfolio. */
@@ -882,21 +1136,40 @@ public class Options {
   }
 
   /**
+   * It defines whether the independent components the objective does not depend on are solved
+   * before search (--components); not under --proof, whose search must derive every value it fixes.
+   *
+   * @return true by default
+   */
+  public boolean components() {
+    return components && proof == null;
+  }
+
+  /**
    * It defines whether presolve posts implied constraints (--presolve-implied).
    *
-   * @return false by default
+   * @return true if it does
    */
   public boolean presolveImplied() {
     return presolveImplied;
   }
 
   /**
-   * It defines whether presolve breaks the symmetries of the model (--symmetry).
+   * It defines whether the symmetries of the model are broken (--symmetry), with or without
+   * presolve. By default they are, except in a model loaded for the API without search, whose store
+   * keeps the constraints of the model only, and under --proof, whose lex-leader constraints are
+   * not in the model the proof is checked against.
    *
    * @return true by default
    */
   public boolean symmetry() {
-    return symmetry;
+    if (!symmetry || proof != null) {
+      return false;
+    }
+    if (symmetryGiven || presolve != Presolve.OFF) {
+      return true;
+    }
+    return runSearch && !"presolve".equals(System.getProperty("jacop.symmetry"));
   }
 
   /**
@@ -916,6 +1189,45 @@ public class Options {
    */
   public int presolveRounds() {
     return presolveRounds;
+  }
+
+  /**
+   * It defines the costliest timing class of presolve rules to run (--presolve-level).
+   *
+   * @return the class, {@link Rule.Timing#EXHAUSTIVE} by default
+   */
+  public Rule.Timing presolveLevel() {
+    return presolveLevel;
+  }
+
+  /**
+   * It defines the share of the variables a round of presolve rules must change to go back to the
+   * fast rules (--presolve-abort).
+   *
+   * @return the share, {@link Derivation#DEFAULT_ABORT_FACTOR} by default
+   */
+  public double presolveAbort() {
+    return presolveAbort;
+  }
+
+  /**
+   * It defines when lazy clause generation presolves the root again at a restart
+   * (--presolve-restart).
+   *
+   * @return the share of the integer variables learnt as root facts since the last time, 0 (off) by
+   *     default
+   */
+  public double presolveRestart() {
+    return presolveRestart;
+  }
+
+  /**
+   * It defines the time the rounds of presolve rules may take (--presolve-time).
+   *
+   * @return the time in milliseconds, or -1 for the default (a twentieth of the time limit)
+   */
+  public long presolveTime() {
+    return presolveTime;
   }
 
   /**

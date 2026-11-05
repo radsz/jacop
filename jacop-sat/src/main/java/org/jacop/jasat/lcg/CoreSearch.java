@@ -107,9 +107,10 @@ public final class CoreSearch {
 
   // the conflicts of one probe of a term's level
   private static final long PROBE_CONFLICTS = 100;
-  // the lower bound's rate is measured once this many nanoseconds passed, and may grow this many
-  // times
-  private static final long RATE_WINDOW = 2_000_000_000L;
+  // the lower bound's rate, per unit of the solver's work (CdclSolver#work, never the clock, so a
+  // run repeats), is measured once this much work was done (about two seconds), and may grow this
+  // many times
+  private static final long RATE_WINDOW = 2_000 * LcgSolver.WORK_PER_MS;
   private static final double RATE_SLACK = 3;
 
   private final LcgSolver lcg;
@@ -124,6 +125,8 @@ public final class CoreSearch {
   private final int objective;
   private final List<Soft> softs = new ArrayList<>();
   private final Map<Integer, Soft> byLiteral = new HashMap<>();
+  // the proof of the cores, or null without a proof
+  private CoreProof proof;
 
   /** Statistics: cores found. */
   public long cores;
@@ -164,10 +167,11 @@ public final class CoreSearch {
   /** Whether the phase proved its best solution optimal, or that there is none. */
   public boolean proved;
 
-  private long startTime; // when the first call of the solver started, and the bound then
+  // the solver's work when the first call of the solver started (-1 before), and the bound then
+  private long startWork = -1;
   private long startBound;
   private long runBound; // the lower bound when the last run started
-  private long runEnd; // when the last run stopped
+  private long runEnd; // the solver's work when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
@@ -216,13 +220,14 @@ public final class CoreSearch {
     terms.put(objective, 1L);
     Set<Constraint> used = new HashSet<>();
     long[] constant = new long[1];
+    List<CoreProof.Definition> definitions = new ArrayList<>();
     for (int round = 0; round < 4 && terms.size() == 1; round++) {
       Map.Entry<Integer, Long> only = terms.entrySet().iterator().next();
-      LinearForm f = definition(lcg.variable(only.getKey()), only.getValue(), used);
-      if (f == null) {
+      Constraint c = definition(lcg.variable(only.getKey()), only.getValue(), used);
+      if (c == null) {
         break;
       }
-      if (!substitute(lcg, terms, only.getKey(), only.getValue(), f, constant)) {
+      if (!substitute(lcg, terms, only.getKey(), only.getValue(), c, constant, definitions)) {
         return null;
       }
     }
@@ -231,6 +236,7 @@ public final class CoreSearch {
     }
     Map<Integer, Long> blocks = new HashMap<>(terms);
     long blocksConstant = constant[0];
+    List<CoreProof.Definition> blockDefinitions = new ArrayList<>(definitions);
     // a term that is only a sum defined for the objective, such as a block of a long sum split for
     // shorter explanations, is replaced by its own terms
     for (int round = 0; round < 4; round++) {
@@ -241,9 +247,9 @@ public final class CoreSearch {
         if (t == objective || weight == null || otherConstraints(y, used) != 1) {
           continue;
         }
-        LinearForm f = definition(y, 0, used);
-        if (f != null) {
-          if (!substitute(lcg, terms, t, weight, f, constant)) {
+        Constraint c = definition(y, 0, used);
+        if (c != null) {
+          if (!substitute(lcg, terms, t, weight, c, constant, definitions)) {
             return null;
           }
           changed = true;
@@ -257,16 +263,45 @@ public final class CoreSearch {
     // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
     // terms, 151 cores on its 3 sums against 2,285 on the terms)
     if (span(lcg, terms) > span(lcg, blocks)) {
-      return new CoreSearch(lcg, objective, blocks, blocksConstant);
+      CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
+      return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    if (!search.startProof(definitions)) {
+      return null;
+    }
     if (!terms.equals(blocks)) {
       // grouped now, as before #313's rework: the probes then have the time of the whole run, not
       // the share of the phase (spot5 28: 58 groups and a proof in 7 s, against 6 groups)
       search.addTermSofts();
-      search.relaxAtMostOnes();
+      search.group();
     }
     return search;
+  }
+
+  /**
+   * Starts the proof of the cores when the solver writes one: the line of the objective's lower
+   * bound, from the definitions. Returns false when the model does not state them, so the phase
+   * cannot be proved.
+   */
+  private boolean startProof(List<CoreProof.Definition> definitions) {
+    if (!lcg.proving()) {
+      return true;
+    }
+    proof = CoreProof.of(lcg, definitions);
+    return proof != null;
+  }
+
+  /**
+   * Relaxes the at-most-one groups ({@link #relaxAtMostOnes}), except under a proof, which does not
+   * define the groups' literals; returns false when the solver is unsatisfiable at the root.
+   */
+  private boolean group() {
+    if (proof != null) {
+      grouped = true;
+      return true;
+    }
+    return relaxAtMostOnes();
   }
 
   /** The number of levels of the terms' variables, summed. */
@@ -285,7 +320,14 @@ public final class CoreSearch {
    * Returns false when a z_j is not a variable of the solver.
    */
   private static boolean substitute(
-      LcgSolver lcg, Map<Integer, Long> terms, int y, long weight, LinearForm f, long[] constant) {
+      LcgSolver lcg,
+      Map<Integer, Long> terms,
+      int y,
+      long weight,
+      Constraint c,
+      long[] constant,
+      List<CoreProof.Definition> definitions) {
+    LinearForm f = LinearForms.of(c);
     IntVar yv = lcg.variable(y);
     long a = 0;
     for (int k = 0; k < f.vars().length; k++) {
@@ -295,6 +337,7 @@ public final class CoreSearch {
     }
     terms.remove(y);
     long scale = weight * a; // a is its own inverse
+    definitions.add(new CoreProof.Definition(c, f, scale));
     for (int k = 0; k < f.vars().length; k++) {
       IntVar z = f.vars()[k];
       if (z == yv) {
@@ -345,7 +388,7 @@ public final class CoreSearch {
    * (jp-encoding data1000: a root bound of 30,874 on the cost variables, 0 on the 0-1 terms of the
    * blocks).
    */
-  private static LinearForm definition(IntVar x, long weight, Set<Constraint> used) {
+  private static Constraint definition(IntVar x, long weight, Set<Constraint> used) {
     IntDomain dom = x.dom();
     if (dom.modelConstraints == null) {
       return null;
@@ -370,7 +413,7 @@ public final class CoreSearch {
         }
         if (weight == 0) {
           used.add(c);
-          return f;
+          return c;
         }
         long bound = rootBound(x, weight * a, f);
         if (found == null || bound > foundBound) {
@@ -383,7 +426,7 @@ public final class CoreSearch {
     if (foundConstraint != null) {
       used.add(foundConstraint);
     }
-    return found;
+    return foundConstraint;
   }
 
   /** The coefficient of x in f, or 0 when x occurs other than once. */
@@ -432,12 +475,12 @@ public final class CoreSearch {
    */
   int run(long phaseLimit, long callLimit) {
     runBound = lowerBound;
-    if (startTime != 0) {
-      // the rate of the lower bound counts only the phase's own time, not branch and bound between
-      startTime += System.nanoTime() - runEnd;
+    if (startWork >= 0) {
+      // the rate of the lower bound counts only the phase's own work, not branch and bound between
+      startWork += sat.work() - runEnd;
     }
     int result = search(phaseLimit, callLimit);
-    runEnd = System.nanoTime();
+    runEnd = sat.work();
     if (result != CdclSolver.UNKNOWN) {
       proved = true;
     }
@@ -452,18 +495,19 @@ public final class CoreSearch {
       if (!grouped) {
         addTermSofts();
       }
-      if (!grouped && !relaxAtMostOnes()) {
+      if (!grouped && !group()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
-      startTime = System.nanoTime();
+      startWork = sat.work();
       startBound = lowerBound;
     }
     while (true) {
       if (!relaxTrueAtRoot()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
-      if (lcg.bestObjective() <= lowerBound) {
+      if (lcg.boundObjective() <= lowerBound) {
+        // also when the best solution was found elsewhere (a portfolio): none here is better
         return CdclSolver.SAT;
       }
       if (!harden()) {
@@ -476,7 +520,8 @@ public final class CoreSearch {
         }
       }
       long cap = sat.conflicts + callLimit;
-      sat.setConflictLimit(Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap));
+      sat.setConflictLimit(
+          Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
       int result = lcg.solveUnder(assumed.stream().mapToInt(Integer::intValue).toArray());
       if (result == CdclSolver.UNKNOWN) {
         if (sat.conflicts < cap || cap >= phaseLimit || !rising()) {
@@ -514,6 +559,7 @@ public final class CoreSearch {
       if (unit != null && unit.term >= 0) {
         probe(unit.term, unit.level, phaseLimit);
       }
+      lcg.reportBound(lowerBound);
       if (tooSlow()) {
         return CdclSolver.UNKNOWN;
       }
@@ -527,18 +573,28 @@ public final class CoreSearch {
    * becomes unsatisfiable.
    */
   private boolean harden() {
-    long best = lcg.bestObjective();
+    long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return true;
     }
     long gap = best - lowerBound;
-    for (Soft s : softs) {
-      if (!s.hard && s.weight > gap) {
-        s.hard = true;
-        hardened++;
-        if (!sat.addClause(-s.lit)) {
-          return false;
+    long line = -1; // the proof's line of the gap, written before the first literal hardened
+    try {
+      for (Soft s : softs) {
+        if (!s.hard && s.weight > gap) {
+          s.hard = true;
+          hardened++;
+          if (proof != null && line < 0) {
+            line = proof.gap();
+          }
+          if (!lcg.addProvedClause(-s.lit)) {
+            return false;
+          }
         }
+      }
+    } finally {
+      if (line > 0) {
+        proof.delete(line);
       }
     }
     return true;
@@ -609,13 +665,13 @@ public final class CoreSearch {
       adjacent[i] = new BitSet();
     }
     BitSet free = new BitSet(n);
-    long start = System.nanoTime();
-    long deadline = sat.deadline();
+    long start = sat.work();
+    long end = lcg.workEnd();
     long budget =
-        deadline == Long.MAX_VALUE
-            ? PROBE_TIME
-            : Math.min(PROBE_TIME, Math.max(0, deadline - start) / PROBE_SHARE);
-    for (int i = 0; i < n && System.nanoTime() - start < budget; i++) {
+        end == Long.MAX_VALUE
+            ? PROBE_WORK
+            : Math.min(PROBE_WORK, Math.max(0, end - start) / PROBE_SHARE);
+    for (int i = 0; i < n && sat.work() - start < budget; i++) {
       int lit = lits.get(i);
       if (sat.value(lit) != 0) {
         continue;
@@ -785,7 +841,9 @@ public final class CoreSearch {
   // the most soft literals probed for at-most-one groups, the most time the probes may take, and
   // at most this part of the time left
   private static final int MAX_GROUP_NODES = 20_000;
-  private static final long PROBE_TIME = 2_000_000_000L;
+  // the work of the probes that look for at-most-one groups (about two seconds), and the share of
+  // the work left that they may take at most
+  private static final long PROBE_WORK = 2_000 * LcgSolver.WORK_PER_MS;
   private static final long PROBE_SHARE = 10;
 
   private static final int[] NO_VALUES = new int[0];
@@ -845,36 +903,37 @@ public final class CoreSearch {
   }
 
   /**
-   * Whether the lower bound rises too slowly to meet the best solution before the deadline, at
-   * three times its rate since the first call of the solver, once that is two seconds ago; for
-   * example when each core of two terms with large domains raises it by 1. Branch and bound then
-   * gets the time. The rate is taken since the start, not over the last seconds, so that a few slow
-   * cores near the optimum do not end the phase.
+   * Whether the lower bound rises too slowly to meet the best solution before the end of the run,
+   * at three times its rate since the first call of the solver, once the phase has done about two
+   * seconds of work (see {@link LcgSolver#WORK_PER_MS}); for example when each core of two terms
+   * with large domains raises it by 1. Branch and bound then gets the time. The rate is taken since
+   * the start, not over the last seconds, so that a few slow cores near the optimum do not end the
+   * phase.
    */
   private boolean tooSlow() {
     // only once the phase has a solution of its own: a poor one from branch and bound before it
     // would stop the phase before its strata find better ones
-    return System.nanoTime() - startTime >= RATE_WINDOW
+    return sat.work() - startWork >= RATE_WINDOW
         && stratumSolutions > 0
         && lcg.bestObjective() != Long.MAX_VALUE
         && !rising();
   }
 
   /**
-   * Whether the lower bound, at its rate since the first call of the solver, would meet the best
-   * solution before the given deadline.
+   * Whether the lower bound, at its rate per unit of work since the first call of the solver, would
+   * meet the best solution before the given end of the run.
    *
-   * @param deadline a time of {@link System#nanoTime()}
+   * @param end the solver's work ({@link CdclSolver#work}) at the end of the run
    * @return false when there is no solution yet
    */
-  boolean closing(long deadline) {
-    long best = lcg.bestObjective();
-    if (best == Long.MAX_VALUE || startTime == 0) {
+  boolean closing(long end) {
+    long best = lcg.boundObjective();
+    if (best == Long.MAX_VALUE || startWork < 0 || end == Long.MAX_VALUE) {
       return false;
     }
-    long now = System.nanoTime();
-    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startTime);
-    return rate * (deadline - now) >= best - lowerBound;
+    long now = sat.work();
+    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startWork);
+    return rate * (end - now) >= best - lowerBound;
   }
 
   /** Whether the lower bound rose in the last run. */
@@ -892,20 +951,21 @@ public final class CoreSearch {
   }
 
   /**
-   * Whether the lower bound, at three times its rate since the first call of the solver, would meet
-   * the best solution before the deadline. False when there is no solution yet. Without a deadline
-   * the time left is taken as the time the phase has run: cores that cost no conflicts never reach
-   * its budget of conflicts, and one per level of a term of a million values would run for hours.
+   * Whether the lower bound, at three times its rate per unit of work since the first call of the
+   * solver, would meet the best solution before the end of the run ({@link LcgSolver#workEnd}).
+   * False when there is no solution yet. Without an end the work left is taken as the work the
+   * phase has done: cores that cost no conflicts never reach its budget of conflicts, and one per
+   * level of a term of a million values would run for hours.
    */
   private boolean rising() {
-    long best = lcg.bestObjective();
+    long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return false;
     }
-    long deadline = sat.deadline();
-    long now = System.nanoTime();
-    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startTime);
-    long left = deadline != Long.MAX_VALUE ? deadline - now : now - startTime;
+    long end = lcg.workEnd();
+    long now = sat.work();
+    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startWork);
+    long left = end != Long.MAX_VALUE ? end - now : now - startWork;
     return RATE_SLACK * rate * left >= best - lowerBound;
   }
 
@@ -962,12 +1022,12 @@ public final class CoreSearch {
       int level = from + step;
       int lit = termLiteral(t, level);
       long cap = sat.conflicts + PROBE_CONFLICTS;
-      sat.setConflictLimit(Math.min(phaseLimit, cap));
+      sat.setConflictLimit(Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap)));
       probes++;
       if (lcg.solveUnder(-lit) != CdclSolver.UNSAT || sat.failedAssumptions().length != 1) {
         return;
       }
-      sat.addClause(lit);
+      lcg.addProvedClause(lit);
       termProven[t] = level;
     }
   }
@@ -1014,12 +1074,16 @@ public final class CoreSearch {
         }
       }
     }
-    // one of the core's literals holds in every solution
-    if (!sat.addClause(lits)) {
+    // one of the core's literals holds in every solution; the solver's cores are in the proof
+    if (!(bound ? sat.addClause(lits) : lcg.addProvedClause(lits))) {
       return false;
     }
     if (lits.length > 1) {
-      addTotalizerSoft(new Totalizer(lits, min), 2);
+      Totalizer tot = new Totalizer(lits, min);
+      addTotalizerSoft(tot, 2);
+      if (proof != null) {
+        proof.core(tot.outputs, min);
+      }
     }
     return !bound || boundObjective();
   }
@@ -1033,7 +1097,7 @@ public final class CoreSearch {
     if (lowerBound > x.max()) {
       return false;
     }
-    return sat.addClause(lcg.geLiteral(objective, (int) lowerBound));
+    return lcg.addProvedClause(lcg.geLiteral(objective, (int) lowerBound));
   }
 
   /**
@@ -1048,6 +1112,9 @@ public final class CoreSearch {
     }
     int to = nextLevel(t, level);
     int lit = termLiteral(t, to);
+    if (proof != null) {
+      proof.fold(termVar[t], termUp[t], termBase[t], level, to, weight);
+    }
     addSoft(new Soft(lit, weight * (to - level + 1), t, to, null, 0));
   }
 
@@ -1074,7 +1141,9 @@ public final class CoreSearch {
       return;
     }
     if (count > tot.outputs.length) {
-      tot.outputs = encode(tot.inputs, Math.min(tot.inputs.length, Math.max(4, 2 * count)));
+      // all outputs under a proof, whose definitions an encoding with more outputs would repeat
+      int limit = proof != null ? tot.inputs.length : Math.max(4, 2 * count);
+      tot.outputs = encode(tot.inputs, Math.min(tot.inputs.length, limit));
     }
     addSoft(new Soft(tot.outputs[count - 1], tot.weight, -1, 0, tot, count));
   }
@@ -1109,6 +1178,9 @@ public final class CoreSearch {
     for (int k = 0; k < n; k++) {
       out[k] = lcg.newAuxiliary();
     }
+    if (proof != null) {
+      proof.define(out, inputs, from, to);
+    }
     for (int i = 0; i <= a.length; i++) {
       for (int j = 0; j <= b.length && i + j <= n; j++) {
         if (i + j == 0) {
@@ -1123,6 +1195,13 @@ public final class CoreSearch {
           clause[k++] = -b[j - 1];
         }
         clause[k] = out[i + j - 1];
+        if (proof != null) {
+          // a child of one input is a leaf, not an output with definitions
+          proof.totalizerClause(
+              i > 0 && mid - from > 1 ? a[i - 1] : 0,
+              j > 0 && to - mid > 1 ? b[j - 1] : 0,
+              clause[k]);
+        }
         sat.addClause(clause);
       }
     }

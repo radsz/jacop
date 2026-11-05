@@ -30,6 +30,7 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -41,9 +42,12 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 import org.jacop.lcg.PrecedeChainExplanation;
 
 /**
@@ -62,9 +66,13 @@ import org.jacop.lcg.PrecedeChainExplanation;
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
-public class SeqPrecedeChain extends Constraint implements Copyable<SeqPrecedeChain>, Explainable {
+public class SeqPrecedeChain extends Constraint
+    implements Copyable<SeqPrecedeChain>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  /** The most edges of the layered graph a proof model gets. */
+  private static final long EDGE_LIMIT = 1 << 22;
 
   /** It specifies lists of variables for the constraint. */
   final IntVar[] x;
@@ -306,6 +314,60 @@ public class SeqPrecedeChain extends Constraint implements Copyable<SeqPrecedeCh
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     return PrecedeChainExplanation.explainFailure(trail, x, chain, out);
+  }
+
+  /**
+   * Writes the constraint as a layered graph whose node at level i is the highest rank among x[0],
+   * ..., x[i - 1]: a value of rank q leaves node r when q <= r + 1, for node max(r, q).
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != SeqPrecedeChain.class) {
+      return false;
+    }
+    int top = 0;
+    for (IntVar v : x) {
+      for (ValueEnumeration e = model.domain(v).valueEnumeration(); e.hasMoreElements(); ) {
+        top = Math.max(top, rank(e.nextElement()));
+      }
+    }
+    long size = 0;
+    for (IntVar v : x) {
+      size += (long) (top + 1) * model.domain(v).getSize();
+    }
+    if (size > EDGE_LIMIT) {
+      return false;
+    }
+    int[] levelNodes = new int[n + 1];
+    Arrays.fill(levelNodes, top + 1);
+    levelNodes[0] = 1;
+    List<Integer> edges = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int r = 0; r < levelNodes[i]; r++) {
+        for (ValueEnumeration e = model.domain(x[i]).valueEnumeration(); e.hasMoreElements(); ) {
+          int v = e.nextElement();
+          int q = rank(v);
+          if (q <= r + 1) {
+            edges.addAll(List.of(i, r, v, Math.max(r, q)));
+          }
+        }
+      }
+    }
+    int[] edge = edges.stream().mapToInt(Integer::intValue).toArray();
+    return PbModel.layeredGraph(model, x, levelNodes, edge, edge.length / 4);
+  }
+
+  /** The rank of a value: its position in the chain from 1, or the value itself, 0 if none. */
+  private int rank(int v) {
+    if (chain == null) {
+      return Math.max(v, 0);
+    }
+    for (int r = 0; r < chain.length; r++) {
+      if (chain[r] == v) {
+        return r + 1;
+      }
+    }
+    return 0;
   }
 
   @Override

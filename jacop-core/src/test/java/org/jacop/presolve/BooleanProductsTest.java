@@ -159,7 +159,8 @@ class BooleanProductsTest {
     Model m = model(new int[][] {{-2, 5}, {-10, 10}}, 1, x -> list(new XmulYeqZ(x[0], x[2], x[1])));
     Derivation d = Presolver.of(m.store()).keep(m.x()).rounds(5).presolve();
     assertThat(rule(d).replaced()).isOne();
-    assertThat(d.rounds()).isLessThanOrEqualTo(2);
+    // the round after the replacement changes nothing, and so does the round of medium rules
+    assertThat(d.rounds()).isLessThanOrEqualTo(3);
     d.discard();
   }
 

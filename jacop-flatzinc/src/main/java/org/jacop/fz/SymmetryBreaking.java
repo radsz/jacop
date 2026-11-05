@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.function.Function;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -115,9 +116,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
   }
 
-  private static final class Unsupported extends RuntimeException {
+  private static class Unsupported extends RuntimeException {
     Unsupported(String reason) {
       super(reason, null, false, false);
+    }
+  }
+
+  /** The time given ran out before the graph was built. */
+  private static final class OutOfTime extends Unsupported {
+    OutOfTime() {
+      super("time limit reached while building the graph");
     }
   }
 
@@ -350,10 +358,115 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   private final Store store;
   private final Tables dictionary;
+  // when the time given to run ends (System.nanoTime)
+  private long deadline = Long.MAX_VALUE;
+  // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
+  private boolean largest;
+  // whether the search is free search (-f), which does not follow the search annotation
+  private boolean free;
+  // the constraints posted, as their kind and variables, for added()
+  private final List<String> postedKinds = new ArrayList<>();
+  private final List<IntVar[][]> postedVariables = new ArrayList<>();
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
     this.dictionary = dictionary;
+  }
+
+  private void note(String kind, IntVar[]... rows) {
+    postedKinds.add(kind);
+    postedVariables.add(rows);
+  }
+
+  /**
+   * Describes the constraints posted by {@link #run}, so that two stores of the same model can tell
+   * whether they added the same ones: the same text means the same constraints.
+   *
+   * @param name the name of a variable of the model, null for any other variable
+   * @return the text, empty when nothing was posted, or null when a constraint has a variable with
+   *     no name
+   */
+  String added(Function<IntVar, String> name) {
+    StringBuilder s = new StringBuilder();
+    for (int k = 0; k < postedKinds.size(); k++) {
+      s.append(postedKinds.get(k));
+      for (IntVar[] row : postedVariables.get(k)) {
+        s.append('[');
+        for (IntVar x : row) {
+          String n = name.apply(x);
+          if (n == null) {
+            return null;
+          }
+          s.append(n).append(',');
+        }
+        s.append(']');
+      }
+      s.append(';');
+    }
+    return s.toString();
+  }
+
+  /**
+   * Keeps the lexicographically largest solution of each orbit of the variable symmetries, for a
+   * search that tries the largest values first; with the smallest one kept, such a search would
+   * first meet the solutions the lex-leader constraints remove. Value precedence keeps the values
+   * in order of first use, which goes with the smallest solution only, so the variable symmetries
+   * are then broken towards the smallest one all the same.
+   *
+   * @param largest true for the largest solution.
+   * @return this.
+   */
+  SymmetryBreaking keepLargest(boolean largest) {
+    this.largest = largest;
+    return this;
+  }
+
+  /**
+   * Tells that the search is free search. Value precedence is then left out of a model that
+   * minimizes the largest load of a bin packing (identical parallel machines, P||Cmax): under
+   * {@code --lcg -f} it multiplies the failures there (n41-m7-s18: 214 without it, 2,000-30,000
+   * with it), while it helps bin packing that minimizes the bins used.
+   *
+   * @param free true for free search.
+   * @return this.
+   */
+  SymmetryBreaking freeSearch(boolean free) {
+    this.free = free;
+    return this;
+  }
+
+  /** Whether the objective is the largest load of a bin packing of the model. */
+  private static boolean largestLoad(List<Item> items, IntVar objective) {
+    if (objective == null) {
+      return false;
+    }
+    Set<IntVar> loads = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Item item : items) {
+      if (item.name().startsWith("jacop_bin_packing") && item.args().length > 1) {
+        for (Atom a : item.args()[1]) {
+          if (a.var() != null) {
+            loads.add(a.var());
+          }
+        }
+      }
+    }
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if ((item.name().equals("jacop_maximum") || item.name().equals("array_int_maximum"))
+          && args.length == 2
+          && args[0].length == 1
+          && args[0][0].var() == objective
+          && args[1].length > 0) {
+        boolean all = true;
+        for (Atom a : args[1]) {
+          all &= a.var() != null && loads.contains(a.var());
+        }
+        if (all) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /**
@@ -387,16 +500,17 @@ final class SymmetryBreaking implements ParserTreeConstants {
   Outcome run(
       SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
     IntVar goal = objective != null && !objective.singleton() ? objective : null;
+    // reading the model and building its graphs count in the time given, as the search does
+    deadline = System.nanoTime() + maxNanos;
     List<Item> items;
     try {
       items = parse(astTree);
     } catch (Unsupported e) {
-      return new Outcome(0, 0, 0, true, e.getMessage());
+      return new Outcome(0, 0, 0, !(e instanceof OutOfTime), e.getMessage());
     } catch (IllegalArgumentException | ClassCastException e) {
       // a form of argument the front end reads elsewhere; the model is left as it is
       return new Outcome(0, 0, 0, true, String.valueOf(e.getMessage()));
     }
-    long deadline = System.nanoTime() + maxNanos;
 
     // the lex-leader order: the variables of the search annotation, then the others as the model
     // first uses them
@@ -433,11 +547,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Graph graph = new Graph(goal, null);
     try {
       for (Item item : items) {
+        checkTime();
         graph.addConstraint(item);
       }
       graph.finish();
     } catch (Unsupported e) {
-      return new Outcome(0, 0, values.posted(), true, e.getMessage(), values.posted(), 0);
+      return new Outcome(
+          0, 0, values.posted(), !(e instanceof OutOfTime), e.getMessage(), values.posted(), 0);
     }
     int n = graph.size();
     if (n > MAX_VERTICES) {
@@ -473,10 +589,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     List<GraphAutomorphisms.Permutation> generators = new ArrayList<>(result.generators());
     int orbitopes = 0;
     int posted = values.posted();
+    boolean descending = largest && values.posted() == 0;
     for (IntVar[][] columns : orbitopes(generators, varAt, rankAt)) {
+      if (descending) {
+        Collections.reverse(Arrays.asList(columns));
+      }
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
       store.impose(chain);
+      note("chain", columns);
       orbitopes++;
       posted++;
     }
@@ -516,10 +637,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
         // ordered by the lex chain of its orbitope
         continue;
       }
-      LexOrder lex = new LexOrder(xs.toArray(new IntVar[0]), ys.toArray(new IntVar[0]), false);
+      IntVar[] x = xs.toArray(new IntVar[0]);
+      IntVar[] y = ys.toArray(new IntVar[0]);
+      LexOrder lex = descending ? new LexOrder(y, x, false) : new LexOrder(x, y, false);
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
       store.impose(lex);
+      note(descending ? "lex>" : "lex<", x, y);
       posted++;
     }
     return new Outcome(
@@ -541,6 +665,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     return v;
   }
 
+  private void checkTime() {
+    if (System.nanoTime() > deadline) {
+      throw new OutOfTime();
+    }
+  }
+
   private List<Item> parse(SimpleNode astTree) {
     List<Item> items = new ArrayList<>();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
@@ -549,6 +679,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
+            checkTime();
             items.add(parse((ASTConstElem) item));
           }
         }
@@ -760,6 +891,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
    */
   private ValueOutcome breakValueSymmetries(
       List<Item> items, IntVar objective, boolean minimize, List<IntVar> ranked, long maxNanos) {
+    if (free && minimize && largestLoad(items, objective)) {
+      return new ValueOutcome(List.of(), 0, true);
+    }
     List<Space> spaces = new ArrayList<>();
     // a minimized objective that only bounds the variables of one space from above
     Set<IntVar> bounded = minimize && objective != null ? upperBounded(items, objective) : null;
@@ -888,11 +1022,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     graph.spaces = spaces;
     try {
       for (Item item : items) {
+        checkTime();
         graph.addConstraint(item);
       }
       graph.finish();
     } catch (Unsupported e) {
-      return new ValueOutcome(List.of(), 0, true);
+      return new ValueOutcome(List.of(), 0, !(e instanceof OutOfTime));
     }
     if (graph.size() > MAX_VERTICES) {
       return new ValueOutcome(List.of(), 0, true);
@@ -918,7 +1053,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
                 graph.colors(),
                 graph.adjacency(),
                 base.stream().mapToInt(Integer::intValue).toArray())
-            .generators(MAX_WORK, maxNanos);
+            .generators(MAX_WORK, Math.min(maxNanos, Math.max(0, deadline - System.nanoTime())));
 
     boolean[] fixedVertex = new boolean[graph.size()];
     for (Space s : spaces) {
@@ -970,6 +1105,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         SeqPrecedeChain precede = new SeqPrecedeChain(xs, chain);
         precede.setDegreeWeight(0);
         store.impose(precede);
+        note("precede" + Arrays.toString(chain), xs);
         posted++;
       }
       first.addAll(spaces.get(k).vars);

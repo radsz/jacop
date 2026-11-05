@@ -119,6 +119,11 @@ public final class Tabling implements Rule {
   }
 
   @Override
+  public Timing timing() {
+    return Timing.EXHAUSTIVE;
+  }
+
+  @Override
   public void apply(Context context) {
     if (nodes >= limits.budget()) {
       return;

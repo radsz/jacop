@@ -31,11 +31,10 @@
 package org.jacop.constraints.lp;
 
 /**
- * The dual ratio test with bound flipping and Harris tolerances, shared by {@link DualSimplex} and
- * {@link SparseDualSimplex}: the eligible columns are taken in the order of their dual ratios, and
- * a boxed column whose move to its other bound leaves the basic variable still outside its bound is
- * flipped instead of entering. Among ratios within the tolerance of the smallest, the largest pivot
- * is taken.
+ * The dual ratio test with bound flipping and Harris tolerances, of {@link DualSimplex}: the
+ * eligible columns are taken in the order of their dual ratios, and a boxed column whose move to
+ * its other bound leaves the basic variable still outside its bound is flipped instead of entering.
+ * Among ratios within the tolerance of the smallest, the largest pivot is taken.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -73,6 +72,9 @@ final class RatioTest {
     flips = 0;
     count = 0;
   }
+
+  /** The choice when the ratios are not numbers (NaN reduced costs or entries). */
+  static final int NUMERIC = -2;
 
   // starts a ratio test
   void start() {
@@ -113,7 +115,8 @@ final class RatioTest {
    * @param lo the lower bounds of the columns
    * @param hi the upper bounds of the columns
    * @return the entering column, or -1 when even every eligible column at its other bound leaves
-   *     the basic variable outside its bound, so the row proves infeasibility
+   *     the basic variable outside its bound, so the row proves infeasibility, or {@link #NUMERIC}
+   *     when the ratios are not numbers
    */
   int choose(double gap, double[] lo, double[] hi) {
     int k = count;
@@ -129,6 +132,11 @@ final class RatioTest {
         if (ratio[i] <= least && (pick < 0 || pivotSize[i] > pivotSize[pick])) {
           pick = i;
         }
+      }
+      if (pick < 0) {
+        // a ratio is NaN: the simplex has lost its numbers
+        flips = 0;
+        return NUMERIC;
       }
       int j = candidate[pick];
       double range = hi[j] - lo[j];

@@ -54,6 +54,7 @@ import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
@@ -63,6 +64,7 @@ import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
 import org.jacop.constraints.Deviation;
+import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
@@ -93,6 +95,8 @@ import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
+import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -101,6 +105,8 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqZ;
@@ -110,9 +116,11 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
@@ -252,6 +260,17 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
     if (s.length == 0) {
+      return;
+    }
+    if (support.options.proof() != null) {
+      // --proof: the time table, which unit propagation over the time-indexed encoding states, and
+      // over fixed tasks the energy and edge-finding rules, whose reasons the proof derives as sums
+      // of the encoding's lines over an overloaded window
+      if (allVarGround(d) && allVarGround(r)) {
+        support.delayedConstraints.add(configureCumulative(new Cumulative(s, d, r, b)));
+      } else {
+        support.delayedConstraints.add(new CumulativeBasic(s, d, r, b));
+      }
       return;
     }
     if (poseInterDistance(s, d, r, b)) {
@@ -540,10 +559,22 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     // successors must all be different, so the same variable (or constant) twice is infeasible
     checkForDuplicateVariables(v);
-    support.pose(new Subcircuit(v));
+    subcircuit(v);
 
     // the successors of a subcircuit are all different too (x[i] = i is unique to i)
     addImpliedAlldistinct(v);
+  }
+
+  // under --proof a decomposition by positions, whose encoding unit propagation follows; the cut
+  // and dominance reasons of Subcircuit it does not
+  private void subcircuit(IntVar[] v) {
+    if (support.options.proof() == null) {
+      support.pose(new Subcircuit(v));
+      return;
+    }
+    for (Constraint c : Subcircuit.decomposition(store, v)) {
+      support.pose(c);
+    }
   }
 
   // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
@@ -553,9 +584,27 @@ class GlobalConstraints implements ParserTreeConstants {
     int[][] costs = matrix(support.getIntArray((SimpleNode) node.jjtGetChild(1)), v.length);
     IntVar cost = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
     checkForDuplicateVariables(v);
-    support.pose(new Subcircuit(v));
+    subcircuit(v);
     addImpliedAlldistinct(v);
-    support.pose(new SubcircuitCost(v, costs, cost));
+    if (support.options.proof() == null) {
+      support.pose(new SubcircuitCost(v, costs, cost));
+      return;
+    }
+    // the cost as a sum of elements, which a proof states
+    IntVar[] terms = new IntVar[v.length + 1];
+    int[] weights = new int[v.length + 1];
+    for (int i = 0; i < v.length; i++) {
+      terms[i] =
+          new IntVar(
+              store,
+              Arrays.stream(costs[i]).min().orElse(0),
+              Arrays.stream(costs[i]).max().orElse(0));
+      support.pose(new ElementInteger(v[i], costs[i], terms[i], 0));
+      weights[i] = 1;
+    }
+    terms[v.length] = cost;
+    weights[v.length] = -1;
+    support.pose(new LinearInt(terms, weights, "==", 0));
   }
 
   // jacop_weighted_subcircuits(next, tour, d, tourCost, cost, offset)
@@ -640,7 +689,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (IntVar vv : v) {
       dom = (IntervalDomain) dom.union(vv.dom());
     }
-    if (v.length > 100) {
+    // a large all_different over sparse domains (successor arrays) keeps domain consistency:
+    // bounds consistency prunes nothing inside them
+    if (v.length > 100 && !isSparseDomains(v)) {
       support.pose(new Alldiff(v));
       return;
     }
@@ -826,6 +877,10 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] xx = distinctCopies(x, seen);
     IntVar vv = distinctCopies(new IntVar[] {v}, seen)[0];
 
+    if (zeroOneCount(x, s.contains(0), s.contains(1), v)) {
+      return;
+    }
+
     IntervalDomain setImpl = new IntervalDomain();
     for (ValueEnumeration e = s.valueEnumeration(); e.hasMoreElements(); ) {
       int val = e.nextElement();
@@ -834,6 +889,48 @@ class GlobalConstraints implements ParserTreeConstants {
     }
 
     support.pose(new Among(xx, setImpl, vv));
+  }
+
+  /**
+   * Counts over 0/1 variables as a sum: n = sum(x) when the ones are counted, n = |x| - sum(x) when
+   * the zeros are. Among and Count propagate the same bounds, but the linear relaxation reads only
+   * linear constraints, and the counts are the rows of set partitioning and covering models (XCSP3
+   * BusScheduling: among(x, {1}) = 1 over 3,829 Booleans, minimize sum(x)), where the root LP is
+   * what proves the optimum. Lists with a variable twice, or with the count among them, keep the
+   * counting propagators.
+   *
+   * @param x the variables
+   * @param zero whether value 0 is counted
+   * @param one whether value 1 is counted
+   * @param n the count
+   * @return false, posting nothing, when some variable is not 0/1
+   */
+  private boolean zeroOneCount(IntVar[] x, boolean zero, boolean one, IntVar n) {
+    if (x.length < 2 || "false".equalsIgnoreCase(System.getProperty("org.jacop.fz.zeroOneCount"))) {
+      return false;
+    }
+    Set<IntVar> distinct = new HashSet<>();
+    for (IntVar xi : x) {
+      if (xi.min() < 0 || xi.max() > 1 || xi == n || !distinct.add(xi)) {
+        return false;
+      }
+    }
+    if (zero == one) {
+      int c = zero ? x.length : 0;
+      n.domain.inValue(store.level, n, c);
+      return true;
+    }
+    if (one) {
+      support.pose(new SumBool(x, "==", n));
+    } else {
+      // the zeros: sum(x) + n = |x|
+      IntVar[] vars = Arrays.copyOf(x, x.length + 1);
+      vars[x.length] = n;
+      int[] w = new int[vars.length];
+      Arrays.fill(w, 1);
+      support.pose(new LinearInt(vars, w, "==", x.length));
+    }
+    return true;
   }
 
   void gen_jacop_gcc(SimpleNode node) {
@@ -989,7 +1086,10 @@ class GlobalConstraints implements ParserTreeConstants {
       System.arraycopy(v, 4 * i, r[i], 0, 4);
     }
 
-    support.pose(new Diffn(r, false));
+    support.pose(
+        support.options.proof() != null
+            ? new Nooverlap(r, false).pairwiseOnly()
+            : new Diffn(r, false));
   }
 
   void gen_jacop_diff2_strict(SimpleNode node) {
@@ -998,9 +1098,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(true).build());
+    support.pose(diffn(x, y, lx, ly, true));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
+  }
+
+  // under --proof the pairwise rule alone, which unit propagation over its encoding reaches; the
+  // profile and area rules of Diffn it does not
+  private Constraint diffn(IntVar[] x, IntVar[] y, IntVar[] lx, IntVar[] ly, boolean strict) {
+    if (support.options.proof() != null) {
+      return new Nooverlap(x, y, lx, ly, strict).pairwiseOnly();
+    }
+    return Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(strict).build();
   }
 
   void gen_jacop_list_diff2(SimpleNode node) {
@@ -1009,8 +1117,7 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] lx = support.getVarArray((SimpleNode) node.jjtGetChild(2));
     IntVar[] ly = support.getVarArray((SimpleNode) node.jjtGetChild(3));
 
-    support.pose(
-        Diffn.builder().origin1(x).origin2(y).length1(lx).length2(ly).strict(false).build());
+    support.pose(diffn(x, y, lx, ly, false));
     diffnProjections.add(new IntVar[][] {x, y, lx, ly});
   }
 
@@ -1150,6 +1257,10 @@ class GlobalConstraints implements ParserTreeConstants {
       for (IntVar v : x) {
         v.domain.inValue(store.level, v, y);
       }
+      return;
+    }
+
+    if ((y == 0 || y == 1) && zeroOneCount(x, y == 0, y == 1, c)) {
       return;
     }
 
@@ -1546,8 +1657,127 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      if (v.length == 2) {
+        support.dictionary.addBinaryTable(v, t);
+      }
       poseTableBySize(v, t);
     }
+  }
+
+  /**
+   * It posts a short table: x is one of the rows of the table, where the value star in a row
+   * matches any value. The rows that cannot match the domains are dropped and a variable that
+   * occurs twice is kept once, so HybridTable sees distinct variables.
+   *
+   * @param node the constraint node: x, the rows flattened row by row, and star.
+   */
+  void gen_jacop_short_table_int(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int star = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int size = v.length;
+    if (size == 0) {
+      if (tbl.length == 0) {
+        throw Store.failException;
+      }
+      return;
+    }
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      position.putIfAbsent(x, position.size());
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] row = new int[nv.length];
+      Arrays.fill(row, star);
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        if (value == star) {
+          continue;
+        }
+        int k = position.get(v[j]);
+        if (!v[j].domain.contains(value) || row[k] != star && row[k] != value) {
+          possible = false;
+        }
+        row[k] = value;
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty()) {
+      throw Store.failException;
+    }
+    for (int[] row : kept) {
+      if (Arrays.stream(row).allMatch(value -> value == star)) {
+        // a row of stars matches every assignment
+        return;
+      }
+    }
+    if (nv.length == 1) {
+      IntervalDomain d = new IntervalDomain();
+      for (int[] row : kept) {
+        d.unionAdapt(row[0], row[0]);
+      }
+      nv[0].domain.in(store.level, nv[0], d);
+      return;
+    }
+    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+  }
+
+  /**
+   * It posts a negative table: x is none of the rows of the table. The rows that cannot match the
+   * domains are dropped and a variable that occurs twice is kept once.
+   *
+   * @param node the constraint node: x and the rows flattened row by row.
+   */
+  void gen_jacop_negative_table_int(SimpleNode node) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int size = v.length;
+    if (size == 0) {
+      if (tbl.length > 0) {
+        throw Store.failException;
+      }
+      return;
+    }
+    Map<IntVar, Integer> position = new LinkedHashMap<>();
+    for (IntVar x : v) {
+      position.putIfAbsent(x, position.size());
+    }
+    IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    List<int[]> kept = new ArrayList<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int[] row = new int[nv.length];
+      boolean[] set = new boolean[nv.length];
+      boolean possible = true;
+      for (int j = 0; j < size && possible; j++) {
+        int value = tbl[size * i + j];
+        int k = position.get(v[j]);
+        if (!v[j].domain.contains(value) || set[k] && row[k] != value) {
+          possible = false;
+        }
+        row[k] = value;
+        set[k] = true;
+      }
+      if (possible) {
+        kept.add(row);
+      }
+    }
+    if (kept.isEmpty()) {
+      return;
+    }
+    if (nv.length == 1) {
+      IntervalDomain d = new IntervalDomain();
+      for (int[] row : kept) {
+        d.unionAdapt(row[0], row[0]);
+      }
+      nv[0].domain.in(store.level, nv[0], nv[0].domain.subtract(d));
+      return;
+    }
+    support.pose(new NegativeTable(nv, deduplicateTableRows(kept.toArray(new int[0][]))));
   }
 
   /**
@@ -1764,6 +1994,33 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * How inverse(x, x) over n variables is posted, set by the system property {@code
+   * org.jacop.fz.symmetricAlldifferent}: {@code matching} (the default) for a {@link
+   * SymmetricAlldifferent} that channels x[i] = j with x[j] = i and fails when no perfect matching
+   * exists, {@code domain} for the domain consistent one, {@code false} for Assignment, which is
+   * also used above 1000 variables. On the MiniZinc Challenge models with inverse(x, x) (p1f,
+   * elitserien) the domain consistent one searched the same number of nodes and was a quarter
+   * slower.
+   *
+   * @param n the number of variables
+   * @return matching, domain or false
+   */
+  static String symmetricAlldifferent(int n) {
+    return n > 1000
+        ? "false"
+        : System.getProperty("org.jacop.fz.symmetricAlldifferent", "matching");
+  }
+
+  private static boolean sameVariables(IntVar[] a, IntVar[] b) {
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i] && !(a[i].singleton() && b[i].singleton() && a[i].value() == b[i].value())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void gen_jacop_assignment(SimpleNode node) {
     IntVar[] f = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] invf = support.getVarArray((SimpleNode) node.jjtGetChild(1));
@@ -1773,6 +2030,13 @@ class GlobalConstraints implements ParserTreeConstants {
     // inverse functions are bijections, so index sets of different sizes cannot be satisfied
     if (f.length != invf.length) {
       throw Store.failException;
+    }
+
+    // inverse(x, x) is symmetric all different, a perfect matching of the variables
+    String symmetric = symmetricAlldifferent(f.length);
+    if (indexF == indexInvf && sameVariables(f, invf) && !"false".equals(symmetric)) {
+      support.pose(new SymmetricAlldifferent(f, indexF, "domain".equals(symmetric)));
+      return;
     }
 
     // we do not not pose Assignment directly because of possible inconsistency with its
@@ -1868,7 +2132,7 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < alphabetSize; j++) {
         if (d[i * alphabetSize + j] != 0) {
-          addTransitionValue(condition, d[i * alphabetSize + j] - minIndex, j + minIndex);
+          addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -2022,8 +2286,10 @@ class GlobalConstraints implements ParserTreeConstants {
       Map<Integer, IntDomain> condition = new HashMap<>();
       for (int j = 0; j < S.getSize(); j++) {
         int valTran = valueTransition.nextElement();
+        // d holds 1-based next states (0 is the failure state); min_index is the smallest
+        // symbol of the alphabet, not of the states
         if (d[i * S.getSize() + j] != 0) {
-          addTransitionValue(condition, d[i * S.getSize() + j] - minIndex, valTran);
+          addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
         }
       }
       addTransitionsFromCondition(s[i], condition, s);
@@ -2053,7 +2319,9 @@ class GlobalConstraints implements ParserTreeConstants {
             .quantity(x)
             .knapsackCapacity(W)
             .knapsackProfit(P)
-            .build());
+            .build()
+            // a proof derives the rows of the relaxation, not the prunings of the dynamic program
+            .dynamicProgramming(support.options.proof() == null));
   }
 
   void gen_jacop_sequence(SimpleNode node) {
@@ -2496,9 +2764,22 @@ class GlobalConstraints implements ParserTreeConstants {
       return;
     }
 
+    if (CONDITIONAL_SELECT) {
+      support.pose(new ConditionalSelect(b, x, y));
+      return;
+    }
     PrimitiveConstraint[] cs = createIntEqualityConstraintsForConditional(x, y);
     poseIntConditionalConstraint(b, cs, n);
   }
+
+  /**
+   * Whether if_then_else on integers is posed as {@link ConditionalSelect}, which bounds the result
+   * by the branches still possible ({@code -Dorg.jacop.fz.conditionalSelect}, true by default),
+   * instead of IfThenElse/Conditional over equalities, which wait until the selected branch is
+   * known.
+   */
+  static final boolean CONDITIONAL_SELECT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.conditionalSelect", "true"));
 
   private boolean tryEarlyReturnForIfThenElseIntTwoBranches(IntVar[] b, IntVar[] x, IntVar y) {
     if (support.options.useSat()
@@ -2644,6 +2925,17 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar b = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(3));
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(4));
 
+    if (optionalAsUse()) {
+      // a task uses its resource when present: the cumulative over these uses explains its
+      // pruning under lazy clause generation
+      IntVar[] use = new IntVar[res.length];
+      for (int i = 0; i < res.length; i++) {
+        use[i] = presentUse(res[i], opt[i]);
+      }
+      cumulativeTasks.add(taskKey(str, dur, use));
+      poseCumulative(str, dur, use, b);
+      return;
+    }
     CumulativeOptional c = configureCumulative(new CumulativeOptional(str, dur, res, b, opt));
     String p = System.getProperty("fz_cumulative_optional_overload");
     if (p != null) {
@@ -2652,12 +2944,32 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(c);
   }
 
+  void gen_jacop_cumulatives(SimpleNode node) {
+    IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] res = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] machine = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar[] bound = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+    boolean upper = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5)) != 0;
+    int first = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    IntVar[] opt =
+        node.jjtGetNumChildren() > 7 ? support.getVarArray((SimpleNode) node.jjtGetChild(7)) : null;
+
+    support.pose(new Cumulatives(str, dur, res, machine, bound, upper, first, opt));
+  }
+
   void gen_jacop_disjunctive_optional(SimpleNode node) {
     IntVar[] str = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] dur = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     IntVar[] opt = support.getVarArray((SimpleNode) node.jjtGetChild(2));
 
     IntVar one = support.dictionary.getConstant(1);
+    if (optionalAsUse()) {
+      // a task's presence is its use of the unary resource: CumulativeUnary explains its pruning
+      // under lazy clause generation and makes absent the tasks that fit nowhere
+      poseCumulative(str, dur, opt, one);
+      return;
+    }
     IntVar[] ones = createFilledArray(one, str.length);
 
     CumulativeUnaryOptional c = new CumulativeUnaryOptional(str, dur, ones, one, opt, true, true);
@@ -2665,6 +2977,37 @@ class GlobalConstraints implements ParserTreeConstants {
     c.doOptionalOverload(
         Boolean.parseBoolean(System.getProperty("fz_cumulative_optional_overload", FALSE)));
     support.pose(c);
+  }
+
+  // the use of a task with resource r and presence o: r when present, 0 otherwise
+  private IntVar presentUse(IntVar r, IntVar o) {
+    if (o.min() == 1 || r.singleton(0)) {
+      return r;
+    }
+    if (o.max() == 0) {
+      return support.dictionary.getConstant(0);
+    }
+    if (r.singleton()) {
+      int c = r.value();
+      IntVar use = new IntVar(support.store, 0, 0);
+      use.addDom(c, c);
+      support.pose(new XmulCeqZ(o, c, use));
+      return use;
+    }
+    IntVar use = new IntVar(support.store, Math.min(0, r.min()), Math.max(0, r.max()));
+    support.pose(new XmulYeqZ(r, o, use));
+    return use;
+  }
+
+  /**
+   * Whether optional tasks on a unary resource are posted with their presences as resource uses,
+   * from the system property {@code org.jacop.fz.optionalAsUse}: {@code lcg} (the default) under
+   * lazy clause generation only, {@code true} always, {@code false} never
+   * (CumulativeUnaryOptional).
+   */
+  private boolean optionalAsUse() {
+    String mode = System.getProperty("org.jacop.fz.optionalAsUse", "lcg").toLowerCase();
+    return "true".equals(mode) || ("lcg".equals(mode) && support.options.lcg());
   }
 
   void gen_jacop_disjunctive_setup(SimpleNode node) {

@@ -92,6 +92,7 @@ public class Shape {
     boxes.add(box);
 
     this.boundingBox = box;
+    area = -1; // lazily initialized
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
@@ -113,6 +114,7 @@ public class Shape {
     boundingBox = new Dbox(origin, length);
     boxes = new ArrayList<>(1);
     boxes.add(boundingBox);
+    area = -1; // lazily initialized
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));

@@ -52,6 +52,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqC;
@@ -653,6 +654,35 @@ class FreeSearchTest {
   }
 
   @Test
+  void deadlineCountsFromWhenItIsGiven() throws InterruptedException {
+    // a time limit counts from solve(); fzn-jacop built the search for 2.1 s on ma-path-finding
+    // ins_g16_p10_a20 after reading the time left, and overran -t by as much. A deadline holds
+    // however long the search takes to build.
+    Store store = new Store();
+    IntVar[] x = new IntVar[12];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, 0, x.length - 2);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    FreeSearch search =
+        FreeSearch.builder(store, new SimpleSelect<>(x, null, new IndomainMin<>()))
+            .timeLimit(Duration.ofSeconds(60))
+            .deadline(System.currentTimeMillis() + 100)
+            .build();
+    Thread.sleep(300);
+    long start = System.currentTimeMillis();
+    Status status = search.solve();
+    long elapsed = System.currentTimeMillis() - start;
+    assertTrue(search.limitReached());
+    assertEquals(Status.UNKNOWN, status);
+    assertTrue(elapsed < 1000, "stopped after " + elapsed + " ms");
+  }
+
+  @Test
   void deepSearchDoesNotUseTheJavaStack() throws InterruptedException {
     // a recursive search needs several stack frames per decision; 5000 decisions do not fit in a
     // 128 KB thread stack
@@ -815,6 +845,65 @@ class FreeSearchTest {
     // larger domains than the limit use the wrapped heuristic
     assertEquals(
         0, new IndomainBoundImpact(store, cost, false, 2, new IndomainMin<>()).indomain(y));
+  }
+
+  @Test
+  void boundImpactBreaksTiesByTheFallbackAndBoundsItsTime() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar cost = new IntVar(store, "cost", -100, 100);
+    // x does not change the bound: every value ties
+    store.impose(new XeqY(y, cost));
+    assertTrue(store.consistency());
+    assertEquals(
+        1, new IndomainBoundImpact(store, cost, false, 10, new IndomainMax<>()).indomain(x));
+    assertEquals(
+        3,
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMax<>())
+            .tiesToFallback()
+            .indomain(x));
+    // with no share of the time, only the first choice probes
+    IndomainBoundImpact bounded =
+        new IndomainBoundImpact(store, cost, false, 10, new IndomainMax<>()).timeShare(0);
+    assertEquals(1, bounded.indomain(x));
+    assertEquals(3, bounded.getProbes());
+    assertEquals(3, bounded.indomain(x));
+    assertEquals(3, bounded.getProbes());
+  }
+
+  @Test
+  void boundImpactOverPhaseSavingKeepsTheOptimum() {
+    Random rnd = new Random(11);
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      Model model = new Model(instance);
+      IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+      IndomainBoundImpact impact =
+          new IndomainBoundImpact(model.store, model.cost, false, 5, phase)
+              .tiesToFallback()
+              .timeShare(0.25);
+      DomWdeg domWdeg = new DomWdeg(concat(model), impact);
+      FreeSearch search =
+          FreeSearch.builder(model.store, domWdeg)
+              .monitor(phase)
+              .monitor(impact)
+              .monitor(domWdeg)
+              .restarts(new LubyCalculator(2))
+              .restartOnSolution(true)
+              .nogoodsFromRestarts(true)
+              .onSolution(s -> model.checkSolution())
+              .minimize(model.cost)
+              .build();
+      Status status = search.solve();
+      if (reference[0] == 0) {
+        assertEquals(Status.UNSATISFIABLE, status);
+      } else {
+        assertEquals(Status.OPTIMAL, status, instance.toString());
+        assertEquals(reference[1], search.getCostValue());
+      }
+    }
   }
 
   @Test
@@ -1489,6 +1578,48 @@ class FreeSearchTest {
         if (found) {
           assertEquals(reference[1], dfs.getCostValue(), instance.toString());
         }
+      }
+    }
+  }
+
+  @Test
+  void sequenceOfManySelectionsKeepsEverySolution() {
+    // fzn -f wraps every int_search of a model in one sequence: the code-generator models have 150
+    for (int selections : new int[] {2, 129, 150, 300}) {
+      for (boolean nested : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[6];
+        for (int i = 0; i < x.length; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 3);
+        }
+        store.impose(new Alldifferent(Arrays.copyOfRange(x, 0, 4)));
+        store.impose(new XltY(x[4], x[5]));
+        List<SelectChoicePoint<IntVar>> selects = new ArrayList<>();
+        for (int k = 0; k < selections; k++) {
+          IntVar[] vars = {x[(k * 5) % x.length], x[(k * 5 + 1) % x.length]};
+          selects.add(
+              new SimpleSelect<>(
+                  vars,
+                  k % 3 == 0 ? new SmallestDomain<>() : null,
+                  k % 2 == 0 ? new IndomainMin<>() : new IndomainMax<>()));
+        }
+        // the last selection labels what the others left
+        SimpleSelect<IntVar> rest = new SimpleSelect<>(x, null, new IndomainMin<>());
+        SelectChoicePoint<Var> select;
+        if (nested) {
+          select = new SequenceSelect(List.of(new SequenceSelect(selects), rest));
+        } else {
+          selects.add(rest);
+          select = new SequenceSelect(selects);
+        }
+        DepthFirstSearch<Var> search = new DepthFirstSearch<>();
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        search.setPrintInfo(false);
+        assertTrue(search.labeling(store, select), selections + " selections");
+        // 4 * 3 * 2 * 1 permutations of x0..x3, 6 pairs x4 < x5
+        assertEquals(
+            24 * 6, search.getSolutionListener().solutionsNo(), selections + " selections");
       }
     }
   }
