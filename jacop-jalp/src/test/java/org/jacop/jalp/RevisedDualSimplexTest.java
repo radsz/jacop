@@ -335,6 +335,28 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void givenDualsHaveNoPerturbation() {
+    // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{0, 1, 2}, {1, 2}, {1, 2}},
+            new double[][] {{1, -1, -1}, {1, 1}, {1, -1}},
+            new double[] {0, 3, -inf},
+            new double[] {inf, inf, 1},
+            new double[] {1, 0, 0},
+            true);
+    for (int j = 0; j < 3; j++) {
+      lp.setBounds(j, 0, 10);
+    }
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    // + 0.0 turns -0.0 into 0.0
+    assertThat(java.util.Arrays.stream(lp.givenDuals()).map(v -> v + 0.0).toArray())
+        .containsExactly(1, 1, 0);
+    assertThat(lp.duals()[0]).isNotEqualTo(1.0);
+  }
+
+  @Test
   void randomLpsAreAnsweredWithCertificates() {
     Random rnd = new Random(3);
     int[] counts = new int[4];
