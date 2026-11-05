@@ -310,7 +310,7 @@ public class SetUnionDetector implements ParserTreeConstants {
         if (l.element() == null) {
           in |= l.constant().contains(v);
         } else if (l.element().domain.contains(v)) {
-          or.add(equal(l.element(), v, equal));
+          or.add(valueLiteral(l.element(), v, equal));
         }
       }
       if (in) {
@@ -336,7 +336,7 @@ public class SetUnionDetector implements ParserTreeConstants {
   }
 
   /** The literal [x = v], one 0/1 variable per pair. */
-  private IntVar equal(IntVar x, int v, Map<IntVar, Map<Integer, IntVar>> equal) {
+  private IntVar valueLiteral(IntVar x, int v, Map<IntVar, Map<Integer, IntVar>> equal) {
     Map<Integer, IntVar> byValue = equal.computeIfAbsent(x, k -> new HashMap<>());
     IntVar b = byValue.get(v);
     if (b == null) {
