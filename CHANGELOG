@@ -1823,7 +1823,25 @@ Version 5.0 (unreleased)
      the results level: default 12 better / 9 worse (objective geomean
      0.999), -f 11 / 11 (1.006). No other Challenge instance has the
      pattern.
-     
+
+123. Under LCG, Regular (and the other layered-graph constraints explained
+     by paths, ExtensionalSupportMdd) is encoded as clauses before the
+     search and removed from the store: a literal per node and per arc
+     of the layered graph (an arc groups the edges between two nodes and
+     reuses a node literal when it is the only arc in or out), arcs imply
+     their nodes and values, nodes imply a leaving and an entering arc,
+     values imply an arc of their layer. Unit propagation then keeps the
+     domains consistent and every pruning has a short clause reason,
+     instead of the path explanations of LayeredGraphExplanation that
+     took 80 % of pentominoes' time. jacop.lcg.graphClauses=false turns
+     it off; it is skipped under --proof. 122 Challenge instances with
+     regular (60 s, every solution checked): default 13 more solved, 0
+     fewer, -f 7 / 2; pentominoes 05 and 07 5-20x faster, 04 solved.
+     Wide set (220, 60 s): the 10 instances with regular are better or
+     equal in both modes (rotating-workforce Example1242 solved in the
+     default mode); solved 132 -> 134 default, 154 -> 152 -f, where the
+     -f changes are all on instances without regular.
+
 Version 4.11
 =============
 
