@@ -1894,6 +1894,34 @@ Version 5.0 (unreleased)
      mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
      concert-hall-cap changes its LP) and 126 -> 128 in default mode.
 
+127. Set search and set builtins, checked by a new brute-force test
+     (SetBuiltinsFuzzTest, setfuzz.trials) on random FlatZinc models of
+     all set builtins and jacop_* set globals, against enumeration of
+     their MiniZinc meaning, with plain search, LCG, free search and
+     presolve. Fixes:
+     - set_search with outdomain_min or outdomain_max decided the element
+       into the set first, as indomain_min, with a warning. It now leaves
+       the smallest (largest) undecided element out of the set first, as
+       Gecode's SET_VAL_MIN_EXC (SET_VAL_MAX_EXC), with plain search and
+       under LCG (new OutdomainSetSelect; choice SetElementChoice).
+     - array_var_set_element with an array literal of set variables, such
+       as [a, b], failed with "var_set_element with list of set variables
+       is not available".
+     - jacop_link_set_to_booleans with a Boolean variable repeated in b
+       failed (ChannelBoolSet rejects repeated variables); the repeated
+       one now gets an equal copy.
+     - set_search with smallest (largest) chose the set with the smallest
+       glb (largest lub) cardinality. It now chooses the set with the
+       smallest (largest) undecided element, as Gecode's
+       SET_VAR_MIN_MIN (SET_VAR_MAX_MAX). most_constrained, which used the
+       smallest glb cardinality, now chooses the fewest undecided elements
+       with ties broken by the most constraints, as MiniZinc defines it
+       (Gecode ignores it on sets). hakank_ramsey_partition, which uses
+       smallest, finds the same 18 solutions in a new order.
+     indomain_min and indomain_max keep the include-first order of Gecode
+     (SET_VAL_MIN_INC, SET_VAL_MAX_INC). OR-Tools CP-SAT reads indomain_min
+     on sets as exclude-first (the smallest value of the element Booleans).
+
 Version 4.11
 =============
 
