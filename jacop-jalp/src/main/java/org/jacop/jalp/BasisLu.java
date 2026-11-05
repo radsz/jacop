@@ -118,6 +118,17 @@ final class BasisLu {
   /** The entries the factorization and the solves have touched, a measure of their work. */
   long ops;
 
+  // the time of a factorization fitted on 29 instances of the LP bench, in units of the work of
+  // the solves (about 3 ns): 1 for each entry counted in ops, 1/3 for each entry looked at by the
+  // pivot search, and 256 for each step, its arrays and lists
+  private static final int STEP_WORK = 256;
+
+  /**
+   * The work of the factorization that {@link #ops} leaves out, its pivot search and its arrays, on
+   * the scale of the work of the solves.
+   */
+  long build;
+
   /** The nonzeros of L and U. */
   long factorNonzeros;
 
@@ -241,6 +252,7 @@ final class BasisLu {
         dependent();
       }
       pack(lStepRow, lStepVal, uStepPos, uStepVal);
+      build = build / 3 + STEP_WORK * m;
     }
 
     // finds and makes one pivot; false when the active matrix has no nonzero left. A pivot must be
@@ -256,8 +268,10 @@ final class BasisLu {
         if (bestRow >= 0 && (looked >= SEARCH || bestCost <= (long) (c - 1) * (c - 1))) {
           break;
         }
+        build++;
         // columns with c entries
         for (int k = colHead[c]; k >= 0; k = colNext[k]) {
+          build += cLen[k];
           for (int e = 0; e < cLen[k]; e++) {
             int i = cIdx[k][e];
             if (rowDone[i]) {
@@ -322,6 +336,7 @@ final class BasisLu {
     private double valueAt(int i, int k) {
       int[] ri = rIdx[i];
       for (int e = 0; e < rLen[i]; e++) {
+        build++;
         if (ri[e] == k) {
           return rVal[i][e];
         }
@@ -331,6 +346,7 @@ final class BasisLu {
 
     private void eliminate(int p, int q) {
       int s = steps++;
+      build += cLen[q];
       pivotRow[s] = p;
       pivotPos[s] = q;
       unlinkRow(p);

@@ -407,6 +407,49 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void theRefactorizationRulesAgree() {
+    Random rnd = new Random(11);
+    int runs = Math.max(3, Integer.getInteger("jalp.test.runs", 3000) / 300);
+    long forWork = 0;
+    for (int run = 0; run < runs; run++) {
+      int m = 120 + rnd.nextInt(80);
+      int n = 150 + rnd.nextInt(150);
+      Lp p = new Lp(rnd, m, n, 5.0 / n, 1);
+      for (int j = 0; j < n; j++) {
+        p.lo[j] = -5.0 - rnd.nextInt(5);
+        p.hi[j] = 5.0 + rnd.nextInt(5);
+      }
+      // the fixed limit, the default weight, and a factorization so cheap it is rebuilt often
+      int status = -1;
+      double objective = 0;
+      for (double weight : new double[] {0, 1, 0.01}) {
+        String what = "run " + run + " weight " + weight;
+        RevisedDualSimplex lp = p.simplex(true);
+        lp.setRefactorWeight(weight);
+        int s = solveAndCheck(p, lp, true, what);
+        if (weight == 0) {
+          status = s;
+          objective = s == RevisedDualSimplex.OPTIMAL ? lp.objective() : 0;
+          assertThat(lp.refactorsForWork()).as(what).isZero();
+          continue;
+        }
+        assertThat(s).as(what).isEqualTo(status);
+        if (s == RevisedDualSimplex.OPTIMAL) {
+          assertThat(lp.objective())
+              .as(what)
+              .isCloseTo(
+                  objective, org.assertj.core.data.Offset.offset(1e-6 * (1 + Math.abs(objective))));
+        }
+        if (weight < 1) {
+          forWork += lp.refactorsForWork();
+        }
+      }
+    }
+    // the cheap factorization makes the rule fire
+    assertThat(forWork).isPositive();
+  }
+
+  @Test
   void warmStartsAgreeWithFreshSolves() {
     Random rnd = new Random(5);
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 10;
