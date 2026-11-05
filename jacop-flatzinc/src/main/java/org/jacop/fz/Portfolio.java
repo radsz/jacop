@@ -150,9 +150,18 @@ final class Portfolio {
   private boolean complete;
   // the best solution and bound of all threads, for --gap and the objectiveBound statistic
   private ObjectiveGap gap;
+  // a thread's bound holds only for the restarts of relax and reconstruct or on_restart
+  private boolean inexactBound;
 
-  private Portfolio(Options options) {
+  Portfolio(Options options) {
     this.options = options;
+  }
+
+  /** Whether the portfolio has ended with its search complete: its best solution is optimal. */
+  boolean provedComplete() {
+    synchronized (lock) {
+      return finished && complete;
+    }
   }
 
   /**
@@ -460,7 +469,8 @@ final class Portfolio {
 
   private static boolean objectiveSetting(String key) {
     return key.startsWith("lcg-core")
-        || "lcg-lb".equals(key)
+        || key.startsWith("lcg-lb")
+        || "lcg-shave".equals(key)
         || key.startsWith("lns")
         || key.startsWith("probe");
   }
@@ -493,7 +503,7 @@ final class Portfolio {
         if (cost >= bestCost) {
           return;
         }
-        if (gap(maximise).solution(cost)) {
+        if (gap(maximise).solution(cost) || provedByBound()) {
           gapReached();
         }
         optimisation = true;
@@ -524,11 +534,15 @@ final class Portfolio {
     return gap;
   }
 
-  // the best solution is within --gap of the bound, which ends the search
+  // a bound at the best solution proves it optimal, with or without --gap
+  private boolean provedByBound() {
+    return !inexactBound && gap.proved();
+  }
+
+  // the best solution is within --gap of the bound, or at a bound, which ends the search
   private void gapReached() {
     synchronized (lock) {
-      // a bound at the best solution proves it optimal
-      complete = gap.proved();
+      complete = provedByBound();
       finished = true;
       lock.notifyAll();
     }
@@ -617,10 +631,13 @@ final class Portfolio {
      *
      * @param lower the bound
      * @param maximise whether the cost variable is the negated objective
+     * @param exact false for a bound of the restarts of relax and reconstruct or on_restart, which
+     *     ends the search at --gap but never proves a solution optimal
      */
-    void bound(long lower, boolean maximise) {
+    void bound(long lower, boolean maximise, boolean exact) {
       synchronized (lock) {
-        if (!finished && gap(maximise).bound(lower)) {
+        inexactBound |= !exact;
+        if (!finished && (gap(maximise).bound(lower) || provedByBound())) {
           gapReached();
         }
       }

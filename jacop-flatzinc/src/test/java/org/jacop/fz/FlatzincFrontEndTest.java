@@ -2679,6 +2679,63 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void lcgAskedForBuildsFloatModelsAsWithoutIt() throws IOException {
+    // --lcg turned the Boolean constraints into clauses and then solved the float model by search,
+    // so it was a different model from the one solved without --lcg: 2 propagators instead of 3
+    String model =
+        """
+        var 0.0..2.0: f:: output_var;
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var bool: c:: output_var;
+        constraint bool_xor(a,b,true);
+        constraint bool_clause([a,c],[b]);
+        constraint float_lin_le([1.0],[f],1.5);
+        solve maximize f;
+        """;
+    String lcg = System.clearProperty("jacop.lcg");
+    try {
+      String with = run(model, "--lcg", "-s", "--precision", "0.5")[0];
+      String without = run(model, "--lcg", "off", "-s", "--precision", "0.5")[0];
+      assertTrue(with.contains("%% --lcg ignored: the model has float variables"), with);
+      for (String stat : new String[] {"propagators=", "nodes=", "propagations="}) {
+        assertEquals(statLine(without, stat), statLine(with, stat), with);
+      }
+    } finally {
+      restoreProperty("jacop.lcg", lcg);
+    }
+  }
+
+  @Test
+  void freeSearchKeepsThePrecisionOfFloatSearch() throws IOException {
+    // golden_search: -f dropped the annotation's precision 0.001, so each better solution was a
+    // few ulps better than the last; after 15 s it was at z = -17.08, far from the optimum -1
+    String model =
+        """
+        array [1..3] of float: c = [1.0,-1.0,1.0];
+        var -1.0..3.0: x:: output_var;
+        var float: z:: output_var:: is_defined_var;
+        var float: e ::var_is_introduced ;
+        constraint float_exp(x,e);
+        constraint float_lin_eq(c,[z,x,e],0.0):: defines_var(z);
+        solve :: float_search([x],0.001,input_order,indomain_split,complete) maximize z;
+        """;
+    String out =
+        assertTimeoutPreemptively(Duration.ofSeconds(60), () -> run(model, "-f", "-t", "15000")[0]);
+    assertTrue(out.contains("=========="), out);
+    Matcher m = Pattern.compile("(?m)^z = (\\S+);").matcher(out);
+    double z = Double.NaN;
+    while (m.find()) {
+      z = Double.parseDouble(m.group(1));
+    }
+    assertEquals(-1.0, z, 0.01, out);
+  }
+
+  private static String statLine(String out, String stat) {
+    return out.lines().filter(l -> l.contains("mzn-stat: " + stat)).findFirst().orElse(null);
+  }
+
+  @Test
   void lcgSolvesSetModels() throws IOException {
     String model =
         """
