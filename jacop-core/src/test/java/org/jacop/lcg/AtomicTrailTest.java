@@ -178,6 +178,13 @@ class AtomicTrailTest {
         });
     m.add(
         s -> {
+          IntVar[] v = {newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd)};
+          int[] w = {2, 3, -1};
+          return new Model(
+              new LinearIntDom(v, w, "==", 1), t -> 2 * t[0] + 3 * t[1] - t[2] == 1, v);
+        });
+    m.add(
+        s -> {
           IntVar[] v = {
             newVar(s, "a", rnd), newVar(s, "b", rnd), newVar(s, "c", rnd), newVar(s, "d", rnd)
           };
@@ -1486,6 +1493,41 @@ class AtomicTrailTest {
     assertThat(out.size()).isEqualTo(2);
     for (int k = 0; k < out.size(); k++) {
       assertThat(trail.variable(out.get(k))).isSameAs(y);
+    }
+    trail.detach();
+  }
+
+  /**
+   * x + y = 5 with x and y in {1, 3}: each variable has a value in the window the other leaves it
+   * (2..4), but no two values sum to 5. LinearIntDom fails there; the failure is explained by the
+   * bounds and the removal of 2 from both, and every solution of x + y = 5 over 0..5 breaks one of
+   * the cited atoms.
+   */
+  @Test
+  void linearFailureWithEveryWindowLeftIsExplained() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (IntVar v : new IntVar[] {x, y}) {
+      v.domain.in(store.level, v, 1, 3);
+      v.domain.inComplement(store.level, v, 2);
+    }
+    EntryList out = new EntryList();
+    assertThat(
+            LinearExplanation.explainFailure(
+                trail, new IntVar[] {x, y}, new long[] {1, 1}, 5, true, true, out))
+        .isTrue();
+    for (int a = 0; a <= 5; a++) {
+      boolean broken = false;
+      for (int k = 0; k < out.size(); k++) {
+        int e = out.get(k);
+        broken |=
+            trail.variable(e) == x && removes(trail, e, a)
+                || trail.variable(e) == y && removes(trail, e, 5 - a);
+      }
+      assertThat(broken).as("x = %d, y = %d", a, 5 - a).isTrue();
     }
     trail.detach();
   }

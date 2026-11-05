@@ -190,6 +190,39 @@ public final class LinearExplanation {
   }
 
   /**
+   * Adds the removals, before the position, of the values of from..to that y had in its root
+   * domain; false when there are more than 4096 such values.
+   */
+  private static boolean removalsBetween(
+      AtomicTrail trail, int position, IntVar y, long from, long to, EntryList out) {
+    IntDomain root = trail.rootDomain(y);
+    long last = Math.min(to, root.max());
+    long u = Math.max(from, root.min());
+    if (u > last) {
+      return true;
+    }
+    if (!root.contains((int) u)) {
+      int next = root.nextValue((int) u);
+      if (next <= u) {
+        return true;
+      }
+      u = next;
+    }
+    for (int checked = 0; u <= last; checked++) {
+      if (checked >= 4096) {
+        return false;
+      }
+      trail.excludedBefore(y, (int) u, position, out);
+      int next = root.nextValue((int) u);
+      if (next <= u) {
+        break;
+      }
+      u = next;
+    }
+    return true;
+  }
+
+  /**
    * Adds the removals of the values of from..to that y had in its root domain, which a bound
    * skipped; false when one of them was still in y's domain before the entry, or there are more
    * than 4096. The holes of the root domain need no atom, so a variable over sparse values (cubes)
@@ -278,8 +311,9 @@ public final class LinearExplanation {
    * Adds the reason of a failure of an equality whose bounds violate neither side: one variable has
    * no value left between the bounds the others give it, so the reason is the removal of those
    * values and the others' bounds on both sides, lifted to what still keeps that window. The
-   * variable with the narrowest window is tried first. False when no variable's window is empty of
-   * root values that need at most 4096 atoms, or a variable occurs more than once.
+   * variable with the narrowest window is tried first. When no window is empty, the reason is the
+   * bounds of all variables and the removals inside every window. False when a window needs more
+   * than 4096 atoms, or a variable occurs more than once.
    */
   private static boolean explainHoleFailure(
       AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
@@ -367,7 +401,22 @@ public final class LinearExplanation {
       }
       return true;
     }
-    return false;
+    // no single window is empty, but the values left in the windows admit no sum c: the reason is
+    // every bound and every removal inside every window, since no value outside its window can be
+    // part of a solution while the others keep their bounds
+    for (int k = 0; k < m; k++) {
+      int i = (int) keys[k];
+      IntVar x = vars[i];
+      int min = trail.minBefore(x, now);
+      int max = trail.maxBefore(x, now);
+      trail.addLowerBound(x, now, out);
+      trail.addUpperBound(x, now, out);
+      if (!removalsBetween(trail, now, x, Math.max(lows[i], min), Math.min(highs[i], max), out)) {
+        out.truncate(mark);
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
