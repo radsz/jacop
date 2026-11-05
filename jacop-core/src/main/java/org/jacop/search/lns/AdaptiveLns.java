@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Random;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
+import org.jacop.constraints.Routes;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -59,7 +60,11 @@ import org.jacop.lcg.LinearForm;
  *       are fixed one batch at a time, each batch among those whose domains the last one reduced
  *       most, until few enough are left free;
  *   <li>{@link Kind#OBJECTIVE}: grown in the graph from the terms of a linear objective that cost
- *       most in the best solution.
+ *       most in the best solution;
+ *   <li>{@link Kind#ROUTES} and {@link Kind#RELATED}: with vehicle routes ({@link Routes}, imposed
+ *       or given by {@link #addRoutes(Routes)}), the customers of whole routes, or customers near
+ *       each other, removed from the best solution and reinserted by the run (see {@link
+ *       RouteNeighbourhoods}).
  * </ul>
  *
  * <p>Each kind has its own share of free variables, raised after a run that explored its whole
@@ -84,7 +89,11 @@ public final class AdaptiveLns {
     /** Propagation-guided. */
     PROPAGATION,
     /** Grown from the costly terms of the objective. */
-    OBJECTIVE
+    OBJECTIVE,
+    /** The customers of whole vehicle routes, near each other. */
+    ROUTES,
+    /** Customers related by the cost of the arcs between them (Shaw removal). */
+    RELATED
   }
 
   /** How a run in a neighbourhood ended. */
@@ -131,6 +140,10 @@ public final class AdaptiveLns {
   private int[] terms = new int[0];
   private long[] termWeights = new long[0];
   private int[] termValues = new int[0];
+  private Map<Var, Integer> nodeOf;
+  // the vehicle routes of the model
+  private final List<RouteNeighbourhoods> routings = new ArrayList<>();
+  private final List<Routes> imposedRoutes = new ArrayList<>();
 
   private final double[] share;
   private final double[] score;
@@ -168,6 +181,41 @@ public final class AdaptiveLns {
     Arrays.fill(share, FIRST_SHARE);
     Arrays.fill(score, 1.0);
     buildGraph();
+    for (Routes r : imposedRoutes) {
+      addRoutes(r);
+    }
+    imposedRoutes.clear();
+  }
+
+  /**
+   * Adds vehicle routes for the {@link Kind#ROUTES} and {@link Kind#RELATED} neighbourhoods, from a
+   * {@link Routes} that need not be imposed (its literals are variables of the store). Routes
+   * imposed in the store are added by the constructor. It is called before the first solution.
+   *
+   * @param routes the routes.
+   * @return this object.
+   */
+  public AdaptiveLns addRoutes(Routes routes) {
+    for (RouteNeighbourhoods known : routings) {
+      if (known.sameAs(routes)) {
+        return this;
+      }
+    }
+    int[] literalNode = new int[routes.literals.length];
+    for (int k = 0; k < literalNode.length; k++) {
+      Integer node = nodeOf.get(routes.literals[k]);
+      literalNode[k] = node == null ? -1 : node;
+    }
+    long[] termCost = new long[nodes.length];
+    for (int k = 0; k < terms.length; k++) {
+      termCost[terms[k]] += termWeights[k];
+    }
+    RouteNeighbourhoods r =
+        new RouteNeighbourhoods(routes, literalNode, termCost, conVars, varCons, vars.length);
+    if (r.customers() > 1) {
+      routings.add(r);
+    }
+    return this;
   }
 
   /**
@@ -185,6 +233,11 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /** The routing structures, for tests. */
+  List<RouteNeighbourhoods> routings() {
+    return routings;
+  }
+
   /** Records the best solution; called while the store holds it, with every variable fixed. */
   public void solution() {
     for (int i = 0; i < vars.length; i++) {
@@ -192,6 +245,9 @@ public final class AdaptiveLns {
     }
     for (int k = 0; k < terms.length; k++) {
       termValues[k] = nodes[terms[k]].value();
+    }
+    for (RouteNeighbourhoods r : routings) {
+      r.solution();
     }
     hasIncumbent = true;
   }
@@ -223,6 +279,9 @@ public final class AdaptiveLns {
         free++;
       }
     }
+    if (kind == Kind.ROUTES || kind == Kind.RELATED) {
+      return fixedOutside(routeRelax(kind));
+    }
     int relaxed = Math.max(2, (int) Math.round(share[kind.ordinal()] * free));
     if (relaxed >= free) {
       return new int[0];
@@ -232,7 +291,7 @@ public final class AdaptiveLns {
           case RANDOM -> randomRelax(relaxed);
           case GRAPH -> graphRelax(relaxed, false);
           case OBJECTIVE -> graphRelax(relaxed, true);
-          case PROPAGATION -> null;
+          default -> null;
         };
     if (relax == null) {
       return propagationGuided(relaxed);
@@ -349,7 +408,35 @@ public final class AdaptiveLns {
     if (disabled[k.ordinal()]) {
       return false;
     }
-    return k != Kind.OBJECTIVE || terms.length > 0;
+    return switch (k) {
+      case OBJECTIVE -> terms.length > 0;
+      case ROUTES, RELATED -> !routings.isEmpty();
+      default -> true;
+    };
+  }
+
+  /**
+   * Removes customers from the routes of one routing structure, its share of the customers; all
+   * variables are relaxed when that removes every customer.
+   */
+  private boolean[] routeRelax(Kind kind) {
+    boolean[] relax = new boolean[vars.length];
+    RouteNeighbourhoods r = routings.get(random.nextInt(routings.size()));
+    double s = share[kind.ordinal()];
+    boolean[] removed =
+        kind == Kind.ROUTES ? r.routeRemoval(s, random) : r.relatedRemoval(s, random);
+    int count = 0;
+    for (boolean b : removed) {
+      if (b) {
+        count++;
+      }
+    }
+    if (count >= r.customers()) {
+      Arrays.fill(relax, true);
+      return relax;
+    }
+    r.relax(removed, relax);
+    return relax;
   }
 
   private boolean[] randomRelax(int relaxed) {
@@ -590,7 +677,7 @@ public final class AdaptiveLns {
    * so they are left out; the linear definition of the objective gives its terms.
    */
   private void buildGraph() {
-    Map<Var, Integer> nodeOf = new IdentityHashMap<>();
+    nodeOf = new IdentityHashMap<>();
     List<IntVar> nodeList = new ArrayList<>();
     for (IntVar x : vars) {
       nodeOf.put(x, nodeList.size());
@@ -626,6 +713,9 @@ public final class AdaptiveLns {
           continue;
         }
         conOf.put(c, -1);
+        if (c instanceof Routes r) {
+          imposedRoutes.add(r);
+        }
         if (cost != null && c.arguments().contains(cost)) {
           readObjective(c, nodeOf);
           continue;
