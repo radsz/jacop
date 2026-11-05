@@ -4327,10 +4327,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
       // a bound that reaches the best solution proves it optimal only when it is a bound of the
-      // model itself, not of narrowed domains or of the restarts of on_restart
-      boolean exact =
-          clampedDomainsKeepOptimum() && relaxVars == null && dictionary.onRestart == null;
-      worker.bound(lower, !minimize, exact);
+      // model itself, not of the restarts of relax and reconstruct or on_restart
+      worker.bound(lower, !minimize, relaxVars == null && dictionary.onRestart == null);
       return false;
     }
     return gap().bound(lower);

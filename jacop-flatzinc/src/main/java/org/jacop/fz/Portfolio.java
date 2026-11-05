@@ -150,7 +150,7 @@ final class Portfolio {
   private boolean complete;
   // the best solution and bound of all threads, for --gap and the objectiveBound statistic
   private ObjectiveGap gap;
-  // a thread's bound holds only for narrowed domains or the restarts of on_restart
+  // a thread's bound holds only for the restarts of relax and reconstruct or on_restart
   private boolean inexactBound;
 
   Portfolio(Options options) {
@@ -630,7 +630,7 @@ final class Portfolio {
      *
      * @param lower the bound
      * @param maximise whether the cost variable is the negated objective
-     * @param exact false for a bound of narrowed domains or of the restarts of on_restart, which
+     * @param exact false for a bound of the restarts of relax and reconstruct or on_restart, which
      *     ends the search at --gap but never proves a solution optimal
      */
     void bound(long lower, boolean maximise, boolean exact) {

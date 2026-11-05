@@ -281,7 +281,7 @@ class ObjectiveGapFlatzincTest {
     c.solution("obj = 100;\n", -100, true, new String[0], new int[0]);
     assertTrue(q.provedComplete());
 
-    // a bound of narrowed domains proves nothing
+    // a bound of the restarts of on_restart proves nothing
     Portfolio r = new Portfolio(options);
     Portfolio.Worker d = r.new Worker("d", List.of());
     d.solution("obj = 7;\n", 7, false, new String[0], new int[0]);
