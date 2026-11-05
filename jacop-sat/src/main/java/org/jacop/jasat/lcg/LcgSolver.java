@@ -77,6 +77,7 @@ import org.jacop.lcg.ExplanationMinimality;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
+import org.jacop.lcg.MirroredChoice;
 import org.jacop.lcg.PbModel;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.lns.AdaptiveLns;
@@ -426,6 +427,11 @@ public final class LcgSolver implements ExternalPropagator {
   private long coreDelayBudget;
   private double coreProbeShare;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
+  // the run's time limit in milliseconds as given, 0 for none: the core-guided phase and the branch
+  // and bound before it take their shares of its work (see WORK_PER_MS), not of the clock
+  private long timeLimitMillis;
+  // the work (CdclSolver#work) at which the core-guided schedule counts the run as over
+  private long workEnd = Long.MAX_VALUE;
   private CoreSearch coreSearch;
   // the conflict limit set before minimize, which its phases keep
   private long conflictCap = Long.MAX_VALUE;
@@ -492,6 +498,7 @@ public final class LcgSolver implements ExternalPropagator {
     // against 20.2 on the OR-Tools set and 18.9 against 19.1 on the Challenge sample, and proved
     // one more instance in each
     sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
+    sat.setExternalWork(() -> WORK_PER_CALL * store.numberConsistencyCalls);
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -2335,6 +2342,11 @@ public final class LcgSolver implements ExternalPropagator {
   private static final int MAX_CORE_EXTENSIONS = 8;
 
   private int minimizeWithCores() {
+    long millis = timeLimitMillis;
+    if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
+      millis = Math.max(1, (sat.deadline() - System.nanoTime()) / 1_000_000L);
+    }
+    workEnd = millis > 0 ? sat.work() + millis * WORK_PER_MS : Long.MAX_VALUE;
     int result;
     if (coreDelayShare > 0) {
       if (coreProbeShare > 0) {
@@ -2376,45 +2388,41 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Runs core-guided search for a share of the time left, or a number of conflicts when there is no
-   * deadline. A later run picks up where this one stopped. When extend is set, a run that stopped
-   * while its lower bound, at its rate so far, would meet the best solution before the deadline
-   * gets another share of the time left. So does a run that stopped as too slow for the time left
-   * of its share once the run brought its lower bound half way to the best solution (jp-encoding
-   * data1000 stopped after 94 cores, 1,800 below the best solution and 2,800 above the bound the
-   * run started from, and is proved in 2 s more); further from it, branch and bound needs the time
-   * more (concert-hall-cap, 18,500 below and 3,500 above, lost its proof). A run that did not raise
-   * the bound is not extended (concert-hall-cap spent two extensions, half of the time left each,
-   * at one bound).
+   * Runs core-guided search for a share of the work left (see {@link #setTimeLimit}), or a number
+   * of conflicts when there is neither a time limit nor a deadline. A later run picks up where this
+   * one stopped. When extend is set, a run that stopped while its lower bound, at its rate so far,
+   * would meet the best solution before the end of the run gets another share of the work left. So
+   * does a run that stopped as too slow for the work left of its share once the run brought its
+   * lower bound half way to the best solution (jp-encoding data1000 stopped after 94 cores, 1,800
+   * below the best solution and 2,800 above the bound the run started from, and is proved in 2 s
+   * more); further from it, branch and bound needs the time more (concert-hall-cap, 18,500 below
+   * and 3,500 above, lost its proof). A run that did not raise the bound is not extended
+   * (concert-hall-cap spent two extensions, half of the time left each, at one bound).
    */
   private int runCores(double share, long conflicts, boolean extend) {
     long deadline = sat.deadline();
-    long now = System.nanoTime();
-    long phaseLimit = Long.MAX_VALUE;
-    if (deadline != Long.MAX_VALUE) {
-      sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
-    } else {
-      phaseLimit = sat.conflicts + conflicts;
-    }
     coreMode = true;
-    int result;
     try {
-      long full = sat.deadline();
-      if (CORE_NO_SOLUTION > 0 && full != Long.MAX_VALUE) {
+      if (workEnd == Long.MAX_VALUE) {
+        return coreSearch.run(sat.conflicts + conflicts, coreCallLimit);
+      }
+      long full = setPhaseLimits(share, deadline);
+      int result;
+      if (CORE_NO_SOLUTION > 0) {
         // without a solution of its own by this share of the phase, branch and bound gets the time
-        long first = now + (long) (CORE_NO_SOLUTION * (full - now));
-        sat.setDeadline(first);
-        result = coreSearch.run(phaseLimit, coreCallLimit);
-        if (result == CdclSolver.UNKNOWN && System.nanoTime() >= first) {
+        long now = sat.work();
+        sat.setWorkLimit(now + (long) (CORE_NO_SOLUTION * (full - now)));
+        result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
+        if (result == CdclSolver.UNKNOWN && sat.work() >= sat.workLimit()) {
           if (ownSolution()) {
-            sat.setDeadline(full);
-            result = coreSearch.run(phaseLimit, coreCallLimit);
+            sat.setWorkLimit(full);
+            result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
           } else {
             coreSearch.noSolutionStops++;
           }
         }
       } else {
-        result = coreSearch.run(phaseLimit, coreCallLimit);
+        result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
       }
       for (int extension = 0;
           extend
@@ -2422,17 +2430,72 @@ public final class LcgSolver implements ExternalPropagator {
               && result == CdclSolver.UNKNOWN
               && extendCores(deadline);
           extension++) {
-        now = System.nanoTime();
-        sat.setDeadline(now + (long) (share * Math.max(0, deadline - now)));
-        result = coreSearch.run(phaseLimit, coreCallLimit);
+        setPhaseLimits(share, deadline);
+        result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
       }
       return result;
     } finally {
       coreMode = false;
-      sat.setDeadline(deadline);
-      sat.setConflictLimit(conflictCap);
+      endPhase(deadline);
     }
   }
+
+  /**
+   * Gives a phase of the core-guided schedule its share of the work left (see {@link #workLeft}):
+   * the solver's work limit, and, with a deadline, a deadline at {@link #CLOCK_SLACK} times that
+   * share of the time left, which stops the phase only where the work is much slower than {@link
+   * #WORK_PER_MS}.
+   *
+   * @return the work limit set
+   */
+  private long setPhaseLimits(double share, long deadline) {
+    if (deadline != Long.MAX_VALUE) {
+      long now = System.nanoTime();
+      double slack = Math.min(1, CLOCK_SLACK * share);
+      sat.setDeadline(now + (long) (slack * Math.max(0, deadline - now)));
+    }
+    long limit = sat.work() + (long) (share * workLeft());
+    sat.setWorkLimit(limit);
+    return limit;
+  }
+
+  /** Restores the limits of the run after a phase of the core-guided schedule. */
+  private void endPhase(long deadline) {
+    if (sat.deadline() < deadline && System.nanoTime() > sat.deadline()) {
+      clockStops++;
+    }
+    sat.setDeadline(deadline);
+    sat.setWorkLimit(Long.MAX_VALUE);
+    sat.setConflictLimit(conflictCap);
+  }
+
+  /** The work left before the end of the run, as the core-guided schedule counts it. */
+  private long workLeft() {
+    return Math.max(0, workEnd - sat.work());
+  }
+
+  /** The work at which the core-guided schedule counts the run as over. */
+  long workEnd() {
+    return workEnd;
+  }
+
+  /**
+   * The work of the solver per millisecond of a time limit, from which the core-guided phase and
+   * the branch and bound before it take their shares, so that a run repeats with the same limit
+   * whatever the load of the machine. The work is the propagated literals plus {@link
+   * #WORK_PER_CALL} per consistency call of a constraint.
+   */
+  static final long WORK_PER_MS = Long.getLong("jacop.lcg.workPerMs", 2_000);
+
+  // the work of one consistency call of a constraint, in propagated literals
+  static final long WORK_PER_CALL = Long.getLong("jacop.lcg.workPerCall", 3);
+
+  // a phase also stops at this many times its share of the time left, where the work is slower
+  private static final double CLOCK_SLACK =
+      Double.parseDouble(System.getProperty("jacop.lcg.clockSlack", "1.5"));
+
+  /** Statistics: phases of the core-guided schedule stopped by the clock, not by their work. */
+  public long clockStops;
 
   // -Djacop.lcg.coreAnySolution=true: the old test, any best solution, also one of branch and
   // bound before the phase
@@ -2454,10 +2517,10 @@ public final class LcgSolver implements ExternalPropagator {
    * given deadline, as {@link #runCores} describes.
    */
   private boolean extendCores(long deadline) {
-    if (deadline == Long.MAX_VALUE || !coreSearch.rose() || !coreSearch.closing(deadline)) {
+    if (System.nanoTime() > deadline || !coreSearch.rose() || !coreSearch.closing(workEnd)) {
       return false;
     }
-    return System.nanoTime() >= sat.deadline() || !coreSearch.exhausted() && coreSearch.halfWay();
+    return sat.work() >= sat.workLimit() || !coreSearch.exhausted() && coreSearch.halfWay();
   }
 
   /**
@@ -2470,9 +2533,8 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int minimizeBeforeCores() {
     long deadline = sat.deadline();
-    long now = System.nanoTime();
-    if (deadline != Long.MAX_VALUE) {
-      sat.setDeadline(now + (long) (coreDelayShare * Math.max(0, deadline - now)));
+    if (workEnd != Long.MAX_VALUE) {
+      setPhaseLimits(coreDelayShare, deadline);
     } else {
       sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
     }
@@ -2493,8 +2555,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } finally {
       coreMode = false;
-      sat.setDeadline(deadline);
-      sat.setConflictLimit(conflictCap);
+      endPhase(deadline);
     }
   }
 
@@ -2634,6 +2695,20 @@ public final class LcgSolver implements ExternalPropagator {
     coreDelayShare = share;
     coreDelayBudget = Math.max(1, conflicts);
     coreProbeShare = probe;
+  }
+
+  /**
+   * Sets the time limit of the run, from which the core-guided phase of {@link #minimize} and the
+   * branch and bound before it take their shares as work ({@link CdclSolver#work}, {@link
+   * #WORK_PER_MS} per millisecond), so that a run repeats with the same limit whatever the load of
+   * the machine. Without it they take shares of the deadline's time left, counted as work at the
+   * start of {@link #minimize}, or, without a deadline either, their budgets of conflicts. It does
+   * not stop the run: the deadline does.
+   *
+   * @param millis the time limit in milliseconds, 0 for none
+   */
+  public void setTimeLimit(long millis) {
+    timeLimitMillis = Math.max(0, millis);
   }
 
   /**
@@ -2810,6 +2885,7 @@ public final class LcgSolver implements ExternalPropagator {
       sat.addClause(-lit); // objective >= target + 1
       lowerBoundRaised++;
       raised = target + 1;
+      reportBound(target + 1L);
       if (!shaving) {
         return CdclSolver.UNKNOWN;
       }
@@ -3215,6 +3291,18 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Gives a bound of the objective proved at the root, under the bound of branch and bound, to the
+   * action of {@link #onBound} when it is larger than the last one given: by a restart, a
+   * lower-bound run or a core of the core-guided phase.
+   */
+  void reportBound(long lower) {
+    if (onBound != null && objective >= 0 && lower > lastBound) {
+      lastBound = lower;
+      onBound.accept(lower);
+    }
+  }
+
+  /**
    * Returns the value of a variable in the last solution.
    *
    * @param x a variable of the store
@@ -3276,10 +3364,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (coreSearch != null) {
       lower = Math.max(lower, coreSearch.lowerBound);
     }
-    if (lower > lastBound) {
-      lastBound = lower;
-      onBound.accept(lower);
-    }
+    reportBound(lower);
   }
 
   @Override
@@ -3289,9 +3374,14 @@ public final class LcgSolver implements ExternalPropagator {
       backtrackConflicts = sat.conflicts;
       conflictVar = decisionVar;
     }
-    while (store.level > baseLevel + level) {
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
+    trail.beginBacktrack();
+    try {
+      while (store.level > baseLevel + level) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    } finally {
+      trail.endBacktrack();
     }
     // a variable fixed at the decision level it was taken off at, or below, may be free again
     while (numPopped > 0 && poppedLevel[numPopped - 1] > level) {
@@ -4552,6 +4642,11 @@ public final class LcgSolver implements ExternalPropagator {
     annotationIndex[numAnnotationIndices] =
         v != null || c != null ? annotation.getIndex() : ANNOTATION_DONE;
     annotationLevel[numAnnotationIndices++] = sat.decisionLevel();
+    if (c instanceof MirroredChoice mc) {
+      // an element of a set variable out of the set first (outdomain)
+      int i = idOf(mc.mirrored().decisionVariable(mc.value()));
+      return i < 0 ? 0 : assignLit(i, mc.holds() ? 1 : 0);
+    }
     if (v instanceof Mirrored m) {
       // the left branch on a set variable's element is that the element is in the set
       int i = idOf(m.decisionVariable(annotation.getChoiceValue()));

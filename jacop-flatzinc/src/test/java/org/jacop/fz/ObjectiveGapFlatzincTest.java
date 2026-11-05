@@ -257,6 +257,39 @@ class ObjectiveGapFlatzincTest {
   }
 
   @Test
+  void portfolioEndsAtABoundThatReachesTheBestSolution() {
+    // without --gap: a bound one thread proves at the cost of the best solution of another ends
+    // the portfolio with that solution as optimal, in either order
+    Options options = new Options(new String[] {"-p", "2", "m.fzn"});
+    Portfolio p = new Portfolio(options);
+    Portfolio.Worker a = p.new Worker("a", List.of());
+    Portfolio.Worker b = p.new Worker("b", List.of());
+    a.bound(5, false, true);
+    b.solution("obj = 7;\n", 7, false, new String[0], new int[0]);
+    assertFalse(p.provedComplete());
+    a.bound(6, false, true);
+    assertFalse(p.provedComplete());
+    a.bound(7, false, true);
+    assertTrue(p.provedComplete());
+
+    Portfolio q = new Portfolio(options);
+    Portfolio.Worker c = q.new Worker("c", List.of());
+    // maximisation: the cost variable is the negated objective, at most 100
+    c.bound(-100, true, true);
+    c.solution("obj = 91;\n", -91, true, new String[0], new int[0]);
+    assertFalse(q.provedComplete());
+    c.solution("obj = 100;\n", -100, true, new String[0], new int[0]);
+    assertTrue(q.provedComplete());
+
+    // a bound of the restarts of on_restart proves nothing
+    Portfolio r = new Portfolio(options);
+    Portfolio.Worker d = r.new Worker("d", List.of());
+    d.solution("obj = 7;\n", 7, false, new String[0], new int[0]);
+    d.bound(7, false, false);
+    assertFalse(r.provedComplete());
+  }
+
+  @Test
   void wrongGapIsRejected() {
     for (String bad : new String[] {"-1", "abc", "NaN", "Infinity"}) {
       assertThrows(

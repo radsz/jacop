@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XplusYeqC;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -192,6 +193,87 @@ class LazyBitSetDomainTest {
         }
       }
     }
+  }
+
+  @Test
+  void manyHolesAreRemovedInOnePass() {
+    // a domain kept as intervals with many holes removes a domain of many intervals in one merge
+    // instead of one interval at a time; the values, events and backtracking stay those of an
+    // interval domain
+    Random random = new Random(13);
+    for (int run = 0; run < 300; run++) {
+      int lo = random.nextInt(2000) - 1000;
+      int hi = lo + 200 + random.nextInt(2000);
+      Side reference = new Side(new IntervalDomain(lo, hi));
+      Side lazy = new Side(Kind.INTERVALS.create(lo, hi));
+      int level = 0;
+      for (int step = 0; step < 40; step++) {
+        String context = "run " + run + " step " + step + " level " + level;
+        int action = random.nextInt(10);
+        if (action < 2) {
+          level++;
+          reference.store.setLevel(level);
+          lazy.store.setLevel(level);
+          continue;
+        }
+        if (action < 4 && level > 0) {
+          backtrack(reference, level);
+          backtrack(lazy, level);
+          level--;
+          compareAll(reference, lazy, level, Kind.INTERVALS, context + " after backtracking");
+          continue;
+        }
+        IntDomain current = reference.x.domain;
+        IntervalDomain d = fineDomain(random, current.min() - 3, current.max() + 3);
+        int shift = random.nextInt(7) - 3;
+        Step pruning =
+            switch (action % 3) {
+              case 0 ->
+                  named(
+                      "inComplement " + d,
+                      x -> x.x.domain.inComplement(x.store.level, x.x, (IntDomain) d));
+              case 1 -> named("in " + d, x -> x.x.domain.in(x.store.level, x.x, d));
+              default ->
+                  named(
+                      "inShift " + shift + " " + d,
+                      x -> x.x.domain.inShift(x.store.level, x.x, d, shift));
+            };
+        context += " " + pruning;
+        boolean referenceFailed = apply(reference, pruning);
+        boolean lazyFailed = apply(lazy, pruning);
+        assertThat(lazyFailed).as(context + " failure").isEqualTo(referenceFailed);
+        assertThat(lazy.x.events).as(context + " events").isEqualTo(reference.x.events);
+        reference.x.events.clear();
+        lazy.x.events.clear();
+        if (referenceFailed) {
+          if (level == 0) {
+            break;
+          }
+          backtrack(reference, level);
+          backtrack(lazy, level);
+          level--;
+          compareAll(reference, lazy, level, Kind.INTERVALS, context + " after failure");
+        } else {
+          compareAll(reference, lazy, level, Kind.INTERVALS, context);
+        }
+      }
+    }
+  }
+
+  /** A domain of many short intervals with short gaps between lo and hi. */
+  private static IntervalDomain fineDomain(Random random, int lo, int hi) {
+    IntervalDomain d = new IntervalDomain();
+    int dense = 1 + random.nextInt(8);
+    int v = lo + random.nextInt(3);
+    while (v <= hi) {
+      int end = Math.min(hi, v + random.nextInt(dense * 4));
+      d.unionAdapt(v, end);
+      v = end + 2 + random.nextInt(dense);
+    }
+    if (d.isEmpty()) {
+      d.unionAdapt(lo, lo);
+    }
+    return d;
   }
 
   @ParameterizedTest
