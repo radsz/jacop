@@ -1894,6 +1894,25 @@ Version 5.0 (unreleased)
      mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
      concert-hall-cap changes its LP) and 126 -> 128 in default mode.
 
+127. Under --lcg -f the core-guided phase no longer depends on the clock.
+     Its probe, the branch and bound before it, the phase itself, its
+     extensions, its "no solution of its own" stop, the lower bound's
+     rate stops and the at-most-one probes took shares of the wall-clock
+     time left, so the cores found differed between runs of one build
+     (wide-quick, 60 s: core counts differed on 18 of 33 instances
+     between two runs). They now take shares of the solver's work
+     (CdclSolver.work: propagated literals plus 3 per constraint
+     consistency call; CdclSolver.setWorkLimit stops the search at a
+     conflict or decision), counted against -t at 2,000 per millisecond
+     (LcgSolver.setTimeLimit; without -t, --free-config
+     lcg-core-time=60000). A phase is still cut by the clock at 1.5x
+     its share of the time left, which only happens where the work is
+     much slower than the nominal rate (stat lcgCoreClockStops).
+     -Djacop.lcg.workPerMs, workPerCall and clockSlack change the
+     constants. wide-quick, two paired rounds: core counts differ on 6
+     of 32 (all clock-capped). Wide set (220, 60 s, -f): solved 150 ->
+     152, 33 better / 25 worse, 7 of 12 families better and 4 worse.
+
 Version 4.11
 =============
 
