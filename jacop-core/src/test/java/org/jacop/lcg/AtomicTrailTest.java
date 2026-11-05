@@ -1933,7 +1933,6 @@ class AtomicTrailTest {
       for (int it = 0; it < 3000; it++) {
         ownDive(s -> optionalModel(s, rnd, unary), rnd, counts);
       }
-      System.out.println("optional unary=" + unary + " " + Arrays.toString(counts));
       assertThat(counts[0]).isGreaterThan(500);
       assertThat(counts[1])
           .as("own explanations of %d atoms", counts[0])
@@ -1972,10 +1971,10 @@ class AtomicTrailTest {
           }
           return fitsUnder(Arrays.copyOf(t, n), d, use, 1);
         };
-    return new Model(
-        new CumulativeUnary(starts, durations, uses, new IntVar(s, 1, 1), rnd.nextBoolean(), true),
-        fits,
-        v);
+    CumulativeUnary unary =
+        new CumulativeUnary(starts, durations, uses, new IntVar(s, 1, 1), rnd.nextBoolean(), true);
+    unary.setOptionalRules(true);
+    return new Model(unary, fits, v);
   }
 
   /**

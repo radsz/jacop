@@ -291,7 +291,7 @@ public class CumulativeUnary extends Cumulative {
         unaryRules(store, tn, tr, !doProfile);
       }
 
-      if (doUnaryEdgeFind && !store.propagationHasOccurred && OPTIONAL_RULES) {
+      if (doUnaryEdgeFind && !store.propagationHasOccurred && optionalRules) {
         optionalRules(store);
         if (store.propagationHasOccurred) {
           boundsChanged();
@@ -301,10 +301,24 @@ public class CumulativeUnary extends Cumulative {
     } while (store.propagationHasOccurred);
   }
 
-  // the overload check and edge finding over optional tasks (uses 0 or positive), unless
-  // -Djacop.cumulative.optionalRules=false
+  // the overload check and edge finding over optional tasks (uses 0 or positive): off by default,
+  // on with -Djacop.cumulative.optionalRules=true. On the optional-interval kit they pruned little
+  // and cost 10-30 % of the node rate, so proofs took longer.
   private static final boolean OPTIONAL_RULES =
-      !"false".equals(System.getProperty("jacop.cumulative.optionalRules"));
+      "true".equals(System.getProperty("jacop.cumulative.optionalRules"));
+
+  private boolean optionalRules = OPTIONAL_RULES;
+
+  /**
+   * Sets whether the overload check and edge finding also run over optional tasks, those whose
+   * resource use may be 0 (see {@link #optionalRules(Store)}). Off by default; the system property
+   * {@code jacop.cumulative.optionalRules=true} turns it on for every instance.
+   *
+   * @param on true to run them.
+   */
+  public void setOptionalRules(boolean on) {
+    optionalRules = on;
+  }
 
   private final EnergyReasoning optionalNormal = new EnergyReasoning();
   private final EnergyReasoning optionalReversed = new EnergyReasoning();
@@ -682,7 +696,7 @@ public class CumulativeUnary extends Cumulative {
   @Override
   CumulativeBasic withTasks(IntVar[] s, IntVar[] d, IntVar[] r) {
     return getClass() == CumulativeUnary.class
-        ? withOptionsOf(new CumulativeUnary(s, d, r, limit, doProfile, doUnaryEdgeFind))
+        ? withUnaryOptions(new CumulativeUnary(s, d, r, limit, doProfile, doUnaryEdgeFind))
         : null;
   }
 
@@ -693,14 +707,21 @@ public class CumulativeUnary extends Cumulative {
     }
     return simplifyTasks(
         t ->
-            withOptionsOf(
+            withUnaryOptions(
                 new CumulativeUnary(t[0], t[1], t[2], limit, doProfile, doUnaryEdgeFind)));
   }
 
   @Override
   public CumulativeUnary copy(VarMap map) {
     IntVar[][] t = taskVariables(map);
-    return withOptionsOf(
+    return withUnaryOptions(
         new CumulativeUnary(t[0], t[1], t[2], map.get(limit), doProfile, doUnaryEdgeFind));
+  }
+
+  // the options of this constraint, the rules over optional tasks included, on a copy
+  private CumulativeUnary withUnaryOptions(CumulativeUnary copy) {
+    CumulativeUnary c = withOptionsOf(copy);
+    c.optionalRules = optionalRules;
+    return c;
   }
 }

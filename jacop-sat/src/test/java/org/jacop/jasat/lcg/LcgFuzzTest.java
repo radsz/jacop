@@ -511,9 +511,13 @@ class LcgFuzzTest {
         case 22 ->
             new CumulativeUnaryOptional(
                 p, constants(3, 1, 3), constants(3, 1, 1), constant(1), pick(b, 3));
-        case 23 ->
-            // optional tasks as uses 0..1 of a unary resource
-            new CumulativeUnary(p, constants(3, 1, 3), pick(b, 3), constant(1), true, true);
+        case 23 -> {
+          // optional tasks as uses 0..1 of a unary resource, with the rules over optional tasks
+          CumulativeUnary unary =
+              new CumulativeUnary(p, constants(3, 1, 3), pick(b, 3), constant(1), true, true);
+          unary.setOptionalRules(rnd.nextBoolean());
+          yield unary;
+        }
         case 24 ->
             new Reservoir(
                 p,
