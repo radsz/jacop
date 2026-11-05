@@ -469,7 +469,8 @@ final class Portfolio {
 
   private static boolean objectiveSetting(String key) {
     return key.startsWith("lcg-core")
-        || "lcg-lb".equals(key)
+        || key.startsWith("lcg-lb")
+        || "lcg-shave".equals(key)
         || key.startsWith("lns")
         || key.startsWith("probe");
   }

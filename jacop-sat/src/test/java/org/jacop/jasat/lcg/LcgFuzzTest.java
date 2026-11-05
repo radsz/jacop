@@ -1046,6 +1046,11 @@ class LcgFuzzTest {
     if (random.nextInt(3) == 0) {
       // short runs, so that the tiny models reach the lower-bound runs
       solver.setLowerBoundSearch(0.25 + random.nextDouble(), 1 + random.nextInt(3));
+      // half of them shave: the runs assume the objective a growing step above its bound
+      if (random.nextBoolean()) {
+        solver.setShaving(true);
+        solver.setLowerBoundGrowth(random.nextBoolean() ? 1 : 2);
+      }
     }
     // one run in three starts with core-guided search, for a few conflicts
     Random core = new Random(seed * 17 + 3);
