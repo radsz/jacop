@@ -30,6 +30,8 @@
 
 package org.jacop.fz.constraints;
 
+import java.util.Arrays;
+import java.util.Objects;
 import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -233,15 +235,8 @@ class ElementConstraints implements ParserTreeConstants {
     SetVar p3 = support.getSetVariable(node, 2);
 
     IntDomain[] p2 = support.getSetArray((SimpleNode) node.jjtGetChild(1));
-    if (p2 != null) {
-
-      for (IntDomain intDomain : p2) {
-        if (intDomain == null) {
-          throw new IllegalArgumentException(
-              "%% var_set_element with list of set variables is not available in org.jacop.set");
-        }
-      }
-
+    // an array literal gives no domain (null) for each of its set variables
+    if (p2 != null && Arrays.stream(p2).noneMatch(Objects::isNull)) {
       support.pose(new ElementSet(p1, p2, p3));
 
     } else {

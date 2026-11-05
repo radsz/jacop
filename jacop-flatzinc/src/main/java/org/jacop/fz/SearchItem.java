@@ -88,10 +88,11 @@ import org.jacop.set.core.SetVar;
 import org.jacop.set.search.IndomainSetMax;
 import org.jacop.set.search.IndomainSetMin;
 import org.jacop.set.search.IndomainSetRandom;
+import org.jacop.set.search.LargestUnknownElement;
 import org.jacop.set.search.MaxCardDiff;
-import org.jacop.set.search.MaxLubCard;
 import org.jacop.set.search.MinCardDiff;
-import org.jacop.set.search.MinGlbCard;
+import org.jacop.set.search.OutdomainSetSelect;
+import org.jacop.set.search.SmallestUnknownElement;
 
 /**
  * The part of the parser responsible for parsing search part of the flatzinc specification.
@@ -134,6 +135,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   private static final String WARM_START = "warm_start";
   private static final String INPUT_ORDER = "input_order";
   private static final String INDOMAIN_MIN = "indomain_min";
+  private static final String OUTDOMAIN_MIN = "outdomain_min";
+  private static final String OUTDOMAIN_MAX = "outdomain_max";
   private static final String INDOMAIN_MAX = "indomain_max";
   // AST annotation IDs
   private static final String ANN_VECTOR = "$vector";
@@ -685,12 +688,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       sel.leftFirst = false;
       return sel;
     }
-    if ("outdomain_max".equals(indomain)) {
+    if (OUTDOMAIN_MAX.equals(indomain)) {
       return tieBreaking == null
           ? new SplitSelect<>(searchVars, varSel, new IndomainMax<>())
           : new SplitSelect<>(searchVars, varSel, tieBreaking, new IndomainMax<>());
     }
-    if ("outdomain_min".equals(indomain)) {
+    if (OUTDOMAIN_MIN.equals(indomain)) {
       SplitSelect<IntVar> sel =
           tieBreaking == null
               ? new SplitSelect<>(searchVars, varSel, new IndomainMin<>())
@@ -788,6 +791,12 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       searchVars[i] = (SetVar) searchVariables[i];
     }
 
+    if (OUTDOMAIN_MIN.equals(indomain) || OUTDOMAIN_MAX.equals(indomain)) {
+      // the element out of the set first, as Gecode's SET_VAL_MIN_EXC and SET_VAL_MAX_EXC
+      return tieBreaking == null
+          ? new OutdomainSetSelect<>(searchVars, varSel, indom)
+          : new OutdomainSetSelect<>(searchVars, varSel, tieBreaking, indom);
+    }
     if (tieBreaking == null) {
       return new SimpleSelect<>(searchVars, varSel, indom);
     } else {
@@ -807,8 +816,8 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return new IndomainSetMin<>();
     } else {
       return switch (indomain) {
-        case INDOMAIN_MIN -> new IndomainSetMin<>();
-        case INDOMAIN_MAX -> new IndomainSetMax<>();
+        case INDOMAIN_MIN, OUTDOMAIN_MIN -> new IndomainSetMin<>();
+        case INDOMAIN_MAX, OUTDOMAIN_MAX -> new IndomainSetMax<>();
         case "indomain_random" -> new IndomainSetRandom<>();
         default -> {
           System.err.println(WARNING_INDOMAIN_USED_MIN + indomain + "\"; used indomain_min");
@@ -978,7 +987,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case FIRST_FAIL -> new ComparatorsVar<>(new MinCardDiff<>());
-        case SMALLEST -> new ComparatorsVar<>(new MinGlbCard<>());
+        // the smallest and largest undecided element, as Gecode's SET_VAR_MIN_MIN and
+        // SET_VAR_MAX_MAX
+        case SMALLEST -> new ComparatorsVar<>(new SmallestUnknownElement<>());
         case OCCURRENCE -> new ComparatorsVar<>(new MostConstrainedStatic<>());
         case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new MaxCardDiff<>());
         case DOM_W_DEG -> new ComparatorsVar<>(new WeightedDegree<>(store));
@@ -1008,9 +1019,10 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         case ACTIVITY_MIN_DEG ->
             // does not follow flatzinc standard (JaCoP specific) ;)
             new ComparatorsVar<>(new ActivityMinDeg<>(store));
+        // the fewest undecided elements, ties to the most constraints
         case MOST_CONSTRAINED ->
-            new ComparatorsVar<>(new MinGlbCard<>(), new MostConstrainedStatic<>());
-        case LARGEST -> new ComparatorsVar<>(new MaxLubCard<>());
+            new ComparatorsVar<>(new MinCardDiff<>(), new MostConstrainedStatic<>());
+        case LARGEST -> new ComparatorsVar<>(new LargestUnknownElement<>());
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
         default -> {
           System.err.println(
