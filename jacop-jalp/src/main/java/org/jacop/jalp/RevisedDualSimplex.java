@@ -161,6 +161,26 @@ public final class RevisedDualSimplex {
   private double[] tau = {};
   private double[] alphaRow = {};
 
+  // the nonzeros of rho (sorted by row), of alphaQ and of the steepest-edge tau, for the
+  // hypersparse solves; rhs is the right-hand side of those, zero between them
+  private int[] rhoIdx = {};
+  private int rhoLen;
+  private int[] alphaIdx = {};
+  private int alphaLen;
+  private double[] dseTau = {};
+  private int[] tauIdx = {};
+  private int tauLen;
+  private double[] rhs = {};
+  private int[] rhsIdx = {};
+
+  // the rows whose basic values are outside their bounds, kept up by the pivots (and rows back
+  // inside, until the next choice of a leaving row drops them); not valid after any other change
+  // of basic values or bounds
+  private int[] outside = {};
+  private boolean[] outsideRow = {};
+  private int outsideLen;
+  private boolean outsideValid;
+
   // rows left out of the choice of leaving rows for the rest of a solve: their violation had no
   // proof of infeasibility on fresh factors
   private boolean[] skipped = {};
@@ -416,6 +436,19 @@ public final class RevisedDualSimplex {
     work = new double[m];
     alphaQ = new double[m];
     tau = new double[m];
+    rhoIdx = new int[m];
+    rhoLen = 0;
+    alphaIdx = new int[m];
+    alphaLen = 0;
+    dseTau = new double[m];
+    tauIdx = new int[m];
+    tauLen = 0;
+    rhs = new double[m];
+    rhsIdx = new int[m];
+    outside = new int[m];
+    outsideRow = new boolean[m];
+    outsideLen = 0;
+    outsideValid = false;
     alphaRow = new double[cols];
     touched = new int[cols];
     isTouched = new boolean[cols];
@@ -610,6 +643,7 @@ public final class RevisedDualSimplex {
     boundLo[j] = min * s;
     boundHi[j] = max * s;
     workingBounds(j);
+    outsideValid = false;
   }
 
   /**
@@ -620,6 +654,7 @@ public final class RevisedDualSimplex {
    */
   public int solve(int limit) {
     infeasibleRow = -1;
+    outsideValid = false;
     clearSkipped();
     if (feasibility) {
       feasibility = false;
@@ -650,7 +685,7 @@ public final class RevisedDualSimplex {
       int p = basis[r];
       // the basic columns are held to their own bounds, never to artificial ones
       boolean toLower = beta[r] < boundLo[p];
-      unitRowOfInverse(r, rho);
+      rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
       pivotRow();
       int q = enteringColumn(toLower, toLower ? boundLo[p] - beta[r] : beta[r] - boundHi[p]);
       if (q < 0) {
@@ -688,8 +723,8 @@ public final class RevisedDualSimplex {
         infeasibleRow = r;
         return INFEASIBLE;
       }
-      column(q, work);
-      lu.ftranColumn(work, alphaQ);
+      clear(alphaQ, alphaIdx, alphaLen);
+      alphaLen = lu.ftran(rhs, rhsIdx, columnInto(q, rhs, rhsIdx), alphaQ, alphaIdx, true);
       double fromRow = alphaRow[q];
       double fromColumn = alphaQ[r];
       if (lu.updates() > 0
@@ -713,17 +748,16 @@ public final class RevisedDualSimplex {
         for (int i = 0; i < m; i++) {
           beta[i] -= tau[i];
         }
+        outsideValid = false;
       }
       // the primal step: x_q moves until x_p reaches the bound it leaves at
       double bound = toLower ? lo[p] : hi[p];
       double theta = (beta[r] - bound) / fromColumn;
       double xq = (upper[q] ? hi[q] : lo[q]) + theta;
       if (theta != 0) {
-        for (int i = 0; i < m; i++) {
-          double v = alphaQ[i];
-          if (v != 0) {
-            beta[i] -= v * theta;
-          }
+        for (int k = 0; k < alphaLen; k++) {
+          int i = alphaIdx[k];
+          beta[i] -= alphaQ[i] * theta;
         }
       }
       beta[r] = xq;
@@ -737,16 +771,19 @@ public final class RevisedDualSimplex {
       d[q] = 0;
       // the steepest-edge weights, from tau = B^-1 rho
       double wr = 0;
-      for (int i = 0; i < m; i++) {
+      for (int k = 0; k < rhoLen; k++) {
+        int i = rhoIdx[k];
         wr += rho[i] * rho[i];
+        rhs[i] = rho[i];
+        rhsIdx[k] = i;
       }
-      System.arraycopy(rho, 0, work, 0, m);
-      lu.ftran(work, tau);
-      for (int i = 0; i < m; i++) {
-        double v = alphaQ[i];
-        if (i != r && v != 0) {
-          double f = v / fromColumn;
-          weight[i] = Math.max(weight[i] + f * (f * wr - 2 * tau[i]), 1e-12);
+      clear(dseTau, tauIdx, tauLen);
+      tauLen = lu.ftran(rhs, rhsIdx, rhoLen, dseTau, tauIdx, false);
+      for (int k = 0; k < alphaLen; k++) {
+        int i = alphaIdx[k];
+        if (i != r) {
+          double f = alphaQ[i] / fromColumn;
+          weight[i] = Math.max(weight[i] + f * (f * wr - 2 * dseTau[i]), 1e-12);
         }
       }
       weight[r] = Math.max(wr / (fromColumn * fromColumn), 1e-12);
@@ -758,6 +795,12 @@ public final class RevisedDualSimplex {
       upper[p] = !toLower;
       at[p] = bound;
       totalPivots++;
+      if (outsideValid) {
+        for (int k = 0; k < alphaLen; k++) {
+          noteRow(alphaIdx[k]);
+        }
+        noteRow(r);
+      }
       if (!stable
           || lu.updates() >= REFACTOR_UPDATES
           || lu.updateNonzeros() > 2 * (lu.factorNonzeros + m)) {
@@ -874,10 +917,12 @@ public final class RevisedDualSimplex {
       factorize();
     }
     double[] y = new double[m];
-    unitRowOfInverse(r, y);
+    int[] yi = new int[m];
+    int len = unitRow(r, y, yi, 0);
     int p = basis[r];
     double f = p < n ? colScale[p] : 1 / rowScale[p - n];
-    for (int i = 0; i < m; i++) {
+    for (int k = 0; k < len; k++) {
+      int i = yi[k];
       y[i] *= rowScale[i] * f;
     }
     return y;
@@ -1097,12 +1142,6 @@ public final class RevisedDualSimplex {
     return oldRow;
   }
 
-  // the column j of [A -I], dense by row, into x
-  private void column(int j, double[] x) {
-    Arrays.fill(x, 0);
-    addColumn(j, 1, x);
-  }
-
   // x += f times the column j of [A -I]
   private void addColumn(int j, double f, double[] x) {
     if (f == 0) {
@@ -1119,12 +1158,41 @@ public final class RevisedDualSimplex {
     }
   }
 
-  // the row r of B^-1 into y
-  private void unitRowOfInverse(int r, double[] y) {
-    double[] z = work;
-    Arrays.fill(z, 0);
-    z[r] = 1;
-    lu.btran(z, y);
+  // the row r of B^-1 into y, whose yn nonzeros listed in yi are cleared first; returns the
+  // number of its nonzeros, listed in yi by row
+  private int unitRow(int r, double[] y, int[] yi, int yn) {
+    clear(y, yi, yn);
+    rhs[r] = 1;
+    rhsIdx[0] = r;
+    int len = lu.btran(rhs, rhsIdx, 1, y, yi);
+    Arrays.sort(yi, 0, len);
+    return len;
+  }
+
+  private static void clear(double[] y, int[] yi, int yn) {
+    for (int k = 0; k < yn; k++) {
+      y[yi[k]] = 0;
+    }
+  }
+
+  // the column j of [A -I] into x, zero before; returns the number of its nonzeros, listed in xi
+  private int columnInto(int j, double[] x, int[] xi) {
+    if (j >= n) {
+      x[j - n] = -1;
+      xi[0] = j - n;
+      return 1;
+    }
+    int len = 0;
+    int[] ci = colIdx[j];
+    double[] cv = colVal[j];
+    for (int e = 0; e < colLen[j]; e++) {
+      int i = ci[e];
+      if (x[i] == 0) {
+        xi[len++] = i;
+      }
+      x[i] += cv[e];
+    }
+    return len;
   }
 
   // the row of the tableau rho [A -I] over the nonbasic columns, into alphaRow and touched
@@ -1134,20 +1202,16 @@ public final class RevisedDualSimplex {
     // row-wise over the nonzeros of rho, or column-wise over the nonbasic columns when rho is so
     // dense that the rows it touches hold a large share of A
     long rowWork = 0;
-    for (int i = 0; i < m; i++) {
-      if (rho[i] != 0) {
-        rowWork += rowIdx[i].length + 1;
-      }
+    for (int k = 0; k < rhoLen; k++) {
+      rowWork += rowIdx[rhoIdx[k]].length + 1;
     }
     if (rowWork * 2 > nonzeros + m) {
       pivotRowByColumns();
       return;
     }
-    for (int i = 0; i < m; i++) {
+    for (int k = 0; k < rhoLen; k++) {
+      int i = rhoIdx[k];
       double ri = rho[i];
-      if (ri == 0) {
-        continue;
-      }
       int[] idx = rowIdx[i];
       ops += idx.length;
       double[] val = rowVal[i];
@@ -1374,24 +1438,52 @@ public final class RevisedDualSimplex {
   }
 
   private int leavingRow() {
+    if (!outsideValid) {
+      outsideLen = 0;
+      for (int i = 0; i < m; i++) {
+        outsideRow[i] = false;
+        noteRow(i);
+      }
+      outsideValid = true;
+      ops += m;
+    }
+    // the rows outside their bounds, which the pivots keep up, less those back inside; among
+    // equal scores the first row, as a pass over all rows would take it
     int r = -1;
     double worst = 0;
-    for (int i = 0; i < m; i++) {
+    int kept = 0;
+    for (int k = 0; k < outsideLen; k++) {
+      int i = outside[k];
+      int p = basis[i];
+      double gap = gap(beta[i], boundLo[p], boundHi[p]);
+      if (gap <= 0) {
+        outsideRow[i] = false;
+        continue;
+      }
+      outside[kept++] = i;
       if (skippedRows > 0 && skipped[i]) {
         continue;
       }
-      int p = basis[i];
-      double v = beta[i];
-      double gap = gap(v, boundLo[p], boundHi[p]);
-      if (gap > 0) {
-        double score = gap * gap / weight[i];
-        if (score > worst) {
-          worst = score;
-          r = i;
-        }
+      double score = gap * gap / weight[i];
+      if (score > worst || score == worst && i < r) {
+        worst = score;
+        r = i;
       }
     }
+    ops += outsideLen;
+    outsideLen = kept;
     return r;
+  }
+
+  // row i joins the rows outside their bounds when its basic value is
+  private void noteRow(int i) {
+    if (!outsideRow[i]) {
+      int p = basis[i];
+      if (gap(beta[i], boundLo[p], boundHi[p]) > 0) {
+        outsideRow[i] = true;
+        outside[outsideLen++] = i;
+      }
+    }
   }
 
   private static double gap(double v, double lo, double hi) {
@@ -1422,6 +1514,7 @@ public final class RevisedDualSimplex {
 
   // moves the basic values with the nonbasic columns whose values changed since the last call
   private void updateBeta() {
+    outsideValid = false;
     if (!betaValid) {
       computeBeta();
       return;
@@ -1451,6 +1544,7 @@ public final class RevisedDualSimplex {
   // x_B = -B^-1 N x_N
   private void computeBeta() {
     betaValid = true;
+    outsideValid = false;
     ops += cols + m + nonzeros;
     Arrays.fill(work, 0);
     for (int j = 0; j < cols; j++) {
@@ -1503,6 +1597,7 @@ public final class RevisedDualSimplex {
    * weights not known yet are computed exactly.
    */
   private void factorize() {
+    outsideValid = false;
     int[][] ci = new int[m][];
     double[][] cv = new double[m][];
     int[] cl = new int[m];
@@ -1541,12 +1636,12 @@ public final class RevisedDualSimplex {
       weightsFrom = 0;
     }
     if (weightsFrom < m) {
-      double[] y = new double[m];
       for (int r = weightsFrom; r < m; r++) {
-        unitRowOfInverse(r, y);
+        rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
         double s = 0;
-        for (int i = 0; i < m; i++) {
-          s += y[i] * y[i];
+        for (int k = 0; k < rhoLen; k++) {
+          double v = rho[rhoIdx[k]];
+          s += v * v;
         }
         weight[r] = Math.max(s, 1e-12);
       }
