@@ -32,14 +32,21 @@ package org.jacop.search.lns;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+import org.jacop.constraints.AbstractElement;
+import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -62,9 +69,10 @@ import org.jacop.lcg.LinearForm;
  *   <li>{@link Kind#OBJECTIVE}: grown in the graph from the terms of a linear objective that cost
  *       most in the best solution;
  *   <li>{@link Kind#ROUTES} and {@link Kind#RELATED}: with vehicle routes ({@link Routes}, imposed
- *       or given by {@link #addRoutes(Routes)}), the customers of whole routes, or customers near
- *       each other, removed from the best solution and reinserted by the run (see {@link
- *       RouteNeighbourhoods}).
+ *       or given by {@link #addRoutes(Routes)}, or the successors of a {@link Circuit} or {@link
+ *       Subcircuit}, a giant tour), the customers of whole routes, or customers near each other,
+ *       removed from the best solution and reinserted by the run (see {@link RouteNeighbourhoods}
+ *       and {@link SuccessorRoutes}).
  * </ul>
  *
  * <p>Each kind has its own share of free variables, raised after a run that explored its whole
@@ -112,6 +120,15 @@ public final class AdaptiveLns {
   /** The failed batches after which a propagation-guided neighbourhood stops fixing variables. */
   static final int MAX_FAILURES = 32;
 
+  /** The nearest customers each node of a circuit keeps for Shaw removal. */
+  static final int NEAR = 32;
+
+  /** The fewest nodes of a circuit worth routes. */
+  static final int MIN_CIRCUIT = 4;
+
+  /** Circuits with more nodes than this get no costs, so Shaw removal follows the routes. */
+  static final int MAX_COST_NODES = 4096;
+
   private static final double FIRST_SHARE = 0.2;
   private static final double MAX_SHARE = 0.95;
   private static final double SHARE_STEP = 1.15;
@@ -142,8 +159,11 @@ public final class AdaptiveLns {
   private int[] termValues = new int[0];
   private Map<Var, Integer> nodeOf;
   // the vehicle routes of the model
-  private final List<RouteNeighbourhoods> routings = new ArrayList<>();
+  private final List<RouteStructure> routings = new ArrayList<>();
   private final List<Routes> imposedRoutes = new ArrayList<>();
+  private final List<Constraint> imposedCircuits = new ArrayList<>();
+  // the variables that are successors of a circuit among the routings
+  private boolean[] successorVar;
 
   private final double[] share;
   private final double[] score;
@@ -185,6 +205,90 @@ public final class AdaptiveLns {
       addRoutes(r);
     }
     imposedRoutes.clear();
+    successorVar = new boolean[this.vars.length];
+    for (Constraint c : imposedCircuits) {
+      if (c instanceof Circuit k) {
+        addCircuit(k.successors(), k.offset());
+      } else if (c instanceof Subcircuit k) {
+        addCircuit(k.successors(), 1);
+      }
+    }
+    imposedCircuits.clear();
+  }
+
+  /**
+   * The routes of a circuit's successors; their costs come from element constraints over a
+   * successor and a list of integers (the distance from the node to each next node), preferring the
+   * one whose value is a term of the objective.
+   */
+  private void addCircuit(IntVar[] x, int offset) {
+    int n = x.length;
+    if (n < MIN_CIRCUIT) {
+      return;
+    }
+    int[] varIndex = new int[n];
+    boolean any = false;
+    for (int v = 0; v < n; v++) {
+      Integer node = nodeOf.get(x[v]);
+      varIndex[v] = node != null && node < vars.length ? node : -1;
+      any |= varIndex[v] >= 0 && !x[v].singleton();
+    }
+    if (!any) {
+      return;
+    }
+    Set<Integer> objectiveTerms = new HashSet<>();
+    for (int t : terms) {
+      objectiveTerms.add(t);
+    }
+    long[][] cost = new long[n][];
+    boolean found = false;
+    for (int v = 0; v < n && n <= MAX_COST_NODES; v++) {
+      int[] list = null;
+      int listOffset = 0;
+      for (Constraint c : x[v].constraintsWithWatches()) {
+        if (!(c instanceof AbstractElement e) || e.index() != x[v]) {
+          continue;
+        }
+        int[] values;
+        IntVar value;
+        if (c instanceof ElementInteger ei) {
+          values = ei.values();
+          value = ei.value();
+        } else if (c instanceof ElementIntegerFast ef) {
+          values = ef.values();
+          value = ef.value();
+        } else {
+          continue;
+        }
+        Integer valueNode = nodeOf.get(value);
+        boolean objective = valueNode != null && objectiveTerms.contains(valueNode);
+        if (list == null || objective) {
+          list = values;
+          listOffset = e.indexOffset();
+          if (objective) {
+            break;
+          }
+        }
+      }
+      if (list != null) {
+        cost[v] = new long[n];
+        for (int w = 0; w < n; w++) {
+          // node w is the value w + offset, read at w + offset - listOffset - 1
+          int k = w + offset - listOffset - 1;
+          cost[v][w] = k >= 0 && k < list.length ? list[k] : Long.MAX_VALUE;
+        }
+        found = true;
+      }
+    }
+    SuccessorRoutes r = new SuccessorRoutes(x, offset, varIndex, found ? cost : null, NEAR);
+    if (r.customers() > 1) {
+      routings.add(r);
+      for (int i : varIndex) {
+        if (i >= 0) {
+          successorVar[i] = true;
+        }
+      }
+    }
   }
 
   /**
@@ -196,8 +300,8 @@ public final class AdaptiveLns {
    * @return this object.
    */
   public AdaptiveLns addRoutes(Routes routes) {
-    for (RouteNeighbourhoods known : routings) {
-      if (known.sameAs(routes)) {
+    for (RouteStructure known : routings) {
+      if (known instanceof RouteNeighbourhoods arcs && arcs.sameAs(routes)) {
         return this;
       }
     }
@@ -234,7 +338,7 @@ public final class AdaptiveLns {
   }
 
   /** The routing structures, for tests. */
-  List<RouteNeighbourhoods> routings() {
+  List<RouteStructure> routings() {
     return routings;
   }
 
@@ -246,7 +350,7 @@ public final class AdaptiveLns {
     for (int k = 0; k < terms.length; k++) {
       termValues[k] = nodes[terms[k]].value();
     }
-    for (RouteNeighbourhoods r : routings) {
+    for (RouteStructure r : routings) {
       r.solution();
     }
     hasIncumbent = true;
@@ -421,7 +525,7 @@ public final class AdaptiveLns {
    */
   private boolean[] routeRelax(Kind kind) {
     boolean[] relax = new boolean[vars.length];
-    RouteNeighbourhoods r = routings.get(random.nextInt(routings.size()));
+    RouteStructure r = routings.get(random.nextInt(routings.size()));
     double s = share[kind.ordinal()];
     boolean[] removed =
         kind == Kind.ROUTES ? r.routeRemoval(s, random) : r.relatedRemoval(s, random);
@@ -433,6 +537,28 @@ public final class AdaptiveLns {
     }
     if (count >= r.customers()) {
       Arrays.fill(relax, true);
+      return relax;
+    }
+    if (r instanceof SuccessorRoutes successors) {
+      // the other variables follow from the successors; the circuits over the same nodes (the
+      // predecessors, the tours of other scenarios) lose the same customers
+      for (int i = 0; i < vars.length; i++) {
+        relax[i] = !successorVar[i];
+      }
+      for (RouteStructure other : routings) {
+        if (other instanceof SuccessorRoutes tour) {
+          if (tour.size() == successors.size()) {
+            tour.relax(removed, relax);
+          } else {
+            for (IntVar x : tour.successors()) {
+              Integer node = nodeOf.get(x);
+              if (node != null && node < vars.length) {
+                relax[node] = true;
+              }
+            }
+          }
+        }
+      }
       return relax;
     }
     r.relax(removed, relax);
@@ -715,6 +841,8 @@ public final class AdaptiveLns {
         conOf.put(c, -1);
         if (c instanceof Routes r) {
           imposedRoutes.add(r);
+        } else if (c instanceof Circuit || c instanceof Subcircuit) {
+          imposedCircuits.add(c);
         }
         if (cost != null && c.arguments().contains(cost)) {
           readObjective(c, nodeOf);

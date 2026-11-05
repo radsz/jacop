@@ -222,4 +222,22 @@ public abstract class AbstractElement extends Constraint {
       appendElement.accept(i);
     }
   }
+
+  /**
+   * Returns the index variable.
+   *
+   * @return the variable that selects the position in the list.
+   */
+  public IntVar index() {
+    return index;
+  }
+
+  /**
+   * Returns the shift applied to the index: the list is read at index - indexOffset, from 1.
+   *
+   * @return the index offset.
+   */
+  public int indexOffset() {
+    return indexOffset;
+  }
 }
