@@ -147,7 +147,12 @@ public class RoutesDetector implements ParserTreeConstants {
     if (a == null || x == null || a.length != x.length) {
       return;
     }
-    int r = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    // bool_lin_eq takes a var int right-hand side; only a fixed one can be a routing row
+    IntVar rhs = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (!rhs.singleton()) {
+      return;
+    }
+    int r = rhs.value();
     if (name.equals("int_lin_le")) {
       load(a, x, r);
     } else {

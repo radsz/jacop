@@ -235,6 +235,21 @@ class RoutesFlatzincTest {
     assertFalse(run(model.fzn(), "-debug").contains("% redundant Routes"));
   }
 
+  @Test
+  void boolLinEqWithVariableRightHandSideIsSkipped() throws IOException {
+    // bool_lin_eq takes a var int right-hand side; reading it as a parameter aborted the model
+    String model =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: count:: output_var:: is_defined_var;
+        constraint bool_lin_eq([1,1],[a,b],count):: defines_var(count);
+        solve satisfy;
+        """;
+    System.clearProperty(PROPERTY);
+    assertEquals(4, solutions(run(model, "-a")).size());
+  }
+
   private String run(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
