@@ -2033,8 +2033,10 @@ public class LinearRelaxation extends Constraint
       baseBound = before;
     }
     int m = rows();
-    LpSolver full = trialRows(status, before, m, k, x.length);
     int plain = Math.min(plainExtra, k);
+    // the value encodings are many rows over many columns: they are kept only when they make the
+    // relaxation infeasible or raise its bound, not for being few
+    LpSolver full = trialRows(status, before, m, k, x.length, plain == k);
     if (full == null && plain > 0 && plain < k) {
       // the value encodings come last: without them, the other rows are judged as on their own
       int n = lp.columns();
@@ -2043,7 +2045,7 @@ public class LinearRelaxation extends Constraint
           n = Math.max(n, j + 1);
         }
       }
-      full = trialRows(status, before, m, plain, n);
+      full = trialRows(status, before, m, plain, n, true);
       if (full != null) {
         k = plain;
         extraForms = new ArrayList<>(extraForms.subList(0, plain));
@@ -2072,9 +2074,10 @@ public class LinearRelaxation extends Constraint
   /**
    * Solves the given rows and the first k extra rows over the first n columns at the root, and
    * returns that simplex when the rows are kept, null otherwise (the rows are then m + k, to be
-   * truncated by the caller).
+   * truncated by the caller). With few, at most SMALL_EXTRA rows are kept even when the bound
+   * stays.
    */
-  private LpSolver trialRows(int status, double before, int m, int k, int n) {
+  private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
     rowColumns = Arrays.copyOf(rowColumns, m + k);
     rowWeights = Arrays.copyOf(rowWeights, m + k);
     rowLo = Arrays.copyOf(rowLo, m + k);
@@ -2127,7 +2130,7 @@ public class LinearRelaxation extends Constraint
           status != DualSimplex.OPTIMAL
               || !Double.isNaN(before)
                   && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
-      keep = raised || k <= SMALL_EXTRA;
+      keep = raised || few && k <= SMALL_EXTRA;
     }
     keep |= keepExtra;
     if (keep) {
