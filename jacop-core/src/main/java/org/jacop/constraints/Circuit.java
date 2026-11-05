@@ -37,6 +37,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Successors;
 import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -60,7 +61,7 @@ import org.jacop.lcg.PbModel;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Circuit extends Alldiff {
+public class Circuit extends Alldiff implements Successors {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -71,6 +72,9 @@ public class Circuit extends Alldiff {
   private final int[] dfsNode;
   private final int[] dfsValue;
   final Map<Var, Integer> valueIndex = new HashMap<>();
+
+  // the successor variables in the order given; Alldiff reorders list
+  private final IntVar[] successors;
   int chainLength;
 
   /** One-time work of the first consistency call. */
@@ -118,6 +122,7 @@ public class Circuit extends Alldiff {
 
     this.numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
+    this.successors = Arrays.copyOf(list, list.length);
     this.queueIndex = 2;
 
     int i = 0;
@@ -407,5 +412,15 @@ public class Circuit extends Alldiff {
   @Override
   public Circuit copy(VarMap map) {
     return new Circuit(map.get(list), offset);
+  }
+
+  @Override
+  public IntVar[] successors() {
+    return successors.clone();
+  }
+
+  @Override
+  public int successorOffset() {
+    return offset;
   }
 }

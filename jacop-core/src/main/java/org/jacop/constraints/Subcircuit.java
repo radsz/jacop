@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Successors;
 import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -65,11 +66,14 @@ import org.jacop.util.DominatorTree;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Subcircuit extends Alldiff {
+public class Subcircuit extends Alldiff implements Successors {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   final Map<Var, Integer> valueIndex = new HashMap<>();
+
+  // the successor variables in the order given; Alldiff reorders list
+  private final IntVar[] successors;
   final DominatorTree graphDominance;
   // a fixed seed keeps propagation, and so the search tree, the same on every run
   final Random random = new Random(0); // NOSONAR not used for security
@@ -118,6 +122,7 @@ public class Subcircuit extends Alldiff {
 
     this.numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
+    this.successors = Arrays.copyOf(list, list.length);
     int n = list.length;
     this.graphDominance = new DominatorTree(n + 1);
 
@@ -555,5 +560,15 @@ public class Subcircuit extends Alldiff {
       }
     }
     return out;
+  }
+
+  @Override
+  public IntVar[] successors() {
+    return successors.clone();
+  }
+
+  @Override
+  public int successorOffset() {
+    return 1;
   }
 }
