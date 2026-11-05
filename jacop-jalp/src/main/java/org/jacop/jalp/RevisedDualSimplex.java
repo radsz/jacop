@@ -176,6 +176,10 @@ public final class RevisedDualSimplex {
   // nonbasic column at its bound (dualsHold), with no pivot since
   private boolean dualsChecked;
 
+  // the work of that check, charged again when it is skipped: work() stays that of a full check,
+  // so LinearRelaxation, which budgets its calls by work(), runs the same calls
+  private long checkedWork;
+
   // the columns with an infinite bound, in order, for the check of artificial bounds at optimum
   private int[] infinite = {};
   private int infiniteLen = -1;
@@ -336,6 +340,7 @@ public final class RevisedDualSimplex {
     movedLen = 0;
     placed = false; // the copy computes its reduced costs again
     dualsChecked = false;
+    checkedWork = 0;
     allocateWork();
   }
 
@@ -849,15 +854,18 @@ public final class RevisedDualSimplex {
       return -1;
     }
     // the reduced costs checked since the last pivot on the same factors are the same again
-    if (lu.updates() > 0 && !dualsChecked && !dualsHold()) {
-      return -1;
+    if (lu.updates() > 0) {
+      if (dualsChecked) {
+        ops += checkedWork;
+      } else if (!dualsHold()) {
+        return -1;
+      }
     }
     // a nonbasic column at an artificial bound that the objective pulls on: the bounds are too
     // close
     if (infiniteLen < 0) {
       listInfinite();
     }
-    ops += infiniteLen;
     for (int k = 0; k < infiniteLen; k++) {
       int j = infinite[k];
       if (row[j] < 0 && isArtificial(j, upper[j]) && lo[j] != hi[j]) {
@@ -880,6 +888,7 @@ public final class RevisedDualSimplex {
    * values follow and the pivots go on.
    */
   private boolean dualsHold() {
+    long before = ops + (lu == null ? 0 : lu.ops);
     computeDuals();
     boolean held = true;
     for (int j = 0; j < cols; j++) {
@@ -892,11 +901,11 @@ public final class RevisedDualSimplex {
       updateBeta();
     }
     dualsChecked = held;
+    checkedWork = ops + (lu == null ? 0 : lu.ops) - before;
     return held;
   }
 
   private void listInfinite() {
-    ops += cols;
     infiniteLen = 0;
     for (int j = 0; j < cols; j++) {
       if (isArtificial(j, false) || isArtificial(j, true)) {
@@ -1468,7 +1477,8 @@ public final class RevisedDualSimplex {
 
   // places the columns whose bounds changed: the others are placed already
   private void placeMoved() {
-    ops += movedLen;
+    // charged as a pass over all columns, see checkedWork
+    ops += cols;
     for (int k = 0; k < movedLen; k++) {
       place(moved[k]);
     }
@@ -1498,7 +1508,8 @@ public final class RevisedDualSimplex {
       return;
     }
     // only the columns in moved can be off at[]; in order, so the sums are those of a pass over all
-    ops += movedLen;
+    // charged as a pass over all columns, see checkedWork
+    ops += cols + m;
     Arrays.sort(moved, 0, movedLen);
     boolean any = false;
     for (int k = 0; k < movedLen; k++) {
@@ -1519,7 +1530,6 @@ public final class RevisedDualSimplex {
     }
     movedLen = 0;
     if (any) {
-      ops += m;
       lu.ftran(work, tau);
       for (int i = 0; i < m; i++) {
         beta[i] -= tau[i];
