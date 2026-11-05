@@ -120,6 +120,9 @@ public class LinearRelaxation extends Constraint
   // whether the relaxation holds the all-different-except encodings over auxiliary columns, which
   // are the relaxation itself and are never dropped (the other encodings are extra rows like any)
   private boolean keepEncodings;
+  // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
+  // are tried without them when all of them are not kept
+  private int plainExtra = Integer.MAX_VALUE;
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -686,6 +689,9 @@ public class LinearRelaxation extends Constraint
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
+    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
+    tried.addAll(valueRows.tried());
+    r.plainExtra = (int) r.extraForms.stream().filter(f -> !tried.contains(f)).count();
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -2013,6 +2019,48 @@ public class LinearRelaxation extends Constraint
       baseBound = before;
     }
     int m = rows();
+    LpSolver full = trialRows(status, before, m, k, x.length);
+    int plain = Math.min(plainExtra, k);
+    if (full == null && plain > 0 && plain < k) {
+      // the value encodings come last: without them, the other rows are judged as on their own
+      int n = lp.columns();
+      for (int q = 0; q < plain; q++) {
+        for (int j : extraColumns[q]) {
+          n = Math.max(n, j + 1);
+        }
+      }
+      full = trialRows(status, before, m, plain, n);
+      if (full != null) {
+        k = plain;
+        extraForms = new ArrayList<>(extraForms.subList(0, plain));
+      }
+    }
+    extraColumns = new int[0][];
+    extraWeights = new long[0][];
+    if (full != null) {
+      keptExtraForms = extraForms;
+      extraRows = k;
+      beforeExtra = lp;
+      baseRows = m;
+      extraLimits = limits;
+      droppedPivots += lp.pivots();
+      lp = full;
+      return trialStatus;
+    }
+    extraForms = new ArrayList<>();
+    truncateRows(m);
+    return status;
+  }
+
+  // the status of the last root solve of trialRows
+  private int trialStatus;
+
+  /**
+   * Solves the given rows and the first k extra rows over the first n columns at the root, and
+   * returns that simplex when the rows are kept, null otherwise (the rows are then m + k, to be
+   * truncated by the caller).
+   */
+  private LpSolver trialRows(int status, double before, int m, int k, int n) {
     rowColumns = Arrays.copyOf(rowColumns, m + k);
     rowWeights = Arrays.copyOf(rowWeights, m + k);
     rowLo = Arrays.copyOf(rowLo, m + k);
@@ -2028,7 +2076,6 @@ public class LinearRelaxation extends Constraint
       rowLo[i] = extraSide[q];
       rowHi[i] = extraSide[q];
     }
-    int n = x.length;
     double[] lo = new double[m + k];
     double[] hi = new double[m + k];
     for (int i = 0; i < m + k; i++) {
@@ -2069,22 +2116,12 @@ public class LinearRelaxation extends Constraint
       keep = raised || k <= SMALL_EXTRA;
     }
     keep |= keepExtra;
-    extraColumns = new int[0][];
-    extraWeights = new long[0][];
     if (keep) {
-      keptExtraForms = extraForms;
-      extraRows = k;
-      beforeExtra = lp;
-      baseRows = m;
-      extraLimits = limits;
-      droppedPivots += lp.pivots();
-      lp = full;
-      return withExtra;
+      trialStatus = withExtra;
+      return full;
     }
-    extraForms = new ArrayList<>();
     droppedPivots += full.pivots();
-    truncateRows(m);
-    return status;
+    return null;
   }
 
   // the rows of the other constraints make too many solves in search stop at the pivot limit: back
