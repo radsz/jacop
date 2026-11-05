@@ -107,9 +107,10 @@ public final class CoreSearch {
 
   // the conflicts of one probe of a term's level
   private static final long PROBE_CONFLICTS = 100;
-  // the lower bound's rate is measured once this many nanoseconds passed, and may grow this many
-  // times
-  private static final long RATE_WINDOW = 2_000_000_000L;
+  // the lower bound's rate, per unit of the solver's work (CdclSolver#work, never the clock, so a
+  // run repeats), is measured once this much work was done (about two seconds), and may grow this
+  // many times
+  private static final long RATE_WINDOW = 2_000 * LcgSolver.WORK_PER_MS;
   private static final double RATE_SLACK = 3;
 
   private final LcgSolver lcg;
@@ -166,10 +167,11 @@ public final class CoreSearch {
   /** Whether the phase proved its best solution optimal, or that there is none. */
   public boolean proved;
 
-  private long startTime; // when the first call of the solver started, and the bound then
+  // the solver's work when the first call of the solver started (-1 before), and the bound then
+  private long startWork = -1;
   private long startBound;
   private long runBound; // the lower bound when the last run started
-  private long runEnd; // when the last run stopped
+  private long runEnd; // the solver's work when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
@@ -473,12 +475,12 @@ public final class CoreSearch {
    */
   int run(long phaseLimit, long callLimit) {
     runBound = lowerBound;
-    if (startTime != 0) {
-      // the rate of the lower bound counts only the phase's own time, not branch and bound between
-      startTime += System.nanoTime() - runEnd;
+    if (startWork >= 0) {
+      // the rate of the lower bound counts only the phase's own work, not branch and bound between
+      startWork += sat.work() - runEnd;
     }
     int result = search(phaseLimit, callLimit);
-    runEnd = System.nanoTime();
+    runEnd = sat.work();
     if (result != CdclSolver.UNKNOWN) {
       proved = true;
     }
@@ -497,7 +499,7 @@ public final class CoreSearch {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
-      startTime = System.nanoTime();
+      startWork = sat.work();
       startBound = lowerBound;
     }
     while (true) {
@@ -557,6 +559,7 @@ public final class CoreSearch {
       if (unit != null && unit.term >= 0) {
         probe(unit.term, unit.level, phaseLimit);
       }
+      lcg.reportBound(lowerBound);
       if (tooSlow()) {
         return CdclSolver.UNKNOWN;
       }
@@ -662,13 +665,13 @@ public final class CoreSearch {
       adjacent[i] = new BitSet();
     }
     BitSet free = new BitSet(n);
-    long start = System.nanoTime();
-    long deadline = sat.deadline();
+    long start = sat.work();
+    long end = lcg.workEnd();
     long budget =
-        deadline == Long.MAX_VALUE
-            ? PROBE_TIME
-            : Math.min(PROBE_TIME, Math.max(0, deadline - start) / PROBE_SHARE);
-    for (int i = 0; i < n && System.nanoTime() - start < budget; i++) {
+        end == Long.MAX_VALUE
+            ? PROBE_WORK
+            : Math.min(PROBE_WORK, Math.max(0, end - start) / PROBE_SHARE);
+    for (int i = 0; i < n && sat.work() - start < budget; i++) {
       int lit = lits.get(i);
       if (sat.value(lit) != 0) {
         continue;
@@ -838,7 +841,9 @@ public final class CoreSearch {
   // the most soft literals probed for at-most-one groups, the most time the probes may take, and
   // at most this part of the time left
   private static final int MAX_GROUP_NODES = 20_000;
-  private static final long PROBE_TIME = 2_000_000_000L;
+  // the work of the probes that look for at-most-one groups (about two seconds), and the share of
+  // the work left that they may take at most
+  private static final long PROBE_WORK = 2_000 * LcgSolver.WORK_PER_MS;
   private static final long PROBE_SHARE = 10;
 
   private static final int[] NO_VALUES = new int[0];
@@ -898,36 +903,37 @@ public final class CoreSearch {
   }
 
   /**
-   * Whether the lower bound rises too slowly to meet the best solution before the deadline, at
-   * three times its rate since the first call of the solver, once that is two seconds ago; for
-   * example when each core of two terms with large domains raises it by 1. Branch and bound then
-   * gets the time. The rate is taken since the start, not over the last seconds, so that a few slow
-   * cores near the optimum do not end the phase.
+   * Whether the lower bound rises too slowly to meet the best solution before the end of the run,
+   * at three times its rate since the first call of the solver, once the phase has done about two
+   * seconds of work (see {@link LcgSolver#WORK_PER_MS}); for example when each core of two terms
+   * with large domains raises it by 1. Branch and bound then gets the time. The rate is taken since
+   * the start, not over the last seconds, so that a few slow cores near the optimum do not end the
+   * phase.
    */
   private boolean tooSlow() {
     // only once the phase has a solution of its own: a poor one from branch and bound before it
     // would stop the phase before its strata find better ones
-    return System.nanoTime() - startTime >= RATE_WINDOW
+    return sat.work() - startWork >= RATE_WINDOW
         && stratumSolutions > 0
         && lcg.bestObjective() != Long.MAX_VALUE
         && !rising();
   }
 
   /**
-   * Whether the lower bound, at its rate since the first call of the solver, would meet the best
-   * solution before the given deadline.
+   * Whether the lower bound, at its rate per unit of work since the first call of the solver, would
+   * meet the best solution before the given end of the run.
    *
-   * @param deadline a time of {@link System#nanoTime()}
+   * @param end the solver's work ({@link CdclSolver#work}) at the end of the run
    * @return false when there is no solution yet
    */
-  boolean closing(long deadline) {
+  boolean closing(long end) {
     long best = lcg.boundObjective();
-    if (best == Long.MAX_VALUE || startTime == 0) {
+    if (best == Long.MAX_VALUE || startWork < 0 || end == Long.MAX_VALUE) {
       return false;
     }
-    long now = System.nanoTime();
-    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startTime);
-    return rate * (deadline - now) >= best - lowerBound;
+    long now = sat.work();
+    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startWork);
+    return rate * (end - now) >= best - lowerBound;
   }
 
   /** Whether the lower bound rose in the last run. */
@@ -945,20 +951,21 @@ public final class CoreSearch {
   }
 
   /**
-   * Whether the lower bound, at three times its rate since the first call of the solver, would meet
-   * the best solution before the deadline. False when there is no solution yet. Without a deadline
-   * the time left is taken as the time the phase has run: cores that cost no conflicts never reach
-   * its budget of conflicts, and one per level of a term of a million values would run for hours.
+   * Whether the lower bound, at three times its rate per unit of work since the first call of the
+   * solver, would meet the best solution before the end of the run ({@link LcgSolver#workEnd}).
+   * False when there is no solution yet. Without an end the work left is taken as the work the
+   * phase has done: cores that cost no conflicts never reach its budget of conflicts, and one per
+   * level of a term of a million values would run for hours.
    */
   private boolean rising() {
     long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return false;
     }
-    long deadline = sat.deadline();
-    long now = System.nanoTime();
-    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startTime);
-    long left = deadline != Long.MAX_VALUE ? deadline - now : now - startTime;
+    long end = lcg.workEnd();
+    long now = sat.work();
+    double rate = (double) (lowerBound - startBound) / Math.max(1, now - startWork);
+    long left = end != Long.MAX_VALUE ? end - now : now - startWork;
     return RATE_SLACK * rate * left >= best - lowerBound;
   }
 

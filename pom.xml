@@ -213,6 +213,9 @@ setup to run configuration. -->
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
                                 <presolve.elimination.trials>300</presolve.elimination.trials>
                                 <wakeup.trials>1000</wakeup.trials>
+                                <floats.fuzz.trials>100</floats.fuzz.trials>
+                                <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
+                                <float.builtins.trials>200</float.builtins.trials>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -275,6 +278,8 @@ setup to run configuration. -->
                                 <include>**/GeostLexVolumeTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
@@ -327,6 +332,7 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
                                 <include>**/SetBuiltinsFuzzTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
@@ -434,6 +440,8 @@ setup to run configuration. -->
                                 <include>**/GeostLexVolumeTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
@@ -491,6 +499,7 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
                                 <include>**/SetBuiltinsFuzzTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
@@ -593,6 +602,8 @@ setup to run configuration. -->
                                 <include>**/GeostLexVolumeTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
@@ -650,6 +661,7 @@ setup to run configuration. -->
                                 <include>**/DiffnSkippingTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
+                                <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
                                 <include>**/SetBuiltinsFuzzTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
@@ -750,6 +762,8 @@ setup to run configuration. -->
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
+                                <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>

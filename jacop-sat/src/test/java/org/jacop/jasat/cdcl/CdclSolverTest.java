@@ -247,6 +247,25 @@ class CdclSolverTest {
   }
 
   @Test
+  void workLimitStopsTheSearchAtTheSameConflictInEveryRun() {
+    // the core-guided phase of LcgSolver stops by the solver's work, not by the clock, so that a
+    // run
+    // repeats whatever the load of the machine
+    long[] conflicts = new long[2];
+    for (int run = 0; run < 2; run++) {
+      CdclSolver s = new CdclSolver();
+      s.setChecking(true);
+      pigeonhole(s, 10);
+      s.setWorkLimit(20_000);
+      assertEquals(CdclSolver.UNKNOWN, s.solve());
+      assertTrue(s.work() >= 20_000, "work " + s.work());
+      conflicts[run] = s.conflicts;
+    }
+    assertTrue(conflicts[0] > 0);
+    assertEquals(conflicts[0], conflicts[1]);
+  }
+
+  @Test
   void deadlineStopsTheSearchOnExternalDecisions() {
     // The deadline was checked only on conflicts and on the solver's own decisions, so a search
     // driven by the external propagator's decisions ran past it.
