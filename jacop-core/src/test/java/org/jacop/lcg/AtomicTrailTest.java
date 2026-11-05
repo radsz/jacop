@@ -1196,7 +1196,17 @@ class AtomicTrailTest {
 
   @Test
   void holesAreRecordedOnceForEveryDomainClass() {
-    Random rnd = new Random(11);
+    recordHolesOnce(new Random(11), false);
+  }
+
+  // a backtrack over several levels between beginBacktrack and endBacktrack copies the restored
+  // domains into the shadows once at its end: the entries after it must still each remove a value
+  @Test
+  void holesAreRecordedOnceAfterABatchedBacktrack() {
+    recordHolesOnce(new Random(14), true);
+  }
+
+  private static void recordHolesOnce(Random rnd, boolean batched) {
     int[] spans = {40, 600, LazyBitSetDomain.MAX_SPAN + 10};
     for (int run = 0; run < 300; run++) {
       Store store = new Store();
@@ -1215,9 +1225,15 @@ class AtomicTrailTest {
       for (int step = 0; step < 60; step++) {
         if (store.level > 0 && rnd.nextInt(4) == 0) {
           int target = rnd.nextInt(store.level);
+          if (batched) {
+            trail.beginBacktrack();
+          }
           while (store.level > target) {
             store.removeLevel(store.level);
             store.setLevel(store.level - 1);
+          }
+          if (batched) {
+            trail.endBacktrack();
           }
         } else {
           store.setLevel(store.level + 1);

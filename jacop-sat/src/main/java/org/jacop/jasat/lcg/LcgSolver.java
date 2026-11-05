@@ -3374,9 +3374,14 @@ public final class LcgSolver implements ExternalPropagator {
       backtrackConflicts = sat.conflicts;
       conflictVar = decisionVar;
     }
-    while (store.level > baseLevel + level) {
-      store.removeLevel(store.level);
-      store.setLevel(store.level - 1);
+    trail.beginBacktrack();
+    try {
+      while (store.level > baseLevel + level) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    } finally {
+      trail.endBacktrack();
     }
     // a variable fixed at the decision level it was taken off at, or below, may be free again
     while (numPopped > 0 && poppedLevel[numPopped - 1] > level) {
