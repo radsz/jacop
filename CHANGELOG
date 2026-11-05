@@ -1904,10 +1904,10 @@ Version 5.0 (unreleased)
      falls back to the dense loop when its recent results were denser
      than 10% (-Dorg.jacop.jalp.hyper=0.1; 0 turns the search off).
      LP bench (659 MPS up to upTo1min, 120 s): the same pivots and
-     objectives on all 621 that both solve, 626 solved instead of 621,
-     geometric mean 1.25x faster on the 230 taking 0.5 s or more and
-     1.59x on those taking 30 s or more (dws008-01 4.6x, CMS750_4 11.9 to
-     5.5 s). Wide set (220, 60 s): solved 146 -> 146 fixed search and
+     objectives on all 621 that both solve, 627 solved instead of 621,
+     geometric mean 1.25x faster on the 227 taking 0.5 s or more and
+     1.79x on those taking 30 s or more (radiationm18-12-05 99.8 to
+     16.7 s, neos-4722843-widden 65.5 to 16.4 s, CMS750_4 12.5 to 5.9 s). Wide set (220, 60 s): solved 146 -> 146 fixed search and
      147 -> 149 under -f, changes at the time limit only.
 
 Version 4.11
