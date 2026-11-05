@@ -43,8 +43,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -710,5 +714,143 @@ class LinearRelaxationTest {
     assertThat(v).isIn((Object[]) b);
     assertThat(select.getChoiceValue()).isEqualTo(1);
     assertThat(select.lpDecisions).isEqualTo(1);
+  }
+
+  /**
+   * A random capacitated concert hall model: offers in halls or declined (hall 0), offers that
+   * overlap at the start of one of them in different halls (all-different except 0), a Boolean per
+   * accepted offer, and the total price of the accepted offers maximized.
+   */
+  private static final class Halls {
+    final Store store = new Store();
+    final IntVar[] assign;
+    final IntVar objective;
+    final IntVar cost;
+
+    Halls(long seed) {
+      Random rnd = new Random(seed);
+      int n = 5 + rnd.nextInt(3);
+      int halls = 2 + rnd.nextInt(2);
+      int[] start = new int[n];
+      int[] end = new int[n];
+      assign = new IntVar[n];
+      IntVar[] accepted = new IntVar[n];
+      int[] price = new int[n + 1];
+      for (int o = 0; o < n; o++) {
+        start[o] = rnd.nextInt(6);
+        end[o] = start[o] + 1 + rnd.nextInt(4);
+        // the halls large enough for the offer: the largest ones
+        int smallest = 1 + rnd.nextInt(halls);
+        assign[o] = new IntVar(store, "a" + o, 0, 0);
+        assign[o].addDom(smallest, halls);
+        accepted[o] = new IntVar(store, "b" + o, 0, 1);
+        price[o] = 1 + rnd.nextInt(20);
+        if (rnd.nextBoolean()) {
+          store.impose(new Reified(new XgteqC(assign[o], 1), accepted[o]));
+        } else {
+          store.impose(new Reified(new XlteqC(assign[o], 0), accepted[o]));
+          price[o] = -price[o];
+        }
+      }
+      for (int o = 0; o < n; o++) {
+        List<IntVar> clique = new ArrayList<>();
+        for (int p = 0; p < n; p++) {
+          if (start[p] <= start[o] && start[o] < end[p]) {
+            clique.add(assign[p]);
+          }
+        }
+        if (clique.size() >= 2) {
+          store.impose(new AlldifferentExceptZero(clique.toArray(new IntVar[0])));
+        }
+      }
+      objective = new IntVar(store, "obj", -200, 200);
+      IntVar[] vars = Arrays.copyOf(accepted, n + 1);
+      vars[n] = objective;
+      price[n] = -1;
+      store.impose(new LinearInt(vars, price, "==", 0));
+      cost = new IntVar(store, "cost", -200, 200);
+      store.impose(new LinearInt(new IntVar[] {objective, cost}, new int[] {1, 1}, "==", 0));
+    }
+
+    // the most objective by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(
+              search.labeling(store, new SimpleSelect<>(assign, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return -search.getCostValue();
+    }
+  }
+
+  /**
+   * The value encodings of all-different-except over LP-only columns (concert-hall-cap): the
+   * relaxation of hall assignments has them, keeps the optimum under depth-first search and under
+   * lazy clause generation with the explanation checker on, and its root bound is often far below
+   * that of the model's own rows.
+   */
+  @Test
+  void valueColumnsKeepTheOptimumOfHallAssignments() {
+    int tighter = 0;
+    long checked = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      long expected = new Halls(run).optimum();
+
+      Halls dfs = new Halls(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.objective, true);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(r.valueColumns).as("seed %d", run).isPositive();
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.rootBound).as("seed %d", run).isGreaterThanOrEqualTo(expected - 1e-6);
+      tighter += r.rootBound < r.baseBound - 0.5 ? 1 : 0;
+
+      Halls lcg = new Halls(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.objective, true);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.objective)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(tighter).isGreaterThan(RUNS / 50);
+    assertThat(checked).isPositive();
+  }
+
+  /** A copy of a relaxation with LP-only columns gets its own columns over the copied variables. */
+  @Test
+  void copyMakesItsOwnValueColumns() {
+    Halls h = new Halls(3);
+    LinearRelaxation r = LinearRelaxation.of(h.store, h.objective, true);
+    h.store.impose(r);
+    assertThat(h.store.consistency()).isTrue();
+    Store target = new Store();
+    Map<Var, Var> copies = new HashMap<>();
+    VarMap map =
+        new VarMap() {
+          @Override
+          public Store target() {
+            return target;
+          }
+
+          @Override
+          @SuppressWarnings("unchecked")
+          public <V extends Var> V get(V v) {
+            return (V)
+                copies.computeIfAbsent(
+                    v, u -> new IntVar(target, u.id(), ((IntVar) u).dom().cloneLight()));
+          }
+        };
+    LinearRelaxation c = r.copy(map);
+    assertThat(c.valueColumns).isEqualTo(r.valueColumns);
+    for (int j = 0; j < c.columns(); j++) {
+      IntVar v = c.column(j);
+      if (v instanceof LpColumn lc) {
+        assertThat(copies).containsValue(lc.variable());
+      } else {
+        assertThat(copies).containsValue(v);
+      }
+    }
   }
 }
