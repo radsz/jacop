@@ -257,6 +257,92 @@ public abstract class AbstractOptionalIntervals extends Constraint implements Sa
     return false;
   }
 
+  /**
+   * Explains an atom on a presence: the master's by the intervals' presences, an interval's by the
+   * master and the other intervals, or by {@link #explainAbsence}.
+   */
+  final boolean explainPresences(AtomicTrail trail, int entry, IntVar y, EntryList out) {
+    int mark = out.size();
+    if (y == p0 && explainMasterPresence(trail, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    for (int i = 0; i < n; i++) {
+      if (y == p[i] && explainPresence(trail, entry, i, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  /** The master is absent as all intervals are, or present as one interval is. */
+  boolean explainMasterPresence(AtomicTrail trail, int entry, EntryList out) {
+    int value = fixedTo(trail, entry);
+    if (value == 0) {
+      return allAbsent(trail, entry, -1, out);
+    }
+    return value == 1 && somePresent(trail, entry, -1, out);
+  }
+
+  private boolean explainPresence(AtomicTrail trail, int entry, int i, EntryList out) {
+    int value = fixedTo(trail, entry);
+    if (value == 1) {
+      // the last candidate of a present master
+      if (presentBefore(trail, p0, entry) && allAbsent(trail, entry, i, out)) {
+        trail.addLowerBound(p0, entry, out);
+        return true;
+      }
+      return false;
+    }
+    if (value != 0) {
+      return false;
+    }
+    if (absentBefore(trail, p0, entry)) {
+      trail.addUpperBound(p0, entry, out);
+      return true;
+    }
+    return explainAbsence(trail, entry, i, out);
+  }
+
+  /** Explains that interval i is absent while the master may be present. */
+  abstract boolean explainAbsence(AtomicTrail trail, int entry, int i, EntryList out);
+
+  /** Explains a failure of a present master whose intervals are all absent. */
+  final boolean explainNoCandidate(AtomicTrail trail, int position, EntryList out) {
+    if (presentBefore(trail, p0, position) && allAbsent(trail, position, -1, out)) {
+      trail.addLowerBound(p0, position, out);
+      return true;
+    }
+    return false;
+  }
+
+  /** Every interval but skip is absent: adds their absences, or nothing and false. */
+  final boolean allAbsent(AtomicTrail trail, int position, int skip, EntryList out) {
+    int mark = out.size();
+    for (int i = 0; i < n; i++) {
+      if (i != skip) {
+        if (!absentBefore(trail, p[i], position)) {
+          out.truncate(mark);
+          return false;
+        }
+        trail.addUpperBound(p[i], position, out);
+      }
+    }
+    return true;
+  }
+
+  /** Some interval but skip is present: adds its presence, or nothing and false. */
+  final boolean somePresent(AtomicTrail trail, int position, int skip, EntryList out) {
+    for (int i = 0; i < n; i++) {
+      if (i != skip && presentBefore(trail, p[i], position)) {
+        trail.addLowerBound(p[i], position, out);
+        return true;
+      }
+    }
+    return false;
+  }
+
   String describe(String name) {
     StringBuilder result = new StringBuilder(id()).append(" : ").append(name).append("(");
     result.append(p0).append(", ").append(s0).append(", ").append(d0).append(", [");

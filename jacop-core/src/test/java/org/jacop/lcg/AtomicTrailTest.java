@@ -87,6 +87,22 @@ class AtomicTrailTest {
 
   private record Model(Constraint constraint, Predicate<int[]> relation, IntVar[] vars) {}
 
+  // whether tasks starting at start, with the lengths and uses, never load more than limit
+  private static boolean fitsUnder(int[] start, int[] length, int[] use, int limit) {
+    for (int k = 0; k < start.length; k++) {
+      int load = 0;
+      for (int j = 0; j < start.length; j++) {
+        if (start[j] <= start[k] && start[k] < start[j] + length[j]) {
+          load += use[j];
+        }
+      }
+      if (load > limit) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private static IntVar newVar(Store store, String name, Random rnd) {
     IntVar x = new IntVar(store, name, -4 + rnd.nextInt(3), 3 + rnd.nextInt(3));
     for (int k = rnd.nextInt(3); k > 0; k--) {
@@ -466,21 +482,7 @@ class AtomicTrailTest {
             durations[k] = new IntVar(s, d[k], d[k]);
           }
           Predicate<int[]> fits =
-              t -> {
-                for (int time = -10; time < 16; time++) {
-                  int load = 0;
-                  for (int k = 0; k < 4; k++) {
-                    int use = k < 3 ? t[4 + k] : 1;
-                    if (t[k] <= time && time < t[k] + d[k]) {
-                      load += use;
-                    }
-                  }
-                  if (load > 1) {
-                    return false;
-                  }
-                }
-                return true;
-              };
+              t -> fitsUnder(Arrays.copyOf(t, 4), d, new int[] {t[4], t[5], t[6], 1}, 1);
           return new Model(
               new CumulativeUnary(
                   Arrays.copyOf(v, 4), durations, resources, new IntVar(s, 1, 1), true, true),

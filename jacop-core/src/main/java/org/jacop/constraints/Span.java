@@ -221,17 +221,10 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     IntVar y = trail.variable(entry);
-    int mark = out.size();
-    if (y == p0 && explainMasterPresence(trail, entry, out)) {
+    if (explainPresences(trail, entry, y, out)) {
       return true;
     }
-    out.truncate(mark);
-    for (int i = 0; i < n; i++) {
-      if (y == p[i] && explainPresence(trail, entry, i, out)) {
-        return true;
-      }
-      out.truncate(mark);
-    }
+    int mark = out.size();
     if (y == s0 && explainMasterStart(trail, entry, out)) {
       return true;
     }
@@ -252,62 +245,12 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
   /** Explains a failure of a present master whose intervals are all absent. */
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    int position = trail.size();
-    if (presentBefore(trail, p0, position) && allAbsent(trail, position, -1, out)) {
-      trail.addLowerBound(p0, position, out);
-      return true;
-    }
-    return false;
+    return explainNoCandidate(trail, trail.size(), out);
   }
 
-  // every interval but skip is absent: adds their absences, or nothing and false
-  private boolean allAbsent(AtomicTrail trail, int position, int skip, EntryList out) {
-    int mark = out.size();
-    for (int i = 0; i < n; i++) {
-      if (i != skip) {
-        if (!absentBefore(trail, p[i], position)) {
-          out.truncate(mark);
-          return false;
-        }
-        trail.addUpperBound(p[i], position, out);
-      }
-    }
-    return true;
-  }
-
-  private boolean explainMasterPresence(AtomicTrail trail, int entry, EntryList out) {
-    int value = fixedTo(trail, entry);
-    if (value == 0) {
-      return allAbsent(trail, entry, -1, out);
-    }
-    if (value == 1) {
-      for (int i = 0; i < n; i++) {
-        if (presentBefore(trail, p[i], entry)) {
-          trail.addLowerBound(p[i], entry, out);
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
-  private boolean explainPresence(AtomicTrail trail, int entry, int i, EntryList out) {
-    int value = fixedTo(trail, entry);
-    if (value == 1) {
-      if (presentBefore(trail, p0, entry) && allAbsent(trail, entry, i, out)) {
-        trail.addLowerBound(p0, entry, out);
-        return true;
-      }
-      return false;
-    }
-    if (value != 0) {
-      return false;
-    }
-    if (absentBefore(trail, p0, entry)) {
-      trail.addUpperBound(p0, entry, out);
-      return true;
-    }
-    // present, interval i would start before the master or end after it
+  // the master may be present: interval i would start before it or end after it
+  @Override
+  boolean explainAbsence(AtomicTrail trail, int entry, int i, EntryList out) {
     int startMax = trail.maxBefore(s[i], entry);
     if (startMax < trail.minBefore(s0, entry)) {
       trail.addUpperBound(s[i], entry, out);
