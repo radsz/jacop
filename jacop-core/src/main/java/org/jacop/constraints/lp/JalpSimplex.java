@@ -57,7 +57,7 @@ final class JalpSimplex implements LpSolver {
     lp = new RevisedDualSimplex(columns, weights, rowLo, rowHi, cost, true);
   }
 
-  private JalpSimplex(RevisedDualSimplex lp) {
+  JalpSimplex(RevisedDualSimplex lp) {
     this.lp = lp;
   }
 

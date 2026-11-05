@@ -165,6 +165,15 @@ final class HighsSimplex implements LpSolver {
     return lp.removeRows(rows);
   }
 
+  /**
+   * Returns JaLP's simplex for the problem as it is now, from the basis of HiGHS.
+   *
+   * @return the simplex of JaLP
+   */
+  RevisedDualSimplex toJalp() {
+    return lp.toJalp();
+  }
+
   @Override
   public LpSolver copy() {
     return new HighsSimplex(lp.copy());

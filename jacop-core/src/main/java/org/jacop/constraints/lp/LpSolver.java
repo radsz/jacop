@@ -199,6 +199,17 @@ interface LpSolver {
   }
 
   /**
+   * Tells the simplex that the first call of the relaxation (the root solve, with its extra rows
+   * and cuts) is over. A simplex that solves the root with another engine hands its problem and
+   * basis over here; the others do nothing.
+   *
+   * @return this simplex
+   */
+  default LpSolver afterRoot() {
+    return this;
+  }
+
+  /**
    * Returns a copy with its basis, which goes on independently.
    *
    * @return the copy

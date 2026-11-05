@@ -309,6 +309,39 @@ class HighsLpTest {
   }
 
   @Test
+  void basisHandedToJalp() {
+    Random rnd = new Random(4);
+    int optimal = 0;
+    for (int t = 0; t < 200; t++) {
+      Lp p = new Lp(rnd, 5 + rnd.nextInt(20), 5 + rnd.nextInt(20), 0.4);
+      HighsLp lp = p.highs();
+      if (lp.solve(100_000) != HighsLp.OPTIMAL) {
+        continue;
+      }
+      optimal++;
+      RevisedDualSimplex jalp = lp.toJalp();
+      jalp.setExact(true);
+      assertThat(jalp.solve(100_000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(jalp.objective())
+          .isCloseTo(lp.objective(), org.assertj.core.data.Offset.offset(1e-5));
+      // from the basis of HiGHS JaLP has (almost) nothing left to do
+      assertThat(jalp.pivots()).isLessThanOrEqualTo(p.cols.length / 2 + 1);
+      // and goes on in the search as a fresh JaLP would
+      int j = rnd.nextInt(p.n);
+      p.hi[j] = p.lo[j];
+      jalp.setBounds(j, p.lo[j], p.hi[j]);
+      RevisedDualSimplex fresh = p.jalp();
+      int status = jalp.solve(100_000);
+      assertThat(status).isEqualTo(fresh.solve(100_000));
+      if (status == RevisedDualSimplex.OPTIMAL) {
+        assertThat(jalp.objective())
+            .isCloseTo(fresh.objective(), org.assertj.core.data.Offset.offset(1e-5));
+      }
+    }
+    assertThat(optimal).isPositive();
+  }
+
+  @Test
   void iterationLimitPerSolve() {
     Random rnd = new Random(3);
     Lp p = new Lp(rnd, 40, 40, 0.5);

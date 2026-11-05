@@ -464,9 +464,12 @@ public class LinearRelaxation extends Constraint
     setScope(Arrays.stream(x).filter(v -> !(v instanceof LpColumn)).map(v -> (Var) v));
   }
 
-  // the engine of the sparse simplex: "jalp" (default), or "highs" for HiGHS through the foreign
-  // function API (org.jacop.jalp.HighsLp), when its library is found
+  // the engine of the sparse simplex: "jalp" (default), "highs" for HiGHS through the foreign
+  // function API (org.jacop.jalp.HighsLp) when its library is found, or "highs-root" for HiGHS at
+  // the root and JaLP, from the basis HiGHS ended with, in the search
   private static final String ENGINE = System.getProperty("org.jacop.lp.engine", "jalp");
+
+  private static final boolean HIGHS_ROOT = "highs-root".equals(ENGINE);
 
   // with the HiGHS engine, the fewest rows of a relaxation it takes; smaller ones keep JaLP
   private static final int HIGHS_ROWS = Integer.getInteger("org.jacop.lp.highsRows", 0);
@@ -474,14 +477,16 @@ public class LinearRelaxation extends Constraint
   private static final boolean HIGHS = highsEngine();
 
   private static boolean highsEngine() {
-    if (!"highs".equals(ENGINE)) {
+    if (!"highs".equals(ENGINE) && !HIGHS_ROOT) {
       return false;
     }
     if (org.jacop.jalp.HighsLp.available()) {
       return true;
     }
     System.err.println(
-        "% org.jacop.lp.engine=highs: HiGHS not available ("
+        "% org.jacop.lp.engine="
+            + ENGINE
+            + ": HiGHS not available ("
             + org.jacop.jalp.HighsLp.loadError()
             + "), JaLP used");
     return false;
@@ -491,7 +496,9 @@ public class LinearRelaxation extends Constraint
   private static LpSolver sparse(
       int[][] columns, double[][] weights, double[] lo, double[] hi, double[] cost) {
     if (HIGHS && columns.length >= HIGHS_ROWS) {
-      return new HighsSimplex(columns, weights, lo, hi, cost);
+      return HIGHS_ROOT
+          ? new HandoffSimplex(columns, weights, lo, hi, cost)
+          : new HighsSimplex(columns, weights, lo, hi, cost);
     }
     return new JalpSimplex(columns, weights, lo, hi, cost);
   }
@@ -1044,6 +1051,13 @@ public class LinearRelaxation extends Constraint
     long started = System.nanoTime();
     try {
       solveAndPropagate(store);
+      if (first) {
+        // the root is solved: a simplex that solved it with another engine hands over now
+        lp = lp.afterRoot();
+        if (beforeExtra != null) {
+          beforeExtra = beforeExtra.afterRoot();
+        }
+      }
     } finally {
       solveNanos += System.nanoTime() - started;
       long cost =

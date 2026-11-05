@@ -86,6 +86,7 @@ public final class HighsLp {
   private static final int MODEL_UNBOUNDED = 10;
   private static final int MODEL_EMPTY = 6;
   private static final int BASIS_BASIC = 1;
+  private static final int BASIS_UPPER = 2;
   private static final int ROW_WISE = 2;
   private static final int MINIMIZE = 1;
   private static final int STATUS_ERROR = -1;
@@ -314,7 +315,10 @@ public final class HighsLp {
   private boolean[] isChangedRow;
 
   private int limitSet = -1;
+  // whether HiGHS has solved, so that it has a basis
+  private boolean solved;
   private long totalPivots;
+  private long setupWork;
   private int status = LIMIT;
 
   // the answers of the last solve, fetched when first asked for
@@ -398,6 +402,14 @@ public final class HighsLp {
     } catch (Throwable t) {
       throw new IllegalStateException(t);
     }
+  }
+
+  private long nonzeros() {
+    long nz = 0;
+    for (int[] r : rowIdx) {
+      nz += r.length;
+    }
+    return nz;
   }
 
   // whether the rows have no nonzero
@@ -516,12 +528,14 @@ public final class HighsLp {
   }
 
   /**
-   * Returns an estimate of the work done so far.
+   * Returns an estimate of the work done so far: the pivots at {@link #pivotWork()} each, and for
+   * every solve the pass over the model that HiGHS makes before it pivots (it checks the model and
+   * copies the solution, O(n + m + nonzeros)), its fixed cost per call.
    *
    * @return the work
    */
   public long work() {
-    return totalPivots * pivotWork();
+    return totalPivots * pivotWork() + setupWork;
   }
 
   /**
@@ -609,6 +623,8 @@ public final class HighsLp {
         limitSet = limit;
       }
       int ok = (int) Native.run.invokeExact(highs);
+      solved = true;
+      setupWork += OP_COST * (n + m + nonzeros());
       int iterations = 0;
       if ((int) Native.intInfo.invokeExact(highs, Native.infoIterations, one) != STATUS_ERROR) {
         iterations = one.get(JAVA_INT, 0);
@@ -956,6 +972,38 @@ public final class HighsLp {
   }
 
   /**
+   * Returns JaLP's simplex for the problem as it is now (rows, bounds and costs), started from the
+   * current basis of HiGHS, so that a solve goes on from where HiGHS stopped.
+   *
+   * @return the simplex of JaLP, scaled
+   */
+  public RevisedDualSimplex toJalp() {
+    RevisedDualSimplex lp = new RevisedDualSimplex(rowIdx, rowVal, rowLo, rowHi, cost, true);
+    for (int j = 0; j < n; j++) {
+      lp.setBounds(j, colLo[j], colHi[j]);
+    }
+    if (m == 0 || !solved) {
+      return lp;
+    }
+    int[][] b;
+    try {
+      fetchBasis();
+      b = basis();
+    } catch (IllegalStateException e) {
+      return lp; // no basis to hand over: JaLP starts from its slack basis
+    }
+    boolean[] up = new boolean[n + m];
+    for (int j = 0; j < n; j++) {
+      up[j] = b[0][j] == BASIS_UPPER;
+    }
+    for (int i = 0; i < m; i++) {
+      up[n + i] = b[1][i] == BASIS_UPPER;
+    }
+    lp.setBasis(basic.clone(), up);
+    return lp;
+  }
+
+  /**
    * Returns a deep copy with the same basis, a new HiGHS object that factorizes it when it is first
    * solved.
    *
@@ -966,6 +1014,7 @@ public final class HighsLp {
     HighsLp c = new HighsLp(rowIdx, rowVal, rowLo, rowHi, cost, colLo, colHi);
     // bounds not yet handed to this HiGHS object are in colLo/colHi, so the copy has them
     c.totalPivots = totalPivots;
+    c.setupWork = setupWork;
     try {
       MemorySegment cs = c.arena.allocateFrom(JAVA_INT, b[0].length == 0 ? new int[1] : b[0]);
       MemorySegment rs = c.arena.allocateFrom(JAVA_INT, b[1].length == 0 ? new int[1] : b[1]);

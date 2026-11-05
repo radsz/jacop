@@ -327,6 +327,40 @@ public final class RevisedDualSimplex {
   }
 
   /**
+   * Replaces the basis, for example by the optimal basis another solver found for the same problem:
+   * the basic column of each row and, for the nonbasic columns whose reduced cost does not choose a
+   * bound, the bound they are at. The basis is factorized, its steepest-edge weights computed
+   * exactly and its basic values computed again at the next solve; columns of a singular basis are
+   * replaced by slacks, as in any factorization.
+   *
+   * @param basic the column basic in each row, a structural column ({@code j < n}) or a slack
+   *     ({@code n + i}), one per row and each at most once
+   * @param atUpper for each column, structural and slack, whether it is at its upper bound when
+   *     nonbasic
+   */
+  public void setBasis(int[] basic, boolean[] atUpper) {
+    if (basic.length != m || atUpper.length != cols) {
+      throw new IllegalArgumentException("a basis needs one column per row");
+    }
+    Arrays.fill(row, -1);
+    for (int r = 0; r < m; r++) {
+      if (row[basic[r]] >= 0) {
+        throw new IllegalArgumentException("column " + basic[r] + " basic twice");
+      }
+      basis[r] = basic[r];
+      row[basic[r]] = r;
+    }
+    for (int j = 0; j < cols; j++) {
+      upper[j] = row[j] < 0 && atUpper[j];
+    }
+    clearSkipped();
+    factorValid = false;
+    betaValid = false;
+    weightsFrom = 0;
+    infeasibleRow = -1;
+  }
+
+  /**
    * Sets whether the cost perturbation is removed before an optimal solve returns, so that the
    * objective, the values and the duals are those of the costs as given.
    *
