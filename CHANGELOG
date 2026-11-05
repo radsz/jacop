@@ -2011,8 +2011,8 @@ Version 5.0 (unreleased)
      RevisedDualSimplex.givenDuals(), the same single BTRAN; dense: the
      slack columns of the tableau), so the pivots are unchanged and no
      primal clean-up is needed. On the 215 root LPs of the lp-bench
-     jacop-root set, JaLP's certificates keep 34 of the 34 LP bounds
-     that beat the column bounds (33 before; routing-flexible GCM_0007
+     jacop-root set, JaLP's certificates keep 42 of the 42 LP bounds
+     that beat the column bounds (41 before; routing-flexible GCM_0007
      lost 31767 to 31765), as many as JaLP's setExact clean-up. Wide
      set (220, 60 s): solved 150 -> 150 by default, 152 -> 151 under
      -f, within the noise of the run. -Dorg.jacop.lp.givenDuals=false
