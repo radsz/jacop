@@ -2626,7 +2626,21 @@ class LcgSolverTest {
 
   @Test
   void layeredGraphsAgreeWithBruteForce() {
-    Random rnd = new Random(31);
+    layeredGraphsAgreeWithBruteForce(false);
+  }
+
+  /**
+   * Regular (some automata nondeterministic) and decision diagrams given to the solver as clauses
+   * against brute force: no explanation is left to the constraints, which are out of the store.
+   */
+  @Test
+  void layeredGraphClausesAgreeWithBruteForce() {
+    layeredGraphsAgreeWithBruteForce(true);
+  }
+
+  private static void layeredGraphsAgreeWithBruteForce(boolean clauses) {
+    Random rnd = new Random(clauses ? 41 : 31);
+    long encoded = 0;
     int sat = 0;
     int unsat = 0;
     long own = 0;
@@ -2640,7 +2654,10 @@ class LcgSolverTest {
       }
       List<Relation> relations = new ArrayList<>();
       for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
-        relations.add(rnd.nextBoolean() ? regularRelation(x, rnd) : mddRelation(x, rnd));
+        relations.add(
+            rnd.nextBoolean()
+                ? clauses && rnd.nextBoolean() ? nfaRelation(x, rnd) : regularRelation(x, rnd)
+                : mddRelation(x, rnd));
       }
       relations.add(relation(x, rnd));
       boolean expected = bruteForce(x, relations, new int[n], 0);
@@ -2649,7 +2666,9 @@ class LcgSolverTest {
       }
       LcgSolver solver = new LcgSolver(store);
       solver.setChecking(true);
+      solver.setGraphClauses(clauses);
       int status = solver.solve();
+      encoded += solver.graphConstraintsEncoded;
       assertThat(status)
           .as("instance %d", instance)
           .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
@@ -2674,12 +2693,78 @@ class LcgSolverTest {
       }
     }
     System.out.printf(
-        "layered graphs: %d sat, %d unsat, %d own and %d generic explanations%n",
-        sat, unsat, own, generic);
+        "layered graphs%s: %d sat, %d unsat, %d own and %d generic explanations%n",
+        clauses ? " as clauses" : "", sat, unsat, own, generic);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
-    assertThat(own).isGreaterThan(300);
+    if (clauses) {
+      assertThat(encoded).isGreaterThan(1500);
+      assertThat(own).isZero();
+    } else {
+      assertThat(own).isGreaterThan(300);
+    }
+  }
+
+  /**
+   * A nondeterministic automaton of three states over 3 or 4 variables: a value leads from a state
+   * to none, one or two states.
+   */
+  private static Relation nfaRelation(IntVar[] x, Random rnd) {
+    int[] at = new int[3 + rnd.nextInt(2)];
+    for (int k = 0; k < at.length; k++) {
+      at[k] = pick(rnd, x.length, Arrays.copyOf(at, k));
+    }
+    int states = 3;
+    // next[s][v + 1] holds bit t when reading v in state s may lead to state t
+    int[][] next = new int[states][7];
+    boolean[] accepting = new boolean[states];
+    FsmState[] state = new FsmState[states];
+    Fsm fsm = new Fsm();
+    for (int s = 0; s < states; s++) {
+      state[s] = new FsmState();
+      fsm.allStates.add(state[s]);
+    }
+    fsm.initState = state[0];
+    for (int s = 0; s < states; s++) {
+      accepting[s] = rnd.nextInt(3) > 0;
+      if (accepting[s]) {
+        fsm.finalStates.add(state[s]);
+      }
+      for (int v = -1; v <= 5; v++) {
+        for (int k = rnd.nextInt(3); k > 0; k--) {
+          int t = rnd.nextInt(states);
+          if ((next[s][v + 1] & 1 << t) == 0) {
+            next[s][v + 1] |= 1 << t;
+            state[s].addTransition(new FsmTransition(new IntervalDomain(v, v), state[t]));
+          }
+        }
+      }
+    }
+    IntVar[] vars = new IntVar[at.length];
+    for (int k = 0; k < at.length; k++) {
+      vars[k] = x[at[k]];
+    }
+    return new Relation(
+        new Regular(fsm, vars),
+        t -> {
+          int current = 1;
+          for (int k : at) {
+            int reached = 0;
+            for (int s = 0; s < states; s++) {
+              if ((current & 1 << s) != 0) {
+                reached |= next[s][t[k] + 1];
+              }
+            }
+            current = reached;
+          }
+          for (int s = 0; s < states; s++) {
+            if ((current & 1 << s) != 0 && accepting[s]) {
+              return true;
+            }
+          }
+          return false;
+        });
   }
 
   /**

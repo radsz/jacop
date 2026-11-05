@@ -57,6 +57,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -69,6 +70,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.ExplanationMinimality;
@@ -2239,6 +2241,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private int solve(int... assumed) {
+    encodeGraphs();
     startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
@@ -2281,6 +2284,7 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
+    encodeGraphs();
     this.objective = trail.id(objective);
     best = null;
     lastBound = Long.MIN_VALUE;
@@ -3095,6 +3099,75 @@ public final class LcgSolver implements ExternalPropagator {
     if (clause.isEmpty() || !sat.addClause(clause.stream().mapToInt(Integer::intValue).toArray())) {
       rootFailed = true;
       clauseFailedAtRoot = true;
+    }
+  }
+
+  /**
+   * Whether layered-graph constraints (regular, mdd) become clauses of the solver in place of their
+   * propagation and explanations by cuts of the graph; the system property {@code
+   * jacop.lcg.graphClauses} turns it off.
+   */
+  private static final boolean GRAPH_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.graphClauses", "true"));
+
+  private boolean graphClauses = GRAPH_CLAUSES;
+
+  /** Whether {@link #encodeGraphs} ran. */
+  private boolean graphsEncoded;
+
+  /**
+   * Sets whether layered-graph constraints (regular, mdd) become clauses of the solver, before it
+   * starts; on by default.
+   *
+   * @param on true for clauses, false to propagate and explain the constraints themselves
+   */
+  public void setGraphClauses(boolean on) {
+    graphClauses = on;
+  }
+
+  /** Statistics: layered-graph constraints given to the solver as clauses. */
+  public long graphConstraintsEncoded;
+
+  /**
+   * Gives the solver every layered-graph constraint of the store as clauses ({@link
+   * LayeredGraphConstraint#encodeClauses}) and removes the constraint from the store. Unit
+   * propagation over the clauses is domain consistent, as the constraint is, and explains itself:
+   * explaining by cuts of the graph made the conflicts of regular-heavy models slow and their
+   * clauses long. Not under a proof, whose model has no auxiliary variables.
+   */
+  private void encodeGraphs() {
+    if (graphsEncoded) {
+      return;
+    }
+    graphsEncoded = true;
+    if (!graphClauses || proof != null || rootFailed) {
+      return;
+    }
+    ClauseModel model =
+        new ClauseModel() {
+          @Override
+          public int newLiteral() {
+            return newAuxiliary();
+          }
+
+          @Override
+          public int valueLiteral(IntVar x, int v) {
+            return eqVar(trail.id(x), v);
+          }
+
+          @Override
+          public void clause(int[] literals, int size) {
+            if (!rootFailed && !sat.addClause(Arrays.copyOf(literals, size))) {
+              rootFailed = true;
+              clauseFailedAtRoot = true;
+            }
+          }
+        };
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
+        g.removeConstraint();
+        graphConstraintsEncoded++;
+      }
     }
   }
 
