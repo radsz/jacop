@@ -258,7 +258,6 @@ class LinearRelaxationTest {
         weaker += gain < -1e-6 ? 1 : 0;
       }
     }
-    System.out.println("GOMORY stronger " + stronger + " weaker " + weaker);
     assertThat(stronger).as("stronger %d weaker %d", stronger, weaker).isGreaterThan(weaker);
   }
 

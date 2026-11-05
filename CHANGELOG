@@ -2001,6 +2001,22 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+131. The LP cut rounds at the root add exact Gomory cuts over the rows and
+     their slacks. A tableau row gives the integer equality
+     sum (lambda A)_j x_j - sum lambda_i s_i = 0 with s_i = a_i x; its MIR
+     is taken over the columns and the slacks (bounded by the row sides
+     and the column bounds) and the slacks are substituted back, which is
+     the textbook Gomory mixed-integer cut computed in longs, so no float
+     rounding enters a cut. The old aggregate MIR cuts stay. Cuts whose
+     weights are too large or too far apart are no longer dropped: small
+     weights leave the cut at their bounds and the rest is divided by the
+     least power of two that fits, each weight rounded to the bound nearest
+     the LP point with the remainder moved to the right side, which keeps
+     every integer point. trucking 05 root bound 282.2 to 287 (the
+     optimum). -Dorg.jacop.lp.slackGomory=false and
+     -Dorg.jacop.lp.reduceCuts=false switch them off. Wide set at 60 s:
+     default 162 to 162 solved (7 families better, 0 worse), -f 152 to 154.
+
 Version 4.11
 =============
 
