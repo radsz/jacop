@@ -1970,6 +1970,19 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+131. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
+     with exact probabilities: integer numerators over a common
+     denominator. ProbArith compares, rescales and rounds them outward;
+     Dist is a discrete distribution and ScenarioSet a finite set of
+     scenarios. ScenarioChance(x, a, b, w, alpha[, ok]) states that the
+     scenarios s with a[s] x <= b[s] weigh at least alpha (a chance
+     constraint over scenarios). It prunes each variable by the weight
+     of the scenarios a value would kill, explains its pruning for lazy
+     clause generation, and with the indicators ok gives the linear
+     relaxation the big-M rows of the usual expansion. ExpectedSum is
+     the expectation of a sum with random coefficients. The MiniZinc
+     library jacop_prob.mzn has scenario_chance and jacop_expected_sum.
+
 Version 4.11
 =============
 
