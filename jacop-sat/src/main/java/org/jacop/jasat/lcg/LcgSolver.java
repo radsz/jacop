@@ -397,6 +397,14 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: lower-bound runs that raised the lower bound. */
   public long lowerBoundRaised;
 
+  // objective shaving: a lower-bound run assumes the objective at most its lower bound plus this
+  // step minus one; the step doubles when the run proves that impossible and halves when the run
+  // runs out of conflicts. 0 turns shaving off: each run assumes the lower bound itself
+  private long shaveStep;
+  private boolean shaving;
+  // the factor by which the lower-bound runs' share grows after a round without a better solution
+  private double shaveGrowth = 1;
+
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
@@ -2730,7 +2738,9 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
+    double share = lowerBoundShare;
     while (true) {
+      long before = best == null ? Long.MAX_VALUE : best[objective];
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
       long start = System.nanoTime();
@@ -2744,27 +2754,66 @@ public final class LcgSolver implements ExternalPropagator {
           return result;
         }
       }
-      int lb = vars[objective].min(); // after solve the domains are those of level 0
-      if (lowerBoundShare > 0 && best != null && lb < best[objective]) {
-        int lit = -geLit(objective, lb + 1); // objective <= lb
-        limit = sat.conflicts + (long) (budget * lowerBoundShare);
-        sat.setConflictLimit(limit);
-        lowerBoundRuns++;
-        result = solve(lit);
-        if (result == CdclSolver.SAT) {
-          return result; // a solution at the smallest value of the objective
+      if (lowerBoundShare > 0 && best != null) {
+        if (shaveGrowth > 1) {
+          // a round that did not improve the best solution gives the bound more of the next one
+          share = best[objective] < before ? lowerBoundShare : Math.min(share * shaveGrowth, 4);
         }
-        if (result == CdclSolver.UNSAT) {
-          if (sat.failedAssumptions().length == 0) {
-            return result; // no better solution at all
-          }
-          sat.addClause(-lit); // objective >= lb + 1
-          lowerBoundRaised++;
-        } else if (sat.conflicts < limit) {
+        result = lowerBoundRun((long) (budget * share));
+        if (result != CdclSolver.UNKNOWN) {
           return result;
         }
       }
       budget += budget / 2;
+    }
+  }
+
+  /**
+   * One lower-bound run of {@link #minimizeWithLowerBoundSearch}: assumes the objective at most a
+   * target and, when that is impossible, raises its lower bound above the target by a clause. The
+   * target is the lower bound itself, or with shaving a step above it; with shaving, the conflicts
+   * a proof leaves go to the next, doubled step.
+   *
+   * @return {@link CdclSolver#UNKNOWN} to go on, or the result of the search when the run proved
+   *     the best solution optimal or that there is none
+   */
+  private int lowerBoundRun(long conflicts) {
+    long limit = sat.conflicts + conflicts;
+    int raised = Integer.MIN_VALUE; // the bound this call proved, which the root may not show yet
+    while (true) {
+      // after solve the domains are those of level 0
+      int lb = Math.max(vars[objective].min(), raised);
+      if (best == null || lb >= best[objective]) {
+        return CdclSolver.UNKNOWN;
+      }
+      // objective <= target: the lower bound itself, or a step above it when shaving
+      int target = shaving ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
+      int lit = -geLit(objective, target + 1);
+      sat.setConflictLimit(limit);
+      lowerBoundRuns++;
+      int result = solve(lit);
+      if (result == CdclSolver.SAT) {
+        return result; // a solution at the smallest value of the objective
+      }
+      if (result != CdclSolver.UNSAT) {
+        if (sat.conflicts < limit) {
+          return result; // stopped by the deadline
+        }
+        shaveStep = Math.max(1, shaveStep / 2);
+        return CdclSolver.UNKNOWN;
+      }
+      if (sat.failedAssumptions().length == 0 || best[objective] <= target) {
+        // no better solution at all; or the run found one within the target and then none
+        // better, and every better one would be within the target too
+        return result;
+      }
+      sat.addClause(-lit); // objective >= target + 1
+      lowerBoundRaised++;
+      raised = target + 1;
+      if (!shaving) {
+        return CdclSolver.UNKNOWN;
+      }
+      shaveStep = Math.min(2 * shaveStep, 1L << 30);
     }
   }
 
@@ -2858,6 +2907,31 @@ public final class LcgSolver implements ExternalPropagator {
   public void setLowerBoundSearch(double share, long firstRun) {
     lowerBoundShare = share;
     lowerBoundBudget = Math.max(1, firstRun);
+  }
+
+  /**
+   * Turns objective shaving on in the lower-bound runs of {@link #setLowerBoundSearch}: instead of
+   * the objective at its lower bound, each run assumes it at most a step above the bound. A run
+   * that proves the assumption impossible raises the bound by the whole step and doubles it; a run
+   * that runs out of conflicts halves it. The bound then closes on the best solution by large steps
+   * when the steps are easy to prove, as CP-SAT's objective shaving does.
+   *
+   * @param on whether to shave
+   */
+  public void setShaving(boolean on) {
+    shaving = on;
+    shaveStep = 1;
+  }
+
+  /**
+   * Makes the share of conflicts that lower-bound runs get grow by the given factor after each
+   * round of branch and bound that did not improve the best solution, up to four times the
+   * conflicts of branch and bound; an improving round sets it back.
+   *
+   * @param growth the factor, 1 for a fixed share
+   */
+  public void setLowerBoundGrowth(double growth) {
+    shaveGrowth = Math.max(1, growth);
   }
 
   /**

@@ -636,6 +636,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraRows
             + "\n%%%mzn-stat: lpExtraDropped="
             + r.extraDropped
+            + "\n%%%mzn-stat: lpValueColumns="
+            + r.valueColumns
             + "\n%%%mzn-stat-end");
   }
 
@@ -2046,6 +2048,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
       lcg.setLowerBoundSearch(Double.parseDouble(options.freeConfig("lcg-lb", "0.5")), 1000);
+      // objective shaving in those runs: each assumes the objective a growing step above its bound
+      lcg.setShaving("on".equals(options.freeConfig("lcg-shave", "on")));
+      lcg.setLowerBoundGrowth(Double.parseDouble(options.freeConfig("lcg-lb-growth", "1")));
       // core-guided search for a sum objective before branch and bound: its share of the time,
       // and the conflicts one call of the solver may take before it stops. With cost variables
       // first, branch and bound finds near-optimal solutions at once and needs the time more:
@@ -2429,6 +2434,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().semanticallyRemoved
             + "\n%%%mzn-stat: lcgSemanticUips="
             + lcg.sat().semanticUips
+            + "\n%%%mzn-stat: lcgLowerBoundRuns="
+            + lcg.lowerBoundRuns
+            + "\n%%%mzn-stat: lcgLowerBoundRaised="
+            + lcg.lowerBoundRaised
             + coreStatistics()
             + lnsStatistics(lcg.lns())
             + sharingStatistics(lcg)

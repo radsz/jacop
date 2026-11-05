@@ -112,6 +112,10 @@ public class LinearRelaxation extends Constraint
   private static final long GOMORY_SCALE = 1L << 20;
 
   private final IntVar[] x;
+  // whether each column is an auxiliary column of the relaxation ({@link LpColumn}), not a
+  // variable of the store, and whether there is any
+  private final boolean[] lpOnly;
+  private final boolean anyLpOnly;
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -236,6 +240,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: whether those rows were dropped in search, as too many solves hit the limit. */
   public boolean extraDropped;
+
+  /** Statistics: the auxiliary columns ({@link LpColumn}) of the relaxation. */
+  public int valueColumns;
 
   /** Statistics: the objective bound of the first solve without those rows, or NaN. */
   public double baseBound = Double.NaN;
@@ -394,6 +401,12 @@ public class LinearRelaxation extends Constraint
       sides.add(new long[] {f.relation(), f.c()});
     }
     x = columns.toArray(new IntVar[0]);
+    lpOnly = new boolean[x.length];
+    for (int j = 0; j < x.length; j++) {
+      lpOnly[j] = x[j] instanceof LpColumn;
+      valueColumns += lpOnly[j] ? 1 : 0;
+    }
+    anyLpOnly = valueColumns > 0;
     int further = rc.size() - base;
     extraColumns = rc.subList(base, rc.size()).toArray(new int[0][]);
     extraWeights = rw.subList(base, rw.size()).toArray(new long[0][]);
@@ -447,7 +460,8 @@ public class LinearRelaxation extends Constraint
           }
         };
     queueIndex = 4;
-    setScope(x);
+    // the auxiliary columns are not variables of the store: nothing to watch or prune there
+    setScope(Arrays.stream(x).filter(v -> !(v instanceof LpColumn)).map(v -> (Var) v));
   }
 
   // the sparse simplex, JaLP's
@@ -576,9 +590,20 @@ public class LinearRelaxation extends Constraint
     if (LINEARIZE) {
       relaxed.addAll(Linearizations.encodings(constraints));
     }
+    // the value encodings over auxiliary columns come first, so that a size cap leaves out other
+    // rows before them; they are many rows by nature (a row per value and constraint) and are not
+    // held to the trial cap of the sparse simplex chosen by size
+    List<LinearForm> columnRows = LINEARIZE ? Linearizations.valueColumns(constraints) : List.of();
+    List<LinearForm> candidates = new ArrayList<>();
+    int exempt = 0;
+    for (LinearForm f : columnRows) {
+      if (Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
+        candidates.add(f);
+        exempt++;
+      }
+    }
     // the rows of the other constraints; rows over a variable that was substituted away are left
     // out
-    List<LinearForm> candidates = new ArrayList<>();
     for (LinearForm f : relaxed) {
       if (f.relation() != LinearForm.NE
           && f.vars().length >= 2
@@ -597,6 +622,15 @@ public class LinearRelaxation extends Constraint
       // larger ones, also those over the dense size cap, which would get no relaxation at all
       simplex = Simplex.SPARSE;
     }
+    if (auto && simplex == Simplex.DENSE && exempt > 0) {
+      List<LinearForm> withColumns = new ArrayList<>(forms);
+      withColumns.addAll(candidates.subList(0, exempt));
+      if (forms.size() + exempt >= SPARSE_ROWS || tooLarge(withColumns, Simplex.DENSE)) {
+        // the encodings are rows of the model as a MIP states it: the simplex is chosen by their
+        // count too, and the sparse one takes them all when the dense tableau cannot
+        simplex = Simplex.SPARSE;
+      }
+    }
     if (tooLarge(forms, simplex)) {
       return null;
     }
@@ -605,7 +639,7 @@ public class LinearRelaxation extends Constraint
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
     // can take a minute and then drop them all)
-    fitsSimplex(forms, candidates, simplex, auto, further);
+    fitsSimplex(forms, candidates, simplex, auto, exempt, further);
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
@@ -670,6 +704,7 @@ public class LinearRelaxation extends Constraint
       List<LinearForm> candidates,
       Simplex simplex,
       boolean denseCap,
+      int exempt,
       List<LinearForm> further) {
     if (tooLarge(forms, simplex)) {
       return false;
@@ -691,7 +726,7 @@ public class LinearRelaxation extends Constraint
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS
               || denseCap
-                  && (further.size() >= 2L * forms.size() + SPARSE_ROWS
+                  && (further.size() >= 2L * forms.size() + SPARSE_ROWS + exempt
                       || vars.size() + added > SPARSE_MAX_COLUMNS)) {
         return false;
       }
@@ -1016,14 +1051,17 @@ public class LinearRelaxation extends Constraint
 
   // fails when every variable is fixed and a row does not hold
   private void checkGround() {
-    for (IntVar v : x) {
-      if (!v.singleton()) {
+    for (int j = 0; j < x.length; j++) {
+      if (!lpOnly[j] && !x[j].singleton()) {
         return;
       }
     }
     for (int i = 0; i < rows(); i++) {
       int[] cs = rowColumns[i];
       long[] ws = rowWeights[i];
+      if (anyLpOnly && overLpOnly(cs)) {
+        continue; // the auxiliary columns have no value; the certificates check such rows
+      }
       long sum = 0;
       try {
         for (int k = 0; k < cs.length; k++) {
@@ -1047,6 +1085,15 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  private boolean overLpOnly(int[] cs) {
+    for (int j : cs) {
+      if (lpOnly[j]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private void solveAndPropagate(Store store) {
     if (rows() == 0 && (calls > 0 || extraColumns.length == 0)) {
       return; // the bounds of the variables alone deduce nothing
@@ -1056,7 +1103,7 @@ public class LinearRelaxation extends Constraint
       lp.setBounds(j, x[j].min(), x[j].max());
     }
     long size = Math.max(1, lp.pivotWork());
-    if (beforeExtra != null && bySize) {
+    if (beforeExtra != null && bySize && !anyLpOnly) {
       // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense
       // tableau they would make, as before the choice: a sparse work unit takes two to four times
       // a dense entry, and the sparse limit alone keeps rows that slow every solve (slnb7x7)
@@ -1092,7 +1139,10 @@ public class LinearRelaxation extends Constraint
       long extraHits = limits - extraLimits;
       // the first solves after the root often stop at the limit while the search moves far from
       // the root solution: judge the extra rows only over 20 solves per limit or more
+      // the value encodings over auxiliary columns are the relaxation: without them it is the
+      // model's few linear rows, so they stay, and the back-off of the solves bounds their cost
       if (beforeExtra != null
+          && !anyLpOnly
           && extraHits >= EXTRA_LIMITS
           && extraHits * 20 > calls
           && calls >= 20L * EXTRA_LIMITS) {
@@ -1587,20 +1637,48 @@ public class LinearRelaxation extends Constraint
    */
   private LinearForm[] combine(Aggregate g) {
     int[] columns = g.columns();
-    int size = columns.length;
+    long[] coef = g.coef();
+    long upper = g.upper();
+    long lower = g.lower();
+    int size = 0;
+    try {
+      for (int k = 0; k < columns.length; k++) {
+        if (coef[k] == 0) {
+          continue;
+        }
+        int j = columns[k];
+        if (lpOnly[j]) {
+          // an auxiliary column leaves the inequality at the bound that keeps it valid: sum c x
+          // <= upper gives sum_rest c x <= upper - min(c lo, c hi), and sum c x >= lower gives
+          // sum_rest c x >= lower - max(c lo, c hi)
+          long a = Math.multiplyExact(coef[k], (long) x[j].min());
+          long b = Math.multiplyExact(coef[k], (long) x[j].max());
+          upper = Math.subtractExact(upper, Math.min(a, b));
+          lower = Math.subtractExact(lower, Math.max(a, b));
+        } else {
+          size++;
+        }
+      }
+    } catch (ArithmeticException overflow) {
+      return new LinearForm[0];
+    }
     if (size == 0) {
       return new LinearForm[0];
     }
     IntVar[] vars = new IntVar[size];
-    long[] w = g.coef().clone();
+    long[] w = new long[size];
     long[] neg = new long[size];
-    for (int k = 0; k < size; k++) {
-      vars[k] = x[columns[k]];
-      neg[k] = -w[k];
+    for (int k = 0, m = 0; k < columns.length; k++) {
+      int j = columns[k];
+      if (coef[k] != 0 && !lpOnly[j]) {
+        vars[m] = x[j];
+        w[m] = coef[k];
+        neg[m++] = -coef[k];
+      }
     }
     return new LinearForm[] {
-      g.hasUpper() ? new LinearForm(vars, w, g.upper(), LinearForm.LE) : null,
-      g.hasLower() ? new LinearForm(vars, neg, -g.lower(), LinearForm.LE) : null
+      g.hasUpper() ? new LinearForm(vars, w, upper, LinearForm.LE) : null,
+      g.hasLower() ? new LinearForm(vars, neg, -lower, LinearForm.LE) : null
     };
   }
 
@@ -2052,13 +2130,16 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public LinearRelaxation copy(VarMap map) {
+    // the auxiliary columns are not in the store: the copy gets its own
+    Map<IntVar, IntVar> columns = new IdentityHashMap<>();
     List<LinearForm> copies = new ArrayList<>();
     for (LinearForm f : forms) {
-      copies.add(new LinearForm(map.get(f.vars()), f.weights(), f.c(), f.relation()));
+      copies.add(new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
     }
     List<LinearForm> extraCopies = new ArrayList<>();
     for (LinearForm f : keptExtraForms.isEmpty() ? extraForms : keptExtraForms) {
-      extraCopies.add(new LinearForm(map.get(f.vars()), f.weights(), f.c(), f.relation()));
+      extraCopies.add(
+          new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
     }
     LinearRelaxation c =
         new LinearRelaxation(
@@ -2066,6 +2147,18 @@ public class LinearRelaxation extends Constraint
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
     return c;
+  }
+
+  private static IntVar[] copied(IntVar[] vars, VarMap map, Map<IntVar, IntVar> columns) {
+    IntVar[] result = new IntVar[vars.length];
+    for (int k = 0; k < vars.length; k++) {
+      IntVar v = vars[k];
+      result[k] =
+          v instanceof LpColumn c
+              ? columns.computeIfAbsent(v, u -> c.copy(map.get(c.variable())))
+              : map.get(v);
+    }
+    return result;
   }
 
   @Override

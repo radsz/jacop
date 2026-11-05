@@ -36,6 +36,8 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 
 /**
  * Common part of {@link Alternative} and {@link Span}: a master interval (presence p0, start s0,
@@ -171,6 +173,174 @@ public abstract class AbstractOptionalIntervals extends Constraint implements Sa
   /** Whether x and y have a common value. */
   static boolean intersect(IntVar x, IntVar y) {
     return x == y || x.domain.isIntersecting(y.domain);
+  }
+
+  // lazy clause generation: helpers of the explanations of the subclasses
+
+  /** The most values an explanation of an equality walks over before it gives up. */
+  private static final int EQUAL_SPAN = 256;
+
+  /**
+   * The value a trail entry gives a 0/1 variable.
+   *
+   * @return 1, 0, or -1 when the atom does not fix it
+   */
+  static int fixedTo(AtomicTrail trail, int entry) {
+    int v = trail.value(entry);
+    return switch (trail.kind(entry)) {
+      case AtomicTrail.GE -> v >= 1 ? 1 : -1;
+      case AtomicTrail.LE -> v <= 0 ? 0 : -1;
+      default -> v == 0 ? 1 : v == 1 ? 0 : -1;
+    };
+  }
+
+  static boolean presentBefore(AtomicTrail trail, IntVar b, int position) {
+    return trail.minBefore(b, position) >= 1;
+  }
+
+  static boolean absentBefore(AtomicTrail trail, IntVar b, int position) {
+    return trail.maxBefore(b, position) <= 0;
+  }
+
+  /**
+   * Explains an atom on x that x = y implies, by the domain of y and the holes of x just before the
+   * entry. Gives up (returns false) on long runs of holes.
+   */
+  static boolean explainEqual(AtomicTrail trail, int entry, IntVar x, IntVar y, EntryList out) {
+    int v = trail.value(entry);
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.NE) {
+      return excludedEither(trail, entry, x, y, v, out);
+    }
+    boolean lower = kind == AtomicTrail.GE;
+    int yb = lower ? trail.minBefore(y, entry) : trail.maxBefore(y, entry);
+    if (lower ? yb >= v : yb <= v) {
+      trail.addBoundReaching(y, entry, lower, v, out);
+      return true;
+    }
+    // the values between y's bound and v are out of x or y
+    if (Math.abs((long) v - yb) > EQUAL_SPAN) {
+      return false;
+    }
+    trail.addBoundReaching(y, entry, lower, yb, out);
+    for (int w = yb; w != v; w += lower ? 1 : -1) {
+      if (!excludedEither(trail, entry, x, y, w, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean excludedEither(
+      AtomicTrail trail, int entry, IntVar x, IntVar y, int w, EntryList out) {
+    return trail.excludedBefore(y, w, entry, out) || trail.excludedBefore(x, w, entry, out);
+  }
+
+  /**
+   * Explains that two intervals of values cannot meet, by their bounds just before a position.
+   *
+   * @return false when the bounds overlap
+   */
+  static boolean explainApart(AtomicTrail trail, int position, IntVar x, IntVar y, EntryList out) {
+    int xMax = trail.maxBefore(x, position);
+    int yMax = trail.maxBefore(y, position);
+    if (xMax < trail.minBefore(y, position)) {
+      trail.addUpperBound(x, position, out);
+      trail.addBoundReaching(y, position, true, (long) xMax + 1, out);
+      return true;
+    }
+    if (yMax < trail.minBefore(x, position)) {
+      trail.addUpperBound(y, position, out);
+      trail.addBoundReaching(x, position, true, (long) yMax + 1, out);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Explains an atom on a presence: the master's by the intervals' presences, an interval's by the
+   * master and the other intervals, or by {@link #explainAbsence}.
+   */
+  final boolean explainPresences(AtomicTrail trail, int entry, IntVar y, EntryList out) {
+    int mark = out.size();
+    if (y == p0 && explainMasterPresence(trail, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    for (int i = 0; i < n; i++) {
+      if (y == p[i] && explainPresence(trail, entry, i, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  /** The master is absent as all intervals are, or present as one interval is. */
+  boolean explainMasterPresence(AtomicTrail trail, int entry, EntryList out) {
+    int value = fixedTo(trail, entry);
+    if (value == 0) {
+      return allAbsent(trail, entry, -1, out);
+    }
+    return value == 1 && somePresent(trail, entry, -1, out);
+  }
+
+  private boolean explainPresence(AtomicTrail trail, int entry, int i, EntryList out) {
+    int value = fixedTo(trail, entry);
+    if (value == 1) {
+      // the last candidate of a present master
+      if (presentBefore(trail, p0, entry) && allAbsent(trail, entry, i, out)) {
+        trail.addLowerBound(p0, entry, out);
+        return true;
+      }
+      return false;
+    }
+    if (value != 0) {
+      return false;
+    }
+    if (absentBefore(trail, p0, entry)) {
+      trail.addUpperBound(p0, entry, out);
+      return true;
+    }
+    return explainAbsence(trail, entry, i, out);
+  }
+
+  /** Explains that interval i is absent while the master may be present. */
+  abstract boolean explainAbsence(AtomicTrail trail, int entry, int i, EntryList out);
+
+  /** Explains a failure of a present master whose intervals are all absent. */
+  final boolean explainNoCandidate(AtomicTrail trail, int position, EntryList out) {
+    if (presentBefore(trail, p0, position) && allAbsent(trail, position, -1, out)) {
+      trail.addLowerBound(p0, position, out);
+      return true;
+    }
+    return false;
+  }
+
+  /** Every interval but skip is absent: adds their absences, or nothing and false. */
+  final boolean allAbsent(AtomicTrail trail, int position, int skip, EntryList out) {
+    int mark = out.size();
+    for (int i = 0; i < n; i++) {
+      if (i != skip) {
+        if (!absentBefore(trail, p[i], position)) {
+          out.truncate(mark);
+          return false;
+        }
+        trail.addUpperBound(p[i], position, out);
+      }
+    }
+    return true;
+  }
+
+  /** Some interval but skip is present: adds its presence, or nothing and false. */
+  final boolean somePresent(AtomicTrail trail, int position, int skip, EntryList out) {
+    for (int i = 0; i < n; i++) {
+      if (i != skip && presentBefore(trail, p[i], position)) {
+        trail.addLowerBound(p[i], position, out);
+        return true;
+      }
+    }
+    return false;
   }
 
   String describe(String name) {

@@ -428,7 +428,8 @@ class CumulativeBruteForceTest {
         int d = 1 + random.nextInt(3);
         durations[i] = random.nextInt(4) == 0 ? values(random, d - 1, d + 1) : new int[] {d};
         if (unary) {
-          resources[i] = new int[] {1};
+          // a use of 0 or 1 is the presence of an optional task
+          resources[i] = random.nextInt(4) == 0 ? new int[] {0, 1} : new int[] {1};
         } else {
           int r = 1 + random.nextInt(3);
           resources[i] = random.nextInt(4) == 0 ? values(random, r - 1, r) : new int[] {r};
