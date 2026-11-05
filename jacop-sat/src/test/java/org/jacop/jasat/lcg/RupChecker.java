@@ -189,7 +189,7 @@ final class RupChecker {
                   sum.add(new Object[] {e.getValue(), e.getKey()});
                 }
               }
-              stack.push(normalise(sum, a.degree() + b.degree()));
+              stack.push(normalise(sum, Math.addExact(a.degree(), b.degree())));
             } else if (k + 1 < tokens.length
                 && (tokens[k + 1].equals("*") || tokens[k + 1].equals("d"))) {
               long scalar = Long.parseLong(t);
@@ -197,9 +197,15 @@ final class RupChecker {
               Pb c = stack.pop();
               Map<String, Long> scaled = new LinkedHashMap<>();
               c.terms()
-                  .forEach((l, a) -> scaled.put(l, divide ? Math.ceilDiv(a, scalar) : a * scalar));
+                  .forEach(
+                      (l, a) ->
+                          scaled.put(
+                              l, divide ? Math.ceilDiv(a, scalar) : Math.multiplyExact(a, scalar)));
               long degree = Math.max(0, c.degree());
-              stack.push(new Pb(scaled, divide ? Math.ceilDiv(degree, scalar) : degree * scalar));
+              stack.push(
+                  new Pb(
+                      scaled,
+                      divide ? Math.ceilDiv(degree, scalar) : Math.multiplyExact(degree, scalar)));
             } else if (Character.isDigit(t.charAt(0))) {
               Pb c = db.get(Long.parseLong(t));
               if (c == null) {
@@ -463,20 +469,20 @@ final class RupChecker {
       long a = (Long) t[0];
       String l = (String) t[1];
       if (l.startsWith("~")) {
-        constant += a;
-        coefficient.merge(l.substring(1), -a, Long::sum);
+        constant = Math.addExact(constant, a);
+        coefficient.merge(l.substring(1), -a, Math::addExact);
       } else {
-        coefficient.merge(l, a, Long::sum);
+        coefficient.merge(l, a, Math::addExact);
       }
     }
-    long degree = rhs - constant;
+    long degree = Math.subtractExact(rhs, constant);
     Map<String, Long> out = new LinkedHashMap<>();
     for (Map.Entry<String, Long> e : coefficient.entrySet()) {
       if (e.getValue() > 0) {
         out.put(e.getKey(), e.getValue());
       } else if (e.getValue() < 0) {
         out.put("~" + e.getKey(), -e.getValue());
-        degree -= e.getValue();
+        degree = Math.subtractExact(degree, e.getValue());
       }
     }
     return new Pb(out, degree);
@@ -498,7 +504,7 @@ final class RupChecker {
     for (Map.Entry<String, Long> e : c.terms().entrySet()) {
       Boolean v = truth(e.getKey(), value);
       if (satisfied ? Boolean.TRUE.equals(v) : !Boolean.FALSE.equals(v)) {
-        s += e.getValue();
+        s = Math.addExact(s, e.getValue());
       }
     }
     return s;

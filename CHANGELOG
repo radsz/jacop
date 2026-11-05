@@ -2001,6 +2001,22 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+132. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
+     derives each of its deductions. Under --proof the relaxation is built
+     by LinearRelaxation.ofModel: its rows are the linear constraints whose
+     proof model is their relation as a line (LinearForms.ofModelLine:
+     linear, LinearBool and the LinearExplainable ones), with no clause
+     rows, table cliques, linearised rows of other constraints,
+     substitution of split sums or cuts. Each bound, failure and
+     infeasibility it propagates keeps its certificate (the rows and the
+     exact integer multipliers it combines, divided by their gcd), and the
+     proof writes the reason as a pol step over those rows' lines (the
+     <= line for a positive multiplier, the >= line for a negative one)
+     followed by the rup step of the clause. The relaxation's deductions
+     are not divided by the gcd of their weights under --proof, which
+     changes no bound they propagate. The pol steps are deleted at the
+     next restart. Before, --proof turned --lp off.
+
 Version 4.11
 =============
 
