@@ -1953,6 +1953,21 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+130. Rounded capacity cuts in the linear relaxation, from each Routes
+     with its arcs among the columns: the routes enter a set S of
+     customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
+     form, the arcs inside S are at most |S| minus that). The sets come
+     from the LP solution at the root, as the connected components of
+     its support graph and sets grown greedily from each customer; up
+     to 50 rounds of 50 cuts run before the MIR cuts and are dropped if
+     they leave the bound where it was. -Dorg.jacop.lp.capacityCuts=false
+     turns them off. The FlatZinc Routes detection (item 122) is now on
+     by default, so the vrp models get them (-Dorg.jacop.fz.routes=false
+     turns it off). vrp A-n34-k5: root bound 375 to 756, optimum near
+     778. 25 vrp instances of the Challenge, 60 s, against develop-5.0:
+     default 21 better / 4 worse (objective geomean 0.916), 3 proved
+     optimal; -f 14 / 11 (0.988), 4 proved optimal.
+
 Version 4.11
 =============
 

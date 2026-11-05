@@ -227,10 +227,11 @@ class RoutesFlatzincTest {
   }
 
   @Test
-  void detectionIsOffByDefault() throws IOException {
+  void detectionIsOnByDefault() throws IOException {
     Model model = randomModel(new Random(3), false);
-    assertTrue(run(model.fzn(), "-debug").contains("% redundant Routes"));
     System.clearProperty(PROPERTY);
+    assertTrue(run(model.fzn(), "-debug").contains("% redundant Routes"));
+    System.setProperty(PROPERTY, "false");
     assertFalse(run(model.fzn(), "-debug").contains("% redundant Routes"));
   }
 
