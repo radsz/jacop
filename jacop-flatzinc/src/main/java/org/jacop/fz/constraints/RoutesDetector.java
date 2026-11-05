@@ -160,12 +160,28 @@ public class RoutesDetector implements ParserTreeConstants {
     if (a == null || x == null || a.length != x.length) {
       return;
     }
-    int r = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    Integer rhs = constant((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (rhs == null) {
+      return;
+    }
+    int r = rhs;
     if (name.equals("int_lin_le")) {
       load(a, x, r);
     } else {
       exactlyOne(a, x, r);
     }
+  }
+
+  // the value of a right-hand side that is a constant, or null when it is a variable
+  private Integer constant(ASTScalarFlatExpr e) {
+    if (e.getType() == 2) {
+      IntVar v = support.getVariable(e);
+      return v.singleton() ? v.value() : null;
+    }
+    if (e.getType() == 3 && support.dictionary.getIntArray(e.getIdent()) == null) {
+      return null;
+    }
+    return support.getInt(e);
   }
 
   // sum x = 1 over at least two 0/1 variables, no variable twice
