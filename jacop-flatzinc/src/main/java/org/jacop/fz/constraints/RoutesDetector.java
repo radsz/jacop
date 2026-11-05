@@ -74,6 +74,9 @@ public class RoutesDetector implements ParserTreeConstants {
 
   private final Support support;
 
+  // whether the routes found are imposed, or only recorded for the neighbourhoods of LNS
+  private final boolean impose;
+
   // exactly-one rows: each a list of 0/1 variables
   private final List<IntVar[]> rows = new ArrayList<>();
 
@@ -91,7 +94,19 @@ public class RoutesDetector implements ParserTreeConstants {
    * @param support the support of the FlatZinc front end.
    */
   public RoutesDetector(Support support) {
+    this(support, true);
+  }
+
+  /**
+   * It constructs a detector that imposes the routes it finds, or only records them for the route
+   * neighbourhoods of large neighbourhood search (see {@code Tables.lnsRoutes()}).
+   *
+   * @param support the parser support.
+   * @param impose true to impose the routes as redundant constraints.
+   */
+  public RoutesDetector(Support support, boolean impose) {
     this.support = support;
+    this.impose = impose;
   }
 
   /**
@@ -366,6 +381,14 @@ public class RoutesDetector implements ParserTreeConstants {
     routes.setDegrees(false);
     // redundant, so degree-based variable selections see the degrees of the model
     routes.setDegreeWeight(0);
+    if (!impose) {
+      support.dictionary.addLnsRoutes(routes);
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% routes for LNS: " + customers + " customers, " + tails.length + " arcs");
+      }
+      return true;
+    }
     if (support.options.debug()) {
       FzConsole.println(
           "% redundant Routes: "
