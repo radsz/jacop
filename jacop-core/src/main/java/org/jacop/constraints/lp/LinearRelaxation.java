@@ -464,9 +464,35 @@ public class LinearRelaxation extends Constraint
     setScope(Arrays.stream(x).filter(v -> !(v instanceof LpColumn)).map(v -> (Var) v));
   }
 
-  // the sparse simplex, JaLP's
+  // the engine of the sparse simplex: "jalp" (default), or "highs" for HiGHS through the foreign
+  // function API (org.jacop.jalp.HighsLp), when its library is found
+  private static final String ENGINE = System.getProperty("org.jacop.lp.engine", "jalp");
+
+  // with the HiGHS engine, the fewest rows of a relaxation it takes; smaller ones keep JaLP
+  private static final int HIGHS_ROWS = Integer.getInteger("org.jacop.lp.highsRows", 0);
+
+  private static final boolean HIGHS = highsEngine();
+
+  private static boolean highsEngine() {
+    if (!"highs".equals(ENGINE)) {
+      return false;
+    }
+    if (org.jacop.jalp.HighsLp.available()) {
+      return true;
+    }
+    System.err.println(
+        "% org.jacop.lp.engine=highs: HiGHS not available ("
+            + org.jacop.jalp.HighsLp.loadError()
+            + "), JaLP used");
+    return false;
+  }
+
+  // the sparse simplex, JaLP's or HiGHS's
   private static LpSolver sparse(
       int[][] columns, double[][] weights, double[] lo, double[] hi, double[] cost) {
+    if (HIGHS && columns.length >= HIGHS_ROWS) {
+      return new HighsSimplex(columns, weights, lo, hi, cost);
+    }
     return new JalpSimplex(columns, weights, lo, hi, cost);
   }
 
