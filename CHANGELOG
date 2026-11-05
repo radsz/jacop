@@ -1911,7 +1911,23 @@ Version 5.0 (unreleased)
      mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
      concert-hall-cap changes its LP) and 126 -> 128 in default mode.
 
-128. Set search and set builtins, checked by a new brute-force test
+128. JaLP solves with the LU factors are hypersparse: a solve whose
+     right-hand side is a list of nonzeros finds the reached pivots by a
+     depth-first search (Gilbert-Peierls) and visits them in the order of
+     the dense loop, so results are bit-identical and the simplex makes
+     the same pivots. The dual simplex keeps rho, the entering column,
+     the DSE vector and the rows outside their bounds as index lists, and
+     the Forrest-Tomlin row elimination uses the same search. A solve
+     falls back to the dense loop when its recent results were denser
+     than 10% (-Dorg.jacop.jalp.hyper=0.1; 0 turns the search off).
+     LP bench (659 MPS up to upTo1min, 120 s): the same pivots and
+     objectives on all 621 that both solve, 627 solved instead of 621,
+     geometric mean 1.25x faster on the 227 taking 0.5 s or more and
+     1.79x on those taking 30 s or more (radiationm18-12-05 99.8 to
+     16.7 s, neos-4722843-widden 65.5 to 16.4 s, CMS750_4 12.5 to 5.9 s). Wide set (220, 60 s): solved 146 -> 146 fixed search and
+     147 -> 149 under -f, changes at the time limit only.
+
+129. Set search and set builtins, checked by a new brute-force test
      (SetBuiltinsFuzzTest, setfuzz.trials) on random FlatZinc models of
      all set builtins and jacop_* set globals, against enumeration of
      their MiniZinc meaning, with plain search, LCG, free search and
@@ -1939,7 +1955,7 @@ Version 5.0 (unreleased)
      (SET_VAL_MIN_INC, SET_VAL_MAX_INC). OR-Tools CP-SAT reads indomain_min
      on sets as exclude-first (the smallest value of the element Booleans).
 
-129. Under --lcg -f the core-guided phase no longer depends on the clock.
+130. Under --lcg -f the core-guided phase no longer depends on the clock.
      Its probe, the branch and bound before it, the phase itself, its
      extensions, its "no solution of its own" stop, the lower bound's
      rate stops and the at-most-one probes took shares of the wall-clock
@@ -1958,7 +1974,7 @@ Version 5.0 (unreleased)
      of 32 (all clock-capped). Wide set (220, 60 s, -f): solved 150 ->
      152, 33 better / 25 worse, 7 of 12 families better and 4 worse.
 
-130. A parallel portfolio (-p) ends as soon as a thread proves a bound at
+131. A parallel portfolio (-p) ends as soon as a thread proves a bound at
      the cost of the best solution, which it prints as optimal. Before,
      the threads' bounds stopped the portfolio only with --gap, so a
      proved optimum waited until one thread completed its own search.
@@ -1970,7 +1986,22 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
-131. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
+130. Large neighbourhood search gets two routing neighbourhoods over the
+     vehicle routes of a Routes structure: ROUTES removes the customers
+     of whole routes near each other, RELATED removes customers close to
+     each other by the cost of their arcs in the objective (Shaw
+     removal); the run relaxes the arcs at the removed customers and the
+     loads of the routes they were on, and reinserts them. AdaptiveLns
+     finds imposed Routes constraints, and addRoutes(Routes) gives routes
+     that are not imposed. Under -f the FlatZinc front end now runs the
+     vrp detector and gives the routes it finds to LNS even though the
+     Routes constraint stays off; --free-config lns-routes=0 turns this
+     off. On the 25 Challenge vrp instances (-f, 60 s, three seeds) the
+     mean gap to the best solution found falls from 7.0 % to 2.7 %
+     (17 / 5 better / worse by median objective). No wide-set instance
+     has these routes; its -f round is level (147 to 147 solved).
+
+132. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
      with exact probabilities: integer numerators over a common
      denominator. ProbArith compares, rescales and rounds them outward;
      Dist is a discrete distribution and ScenarioSet a finite set of
