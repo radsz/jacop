@@ -1841,6 +1841,21 @@ Version 5.0 (unreleased)
      wordpress 38 to 25 s); -f 24 / 26, 5 / 5 on the 28, solved +1, where
      repeated seeds put tppv, crosswords and diameterc-mst in the noise.
 
+124. The LP relaxation encodes the variables of all-different-except
+     constraints (alldifferent_except_0, alldifferent_except) by values
+     over LP-only columns: x = sum v x_v, sum x_v <= 1 per variable and
+     per value, and b = sum x_v for each reified or implied comparison
+     of x with a constant. The columns are not store variables: every
+     deduced inequality removes them at the bound that keeps it valid,
+     so LCG reasons stay over model variables. Encodings of 100 rows and
+     more use the sparse simplex and are never dropped in search.
+     -Dorg.jacop.lp.valueColumns=false turns this off (domain cap
+     valueColumnsDomain 128, valueColumnsMax 20,000 columns); stat
+     lpValueColumns. concert-hall-cap (9 instances, 60 s): the root bound
+     is the optimum on 8; proofs 2 -> 8 under -f and 0 -> 6 in default
+     mode. Wide set (220, 60 s): solved 147 -> 146 under -f (noise: only
+     concert-hall-cap changes its LP) and 126 -> 128 in default mode.
+
 Version 4.11
 =============
 
