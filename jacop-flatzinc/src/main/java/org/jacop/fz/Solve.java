@@ -2488,7 +2488,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objectiveVariable instanceof IntVar o) {
       vars.remove(o);
     }
-    if ("1".equals(options.freeConfig("lns-defined", "0"))) {
+    if ("1".equals(options.freeConfig("lns-defined", "1"))) {
       // a variable defined by a constraint follows from the others: fixed with them it adds
       // nothing, fixed without them it keeps the relaxed ones from moving
       Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());

@@ -124,6 +124,9 @@ public final class AdaptiveLns {
    */
   static final int NEAR_ARITY = 8;
 
+  /** Constraints of at most this many variables tie a task's companions to it. */
+  static final int COMPANION_ARITY = 3;
+
   /** The most decision variables that a variable runs do not fix stands for. */
   static final int MAX_NEAR = 16;
 
@@ -535,6 +538,28 @@ public final class AdaptiveLns {
     for (int u : task) {
       if (u >= 0) {
         n += relaxNode(u, relax);
+        n += relaxCompanions(u, relax);
+      }
+    }
+    return n;
+  }
+
+  /**
+   * Relaxes the decision variables that share a constraint of at most {@link #COMPANION_ARITY}
+   * variables with a node of a task or rectangle: what the schedule ties to it, such as a due time
+   * that the objective counts. Without them every cargo run of the structural kinds was exhausted
+   * at once: the rows end + c &lt;= reclaim stayed fixed (found by the cargo thread).
+   */
+  private int relaxCompanions(int u, boolean[] relax) {
+    int n = 0;
+    for (int c : varCons[u]) {
+      if (conVars[c].length > COMPANION_ARITY) {
+        continue;
+      }
+      for (int w : conVars[c]) {
+        if (w != u) {
+          n += w < vars.length ? relaxNode(w, relax) : 0;
+        }
       }
     }
     return n;
