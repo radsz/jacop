@@ -226,6 +226,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: cuts added. */
   public long cuts;
 
+  /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
+  public int pairCliques;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -584,6 +587,15 @@ public class LinearRelaxation extends Constraint
         relaxed.add(f);
       }
     }
+    int pairCliques = 0;
+    // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
+    // rows only make each call dearer
+    if (PAIR_CLIQUES && objective != null) {
+      PairCliques merged = PairCliques.merge(forms, relaxed);
+      forms = merged.rows;
+      relaxed = merged.further;
+      pairCliques = merged.cliques;
+    }
     if (!substituted.isEmpty()) {
       forms = substitute(forms, substituted, objective);
     }
@@ -642,12 +654,17 @@ public class LinearRelaxation extends Constraint
     fitsSimplex(forms, candidates, simplex, auto, exempt, further);
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
+    r.pairCliques = pairCliques;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the conflicts of pairs of 0/1 literals merged into clique rows
+  private static final boolean PAIR_CLIQUES =
+      !"false".equals(System.getProperty("org.jacop.lp.pairCliques"));
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
