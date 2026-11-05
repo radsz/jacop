@@ -74,6 +74,7 @@ import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.ExplanationMinimality;
+import org.jacop.lcg.ImpliedClauses;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
@@ -3204,19 +3205,23 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: layered-graph constraints given to the solver as clauses. */
   public long graphConstraintsEncoded;
 
+  /** Statistics: clauses implied by constraints ({@link ImpliedClauses}) given to the solver. */
+  public long impliedClauses;
+
   /**
    * Gives the solver every layered-graph constraint of the store as clauses ({@link
    * LayeredGraphConstraint#encodeClauses}) and removes the constraint from the store. Unit
    * propagation over the clauses is domain consistent, as the constraint is, and explains itself:
    * explaining by cuts of the graph made the conflicts of regular-heavy models slow and their
-   * clauses long. Not under a proof, whose model has no auxiliary variables.
+   * clauses long. Constraints with {@link ImpliedClauses} add theirs here too and stay in the
+   * store. Neither under a proof, whose model has no auxiliary variables and no implied clauses.
    */
   private void encodeGraphs() {
     if (graphsEncoded) {
       return;
     }
     graphsEncoded = true;
-    if (!graphClauses || proof != null || rootFailed) {
+    if (proof != null || rootFailed) {
       return;
     }
     ClauseModel model =
@@ -3240,9 +3245,11 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     for (Constraint c : store.getConstraints()) {
-      if (c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
+      if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
         graphConstraintsEncoded++;
+      } else if (c instanceof ImpliedClauses i && !rootFailed) {
+        impliedClauses += i.impliedClauses(model);
       }
     }
   }
