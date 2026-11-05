@@ -439,6 +439,97 @@ class LcgSolverTest {
   }
 
   /**
+   * Restarts under a fixed search annotation (each run replays it, or runs take turns with activity
+   * branching, from the start or from the first solution) keep the brute-force optimum of a
+   * weighted sum under random side constraints.
+   */
+  @Test
+  void fixedRestartsAgreeWithBruteForce() {
+    Random rnd = new Random(31);
+    int proved = 0;
+    long restarts = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      LcgSolver.FixedRestarts mode =
+          instance % 2 == 0 ? LcgSolver.FixedRestarts.REPLAY : LcgSolver.FixedRestarts.ALTERNATE;
+      Store store = new Store();
+      int n = 5 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 2 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(9) - 4;
+      }
+      long best = minimum(x, relations, w, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      int[] weights = Arrays.copyOf(w, n + 1);
+      weights[n] = -1;
+      store.impose(new LinearInt(terms, weights, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      // the annotation covers part of the variables: activity completes the assignment
+      IntVar[] annotated = Arrays.copyOf(x, n - instance % 3);
+      solver.setAnnotation(new SimpleSelect<>(annotated, null, new IndomainMin<>()), false);
+      solver.setFixedRestarts(mode, instance % 4 >= 2);
+      solver.setSeed(instance % 3);
+      int status = solver.minimize(cost);
+      restarts += solver.sat().restarts;
+      if (best == Long.MAX_VALUE) {
+        assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
+        continue;
+      }
+      assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(cost)).as("instance %d", instance).isEqualTo(best);
+      int[] t = new int[n];
+      for (int i = 0; i < n; i++) {
+        t[i] = solver.value(x[i]);
+      }
+      for (Relation r : relations) {
+        assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+      }
+      proved++;
+    }
+    assertThat(proved).isGreaterThan(100);
+    // the optimum of n pairwise different values from 0 takes many conflicts to prove: the runs
+    // restart and keep it
+    for (int k = 0; k < 2; k++) {
+      Store store = new Store();
+      int n = 8;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, n + 1);
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 1000);
+      store.impose(new SumInt(x, "==", cost));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), false);
+      solver.setFixedRestarts(
+          k == 0 ? LcgSolver.FixedRestarts.REPLAY : LcgSolver.FixedRestarts.ALTERNATE, k == 1);
+      assertThat(solver.minimize(cost)).as("run %d", k).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).as("run %d", k).isEqualTo(n * (n - 1) / 2);
+      restarts += solver.sat().restarts;
+      System.out.println(
+          "restarts " + k + " " + solver.sat().restarts + " " + solver.sat().conflicts);
+    }
+    assertThat(restarts).isPositive();
+  }
+
+  /**
    * Presolving the root again at every restart that learnt a root fact, which leaves out the
    * constraints the root satisfies, keeps the optimum: random weighted sums over a permutation with
    * random side constraints, solved with and without it.
@@ -648,6 +739,69 @@ class LcgSolverTest {
     }
     assertThat(raised).isGreaterThan(0);
     assertThat(stopped).isGreaterThan(0);
+  }
+
+  /**
+   * Without restarts, as under a fixed search annotation, the bounds come from the backjumps to the
+   * root: each must hold (never above the optimum), they must rise, and some must rise above the
+   * root's bound before the search ends.
+   */
+  @Test
+  void boundsWithoutRestartsComeFromBackjumpsToTheRoot() {
+    Random rnd = new Random(37);
+    int raised = 0;
+    for (int instance = 0; instance < 24; instance++) {
+      Store store = new Store();
+      int n = 9;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, n - 1);
+      }
+      store.impose(new Alldistinct(x));
+      for (int c = 0; c < 4; c++) {
+        int[] a = new int[n];
+        for (int i = 0; i < n; i++) {
+          a[i] = rnd.nextInt(7) - 3;
+        }
+        store.impose(new LinearInt(x, a, "<=", rnd.nextInt(10)));
+      }
+      IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      int[] weights = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        weights[i] = rnd.nextInt(41) - 20;
+      }
+      weights[n] = -1;
+      store.impose(new LinearInt(terms, weights, "==", 0));
+      if (!store.consistency()) {
+        continue;
+      }
+      int root = cost.min();
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setSeed(instance);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), false);
+      solver.sat().setRestarts(false);
+      List<Long> bounds = new ArrayList<>();
+      solver.onBound(bounds::add);
+      int status = solver.minimize(cost);
+      assertThat(solver.sat().restarts).isZero();
+      if (status != CdclSolver.SAT) {
+        continue;
+      }
+      int optimum = solver.value(cost);
+      for (int k = 0; k < bounds.size(); k++) {
+        assertThat(bounds.get(k)).as("instance %d", instance).isLessThanOrEqualTo(optimum);
+        if (k > 0) {
+          assertThat(bounds.get(k)).isGreaterThan(bounds.get(k - 1));
+        }
+      }
+      if (bounds.stream().anyMatch(b -> b > root)) {
+        raised++;
+      }
+    }
+    assertThat(raised).isGreaterThan(0);
   }
 
   // the smallest weighted sum over the assignments of x that satisfy the relations

@@ -69,7 +69,7 @@ public class Options {
   int timeOut;
 
   /** The time the options were read; the time-out counts from it. */
-  private final long startTime = System.currentTimeMillis();
+  private long startTime = System.currentTimeMillis();
 
   int numberSolutions = -1;
   boolean interval;
@@ -202,6 +202,13 @@ public class Options {
                 branching, in runs alternated with the annotation),
                 interleave=restart|solution|none (with --lcg: default restart; none with literals
                 and auto),
+                fixed-restarts=turns|alternate|replay|off (with --lcg, without -f, for a model
+                with a search annotation: turns (default) restarts and takes turns between runs
+                of the annotation, the SAT solver's decisions on literals and activity branching;
+                alternate between the annotation and activity; replay restarts and follows the
+                annotation in every run; off never restarts, as before 5.0),
+                fixed-restarts-from=start|solution (restarts from the start or only after a
+                first solution),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-shave=on|off (with --lcg: a lower-bound run tries obj <= lb + step - 1,
@@ -252,7 +259,8 @@ public class Options {
                 implementing bounds consistency (default false).
             -sat use SAT solver for boolean constraints.
             --lcg [on|off] solve integer and Boolean models with lazy clause generation (JaSAT
-                as the SAT core); the search annotation is followed without restarts, or with -f
+                as the SAT core); the search annotation takes turns at restarts with the SAT
+                core's decisions and activity branching (see fixed-restarts), or with -f
                 the SAT core's decisions on literals take turns with activity branching and
                 the annotation (see lcg-branching of --free-config). On by default ("--lcg off"
                 turns it off); left out by default for models with float variables, for
@@ -922,6 +930,15 @@ public class Options {
       return 0;
     }
     return (int) Math.max(1, timeOut - (System.currentTimeMillis() - startTime));
+  }
+
+  /**
+   * Moves the start of the run back, as if reading the model had taken that long (for tests).
+   *
+   * @param millis the milliseconds the run started earlier
+   */
+  void startedEarlier(long millis) {
+    startTime -= millis;
   }
 
   /**
