@@ -342,6 +342,7 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
+                                <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -512,6 +513,7 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
+                                <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
@@ -677,6 +679,7 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
+                                <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>

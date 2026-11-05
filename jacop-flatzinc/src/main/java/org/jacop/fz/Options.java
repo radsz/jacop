@@ -215,6 +215,10 @@ public class Options {
                 annotation: when branch and bound under the annotation has no solution after
                 fixed-core-delay of the time, default 0.15, the core-guided phase of -f runs for
                 this share of the time, default 0.1; 0 = off),
+                fixed-completion=output|activity (with --lcg, without -f, for a model with a
+                search annotation: output (default) decides the output variables the annotation
+                leaves open in input order, lower half first, as fixed search without --lcg does;
+                activity leaves them to activity branching, as before),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-shave=on|off (with --lcg: a lower-bound run tries obj <= lb + step - 1,

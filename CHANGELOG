@@ -2206,6 +2206,18 @@ Version 5.0 (unreleased)
      wide-set instances, with the same results in both modes. Off:
      -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
 
+151. Under --lcg without -f, the output variables that a search
+     annotation leaves open are decided after it in input order, lower
+     half first, as fixed search without --lcg does, instead of by
+     activity branching. On connect, whose annotation covers about 760
+     of the variables, activity branching wandered: 0018 290M to
+     177-287k, 0083 99M to 925k, 0086 optimal in 15-27 s instead of
+     no proof (60 s). --free-config fixed-completion=activity gives the
+     old completion. Wide set (220, 60 s, fixed search, interleaved):
+     solved 119 to 119, with solutions 189 to 189; besides connect,
+     flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
+     51 s and network_50_cstr 2204150001 12 to 22 s.
+
 Version 4.11
 =============
 
