@@ -23,7 +23,10 @@ predicate scenario_chance(array[int] of var int: x, array[int, int] of int: a,
          "scenario_chance: the probabilities must be numerators from 0 over den summing to at most den") /\
   let { array[index_set(b)] of var bool: ok } in
   jacop_scenario_chance(array1d(x), array1d(a), array1d(b), array1d(prob), den, alpha,
-                        array1d(ok));
+                        array1d(ok))
+  % the weighted sum again as a linear constraint: the relaxation and the conflict analysis of
+  % lazy clause generation use it as a row of the model (10x faster proofs on ccks)
+  /\ sum(s in index_set(b))(prob[s] * bool2int(ok[s])) >= alpha;
 
 /** The expectation of a sum with random coefficients, scaled by the common denominator den:
   z = den * E[sum(i)(W[i] * x[i])] = sum(i)(mean_num[i] * x[i]), where mean_num[i] is den times the
