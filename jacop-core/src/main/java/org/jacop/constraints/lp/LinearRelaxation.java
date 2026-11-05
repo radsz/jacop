@@ -1188,6 +1188,20 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  // the bounds of column j: those of its variable, or for an auxiliary column [x = v] 0 when v is
+  // not in the domain of x and 1 when x is v; the certificates still remove an auxiliary column at
+  // its bounds 0 and 1, so the inequalities they deduce need no reason over x
+  private void setBounds(LpSolver solver, int j) {
+    if (lpOnly[j]) {
+      LpColumn c = (LpColumn) x[j];
+      IntVar v = c.variable();
+      int value = c.value();
+      solver.setBounds(j, v.singleton(value) ? 1 : 0, v.domain.contains(value) ? 1 : 0);
+    } else {
+      solver.setBounds(j, x[j].min(), x[j].max());
+    }
+  }
+
   private boolean overLpOnly(int[] cs) {
     for (int j : cs) {
       if (lpOnly[j]) {
@@ -1208,7 +1222,7 @@ public class LinearRelaxation extends Constraint
       restoreBasis(store.level, jump);
     }
     for (int j = 0; j < lp.columns(); j++) {
-      lp.setBounds(j, x[j].min(), x[j].max());
+      setBounds(lp, j);
     }
     long size = Math.max(1, lp.pivotWork());
     if (beforeExtra != null && bySize && !keepEncodings) {
@@ -2099,7 +2113,7 @@ public class LinearRelaxation extends Constraint
       full = sparse(sparseRows(m + k), doubles(m + k), lo, hi, cost);
     }
     for (int j = 0; j < n; j++) {
-      full.setBounds(j, x[j].min(), x[j].max());
+      setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
     int withExtra = rootSolve(full, Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
