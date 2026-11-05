@@ -26,12 +26,15 @@
 package org.jacop.fz.constraints;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.XeqY;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -299,7 +302,17 @@ class SetConstraints implements ParserTreeConstants {
     IntVar[] b = support.getVarArray((SimpleNode) node.jjtGetChild(1));
     int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
-    support.pose(new ChannelBoolSet(b, s, offset));
+    // ChannelBoolSet takes each variable once; a repeated one gets a copy equal to it
+    Set<IntVar> seen = new HashSet<>();
+    IntVar[] bs = b.clone();
+    for (int i = 0; i < bs.length; i++) {
+      if (!bs[i].singleton() && !seen.add(bs[i])) {
+        IntVar copy = new IntVar(store, 0, 1);
+        support.pose(new XeqY(b[i], copy));
+        bs[i] = copy;
+      }
+    }
+    support.pose(new ChannelBoolSet(bs, s, offset));
   }
 
   void gen_all_disjoint(SimpleNode node) {

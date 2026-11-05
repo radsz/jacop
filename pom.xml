@@ -202,6 +202,7 @@ setup to run configuration. -->
                                 <unary.reasoning.trials>300</unary.reasoning.trials>
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
+                                <setfuzz.trials>100</setfuzz.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
@@ -333,6 +334,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
+                                <include>**/SetBuiltinsFuzzTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
@@ -499,6 +501,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
+                                <include>**/SetBuiltinsFuzzTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
@@ -660,6 +663,7 @@ setup to run configuration. -->
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/ZeroOneCountFlatzincTest.java</include>
                                 <include>**/RegularSetFlatzincTest.java</include>
+                                <include>**/SetBuiltinsFuzzTest.java</include>
                                 <include>**/XcspTableFlatzincTest.java</include>
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>

@@ -77,6 +77,7 @@ import org.jacop.lcg.ExplanationMinimality;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
+import org.jacop.lcg.MirroredChoice;
 import org.jacop.lcg.PbModel;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.lns.AdaptiveLns;
@@ -4636,6 +4637,11 @@ public final class LcgSolver implements ExternalPropagator {
     annotationIndex[numAnnotationIndices] =
         v != null || c != null ? annotation.getIndex() : ANNOTATION_DONE;
     annotationLevel[numAnnotationIndices++] = sat.decisionLevel();
+    if (c instanceof MirroredChoice mc) {
+      // an element of a set variable out of the set first (outdomain)
+      int i = idOf(mc.mirrored().decisionVariable(mc.value()));
+      return i < 0 ? 0 : assignLit(i, mc.holds() ? 1 : 0);
+    }
     if (v instanceof Mirrored m) {
       // the left branch on a set variable's element is that the element is in the set
       int i = idOf(m.decisionVariable(annotation.getChoiceValue()));
