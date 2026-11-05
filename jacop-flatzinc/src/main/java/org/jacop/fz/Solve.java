@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -1902,8 +1903,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void mirrorSetVariables() {
     List<SetVar> sets = new ArrayList<>();
+    // sets whose constraints a reformulation replaced need no literals
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
     for (int i = 0; i < store.size(); i++) {
-      if (store.vars[i] instanceof SetVar s && !s.singleton()) {
+      if (store.vars[i] instanceof SetVar s && !s.singleton() && !unused.contains(s)) {
         sets.add(s);
       }
     }

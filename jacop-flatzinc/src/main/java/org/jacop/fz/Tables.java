@@ -368,6 +368,9 @@ public class Tables {
     defaultSearchVariables.removeIf(vars::contains);
     defaultSearchArrays.replaceAll(
         a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
+    defaultSearchSetVariables.removeIf(vars::contains);
+    defaultSearchSetArrays.replaceAll(
+        a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
   }
 
   /** Removes aliased variables from the search variable collection. */
@@ -666,6 +669,22 @@ public class Tables {
    */
   public void addSetVariableArray(String ident, SetVar[] array) {
     setVariableArrayTable.put(ident, array);
+  }
+
+  /**
+   * It returns the array of set variables of the given identity.
+   *
+   * @param ident the identity of the returned array of set variables.
+   * @return the array of set variables with the given identity.
+   */
+  /**
+   * It returns the array of set variables of the given identity, if there is one.
+   *
+   * @param ident the identity of the array.
+   * @return the array of set variables, or null when no array of set variables has that identity.
+   */
+  public SetVar[] getSetVariableArrayOrNull(String ident) {
+    return setVariableArrayTable.get(ident);
   }
 
   /**

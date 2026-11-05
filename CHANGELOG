@@ -1970,6 +1970,20 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+131. The FlatZinc front end posts a union of singleton sets as one
+     membership clause per element. MiniZinc flattens a set
+     comprehension over variables, {e(i) | i in I}, into one singleton
+     set per element (set_card(S, 1), set_in(e, S)) and a chain of
+     set_union constraints, and under LCG every inner union of the chain
+     carried membership literals of its own (gt-sort: 3,657 unions for
+     11 sets). SetUnionDetector replaces a chain whose inner sets appear
+     nowhere else by [v in U] <-> OR_i [e_i = v] for each element v;
+     chains of fewer than 8 singletons stay as they are
+     (-Dorg.jacop.fz.setUnion.min), and -Dorg.jacop.fz.setUnion=false
+     turns it off. gt-sort, 60 s, model search: 3 of 5 optimal (none
+     before), the optimum found on all 4 instances with a known one.
+     Only gt-sort changes model on the wide set.
+
 Version 4.11
 =============
 
