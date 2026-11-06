@@ -153,6 +153,7 @@ import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
+import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
@@ -448,7 +449,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(26)) {
+      return switch (rnd.nextInt(27)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -529,6 +530,18 @@ class LcgFuzzTest {
                 new IntVar[] {p[0]},
                 new IntVar[] {p[1 + rnd.nextInt(2)]},
                 new int[] {rnd.nextInt(3) - 1});
+        case 25 -> {
+          // the preemptive flow check alone, unit or larger uses, with or without compulsory parts
+          int k = 3 + rnd.nextInt(2);
+          HornFlow flow =
+              new HornFlow(
+                  pick(x, k),
+                  constants(k, 1, 3),
+                  rnd.nextBoolean() ? constants(k, 1, 1) : chain("hr", k, 1, 2),
+                  rnd.nextBoolean() ? constant(1 + rnd.nextInt(2)) : intVar("hc", 1, 3));
+          flow.useCompulsoryParts(rnd.nextBoolean());
+          yield flow;
+        }
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
