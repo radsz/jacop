@@ -101,6 +101,28 @@ public final class RevisedDualSimplex {
   // the passes of geometric scaling
   private static final int SCALE_PASSES = 4;
 
+  // the crash basis of the first solve (org.jacop.jalp.crash): the slack rows it may give to a
+  // structural column, by the kind of the slack: "off", "eq" (fixed slacks of equality rows),
+  // "ranged" (and boxed slacks) or "all" (and the slacks of inequality rows)
+  private static final int CRASH_ROWS = crashRows(System.getProperty("org.jacop.jalp.crash", "eq"));
+
+  // a crash pivot must be at least this share of the largest entry of its column
+  private static final double CRASH_PIVOT =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.crashPivot", "0.9"));
+
+  // whether the crash takes only columns without cost, which leave the duals of the slack basis
+  private static final boolean CRASH_ZERO_COST =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.crashZeroCost", "false"));
+
+  // whether a crash basis with more dual infeasibilities than the slack basis is dropped
+  private static final boolean CRASH_GUARD =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.crashGuard", "true"));
+
+  // whether the steepest-edge weights of the crash basis are computed exactly (one BTRAN a row) or
+  // start at one, as for slacks
+  private static final boolean CRASH_EXACT_WEIGHTS =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.crashExactWeights", "false"));
+
   private int m;
   private final int n;
   private int cols;
@@ -156,6 +178,10 @@ public final class RevisedDualSimplex {
 
   // counts the removals of rows: a saved basis is for the rows of one count
   private long rowEpoch;
+  // the first solve starts from a crash basis that may give away the slack rows up to this kind
+  private int crashRows = CRASH_ROWS;
+  private boolean crashPending;
+  private int crashed;
 
   // work arrays by row or position, and by column for the row of the tableau (see allocateWork)
   private double[] rho = {};
@@ -286,6 +312,7 @@ public final class RevisedDualSimplex {
     // the slack basis: B = -I, so every row of B^-1 has norm 1
     Arrays.fill(weight, 1);
     weightsFrom = m;
+    crashPending = CRASH_ROWS >= 0;
   }
 
   // a deep copy of the state of another simplex
@@ -329,6 +356,9 @@ public final class RevisedDualSimplex {
     weightsFrom = o.weightsFrom;
     infeasibleRow = o.infeasibleRow;
     rowEpoch = o.rowEpoch;
+    crashRows = o.crashRows;
+    crashPending = o.crashPending;
+    crashed = o.crashed;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
     ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
@@ -605,6 +635,27 @@ public final class RevisedDualSimplex {
   }
 
   /**
+   * Sets the crash basis of the first solve, as {@code org.jacop.jalp.crash} does: the slack rows
+   * it may give to structural columns are those of equality rows (0), and of ranged rows (1), and
+   * of every row with a bound (2); -1 starts from the slack basis. It has no effect after a solve.
+   *
+   * @param rows the kinds of slack rows the crash may give away, or -1
+   */
+  public void setCrash(int rows) {
+    crashRows = rows;
+    crashPending = rows >= 0 && totalPivots == 0;
+  }
+
+  /**
+   * Returns the structural columns the crash basis of the first solve made basic.
+   *
+   * @return the crashed columns
+   */
+  public int crashed() {
+    return crashed;
+  }
+
+  /**
    * Returns the factorizations made so far.
    *
    * @return the factorizations
@@ -670,6 +721,12 @@ public final class RevisedDualSimplex {
     if (exact && !perturbed) {
       setCosts(true);
       computeDuals();
+    }
+    if (crashPending) {
+      crashPending = false;
+      if (totalPivots == 0) {
+        crash();
+      }
     }
     if (!factorValid) {
       factorize();
@@ -1654,6 +1711,169 @@ public final class RevisedDualSimplex {
     }
     for (int i = 0; i < m; i++) {
       d[n + i] = row[n + i] >= 0 ? 0 : cost[n + i] + y[i];
+    }
+  }
+
+  // the order in which the crash gives away a slack row, by the kind of the slack (crashKind)
+  private static final int[] SLACK_KIND = {3, 2, 1, 0};
+
+  private static int crashRows(String mode) {
+    switch (mode) {
+      case "off":
+        return -1;
+      case "eq":
+        return 0;
+      case "ranged":
+        return 1;
+      case "all":
+        return 2;
+      default:
+        throw new IllegalArgumentException("org.jacop.jalp.crash: off, eq, ranged or all");
+    }
+  }
+
+  // a nonbasic column whose reduced cost pulls it to an infinite bound
+  private boolean dualInfeasible(int j, double dj) {
+    return dj < -DUAL_TOL
+        ? boundHi[j] == Double.POSITIVE_INFINITY
+        : dj > DUAL_TOL && boundLo[j] == Double.NEGATIVE_INFINITY;
+  }
+
+  // the kind of a column for the crash: 0 free, 1 one bound infinite, 2 boxed, 3 fixed
+  private int crashKind(int j) {
+    double l = boundLo[j];
+    double h = boundHi[j];
+    if (l == h) {
+      return 3;
+    }
+    boolean li = l == Double.NEGATIVE_INFINITY;
+    boolean hi2 = h == Double.POSITIVE_INFINITY;
+    return li && hi2 ? 0 : li || hi2 ? 1 : 2;
+  }
+
+  /**
+   * A triangular crash basis (Bixby, "Implementing the simplex method: the initial basis", 1992),
+   * built over the slack basis before the first solve. The structural columns are taken free ones
+   * first, then those with one infinite bound, then boxed ones, the shorter first; a column enters
+   * in the slack row of its largest entry among the rows no column taken so far touches, when that
+   * entry is at least {@link #CRASH_PIVOT} of the largest of the column and the slack of the row is
+   * of a kind the crash may replace. A fixed slack (an equality row) is always basic at a value
+   * outside its bounds unless the row is zero at the bounds, so giving its row to a structural
+   * column saves the pivot that takes it out; a free column at an artificial bound costs an
+   * enlargement. The basis is triangular by construction, so it factorizes without fill.
+   */
+  private void crash() {
+    if (m == 0 || n == 0) {
+      return;
+    }
+    // the slack kinds: the order in which rows are given away; 3 (free) never
+    int[] rowKind = new int[m];
+    boolean[] covered = new boolean[m];
+    boolean anyRow = false;
+    for (int i = 0; i < m; i++) {
+      // fixed 0, boxed 1, one bound infinite 2, free 3; a nonbasic slack is never given away
+      int s = n + i;
+      int k = row[s] < 0 ? 4 : SLACK_KIND[crashKind(s)];
+      rowKind[i] = k;
+      if (k <= crashRows) {
+        anyRow = true;
+      }
+    }
+    if (!anyRow) {
+      return;
+    }
+    Integer[] order = new Integer[n];
+    int count = 0;
+    for (int j = 0; j < n; j++) {
+      if (row[j] < 0
+          && colLen[j] > 0
+          && crashKind(j) < 3
+          && (!CRASH_ZERO_COST || givenCost[j] == 0)) {
+        order[count++] = j;
+      }
+    }
+    Arrays.sort(
+        order,
+        0,
+        count,
+        (a, b) -> {
+          int c = Integer.compare(crashKind(a), crashKind(b));
+          return c != 0 ? c : Integer.compare(colLen[a], colLen[b]);
+        });
+    ops += nonzeros + n;
+    int[] slackBasis = basis.clone();
+    int[] slackRow = row.clone();
+    for (int t = 0; t < count; t++) {
+      int j = order[t];
+      int[] ci = colIdx[j];
+      double[] cv = colVal[j];
+      double largest = 0;
+      for (int e = 0; e < colLen[j]; e++) {
+        largest = Math.max(largest, Math.abs(cv[e]));
+      }
+      int pick = -1;
+      double pickVal = 0;
+      int pickKind = Integer.MAX_VALUE;
+      for (int e = 0; e < colLen[j]; e++) {
+        int i = ci[e];
+        double v = Math.abs(cv[e]);
+        int k = rowKind[i];
+        if (covered[i] || k > crashRows || v < CRASH_PIVOT * largest) {
+          continue;
+        }
+        if (k < pickKind || (k == pickKind && v > pickVal)) {
+          pick = i;
+          pickVal = v;
+          pickKind = k;
+        }
+      }
+      if (pick < 0) {
+        continue;
+      }
+      int s = n + pick;
+      int pos = row[s];
+      basis[pos] = j;
+      row[j] = pos;
+      row[s] = -1;
+      upper[s] = false;
+      rowKind[pick] = 4;
+      crashed++;
+      for (int e = 0; e < colLen[j]; e++) {
+        covered[ci[e]] = true;
+      }
+    }
+    if (crashed == 0) {
+      return;
+    }
+    factorValid = false;
+    betaValid = false;
+    if (CRASH_GUARD) {
+      // the slack basis has the costs as reduced costs
+      int before = 0;
+      for (int j = 0; j < n; j++) {
+        before += dualInfeasible(j, cost[j]) ? 1 : 0;
+      }
+      int keepFrom = weightsFrom;
+      weightsFrom = m; // no weights for a basis that may be dropped
+      factorize();
+      int after = 0;
+      for (int j = 0; j < cols; j++) {
+        after += row[j] < 0 && dualInfeasible(j, d[j]) ? 1 : 0;
+      }
+      weightsFrom = keepFrom;
+      if (after > before) {
+        // back to the basis before the crash
+        System.arraycopy(slackBasis, 0, basis, 0, m);
+        System.arraycopy(slackRow, 0, row, 0, cols);
+        crashed = 0;
+        factorValid = false;
+        return;
+      }
+    }
+    if (CRASH_EXACT_WEIGHTS) {
+      weightsFrom = 0;
+    } else {
+      Arrays.fill(weight, 1);
     }
   }
 

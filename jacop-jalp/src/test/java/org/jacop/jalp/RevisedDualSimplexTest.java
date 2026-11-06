@@ -352,6 +352,39 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void crashBasesAgreeWithTheSlackBasis() {
+    Random rnd = new Random(11);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
+    int crashed = 0;
+    for (int run = 0; run < runs; run++) {
+      boolean scale = rnd.nextBoolean();
+      int m = 1 + rnd.nextInt(12);
+      int n = 1 + rnd.nextInt(14);
+      Lp p = new Lp(rnd, m, n, 0.4, rnd.nextInt(3));
+      RevisedDualSimplex slack = p.simplex(scale);
+      slack.setCrash(-1);
+      int status = solveAndCheck(p, slack, scale, "run " + run + " slack basis");
+      assertThat(slack.crashed()).isZero();
+      for (int rows = 0; rows <= 2; rows++) {
+        String what = "run " + run + " crash " + rows;
+        RevisedDualSimplex lp = p.simplex(scale);
+        lp.setCrash(rows);
+        assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
+        crashed += lp.crashed() > 0 ? 1 : 0;
+        if (status == RevisedDualSimplex.OPTIMAL) {
+          assertThat(lp.objective())
+              .as(what)
+              .isCloseTo(
+                  slack.objective(),
+                  org.assertj.core.data.Offset.offset(
+                      objectiveTolerance(scale) * (1 + Math.abs(slack.objective()))));
+        }
+      }
+    }
+    assertThat(crashed).isGreaterThan(runs);
+  }
+
+  @Test
   void warmStartsAgreeWithFreshSolves() {
     Random rnd = new Random(5);
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 10;
