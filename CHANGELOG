@@ -2206,7 +2206,7 @@ Version 5.0 (unreleased)
      wide-set instances, with the same results in both modes. Off:
      -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
 
-147. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
+146. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
      derives each of its deductions. Under --proof the relaxation is built
      by LinearRelaxation.ofModel: its rows are the linear constraints whose
      proof model is their relation as a line (LinearForms.ofModelLine:
@@ -2221,6 +2221,36 @@ Version 5.0 (unreleased)
      are not divided by the gcd of their weights under --proof, which
      changes no bound they propagate. The pol steps are deleted at the
      next restart. Before, --proof turned --lp off.
+
+147. The LP cut rounds at the root add exact Gomory cuts over the rows and
+     their slacks. A tableau row gives the integer equality
+     sum (lambda A)_j x_j - sum lambda_i s_i = 0 with s_i = a_i x; its MIR
+     is taken over the columns and the slacks (bounded by the row sides
+     and the column bounds) and the slacks are substituted back, which is
+     the textbook Gomory mixed-integer cut computed in longs, so no float
+     rounding enters a cut. The old aggregate MIR cuts stay. Cuts whose
+     weights are too large or too far apart are no longer dropped: small
+     weights leave the cut at their bounds and the rest is divided by the
+     least power of two that fits, each weight rounded to the bound nearest
+     the LP point with the remainder moved to the right side, which keeps
+     every integer point. trucking 05 root bound 282.2 to 287 (the
+     optimum). -Dorg.jacop.lp.slackGomory=false and
+     -Dorg.jacop.lp.reduceCuts=false switch them off. Wide set at 60 s:
+     default 162 to 162 solved (7 families better, 0 worse), -f 152 to 154.
+
+148. Under --lcg without -f, the output variables that a search
+     annotation leaves open are decided after it in input order, lower
+     half first, as fixed search without --lcg does, instead of by
+     activity branching. On connect, whose annotation covers about 760
+     of the variables, activity branching wandered: 0018 290M to
+     177-287k, 0083 99M to 925k, 0086 204.8M to 224,674 with the
+     search completed in 15-27 s instead of running into the 60 s limit
+     (not reported optimal: 325 of its domains reach beyond JaCoP's
+     integer range). --free-config fixed-completion=activity gives the
+     old completion. Wide set (220, 60 s, fixed search, interleaved):
+     solved 119 to 119, with solutions 189 to 189; besides connect,
+     flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
+     51 s and network_50_cstr 2204150001 12 to 22 s.
 
 Version 4.11
 =============

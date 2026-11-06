@@ -2075,6 +2075,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
     }
+    if (!free
+        && annotated != null
+        && !"activity".equals(options.freeConfig("fixed-completion", "output"))) {
+      // after the annotation, the output variables in input order, lower half first, as the
+      // complementary search of fixed search without LCG
+      DefaultSearchVars out = new DefaultSearchVars(dictionary);
+      out.outputVars();
+      List<IntVar> rest = new ArrayList<>();
+      for (IntVar v : out.getIntVars()) {
+        if (!v.singleton()) {
+          rest.add(v);
+        }
+      }
+      for (IntVar v : out.getBoolVars()) {
+        if (!v.singleton()) {
+          rest.add(v);
+        }
+      }
+      if (!rest.isEmpty()) {
+        annotated =
+            new SequenceSelect(
+                List.of(
+                    annotated,
+                    new SplitSelect<>(rest.toArray(new IntVar[0]), null, new IndomainMiddle<>())));
+      }
+    }
     // decisions from the solution of the linear relaxation: on, off, or auto, on when the
     // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
