@@ -273,7 +273,9 @@ public class Options {
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
                 violated constraints, default 1000), ls-moves=fj|walk (fj, the default:
                 feasibility jump, the best jump of a sample of variables, all violated constraints
-                weigh more at a minimum; walk: a step moves a variable of one violated constraint)
+                weigh more at a minimum; walk: a step moves a variable of one violated constraint),
+                ls-perm=1|0 (1, the default: an all different constraint over one domain of as many
+                values as variables is kept by moving its variables only by swaps)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
