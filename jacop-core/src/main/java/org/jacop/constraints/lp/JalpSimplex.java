@@ -169,6 +169,16 @@ final class JalpSimplex implements LpSolver {
   }
 
   @Override
+  public Object saveBasis() {
+    return lp.saveBasis();
+  }
+
+  @Override
+  public boolean restoreBasis(Object basis) {
+    return basis instanceof RevisedDualSimplex.Basis b && lp.restoreBasis(b);
+  }
+
+  @Override
   public LpSolver copy() {
     return new JalpSimplex(lp.copy());
   }

@@ -54,8 +54,15 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
 
   private static final double EPSILON = 1e-6;
 
+  /**
+   * Following the root solution, the largest share of value columns it may set strictly between 0
+   * and 1: a root solution that is fractional on more of them does not point at a solution.
+   */
+  static final double ROOT_FRACTIONAL = 0.1;
+
   private final LinearRelaxation lp;
   private final SelectChoicePoint<? extends Var> fallback;
+  private final boolean root;
 
   // the last decision: from the relaxation, or of the other selection
   private boolean fromLp;
@@ -71,8 +78,24 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
    * @param fallback the selection when the relaxation gives no decision, or null for none
    */
   public LpGuidedSelect(LinearRelaxation lp, SelectChoicePoint<? extends Var> fallback) {
+    this(lp, fallback, false);
+  }
+
+  /**
+   * Creates the selection.
+   *
+   * @param lp the linear relaxation
+   * @param fallback the selection when the relaxation gives no decision, or null for none
+   * @param root true to follow the relaxation's solution at the root (see {@link
+   *     LinearRelaxation#rootSolutionValue}) instead of its last solution; it then gives no
+   *     decision unless it has open value columns (see {@link LpColumn}) and at most a tenth of
+   *     them are fractional
+   */
+  public LpGuidedSelect(
+      LinearRelaxation lp, SelectChoicePoint<? extends Var> fallback, boolean root) {
     this.lp = lp;
     this.fallback = fallback;
+    this.root = root;
     lp.keepSolutions();
   }
 
@@ -82,31 +105,53 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     double bestScore = Double.POSITIVE_INFINITY;
     int bestValue = 0;
     IntVar one = null;
+    int oneValue = 1;
     IntVar objective = lp.objective();
-    for (int j = 0; j < lp.solutionColumns(); j++) {
+    int n = root ? lp.rootSolutionColumns() : lp.solutionColumns();
+    int columns = 0;
+    int fractional = 0;
+    for (int j = 0; j < n; j++) {
       IntVar x = lp.column(j);
-      if (x == objective
-          || x instanceof LpColumn
-          || x.singleton()
-          || x.min() != 0
-          || x.max() != 1) {
+      if (x == objective) {
         continue;
       }
-      double v = lp.solutionValue(j);
-      if (v > EPSILON && v < 1 - EPSILON) {
+      // a value column [y = w] of the relaxation decides y = w (or y != w when rounded down)
+      IntVar decided = x;
+      int at = 1;
+      if (x instanceof LpColumn c) {
+        decided = c.variable();
+        at = c.value();
+        if (decided.singleton() || !decided.domain.contains(at)) {
+          continue;
+        }
+      } else if (x.singleton() || x.min() != 0 || x.max() != 1) {
+        continue;
+      }
+      double v = root ? lp.rootSolutionValue(j) : lp.solutionValue(j);
+      boolean isFractional = v > EPSILON && v < 1 - EPSILON;
+      if (x instanceof LpColumn) {
+        columns++;
+        fractional += isFractional ? 1 : 0;
+      }
+      if (isFractional) {
         double score = Math.abs(v - 0.5);
-        if (score < bestScore) {
+        if (score < bestScore && (v >= 0.5 || decided == x)) {
           bestScore = score;
-          best = x;
-          bestValue = v >= 0.5 ? 1 : 0;
+          best = decided;
+          bestValue = v >= 0.5 ? at : 0;
         }
       } else if (one == null && v >= 1 - EPSILON) {
-        one = x;
+        one = decided;
+        oneValue = at;
       }
+    }
+    if (root && (columns == 0 || fractional > ROOT_FRACTIONAL * columns)) {
+      best = null;
+      one = null;
     }
     if (best == null && one != null) {
       best = one;
-      bestValue = 1;
+      bestValue = oneValue;
     }
     if (best != null) {
       fromLp = true;
