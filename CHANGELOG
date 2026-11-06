@@ -2002,7 +2002,8 @@ Version 5.0 (unreleased)
      most 64 edges each, index domains up to 100,000 values), x div c
      through the remainder x - c*z, if-then-else (ConditionalSelect)
      as big-M rows from the root bounds, x in an interval under a
-     reification, and the FlatZinc reified x = c, x != c and x = y.
+     reification, and the FlatZinc reified x = c, x = y and x != c (the
+     last only with c at a bound of x).
      When not all candidate rows fit the tableau, the rows nearest to
      the objective (breadth-first through the base rows) go first; they
      used to be taken in model order and could all be cut before the
