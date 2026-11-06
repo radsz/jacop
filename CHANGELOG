@@ -2464,6 +2464,20 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
+160. Under --lcg, EinA (set_in_reif with a set variable)
+     explains what the set's cardinality derives inside the constraint:
+     when the cardinality bound leaves no room for the element, or when
+     the other members already fill it, the reason cites the
+     cardinality and the other memberships of the set's mirror
+     (SetExplanation.explainCardinality, as ElementwiseExplainable
+     does), instead of falling back to a generic reason. On vaccine v857
+     every generic reason came from these (28,010 of 97,168); now none,
+     and -f 22.7 s to 17.7 s. Of the 37 wide-set instances with
+     set_in_reif, vaccine is the only one with generic Reified reasons.
+     Wide set (220, 60 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +7, -f S = -2 over two repetitions, with every
+     decided instance outside the instances whose reasons changed.
+
 Version 4.11
 =============
 
