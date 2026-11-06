@@ -2046,6 +2046,24 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+136. A call of the LP relaxation does less work when few bounds changed:
+     LinearRelaxation sends JaLP only the column bounds that differ from
+     the ones it sent last, and RevisedDualSimplex places, and moves into
+     the basic values, only the columns whose bounds changed, skips the
+     check of the reduced costs when no pivot was made since the last
+     one, and keeps the list of columns with an infinite bound. Every
+     solve gives the same pivots, values and duals bit for bit as
+     before (240,000 random solves side by side, with rows added and
+     removed, copies and kept bases), and the work count by which
+     LinearRelaxation budgets its calls is charged as before, so the
+     search is unchanged; counting only the work done instead ran other
+     LP calls and made still-life-wastage 13 take 46 s instead of 30 s.
+     28 LP-heavy wide-set runs (30 s, paired): LP time per call 0.96x
+     (0.66x to 1.10x on the runs with the same calls). Wide set (220,
+     60 s, paired): default 164 -> 164 solved, 7 better / 1 worse;
+     -f 155 -> 155, 12 / 16 (an earlier round on another machine:
+     14 / 9), all by time-limit differences of -f's clock-based phases.
+
 Version 4.11
 =============
 
