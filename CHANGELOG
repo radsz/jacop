@@ -2046,6 +2046,25 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+132. The clique rows of tables (TableCliques) and new value encodings of
+     GCC, count, alldifferent, alldistinct and element use LP-only
+     columns [x = v] (LpColumn) instead of store Booleans channelled with
+     ChannelReif, so they add no variables or constraints to the store.
+     Tables of up to 6 variables (org.jacop.lp.tableCliqueArity) are
+     projected on their pairs. The value encodings (x = sum v [x = v],
+     sum [x = v] = 1, counters, at most one per value, y = sum a[v] [x = v])
+     share one set of columns per variable and reuse the model's own
+     Booleans; they are tried at the first solve and kept only when they
+     raise the root bound or make it infeasible, and when they are not
+     kept the other extra rows are tried without them. In the simplex an
+     LP-only column is bounded by the domain of its variable.
+     -Dorg.jacop.lp.valueEncodings=false turns the new encodings off,
+     valueEncodingsDomain (64) and valueEncodingsMax (20,000) cap them;
+     the stat lpTableBooleans is now lpTableColumns. Wide set (220, 60 s):
+     -f 155 to 155 solved (4 families better, 4 worse), default 164 to
+     162 (0 / 5), where the losses are near the time limit or keep rows
+     that raise a weak bound (lot-sizing, peaceable queens).
+
 Version 4.11
 =============
 
