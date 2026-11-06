@@ -498,7 +498,9 @@ public final class Linearizations {
   /**
    * Returns the big-M rows of {@code b -> x = c} and, when reified, of {@code !b -> x != c}, which
    * is linear when c is a bound of x ({@code x <= c - 1} or {@code x >= c + 1}). With {@code equal}
-   * false, the rows of {@code b -> x != c} (or {@code b <-> x != c}).
+   * false, the rows of {@code b -> x != c} (or {@code b <-> x != c}), only when c is a bound of x:
+   * for an inner c they would be the big-M pair of {@code !b -> x = c} alone, which does not raise
+   * the root bound and slowed the search (still_life_no_border slnb7x7, 22k to 32k nodes).
    *
    * @param x the variable
    * @param c the value
@@ -511,6 +513,9 @@ public final class Linearizations {
     List<LinearForm> out = new ArrayList<>();
     if (x == b || x.singleton() || !x.domain.contains(c)) {
       return out; // b is fixed by propagation
+    }
+    if (!equal && c != x.min() && c != x.max()) {
+      return out;
     }
     try {
       int relation;
