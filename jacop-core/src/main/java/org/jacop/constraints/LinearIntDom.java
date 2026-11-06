@@ -40,6 +40,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
@@ -56,6 +57,21 @@ import org.jacop.lcg.LinearForm;
  * <p>It provides the weighted sum from all variables on the list. The weights are integers. Domain
  * consistency is used.
  *
+ * <p>The supports of an equality are found in one of two ways, whichever is estimated cheaper. The
+ * first enumerates the assignments that the bounds allow, at a cost of up to the product of the
+ * domain sizes. The second computes sumsets: a forward pass of bitset shifts gives the set of
+ * reachable partial sums after each variable, a backward pass keeps the partial sums that can still
+ * reach the right-hand side, and a value has a support when its shifted prefix set meets that
+ * suffix set. It costs O(Σ |D_i| · W / 64) word operations, where W is the width of the window of
+ * partial sums that can still reach the right-hand side, so it stays domain consistent on long
+ * equalities with small coefficients where the enumeration would fall back to bounds. This is the
+ * dynamic program for knapsack constraints of Trick (Annals of OR 118, 2003) and the sumset view of
+ * subset sum of Koiliaris and Xu (SODA 2017; ACM Trans. Algorithms 15(3), 2019) and Bringmann (SODA
+ * 2017), on bitsets; their FFT-based sumsets pay off only for sums far wider than those of FlatZinc
+ * equalities, so they are not used. The system property {@code
+ * org.jacop.constraints.LinearIntDom.sumset} chooses: {@code auto} (default), {@code off} (the
+ * enumeration only, as before) or {@code always} (sumsets whenever within their limit).
+ *
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
@@ -65,6 +81,37 @@ public class LinearIntDom extends LinearInt {
 
   /** Limit on the product of sizes of domains when domain consistency is carried out. */
   private static final double LIMIT_DOMAIN_PRUNING = 1e+7;
+
+  /** Limit on the estimated word operations of one sumset pass. */
+  private static final double LIMIT_SUMSET = 1e+7;
+
+  /** Limit on the width, in bits, of a window of partial sums. */
+  private static final long LIMIT_SUMSET_WIDTH = 1L << 24;
+
+  /** Sumsets are not used. */
+  static final int SUMSET_OFF = 0;
+
+  /** Sumsets are used when they are estimated cheaper than the enumeration. */
+  static final int SUMSET_AUTO = 1;
+
+  /** Sumsets are used whenever they are within their limit. */
+  static final int SUMSET_ALWAYS = 2;
+
+  private static final int SUMSET_DEFAULT =
+      switch (System.getProperty("org.jacop.constraints.LinearIntDom.sumset", "auto")) {
+        case "off" -> SUMSET_OFF;
+        case "always" -> SUMSET_ALWAYS;
+        default -> SUMSET_AUTO;
+      };
+
+  /** How the supports of an equality are found, one of the SUMSET_ constants. */
+  int sumset = SUMSET_DEFAULT;
+
+  /** Statistics: the sumset passes made. */
+  long sumsetPasses;
+
+  /** Statistics: the enumeration passes made. */
+  long enumerationPasses;
 
   /** Defines support (valid values) for each variable. */
   IntervalDomain[] support;
@@ -156,7 +203,13 @@ public class LinearIntDom extends LinearInt {
 
     switch (rel) {
       case EQ:
-        if (domainSize() < LIMIT_DOMAIN_PRUNING) {
+        double size = domainSize();
+        double sumsetCost = sumset == SUMSET_OFF ? Double.MAX_VALUE : sumsetCost();
+        if (sumsetCost <= LIMIT_SUMSET && (sumset == SUMSET_ALWAYS || sumsetCost < size)) {
+          sumsetPasses++;
+          pruneEqSumset(); // domain consistency
+        } else if (size < LIMIT_DOMAIN_PRUNING) {
+          enumerationPasses++;
           computeInit();
           pruneEq(); // domain consistency
         } else {
@@ -222,6 +275,260 @@ public class LinearIntDom extends LinearInt {
         x[i].domain.in(store.level, x[i], support[i]);
       }
     }
+  }
+
+  /**
+   * Estimates the word operations of {@link #pruneEqSumset()}: each value of each variable costs a
+   * shift of a window of partial sums.
+   *
+   * @return the estimate, or {@link Double#MAX_VALUE} when a window is wider than its limit.
+   */
+  double sumsetCost() {
+    long lo = 0;
+    long hi = 0;
+    for (int i = 0; i < l; i++) {
+      long u = a[i] * x[i].min();
+      long v = a[i] * x[i].max();
+      lo += Math.min(u, v);
+      hi += Math.max(u, v);
+    }
+    long width = hi - lo + 1;
+    double cost = 0;
+    for (int i = 0; i < l; i++) {
+      // a window is no wider than the sums of the terms before it, nor those after it
+      cost += x[i].getSize();
+    }
+    long words = Math.min(width, LIMIT_SUMSET_WIDTH + 1) / 64 + 2;
+    if (width > LIMIT_SUMSET_WIDTH || width <= 0) {
+      return Double.MAX_VALUE;
+    }
+    return cost * words;
+  }
+
+  /**
+   * Prunes an equality to domain consistency by sumsets. With the terms t_i = a_i x_i and s_k the
+   * sum of the first k terms, it computes forward the sets F_k of the values of s_k that the
+   * domains reach, kept to the window of values from which b is still reachable, and backward the
+   * sets G_k of the values of F_k from which b is reached. A value v of x_k has a support exactly
+   * when F_k shifted by a_k v meets G_(k+1).
+   */
+  void pruneEqSumset() {
+    int n = l;
+    // bounds of the sums of the terms before k (pre) and from k on (suf)
+    long[] preLo = new long[n + 1];
+    long[] preHi = new long[n + 1];
+    long[] sufLo = new long[n + 1];
+    long[] sufHi = new long[n + 1];
+    for (int i = 0; i < n; i++) {
+      long u = a[i] * x[i].min();
+      long v = a[i] * x[i].max();
+      preLo[i + 1] = preLo[i] + Math.min(u, v);
+      preHi[i + 1] = preHi[i] + Math.max(u, v);
+    }
+    for (int i = n - 1; i >= 0; i--) {
+      long u = a[i] * x[i].min();
+      long v = a[i] * x[i].max();
+      sufLo[i] = sufLo[i + 1] + Math.min(u, v);
+      sufHi[i] = sufHi[i + 1] + Math.max(u, v);
+    }
+    // the window of s_k: reachable from the left and able to reach b to the right
+    long[] lo = new long[n + 1];
+    int[] bits = new int[n + 1];
+    for (int k = 0; k <= n; k++) {
+      long wl = Math.max(preLo[k], b - sufHi[k]);
+      long wh = Math.min(preHi[k], b - sufLo[k]);
+      if (wl > wh) {
+        throw Store.failException;
+      }
+      lo[k] = wl;
+      bits[k] = (int) (wh - wl + 1);
+    }
+    long[][] reach = new long[n + 1][];
+    reach[0] = new long[1];
+    reach[0][0] = 1L; // s_0 = 0, inside its window [0, 0]
+    for (int k = 0; k < n; k++) {
+      long[] next = new long[(bits[k + 1] + 63) >>> 6];
+      long w = a[k];
+      long[] window = valueWindow(k, lo, bits);
+      for (Interval iv : intervals(x[k], window)) {
+        for (long v = iv.min(); v <= iv.max(); v++) {
+          orShifted(reach[k], next, lo[k] + w * v - lo[k + 1]);
+        }
+      }
+      clearTail(next, bits[k + 1]);
+      if (isEmpty(next)) {
+        throw Store.failException;
+      }
+      reach[k + 1] = next;
+    }
+    if ((reach[n][0] & 1L) == 0) {
+      throw Store.failException;
+    }
+    // backward: the partial sums of F_(k+1) that reach b; G_n = {b}
+    long[] back = reach[n];
+    IntervalDomain[] supports = new IntervalDomain[n];
+    for (int k = n - 1; k >= 0; k--) {
+      long[] prev = new long[reach[k].length];
+      long w = a[k];
+      IntervalDomain supported = new IntervalDomain();
+      long[] window = valueWindow(k, lo, bits);
+      for (Interval iv : intervals(x[k], window)) {
+        for (long v = iv.min(); v <= iv.max(); v++) {
+          long shift = lo[k] + w * v - lo[k + 1];
+          if (intersectsShifted(reach[k], back, shift)) {
+            supported.unionAdapt((int) v, (int) v);
+            andOrShifted(back, reach[k], prev, -shift);
+          }
+        }
+      }
+      supports[k] = supported;
+      back = prev;
+    }
+    for (int k = 0; k < n; k++) {
+      if (supports[k].isEmpty()) {
+        throw Store.failException;
+      }
+      x[k].domain.in(store.level, x[k], supports[k]);
+    }
+  }
+
+  /** The values v of x_k for which s_k + a_k v can fall in the window of s_(k+1). */
+  private long[] valueWindow(int k, long[] lo, int[] bits) {
+    long dl = lo[k + 1] - (lo[k] + bits[k] - 1);
+    long dh = lo[k + 1] + bits[k + 1] - 1 - lo[k];
+    long w = a[k];
+    long vl;
+    long vh;
+    if (w > 0) {
+      vl = Math.ceilDiv(dl, w);
+      vh = Math.floorDiv(dh, w);
+    } else {
+      vl = Math.ceilDiv(dh, w);
+      vh = Math.floorDiv(dl, w);
+    }
+    return new long[] {vl, vh};
+  }
+
+  /** The intervals of the domain of x within the window [w[0], w[1]]. */
+  private static List<Interval> intervals(IntVar x, long[] w) {
+    IntDomain d = x.dom();
+    List<Interval> out = new java.util.ArrayList<>();
+    if (w[0] > w[1]) {
+      return out;
+    }
+    for (IntervalEnumeration e = d.intervalEnumeration(); e.hasMoreElements(); ) {
+      Interval iv = e.nextElement();
+      long mn = Math.max(iv.min(), w[0]);
+      long mx = Math.min(iv.max(), w[1]);
+      if (mn <= mx) {
+        out.add(new Interval((int) mn, (int) mx));
+      }
+    }
+    return out;
+  }
+
+  /** dst |= src shifted up by shift bits (down when shift is negative); dst is not masked. */
+  static void orShifted(long[] src, long[] dst, long shift) {
+    int srcBits = src.length << 6;
+    int dstBits = dst.length << 6;
+    if (shift >= dstBits || shift <= -srcBits) {
+      return;
+    }
+    if (shift >= 0) {
+      int ws = (int) (shift >>> 6);
+      int bs = (int) (shift & 63);
+      for (int i = 0; i < src.length && i + ws < dst.length; i++) {
+        long v = src[i];
+        if (v != 0) {
+          dst[i + ws] |= v << bs;
+          if (bs != 0 && i + ws + 1 < dst.length) {
+            dst[i + ws + 1] |= v >>> (64 - bs);
+          }
+        }
+      }
+    } else {
+      long s = -shift;
+      int ws = (int) (s >>> 6);
+      int bs = (int) (s & 63);
+      for (int i = ws; i < src.length; i++) {
+        long v = src[i];
+        if (v != 0) {
+          int d = i - ws;
+          if (d < dst.length) {
+            dst[d] |= v >>> bs;
+          }
+          if (bs != 0 && d - 1 >= 0 && d - 1 < dst.length) {
+            dst[d - 1] |= v << (64 - bs);
+          }
+        }
+      }
+    }
+  }
+
+  /** Tells whether src shifted up by shift bits meets dst. */
+  static boolean intersectsShifted(long[] src, long[] dst, long shift) {
+    int srcBits = src.length << 6;
+    int dstBits = dst.length << 6;
+    if (shift >= dstBits || shift <= -srcBits) {
+      return false;
+    }
+    if (shift >= 0) {
+      int ws = (int) (shift >>> 6);
+      int bs = (int) (shift & 63);
+      for (int i = 0; i < src.length && i + ws < dst.length; i++) {
+        long v = src[i];
+        if (v != 0) {
+          if ((dst[i + ws] & (v << bs)) != 0) {
+            return true;
+          }
+          if (bs != 0 && i + ws + 1 < dst.length && (dst[i + ws + 1] & (v >>> (64 - bs))) != 0) {
+            return true;
+          }
+        }
+      }
+    } else {
+      long s = -shift;
+      int ws = (int) (s >>> 6);
+      int bs = (int) (s & 63);
+      for (int i = ws; i < src.length; i++) {
+        long v = src[i];
+        if (v != 0) {
+          int d = i - ws;
+          if (d < dst.length && (dst[d] & (v >>> bs)) != 0) {
+            return true;
+          }
+          if (bs != 0 && d - 1 >= 0 && d - 1 < dst.length && (dst[d - 1] & (v << (64 - bs))) != 0) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /** out |= (src shifted up by shift bits) & mask. */
+  private static void andOrShifted(long[] src, long[] mask, long[] out, long shift) {
+    long[] tmp = new long[out.length];
+    orShifted(src, tmp, shift);
+    for (int i = 0; i < out.length; i++) {
+      out[i] |= tmp[i] & mask[i];
+    }
+  }
+
+  private static void clearTail(long[] set, int bits) {
+    int rest = bits & 63;
+    if (rest != 0) {
+      set[set.length - 1] &= (1L << rest) - 1;
+    }
+  }
+
+  private static boolean isEmpty(long[] set) {
+    for (long v : set) {
+      if (v != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 
   void pruneNeq() {
