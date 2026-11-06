@@ -89,24 +89,18 @@ public final class LpMain {
         long t0 = System.nanoTime();
         LpProblem p = MpsReader.read(Path.of(arg));
         long t1 = System.nanoTime();
-        int status;
-        double objective;
-        long pivots;
-        long factors;
+        SparseLp lp;
         if (highs) {
-          HighsLp lp = highs(p);
-          status = lp.solve(limit);
-          objective = lp.objective();
-          pivots = lp.pivots();
-          factors = 0;
+          lp = highs(p);
         } else {
-          RevisedDualSimplex lp = p.simplex(scale);
-          lp.setExact(true);
-          status = lp.solve(limit);
-          objective = lp.objective();
-          pivots = lp.pivots();
-          factors = lp.factorizations();
+          RevisedDualSimplex jalp = p.simplex(scale);
+          jalp.setExact(true);
+          lp = jalp;
         }
+        int status = lp.solve(limit);
+        double objective = lp.objective();
+        long pivots = lp.pivots();
+        long factors = lp instanceof RevisedDualSimplex jalp ? jalp.factorizations() : 0;
         long t2 = System.nanoTime();
         double z = (p.maximize ? -objective : objective) + p.costConstant;
         System.out.printf(

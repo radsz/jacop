@@ -54,7 +54,7 @@ import java.util.Random;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public final class RevisedDualSimplex {
+public final class RevisedDualSimplex implements SparseLp {
 
   /** The status of an optimal solve. */
   public static final int OPTIMAL = 0;
@@ -1063,6 +1063,17 @@ public final class RevisedDualSimplex {
    * Makes a saved basis the current one. The slacks of the rows added since it was saved are basic,
    * so the basis stays nonsingular and dual feasible, as it was when it was saved; the next solve
    * factorizes it. A basis saved before rows were removed, or by another simplex, is not restored.
+   *
+   * @param b the basis
+   * @return whether it was restored
+   */
+  @Override
+  public boolean restoreBasis(Object basis) {
+    return basis instanceof Basis b && restoreBasis(b);
+  }
+
+  /**
+   * Makes a saved basis of this simplex the current one; see {@link #restoreBasis(Object)}.
    *
    * @param b the basis
    * @return whether it was restored

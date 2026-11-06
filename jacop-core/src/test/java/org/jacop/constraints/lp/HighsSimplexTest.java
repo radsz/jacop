@@ -36,9 +36,10 @@ import org.jacop.jalp.HighsLp;
 import org.junit.jupiter.api.BeforeAll;
 
 /**
- * The tests of {@link JalpSimplexTest} on HiGHS through {@link HighsSimplex}: the same answers as
- * the dense simplex, with its certificates, through warm-started re-solves, added and removed rows
- * and copies. Skipped when the HiGHS library is not available ({@code JACOP_HIGHS}).
+ * The tests of {@link JalpSimplexTest} on HiGHS through {@link JalpSimplex} over {@code HighsLp}:
+ * the same answers as the dense simplex, with its certificates, through warm-started re-solves,
+ * added and removed rows and copies. Skipped when the HiGHS library is not available ({@code
+ * JACOP_HIGHS}).
  */
 class HighsSimplexTest extends JalpSimplexTest {
 
@@ -49,6 +50,6 @@ class HighsSimplexTest extends JalpSimplexTest {
 
   @Override
   LpSolver make(int[][] c, double[][] w, double[] rowLo, double[] rowHi, double[] cost) {
-    return new HighsSimplex(c, w, rowLo, rowHi, cost);
+    return new JalpSimplex(new HighsLp(c, w, rowLo, rowHi, cost));
   }
 }

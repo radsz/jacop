@@ -31,18 +31,19 @@
 package org.jacop.constraints.lp;
 
 import org.jacop.jalp.RevisedDualSimplex;
+import org.jacop.jalp.SparseLp;
 
 /**
- * The simplex of JaLP ({@link RevisedDualSimplex}, module jacop-jalp) behind the interface of the
- * relaxation: the sparse simplex of {@link LinearRelaxation.Simplex#SPARSE} and {@link
- * LinearRelaxation.Simplex#LAZY}.
+ * A sparse LP engine of module jacop-jalp ({@link SparseLp}: JaLP's {@link RevisedDualSimplex}, or
+ * HiGHS through {@code org.jacop.jalp.HighsLp}) behind the interface of the relaxation: the sparse
+ * simplex of {@link LinearRelaxation.Simplex#SPARSE} and {@link LinearRelaxation.Simplex#LAZY}.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class JalpSimplex implements LpSolver {
+class JalpSimplex implements LpSolver {
 
-  private final RevisedDualSimplex lp;
+  private SparseLp lp;
 
   /**
    * Creates the problem with the slack basis.
@@ -57,7 +58,30 @@ final class JalpSimplex implements LpSolver {
     lp = new RevisedDualSimplex(columns, weights, rowLo, rowHi, cost, true);
   }
 
-  JalpSimplex(RevisedDualSimplex lp) {
+  /**
+   * Creates the relaxation's simplex over an engine.
+   *
+   * @param lp the engine
+   */
+  JalpSimplex(SparseLp lp) {
+    this.lp = lp;
+  }
+
+  /**
+   * Returns the engine.
+   *
+   * @return the engine
+   */
+  SparseLp engine() {
+    return lp;
+  }
+
+  /**
+   * Replaces the engine, for a hand-off from one engine to another.
+   *
+   * @param lp the new engine, over the same rows and columns
+   */
+  void engine(SparseLp lp) {
     this.lp = lp;
   }
 
@@ -169,7 +193,7 @@ final class JalpSimplex implements LpSolver {
 
   @Override
   public boolean restoreBasis(Object basis) {
-    return basis instanceof RevisedDualSimplex.Basis b && lp.restoreBasis(b);
+    return lp.restoreBasis(basis);
   }
 
   @Override

@@ -30,38 +30,47 @@
 
 package org.jacop.constraints.lp;
 
+import org.jacop.jalp.HighsLp;
+
 /**
- * HiGHS for the root, JaLP for the search: the relaxation is solved by HiGHS ({@link HighsSimplex},
- * HiGHS's {@code org.jacop.jalp.HighsLp}) until {@link #afterRoot()}, which the relaxation calls
- * when its first call (the root solve, its extra rows and its cut rounds) is over; then the problem
- * and the basis HiGHS ended with go to JaLP ({@link JalpSimplex}), whose cost per call is lower on
- * the small changes of bounds of the search. Used with {@code -Dorg.jacop.lp.engine=highs-root}.
+ * HiGHS for the root, JaLP for the search: the relaxation is solved by HiGHS ({@link HighsLp})
+ * until {@link #afterRoot()}, which the relaxation calls when its first call (the root solve, its
+ * extra rows and its cut rounds) is over; then the problem and the basis HiGHS ended with go to
+ * JaLP, whose cost per call is lower on the small changes of bounds of the search. Used with {@code
+ * -Dorg.jacop.lp.engine=highs-root}.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-class HandoffSimplex implements LpSolver {
+class HandoffSimplex extends JalpSimplex {
 
   // the most pivots JaLP may take to settle on the basis it got from HiGHS
   private static final int HANDOFF_PIVOTS = 100_000;
 
-  private HighsSimplex highs;
-  private LpSolver lp;
-  // the pivots HiGHS made before the hand-off, so that pivots() keeps counting up
+  // the HiGHS engine until the hand-off, then null
+  private HighsLp highs;
+  // the pivots and work of HiGHS before the hand-off (0 until then), so that pivots() and work()
+  // keep counting up
   private long highsPivots;
   private long highsWork;
 
+  /**
+   * Creates the problem with the slack basis, in HiGHS.
+   *
+   * @param columns the columns of each row
+   * @param weights the weights of each row, matching its columns
+   * @param rowLo the lower bounds of the rows, or negative infinity
+   * @param rowHi the upper bounds of the rows, or positive infinity
+   * @param cost the objective over the n columns, minimized
+   */
   HandoffSimplex(
       int[][] columns, double[][] weights, double[] rowLo, double[] rowHi, double[] cost) {
-    highs = new HighsSimplex(columns, weights, rowLo, rowHi, cost);
-    lp = highs;
+    this(new HighsLp(columns, weights, rowLo, rowHi, cost));
   }
 
-  private HandoffSimplex(HighsSimplex highs, LpSolver lp, long highsPivots, long highsWork) {
+  private HandoffSimplex(HighsLp highs) {
+    super(highs);
     this.highs = highs;
-    this.lp = lp;
-    this.highsPivots = highsPivots;
-    this.highsWork = highsWork;
   }
 
   @Override
@@ -69,118 +78,37 @@ class HandoffSimplex implements LpSolver {
     if (highs != null) {
       highsPivots = highs.pivots();
       highsWork = highs.work();
-      lp = new JalpSimplex(highs.toJalp());
+      engine(highs.toJalp());
       highs = null;
       // JaLP factorizes the basis of HiGHS and computes its solution now, so that the values,
       // duals and rows of the inverse it answers with are those of the root; from an optimal
       // basis this takes no pivot, or a few to repair the round-off of a basis from another code
-      lp.solve(HANDOFF_PIVOTS);
+      solve(HANDOFF_PIVOTS);
     }
     return this;
   }
 
-  /**
-   * Returns whether the problem is still with HiGHS.
-   *
-   * @return true before {@link #afterRoot()}
-   */
-  boolean inHighs() {
-    return highs != null;
-  }
-
-  @Override
-  public int rows() {
-    return lp.rows();
-  }
-
-  @Override
-  public int columns() {
-    return lp.columns();
-  }
-
   @Override
   public long pivots() {
-    return highsPivots + lp.pivots();
-  }
-
-  @Override
-  public long pivotWork() {
-    return lp.pivotWork();
+    return highsPivots + super.pivots();
   }
 
   @Override
   public long work() {
-    return highsWork + lp.work();
-  }
-
-  @Override
-  public void setBounds(int j, double min, double max) {
-    lp.setBounds(j, min, max);
-  }
-
-  @Override
-  public int solve(int limit) {
-    return lp.solve(limit);
-  }
-
-  @Override
-  public double[] farkas() {
-    return lp.farkas();
-  }
-
-  @Override
-  public double[] duals() {
-    return lp.duals();
-  }
-
-  @Override
-  public double objective() {
-    return lp.objective();
-  }
-
-  @Override
-  public double value(int j) {
-    return lp.value(j);
-  }
-
-  @Override
-  public int basicRow(int j) {
-    return lp.basicRow(j);
-  }
-
-  @Override
-  public double[] inverseRow(int r) {
-    return lp.inverseRow(r);
-  }
-
-  @Override
-  public void addRows(double[][] rows, double[] rowLo, double[] rowHi) {
-    lp.addRows(rows, rowLo, rowHi);
-  }
-
-  @Override
-  public void addRows(int[][] columns, double[][] weights, double[] rowLo, double[] rowHi) {
-    lp.addRows(columns, weights, rowLo, rowHi);
-  }
-
-  @Override
-  public int[] removeRows(int[] rows) {
-    return lp.removeRows(rows);
-  }
-
-  @Override
-  public Object saveBasis() {
-    return lp.saveBasis();
-  }
-
-  @Override
-  public boolean restoreBasis(Object basis) {
-    return lp.restoreBasis(basis);
+    return highsWork + super.work();
   }
 
   @Override
   public LpSolver copy() {
-    LpSolver c = lp.copy();
-    return new HandoffSimplex(highs == null ? null : (HighsSimplex) c, c, highsPivots, highsWork);
+    HandoffSimplex c;
+    if (highs != null) {
+      c = new HandoffSimplex(highs.copy());
+    } else {
+      c = new HandoffSimplex(null);
+      c.engine(engine().copy());
+    }
+    c.highsPivots = highsPivots;
+    c.highsWork = highsWork;
+    return c;
   }
 }

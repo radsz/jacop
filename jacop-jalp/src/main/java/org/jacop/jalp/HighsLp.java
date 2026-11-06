@@ -65,7 +65,7 @@ import java.util.Arrays;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public final class HighsLp {
+public final class HighsLp implements SparseLp {
 
   /** The status of an optimal solve. */
   public static final int OPTIMAL = RevisedDualSimplex.OPTIMAL;

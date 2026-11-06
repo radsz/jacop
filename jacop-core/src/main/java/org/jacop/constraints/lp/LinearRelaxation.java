@@ -521,7 +521,7 @@ public class LinearRelaxation extends Constraint
     if (HIGHS && columns.length >= HIGHS_ROWS) {
       return HIGHS_ROOT
           ? new HandoffSimplex(columns, weights, lo, hi, cost)
-          : new HighsSimplex(columns, weights, lo, hi, cost);
+          : new JalpSimplex(new org.jacop.jalp.HighsLp(columns, weights, lo, hi, cost));
     }
     return new JalpSimplex(columns, weights, lo, hi, cost);
   }
