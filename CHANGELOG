@@ -2352,6 +2352,18 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
+155. Local search (--free-config ls=...) keeps an all different over n
+     variables whose domains share n values as a permutation: it starts
+     from a matching and moves those variables only by swaps, so the
+     constraint is no longer evaluated (an implicit constraint, as in
+     Comet's constraint-based local search). Other all different
+     constraints count their values, which makes the delta of a move
+     O(1), and one walk step in four tries only the variables whose
+     value another one takes. --free-config ls-perm=0 turns the
+     permutations off. Costas arrays, local search only, 60 s: n <= 12
+     solved before, n <= 16 now. Wide set at 60 s, -f ls=0.1: 159 to
+     160 solved, with solutions 190 to 190; ls stays off by default.
+
 Version 4.11
 =============
 
