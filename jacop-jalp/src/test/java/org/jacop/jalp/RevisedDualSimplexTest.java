@@ -497,6 +497,46 @@ class RevisedDualSimplexTest {
     assertThat(warm * 3).isLessThan(fresh);
   }
 
+  // the search changes a few bounds between solves, tightens and loosens them, and often changes
+  // none; the simplex only places and moves the columns whose bounds changed, and every answer must
+  // still hold by its certificate
+  @Test
+  void solvesAfterFewBoundChangesHoldTheirCertificates() {
+    Random rnd = new Random(11);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 20;
+    int[] counts = new int[4];
+    for (int run = 0; run < runs; run++) {
+      int n = 5 + rnd.nextInt(30);
+      Lp p = new Lp(rnd, 3 + rnd.nextInt(20), n, 4.0 / n, 1);
+      double[] wideLo = new double[n];
+      double[] wideHi = new double[n];
+      for (int j = 0; j < n; j++) {
+        wideLo[j] = p.lo[j] = -4.0 - rnd.nextInt(4);
+        wideHi[j] = p.hi[j] = 4.0 + rnd.nextInt(4);
+      }
+      RevisedDualSimplex lp = p.simplex(true);
+      for (int step = 0; step < 30; step++) {
+        counts[solveAndCheck(p, lp, true, "run " + run + " step " + step)]++;
+        for (int k = rnd.nextInt(4); k > 0; k--) {
+          int j = rnd.nextInt(n);
+          switch (rnd.nextInt(3)) {
+            case 0 -> p.lo[j] = Math.min(p.hi[j], p.lo[j] + 1);
+            case 1 -> p.hi[j] = Math.max(p.lo[j], p.hi[j] - 1);
+            default -> {
+              // a backtrack: the bounds go back
+              p.lo[j] = wideLo[j];
+              p.hi[j] = wideHi[j];
+            }
+          }
+          lp.setBounds(j, p.lo[j], p.hi[j]);
+        }
+      }
+    }
+    String found = java.util.Arrays.toString(counts);
+    assertThat(counts[RevisedDualSimplex.OPTIMAL]).as(found).isGreaterThan(runs);
+    assertThat(counts[RevisedDualSimplex.INFEASIBLE]).as(found).isGreaterThan(runs);
+  }
+
   @Test
   void aCopyAndRemovedRowsGoOnIndependently() {
     Random rnd = new Random(9);

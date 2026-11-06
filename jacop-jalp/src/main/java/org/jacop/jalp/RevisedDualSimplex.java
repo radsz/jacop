@@ -207,6 +207,29 @@ public final class RevisedDualSimplex {
   private double[] tau = {};
   private double[] alphaRow = {};
 
+  // the columns whose values may differ from at[] (their bounds changed, or placeNonbasic moved
+  // them), for updateBeta: every other nonbasic column is at at[]
+  private int[] moved = {};
+  private boolean[] isMoved = {};
+  private int movedLen;
+
+  // whether every nonbasic column not in moved is where placeNonbasic would put it: true after a
+  // pass over all columns until the reduced costs or the basis change, so that a solve after only
+  // a change of bounds places just the columns whose bounds changed
+  private boolean placed;
+
+  // whether the reduced costs were computed again from the current factors and placed every
+  // nonbasic column at its bound (dualsHold), with no pivot since
+  private boolean dualsChecked;
+
+  // the work of that check, charged again when it is skipped: work() stays that of a full check,
+  // so LinearRelaxation, which budgets its calls by work(), runs the same calls
+  private long checkedWork;
+
+  // the columns with an infinite bound, in order, for the check of artificial bounds at optimum
+  private int[] infinite = {};
+  private int infiniteLen = -1;
+
   // the nonzeros of rho (sorted by row), of alphaQ and of the steepest-edge tau, for the
   // hypersparse solves; rhs is the right-hand side of those, zero between them
   private int[] rhoIdx = {};
@@ -412,6 +435,10 @@ public final class RevisedDualSimplex {
     flips = 0;
     artificialProof = false;
     feasibility = false;
+    movedLen = 0;
+    placed = false; // the copy computes its reduced costs again
+    dualsChecked = false;
+    checkedWork = 0;
     allocateWork();
   }
 
@@ -538,6 +565,21 @@ public final class RevisedDualSimplex {
     candSlack = new double[cols];
     candRange = new double[cols];
     flipped = new int[cols];
+    moved = new int[cols];
+    isMoved = new boolean[cols];
+    movedLen = 0;
+    placed = false;
+    dualsChecked = false;
+    infinite = new int[cols];
+    infiniteLen = -1;
+  }
+
+  // column j may no longer be at at[]
+  private void markMoved(int j) {
+    if (!isMoved[j]) {
+      isMoved[j] = true;
+      moved[movedLen++] = j;
+    }
   }
 
   // the working bounds of column j: its bounds with artificial ones for the infinite ones
@@ -763,9 +805,19 @@ public final class RevisedDualSimplex {
    */
   public void setBounds(int j, double min, double max) {
     double s = j < n ? 1 / colScale[j] : rowScale[j - n];
-    boundLo[j] = min * s;
-    boundHi[j] = max * s;
+    double l = min * s;
+    double h = max * s;
+    if (l == boundLo[j] && h == boundHi[j]) {
+      return;
+    }
+    if ((l == Double.NEGATIVE_INFINITY) != (boundLo[j] == Double.NEGATIVE_INFINITY)
+        || (h == Double.POSITIVE_INFINITY) != (boundHi[j] == Double.POSITIVE_INFINITY)) {
+      infiniteLen = -1;
+    }
+    boundLo[j] = l;
+    boundHi[j] = h;
     workingBounds(j);
+    markMoved(j);
     outsideValid = false;
   }
 
@@ -799,7 +851,11 @@ public final class RevisedDualSimplex {
     if (!factorValid) {
       factorize();
     }
-    placeNonbasic();
+    if (placed) {
+      placeMoved();
+    } else {
+      placeNonbasic();
+    }
     updateBeta();
     for (int iter = 0; iter < limit; iter++) {
       ops += 3L * m;
@@ -885,6 +941,8 @@ public final class RevisedDualSimplex {
       }
       d[p] = -thetaD;
       d[q] = 0;
+      placed = false;
+      dualsChecked = false;
       // the steepest-edge weights, from tau = B^-1 rho
       double wr = 0;
       for (int k = 0; k < rhoLen; k++) {
@@ -984,12 +1042,21 @@ public final class RevisedDualSimplex {
       updateBeta();
       return -1;
     }
-    if (lu.updates() > 0 && !dualsHold()) {
-      return -1;
+    // the reduced costs checked since the last pivot on the same factors are the same again
+    if (lu.updates() > 0) {
+      if (dualsChecked) {
+        ops += checkedWork;
+      } else if (!dualsHold()) {
+        return -1;
+      }
     }
     // a nonbasic column at an artificial bound that the objective pulls on: the bounds are too
     // close
-    for (int j = 0; j < cols; j++) {
+    if (infiniteLen < 0) {
+      listInfinite();
+    }
+    for (int k = 0; k < infiniteLen; k++) {
+      int j = infinite[k];
       if (row[j] < 0 && isArtificial(j, upper[j]) && lo[j] != hi[j]) {
         if (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL) {
           if (!enlarge()) {
@@ -1010,6 +1077,7 @@ public final class RevisedDualSimplex {
    * values follow and the pivots go on.
    */
   private boolean dualsHold() {
+    long before = ops + (lu == null ? 0 : lu.ops);
     computeDuals();
     boolean held = true;
     for (int j = 0; j < cols; j++) {
@@ -1021,7 +1089,18 @@ public final class RevisedDualSimplex {
       placeNonbasic();
       updateBeta();
     }
+    dualsChecked = held;
+    checkedWork = ops + (lu == null ? 0 : lu.ops) - before;
     return held;
+  }
+
+  private void listInfinite() {
+    infiniteLen = 0;
+    for (int j = 0; j < cols; j++) {
+      if (isArtificial(j, false) || isArtificial(j, true)) {
+        infinite[infiniteLen++] = j;
+      }
+    }
   }
 
   // enlarges the artificial bounds; false when they are at their largest
@@ -1210,6 +1289,8 @@ public final class RevisedDualSimplex {
     factorValid = false;
     betaValid = false;
     outsideValid = false;
+    placed = false;
+    dualsChecked = false;
     infeasibleRow = -1;
     return true;
   }
@@ -1781,15 +1862,33 @@ public final class RevisedDualSimplex {
   private void placeNonbasic() {
     ops += cols;
     for (int j = 0; j < cols; j++) {
-      if (row[j] < 0) {
-        if (d[j] > DUAL_TOL) {
-          upper[j] = false;
-        } else if (d[j] < -DUAL_TOL) {
-          upper[j] = true;
-        } else if (isArtificial(j, upper[j]) && !isArtificial(j, !upper[j])) {
-          // no pull either way: the finite bound
-          upper[j] = !upper[j];
-        }
+      place(j);
+    }
+    placed = true;
+  }
+
+  // places the columns whose bounds changed: the others are placed already
+  private void placeMoved() {
+    // charged as a pass over all columns, see checkedWork
+    ops += cols;
+    for (int k = 0; k < movedLen; k++) {
+      place(moved[k]);
+    }
+  }
+
+  private void place(int j) {
+    if (row[j] < 0) {
+      boolean was = upper[j];
+      if (d[j] > DUAL_TOL) {
+        upper[j] = false;
+      } else if (d[j] < -DUAL_TOL) {
+        upper[j] = true;
+      } else if (isArtificial(j, upper[j]) && !isArtificial(j, !upper[j])) {
+        // no pull either way: the finite bound
+        upper[j] = !upper[j];
+      }
+      if (upper[j] != was) {
+        markMoved(j);
       }
     }
   }
@@ -1801,20 +1900,28 @@ public final class RevisedDualSimplex {
       computeBeta();
       return;
     }
+    // only the columns in moved can be off at[]; in order, so the sums are those of a pass over all
+    // charged as a pass over all columns, see checkedWork
     ops += cols + m;
-    Arrays.fill(work, 0);
+    Arrays.sort(moved, 0, movedLen);
     boolean any = false;
-    for (int j = 0; j < cols; j++) {
+    for (int k = 0; k < movedLen; k++) {
+      int j = moved[k];
+      isMoved[j] = false;
       if (row[j] < 0) {
         double v = upper[j] ? hi[j] : lo[j];
         double delta = v - at[j];
         if (delta != 0) {
+          if (!any) {
+            Arrays.fill(work, 0);
+            any = true;
+          }
           addColumn(j, delta, work);
           at[j] = v;
-          any = true;
         }
       }
     }
+    movedLen = 0;
     if (any) {
       lu.ftran(work, tau);
       for (int i = 0; i < m; i++) {
@@ -1826,6 +1933,10 @@ public final class RevisedDualSimplex {
   // x_B = -B^-1 N x_N
   private void computeBeta() {
     betaValid = true;
+    for (int k = 0; k < movedLen; k++) {
+      isMoved[moved[k]] = false;
+    }
+    movedLen = 0;
     outsideValid = false;
     ops += cols + m + nonzeros;
     Arrays.fill(work, 0);
@@ -1849,6 +1960,8 @@ public final class RevisedDualSimplex {
       return;
     }
     ops += nonzeros + cols;
+    placed = false;
+    dualsChecked = false;
     double[] y = new double[m];
     double[] z = new double[m];
     for (int k = 0; k < m; k++) {
