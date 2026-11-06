@@ -85,6 +85,12 @@ public class XorSystemDetector implements ParserTreeConstants {
   /** Statistics: the rows of the systems posted. */
   int systemRows;
 
+  /** Statistics: the parity rows implied by tables. */
+  int tableRows;
+
+  // the 0/1 columns of a table read, at most, for its implied parities
+  static final int MAX_TABLE_COLUMNS = 63;
+
   /**
    * It creates a detector reading variables through the given support.
    *
@@ -149,7 +155,14 @@ public class XorSystemDetector implements ParserTreeConstants {
       systemRows += members.size();
     }
     if (support.options.debug() && systems > 0) {
-      FzConsole.println("% XorSystem: " + systems + " systems, " + systemRows + " rows");
+      FzConsole.println(
+          "% XorSystem: "
+              + systems
+              + " systems, "
+              + systemRows
+              + " rows, "
+              + tableRows
+              + " rows from tables");
     }
   }
 
@@ -172,10 +185,169 @@ public class XorSystemDetector implements ParserTreeConstants {
       case "bool_eq_reif" -> row(new IntVar[] {var(node, 0), var(node, 1), var(node, 2)}, 1);
       // r = (a != b): a xor b xor r = 0
       case "bool_ne_reif" -> row(new IntVar[] {var(node, 0), var(node, 1), var(node, 2)}, 0);
+      case "jacop_table_int", "jacop_table_bool" -> {
+        if (node.jjtGetNumChildren() == 2) {
+          table(node, false);
+        }
+      }
+      case "jacop_short_table_int" -> {
+        if (node.jjtGetNumChildren() == 3) {
+          table(node, true);
+        }
+      }
       default -> {
         // not a parity constraint
       }
     }
+  }
+
+  /**
+   * It adds the parity constraints that a table implies on its 0/1 variables: the equations of the
+   * affine hull over GF(2) of its tuples allowed by the domains, projected on those variables. A
+   * table that is an XOR gives its row; a table whose tuples span the whole space gives nothing.
+   */
+  private void table(ASTConstElem node, boolean hasStar) {
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int k = v.length;
+    int zeroOne = 0;
+    for (IntVar x : v) {
+      if (x.min() >= 0 && x.max() <= 1) {
+        zeroOne++;
+      }
+    }
+    // the tuples are read only for a table with at least two 0/1 variables
+    if (zeroOne < 2) {
+      return;
+    }
+    int[] tuples = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int star = hasStar ? support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) : 0;
+    if (tuples.length == 0 || tuples.length % k != 0) {
+      return;
+    }
+    // the 0/1 columns, one per distinct variable
+    Map<IntVar, Integer> local = new IdentityHashMap<>();
+    int[] bit = new int[k];
+    List<IntVar> columns = new ArrayList<>();
+    for (int j = 0; j < k; j++) {
+      bit[j] = -1;
+      if (v[j].min() >= 0 && v[j].max() <= 1) {
+        Integer c = local.get(v[j]);
+        if (c == null) {
+          if (columns.size() == MAX_TABLE_COLUMNS) {
+            continue;
+          }
+          c = columns.size();
+          local.put(v[j], c);
+          columns.add(v[j]);
+        }
+        bit[j] = c;
+      }
+    }
+    int width = columns.size();
+    if (width < 2) {
+      return;
+    }
+    long first = -1;
+    long[] basis = new long[width];
+    int dim = 0;
+    for (int t = 0; t < tuples.length / k && dim < width; t++) {
+      long point = 0;
+      long free = 0;
+      long assigned = 0;
+      boolean allowed = true;
+      for (int j = 0; j < k && allowed; j++) {
+        int value = tuples[t * k + j];
+        if (hasStar && value == star) {
+          if (bit[j] >= 0) {
+            free |= 1L << bit[j];
+          }
+          continue;
+        }
+        if (!v[j].domain.contains(value)) {
+          allowed = false;
+        } else if (bit[j] >= 0) {
+          long b = 1L << bit[j];
+          // a variable listed twice takes one value
+          if ((assigned & b) != 0 && ((point & b) != 0) != (value == 1)) {
+            allowed = false;
+          }
+          assigned |= b;
+          if (value == 1) {
+            point |= b;
+          }
+        }
+      }
+      if (!allowed) {
+        continue;
+      }
+      // a star on a variable listed elsewhere in the tuple is that value
+      free &= ~assigned;
+      if (first < 0) {
+        first = point;
+      } else {
+        dim = insert(basis, dim, point ^ first);
+      }
+      while (free != 0) {
+        long b = free & -free;
+        free &= free - 1;
+        dim = insert(basis, dim, b);
+      }
+    }
+    if (first < 0 || dim == width) {
+      return;
+    }
+    // reduced row echelon form of the span, then one equation per column without a pivot
+    long pivots = 0;
+    long[] pivot = new long[dim];
+    for (int i = 0; i < dim; i++) {
+      long p = Long.lowestOneBit(basis[i]);
+      pivot[i] = p;
+      pivots |= p;
+      for (int r = 0; r < dim; r++) {
+        if (r != i && (basis[r] & p) != 0) {
+          basis[r] ^= basis[i];
+        }
+      }
+    }
+    for (int f = 0; f < width; f++) {
+      if ((pivots & (1L << f)) != 0) {
+        continue;
+      }
+      long a = 1L << f;
+      for (int i = 0; i < dim; i++) {
+        if ((basis[i] & (1L << f)) != 0) {
+          a |= pivot[i];
+        }
+      }
+      IntVar[] x = new IntVar[Long.bitCount(a)];
+      int size = 0;
+      for (long bits = a; bits != 0; bits &= bits - 1) {
+        x[size++] = columns.get(Long.numberOfTrailingZeros(bits));
+      }
+      tableRows++;
+      row(x, Long.bitCount(a & first) & 1);
+    }
+  }
+
+  // reduces vector by the basis and adds it when it is independent
+  private static int insert(long[] basis, int dim, long vector) {
+    for (int i = 0; i < dim && vector != 0; i++) {
+      long top = Long.highestOneBit(basis[i]);
+      if ((vector & top) != 0) {
+        vector ^= basis[i];
+      }
+    }
+    if (vector == 0) {
+      return dim;
+    }
+    // keep the basis ordered by leading bit, decreasing
+    int at = dim;
+    while (at > 0 && Long.highestOneBit(basis[at - 1]) < Long.highestOneBit(vector)) {
+      basis[at] = basis[at - 1];
+      at--;
+    }
+    basis[at] = vector;
+    return dim + 1;
   }
 
   private IntVar var(ASTConstElem node, int i) {
