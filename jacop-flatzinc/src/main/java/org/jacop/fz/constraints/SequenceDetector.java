@@ -89,14 +89,58 @@ public class SequenceDetector implements ParserTreeConstants {
   int windowsCovered;
 
   // one window: its variables, its kind and its bound
-  private record Window(IntVar[] y, int kind, int bound) {}
+  private static final class Window {
+    private final IntVar[] y;
+    private final int kind;
+    private final int bound;
+
+    Window(IntVar[] y, int kind, int bound) {
+      this.y = y;
+      this.kind = kind;
+      this.bound = bound;
+    }
+
+    IntVar[] y() {
+      return y;
+    }
+
+    int kind() {
+      return kind;
+    }
+
+    int bound() {
+      return bound;
+    }
+  }
 
   private static final int AT_MOST = 0;
   private static final int AT_LEAST = 1;
   private static final int EXACTLY = 2;
 
   // one element over a constant 0/1 array: y = array[x - first]
-  private record Channel(IntVar x, int[] array, int first) {}
+  private static final class Channel {
+    private final IntVar x;
+    private final int[] array;
+    private final int first;
+
+    Channel(IntVar x, int[] array, int first) {
+      this.x = x;
+      this.array = array;
+      this.first = first;
+    }
+
+    IntVar x() {
+      return x;
+    }
+
+    int[] array() {
+      return array;
+    }
+
+    int first() {
+      return first;
+    }
+  }
 
   private final List<Window> windows = new ArrayList<>();
   private final Map<IntVar, Channel> channels = new IdentityHashMap<>();
