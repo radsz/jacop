@@ -2674,7 +2674,9 @@ public final class RevisedDualSimplex {
       if (Math.abs(rate) >= PIVOT_TOL) {
         double slack = slackTo(i, rate);
         if (slack < Double.POSITIVE_INFINITY) {
-          bound = Math.min(bound, (Math.max(0, slack) + HARRIS_TOL) / Math.abs(rate));
+          // a column already past its bound within the tolerance may only use what is left of it
+          // (neos17: steps of HARRIS_TOL beyond a clamped slack pushed such columns out of it)
+          bound = Math.min(bound, Math.max(0, slack + HARRIS_TOL) / Math.abs(rate));
         }
       }
     }
