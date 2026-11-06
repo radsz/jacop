@@ -2063,9 +2063,11 @@ Version 5.0 (unreleased)
      the stat lpTableBooleans is now lpTableColumns. Infeasibility and
      dual certificates use the simplex bounds of the LP-only columns, and
      their LCG explanations add the facts x != v or x = v behind those
-     bounds. Wide set (220, 60 s): default 164 to 162 solved (4 families
-     better, 1 worse), -f 152 to 152 (4 / 4); sudoku_fixed p28 is lost in
-     both modes since one more LP failure changes its search path.
+     bounds. Wide set (220, 60 s): default 164 to 163 solved (3 families
+     better, 4 worse), -f 156 to 154 (3 / 5); the instances that change
+     have the same LP in both versions and swap outcomes when re-run,
+     except sudoku_fixed p28, where one more LP failure changes the
+     search path.
 
 Version 4.11
 =============
