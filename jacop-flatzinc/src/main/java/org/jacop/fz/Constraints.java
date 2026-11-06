@@ -47,6 +47,7 @@ import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
+import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -299,8 +300,16 @@ public class Constraints implements ParserTreeConstants {
         increasing.postSums();
       }
 
+      Set<ASTConstElem> balanced = Set.of();
       if (BalanceDetector.enabled()) {
-        new BalanceDetector(support).detect(astTree);
+        BalanceDetector balance = new BalanceDetector(support);
+        balance.detect(astTree);
+        balanced = balance.handled();
+      }
+
+      // the allocations it adds are redundant, and --proof does not encode them
+      if (ConvexAllocationDetector.enabled() && options.proof() == null) {
+        new ConvexAllocationDetector(support, balanced).detect(astTree);
       }
 
       // the stocking cost it adds is redundant, and --proof does not encode it
