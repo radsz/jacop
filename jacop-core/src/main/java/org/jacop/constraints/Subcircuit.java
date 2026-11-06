@@ -556,4 +556,14 @@ public class Subcircuit extends Alldiff {
     }
     return out;
   }
+
+  /**
+   * Returns the successor variables: variable i (from 0) holds the number, from 1, of the node
+   * after node i + 1, or i + 1 itself when the node is not on the circuit.
+   *
+   * @return a copy of the successor variables.
+   */
+  public IntVar[] successors() {
+    return list.clone();
+  }
 }

@@ -340,4 +340,22 @@ public class ElementIntegerFast extends AbstractElement
         && index != value
         && ElementExplanation.explainFailure(trail, index, list, value, indexOffset, out);
   }
+
+  /**
+   * Returns the values of the list.
+   *
+   * @return a copy of the list, read at index - indexOffset from 1.
+   */
+  public int[] values() {
+    return list.clone();
+  }
+
+  /**
+   * Returns the variable equal to the selected value.
+   *
+   * @return the value variable.
+   */
+  public IntVar value() {
+    return value;
+  }
 }

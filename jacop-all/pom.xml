@@ -38,6 +38,11 @@
         </dependency>
         <dependency>
             <groupId>org.jacop</groupId>
+            <artifactId>jacop-prob</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
             <artifactId>jacop-sat</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -84,6 +89,7 @@
                                     <include>org.jacop:jacop-floats</include>
                                     <include>org.jacop:jacop-sets</include>
                                     <include>org.jacop:jacop-sat</include>
+                                    <include>org.jacop:jacop-prob</include>
                                     <include>org.jacop:jacop-flatzinc</include>
                                     <include>org.jacop:jacop-scala</include>
                                 </includes>

@@ -177,7 +177,7 @@ class RouteNeighbourhoodsTest {
     lns.addRoutes(routes());
     assertEquals(1, lns.routings().size());
     withSolution(lns);
-    RouteNeighbourhoods r = lns.routings().get(0);
+    RouteStructure r = lns.routings().get(0);
     assertEquals(6, r.customers());
     Set<String> found = new HashSet<>();
     for (int[] route : r.routes()) {
@@ -192,7 +192,7 @@ class RouteNeighbourhoodsTest {
     assertTrue(store.consistency());
     AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(2)));
     assertEquals(1, lns.routings().size());
-    RouteNeighbourhoods r = lns.routings().get(0);
+    RouteStructure r = lns.routings().get(0);
     Random random = new Random(3);
     IntVar[] vars = lns.variables();
     for (int t = 0; t < 50; t++) {
@@ -224,7 +224,7 @@ class RouteNeighbourhoodsTest {
     AdaptiveLns lns = new AdaptiveLns(store, decisionVars(), cost, new Random(4));
     lns.addRoutes(routes());
     withSolution(lns);
-    RouteNeighbourhoods r = lns.routings().get(0);
+    RouteStructure r = lns.routings().get(0);
     Random random = new Random(5);
     int partners = 0;
     for (int t = 0; t < 100; t++) {

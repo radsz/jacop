@@ -554,7 +554,16 @@ public class LinearIntDom extends LinearInt {
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    if (getClass() != LinearIntDom.class || !lcgForm().explainFailure(trail, out)) {
+    if (getClass() != LinearIntDom.class) {
+      return false;
+    }
+    LinearForm f = lcgForm();
+    // a failure of the equality is a domain without support, which every window shows
+    boolean explained =
+        f.relation() == LinearForm.EQ
+            ? LinearExplanation.explainDomainFailure(trail, f.vars(), f.weights(), f.c(), out)
+            : f.explainFailure(trail, out);
+    if (!explained) {
       return false;
     }
     addFolded(trail, trail.size(), out);

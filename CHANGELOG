@@ -2206,7 +2206,107 @@ Version 5.0 (unreleased)
      wide-set instances, with the same results in both modes. Off:
      -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
 
-146. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
+146. The route neighbourhoods of large neighbourhood search (ROUTES and
+     RELATED) also work on giant-tour models: the successors of a
+     Circuit or Subcircuit, split into routes by the links fixed at the
+     root (the end depot of one vehicle followed by the start depot of
+     the next), with the distances read from element constraints indexed
+     by the successors. Removing customers relaxes their successors and
+     those of the nodes before them; circuits over the same nodes (the
+     predecessors, the tours of other scenarios) lose the same customers.
+     On the 34 giant-tour Challenge instances (cvrp, vrplc, tsptw,
+     stochastic-vrp, vrp-submission; -f, 60 s, three seeds) the mean gap
+     to the best solution found falls from 10.4 % to 7.0 % (8 / 1 better
+     / worse by median objective; cvrp 16 to 20 % lower). The wide set is
+     level: -f 152 to 154 solved, fixed search (wide-quick) 48 to 47,
+     the one difference on an instance without a circuit.
+
+147. A call of the LP relaxation does less work when few bounds changed:
+     LinearRelaxation sends JaLP only the column bounds that differ from
+     the ones it sent last, and RevisedDualSimplex places, and moves into
+     the basic values, only the columns whose bounds changed, skips the
+     check of the reduced costs when no pivot was made since the last
+     one, and keeps the list of columns with an infinite bound. Every
+     solve gives the same pivots, values and duals bit for bit as
+     before (240,000 random solves side by side, with rows added and
+     removed, copies and kept bases), and the work count by which
+     LinearRelaxation budgets its calls is charged as before, so the
+     search is unchanged; counting only the work done instead ran other
+     LP calls and made still-life-wastage 13 take 46 s instead of 30 s.
+     28 LP-heavy wide-set runs (30 s, three paired runs each): LP time
+     per call 0.965x by geometric mean (0.76x to 1.15x), nodes per
+     second 1.00x. Wide set (220, 60 s, paired): default 164 -> 164
+     solved, 7 better / 1 worse; -f 155 -> 155, 12 / 16 (an earlier
+     round on another machine: 14 / 9), all by time-limit differences
+     of -f's clock-based phases.
+
+148. JaLP refactorizes its LU factors when the solves have grown more
+     costly than a fresh factorization, instead of every 100 updates:
+     after each pivot it rebuilds them when the recent solve work per
+     pivot (a moving average) is above the average work per pivot since
+     the factorization, the factorization included (Chvatal's rule). The
+     work is the deterministic op count of BasisLu; the factorization
+     adds the entries its pivot search looks at and a cost per row
+     (BasisLu.build), fitted to measured times on 29 LP bench instances.
+     The stability, drift and fill (2x) checks stay; at least 10 and at
+     most 1000 updates. -Dorg.jacop.jalp.refactorWeight=0 restores the
+     fixed 100 (refactorWeight 1, refactorUpdates 1000, refactorFill 2,
+     refactorMin 10); RevisedDualSimplex.refactorsForWork() counts the
+     refactorizations it asked for. LP bench (659 MPS up to upTo1min,
+     120 s): 625 solved instead of 623, a median of 32% fewer
+     factorizations, 1.11x faster on the 56 instances of 0.5 s or more
+     whose pivots stay the same (radiationm18-12-05 33.3 to 14.5 s,
+     neos-4722843-widden 20.8 to 10.5 s); pivot paths change on the
+     others, both ways (dano3_3 and dano3_5 lost, brazil3, uccase12 and
+     fome21 gained). Wide set (220, 60 s): solved 149 -> 149 fixed search
+     and 146 -> 147 under -f.
+
+149. The rows of the linear relaxation (--lp) are one pool, of which the
+     simplex holds a part, with every simplex (before, only --lp lazy aged
+     rows). The model's own rows stay in the simplex. Linearised rows of
+     other constraints and cuts leave it after org.jacop.lp.poolAge (100)
+     optimal solves in which they are inactive, and come back when a
+     solution of the simplex breaks them; each return doubles the age, so
+     a row the search keeps needing stays. -Dorg.jacop.lp.pool=false turns
+     this off. org.jacop.lp.poolExtra and org.jacop.lp.poolCuts (both off)
+     keep the linearised rows the root trial rejects, and the cuts of a
+     round that does not move the root bound, in the pool instead of
+     dropping them. The dense simplex can now remove rows whose slacks are
+     basic. Wide set (220, 60 s): fixed search solved 163 -> 164, 7 better
+     / 2 worse; -f 158 -> 160, 17 / 11 (both with pooled cuts on; with
+     them off, the 34 instances where the pool moves rows are unchanged
+     in fixed search and 1 / 2 under -f).
+
+150. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
+     with exact probabilities: integer numerators over a common
+     denominator. ProbArith compares, rescales and rounds them outward;
+     Dist is a discrete distribution and ScenarioSet a finite set of
+     scenarios. ScenarioChance(x, a, b, w, alpha[, ok]) states that the
+     scenarios s with a[s] x <= b[s] weigh at least alpha (a chance
+     constraint over scenarios). It prunes each variable by the weight
+     of the scenarios a value would kill, explains its pruning for lazy
+     clause generation, and with the indicators ok gives the linear
+     relaxation the big-M rows of the usual expansion. ExpectedSum is
+     the expectation of a sum with random coefficients. The MiniZinc
+     library jacop_prob.mzn has scenario_chance and jacop_expected_sum.
+
+151. LCG explains the failures of a linear equality (LinearIntDom, and
+     SumWeight's failure reason) that its bounds do not violate. When the
+     other variables' bounds leave one variable a window with no value
+     in its domain, the reason is that window's removals and the bounds
+     on both sides, lifted. When every window still holds a value but the
+     equality has no solution (LinearIntDom's domain consistency proves
+     it), the reason is every bound and the removals inside every window;
+     only LinearIntDom uses that one, since Knapsack calls the linear
+     reason speculatively. Before, these failures took the generic reason.
+     liner-sf-repositioning tp7_4: generic LinearIntDom failures 45 % to
+     0 % (--lcg) and 18 % to 0 % (--lcg -f); --lcg -f proves the known
+     optimum 150674 in 41 s (before 160071 in 60 s, not proved). Wide set
+     (220, 60 s, osolpro #231 scoring, two -f repetitions): --lcg S = +6,
+     --lcg -f S = +9; the only decided instance with generic LinearIntDom
+     failures is tp7_4 (-f +1, H1), the others are search-order noise.
+
+152. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
      derives each of its deductions. Under --proof the relaxation is built
      by LinearRelaxation.ofModel: its rows are the linear constraints whose
      proof model is their relation as a line (LinearForms.ofModelLine:
@@ -2222,7 +2322,7 @@ Version 5.0 (unreleased)
      changes no bound they propagate. The pol steps are deleted at the
      next restart. Before, --proof turned --lp off.
 
-147. The LP cut rounds at the root add exact Gomory cuts over the rows and
+153. The LP cut rounds at the root add exact Gomory cuts over the rows and
      their slacks. A tableau row gives the integer equality
      sum (lambda A)_j x_j - sum lambda_i s_i = 0 with s_i = a_i x; its MIR
      is taken over the columns and the slacks (bounded by the row sides
@@ -2238,7 +2338,7 @@ Version 5.0 (unreleased)
      -Dorg.jacop.lp.reduceCuts=false switch them off. Wide set at 60 s:
      default 162 to 162 solved (7 families better, 0 worse), -f 152 to 154.
 
-148. Under --lcg without -f, the output variables that a search
+154. Under --lcg without -f, the output variables that a search
      annotation leaves open are decided after it in input order, lower
      half first, as fixed search without --lcg does, instead of by
      activity branching. On connect, whose annotation covers about 760

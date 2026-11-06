@@ -408,4 +408,23 @@ public class Circuit extends Alldiff {
   public Circuit copy(VarMap map) {
     return new Circuit(map.get(list), offset);
   }
+
+  /**
+   * Returns the successor variables: variable i (from 0) holds the number of the node after node i,
+   * nodes being numbered from {@link #offset()}.
+   *
+   * @return a copy of the successor variables.
+   */
+  public IntVar[] successors() {
+    return list.clone();
+  }
+
+  /**
+   * Returns the number of the first node.
+   *
+   * @return the offset of the node numbers.
+   */
+  public int offset() {
+    return offset;
+  }
 }
