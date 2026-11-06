@@ -2524,6 +2524,29 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
+163. Flow model of Regular and ExtensionalSupportMdd in the linear
+     relaxation (Cote, Gendron and Rousseau, "Modeling the regular
+     constraint with integer programming", CPAIOR 2007): one LP-only arc
+     column per group of edges with the same level and value on a path of
+     the layered graph (the value column itself when the group is a single
+     edge), a row sum arcs = [x = v] per group, one unit of flow out of the
+     source and conservation at every inner node. The flow polytope of a
+     layered graph is integral. The arc columns are bounded by the domain
+     of their variable (LpColumn.arc) and are not used to guide the
+     search. The rows come after the value encodings and are kept only when
+     they raise the integer bound of the objective above that of the rows
+     before them. -Dorg.jacop.lp.flowEncodings=false turns them off. The
+     value encodings of item 161 are no longer tried on models without an
+     objective, where they cannot raise a bound. Wide set (220, 60 s,
+     paired): default 161 to 161 solved (5 families better, 5 worse), -f
+     162 to 162 (6 / 3); the LP differs only on the 8 satisfaction models
+     that lose their value columns and on 2 peaceable-queens instances
+     where the flow rows are built but not kept, and none of the outcomes
+     that changed is on those. On the 55 Challenge instances with Regular
+     or MDD and an objective, the flow rows rarely fit in the sparse
+     simplex (handball: none of 1664) and, without that cap, raise the
+     integer root bound only on peaceable queens (pq_n12 72 to 71).
+
 Version 4.11
 =============
 
