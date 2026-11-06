@@ -336,6 +336,7 @@ setup to run configuration. -->
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/DiffnSkippingTest.java</include>
+                                <include>**/DualFeasibleFunctionsTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/ZeroOneCountFlatzincTest.java</include>
@@ -508,6 +509,7 @@ setup to run configuration. -->
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/DiffnSkippingTest.java</include>
+                                <include>**/DualFeasibleFunctionsTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/ZeroOneCountFlatzincTest.java</include>
@@ -675,6 +677,7 @@ setup to run configuration. -->
                                 <include>**/DepthFirstSearchTimeOutTest.java</include>
                                 <include>**/GlobalCardinalityTest.java</include>
                                 <include>**/DiffnSkippingTest.java</include>
+                                <include>**/DualFeasibleFunctionsTest.java</include>
                                 <include>**/GlobalCardinalityFlatzincTest.java</include>
                                 <include>**/CountFlatzincTest.java</include>
                                 <include>**/ZeroOneCountFlatzincTest.java</include>

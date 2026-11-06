@@ -51,6 +51,7 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.util.DualFeasibleFunctions;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles does not overlap in
@@ -91,6 +92,16 @@ public class Diffn extends Nooverlap {
       (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
   private boolean[] inProfile;
   private final List<Interval> sweepLine = new ArrayList<>();
+
+  // the dual feasible functions in the area check: 0 off, 1 when the minimum area of the last
+  // rectangle examined and those that may overlap it exceeds half its space, 2 at every fixpoint
+  static final int DFF_OFF = 0;
+  static final int DFF_GATED = 1;
+  static final int DFF_ALWAYS = 2;
+  static final int DFF_MODE = Integer.getInteger("org.jacop.diffn.dff", DFF_GATED);
+  private DualFeasibleFunctions dffs;
+  private int[] dffWidth = new int[0];
+  private int[] dffHeight = new int[0];
 
   /**
    * It specifies a diff constraint.
@@ -209,11 +220,31 @@ public class Diffn extends Nooverlap {
 
     if (store.propagationHasOccurred) {
       store.addChanged(this);
-    } else if (doAreaCheck) {
+    } else if (doAreaCheck || DFF_MODE == DFF_ALWAYS) {
       areaCheck();
     }
   }
 
+  @Override
+  public void impose(Store store) {
+    super.impose(store);
+    if (DFF_MODE == DFF_GATED) {
+      // Steinberg's theorem: below half the space the rectangles always fit
+      areaCheckFactor = 2;
+    }
+  }
+
+  /**
+   * The area check. For each rectangle k, the window is the space k may occupy, and every other
+   * rectangle j must cover a part of the window of at least {@code partialCommonArea(k, j, X)} by
+   * {@code partialCommonArea(k, j, Y)}. These parts and k itself must be packed in the window
+   * without overlap. The check fails when their area exceeds the window's, or when a pair of the
+   * dual feasible functions of Fekete and Schepers and of Carlier, Clautiaux and Moukrim shows that
+   * they cannot be packed (S. P. Fekete and J. Schepers, A general framework for bounds for
+   * higher-dimensional orthogonal packing problems, Mathematical Methods of Operations Research
+   * 60(2):311-329, 2004; see {@link DualFeasibleFunctions} for the functions and the other
+   * references). The failure depends on the bounds only, so the bounds explain it under LCG.
+   */
   private void areaCheck() {
     startPass(AREA_PASS);
     int n = rectangle.length;
@@ -230,17 +261,43 @@ public class Diffn extends Nooverlap {
         read = true;
       }
       bounds(k);
+      int width = lst[X][k] + lMax[X][k] - est[X][k];
+      int height = lst[Y][k] + lMax[Y][k] - est[Y][k];
+      boolean dff = DFF_MODE != DFF_OFF;
+      if (dff && dffWidth.length < n) {
+        dffWidth = new int[n];
+        dffHeight = new int[n];
+      }
+      int m = 0;
       int commonArea = 0;
       for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
         bounds(j);
-        int partialCommonArea = partialCommonArea(k, j, 0) * partialCommonArea(k, j, 1);
-        commonArea += partialCommonArea;
+        int px = partialCommonArea(k, j, 0);
+        int py = partialCommonArea(k, j, 1);
+        commonArea += px * py;
+        if (dff && px > 0 && py > 0) {
+          dffWidth[m] = Math.min(px, width);
+          dffHeight[m++] = Math.min(py, height);
+        }
       }
-      if (commonArea + lMin[X][k] * lMin[Y][k]
-          > (lst[X][k] + lMax[X][k] - est[X][k]) * (lst[Y][k] + lMax[Y][k] - est[Y][k])) {
+      if (commonArea + lMin[X][k] * lMin[Y][k] > width * height) {
         throw Store.failException;
       }
+      if (dff) {
+        dffWidth[m] = lMin[X][k];
+        dffHeight[m++] = lMin[Y][k];
+        if (dffs().packingFails(width, height, dffWidth, dffHeight, m)) {
+          throw Store.failException;
+        }
+      }
     }
+  }
+
+  private DualFeasibleFunctions dffs() {
+    if (dffs == null) {
+      dffs = new DualFeasibleFunctions();
+    }
+    return dffs;
   }
 
   // the part of rectangle s that must lie within the extent of rectangle r in dimension d
