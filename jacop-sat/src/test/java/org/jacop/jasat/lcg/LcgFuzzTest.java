@@ -1059,6 +1059,7 @@ class LcgFuzzTest {
       if (core.nextBoolean()) {
         // half of them after a few conflicts of branch and bound, with or without a core probe
         solver.setCoreDelay(1, 1 + core.nextInt(20), core.nextInt(2));
+        solver.setCoresWithoutSolutionOnly(core.nextInt(4) == 0);
       }
     }
     int kind = (int) (seed / 3 % 4);

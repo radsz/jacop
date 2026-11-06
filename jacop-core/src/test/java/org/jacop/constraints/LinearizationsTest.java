@@ -65,8 +65,8 @@ class LinearizationsTest {
   void rowsHoldForEverySolution() {
     Random rnd = new Random(7);
     int rows = 0;
-    for (int run = 0; run < 3000; run++) {
-      int kind = run % 15;
+    for (int run = 0; run < 4200; run++) {
+      int kind = run % 21;
       Store store = new Store();
       IntVar[] x = new IntVar[4];
       for (int i = 0; i < x.length; i++) {
@@ -82,6 +82,7 @@ class LinearizationsTest {
       String rel = RELATIONS[rnd.nextInt(RELATIONS.length)];
       int k = rnd.nextInt(9) - 4;
       List<Constraint> cs = new ArrayList<>();
+      List<LinearForm> made = new ArrayList<>();
       IntVar[] scope;
       switch (kind) {
         case 0 -> {
@@ -150,6 +151,62 @@ class LinearizationsTest {
           cs.add(new ElementInteger(index, list, value, 0));
           scope = new IntVar[] {index, value, bs[0], bs[1], bs[2]};
         }
+        case 15 -> {
+          // element over an index without value Booleans, with holes in its domain
+          IntVar index = new IntVar(store, "i", 0, 6);
+          index.domain.inComplement(0, index, 1 + rnd.nextInt(5));
+          IntVar value = new IntVar(store, "v", -20, 20);
+          int[] list = new int[5 + rnd.nextInt(3)];
+          for (int i = 0; i < list.length; i++) {
+            list[i] = rnd.nextInt(21) - 10;
+          }
+          int offset = rnd.nextInt(2) - 1;
+          cs.add(
+              rnd.nextBoolean()
+                  ? new ElementInteger(index, list, value, offset)
+                  : new ElementIntegerFast(index, list, value, offset));
+          scope = new IntVar[] {index, value};
+        }
+        case 16 -> {
+          int d = (1 + rnd.nextInt(4)) * (rnd.nextBoolean() ? 1 : -1);
+          IntVar z = new IntVar(store, "z", -10, 10);
+          cs.add(new XdivYeqZ(x[0], new IntVar(store, "d", d, d), z));
+          scope = new IntVar[] {x[0], z};
+        }
+        case 17 -> {
+          // the last condition may be fixed to 1 and a value fixed, as the FlatZinc if_then_else
+          // gives them
+          IntVar last = rnd.nextBoolean() ? bs[2] : new IntVar(store, "one", 1, 1);
+          IntVar second = rnd.nextBoolean() ? x[1] : new IntVar(store, "k", k, k);
+          IntVar[] conditions = {bs[0], bs[1], last};
+          IntVar[] values = {x[0], second, x[2]};
+          cs.add(new ConditionalSelect(conditions, values, x[3]));
+          scope = new IntVar[] {bs[0], bs[1], last, x[0], second, x[2], x[3]};
+        }
+        case 18 -> {
+          int lo = x[0].min() + rnd.nextInt(3) - 1;
+          cs.add(new Reified(new In(x[0], new IntervalDomain(lo, lo + rnd.nextInt(3))), b));
+          scope = new IntVar[] {x[0], b};
+        }
+        case 19 -> {
+          // x = c (or x != c) reified with b or implied by b, as the FlatZinc constraints give them
+          int c = x[0].min() + rnd.nextInt(x[0].getSize());
+          boolean both = rnd.nextBoolean();
+          boolean equal = rnd.nextBoolean();
+          PrimitiveConstraint p = equal ? new XeqC(x[0], c) : new XneqC(x[0], c);
+          cs.add(both ? new Reified(p, b) : new Implies(b, p));
+          made.addAll(Linearizations.valueRows(x[0], c, b, both, equal));
+          scope = new IntVar[] {x[0], b};
+        }
+        case 20 -> {
+          cs.add(new Implies(b, new XeqY(x[0], x[1])));
+          made.addAll(
+              Linearizations.implied(
+                  new LinearForm(new IntVar[] {x[0], x[1]}, new long[] {1, -1}, 0, LinearForm.EQ),
+                  b,
+                  false));
+          scope = new IntVar[] {x[0], x[1], b};
+        }
         default -> {
           int lo = x[0].min();
           cs.add(new Reified(new XeqC(x[0], lo), bs[0]));
@@ -158,7 +215,6 @@ class LinearizationsTest {
           scope = new IntVar[] {x[0], bs[0], bs[1], bs[2]};
         }
       }
-      List<LinearForm> made = new ArrayList<>();
       for (Constraint c : cs) {
         made.addAll(Linearizations.of(c));
       }

@@ -111,6 +111,11 @@ class AdaptiveLnsTest {
     }
     // every kind was used, the objective's terms included
     for (AdaptiveLns.Kind kind : AdaptiveLns.Kind.values()) {
+      if (kind == AdaptiveLns.Kind.ROUTES || kind == AdaptiveLns.Kind.RELATED) {
+        // no routes in this model
+        assertTrue(lns.statistics().contains(kind + " 0/"), lns.statistics());
+        continue;
+      }
       assertTrue(!lns.statistics().contains(kind + " 0/"), lns.statistics());
     }
     assertEquals(400, lns.runs());

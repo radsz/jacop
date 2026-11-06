@@ -1227,7 +1227,8 @@ public class Support implements ParserTreeConstants {
           Explainable,
           ValueIndicator,
           PbEncodable,
-          ConflictRows {
+          ConflictRows,
+          Linearizations.Relaxable {
 
     final IntVar x;
     final int c;
@@ -1278,6 +1279,12 @@ public class Support implements ParserTreeConstants {
     @Override
     public List<LinearForm> conflictRows() {
       return Linearizations.of(new Implies(b, new XeqC(x, c)));
+    }
+
+    // b -> x = c, and !b -> x != c when c is a bound of x
+    @Override
+    public List<LinearForm> relaxation() {
+      return Linearizations.valueRows(x, c, b, isReified, true);
     }
 
     @Override
@@ -1341,7 +1348,7 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x != c, reified with b or implied by b. */
   final class FzXneqC extends Constraint
-      implements Violation, Copyable<FzXneqC>, Explainable, PbEncodable {
+      implements Violation, Copyable<FzXneqC>, Explainable, PbEncodable, Linearizations.Relaxable {
 
     final IntVar x;
     final int c;
@@ -1371,6 +1378,12 @@ public class Support implements ParserTreeConstants {
     @Override
     public void consistency(final Store store) {
       propagateFzXneqC(store, x, c, b, isReified, this::removeConstraint);
+    }
+
+    // !b -> x = c when reified, and b -> x != c when c is a bound of x
+    @Override
+    public List<LinearForm> relaxation() {
+      return Linearizations.valueRows(x, c, b, isReified, false);
     }
 
     @Override
@@ -1434,7 +1447,12 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x = y, reified with b or implied by b. */
   final class FzXeqY extends Constraint
-      implements Violation, Copyable<FzXeqY>, Explainable, PbEncodable, ConflictRows {
+      implements Violation,
+          Copyable<FzXeqY>,
+          Explainable,
+          PbEncodable,
+          ConflictRows,
+          Linearizations.Relaxable {
 
     final IntVar x;
     final IntVar y;
@@ -1460,6 +1478,11 @@ public class Support implements ParserTreeConstants {
     @Override
     public List<LinearForm> conflictRows() {
       return Linearizations.of(new Implies(b, new XeqY(x, y)));
+    }
+
+    @Override
+    public List<LinearForm> relaxation() {
+      return conflictRows();
     }
 
     @Override
