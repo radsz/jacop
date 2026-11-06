@@ -103,8 +103,11 @@ public final class RevisedDualSimplex {
 
   // the crash basis of the first solve (org.jacop.jalp.crash): the slack rows it may give to a
   // structural column, by the kind of the slack: "off", "eq" (fixed slacks of equality rows),
-  // "ranged" (and boxed slacks) or "all" (and the slacks of inequality rows)
-  private static final int CRASH_ROWS = crashRows(System.getProperty("org.jacop.jalp.crash", "eq"));
+  // "ranged" (and boxed slacks) or "all" (and the slacks of inequality rows). Off by default: on
+  // the LP bench "eq" saves 15 % of the pivots (31 % on JaCoP's root LPs) but no time, and in
+  // JaCoP the other root vertex moves search both ways (2021 ATSP instance10: 2.6 s to a timeout)
+  private static final int CRASH_ROWS =
+      crashRows(System.getProperty("org.jacop.jalp.crash", "off"));
 
   // a crash pivot must be at least this share of the largest entry of its column
   private static final double CRASH_PIVOT =
