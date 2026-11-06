@@ -1058,7 +1058,9 @@ class LcgFuzzTest {
       IntVar[] list = x.clone();
       if (rnd.nextInt(5) == 0) {
         // a repeated variable
-        list[rnd.nextInt(n)] = list[rnd.nextInt(n)];
+        int to = rnd.nextInt(n);
+        int from = rnd.nextInt(n);
+        list[to] = list[from];
       }
       IntervalDomain set = new IntervalDomain();
       for (int v = 1; v <= classes; v++) {
