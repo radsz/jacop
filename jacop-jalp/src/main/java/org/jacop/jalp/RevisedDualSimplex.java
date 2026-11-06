@@ -475,6 +475,8 @@ public final class RevisedDualSimplex {
   public void setCost(double[] c) {
     System.arraycopy(c, 0, givenCost, 0, n);
     setCosts(true);
+    placed = false;
+    dualsChecked = false;
     if (factorValid) {
       computeDuals();
     }
@@ -2270,6 +2272,10 @@ public final class RevisedDualSimplex {
   public int solvePrimal(int limit) {
     long start = totalPivots;
     int status = primalPivots(limit);
+    // the primal pivots change the basis and the reduced costs: the dual simplex places every
+    // column and checks its reduced costs again
+    placed = false;
+    dualsChecked = false;
     if (savedLo != null) {
       restoreBounds();
       if (status == OPTIMAL && leavingRow() >= 0) {
@@ -2355,6 +2361,7 @@ public final class RevisedDualSimplex {
     boundsPerturbed = false;
     for (int j = 0; j < cols; j++) {
       workingBounds(j);
+      markMoved(j);
     }
     if (factorValid) {
       updateBeta();
@@ -2378,6 +2385,7 @@ public final class RevisedDualSimplex {
     for (int j = 0; j < cols; j++) {
       if (row[j] < 0 && isArtificial(j, upper[j]) && !isArtificial(j, !upper[j])) {
         upper[j] = !upper[j];
+        markMoved(j);
       }
     }
     updateBeta();
@@ -2497,8 +2505,9 @@ public final class RevisedDualSimplex {
         Arrays.fill(devex, 0, cols, 1);
       }
       if (!stable
-          || lu.updates() >= REFACTOR_UPDATES
-          || lu.updateNonzeros() > 2 * (lu.factorNonzeros + m)) {
+          || lu.updates() >= refactorUpdates
+          || lu.updateNonzeros() > REFACTOR_FILL * (lu.factorNonzeros + m)
+          || solvesOutgrowFactor()) {
         primalRefactor();
         wasPhaseOne = false;
       }
