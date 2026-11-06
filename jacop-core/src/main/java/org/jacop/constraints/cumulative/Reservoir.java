@@ -44,6 +44,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Reservoir: event i changes the level of a reservoir by {@code changes[i]} at time {@code
@@ -79,7 +82,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<Reservoir> {
+public class Reservoir extends Constraint
+    implements SatisfiedPresent, Copyable<Reservoir>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -271,6 +275,26 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
     return true;
   }
 
+  // whether the precedences are not contradictory
+  boolean feasible() {
+    return feasible;
+  }
+
+  // the precedences between events: times[p[1]] >= times[p[0]] + p[2]
+  int[][] pairs() {
+    return pairs;
+  }
+
+  // the time of y is at or before the time of x by the precedences alone (or the same variable)
+  boolean staticBefore(int y, int x) {
+    return times[y] == times[x] || (dist != null && dist[y][x] != NONE && dist[y][x] >= 0);
+  }
+
+  // the time of y is after the time of x by the precedences alone
+  boolean staticAfter(int y, int x) {
+    return times[y] != times[x] && dist != null && dist[x][y] != NONE && dist[x][y] >= 1;
+  }
+
   // the time of y is at or before the time of x in every solution
   private boolean before(int y, int x) {
     return tmax[y] <= tmin[x] || (dist != null && dist[y][x] != NONE && dist[y][x] >= 0);
@@ -409,6 +433,35 @@ public class Reservoir extends Constraint implements SatisfiedPresent, Copyable<
       times[b].domain.inMin(
           store.level, times[b], (int) Math.min(IntDomain.MAX_INT, (long) times[a].min() + gap));
     }
+  }
+
+  // explains the propagation for lazy clause generation, unless -Djacop.lcg.reservoirExplain=false
+  private static final boolean EXPLAIN =
+      !"false".equals(System.getProperty("jacop.lcg.reservoirExplain"));
+
+  // created on first use
+  private ReservoirExplanation explanation;
+
+  private ReservoirExplanation explanation() {
+    if (explanation == null) {
+      explanation = new ReservoirExplanation(this);
+    }
+    return explanation;
+  }
+
+  /**
+   * Explains a bound of a time by the level just after one event (see {@link
+   * ReservoirExplanation}), or by a precedence between events.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return EXPLAIN && explanation().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by an event whose level leaves the bounds wherever its time lies. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return EXPLAIN && explanation().explainFailure(trail, out);
   }
 
   @Override

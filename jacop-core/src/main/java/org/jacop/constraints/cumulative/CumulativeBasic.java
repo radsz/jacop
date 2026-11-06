@@ -596,6 +596,17 @@ public class CumulativeBasic extends Constraint
       if (y == limit) {
         return kind == AtomicTrail.GE && explainLimit(trail, entry, out);
       }
+      if (snapshotPresent != null && kind == AtomicTrail.LE && trail.value(entry) <= 0) {
+        for (int i = 0; i < taskNormal.length; i++) {
+          if (presence(i) == y) {
+            int mark = out.size();
+            if (explainAbsent(trail, entry, i, out)) {
+              return true;
+            }
+            out.truncate(mark);
+          }
+        }
+      }
       return kind == AtomicTrail.LE && explainUseBound(trail, entry, y, out);
     }
     TaskView own = taskNormal[j];
@@ -605,7 +616,7 @@ public class CumulativeBasic extends Constraint
       return false;
     }
     trail.addLowerBound(own.dur, entry, out);
-    trail.addLowerBound(own.res, entry, out);
+    addUseLowerBound(trail, entry, own, out);
     int room = limitMax - r;
     int v = trail.value(entry);
     if (kind == AtomicTrail.NE) {
@@ -696,6 +707,9 @@ public class CumulativeBasic extends Constraint
     if (explainNoStartLeft(trail, position, out)) {
       return true;
     }
+    if (snapshotPresent != null && explainNoTaskStart(trail, position, out)) {
+      return true;
+    }
     int[] window = overloadedWindow(trail, position, -1, 0);
     if (window != null) {
       addWindowReason(trail, position, -1, window, 0, 0, out);
@@ -717,18 +731,53 @@ public class CumulativeBasic extends Constraint
   private int[] snapshotLst;
   private int[] snapshotDur;
   private int[] snapshotRes;
+  // whether each optional task is present, null without optional tasks
+  private boolean[] snapshotPresent;
   private int limitMax;
   private int snapshotPosition = -1;
   private int windowBudget;
 
   // the explanations hold for the relation of every task present, using the smallest durations
-  // and resource uses and the largest limit; CumulativeOptional and other subclasses with another
-  // relation use the generic reason
+  // and resource uses and the largest limit; a task of CumulativeOptional or
+  // CumulativeUnaryOptional counts only once its presence is 1, which the reasons then cite; other
+  // subclasses with another relation use the generic reason
   private boolean explainable() {
     Class<?> type = getClass();
     return type == CumulativeBasic.class
         || type == Cumulative.class
-        || type == CumulativeUnary.class;
+        || type == CumulativeUnary.class
+        || (OPTIONAL_EXPLAIN
+            && (type == CumulativeOptional.class || type == CumulativeUnaryOptional.class));
+  }
+
+  // explains CumulativeOptional and CumulativeUnaryOptional, unless
+  // -Djacop.lcg.optionalExplain=false
+  private static final boolean OPTIONAL_EXPLAIN =
+      !"false".equals(System.getProperty("jacop.lcg.optionalExplain"));
+
+  /**
+   * The variable telling whether task i (in the order of the constructor) is present, for the
+   * optional cumulatives; null when every task is present.
+   *
+   * @param i the task.
+   * @return its presence variable, or null.
+   */
+  IntVar presence(int i) {
+    return null;
+  }
+
+  // cites the lower bound of a task's resource use and, for an optional task, its presence
+  private void addUseLowerBound(AtomicTrail trail, int position, TaskView task, EntryList out) {
+    trail.addLowerBound(task.res, position, out);
+    IntVar p = presence(slot(task));
+    if (p != null) {
+      trail.addLowerBound(p, position, out);
+    }
+  }
+
+  // whether a task is present just before the snapshot position (always without presences)
+  private boolean presentInSnapshot(TaskView task) {
+    return snapshotPresent == null || snapshotPresent[slot(task)];
   }
 
   /**
@@ -807,13 +856,38 @@ public class CumulativeBasic extends Constraint
     }
     int mark = out.size();
     trail.addLowerBound(own.dur, position, out);
-    trail.addLowerBound(own.res, position, out);
+    addUseLowerBound(trail, position, own, out);
     trail.addLowerBound(own.start, position, out);
     trail.addUpperBound(own.start, position, out);
     if (explainStartsBelow(trail, position, j, est(own), lst(own) + 1, d, limitMax - r, out)) {
       return true;
     }
     out.truncate(mark);
+    return false;
+  }
+
+  /**
+   * Explains a failure by a task that has no start left between its bounds, for the optional
+   * cumulatives, whose own sweep does not record which task lost its starts.
+   */
+  private boolean explainNoTaskStart(AtomicTrail trail, int position, EntryList out) {
+    for (int j = 0; j < taskNormal.length; j++) {
+      TaskView own = taskNormal[j];
+      int d = dmin(position, own);
+      int r = rmin(position, own);
+      if (d <= 0 || r <= 0) {
+        continue;
+      }
+      int mark = out.size();
+      addUseLowerBound(trail, position, own, out);
+      trail.addLowerBound(own.dur, position, out);
+      trail.addLowerBound(own.start, position, out);
+      trail.addUpperBound(own.start, position, out);
+      if (explainStartsBelow(trail, position, j, est(own), lst(own) + 1, d, limitMax - r, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
     return false;
   }
 
@@ -931,7 +1005,7 @@ public class CumulativeBasic extends Constraint
     trail.addBoundReaching(task.start, position, true, (long) pair[1] - di + 1, out);
     trail.addBoundReaching(task.start, position, false, pair[2], out);
     trail.addLowerBound(task.dur, position, out);
-    trail.addLowerBound(task.res, position, out);
+    addUseLowerBound(trail, position, task, out);
     long left = (long) room - rmin(position, task);
     if (pair[2] - pair[1] <= di) {
       overloaded(trail, position, j, pair[0], pair[1], left, out);
@@ -1014,7 +1088,7 @@ public class CumulativeBasic extends Constraint
           trail.addBoundReaching(
               task.start, position, true, (long) end - dmin(position, task) + 1, out);
           trail.addLowerBound(task.dur, position, out);
-          trail.addLowerBound(task.res, position, out);
+          addUseLowerBound(trail, position, task, out);
         }
       }
       t = end + 1;
@@ -1319,7 +1393,7 @@ public class CumulativeBasic extends Constraint
         }
       } else if (task.res == y && task.dur != y) {
         int d = dmin(entry, task);
-        if (d <= 0) {
+        if (d <= 0 || !presentInSnapshot(task)) {
           continue;
         }
         if (w >= limitMax) {
@@ -1352,12 +1426,55 @@ public class CumulativeBasic extends Constraint
     trail.addLowerBound(task.dur, entry, out);
     trail.addLowerBound(task.start, entry, out);
     trail.addUpperBound(task.start, entry, out);
-    if (explainStartsBelow(
-        trail, entry, i, est(task), lst(task) + 1, dmin(entry, task), limitMax - w - 1, out)) {
+    // the task counts in the windows with the use it would have
+    int slot = slot(task);
+    int saved = snapshotRes[slot];
+    snapshotRes[slot] = w + 1;
+    boolean done =
+        explainStartsBelow(
+            trail, entry, i, est(task), lst(task) + 1, dmin(entry, task), limitMax - w - 1, out);
+    snapshotRes[slot] = saved;
+    if (done) {
       return true;
     }
     out.truncate(mark);
     return false;
+  }
+
+  /**
+   * Explains that optional task i is absent: present, with its smallest duration and resource use,
+   * it would exceed the limit by itself, overlap with its compulsory part a time point where the
+   * others leave too little, or find no start left between its bounds.
+   */
+  private boolean explainAbsent(AtomicTrail trail, int entry, int i, EntryList out) {
+    TaskView task = taskNormal[i];
+    int d = dmin(entry, task);
+    int r = trail.minBefore(task.res, entry);
+    if (d <= 0 || r <= 0) {
+      return false;
+    }
+    trail.addLowerBound(task.dur, entry, out);
+    trail.addLowerBound(task.res, entry, out);
+    if (r > limitMax) {
+      trail.addBoundReaching(limit, entry, false, r - 1L, out);
+      return true;
+    }
+    int room = limitMax - r;
+    int t = firstOverloaded(trail, entry, i, lst(task), est(task) + d - 1, room);
+    if (t != NONE) {
+      trail.addBoundReaching(task.start, entry, true, (long) t - d + 1, out);
+      trail.addBoundReaching(task.start, entry, false, t, out);
+      overloaded(trail, entry, i, t, room, out);
+      return true;
+    }
+    trail.addLowerBound(task.start, entry, out);
+    trail.addUpperBound(task.start, entry, out);
+    int slot = slot(task);
+    int saved = snapshotRes[slot];
+    snapshotRes[slot] = r;
+    boolean done = explainStartsBelow(trail, entry, i, est(task), lst(task) + 1, d, room, out);
+    snapshotRes[slot] = saved;
+    return done;
   }
 
   // explains that task i, with a duration above w, has no start left (see explainUseBound)
@@ -1365,7 +1482,7 @@ public class CumulativeBasic extends Constraint
       AtomicTrail trail, int entry, int i, int w, int room, EntryList out) {
     TaskView task = taskNormal[i];
     int mark = out.size();
-    trail.addLowerBound(task.res, entry, out);
+    addUseLowerBound(trail, entry, task, out);
     int t = firstOverloaded(trail, entry, i, lst(task), est(task) + w, room);
     if (t != NONE) {
       trail.addBoundReaching(task.start, entry, true, (long) t - w, out);
@@ -1452,7 +1569,7 @@ public class CumulativeBasic extends Constraint
       trail.addBoundReaching(task.start, position, true, (long) a + o - d, out);
       trail.addBoundReaching(task.start, position, false, (long) b - o, out);
       trail.addLowerBound(task.dur, position, out);
-      trail.addLowerBound(task.res, position, out);
+      addUseLowerBound(trail, position, task, out);
     }
   }
 
@@ -1501,6 +1618,9 @@ public class CumulativeBasic extends Constraint
       snapshotLst = new int[n];
       snapshotDur = new int[n];
       snapshotRes = new int[n];
+      if (n > 0 && presence(0) != null) {
+        snapshotPresent = new boolean[n];
+      }
     }
     for (int i = 0; i < n; i++) {
       TaskView task = snapshotTasks[i];
@@ -1508,6 +1628,13 @@ public class CumulativeBasic extends Constraint
       snapshotLst[i] = trail.maxBefore(task.start, position);
       snapshotDur[i] = trail.minBefore(task.dur, position);
       snapshotRes[i] = trail.minBefore(task.res, position);
+      if (snapshotPresent != null) {
+        // an optional task counts with no resource use until it is present
+        snapshotPresent[i] = trail.minBefore(presence(i), position) >= 1;
+        if (!snapshotPresent[i]) {
+          snapshotRes[i] = 0;
+        }
+      }
     }
     limitMax = trail.maxBefore(limit, position);
     snapshotPosition = position;
@@ -1524,7 +1651,7 @@ public class CumulativeBasic extends Constraint
     trail.addBoundReaching(task.start, position, true, (long) t - dmin(position, task) + 1, out);
     trail.addBoundReaching(task.start, position, false, t, out);
     trail.addLowerBound(task.dur, position, out);
-    trail.addLowerBound(task.res, position, out);
+    addUseLowerBound(trail, position, task, out);
   }
 
   /**
