@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -118,6 +119,15 @@ public class Store {
 
   /** The constraints imposed so far, in imposition order, when recording is on; otherwise null. */
   private List<Constraint> model;
+
+  /**
+   * Constraints that every solution of the other constraints satisfies (redundant constraints added
+   * for propagation), or null if there are none.
+   */
+  private Set<Constraint> implied;
+
+  /** True while the constraints imposed are implied by the others. */
+  private boolean imposingImplied;
 
   /** The constraints imposed without a place in any domain's constraint list, in order. */
   private final List<Constraint> unlisted = new ArrayList<>();
@@ -1616,6 +1626,42 @@ public class Store {
     if (model != null) {
       model.add(c);
     }
+    if (imposingImplied) {
+      markImplied(c);
+    }
+  }
+
+  /**
+   * Starts or ends a stretch in which every constraint imposed, including the constraints of
+   * decompositions, is implied by the others: it only adds propagation, and every solution of the
+   * other constraints satisfies it. Local search, for example, does not evaluate such constraints.
+   *
+   * @param on true to start the stretch, false to end it.
+   */
+  public void imposingImplied(boolean on) {
+    imposingImplied = on;
+  }
+
+  /**
+   * Marks a constraint as implied by the other constraints of the store.
+   *
+   * @param c the constraint, implied by the others.
+   */
+  public void markImplied(Constraint c) {
+    if (implied == null) {
+      implied = Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+    implied.add(c);
+  }
+
+  /**
+   * Tells whether a constraint was marked as implied by the other constraints of the store.
+   *
+   * @param c the constraint.
+   * @return true if c was imposed in a stretch of implied constraints or marked so.
+   */
+  public boolean isImplied(Constraint c) {
+    return implied != null && implied.contains(c);
   }
 
   /**
