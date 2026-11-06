@@ -2524,7 +2524,7 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
-160. Lattice methods for linear equalities.
+163. Lattice methods for linear equalities.
      - LinearIntDom finds the supports of an equality by bitset sumsets
        when that is estimated cheaper than enumerating them: a forward
        pass of shifts gives the reachable partial sums after each
@@ -2549,7 +2549,8 @@ Version 5.0 (unreleased)
        equalities that only define a variable are set aside, and each
        remaining component is solved over the integers, which proves it
        infeasible or gives every variable a congruence x = x0 (mod g)
-       whose other values are removed; the variables the set-aside
+       whose other values are removed from domains of at most 256 values
+       (larger domains only get their bounds rounded); the variables the set-aside
        equalities define get the congruence of their sum.
      - Market split systems (at least two equalities of five or more
        variables, a coefficient of at least 10, domains of at most 100
@@ -2558,9 +2559,22 @@ Version 5.0 (unreleased)
        basis, with x0 moved near the centre of the box (Babai,
        Combinatorica 6, 1986). The linear relaxation takes these rows in
        and lambda is searched first, last basis vector first, middle
-       value first. RESULTS_MS
+       value first. Without the relaxation the lambda search is
+       slower than the x search, so it is only done with the relaxation
+       on (the default). On 20
+       market split instances (Cornuejols and Dawande, IPCO 1998;
+       m = 3..6 equalities, n = 10(m-1) binaries, 60 s) solved 8 -> 17
+       by default and 6 -> 16 with -f; m = 5 takes 1-7 s against
+       time-outs, and 3 of the 5 m = 6 instances stay open.
        -Dorg.jacop.fz.lattice=false turns the detector off;
-       -Dorg.jacop.fz.latticeReformulate=auto|on|off. RESULTS_WIDE
+       -Dorg.jacop.fz.latticeReformulate=auto|on|off. Wide set (220,
+       60 s, paired): congruences prune on 16 instances and no wide
+       instance is reformulated; solved 168 -> 167 by default (one evm
+       proof at 59.4 s lost) and 160 -> 161 with -f, instances 6 better
+       / 6 worse and 13 / 13, the rest of the differences being on
+       instances whose model does not change. ptv pax_period_20_3b is
+       proved in 28 s instead of 58 s (4.4 s instead of 7.4 s with -f),
+       harmony canon in 18 s instead of 23 s (36 s instead of 48 s).
 
 Version 4.11
 =============
