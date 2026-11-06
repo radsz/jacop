@@ -221,7 +221,14 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
 
   // x - y <= c when literal is null or literal == value
   private void difference(IntVar x, IntVar y, long c, IntVar literal, int value) {
-    if (x == y || c < Integer.MIN_VALUE || c > Integer.MAX_VALUE) {
+    // an arc through a constant is on no cycle of the variables; it never reaches the constraint,
+    // so
+    // the scratch constants stay out of it
+    if (x == y
+        || x.singleton()
+        || y.singleton()
+        || c < Integer.MIN_VALUE
+        || c > Integer.MAX_VALUE) {
       return;
     }
     IntVar b = literal;
