@@ -291,7 +291,91 @@ public class CumulativeUnary extends Cumulative {
         unaryRules(store, tn, tr, !doProfile);
       }
 
+      if (doUnaryEdgeFind && !store.propagationHasOccurred && optionalRules) {
+        optionalRules(store);
+        if (store.propagationHasOccurred) {
+          boundsChanged();
+        }
+      }
+
     } while (store.propagationHasOccurred);
+  }
+
+  // the overload check and edge finding over optional tasks (uses 0 or positive): off by default,
+  // on with -Djacop.cumulative.optionalRules=true. On the optional-interval kit they pruned little
+  // and cost 10-30 % of the node rate, so proofs took longer.
+  private static final boolean OPTIONAL_RULES =
+      "true".equals(System.getProperty("jacop.cumulative.optionalRules"));
+
+  private boolean optionalRules = OPTIONAL_RULES;
+
+  /**
+   * Sets whether the overload check and edge finding also run over optional tasks, those whose
+   * resource use may be 0 (see {@link #optionalRules(Store)}). Off by default; the system property
+   * {@code jacop.cumulative.optionalRules=true} turns it on for every instance.
+   *
+   * @param on true to run them.
+   */
+  public void setOptionalRules(boolean on) {
+    optionalRules = on;
+  }
+
+  private final EnergyReasoning optionalNormal = new EnergyReasoning();
+  private final EnergyReasoning optionalReversed = new EnergyReasoning();
+  private TaskView[] optionalLoaded;
+  private boolean[] optionalIsPresent;
+  private IntVar[] optionalUse;
+  private int[] optionalTask;
+
+  /**
+   * The overload check and edge finding with optional tasks (Vilím, Barták and Čepek, "Extension of
+   * O(n log n) filtering algorithms for the unary resource constraint to optional activities",
+   * Constraints 10, 2005) for the tasks whose resource use may be 0: their use is their presence.
+   * The rules above leave such tasks out. An optional task that the present tasks would overload
+   * with, or that edge finding would push past its latest start, gets use 0 ({@link
+   * UnaryExplanation#explainAbsent} explains it). Only the uses change, never the starts of
+   * optional tasks.
+   *
+   * @param store the constraint store.
+   */
+  void optionalRules(Store store) {
+    int n = taskNormal.length;
+    if (optionalLoaded == null) {
+      optionalLoaded = new TaskView[n];
+      optionalIsPresent = new boolean[n];
+      optionalUse = new IntVar[n];
+      optionalTask = new int[n];
+    }
+    int k = 0;
+    boolean anyOptional = false;
+    for (int i = 0; i < n; i++) {
+      TaskView t = taskNormal[i];
+      if (t.dur.min() > 0 && t.res.max() > 0) {
+        optionalLoaded[k] = t;
+        optionalIsPresent[k] = t.res.min() > 0;
+        optionalUse[k] = t.res;
+        optionalTask[k] = i;
+        anyOptional |= !optionalIsPresent[k];
+        k++;
+      }
+    }
+    if (!anyOptional) {
+      return;
+    }
+    optionalNormal.load(optionalLoaded, k, true);
+    optionalNormal.overloadOptional(1, k, optionalIsPresent, optionalUse, store);
+    if (store.propagationHasOccurred) {
+      return;
+    }
+    optionalNormal.unaryEdgeFindOptional(k, optionalIsPresent, optionalUse, store);
+    if (store.propagationHasOccurred) {
+      return;
+    }
+    for (int q = 0; q < k; q++) {
+      optionalLoaded[q] = taskReversed[optionalTask[q]];
+    }
+    optionalReversed.load(optionalLoaded, k, true);
+    optionalReversed.unaryEdgeFindOptional(k, optionalIsPresent, optionalUse, store);
   }
 
   /**
@@ -519,12 +603,53 @@ public class CumulativeUnary extends Cumulative {
         unaryExplanation = new UnaryExplanation(taskNormal, limit);
       }
       int mark = out.size();
+      int absent = absentTask(trail, entry);
+      if (absent >= 0) {
+        // an optional task made absent: by the time table or by the rules over optional tasks,
+        // whichever reason is shorter
+        absentScratch.clear();
+        boolean byRules = unaryExplanation.explainAbsent(trail, entry, absent, absentScratch);
+        boolean byTable = super.explain(trail, entry, out);
+        if (byRules && (!byTable || absentScratch.size() < out.size() - mark)) {
+          out.truncate(mark);
+          for (int q = 0; q < absentScratch.size(); q++) {
+            out.addFrom(absentScratch, q);
+          }
+          return true;
+        }
+        if (byTable) {
+          return true;
+        }
+        out.truncate(mark);
+        return false;
+      }
       if (unaryExplanation.explain(trail, entry, out)) {
         return true;
       }
       out.truncate(mark);
     }
     return super.explain(trail, entry, out);
+  }
+
+  private final EntryList absentScratch = new EntryList();
+
+  // the task whose use the entry sets to 0, or -1
+  private int absentTask(AtomicTrail trail, int entry) {
+    if (trail.kind(entry) != AtomicTrail.LE || trail.value(entry) > 0) {
+      return -1;
+    }
+    IntVar y = trail.variable(entry);
+    int found = -1;
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView t = taskNormal[i];
+      if (t.res == y) {
+        if (found >= 0 || t.start == y || t.dur == y) {
+          return -1;
+        }
+        found = i;
+      }
+    }
+    return found;
   }
 
   /**
@@ -571,7 +696,7 @@ public class CumulativeUnary extends Cumulative {
   @Override
   CumulativeBasic withTasks(IntVar[] s, IntVar[] d, IntVar[] r) {
     return getClass() == CumulativeUnary.class
-        ? withOptionsOf(new CumulativeUnary(s, d, r, limit, doProfile, doUnaryEdgeFind))
+        ? withUnaryOptions(new CumulativeUnary(s, d, r, limit, doProfile, doUnaryEdgeFind))
         : null;
   }
 
@@ -582,14 +707,21 @@ public class CumulativeUnary extends Cumulative {
     }
     return simplifyTasks(
         t ->
-            withOptionsOf(
+            withUnaryOptions(
                 new CumulativeUnary(t[0], t[1], t[2], limit, doProfile, doUnaryEdgeFind)));
   }
 
   @Override
   public CumulativeUnary copy(VarMap map) {
     IntVar[][] t = taskVariables(map);
-    return withOptionsOf(
+    return withUnaryOptions(
         new CumulativeUnary(t[0], t[1], t[2], map.get(limit), doProfile, doUnaryEdgeFind));
+  }
+
+  // the options of this constraint, the rules over optional tasks included, on a copy
+  private CumulativeUnary withUnaryOptions(CumulativeUnary copy) {
+    CumulativeUnary c = withOptionsOf(copy);
+    c.optionalRules = optionalRules;
+    return c;
   }
 }

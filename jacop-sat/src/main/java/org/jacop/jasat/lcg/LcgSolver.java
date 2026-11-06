@@ -75,6 +75,7 @@ import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
 import org.jacop.lcg.ExplanationMinimality;
+import org.jacop.lcg.ImpliedClauses;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
@@ -295,6 +296,12 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: decisions taken from the model's search annotation. */
   public long annotationDecisions;
+
+  // the selection that starts the activity runs of fixed search with restarts, or null
+  private SelectChoicePoint<? extends Var> activityGuide;
+
+  /** Statistics: decisions taken from the selection that starts the activity runs. */
+  public long guideDecisions;
 
   /** How decisions are made outside the runs of the search annotation. */
   public enum Branching {
@@ -2417,6 +2424,21 @@ public final class LcgSolver implements ExternalPropagator {
   // the most times the core-guided phase gets another share of the time
   private static final int MAX_CORE_EXTENSIONS = 8;
 
+  // -Djacop.lcg.coreSkip=false: the core-guided phase runs after its probe even when the probe's
+  // rate could not raise the bound to the objective's root bound
+  private static final boolean CORE_SKIP =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreSkip", Boolean.TRUE.toString()));
+
+  // the share of the core-guided phase that measures its rate when the objective's root bound is
+  // above the cores' lower bound
+  private static final double CORE_TRIAL =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreTrial", "0.1"));
+
+  /**
+   * Statistics: core-guided phases skipped after the probe, as below the objective's root bound.
+   */
+  public long coreSkips;
+
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
@@ -2448,9 +2470,29 @@ public final class LcgSolver implements ExternalPropagator {
         return result;
       }
     }
+    double share = coreShare;
+    if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < root[objective].min()) {
+      // the root bound of the objective (from the linear relaxation, say) is above the cores' lower
+      // bound: a trial part of the phase measures how fast the cores raise it, and the rest of the
+      // phase runs only if they could reach the root bound at that rate. Below it they prove
+      // nothing, and branch and bound needs the time for the solutions: concert-hall-cap 2024
+      // 200_20 found no better solution during 32 s of cores that raised the bound a twentieth of
+      // the way to the root bound
+      coreSearch.mark();
+      result = runCores(CORE_TRIAL * coreShare, coreBudget, false);
+      if (result != CdclSolver.UNKNOWN) {
+        return result;
+      }
+      share = (1 - CORE_TRIAL) * coreShare / (1 - CORE_TRIAL * coreShare);
+      boolean reach = coreSearch.canReach(root[objective].min(), (long) (share * workLeft()));
+      if (!reach) {
+        coreSkips++;
+        return afterCores();
+      }
+    }
     double[] saved = CORE_RESTORE ? activity.clone() : null;
     double savedInc = activityInc;
-    result = runCores(coreShare, coreBudget, true);
+    result = runCores(share, coreBudget, true);
     if (result != CdclSolver.UNKNOWN) {
       return result;
     }
@@ -2464,6 +2506,11 @@ public final class LcgSolver implements ExternalPropagator {
       rebuildHeap(wide);
       rebuildHeap(lateHeap);
     }
+    return afterCores();
+  }
+
+  /** Branch and bound after the core-guided phase, from its best solution. */
+  private int afterCores() {
     if (!requireBetter()) {
       return CdclSolver.SAT;
     }
@@ -3247,6 +3294,19 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets a selection that starts the runs of activity branching under fixed search with restarts
+   * (see {@link #setFixedRestarts}): its decisions come first in those runs, and activity branching
+   * takes over when it gives none. A selection that follows the solution of the linear relaxation
+   * gives those runs the relaxation's values, which the model's annotation may not find (the
+   * annotation of concert-hall-cap rejects every offer first). Set it before solving.
+   *
+   * @param select the selection, or null for none
+   */
+  public void setActivityGuide(SelectChoicePoint<? extends Var> select) {
+    activityGuide = select;
+  }
+
+  /**
    * Sets restarts under fixed search (an annotation set with free false). Without them the solver
    * never restarts, so its learnt clauses prune but never reorder the search. With them the solver
    * restarts on its own schedule; each run follows the annotation (REPLAY) or the runs take turns
@@ -3322,19 +3382,23 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: layered-graph constraints given to the solver as clauses. */
   public long graphConstraintsEncoded;
 
+  /** Statistics: clauses implied by constraints ({@link ImpliedClauses}) given to the solver. */
+  public long impliedClauses;
+
   /**
    * Gives the solver every layered-graph constraint of the store as clauses ({@link
    * LayeredGraphConstraint#encodeClauses}) and removes the constraint from the store. Unit
    * propagation over the clauses is domain consistent, as the constraint is, and explains itself:
    * explaining by cuts of the graph made the conflicts of regular-heavy models slow and their
-   * clauses long. Not under a proof, whose model has no auxiliary variables.
+   * clauses long. Constraints with {@link ImpliedClauses} add theirs here too and stay in the
+   * store. Neither under a proof, whose model has no auxiliary variables and no implied clauses.
    */
   private void encodeGraphs() {
     if (graphsEncoded) {
       return;
     }
     graphsEncoded = true;
-    if (!graphClauses || proof != null || rootFailed) {
+    if (proof != null || rootFailed) {
       return;
     }
     ClauseModel model =
@@ -3358,9 +3422,11 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     for (Constraint c : store.getConstraints()) {
-      if (c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
+      if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
         graphConstraintsEncoded++;
+      } else if (c instanceof ImpliedClauses i && !rootFailed) {
+        impliedClauses += i.impliedClauses(model);
       }
     }
   }
@@ -4589,9 +4655,30 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     if (activityBranching) {
+      if (activityGuide != null && !freeSearch && annotation != null) {
+        int lit = guideDecision();
+        if (lit != 0) {
+          guideDecisions++;
+          return lit;
+        }
+      }
       return activityDecision();
     }
     return 0;
+  }
+
+  /** The next decision of the selection that starts the activity runs, or 0 when it has none. */
+  private int guideDecision() {
+    Var v = activityGuide.getChoiceVariable(0);
+    if (v == null) {
+      return 0;
+    }
+    int i = idOf(v);
+    if (i < 0 || vars[i].singleton()) {
+      return 0;
+    }
+    int value = activityGuide.getChoiceValue();
+    return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
   }
 
   /**

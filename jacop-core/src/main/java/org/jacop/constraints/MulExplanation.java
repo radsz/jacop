@@ -137,6 +137,19 @@ final class MulExplanation {
   boolean explainFailure(EntryList out) {
     int mark = out.size();
     IntVar[] vars = {z, x, y};
+    // the cheap case: the bounds of two variables exclude every value of the third's bounds
+    for (IntVar v : vars) {
+      int roles = (v == z ? 1 : 0) | (v == x ? 2 : 0) | (v == y ? 4 : 0);
+      if (boundsExclude(roles, trail.minBefore(v, position), trail.maxBefore(v, position), out)) {
+        addBounds(v, out);
+        return true;
+      }
+      out.truncate(mark);
+    }
+    // otherwise the shortest of the variables' reasons that no value is supported: the first one
+    // found could cite a != atom for every value of a wide product, thousands of atoms on Molnar
+    EntryList best = null;
+    EntryList candidate = new EntryList();
     for (IntVar v : vars) {
       int lo = trail.minBefore(v, position);
       int hi = trail.maxBefore(v, position);
@@ -144,17 +157,28 @@ final class MulExplanation {
       if ((long) hi - lo >= REMOVED_LIMIT && ((long) hi - lo + 1) * width(roles) > WORK_LIMIT) {
         continue;
       }
-      addBounds(v, out);
+      candidate.clear();
+      addBounds(v, candidate);
       boolean all = true;
       for (int w = lo; w <= hi && all; w++) {
-        all = trail.excludedBefore(v, w, position, out) || unsupported(roles, w, out);
+        all = trail.excludedBefore(v, w, position, candidate) || unsupported(roles, w, candidate);
       }
       if (all) {
-        return true;
+        candidate.sortUnique(0);
+        if (best == null || candidate.size() < best.size()) {
+          EntryList swap = best == null ? new EntryList() : best;
+          best = candidate;
+          candidate = swap;
+        }
       }
-      out.truncate(mark);
     }
-    return false;
+    if (best == null) {
+      return false;
+    }
+    for (int k = 0; k < best.size(); k++) {
+      out.add(best.get(k));
+    }
+    return true;
   }
 
   /**

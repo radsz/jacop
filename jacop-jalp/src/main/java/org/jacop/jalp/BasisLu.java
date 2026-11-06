@@ -686,9 +686,31 @@ final class BasisLu {
    * @return the number of nonzeros of y
    */
   int ftran(double[] x, int[] xi, int xn, double[] y, int[] yi, boolean keep) {
+    return ftran(x, xi, xn, y, yi, keep, keep ? 0 : OTHER);
+  }
+
+  /**
+   * Solves {@code B y = x} for the change of the basic values when nonbasic columns move to their
+   * other bounds (the bound flips of the ratio test), as {@link #ftran(double[], int[], int,
+   * double[], int[], boolean)} with a history of result densities of its own: these right-hand
+   * sides are usually far sparser than the other ftrans that do not enter.
+   *
+   * @param x the right-hand side, by row
+   * @param xi the rows of the nonzeros of x, overwritten (of length m)
+   * @param xn the number of nonzeros of x
+   * @param y the solution, by position
+   * @param yi the positions of the nonzeros of y
+   * @return the number of nonzeros of y
+   */
+  int ftranFlips(double[] x, int[] xi, int xn, double[] y, int[] yi) {
+    return ftran(x, xi, xn, y, yi, false, FLIPS);
+  }
+
+  // history: the first of the two density slots of the solve, for L and for U
+  private int ftran(double[] x, int[] xi, int xn, double[] y, int[] yi, boolean keep, int history) {
     ops += m;
     // L, by step: the steps the rows of x reach in L, in the order of the steps
-    int reached = xi == null ? -1 : reach(xi, xn, L_FTRAN, keep ? L_FTRAN : OTHER + L_FTRAN);
+    int reached = xi == null ? -1 : reach(xi, xn, L_FTRAN, history + L_FTRAN);
     if (reached < 0) {
       ops += m;
       for (int s = 0; s < m; s++) {
@@ -724,7 +746,7 @@ final class BasisLu {
       for (int k = 0; k < reached; k++) {
         xi[k] = pivotRow[reach[k]];
       }
-      reached = reach(xi, reached, U_FTRAN, keep ? U_FTRAN : OTHER + U_FTRAN);
+      reached = reach(xi, reached, U_FTRAN, history + U_FTRAN);
     }
     int yn = 0;
     if (reached < 0) {
@@ -943,6 +965,9 @@ final class BasisLu {
   // the history of the row eliminations of the updates
   private static final int UPDATE = 6;
 
+  // the history of the ftrans of bound flips
+  private static final int FLIPS = 7;
+
   /**
    * The share of the steps a solve may reach for its search to pay (Gilbert-Peierls): above it, or
    * when the recent solves of the same kind reached more, the solve runs over all steps.
@@ -959,7 +984,7 @@ final class BasisLu {
   private int stamp;
 
   // the share of the steps reached by recent solves of each kind
-  private final double[] density = new double[7];
+  private final double[] density = new double[9];
 
   // the rows of the spike's nonzeros, or -1 when the spike was copied whole
   private int[] spikeRows;
