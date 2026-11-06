@@ -398,6 +398,15 @@ public final class LocalSearch {
   }
 
   /**
+   * Returns the size of the disjunctive graph that the scheduling search used, and its iterations.
+   *
+   * @return tasks, machines and tabu search iterations; zeros when the model has no such graph.
+   */
+  public long[] getScheduleCounts() {
+    return new long[] {scheduleTasks, scheduleMachines, scheduleIterations};
+  }
+
+  /**
    * Returns the number of evaluations of copied constraints.
    *
    * @return the evaluations.
@@ -941,8 +950,10 @@ public final class LocalSearch {
 
   // the disjunctive graph of a scheduling model, searched by critical-path moves, or null
   private DisjunctiveSchedule schedule;
-  // tabu search iterations and moves of the scheduling search
+  // tabu search iterations of the scheduling search, and the tasks and machines it found
   private long scheduleIterations;
+  private int scheduleTasks;
+  private int scheduleMachines;
 
   /**
    * Finds the disjunctive graph of a scheduling model: the tasks of every cumulative resource on
@@ -972,11 +983,17 @@ public final class LocalSearch {
       return;
     }
     List<int[]> arcs = new ArrayList<>();
+    boolean bounded = false;
     for (int c = 0; c < linearCount; c++) {
       int[] arc = precedence(c, taskOf);
       if (arc != null) {
         arcs.add(arc);
       }
+      bounded |= boundsCost(c, taskOf);
+    }
+    if (!bounded) {
+      // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
+      return;
     }
     int[] var = new int[n];
     int[] dur = new int[n];
@@ -990,8 +1007,8 @@ public final class LocalSearch {
     }
     schedule =
         new DisjunctiveSchedule(var, dur, release, deadline, arcs, machines, scheduling, random);
-    classes.merge("S:tasks", n, Integer::sum);
-    classes.merge("S:machines", machines.size(), Integer::sum);
+    scheduleTasks = n;
+    scheduleMachines = machines.size();
   }
 
   /**
@@ -1088,6 +1105,24 @@ public final class LocalSearch {
     return a0 > 0 ? new int[] {t0, t1, (int) lag} : new int[] {t1, t0, (int) lag};
   }
 
+  // whether row c is cost >= s[t] + lag for a task t
+  private boolean boundsCost(int c, Map<Integer, Integer> taskOf) {
+    if (enforcer[c] >= 0
+        || coef[c] == null
+        || scope[c].length != 2
+        || (rel[c] != LE && rel[c] != GE)) {
+      return false;
+    }
+    int k = scope[c][0] == costIndex ? 0 : 1;
+    if (scope[c][k] != costIndex || !taskOf.containsKey(scope[c][1 - k])) {
+      return false;
+    }
+    long a = coef[c][k];
+    long b = coef[c][1 - k];
+    // a cost + b s <= r with a < 0 < b (LE), or >= with a > 0 > b (GE)
+    return a == -b && (rel[c] == LE ? a < 0 : a > 0);
+  }
+
   /**
    * Runs the tabu search over the machine sequences, checking each better schedule in the store.
    *
@@ -1106,6 +1141,7 @@ public final class LocalSearch {
       return false;
     }
     long started = solutions;
+    int[] before = val.clone();
     boolean[] over = {false};
     int[] failed = {0};
     DisjunctiveSchedule.Listener listener =
@@ -1120,8 +1156,9 @@ public final class LocalSearch {
               val[tasks[k]] = start[k];
             }
             if (!feasible(tasks)) {
-              // the other constraints of the model do not hold on these schedules
-              return ++failed[0] < 3;
+              // the other constraints of the model do not hold on these schedules: the graph is
+              // only part of the model
+              return solutions > started && ++failed[0] < 3;
             }
             if (solutionCost != makespan) {
               // the cost is not the makespan: the moves would minimise the wrong function
@@ -1160,9 +1197,7 @@ public final class LocalSearch {
     }
     // back to the general search, from the best solution if the schedules gave one
     schedule = null;
-    if (solutions > started) {
-      System.arraycopy(solution, 0, val, 0, val.length);
-    }
+    System.arraycopy(solutions > started ? solution : before, 0, val, 0, val.length);
     evaluateAll();
     defineAll();
     return timeUp();

@@ -2524,6 +2524,33 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
+163. Local search searches the machine sequences of disjunctive scheduling
+     models with critical-path neighbourhoods, the scheduling abstraction
+     of Comet's constraint-based local search (Van Hentenryck and Michel,
+     "Scheduling abstractions for local search", CPAIOR 2004). Machines are
+     cumulative constraints with fixed durations and demands on which no
+     two tasks fit together; precedences are rows s[a] + lag <= s[b]
+     between their starts. A tabu search moves operations of the blocks of
+     one critical path: NS swaps the first two and last two operations of
+     each block (Nowicki and Smutnicki, "A fast taboo search algorithm for
+     the job shop problem", Management Science 42(6), 1996), N1 any two
+     adjacent ones (van Laarhoven, Aarts and Lenstra, Operations Research
+     40(1), 1992), N4 moves one to the front or back of its block
+     (Dell'Amico and Trubian, Annals of Operations Research 41, 1993).
+     Moves are ranked by the estimates of Taillard (ORSA Journal on
+     Computing 6(2), 1994) and Dell'Amico and Trubian from heads and tails,
+     with arc tabu and aspiration. Every better schedule is checked in the
+     store; when the cost is not the makespan or the store rejects the
+     schedules, the general local search takes over. LocalSearch.Builder
+     .scheduling(kinds), --free-config ls-sched=ns+n4 (default), n1, 0;
+     statistic lsSchedule=tasks/machines/iterations. Local search itself
+     stays off by default (ls=0). 46 JSPLIB job shops and 5 Challenge open
+     shops, 60 s: local search alone cuts the mean gap to the best known
+     makespan from 30.45 % to 0.89 % (51 better, 0 worse); -f with
+     ls=0.1 from 2.46 % to 1.01 % (27 / 6). Wide set (220), -f ls=0.1:
+     163 to 162 solved, 6 families better, 1 worse; only two instances
+     have such a graph and neither changes.
+
 Version 4.11
 =============
 

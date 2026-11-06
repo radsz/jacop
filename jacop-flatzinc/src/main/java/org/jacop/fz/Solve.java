@@ -2899,7 +2899,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "/"
         + counts[2]
         + "\n%%%mzn-stat: lsEvaluations="
-        + localSearch.getEvaluations();
+        + localSearch.getEvaluations()
+        + scheduleStatistics();
+  }
+
+  // the disjunctive graph of the scheduling search of local search: tasks/machines/iterations
+  private String scheduleStatistics() {
+    long[] counts = localSearch.getScheduleCounts();
+    if (counts[0] == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lsSchedule=" + counts[0] + "/" + counts[1] + "/" + counts[2];
   }
 
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
