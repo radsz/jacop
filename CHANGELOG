@@ -2352,6 +2352,24 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
+155. JaLP gets a primal simplex, RevisedDualSimplex.solvePrimal(limit),
+     and setCost(c) to change the objective while the factored basis is
+     kept: the basis stays primal feasible, so the primal simplex goes on
+     from it where the dual simplex has to repair its dual feasibility.
+     Composite phase 1 (the sum of infeasibilities, priced every pivot),
+     Devex pricing, a two-pass Harris ratio test with bound flips of the
+     entering column, bound perturbation after 30 degenerate pivots and
+     bound shifting of infeasibilities below 1e-5; the dual simplex
+     cleans up when the restored bounds leave the basis infeasible and
+     gives the infeasibility proof. Nothing in the solver calls it yet; it
+     is for RINS and LP diving. LpMain -primal and
+     -reobjective (zero objective first, then the real one) run it. LP
+     bench (659 LPs, 120 s): no wrong answer; the dual simplex makes the
+     same pivots as before on all 636 it solves; after an objective
+     change the primal solves 617 against the dual's 626 in about the
+     same time (0.98 on solves over 0.5 s), and from scratch 610 against
+     636, 1.13 times slower on solves over 0.5 s.
+
 Version 4.11
 =============
 
