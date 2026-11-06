@@ -85,6 +85,27 @@ public final class LinearForms {
     return null;
   }
 
+  /**
+   * Returns the linear relation of a constraint whose model, for a VeriPB proof, is that relation
+   * as one line (two for an equality): the linear constraints and the linear Boolean ones. Their
+   * relations are the rows a proof's linear relaxation may combine, by {@code pol} steps over those
+   * lines. The other forms of {@link #of}, such as those of clauses and conjunctions, are
+   * relaxations of encodings with other lines.
+   *
+   * @param c the constraint
+   * @return its relation, or null
+   */
+  public static LinearForm ofModelLine(Constraint c) {
+    Class<?> k = c.getClass();
+    if (c instanceof LinearExplainable
+        || k == LinearInt.class
+        || k == LinearIntDom.class
+        || k == LinearBool.class) {
+      return of(c);
+    }
+    return null;
+  }
+
   private static LinearForm linearBool(LinearBool l) {
     IntVar[] vars = l.x;
     long[] weights = l.w;

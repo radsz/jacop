@@ -165,6 +165,10 @@ final class OpbEncoder implements PbModel {
   record EqualityLine(LinearForm form, long id) {}
 
   private final Map<Constraint, EqualityLine> equalities = new IdentityHashMap<>();
+
+  // the ids of the first linear relation each constraint writes unguarded: its line sum >= c and
+  // its line sum <= c (written -sum >= -c), 0 for a side it does not have
+  private final Map<Constraint, long[]> linearLines = new IdentityHashMap<>();
   private final Map<Constraint, List<EqualityLine>> allEqualities = new IdentityHashMap<>();
 
   // the id of each variable's first order line, [x >= v] or not [x >= v + 1], for v = min + 1
@@ -381,6 +385,16 @@ final class OpbEncoder implements PbModel {
 
   @Override
   public void linear(LinearForm f) {
+    if (guard.isEmpty() && current != null && f.relation() != LinearForm.NE) {
+      long next = numConstraints + 1;
+      linearLines.putIfAbsent(
+          current,
+          switch (f.relation()) {
+            case LinearForm.LE -> new long[] {0, next};
+            case LinearForm.GE -> new long[] {next, 0};
+            default -> new long[] {next, next + 1};
+          });
+    }
     switch (f.relation()) {
       case LinearForm.LE -> atLeast(f, -1, -f.c());
       case LinearForm.GE -> atLeast(f, 1, f.c());
@@ -711,6 +725,17 @@ final class OpbEncoder implements PbModel {
    */
   Map<Constraint, EqualityLine> equalityLines() {
     return equalities;
+  }
+
+  /**
+   * Returns the lines of the first linear relation each constraint wrote unguarded: the id of its
+   * line {@code sum >= c} and of its line {@code sum <= c}, 0 for a side the relation does not
+   * have. The proofs of the linear relaxation combine them.
+   *
+   * @return the two ids, by constraint
+   */
+  Map<Constraint, long[]> linearLines() {
+    return linearLines;
   }
 
   /**

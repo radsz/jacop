@@ -88,6 +88,7 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
@@ -101,6 +102,7 @@ import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
@@ -1247,6 +1249,108 @@ class VeriPbProofTest {
     RupChecker checker = new RupChecker();
     assertThat(checker.check(opb(), pbp)).isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS 13 13");
+  }
+
+  // independent sets of cycles of five 0/1 variables, adjacent ones at most 1: the relaxation
+  // bounds each cycle by 5/2, the sum of its lines halved, which no single line gives, while the
+  // largest set takes 2 of each
+  private static IntVar[] cycles(Store store, int count) {
+    IntVar[] x = new IntVar[5 * count + 1];
+    for (int i = 0; i < 5 * count; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    x[5 * count] = new IntVar(store, "obj", -5 * count, 0);
+    return x;
+  }
+
+  private static IntVar imposeCycles(Store store, IntVar[] x) {
+    int n = x.length - 1;
+    for (int i = 0; i < n; i++) {
+      int next = i % 5 == 4 ? i - 4 : i + 1;
+      store.impose(new LinearInt(new IntVar[] {x[i], x[next]}, new int[] {1, 1}, "<=", 1));
+    }
+    int[] ones = new int[n + 1];
+    Arrays.fill(ones, 1);
+    store.impose(new LinearInt(x, ones, "==", 0));
+    return x[n];
+  }
+
+  @Test
+  void relaxationBoundAtTheRootIsDerived() {
+    Store store = new Store();
+    IntVar[] x = cycles(store, 1);
+    // attached after the variables: the model states their domains before the root propagation
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    IntVar obj = imposeCycles(store, x);
+    assertThat(store.consistency()).isTrue();
+    assertThat(obj.min()).isEqualTo(-5);
+    LinearRelaxation r =
+        LinearRelaxation.ofModel(store, obj, false, LinearRelaxation.Simplex.DENSE);
+    assertThat(r.certifies()).isTrue();
+    store.imposeWithConsistency(r);
+    assertThat(obj.min()).isEqualTo(-2);
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(-2);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("\npol ").contains("root changes derived, 0 taken into");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -2 -2");
+  }
+
+  @Test
+  void relaxationDeductionsInSearchAreProved() {
+    // three cycles: the root bound is -7, and the search refutes -7 with the relaxation's bounds
+    // under its decisions, each of them a pol step
+    Store store = new Store();
+    IntVar obj = imposeCycles(store, cycles(store, 3));
+    LinearRelaxation r =
+        LinearRelaxation.ofModel(store, obj, false, LinearRelaxation.Simplex.DENSE);
+    store.impose(r);
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(lcg.value(obj)).isEqualTo(-6);
+    assertThat(r.prunings).isPositive();
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("\npol ").doesNotContain("without");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -6 -6");
+  }
+
+  @Test
+  void relaxationFailureIsRefuted() {
+    // a set of 3 in a cycle of five has no solution; only the relaxation sees it at the root, where
+    // the bounds of each line leave every variable free
+    Store store = new Store();
+    IntVar[] x = cycles(store, 1);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    IntVar obj = imposeCycles(store, x);
+    store.impose(new XlteqC(obj, -3));
+    assertThat(store.consistency()).isTrue();
+    store.impose(LinearRelaxation.ofModel(store, obj, false, LinearRelaxation.Simplex.DENSE));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("\npol ");
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), pbp)).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void relaxationNotBuiltForAProofIsRefused() {
+    // the relaxation of other constraints' rows and cuts has no certificates: no model for it
+    Store store = new Store();
+    IntVar obj = knapsack(store);
+    store.impose(LinearRelaxation.of(store, obj, false));
+    LcgSolver lcg = withProof(store);
+    assertThatThrownBy(() -> lcg.minimize(obj))
+        .isInstanceOf(UnsupportedOperationException.class)
+        .hasMessageContaining("LinearRelaxation");
   }
 
   @Test

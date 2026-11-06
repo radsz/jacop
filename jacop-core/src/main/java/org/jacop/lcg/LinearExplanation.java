@@ -197,6 +197,22 @@ public final class LinearExplanation {
    */
   private static boolean holesBetween(
       AtomicTrail trail, int entry, IntVar y, long from, long to, EntryList out) {
+    return removalsBetween(trail, entry, y, from, to, true, out);
+  }
+
+  /**
+   * Adds the removals, before the entry, of the values of from..to that y had in its root domain;
+   * false when there are more than 4096 such values or, when {@code allRemoved} is set, one of them
+   * was still in y's domain before the entry.
+   */
+  private static boolean removalsBetween(
+      AtomicTrail trail,
+      int entry,
+      IntVar y,
+      long from,
+      long to,
+      boolean allRemoved,
+      EntryList out) {
     IntDomain root = trail.rootDomain(y);
     long last = Math.min(to, root.max());
     long u = Math.max(from, root.min());
@@ -211,7 +227,7 @@ public final class LinearExplanation {
       u = next;
     }
     for (int checked = 0; u <= last; checked++) {
-      if (checked >= 4096 || !trail.excludedBefore(y, (int) u, entry, out)) {
+      if (checked >= 4096 || !trail.excludedBefore(y, (int) u, entry, out) && allRemoved) {
         return false;
       }
       int next = root.nextValue((int) u);
@@ -244,6 +260,37 @@ public final class LinearExplanation {
       boolean lessOrEqual,
       boolean greaterOrEqual,
       EntryList out) {
+    return explainFailure(trail, vars, weights, c, lessOrEqual, greaterOrEqual, false, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of {@code sum w[i] * x[i] = c} that a propagator
+   * reaching domain consistency detected: as {@link #explainFailure}, and when no variable has an
+   * empty window, the bounds of all variables and the removals inside every window. Only a caller
+   * that knows the domains admit no solution of the equality may use it.
+   *
+   * @param trail the trail
+   * @param vars the variables
+   * @param weights their weights
+   * @param c the right-hand side
+   * @param out where the reason entries are added
+   * @return false when a window needs more than 4096 atoms, a variable occurs twice, or a sum
+   *     overflows a {@code long}
+   */
+  public static boolean explainDomainFailure(
+      AtomicTrail trail, IntVar[] vars, long[] weights, long c, EntryList out) {
+    return explainFailure(trail, vars, weights, c, true, true, true, out);
+  }
+
+  private static boolean explainFailure(
+      AtomicTrail trail,
+      IntVar[] vars,
+      long[] weights,
+      long c,
+      boolean lessOrEqual,
+      boolean greaterOrEqual,
+      boolean allWindows,
+      EntryList out) {
     int now = trail.size();
     long smallest = 0;
     long largest = 0;
@@ -268,9 +315,122 @@ public final class LinearExplanation {
     } else if (greaterOrEqual && largest < c) {
       upperSide = false;
     } else {
-      return false;
+      return lessOrEqual
+          && greaterOrEqual
+          && explainHoleFailure(trail, vars, weights, c, allWindows, out);
     }
     addLiftedBounds(trail, now, vars, weights, -1, null, upperSide, slack, out);
+    return true;
+  }
+
+  /**
+   * Adds the reason of a failure of an equality whose bounds violate neither side: one variable has
+   * no value left between the bounds the others give it, so the reason is the removal of those
+   * values and the others' bounds on both sides, lifted to what still keeps that window. The
+   * variable with the narrowest window is tried first. When no window is empty and {@code
+   * allWindows} is set (the caller knows the domains admit no solution), the reason is the bounds
+   * of all variables and the removals inside every window. False otherwise, when a window needs
+   * more than 4096 atoms, or a variable occurs more than once.
+   */
+  private static boolean explainHoleFailure(
+      AtomicTrail trail, IntVar[] vars, long[] weights, long c, boolean allWindows, EntryList out) {
+    int now = trail.size();
+    int n = vars.length;
+    long[] keys = new long[n];
+    long[] lows = new long[n];
+    long[] highs = new long[n];
+    long[] restHighs = new long[n];
+    long[] restLows = new long[n];
+    int m = 0;
+    try {
+      long smallest = 0;
+      long largest = 0;
+      for (int i = 0; i < n; i++) {
+        if (ownOccurrence(vars, weights, vars[i]) != i) {
+          return false;
+        }
+        long lo = Math.multiplyExact(weights[i], trail.minBefore(vars[i], now));
+        long hi = Math.multiplyExact(weights[i], trail.maxBefore(vars[i], now));
+        lows[i] = Math.min(lo, hi);
+        highs[i] = Math.max(lo, hi);
+        smallest = Math.addExact(smallest, lows[i]);
+        largest = Math.addExact(largest, highs[i]);
+      }
+      for (int i = 0; i < n; i++) {
+        long w = weights[i];
+        if (w == 0) {
+          continue;
+        }
+        // the others leave w * x between restLow and restHigh
+        long restHigh = Math.subtractExact(c, Math.subtractExact(smallest, lows[i]));
+        long restLow = Math.subtractExact(c, Math.subtractExact(largest, highs[i]));
+        restHighs[i] = restHigh;
+        restLows[i] = restLow;
+        long from = w > 0 ? -Math.floorDiv(-restLow, w) : -Math.floorDiv(restHigh, -w);
+        long to = w > 0 ? Math.floorDiv(restHigh, w) : Math.floorDiv(-restLow, -w);
+        lows[i] = from;
+        highs[i] = to;
+        long width = Math.max(0, Math.subtractExact(to, from));
+        keys[m++] = Math.min(width, Integer.MAX_VALUE) << 32 | i;
+      }
+    } catch (ArithmeticException overflow) {
+      return false;
+    }
+    Arrays.sort(keys, 0, m);
+    int mark = out.size();
+    for (int k = 0; k < m; k++) {
+      int i = (int) keys[k];
+      IntVar x = vars[i];
+      long from = lows[i];
+      long to = highs[i];
+      int min = trail.minBefore(x, now);
+      int max = trail.maxBefore(x, now);
+      if (from < min) {
+        trail.addLowerBound(x, now, out);
+      }
+      if (to > max) {
+        trail.addUpperBound(x, now, out);
+      }
+      if (!holesBetween(trail, now, x, Math.max(from, min), Math.min(to, max), out)) {
+        out.truncate(mark);
+        continue;
+      }
+      long w = weights[i];
+      try {
+        // the values next to the window, which each side's bounds must keep out
+        long above =
+            Math.multiplyExact(w, w > 0 ? Math.addExact(to, 1) : Math.subtractExact(from, 1));
+        long below =
+            Math.multiplyExact(w, w > 0 ? Math.subtractExact(from, 1) : Math.addExact(to, 1));
+        long upperSlack = Math.subtractExact(Math.subtractExact(above, 1), restHighs[i]);
+        long lowerSlack = Math.subtractExact(Math.subtractExact(restLows[i], 1), below);
+        addLiftedBounds(trail, now, vars, weights, i, null, true, upperSlack, out);
+        addLiftedBounds(trail, now, vars, weights, i, null, false, lowerSlack, out);
+      } catch (ArithmeticException overflow) {
+        out.truncate(mark);
+        return false;
+      }
+      return true;
+    }
+    if (!allWindows) {
+      return false;
+    }
+    // no single window is empty, but the values left in the windows admit no sum c: the reason is
+    // every bound and every removal inside every window, since no value outside its window can be
+    // part of a solution while the others keep their bounds
+    for (int k = 0; k < m; k++) {
+      int i = (int) keys[k];
+      IntVar x = vars[i];
+      int min = trail.minBefore(x, now);
+      int max = trail.maxBefore(x, now);
+      trail.addLowerBound(x, now, out);
+      trail.addUpperBound(x, now, out);
+      if (!removalsBetween(
+          trail, now, x, Math.max(lows[i], min), Math.min(highs[i], max), false, out)) {
+        out.truncate(mark);
+        return false;
+      }
+    }
     return true;
   }
 
