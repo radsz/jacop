@@ -42,6 +42,11 @@ import org.jacop.jalp.RevisedDualSimplex;
  */
 final class JalpSimplex implements LpSolver {
 
+  // the perturbation removed at the end of every solve, with the pivots that takes (JaLP's
+  // clean-up); off by default, as the duals for the costs as given over the final basis are
+  // enough for the certificates
+  private static final boolean EXACT = Boolean.getBoolean("org.jacop.lp.exact");
+
   private final RevisedDualSimplex lp;
 
   /**
@@ -55,6 +60,7 @@ final class JalpSimplex implements LpSolver {
    */
   JalpSimplex(int[][] columns, double[][] weights, double[] rowLo, double[] rowHi, double[] cost) {
     lp = new RevisedDualSimplex(columns, weights, rowLo, rowHi, cost, true);
+    lp.setExact(EXACT);
   }
 
   private JalpSimplex(RevisedDualSimplex lp) {
@@ -105,7 +111,7 @@ final class JalpSimplex implements LpSolver {
 
   @Override
   public double[] duals() {
-    return lp.duals();
+    return DualSimplex.GIVEN_DUALS ? lp.givenDuals() : lp.duals();
   }
 
   @Override
@@ -160,6 +166,16 @@ final class JalpSimplex implements LpSolver {
   @Override
   public int[] removeRows(int[] rows) {
     return lp.removeRows(rows);
+  }
+
+  @Override
+  public Object saveBasis() {
+    return lp.saveBasis();
+  }
+
+  @Override
+  public boolean restoreBasis(Object basis) {
+    return basis instanceof RevisedDualSimplex.Basis b && lp.restoreBasis(b);
   }
 
   @Override

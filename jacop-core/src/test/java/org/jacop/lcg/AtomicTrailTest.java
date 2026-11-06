@@ -67,6 +67,8 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.core.BooleanVar;
@@ -1727,6 +1729,270 @@ class AtomicTrailTest {
       }
     }
     throw new IllegalStateException(x + " is not in the model");
+  }
+
+  // the reservoir's relation: precedences t[to] >= t[from] + lag, the level after every event
+  private static boolean reservoirHolds(
+      int[] t, int[] change, int initial, int min, int max, int[][] precedences) {
+    for (int[] p : precedences) {
+      if (t[p[1]] < t[p[0]] + p[2]) {
+        return false;
+      }
+    }
+    if (initial < min || initial > max) {
+      return false;
+    }
+    for (int x = 0; x < change.length; x++) {
+      int level = initial;
+      for (int y = 0; y < change.length; y++) {
+        if (t[y] <= t[x]) {
+          level += change[y];
+        }
+      }
+      if (level < min || level > max) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // a reservoir of five events over times 0..5, some with precedences or a shared time
+  private static Model reservoirModel(Store s, Random rnd) {
+    int n = 5;
+    IntVar[] v = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      v[i] = new IntVar(s, "t" + i, 0, 5);
+    }
+    IntVar[] times = v.clone();
+    boolean shared = rnd.nextInt(5) == 0;
+    if (shared) {
+      times[4] = times[0];
+    }
+    int[] change = new int[n];
+    for (int i = 0; i < n; i++) {
+      change[i] = rnd.nextInt(7) - 3;
+    }
+    int initial = rnd.nextInt(3);
+    int min = 0;
+    int max = 2 + rnd.nextInt(3);
+    int[][] precedences = new int[rnd.nextBoolean() ? 0 : 1 + rnd.nextInt(3)][];
+    IntVar[] from = new IntVar[precedences.length];
+    IntVar[] to = new IntVar[precedences.length];
+    int[] lag = new int[precedences.length];
+    for (int k = 0; k < precedences.length; k++) {
+      int a = rnd.nextInt(4);
+      int b = (a + 1 + rnd.nextInt(3)) % 4;
+      precedences[k] = new int[] {a, b, rnd.nextInt(4) - 1};
+      from[k] = v[a];
+      to[k] = v[b];
+      lag[k] = precedences[k][2];
+    }
+    IntVar[] vars = shared ? Arrays.copyOf(v, 4) : v;
+    int[] eventOf = {0, 1, 2, 3, shared ? 0 : 4};
+    Predicate<int[]> holds =
+        t -> {
+          int[] times5 = new int[n];
+          for (int i = 0; i < n; i++) {
+            times5[i] = t[eventOf[i]];
+          }
+          return reservoirHolds(times5, change, initial, min, max, precedences);
+        };
+    return new Model(new Reservoir(times, change, initial, min, max, from, to, lag), holds, vars);
+  }
+
+  // whether no assignment of the box the reason allows satisfies the relation
+  private static boolean noSolutionUnder(
+      AtomicTrail trail, Model model, IntDomain[] initial, EntryList reason) {
+    IntDomain[] box = initial.clone();
+    for (int k = 0; k < reason.size(); k++) {
+      int r = reason.get(k);
+      int i = indexOf(model.vars, trail.variable(r));
+      box[i] = apply(box[i], trail, r);
+    }
+    return !anySolution(box, 0, new int[box.length], model.relation);
+  }
+
+  /**
+   * Dives over a model and checks every atom the constraint propagated, and every failure, by the
+   * constraint's own explanation. counts: atoms, own explanations, failures, own failure ones.
+   */
+  private static void ownDive(Function<Store, Model> generator, Random rnd, int[] counts) {
+    Store store = new Store();
+    Model model = generator.apply(store);
+    IntDomain[] initial = new IntDomain[model.vars.length];
+    for (int i = 0; i < initial.length; i++) {
+      initial[i] = model.vars[i].dom().cloneLight();
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(model.constraint);
+    Explainable c = (Explainable) model.constraint;
+    EntryList reason = new EntryList();
+    int seen = 0;
+    for (int depth = 0; depth < 10; depth++) {
+      store.setLevel(store.level + 1);
+      if (depth > 0) {
+        decide(model.vars, rnd);
+      }
+      boolean ok;
+      try {
+        ok = store.consistency();
+      } catch (FailException e) {
+        ok = false;
+      }
+      if (!ok) {
+        if (store.recentlyFailedConstraint == model.constraint) {
+          counts[2]++;
+          reason.clear();
+          if (c.explainFailure(trail, reason)) {
+            counts[3]++;
+            assertThat(noSolutionUnder(trail, model, initial, reason))
+                .as("the failure reason of %s has a solution", model.constraint)
+                .isTrue();
+          }
+        }
+        break;
+      }
+      for (int e = seen; e < trail.size(); e++) {
+        if (trail.reason(e) != model.constraint) {
+          continue;
+        }
+        counts[0]++;
+        reason.clear();
+        if (c.explain(trail, e, reason)) {
+          counts[1]++;
+          checkImplied(trail, model, initial, e, reason);
+        }
+      }
+      seen = trail.size();
+    }
+    trail.detach();
+  }
+
+  /**
+   * Reservoir explains its bounds and failures itself, by the level just after one event, and every
+   * reason implies its atom by enumeration of the box it allows.
+   */
+  @Test
+  void reservoirExplainsItsAtoms() {
+    Random rnd = new Random(11);
+    int[] counts = new int[4];
+    for (int it = 0; it < 3000; it++) {
+      ownDive(s -> reservoirModel(s, rnd), rnd, counts);
+    }
+    assertThat(counts[0]).isGreaterThan(1000);
+    assertThat(counts[1]).as("own explanations of %d atoms", counts[0]).isEqualTo(counts[0]);
+    assertThat(counts[2]).isGreaterThan(100);
+    assertThat(counts[3]).as("own explanations of %d failures", counts[2]).isEqualTo(counts[2]);
+  }
+
+  // optional tasks on a resource: four tasks over starts 0..5, presences p0..p3, unary or not
+  private static Model optionalModel(Store s, Random rnd, boolean unary) {
+    int n = 4;
+    IntVar[] v = new IntVar[2 * n];
+    int[] d = new int[n];
+    int[] r = new int[n];
+    IntVar[] durations = new IntVar[n];
+    IntVar[] resources = new IntVar[n];
+    int limit = unary ? 1 : 2 + rnd.nextInt(2);
+    for (int i = 0; i < n; i++) {
+      v[i] = new IntVar(s, "s" + i, rnd.nextInt(2), 4 + rnd.nextInt(2));
+      v[n + i] = new IntVar(s, "p" + i, 0, 1);
+      d[i] = 1 + rnd.nextInt(3);
+      r[i] = unary ? 1 : 1 + rnd.nextInt(limit);
+      durations[i] = new IntVar(s, d[i], d[i]);
+      resources[i] = new IntVar(s, r[i], r[i]);
+    }
+    IntVar[] starts = Arrays.copyOf(v, n);
+    IntVar[] opt = Arrays.copyOfRange(v, n, 2 * n);
+    Predicate<int[]> fits =
+        t -> {
+          int[] use = new int[n];
+          for (int i = 0; i < n; i++) {
+            use[i] = t[n + i] * r[i];
+          }
+          return fitsUnder(Arrays.copyOf(t, n), d, use, limit);
+        };
+    IntVar cap = new IntVar(s, limit, limit);
+    Constraint c =
+        unary
+            ? new CumulativeUnaryOptional(starts, durations, resources, cap, opt, rnd.nextBoolean())
+            : new CumulativeOptional(starts, durations, resources, cap, opt);
+    return new Model(c, fits, v);
+  }
+
+  /**
+   * CumulativeOptional and CumulativeUnaryOptional explain their atoms by the time table with a
+   * task counted once present: the reasons cite the presences, and an absent task by what it would
+   * overlap. Every reason implies its atom by enumeration.
+   */
+  @Test
+  void optionalCumulativesExplainTheirAtoms() {
+    Random rnd = new Random(17);
+    for (boolean unary : new boolean[] {false, true}) {
+      int[] counts = new int[4];
+      for (int it = 0; it < 3000; it++) {
+        ownDive(s -> optionalModel(s, rnd, unary), rnd, counts);
+      }
+      assertThat(counts[0]).isGreaterThan(500);
+      assertThat(counts[1])
+          .as("own explanations of %d atoms", counts[0])
+          .isGreaterThan(counts[0] / 2);
+      assertThat(counts[3])
+          .as("own explanations of %d failures", counts[2])
+          .isGreaterThan(counts[2] / 2);
+    }
+  }
+
+  // a unary resource of five tasks whose uses 0..1 are their presences (the last one present)
+  private static Model presenceAsUseModel(Store s, Random rnd) {
+    int n = 5;
+    IntVar[] v = new IntVar[2 * n - 1];
+    int[] d = new int[n];
+    IntVar[] starts = new IntVar[n];
+    IntVar[] durations = new IntVar[n];
+    IntVar[] uses = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      starts[i] = new IntVar(s, "s" + i, rnd.nextInt(3), 3 + rnd.nextInt(3));
+      v[i] = starts[i];
+      d[i] = 1 + rnd.nextInt(3);
+      durations[i] = new IntVar(s, d[i], d[i]);
+      if (i < n - 1) {
+        uses[i] = new IntVar(s, "p" + i, 0, 1);
+        v[n + i] = uses[i];
+      } else {
+        uses[i] = new IntVar(s, 1, 1);
+      }
+    }
+    Predicate<int[]> fits =
+        t -> {
+          int[] use = new int[n];
+          for (int i = 0; i < n; i++) {
+            use[i] = i < n - 1 ? t[n + i] : 1;
+          }
+          return fitsUnder(Arrays.copyOf(t, n), d, use, 1);
+        };
+    CumulativeUnary unary =
+        new CumulativeUnary(starts, durations, uses, new IntVar(s, 1, 1), rnd.nextBoolean(), true);
+    unary.setOptionalRules(true);
+    return new Model(unary, fits, v);
+  }
+
+  /**
+   * On a unary resource with presences as uses, the rules over optional tasks (overload and edge
+   * finding) set uses to 0, and every atom, those included, has a sound reason of its own.
+   */
+  @Test
+  void unaryOptionalTasksHaveTheirOwnReasons() {
+    Random rnd = new Random(23);
+    int[] counts = new int[4];
+    for (int it = 0; it < 2000; it++) {
+      ownDive(s -> presenceAsUseModel(s, rnd), rnd, counts);
+    }
+    System.out.println("presence as use " + Arrays.toString(counts));
+    assertThat(counts[0]).isGreaterThan(1000);
+    assertThat(counts[1])
+        .as("own explanations of %d atoms", counts[0])
+        .isGreaterThan(counts[0] * 9 / 10);
   }
 
   /**

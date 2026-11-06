@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jacop.constraints.lp.LpColumn;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
@@ -418,7 +419,10 @@ public final class Linearizations {
       return;
     }
     Class<?> k = c.getClass();
-    if (k == Reified.class) {
+    if (k == Reified.class && ((Reified) c).c.getClass() == In.class) {
+      In in = (In) ((Reified) c).c;
+      inSet(in.x, in.dom, ((Reified) c).b, out);
+    } else if (k == Reified.class) {
       Reified r = (Reified) c;
       reified(LinearForms.of(r.c), r.b, true, out);
     } else if (k == Implies.class) {
@@ -460,6 +464,20 @@ public final class Linearizations {
       alldifferent(((Alldistinct) c).list, out);
     } else if (k == Alldiff.class || k == Alldifferent.class) {
       alldifferent(((Alldifferent) c).list, out);
+    } else if (k == ElementInteger.class) {
+      ElementInteger e = (ElementInteger) c;
+      elementHull(e.index, e.list, e.indexOffset, e.value, out);
+    } else if (k == ElementIntegerFast.class) {
+      ElementIntegerFast e = (ElementIntegerFast) c;
+      elementHull(e.index, e.list, e.indexOffset, e.value, out);
+    } else if (k == XdivYeqZ.class) {
+      XdivYeqZ d = (XdivYeqZ) c;
+      if (d.y().singleton()) {
+        divide(d.x(), d.y().value(), d.z(), out);
+      }
+    } else if (k == ConditionalSelect.class) {
+      ConditionalSelect s = (ConditionalSelect) c;
+      select(s.b, s.x, s.y, out);
     } else if (k == ChannelImply.class) {
       // b_v -> x = v: at most one of the Booleans
       AbstractChannel ch = (AbstractChannel) c;
@@ -475,6 +493,248 @@ public final class Linearizations {
         out.add(new LinearForm(bs.toArray(new IntVar[0]), ones, 1, LinearForm.LE));
       }
     }
+  }
+
+  /**
+   * Returns the big-M rows of {@code b -> x = c} and, when reified, of {@code !b -> x != c}, which
+   * is linear when c is a bound of x ({@code x <= c - 1} or {@code x >= c + 1}). With {@code equal}
+   * false, the rows of {@code b -> x != c} (or {@code b <-> x != c}), only when c is a bound of x:
+   * for an inner c they would be the big-M pair of {@code !b -> x = c} alone, which does not raise
+   * the root bound and slowed the search (still_life_no_border slnb7x7, 22k to 32k nodes).
+   *
+   * @param x the variable
+   * @param c the value
+   * @param b the 0/1 control variable
+   * @param both whether b is equivalent to the relation, not only implies it
+   * @param equal whether the relation is {@code x = c}, not {@code x != c}
+   * @return the rows
+   */
+  public static List<LinearForm> valueRows(IntVar x, int c, IntVar b, boolean both, boolean equal) {
+    List<LinearForm> out = new ArrayList<>();
+    if (x == b || x.singleton() || !x.domain.contains(c)) {
+      return out; // b is fixed by propagation
+    }
+    LinearForm form = valueForm(x, c, equal);
+    if (form == null) {
+      return out;
+    }
+    try {
+      reified(form, b, both, out);
+    } catch (ArithmeticException overflow) {
+      out.clear();
+    }
+    return out;
+  }
+
+  // x = c (equal) or x != c as one linear relation on x: a bound form when c is a bound of x,
+  // otherwise x = c as EQ and, for x != c, null (no rows, see valueRows)
+  private static LinearForm valueForm(IntVar x, int c, boolean equal) {
+    int relation;
+    long bound;
+    if (c == x.max()) {
+      // x = c is x >= c, x != c is x <= c - 1
+      relation = equal ? LinearForm.GE : LinearForm.LE;
+      bound = equal ? c : c - 1L;
+    } else if (c == x.min()) {
+      relation = equal ? LinearForm.LE : LinearForm.GE;
+      bound = equal ? c : c + 1L;
+    } else if (equal) {
+      relation = LinearForm.EQ;
+      bound = c;
+    } else {
+      return null;
+    }
+    return new LinearForm(new IntVar[] {x}, new long[] {1}, bound, relation);
+  }
+
+  /**
+   * Returns the big-M rows of {@code b -> f} and, for {@code both}, of {@code !b -> !f} where that
+   * is linear.
+   *
+   * @param f the linear relation
+   * @param b the 0/1 control variable
+   * @param both whether b is equivalent to f, not only implies it
+   * @return the rows
+   */
+  public static List<LinearForm> implied(LinearForm f, IntVar b, boolean both) {
+    List<LinearForm> out = new ArrayList<>();
+    try {
+      reified(f, b, both, out);
+    } catch (ArithmeticException overflow) {
+      out.clear();
+    }
+    return out;
+  }
+
+  // b <-> x in dom, for dom an interval [l, u]: b -> l <= x <= u; !b -> x > u when l <= min(x),
+  // !b -> x < l when u >= max(x)
+  private static void inSet(IntVar x, IntDomain dom, IntVar b, List<LinearForm> out) {
+    if (dom.isEmpty() || dom.getSize() != dom.max() - dom.min() + 1L) {
+      return;
+    }
+    long l = dom.min();
+    long u = dom.max();
+    IntVar[] xs = {x};
+    long[] one = {1};
+    if (l <= x.min()) {
+      reified(new LinearForm(xs, one, u, LinearForm.LE), b, true, out);
+    } else if (u >= x.max()) {
+      reified(new LinearForm(xs, one, l, LinearForm.GE), b, true, out);
+    } else {
+      reified(new LinearForm(xs, one, l, LinearForm.GE), b, false, out);
+      reified(new LinearForm(xs, one, u, LinearForm.LE), b, false, out);
+    }
+  }
+
+  // the most hull edges of an element made into rows on each side
+  private static final int HULL_ROWS = 64;
+
+  // value = list[index - offset - 1] for a constant list: the rows of the convex hull of the points
+  // (i, list[i - offset - 1]) over the domain of index, below and above
+  private static void elementHull(
+      IntVar index, int[] list, int offset, IntVar value, List<LinearForm> out) {
+    if (index == value || index.singleton() || index.getSize() > 100_000) {
+      return;
+    }
+    List<long[]> points = new ArrayList<>();
+    for (ValueEnumeration en = index.domain.valueEnumeration(); en.hasMoreElements(); ) {
+      int i = en.nextElement();
+      long position = (long) i - offset - 1;
+      if (position >= 0 && position < list.length) {
+        points.add(new long[] {i, list[(int) position]});
+      }
+    }
+    if (points.size() < 2) {
+      return;
+    }
+    hullRows(points, index, value, true, out);
+    hullRows(points, index, value, false, out);
+  }
+
+  // the lower (or upper) hull of points sorted by x, by the monotone chain; each edge from (x1, y1)
+  // to (x2, y2) gives (x2 - x1) value - (y2 - y1) index >= (x2 - x1) y1 - (y2 - y1) x1 (<= above);
+  // an edge that the bound of value already gives (flat at the bound) is left out
+  private static void hullRows(
+      List<long[]> points, IntVar index, IntVar value, boolean lower, List<LinearForm> out) {
+    List<long[]> hull = new ArrayList<>();
+    for (long[] p : points) {
+      while (hull.size() >= 2) {
+        long[] a = hull.get(hull.size() - 2);
+        long[] o = hull.get(hull.size() - 1);
+        long cross =
+            Math.subtractExact(
+                Math.multiplyExact(o[0] - a[0], p[1] - a[1]),
+                Math.multiplyExact(o[1] - a[1], p[0] - a[0]));
+        if (lower ? cross <= 0 : cross >= 0) {
+          hull.remove(hull.size() - 1);
+        } else {
+          break;
+        }
+      }
+      hull.add(p);
+    }
+    if (hull.size() - 1 > HULL_ROWS) {
+      return;
+    }
+    long bound = lower ? value.min() : value.max();
+    for (int i = 0; i + 1 < hull.size(); i++) {
+      long[] p = hull.get(i);
+      long[] q = hull.get(i + 1);
+      long dx = q[0] - p[0];
+      long dy = q[1] - p[1];
+      if (dy == 0 && (lower ? p[1] <= bound : p[1] >= bound)) {
+        continue;
+      }
+      long c = Math.subtractExact(Math.multiplyExact(dx, p[1]), Math.multiplyExact(dy, p[0]));
+      out.add(
+          new LinearForm(
+              new IntVar[] {value, index},
+              new long[] {dx, -dy},
+              c,
+              lower ? LinearForm.GE : LinearForm.LE));
+    }
+  }
+
+  // z = x div d, rounding towards zero, for a constant d != 0: the remainder r = x - d z has the
+  // sign of x and |r| <= |d| - 1
+  private static void divide(IntVar x, int d, IntVar z, List<LinearForm> out) {
+    if (d == 0 || x == z) {
+      return;
+    }
+    long m = Math.abs((long) d) - 1;
+    long low = x.min() >= 0 ? 0 : -m;
+    long high = x.max() <= 0 ? 0 : m;
+    IntVar[] vars = {x, z};
+    long[] w = {1, -(long) d};
+    if (low == high) {
+      out.add(new LinearForm(vars, w, low, LinearForm.EQ));
+      return;
+    }
+    out.add(new LinearForm(vars, w, low, LinearForm.GE));
+    out.add(new LinearForm(vars, w, high, LinearForm.LE));
+  }
+
+  // the most branches of an if-then-else made into rows (each row of branch k has k + 3 terms)
+  private static final int SELECT_BRANCHES = 32;
+
+  // y = x[k] for the first k with b[k] = 1: branch k is selected when b[k] = 1 and b[j] = 0 for j <
+  // k, so y - x[k] <= M (1 - b[k] + sum_{j<k} b[j]) and y - x[k] >= -M' (1 - b[k] + sum_{j<k}
+  // b[j]), with M and M' from the bounds; the conditions fixed to 0 drop out, a condition fixed to
+  // 1
+  // ends the branches
+  private static void select(IntVar[] b, IntVar[] x, IntVar y, List<LinearForm> out) {
+    if (b.length > SELECT_BRANCHES) {
+      return;
+    }
+    for (IntVar v : b) {
+      if (v == y || !boolean01(v)) {
+        return;
+      }
+    }
+    List<IntVar> before = new ArrayList<>();
+    for (int k = 0; k < b.length; k++) {
+      if (b[k].max() == 0 || before.contains(b[k])) {
+        continue; // not selected
+      }
+      boolean last = b[k].min() == 1;
+      if (x[k] != y && !before.contains(x[k]) && x[k] != b[k]) {
+        long up = Math.subtractExact((long) y.max(), x[k].min());
+        long down = Math.subtractExact((long) x[k].max(), y.min());
+        if (up > 0) {
+          out.add(selectRow(y, x[k], last ? null : b[k], before, up, LinearForm.LE));
+        }
+        if (down > 0) {
+          out.add(selectRow(y, x[k], last ? null : b[k], before, -down, LinearForm.GE));
+        }
+      }
+      if (last) {
+        return;
+      }
+      before.add(b[k]);
+    }
+  }
+
+  // y - x + big bk - big sum before <= big (relation LE, big > 0), or the same with big < 0 and GE;
+  // without bk (fixed to 1) the right side is 0
+  private static LinearForm selectRow(
+      IntVar y, IntVar x, IntVar bk, List<IntVar> before, long big, int relation) {
+    int n = 2 + (bk == null ? 0 : 1) + before.size();
+    IntVar[] vars = new IntVar[n];
+    long[] w = new long[n];
+    vars[0] = y;
+    w[0] = 1;
+    vars[1] = x;
+    w[1] = -1;
+    int i = 2;
+    if (bk != null) {
+      vars[i] = bk;
+      w[i++] = big;
+    }
+    for (IntVar v : before) {
+      vars[i] = v;
+      w[i++] = -big;
+    }
+    return new LinearForm(vars, w, bk == null ? 0 : big, relation);
   }
 
   private static boolean boolean01(IntVar b) {

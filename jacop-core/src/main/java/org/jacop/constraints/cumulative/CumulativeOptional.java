@@ -191,6 +191,11 @@ public class CumulativeOptional extends Cumulative {
   }
 
   @Override
+  IntVar presence(int i) {
+    return opt[i];
+  }
+
+  @Override
   protected boolean present(int i, ToIntFunction<IntVar> value) {
     return value.applyAsInt(opt[i]) == 1;
   }

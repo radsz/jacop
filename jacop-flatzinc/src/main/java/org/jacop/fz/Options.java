@@ -211,6 +211,10 @@ public class Options {
                 annotation in every run; off never restarts, as before 5.0),
                 fixed-restarts-from=start|solution (restarts from the start or only after a
                 first solution),
+                fixed-core=<share> (with --lcg, without -f, a linear objective and an
+                annotation: when branch and bound under the annotation has no solution after
+                fixed-core-delay of the time, default 0.15, the core-guided phase of -f runs for
+                this share of the time, default 0.1; 0 = off),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-shave=on|off (with --lcg: a lower-bound run tries obj <= lb + step - 1,
@@ -232,6 +236,10 @@ public class Options {
                 lcg-booleans-first=on|off|turns (with --lcg: activity branching decides the 0/1
                 variables before the others (on, default), or all variables in one order of
                 activity (off); turns changes between the two at each restart),
+                lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
+                from the relaxation's solution in the annotation's runs under -f, and at the start
+                of the activity runs of fixed-restarts; auto, the default, uses them when the
+                relaxation has value columns),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
@@ -248,6 +256,9 @@ public class Options {
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
                 lns-routes=0|1 (route removal and related-customer neighbourhoods over the vehicle
                 routes of two-index vrp models, default 1),
+                lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
+                default 1), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
+                propagation, objective, constraints, scheduling, packing, routes, related; default all),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
