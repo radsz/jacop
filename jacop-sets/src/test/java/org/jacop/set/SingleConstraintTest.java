@@ -1153,6 +1153,73 @@ class SingleConstraintTest {
     assertThat(b[0].dom().getSize()).isEqualTo(2);
   }
 
+  /**
+   * Under LCG ChannelBoolSet explains its atoms by the Boolean or the membership of the same
+   * element, and by the set's cardinality: with card(s) at most 1 and b[0] = 1, element 0 fills s,
+   * so 1 and 2 are out and their Booleans 0. These reasons were generic (gt-sort, 51 % of all
+   * reasons).
+   */
+  @Test
+  void channelBoolSetExplainsItsAtoms() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", 0, 2);
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    ChannelBoolSet channel = new ChannelBoolSet(b, s);
+    store.impose(channel);
+    store.impose(new SetMirror(s));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    s.domain.inCardinality(store.level, s, 0, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    b[0].domain.in(store.level, b[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b[1].max()).isZero();
+    assertThat(b[2].max()).isZero();
+    EntryList reason = new EntryList();
+    List<IntVar> explained = new ArrayList<>();
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == channel) {
+        reason.clear();
+        assertThat(channel.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        explained.add(trail.variable(e));
+        if (trail.variable(e) == b[1]) {
+          assertThat(reasonVariables(trail, reason)).containsExactly(s.lcgMirror().member(1));
+        }
+      }
+    }
+    assertThat(explained).contains(b[1], b[2], s.lcgMirror().member(0));
+    trail.detach();
+  }
+
+  /** ChannelBoolSet explains a failure by the Boolean and the membership of the same element. */
+  @Test
+  void channelBoolSetExplainsAFailure() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", 0, 2);
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    ChannelBoolSet channel = new ChannelBoolSet(b, s);
+    store.impose(channel);
+    store.impose(new SetMirror(s));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    IntVar member = s.lcgMirror().member(1);
+    member.domain.in(store.level, member, 0, 0);
+    b[1].domain.in(store.level, b[1], 1, 1);
+    EntryList reason = new EntryList();
+    assertThat(channel.explainFailure(trail, reason)).isTrue();
+    assertThat(reasonVariables(trail, reason)).containsExactlyInAnyOrder(member, b[1]);
+    trail.detach();
+  }
+
   private static List<IntVar> reasonVariables(AtomicTrail trail, EntryList reason) {
     List<IntVar> vars = new ArrayList<>();
     for (int k = 0; k < reason.size(); k++) {

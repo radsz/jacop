@@ -31,6 +31,7 @@
 package org.jacop.set.constraints;
 
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -44,6 +45,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 import org.jacop.set.core.SetDomain;
@@ -58,7 +62,7 @@ import org.jacop.set.core.SetVar;
  * @version 5.0
  */
 public class ChannelBoolSet extends Constraint
-    implements SatisfiedPresent, Copyable<ChannelBoolSet>, PbEncodable {
+    implements SatisfiedPresent, Copyable<ChannelBoolSet>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -69,6 +73,9 @@ public class ChannelBoolSet extends Constraint
 
   /** One-time work of the first consistency call. */
   final InitOnce init = new InitOnce();
+
+  /** The position in b of each Boolean variable, built for the first explanation. */
+  private IdentityHashMap<IntVar, Integer> positions;
 
   /**
    * It constructs a Channel constraint.
@@ -196,6 +203,204 @@ public class ChannelBoolSet extends Constraint
   @Override
   public int getDefaultConsistencyPruningEvent() {
     throw new IllegalStateException("Not implemented as more precise variant exists.");
+  }
+
+  private static final int OPEN = -1;
+  private static final int OUT = 0;
+  private static final int IN = 1;
+
+  // the explanations need the mirror of s and the channel alone (not a subclass)
+  private SetMirror mirror() {
+    return getClass() == ChannelBoolSet.class ? s.lcgMirror() : null;
+  }
+
+  private Integer position(IntVar x) {
+    if (positions == null) {
+      positions = new IdentityHashMap<>();
+      for (int i = 0; i < n; i++) {
+        positions.putIfAbsent(b[i], i);
+      }
+    }
+    return positions.get(x);
+  }
+
+  // whether e is in s, out of it or open just before a position, known from its membership
+  // variable (useMember) or its Boolean (useBoolean); with out, adds the atom that shows it. An
+  // element outside the channel's range, or without a membership variable, is a fact.
+  private int state(
+      AtomicTrail trail,
+      SetMirror m,
+      int e,
+      int position,
+      boolean useMember,
+      boolean useBoolean,
+      EntryList out) {
+    if (e < offset || e >= n + offset) {
+      return OUT;
+    }
+    IntVar member = m.member(e);
+    if (member == null) {
+      return m.inRootGlb(e) ? IN : OUT;
+    }
+    if (useMember) {
+      int known = known(trail, member, position, out);
+      if (known != OPEN) {
+        return known;
+      }
+    }
+    return useBoolean ? known(trail, b[e - offset], position, out) : OPEN;
+  }
+
+  private static int known(AtomicTrail trail, IntVar x, int position, EntryList out) {
+    if (trail.minBefore(x, position) >= 1) {
+      if (out != null) {
+        trail.addLowerBound(x, position, out);
+      }
+      return IN;
+    }
+    if (trail.maxBefore(x, position) <= 0) {
+      if (out != null) {
+        trail.addUpperBound(x, position, out);
+      }
+      return OUT;
+    }
+    return OPEN;
+  }
+
+  // the elements of the mirror in (in) or not out (!in) just before a position, with the root
+  // greatest lower bound, leaving out skip; with out, adds the atoms of the counted (in) or the
+  // excluded (!in) elements
+  private int count(
+      AtomicTrail trail, SetMirror m, int position, boolean in, int skip, EntryList out) {
+    int count = m.rootGlbSize();
+    for (int e : m.elements()) {
+      if (e == skip) {
+        continue;
+      }
+      int known = state(trail, m, e, position, true, true, null);
+      if (in ? known == IN : known != OUT) {
+        count++;
+      }
+      if (out != null && known == (in ? IN : OUT)) {
+        state(trail, m, e, position, true, true, out);
+      }
+    }
+    return count;
+  }
+
+  // the membership of e from the cardinality of s: the others that may be in only reach its
+  // minimum (in), or those in already reach its maximum (out)
+  private boolean fromCardinality(
+      AtomicTrail trail, SetMirror m, int e, int position, boolean in, EntryList out) {
+    IntVar card = m.cardinality();
+    if (in) {
+      if (count(trail, m, position, false, e, null) > trail.minBefore(card, position) - 1) {
+        return false;
+      }
+      trail.addLowerBound(card, position, out);
+      count(trail, m, position, false, e, out);
+      return true;
+    }
+    if (count(trail, m, position, true, e, null) < trail.maxBefore(card, position)) {
+      return false;
+    }
+    trail.addUpperBound(card, position, out);
+    count(trail, m, position, true, e, out);
+    return true;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    SetMirror m = mirror();
+    if (m == null) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int value = trail.value(entry);
+    if (y == m.cardinality()) {
+      if (kind == AtomicTrail.GE) {
+        if (count(trail, m, entry, true, Integer.MIN_VALUE, null) < value) {
+          return false;
+        }
+        count(trail, m, entry, true, Integer.MIN_VALUE, out);
+        return true;
+      }
+      if (kind == AtomicTrail.LE) {
+        if (count(trail, m, entry, false, Integer.MIN_VALUE, null) > value) {
+          return false;
+        }
+        count(trail, m, entry, false, Integer.MIN_VALUE, out);
+        return true;
+      }
+      return false;
+    }
+    boolean in = kind == AtomicTrail.GE && value == 1 || kind == AtomicTrail.NE && value == 0;
+    boolean outOf = kind == AtomicTrail.LE && value == 0 || kind == AtomicTrail.NE && value == 1;
+    if (!in && !outOf) {
+      return false;
+    }
+    Integer i = position(y);
+    int e;
+    boolean fromBoolean;
+    if (i != null) {
+      // b[i] follows the membership of its element
+      e = i + offset;
+      fromBoolean = false;
+    } else {
+      e = elementOf(m, y);
+      if (e == Integer.MIN_VALUE) {
+        return false;
+      }
+      // the membership follows the Boolean, and elements outside the range are out
+      fromBoolean = true;
+    }
+    int mark = out.size();
+    int known = state(trail, m, e, entry, !fromBoolean, fromBoolean, out);
+    if (known == (in ? IN : OUT)) {
+      return true;
+    }
+    out.truncate(mark);
+    return fromCardinality(trail, m, e, entry, in, out);
+  }
+
+  private static int elementOf(SetMirror m, IntVar y) {
+    for (int e : m.elements()) {
+      if (m.member(e) == y) {
+        return e;
+      }
+    }
+    return Integer.MIN_VALUE;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    SetMirror m = mirror();
+    if (m == null) {
+      return false;
+    }
+    int now = trail.size();
+    for (int e : m.elements()) {
+      int member = state(trail, m, e, now, true, false, null);
+      int bool = state(trail, m, e, now, false, true, null);
+      if (member != OPEN && bool != OPEN && member != bool) {
+        state(trail, m, e, now, true, false, out);
+        state(trail, m, e, now, false, true, out);
+        return true;
+      }
+    }
+    IntVar card = m.cardinality();
+    if (count(trail, m, now, true, Integer.MIN_VALUE, null) > trail.maxBefore(card, now)) {
+      trail.addUpperBound(card, now, out);
+      count(trail, m, now, true, Integer.MIN_VALUE, out);
+      return true;
+    }
+    if (count(trail, m, now, false, Integer.MIN_VALUE, null) < trail.minBefore(card, now)) {
+      trail.addLowerBound(card, now, out);
+      count(trail, m, now, false, Integer.MIN_VALUE, out);
+      return true;
+    }
+    return false;
   }
 
   @Override
