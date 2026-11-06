@@ -2352,7 +2352,37 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
-155. JaLP gets a primal simplex, RevisedDualSimplex.solvePrimal(limit),
+155. Diffn's area check also tests the rectangles that overlap a
+     rectangle's window with dual feasible functions (new class
+     org.jacop.util.DualFeasibleFunctions): for every pair f1, f2 of
+     the functions u^(k) and U^(e) of Fekete and Schepers and f_CCM1 of
+     Carlier, Clautiaux and Moukrim, a packing needs
+     sum f1(w_i) f2(h_i) <= f1(W) f2(H) (S. P. Fekete and J. Schepers,
+     A general framework for bounds for higher-dimensional orthogonal
+     packing problems, Math. Methods Oper. Res. 60(2):311-329, 2004;
+     New classes of fast lower bounds for bin packing problems, Math.
+     Program. 91(1):11-31, 2001; J. Carlier, F. Clautiaux and
+     A. Moukrim, New reduction procedures and lower bounds for the
+     two-dimensional bin packing problem with fixed orientation,
+     Comput. Oper. Res. 34(8):2223-2250, 2007). The functions are exact
+     integer maps, with parameters taken from the item sizes, and the
+     test is skipped when Steinberg's condition proves the set packable
+     (A. Steinberg, A strip-packing algorithm with absolute performance
+     bound 2, SIAM J. Comput. 26(2):401-409, 1997). Binpacking's f_CCM1
+     bound uses the same code. The area check now runs when twice the
+     minimum area exceeds the free space. Under --lcg an area-check
+     failure is explained by the rectangle and the rectangles with a
+     part in its window instead of by all rectangles.
+     -Dorg.jacop.diffn.dff=0 (off), 1 (default), 2 (always) and
+     -Dorg.jacop.diffn.areaReasons=false give the old behaviour. All 120
+     Challenge instances that post Diffn, 60 s: default 64 to 66 solved
+     (accap a3 and a5 optimal), -f 65 to 64 and 63 to 63 in two rounds
+     (accap a4 and a5 solved, others lost and won by search changes).
+     Wide set: default 166 to 166 (5 families better, 1 worse), -f
+     158 to 158 and 161 to 159, within the noise of the same build run
+     twice (only 11 of the 220 instances post Diffn).
+
+156. JaLP gets a primal simplex, RevisedDualSimplex.solvePrimal(limit),
      and setCost(c) to change the objective while the factored basis is
      kept: the basis stays primal feasible, so the primal simplex goes on
      from it where the dual simplex has to repair its dual feasibility.
@@ -2370,7 +2400,7 @@ Version 5.0 (unreleased)
      same time (0.94 on solves over 0.5 s), and from scratch 610 against
      631, 1.27 times slower on solves over 0.5 s.
 
-156. Local search (--free-config ls=...) keeps an all different over n
+157. Local search (--free-config ls=...) keeps an all different over n
      variables whose domains share n values as a permutation: it starts
      from a matching and moves those variables only by swaps, so the
      constraint is no longer evaluated (an implicit constraint, as in
@@ -2382,7 +2412,7 @@ Version 5.0 (unreleased)
      solved before, n <= 16 now. Wide set at 60 s, -f ls=0.1: 159 to
      160 solved, with solutions 190 to 190; ls stays off by default.
 
-157. Under --lcg, GCC and CountValues explain an upper bound of a counter
+158. Under --lcg, GCC and CountValues explain an upper bound of a counter
      by the lower bounds of the other counters (the variables they take
      leave too few for this value) before they try the flow network.
      The reason was written but not called, so these bounds went to the
@@ -2394,7 +2424,7 @@ Version 5.0 (unreleased)
      Wide set (220, 60 s, paired, scored by section 7 of the scoring
      rules): --lcg S = +4, -f S = +6 over two repetitions.
 
-158. New constraint XorSystem (org.jacop.constraints): Gauss-Jordan
+159. New constraint XorSystem (org.jacop.constraints): Gauss-Jordan
      elimination over GF(2) for a system of parity constraints. The rows
      are bit-packed and kept in reduced row echelon form over the unfixed
      variables; a pivot change adds one row to the others, so nothing is
@@ -2421,7 +2451,7 @@ Version 5.0 (unreleased)
      speck-optimisation: unchanged within seed noise. Wide set (220):
      only parity-learning 52_26_6.1 and speck easy_3 get a system.
 
-159. New constraint DifferenceCycles over difference constraints
+160. New constraint DifferenceCycles over difference constraints
      x - y <= c that hold always or when a 0/1 literal takes a value. It
      fails as soon as the ones that hold close a cycle of negative
      weight and, under LCG, explains the failure by the literals of the
@@ -2452,7 +2482,7 @@ Version 5.0 (unreleased)
      with up to 2.8x fewer failures, rectangle-packing rpp30 1.1 to
      0.7 s, rcpsp_max psp_d_244 8.5 to 10.2 s.
 
-160. The clique rows of tables (TableCliques) and new value encodings of
+161. The clique rows of tables (TableCliques) and new value encodings of
      GCC, count, alldifferent, alldistinct and element use LP-only
      columns [x = v] (LpColumn) instead of store Booleans channelled with
      ChannelReif, so they add no variables or constraints to the store.
@@ -2475,7 +2505,7 @@ Version 5.0 (unreleased)
      except sudoku_fixed p28, where one more LP failure changes the
      search path.
 
-161. Root reduced-cost fixing for the linear relaxation (SCIP's
+162. Root reduced-cost fixing for the linear relaxation (SCIP's
      prop_rootredcost). The inequalities of the duals of the last optimal
      solve at the root level are kept; they are combinations of the rows,
      so they hold everywhere, and whenever the bound of the objective
