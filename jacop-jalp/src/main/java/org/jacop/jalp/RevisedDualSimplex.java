@@ -51,6 +51,11 @@ import java.util.Random;
  * perturbation is removed at the end and the problem solved again from the basis found, so the
  * objective is the one of the problem as given.
  *
+ * <p>{@link #solvePrimal(int)} is a primal simplex over the same basis, factors and bounds: a
+ * composite phase 1 that minimizes the sum of infeasibilities, then the objective, with Devex
+ * pricing and a Harris ratio test with bound flips of the entering column. It suits a basis that
+ * stays primal feasible while it is not dual feasible, as after {@link #setCost(double[])}.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -393,7 +398,13 @@ public final class RevisedDualSimplex {
     colScale = o.colScale.clone();
     cost = o.cost.clone();
     trueCost = o.trueCost.clone();
-    givenCost = o.givenCost;
+    givenCost = o.givenCost.clone();
+    // the primal simplex keeps no state between its solves: the bounds are restored when it ends
+    primalStep = 0;
+    leavesAtUpper = false;
+    savedLo = null;
+    savedHi = null;
+    boundsPerturbed = false;
     perturbed = o.perturbed;
     seed = o.seed;
     exact = o.exact;
@@ -459,6 +470,22 @@ public final class RevisedDualSimplex {
    */
   public void setExact(boolean exact) {
     this.exact = exact;
+  }
+
+  /**
+   * Replaces the objective. The basis stays, so it is still primal feasible and {@link
+   * #solvePrimal(int)} goes on from it; the reduced costs are computed again.
+   *
+   * @param c the new objective over the n columns, minimized
+   */
+  public void setCost(double[] c) {
+    System.arraycopy(c, 0, givenCost, 0, n);
+    setCosts(true);
+    placed = false;
+    dualsChecked = false;
+    if (factorValid) {
+      computeDuals();
+    }
   }
 
   // the costs of the scaled problem, perturbed or not
@@ -2205,5 +2232,522 @@ public final class RevisedDualSimplex {
       }
       weightsFrom = m;
     }
+  }
+
+  // the primal simplex: the Devex reference weights of the columns, the reduced costs of phase 1,
+  // and the step and the bound of the leaving column found by the ratio test
+  private double[] devex = {};
+  private double[] phaseOne = {};
+  private double[] phaseY = {};
+  private double primalStep;
+  private boolean leavesAtUpper;
+
+  // infeasibilities of basic columns up to this are shifted away rather than taken to phase 1
+  // (trento1 cycled in phase 1 on one infeasibility of 1.3e-6)
+  private static final double SHIFT_TOL = 1e-5;
+
+  // the primal Harris tolerance: half the primal tolerance, so that the basic columns a step
+  // leaves just past their bounds are not infeasible (d6cube cycled between the phases with it at
+  // the primal tolerance)
+  private static final double HARRIS_TOL = PRIMAL_TOL / 2;
+
+  // Devex weights grow with the pivots; past this the reference framework starts again
+  private static final double DEVEX_RESET = 1e6;
+
+  /**
+   * Solves the problem from the current basis by the primal simplex. While the basis is primal
+   * infeasible it minimizes the sum of the infeasibilities of the basic columns (phase 1, with
+   * costs -1, 0 or 1 by basic column taken again after each pivot), then the objective (phase 2),
+   * keeping the basic columns within their bounds. The entering column is chosen by Devex pricing;
+   * the ratio test has Harris tolerances, and the entering column flips to its other bound when
+   * that comes first. A nonbasic column at an artificial bound may move past it, and a column that
+   * can move without limit along an improving edge makes the problem unbounded.
+   *
+   * <p>When phase 1 ends with infeasibilities left the dual simplex goes on from the basis found,
+   * with the pivots left of the limit, so that an infeasible answer carries its proof ({@link
+   * #farkas()}). With {@link #setExact(boolean)} the perturbation of the costs is removed at the
+   * end of phase 2 and the primal simplex goes on, which keeps the basis primal feasible.
+   *
+   * <p>After a run of degenerate pivots the finite bounds are widened by small random amounts
+   * (bound perturbation, against stalling); they are restored at the end, and when that leaves
+   * basic columns outside their bounds the dual simplex goes on from the basis found.
+   *
+   * @param limit the most pivots to make
+   * @return {@link #OPTIMAL}, {@link #INFEASIBLE}, {@link #UNBOUNDED} or {@link #LIMIT}
+   */
+  public int solvePrimal(int limit) {
+    long start = totalPivots;
+    int status = primalPivots(limit);
+    // the primal pivots change the basis and the reduced costs: the dual simplex places every
+    // column and checks its reduced costs again
+    placed = false;
+    dualsChecked = false;
+    if (savedLo != null) {
+      restoreBounds();
+      if (status == OPTIMAL && leavingRow() >= 0) {
+        // the perturbed bounds held the optimum, the true ones not quite: a dual clean-up
+        status = DUAL;
+      }
+    }
+    if (status == DUAL) {
+      computeDuals();
+      status = solve((int) Math.max(0, limit - (totalPivots - start)));
+    }
+    return status;
+  }
+
+  // the bounds as given while they are perturbed, or null
+  private double[] savedLo;
+  private double[] savedHi;
+  private boolean boundsPerturbed;
+
+  // the status of a primal solve that hands over to the dual simplex
+  private static final int DUAL = -2;
+
+  // the reduced costs on fresh factors that end a primal solve
+  private static final double END_TOL = 1e-8;
+
+  // the answer of atPrimalEnd when the pivots go on
+  private static final int GO_ON = -1;
+
+  // degenerate pivots in a row before the bounds are perturbed, and the relative perturbation
+  private static final int DEGENERATE_RUN = 30;
+  private static final double BOUND_PERTURBATION =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.boundPerturbation", "5e-6"));
+
+  // widens the finite bounds by small random amounts, except the bound a nonbasic column is at:
+  // the point stays where it is, and the basic columns at their bounds move off them
+  private void perturbBounds() {
+    boundsPerturbed = true;
+    if (savedLo == null) {
+      savedLo = boundLo.clone();
+      savedHi = boundHi.clone();
+    }
+    Random rnd = new Random(seed + totalPivots);
+    for (int j = 0; j < cols; j++) {
+      if (boundLo[j] == boundHi[j]) {
+        continue;
+      }
+      boolean basic = row[j] >= 0;
+      if (boundLo[j] != Double.NEGATIVE_INFINITY && (basic || upper[j])) {
+        boundLo[j] -= BOUND_PERTURBATION * (1 + rnd.nextDouble()) * (1 + Math.abs(boundLo[j]));
+      }
+      if (boundHi[j] != Double.POSITIVE_INFINITY && (basic || !upper[j])) {
+        boundHi[j] += BOUND_PERTURBATION * (1 + rnd.nextDouble()) * (1 + Math.abs(boundHi[j]));
+      }
+      workingBounds(j);
+    }
+  }
+
+  // moves the bounds of the basic columns just outside them to their values (bound shifting),
+  // restored with the perturbed ones at the end
+  private void shiftBounds() {
+    if (savedLo == null) {
+      savedLo = boundLo.clone();
+      savedHi = boundHi.clone();
+    }
+    for (int k = 0; k < m; k++) {
+      int p = basis[k];
+      double v = beta[k];
+      if (v < boundLo[p] - PRIMAL_TOL) {
+        boundLo[p] = v;
+        workingBounds(p);
+      } else if (v > boundHi[p] + PRIMAL_TOL) {
+        boundHi[p] = v;
+        workingBounds(p);
+      }
+    }
+  }
+
+  private void restoreBounds() {
+    System.arraycopy(savedLo, 0, boundLo, 0, cols);
+    System.arraycopy(savedHi, 0, boundHi, 0, cols);
+    savedLo = null;
+    savedHi = null;
+    boundsPerturbed = false;
+    for (int j = 0; j < cols; j++) {
+      workingBounds(j);
+      markMoved(j);
+    }
+    if (factorValid) {
+      updateBeta();
+    }
+  }
+
+  private int primalPivots(int limit) {
+    infeasibleRow = -1;
+    clearSkipped();
+    if (feasibility || (exact && !perturbed)) {
+      feasibility = false;
+      setCosts(true);
+      if (factorValid) {
+        computeDuals();
+      }
+    }
+    if (!factorValid) {
+      factorize();
+    }
+    // a nonbasic column starts at its finite bound when it has one
+    for (int j = 0; j < cols; j++) {
+      if (row[j] < 0 && isArtificial(j, upper[j]) && !isArtificial(j, !upper[j])) {
+        upper[j] = !upper[j];
+        markMoved(j);
+      }
+    }
+    updateBeta();
+    if (devex.length < cols) {
+      devex = new double[cols];
+      phaseOne = new double[cols];
+    }
+    if (phaseY.length < m) {
+      phaseY = new double[m];
+    }
+    Arrays.fill(devex, 0, cols, 1);
+    boolean wasPhaseOne = false;
+    int degenerate = 0;
+    for (int iter = 0; iter < limit; iter++) {
+      ops += 3L * m;
+      boolean phase1 = phaseOneCosts();
+      if (wasPhaseOne && !phase1) {
+        computeDuals();
+      }
+      wasPhaseOne = phase1;
+      double[] dd = phase1 ? phaseOne : d;
+      int q = primalEntering(dd, DUAL_TOL);
+      if (q < 0) {
+        int status = atPrimalEnd(phase1);
+        if (status != GO_ON) {
+          return status;
+        }
+        wasPhaseOne = false;
+        continue;
+      }
+      double dir = dd[q] < 0 ? 1 : -1;
+      clear(alphaQ, alphaIdx, alphaLen);
+      alphaLen = lu.ftran(rhs, rhsIdx, columnInto(q, rhs, rhsIdx), alphaQ, alphaIdx, true);
+      int r = primalLeaving(dir);
+      double range = enteringRange(q, dir);
+      if (r < 0 && range == Double.POSITIVE_INFINITY) {
+        if (!phase1) {
+          if (perturbed && !rayImproves(q, dir)) {
+            // only the perturbation pulls along the ray (a free column with no cost): the
+            // columns of the ray keep their costs as given, and the pricing goes on
+            unperturbRay(q);
+            computeDuals();
+            continue;
+          }
+          return UNBOUNDED;
+        }
+        // an improving edge of phase 1 always meets the bound of an infeasible column: round-off
+        int status = atPrimalEnd(true);
+        if (status != GO_ON) {
+          return status;
+        }
+        wasPhaseOne = false;
+        continue;
+      }
+      double from = upper[q] ? hi[q] : lo[q];
+      if (r < 0 || range <= primalStep) {
+        // the entering column reaches its other bound first: a flip, the basis stays
+        upper[q] = !upper[q];
+        double to = upper[q] ? hi[q] : lo[q];
+        at[q] = to;
+        moveBasic(to - from);
+        continue;
+      }
+      int p = basis[r];
+      rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
+      pivotRow();
+      double fromRow = alphaRow[q];
+      double fromColumn = alphaQ[r];
+      if (lu.updates() > 0
+          && Math.abs(fromRow - fromColumn) > PIVOT_AGREEMENT * (1 + Math.abs(fromColumn))) {
+        clearTouched();
+        primalRefactor();
+        wasPhaseOne = false;
+        continue;
+      }
+      double step = dir * primalStep;
+      degenerate = primalStep * Math.abs(fromColumn) <= PRIMAL_TOL * 1e-3 ? degenerate + 1 : 0;
+      moveBasic(step);
+      beta[r] = from + step;
+      if (!phase1) {
+        double thetaD = d[q] / fromRow;
+        for (int t = 0; t < touchedCount; t++) {
+          int j = touched[t];
+          d[j] -= thetaD * alphaRow[j];
+        }
+        d[p] = -thetaD;
+        d[q] = 0;
+      }
+      double wq = devex[q];
+      boolean reset = false;
+      for (int t = 0; t < touchedCount; t++) {
+        int j = touched[t];
+        double f = alphaRow[j] / fromRow;
+        double w = f * f * wq;
+        if (w > devex[j]) {
+          devex[j] = w;
+          reset |= w > DEVEX_RESET;
+        }
+      }
+      devex[p] = Math.max(wq / (fromRow * fromRow), 1);
+      // the dual steepest-edge weight of the row, for a dual solve that follows
+      double wr = 0;
+      for (int k = 0; k < rhoLen; k++) {
+        double v = rho[rhoIdx[k]];
+        wr += v * v;
+      }
+      weight[r] = Math.max(wr / (fromColumn * fromColumn), 1e-12);
+      clearTouched();
+      boolean stable = lu.update(r);
+      basis[r] = q;
+      row[q] = r;
+      row[p] = -1;
+      upper[p] = leavesAtUpper;
+      at[p] = leavesAtUpper ? hi[p] : lo[p];
+      totalPivots++;
+      if (reset || devex[p] > DEVEX_RESET) {
+        Arrays.fill(devex, 0, cols, 1);
+      }
+      if (!stable
+          || lu.updates() >= refactorUpdates
+          || lu.updateNonzeros() > REFACTOR_FILL * (lu.factorNonzeros + m)
+          || solvesOutgrowFactor()) {
+        primalRefactor();
+        wasPhaseOne = false;
+      }
+      if (degenerate >= DEGENERATE_RUN && !boundsPerturbed) {
+        perturbBounds();
+        degenerate = 0;
+      }
+    }
+    if (wasPhaseOne) {
+      computeDuals();
+    }
+    return LIMIT;
+  }
+
+  // no improving column: the status to return, DUAL, or GO_ON
+  private int atPrimalEnd(boolean phase1) {
+    if (lu.updates() > 0) {
+      // confirm on fresh factors, basic values and reduced costs; a reduced cost that only the
+      // fresh ones show past the dual tolerance, but within END_TOL, is round-off (sp98ar with the
+      // costs as given: one degenerate pivot and one refactorization after the other)
+      primalRefactor();
+      if (phase1 || phaseOneCosts() || primalEntering(d, END_TOL) >= 0) {
+        return GO_ON;
+      }
+    }
+    if (phase1) {
+      // infeasible, as far as the primal simplex can tell: the dual simplex finds the proof
+      return DUAL;
+    }
+    if (exact && perturbed) {
+      setCosts(false);
+      computeDuals();
+      return GO_ON;
+    }
+    return OPTIMAL;
+  }
+
+  private void primalRefactor() {
+    factorize();
+    updateBeta();
+  }
+
+  // whether the ray of the entering column improves the objective as given
+  private boolean rayImproves(int q, double dir) {
+    double z = trueCost[q];
+    for (int i = 0; i < m; i++) {
+      if (alphaQ[i] != 0) {
+        z -= trueCost[basis[i]] * alphaQ[i];
+      }
+    }
+    return dir * z < -DUAL_TOL;
+  }
+
+  private void unperturbRay(int q) {
+    cost[q] = trueCost[q];
+    for (int i = 0; i < m; i++) {
+      if (alphaQ[i] != 0) {
+        cost[basis[i]] = trueCost[basis[i]];
+      }
+    }
+  }
+
+  // x_B -= alphaQ * step: the basic columns follow a step of the entering column
+  private void moveBasic(double step) {
+    if (step == 0) {
+      return;
+    }
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
+      beta[i] -= alphaQ[i] * step;
+    }
+  }
+
+  /**
+   * The reduced costs of phase 1 into phaseOne when some basic column is outside its bounds: the
+   * cost of a basic column is -1 below its lower bound, 1 above its upper bound and 0 otherwise,
+   * and the other columns have none.
+   *
+   * @return whether the basis is primal infeasible
+   */
+  private boolean phaseOneCosts() {
+    boolean any = false;
+    double worst = 0;
+    Arrays.fill(work, 0);
+    for (int k = 0; k < m; k++) {
+      int p = basis[k];
+      double v = beta[k];
+      if (v < boundLo[p] - PRIMAL_TOL) {
+        work[k] = -1;
+        any = true;
+        worst = Math.max(worst, boundLo[p] - v);
+      } else if (v > boundHi[p] + PRIMAL_TOL) {
+        work[k] = 1;
+        any = true;
+        worst = Math.max(worst, v - boundHi[p]);
+      }
+    }
+    if (!any) {
+      return false;
+    }
+    if (worst <= SHIFT_TOL) {
+      shiftBounds();
+      return false;
+    }
+    ops += nonzeros + cols;
+    // into phaseY, since rho keeps its nonzeros listed in rhoIdx for the pivot row
+    double[] y = phaseY;
+    lu.btran(work, y);
+    for (int j = 0; j < n; j++) {
+      if (row[j] >= 0) {
+        phaseOne[j] = 0;
+        continue;
+      }
+      double s = 0;
+      int[] ci = colIdx[j];
+      double[] cv = colVal[j];
+      for (int e = 0; e < colLen[j]; e++) {
+        s -= y[ci[e]] * cv[e];
+      }
+      phaseOne[j] = s;
+    }
+    for (int i = 0; i < m; i++) {
+      phaseOne[n + i] = row[n + i] >= 0 ? 0 : y[i];
+    }
+    return true;
+  }
+
+  // the nonbasic column with the largest improving reduced cost by Devex weight, or -1
+  private int primalEntering(double[] dd, double tol) {
+    ops += cols;
+    int q = -1;
+    double best = 0;
+    for (int j = 0; j < cols; j++) {
+      if (row[j] >= 0 || lo[j] == hi[j]) {
+        continue;
+      }
+      double v = dd[j];
+      // a column rises when v < 0 and falls when v > 0; it may not leave a true bound
+      boolean improving =
+          upper[j]
+              ? v > tol || (v < -tol && isArtificial(j, true))
+              : v < -tol || (v > tol && isArtificial(j, false));
+      if (improving) {
+        double score = v * v / devex[j];
+        if (score > best) {
+          best = score;
+          q = j;
+        }
+      }
+    }
+    return q;
+  }
+
+  // how far the entering column can move in its direction before it reaches its other bound
+  private double enteringRange(int q, double dir) {
+    boolean rising = dir > 0;
+    if (rising == upper[q]) {
+      // past the bound it is at, which can only be an artificial one
+      return Double.POSITIVE_INFINITY;
+    }
+    return isArtificial(q, rising) ? Double.POSITIVE_INFINITY : hi[q] - lo[q];
+  }
+
+  /**
+   * The primal ratio test of Harris in two passes over the basic columns that move with the
+   * entering column (x_B moves by -alphaQ dir per unit): the first finds the largest step that
+   * keeps every basic column within its bounds up to the primal tolerance, the second takes the
+   * largest pivot among the rows that block before it. An infeasible basic column blocks where it
+   * becomes feasible, and never as it moves away from its bounds.
+   *
+   * @return the leaving row, or -1 when no basic column blocks; the step goes into primalStep
+   */
+  private int primalLeaving(double dir) {
+    ops += 2L * alphaLen;
+    double bound = Double.POSITIVE_INFINITY;
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
+      double rate = -alphaQ[i] * dir;
+      if (Math.abs(rate) >= PIVOT_TOL) {
+        double slack = slackTo(i, rate);
+        if (slack < Double.POSITIVE_INFINITY) {
+          // a column already past its bound within the tolerance may only use what is left of it
+          // (neos17: steps of HARRIS_TOL beyond a clamped slack pushed such columns out of it)
+          bound = Math.min(bound, Math.max(0, slack + HARRIS_TOL) / Math.abs(rate));
+        }
+      }
+    }
+    if (bound == Double.POSITIVE_INFINITY) {
+      return -1;
+    }
+    int r = -1;
+    double pivot = 0;
+    boolean atUpper = false;
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
+      double rate = -alphaQ[i] * dir;
+      if (Math.abs(rate) > pivot) {
+        double slack = slackTo(i, rate);
+        if (slack < Double.POSITIVE_INFINITY && Math.max(0, slack) / Math.abs(rate) <= bound) {
+          r = i;
+          pivot = Math.abs(rate);
+          primalStep = Math.max(0, slack) / pivot;
+          atUpper = leavesAtUpper;
+        }
+      }
+    }
+    leavesAtUpper = atUpper;
+    return r;
+  }
+
+  // the distance of the basic column of row i to the bound it moves to at the given rate, or
+  // infinity; the bound goes into leavesAtUpper
+  private double slackTo(int i, double rate) {
+    int p = basis[i];
+    double v = beta[i];
+    if (rate > 0) {
+      if (v < boundLo[p] - PRIMAL_TOL) {
+        leavesAtUpper = false;
+        return boundLo[p] - v;
+      }
+      if (v > boundHi[p] + PRIMAL_TOL || boundHi[p] == Double.POSITIVE_INFINITY) {
+        return Double.POSITIVE_INFINITY;
+      }
+      leavesAtUpper = true;
+      return boundHi[p] - v;
+    }
+    if (v > boundHi[p] + PRIMAL_TOL) {
+      leavesAtUpper = true;
+      return v - boundHi[p];
+    }
+    if (v < boundLo[p] - PRIMAL_TOL || boundLo[p] == Double.NEGATIVE_INFINITY) {
+      return Double.POSITIVE_INFINITY;
+    }
+    leavesAtUpper = false;
+    return v - boundLo[p];
   }
 }

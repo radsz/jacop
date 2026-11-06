@@ -2352,7 +2352,25 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
-155. Local search (--free-config ls=...) keeps an all different over n
+155. JaLP gets a primal simplex, RevisedDualSimplex.solvePrimal(limit),
+     and setCost(c) to change the objective while the factored basis is
+     kept: the basis stays primal feasible, so the primal simplex goes on
+     from it where the dual simplex has to repair its dual feasibility.
+     Composite phase 1 (the sum of infeasibilities, priced every pivot),
+     Devex pricing, a two-pass Harris ratio test with bound flips of the
+     entering column, bound perturbation after 30 degenerate pivots and
+     bound shifting of infeasibilities below 1e-5; the dual simplex
+     cleans up when the restored bounds leave the basis infeasible and
+     gives the infeasibility proof. Nothing in the solver calls it yet; it
+     is for RINS and LP diving. LpMain -primal and
+     -reobjective (zero objective first, then the real one) run it. LP
+     bench (659 LPs, 120 s): no wrong answer; the dual simplex makes the
+     same pivots as before on all 631 it solves; after an objective
+     change the primal solves 616 against the dual's 627 in about the
+     same time (0.94 on solves over 0.5 s), and from scratch 610 against
+     631, 1.27 times slower on solves over 0.5 s.
+
+156. Local search (--free-config ls=...) keeps an all different over n
      variables whose domains share n values as a permutation: it starts
      from a matching and moves those variables only by swaps, so the
      constraint is no longer evaluated (an implicit constraint, as in
@@ -2364,7 +2382,7 @@ Version 5.0 (unreleased)
      solved before, n <= 16 now. Wide set at 60 s, -f ls=0.1: 159 to
      160 solved, with solutions 190 to 190; ls stays off by default.
 
-156. Under --lcg, GCC and CountValues explain an upper bound of a counter
+157. Under --lcg, GCC and CountValues explain an upper bound of a counter
      by the lower bounds of the other counters (the variables they take
      leave too few for this value) before they try the flow network.
      The reason was written but not called, so these bounds went to the
@@ -2376,7 +2394,7 @@ Version 5.0 (unreleased)
      Wide set (220, 60 s, paired, scored by section 7 of the scoring
      rules): --lcg S = +4, -f S = +6 over two repetitions.
 
-157. New constraint XorSystem (org.jacop.constraints): Gauss-Jordan
+158. New constraint XorSystem (org.jacop.constraints): Gauss-Jordan
      elimination over GF(2) for a system of parity constraints. The rows
      are bit-packed and kept in reduced row echelon form over the unfixed
      variables; a pivot change adds one row to the others, so nothing is
@@ -2403,7 +2421,7 @@ Version 5.0 (unreleased)
      speck-optimisation: unchanged within seed noise. Wide set (220):
      only parity-learning 52_26_6.1 and speck easy_3 get a system.
 
-158. New constraint DifferenceCycles over difference constraints
+159. New constraint DifferenceCycles over difference constraints
      x - y <= c that hold always or when a 0/1 literal takes a value. It
      fails as soon as the ones that hold close a cycle of negative
      weight and, under LCG, explains the failure by the literals of the
@@ -2434,7 +2452,7 @@ Version 5.0 (unreleased)
      with up to 2.8x fewer failures, rectangle-packing rpp30 1.1 to
      0.7 s, rcpsp_max psp_d_244 8.5 to 10.2 s.
 
-159. The clique rows of tables (TableCliques) and new value encodings of
+160. The clique rows of tables (TableCliques) and new value encodings of
      GCC, count, alldifferent, alldistinct and element use LP-only
      columns [x = v] (LpColumn) instead of store Booleans channelled with
      ChannelReif, so they add no variables or constraints to the store.
@@ -2457,7 +2475,7 @@ Version 5.0 (unreleased)
      except sudoku_fixed p28, where one more LP failure changes the
      search path.
 
-160. Root reduced-cost fixing for the linear relaxation (SCIP's
+161. Root reduced-cost fixing for the linear relaxation (SCIP's
      prop_rootredcost). The inequalities of the duals of the last optimal
      solve at the root level are kept; they are combinations of the rows,
      so they hold everywhere, and whenever the bound of the objective
