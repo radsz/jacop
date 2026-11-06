@@ -62,6 +62,7 @@ import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.lcg.LinearForm;
@@ -679,19 +680,6 @@ public final class LocalSearch {
     }
   }
 
-  // the first position from p on, cyclically, of a variable that shares its value, or p
-  private int conflicting(int c, int p) {
-    int[] s = scope[c];
-    Counter k = counters[c];
-    for (int t = 0; t < s.length; t++) {
-      int q = (p + t) % s.length;
-      if (k.taken(val[s[q]]) > 1) {
-        return q;
-      }
-    }
-    return p;
-  }
-
   private void buildCounters() {
     counters = new Counter[m];
     for (int k = 0; k < measuredConstraints.size(); k++) {
@@ -791,7 +779,8 @@ public final class LocalSearch {
     if (s.length > GROUP_LIMIT) {
       return false;
     }
-    IntDomain union = domains[s[0]].cloneLight();
+    // an interval domain, since the union of small dense domains may span more than 64 values
+    IntDomain union = new IntervalDomain();
     for (int i : s) {
       if (groupOf[i] >= 0
           || i == costIndex
@@ -1859,11 +1848,14 @@ public final class LocalSearch {
     double best = Double.MAX_VALUE;
     int ties = 0;
     int size = s.length + (enforcer[c] >= 0 ? 1 : 0);
-    // all of an all different constraint: only the variables sharing a value are tried
+    // all of an all different constraint; on one step in four only the variables sharing a value
+    // (their violation, in Comet's terms): always would stall on quasigroups, where a conflict is
+    // often repaired by moving a variable that has none in this constraint
     int scan = counters[c] != null ? size : Math.min(size, SCAN_LIMIT);
     int offset = size > SCAN_LIMIT || counters[c] != null ? random.nextInt(size) : 0;
     int bestPartner = -1;
     int swapped = 0;
+    boolean onlyConflicts = counters[c] != null && random.nextInt(4) == 0;
     for (int t = 0; t < scan; t++) {
       if (t > 0 && expired()) {
         // a step on costly constraints can take long: the moves seen so far will do
@@ -1871,7 +1863,7 @@ public final class LocalSearch {
       }
       int p = (offset + t) % size;
       int i = p < s.length ? s[p] : enforcer[c];
-      if (counters[c] != null && counters[c].taken(val[i]) <= 1) {
+      if (onlyConflicts && counters[c].taken(val[i]) <= 1) {
         // moving a variable whose value no other one takes does not lower the duplicates
         continue;
       }
@@ -2123,10 +2115,6 @@ public final class LocalSearch {
       return -1;
     }
     int p = random.nextInt(size);
-    if (counters[c] != null) {
-      // a variable whose value another one takes too (its violation, in Comet's terms)
-      p = conflicting(c, p);
-    }
     int i = p < s.length ? s[p] : enforcer[c];
     if (defOf[i] >= 0) {
       i = upstream(i);

@@ -257,6 +257,25 @@ class LocalSearchTest {
   }
 
   /**
+   * An all different whose small domains lie far apart is not a permutation; looking for one must
+   * not build a small dense union wider than 64 values.
+   */
+  @Test
+  void skipsAllDifferentOverDistantSmallDomains() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 1),
+      new IntVar(store, "x1", 100, 101),
+      new IntVar(store, "x2", 0, 101)
+    };
+    store.impose(new Alldistinct(x));
+    assertTrue(store.consistency());
+    LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(LIMIT).seed(1).build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(!ls.toString().contains("P:"), ls.toString());
+  }
+
+  /**
    * Minimises the makespan of tasks on a cumulative resource, with a reified linear constraint
    * between two tasks; each solution reported is better than the last.
    */
