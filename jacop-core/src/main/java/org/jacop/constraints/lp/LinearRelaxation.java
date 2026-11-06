@@ -42,7 +42,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
@@ -414,6 +413,8 @@ public class LinearRelaxation extends Constraint
   private static final boolean ROOT_REDUCED_COSTS =
       !"false".equals(System.getProperty("org.jacop.lp.rootReducedCosts"));
   private LinearForm[] rootForms = new LinearForm[0];
+  // the certificate of each root form, for a proof, or null
+  private Certificate[] rootCertificates = new Certificate[0];
   private long[] solvedLo;
   private long[] solvedHi;
 
@@ -1361,8 +1362,8 @@ public class LinearRelaxation extends Constraint
       rootObjective = objectiveBound();
       if (ROOT_REDUCED_COSTS) {
         long pruned = prunings;
-        for (LinearForm f : rootForms) {
-          propagate(store, f);
+        for (int k = 0; k < rootForms.length; k++) {
+          propagate(store, rootForms[k], rootCertificates[k]);
         }
         rootPrunings += prunings - pruned;
       }
@@ -1641,7 +1642,16 @@ public class LinearRelaxation extends Constraint
         continue; // the combination overflows: try a smaller scale
       }
       if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
-        rootForms = Arrays.stream(forms).filter(Objects::nonNull).toArray(LinearForm[]::new);
+        List<LinearForm> kept = new ArrayList<>();
+        List<Certificate> keptCertificates = new ArrayList<>();
+        for (int k = 0; k < forms.length; k++) {
+          if (forms[k] != null) {
+            kept.add(forms[k]);
+            keptCertificates.add(certified(forms[k], used[k], k == 0));
+          }
+        }
+        rootForms = kept.toArray(new LinearForm[0]);
+        rootCertificates = keptCertificates.toArray(new Certificate[0]);
         if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
           rootSimplex = lp.copy();
           rootSimplexRows = rows();
