@@ -91,6 +91,24 @@ final class MirCut {
   }
 
   /**
+   * Returns a cut {@code sum weights x <= rhs} found by other means than the MIR, such as a rounded
+   * capacity cut, to be added like the MIR cuts.
+   *
+   * @param columns the columns, ascending
+   * @param weights the weight of each column
+   * @param rhs the side
+   * @param efficacy the violation by the LP solution over the norm of the cut
+   * @return the cut
+   */
+  static MirCut row(int[] columns, long[] weights, long rhs, double efficacy) {
+    double norm = 0;
+    for (long w : weights) {
+      norm += (double) w * w;
+    }
+    return new MirCut(columns, weights, rhs, efficacy, Math.sqrt(norm));
+  }
+
+  /**
    * Returns the best MIR cut of {@code sum c x <= b}, or null when none is violated enough or the
    * arithmetic overflows.
    *

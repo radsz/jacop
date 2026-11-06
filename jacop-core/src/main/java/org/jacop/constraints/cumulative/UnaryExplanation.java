@@ -92,6 +92,7 @@ final class UnaryExplanation {
   private static final int DETECTABLE = 0;
   private static final int EDGE_FINDING = 1;
   private static final int NOT_FIRST = 2;
+  private static final int OVERLOAD = 3;
 
   UnaryExplanation(TaskView[] tasks, IntVar limit) {
     this.tasks = tasks.clone();
@@ -170,8 +171,113 @@ final class UnaryExplanation {
     return false;
   }
 
+  /**
+   * Explains that an optional task j (one whose use may be 0) uses nothing: with a positive use, a
+   * rule would push it past its latest start (in either time line), or it would overload a window
+   * together with tasks that end within it.
+   *
+   * @param trail the trail
+   * @param entry the entry of the atom {@code use(j) <= 0}
+   * @param j the task
+   * @param out where the reason is added
+   * @return false when no rule explains it; out may then hold entries to drop
+   */
+  boolean explainAbsent(AtomicTrail trail, int entry, int j, EntryList out) {
+    // the least positive use of j, a fact of its initial domain
+    IntVar use = tasks[j].res;
+    int root = trail.rootDomain(use).max() > 0 ? trail.rootDomain(use).nextValue(0) : 0;
+    if (root <= 0) {
+      return false;
+    }
+    for (boolean lower : new boolean[] {true, false}) {
+      if (!load(trail, entry, j, lower, root)) {
+        continue;
+      }
+      long last = (long) lct[j] - dur[j];
+      long v = last + 1;
+      numBest = Integer.MAX_VALUE;
+      bestV = v;
+      detectable(j, v);
+      edgeFinding(j, v);
+      notFirst(j, v);
+      if (lower) {
+        overload(j);
+      }
+      if (numBest == Integer.MAX_VALUE) {
+        continue;
+      }
+      if (bestKind == OVERLOAD) {
+        for (int q = 0; q < numBest; q++) {
+          int k = best[q];
+          startAtLeast(trail, entry, k, true, bestA, out);
+          startAtMost(trail, entry, k, true, bestB - dur[k], out);
+          trail.addLowerBound(tasks[k].res, entry, out);
+        }
+        startAtLeast(trail, entry, j, true, bestA, out);
+        startAtMost(trail, entry, j, true, bestB - dur[j], out);
+        trail.addUpperBound(limit, entry, out);
+      } else {
+        cite(trail, entry, j, lower, out);
+        startAtMost(trail, entry, j, lower, last, out);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Overload with j: for each window end b from j's latest end, the tasks that end by b by
+   * decreasing earliest start, until a + p(Ω) + p(j) &gt; b for a = min(est(j), est of the last).
+   */
+  private void overload(int j) {
+    int n = tasks.length;
+    int m = 0;
+    for (int k = 0; k < n; k++) {
+      if (k != j && usable[k]) {
+        ends[m++] = k;
+      }
+    }
+    System.arraycopy(ends, 0, window, 0, m);
+    sortBy(window, m, est, true);
+    sortBy(ends, m, lct, false);
+    for (int e = -1; e < m; e++) {
+      long b;
+      if (e < 0) {
+        b = lct[j];
+      } else {
+        if (e + 1 < m && lct[ends[e + 1]] == lct[ends[e]]) {
+          continue;
+        }
+        b = lct[ends[e]];
+        if (b <= lct[j]) {
+          continue;
+        }
+      }
+      long p = dur[j];
+      numPicked = 0;
+      for (int q = 0; q < m && numPicked + 1 < numBest; q++) {
+        int k = window[q];
+        if (lct[k] > b) {
+          continue;
+        }
+        picked[numPicked++] = k;
+        p += dur[k];
+        long a = Math.min(est[j], est[k]);
+        if (a + p > b) {
+          keep(OVERLOAD, a, 0, b);
+          break;
+        }
+      }
+    }
+  }
+
   // reads the tasks just before the entry; false when j or the limit do not allow the rules
   private boolean load(AtomicTrail trail, int entry, int j, boolean lower) {
+    return load(trail, entry, j, lower, 0);
+  }
+
+  // as above, with task j using assumedUse (when positive) whatever its bound
+  private boolean load(AtomicTrail trail, int entry, int j, boolean lower, int assumedUse) {
     int n = tasks.length;
     if (est.length < n) {
       est = new int[n];
@@ -190,7 +296,7 @@ final class UnaryExplanation {
       TaskView t = tasks[i];
       // the durations are constant
       int d = t.dur.min();
-      int r = trail.minBefore(t.res, entry);
+      int r = i == j && assumedUse > 0 ? assumedUse : trail.minBefore(t.res, entry);
       usable[i] = d > 0 && r > 0;
       if (!usable[i]) {
         if (i == j) {

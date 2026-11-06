@@ -54,8 +54,10 @@ import org.jacop.core.TimeStamp;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.ImpliedClauses;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -95,6 +97,7 @@ public class Alldistinct extends Constraint
         SatisfiedPresent,
         Copyable<Alldistinct>,
         Explainable,
+        ImpliedClauses,
         PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
@@ -1482,6 +1485,12 @@ public class Alldistinct extends Constraint
     }
     model.allDifferent(list);
     return true;
+  }
+
+  /** The value cover clauses of a permutation, see {@link AlldiffCover}. */
+  @Override
+  public int impliedClauses(ClauseModel model) {
+    return getClass() != Alldistinct.class ? 0 : AlldiffCover.clauses(list, model);
   }
 
   @Override

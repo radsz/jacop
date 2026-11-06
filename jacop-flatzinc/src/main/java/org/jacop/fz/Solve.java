@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -196,6 +197,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the linear relaxation (--lp), or null
   private LinearRelaxation linearRelaxation;
+
+  // fixed search's activity runs follow the relaxation's root solution, not its last one, which
+  // comes from another branch
+  private static final boolean LP_GUIDE_ROOT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.lpGuideRoot", Boolean.TRUE.toString()));
 
   // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
   // turns them off)
@@ -629,8 +635,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootBound
             + "\n%%%mzn-stat: lpCuts="
             + r.cuts
+            + "\n%%%mzn-stat: lpPairCliques="
+            + r.pairCliques
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpCapacityCuts="
+            + r.capacityCuts
+            + "\n%%%mzn-stat: lpCapacityBound="
+            + r.capacityBound
             + "\n%%%mzn-stat: lpBaseBound="
             + r.baseBound
             + "\n%%%mzn-stat: lpExtraRows="
@@ -1909,8 +1921,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void mirrorSetVariables() {
     List<SetVar> sets = new ArrayList<>();
+    // sets whose constraints a reformulation replaced need no literals
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
     for (int i = 0; i < store.size(); i++) {
-      if (store.vars[i] instanceof SetVar s && !s.singleton()) {
+      if (store.vars[i] instanceof SetVar s && !s.singleton() && !unused.contains(s)) {
         sets.add(s);
       }
     }
@@ -2054,12 +2068,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
     }
-    if (free
-        && linearRelaxation != null
-        && annotated != null
-        && "on".equals(options.freeConfig("lcg-lp-branching", "off"))) {
+    // decisions from the solution of the linear relaxation: on, off, or auto, on when the
+    // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
+    // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
+    // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
+    // it in 60 s
+    String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
+    boolean lpGuided =
+        linearRelaxation != null
+            && ("on".equals(lpBranching)
+                || "auto".equals(lpBranching) && linearRelaxation.valueColumns > 0);
+    if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
+    }
+    if (!free && lpGuided) {
+      // fixed search: the runs of activity branching between the annotation's runs start from it
+      lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
     }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
@@ -2459,6 +2484,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgImpliedClauses="
+            + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
@@ -2479,6 +2506,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.represolveEntailed
             + "\n%%%mzn-stat: lcgAnnotationDecisions="
             + lcg.annotationDecisions
+            + "\n%%%mzn-stat: lcgGuideDecisions="
+            + lcg.guideDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
             + "\n%%%mzn-stat: lcgBooleanVariables="
@@ -2573,6 +2602,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
         + lcg.clockStops
+        + "\n%%%mzn-stat: lcgCoreSkips="
+        + lcg.coreSkips
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="
@@ -2599,6 +2630,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objectiveVariable instanceof IntVar o) {
       vars.remove(o);
     }
+    if ("1".equals(options.freeConfig("lns-defined", "1"))) {
+      // a variable defined by a constraint follows from the others: fixed with them it adds
+      // nothing, fixed without them it keeps the relaxed ones from moving
+      Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+      defined.addAll(dictionary.definedVariables);
+      List<IntVar> independent = new ArrayList<>();
+      for (IntVar x : vars) {
+        if (!defined.contains(x)) {
+          independent.add(x);
+        }
+      }
+      if (!independent.isEmpty()) {
+        vars = new LinkedHashSet<>(independent);
+      }
+    }
     if (vars.isEmpty()) {
       return null;
     }
@@ -2611,6 +2657,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     } else {
       lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
+    }
+    String kinds = options.freeConfig("lns-kinds", "");
+    if (!kinds.isEmpty()) {
+      // the kinds to use, separated by '+', for example random+graph+objective
+      Set<String> chosen =
+          new java.util.HashSet<>(Arrays.asList(kinds.toUpperCase(Locale.ROOT).split("\\+")));
+      for (AdaptiveLns.Kind k : AdaptiveLns.Kind.values()) {
+        if (!chosen.contains(k.name())) {
+          lns.disable(k);
+        }
+      }
     }
     return lns;
   }

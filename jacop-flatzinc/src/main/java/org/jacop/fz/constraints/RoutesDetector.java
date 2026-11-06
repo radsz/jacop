@@ -110,13 +110,15 @@ public class RoutesDetector implements ParserTreeConstants {
   }
 
   /**
-   * It tells if the detection is on. It is off by default: on the vrp instances of the MiniZinc
-   * Challenge the redundant Routes leaves the results level.
+   * It tells if the detection is on. It is on by default: the routes it finds give the linear
+   * relaxation its rounded capacity cuts ({@link org.jacop.constraints.lp.CapacityCuts}), which
+   * raise the objective bound of the vrp instances of the MiniZinc Challenge (A-n34-k5: 375 to 756,
+   * optimum near 778).
    *
-   * @return true if the system property org.jacop.fz.routes is true.
+   * @return false if the system property org.jacop.fz.routes is false.
    */
   public static boolean enabled() {
-    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.routes"));
+    return !"false".equals(System.getProperty("org.jacop.fz.routes"));
   }
 
   /**
