@@ -2046,7 +2046,25 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
-136. Under LCG an all_different over n variables whose domains hold n
+136. LP duals are those of the costs as given. Both dual simplex engines
+     perturb the costs by about 1e-7 against dual degeneracy, and the
+     duals of the perturbed costs carried that noise into the integer
+     certificates of LinearRelaxation, where a large scale could turn it
+     into a multiplier of a row without the side it needs; dropping it
+     lost the bound. LpSolver.duals() now returns c_B B^-1 for the costs
+     as given over the basis the perturbed solve ends with (JaLP:
+     RevisedDualSimplex.givenDuals(), the same single BTRAN; dense: the
+     slack columns of the tableau), so the pivots are unchanged and no
+     primal clean-up is needed. On the 215 root LPs of the lp-bench
+     jacop-root set, JaLP's certificates keep 42 of the 42 LP bounds
+     that beat the column bounds (41 before; routing-flexible GCM_0007
+     lost 31767 to 31765), as many as JaLP's setExact clean-up. Wide
+     set (220, 60 s): solved 150 -> 150 by default, 152 -> 151 under
+     -f, within the noise of the run. -Dorg.jacop.lp.givenDuals=false
+     restores the old duals; -Dorg.jacop.lp.exact=true runs JaLP's
+     setExact clean-up in search.
+
+137. Under LCG an all_different over n variables whose domains hold n
      values in all adds, for each value, the clause "some variable takes
      it" over the value literals (Chuffed's alldiff_cheat). Constraints
      give such clauses through the new ImpliedClauses interface, which
@@ -2058,7 +2076,7 @@ Version 5.0 (unreleased)
      (Chuffed 0.6 s). 161 XCSP3 instances with such an all_different:
      completed 76 -> 83, 22 faster / 16 slower.
 
-137. Increasing, Among and OverlappingAlldiff give their own LCG reasons
+138. Increasing, Among and OverlappingAlldiff give their own LCG reasons
      instead of the generic one, and Values (nvalue) gets a union-of-
      domains rule so its reasons need no replays. TilingRythmicCanons
      Increasing reasons 439 -> 2 atoms, SportsScheduling-dummy-14 Among
@@ -2067,7 +2085,7 @@ Version 5.0 (unreleased)
      shortest per-variable reason, not the first: Molnar failure reasons
      2,297 -> 4 atoms.
 
-138. Element over a variable array bumps on failure the weights of the
+139. Element over a variable array bumps on failure the weights of the
      index, the value and only the list variables whose position is still
      in the index domain, so dom/wdeg no longer prefers variables that
      appear in every element (LangfordBin-040: solved with 195 failures,
@@ -2080,7 +2098,7 @@ Version 5.0 (unreleased)
      14 worse, 5 families better and 4 worse (within the noise of two
      runs of one build).
 
-139. Rounded capacity cuts in the linear relaxation, from each Routes
+140. Rounded capacity cuts in the linear relaxation, from each Routes
      with its arcs among the columns: the routes enter a set S of
      customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
      form, the arcs inside S are at most |S| minus that). The sets come

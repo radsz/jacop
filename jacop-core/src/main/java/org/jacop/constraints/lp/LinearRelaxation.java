@@ -1700,9 +1700,9 @@ public class LinearRelaxation extends Constraint
   }
 
   // y scaled so that its largest entry is about scale, rounded; null when y is zero. With the
-  // certificate cleaning on, entries below 1e-12 of the largest are noise of the simplex (its cost
-  // perturbation and eta file) and are zeroed, so that a large scale does not turn them into
-  // multipliers of rows without the side they need
+  // certificate cleaning on, entries below 1e-11 of the largest are noise of the simplex (the
+  // round-off of its factors and updates) and are zeroed, so that a large scale does not turn
+  // them into multipliers of rows without the side they need
   private static long[] scaled(double[] y, long scale) {
     double largest = 0;
     for (double v : y) {
