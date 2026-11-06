@@ -83,8 +83,22 @@ public final class RevisedDualSimplex {
   private static final double PERTURBATION =
       Double.parseDouble(System.getProperty("org.jacop.jalp.perturbation", "1e-6"));
 
-  // refactorizations after this many updates, against the growth and drift of the eta file
-  private static final int REFACTOR_UPDATES = 100;
+  // the factors are rebuilt when the solves of the last pivots cost more than the average pivot
+  // since the factorization, with the factorization counted REFACTOR_WEIGHT times its own work
+  // (org.jacop.jalp.refactorWeight); at most REFACTOR_UPDATES updates
+  // (org.jacop.jalp.refactorUpdates) and REFACTOR_FILL times the nonzeros of the factors in the
+  // updates (org.jacop.jalp.refactorFill), never before REFACTOR_MIN updates
+  // (org.jacop.jalp.refactorMin); a weight of 0 restores the fixed limit of FIXED_UPDATES updates
+  private static final double REFACTOR_WEIGHT =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.refactorWeight", "1"));
+  private static final int REFACTOR_UPDATES =
+      Integer.getInteger("org.jacop.jalp.refactorUpdates", 1000);
+  private static final int FIXED_UPDATES = 100;
+  private static final double REFACTOR_FILL =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.refactorFill", "2"));
+  private static final int REFACTOR_MIN = Integer.getInteger("org.jacop.jalp.refactorMin", 10);
+  // the weight of the last pivot in the moving average of the solve work per pivot
+  private static final double RECENT_WEIGHT = 0.1;
 
   // the pivot of the row and of the column must agree this closely, or the basis is refactorized
   private static final double PIVOT_AGREEMENT = 1e-7;
@@ -193,6 +207,29 @@ public final class RevisedDualSimplex {
   private double[] tau = {};
   private double[] alphaRow = {};
 
+  // the columns whose values may differ from at[] (their bounds changed, or placeNonbasic moved
+  // them), for updateBeta: every other nonbasic column is at at[]
+  private int[] moved = {};
+  private boolean[] isMoved = {};
+  private int movedLen;
+
+  // whether every nonbasic column not in moved is where placeNonbasic would put it: true after a
+  // pass over all columns until the reduced costs or the basis change, so that a solve after only
+  // a change of bounds places just the columns whose bounds changed
+  private boolean placed;
+
+  // whether the reduced costs were computed again from the current factors and placed every
+  // nonbasic column at its bound (dualsHold), with no pivot since
+  private boolean dualsChecked;
+
+  // the work of that check, charged again when it is skipped: work() stays that of a full check,
+  // so LinearRelaxation, which budgets its calls by work(), runs the same calls
+  private long checkedWork;
+
+  // the columns with an infinite bound, in order, for the check of artificial bounds at optimum
+  private int[] infinite = {};
+  private int infiniteLen = -1;
+
   // the nonzeros of rho (sorted by row), of alphaQ and of the steepest-edge tau, for the
   // hypersparse solves; rhs is the right-hand side of those, zero between them
   private int[] rhoIdx = {};
@@ -241,6 +278,20 @@ public final class RevisedDualSimplex {
   private long totalPivots;
   private long factorizations;
   private long ops;
+
+  // the refactorization rule: the weight of the factorization (0 for the fixed limit) and the
+  // updates allowed
+  private double refactorWeight = REFACTOR_WEIGHT;
+  private int refactorUpdates = REFACTOR_WEIGHT > 0 ? REFACTOR_UPDATES : FIXED_UPDATES;
+
+  // the work of the factors since they were built: the factorization with the solves that follow
+  // it, the solves of the pivots since, and their recent average per pivot
+  private BasisLu workOf;
+  private long factorWork;
+  private long workMark;
+  private long pivotWork;
+  private double recentWork;
+  private long refactorsForWork;
 
   /**
    * Creates the problem with the slack basis, scaled.
@@ -368,6 +419,15 @@ public final class RevisedDualSimplex {
     crashed = o.crashed;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
+    refactorWeight = o.refactorWeight;
+    refactorUpdates = o.refactorUpdates;
+    refactorsForWork = o.refactorsForWork;
+    // the copy builds its own factors, and their work is counted from there
+    workOf = null;
+    factorWork = 0;
+    workMark = 0;
+    pivotWork = 0;
+    recentWork = -1;
     ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
     lu = null;
     touchedCount = 0;
@@ -375,6 +435,10 @@ public final class RevisedDualSimplex {
     flips = 0;
     artificialProof = false;
     feasibility = false;
+    movedLen = 0;
+    placed = false; // the copy computes its reduced costs again
+    dualsChecked = false;
+    checkedWork = 0;
     allocateWork();
   }
 
@@ -501,6 +565,21 @@ public final class RevisedDualSimplex {
     candSlack = new double[cols];
     candRange = new double[cols];
     flipped = new int[cols];
+    moved = new int[cols];
+    isMoved = new boolean[cols];
+    movedLen = 0;
+    placed = false;
+    dualsChecked = false;
+    infinite = new int[cols];
+    infiniteLen = -1;
+  }
+
+  // column j may no longer be at at[]
+  private void markMoved(int j) {
+    if (!isMoved[j]) {
+      isMoved[j] = true;
+      moved[movedLen++] = j;
+    }
   }
 
   // the working bounds of column j: its bounds with artificial ones for the infinite ones
@@ -674,6 +753,27 @@ public final class RevisedDualSimplex {
     return factorizations;
   }
 
+  /**
+   * Returns the factorizations made because the solves with the updated factors had grown more
+   * costly than a fresh factorization.
+   *
+   * @return those factorizations
+   */
+  public long refactorsForWork() {
+    return refactorsForWork;
+  }
+
+  /**
+   * Sets the refactorization rule: a positive weight of the work of a factorization against the
+   * work of the solves, or 0 for a refactorization every 100 updates.
+   *
+   * @param weight the weight, or 0
+   */
+  void setRefactorWeight(double weight) {
+    refactorWeight = weight;
+    refactorUpdates = weight > 0 ? REFACTOR_UPDATES : FIXED_UPDATES;
+  }
+
   // a sparse operation, with its indirect access, against an update of a dense tableau entry
   private static final long OP_COST = 3;
 
@@ -705,9 +805,19 @@ public final class RevisedDualSimplex {
    */
   public void setBounds(int j, double min, double max) {
     double s = j < n ? 1 / colScale[j] : rowScale[j - n];
-    boundLo[j] = min * s;
-    boundHi[j] = max * s;
+    double l = min * s;
+    double h = max * s;
+    if (l == boundLo[j] && h == boundHi[j]) {
+      return;
+    }
+    if ((l == Double.NEGATIVE_INFINITY) != (boundLo[j] == Double.NEGATIVE_INFINITY)
+        || (h == Double.POSITIVE_INFINITY) != (boundHi[j] == Double.POSITIVE_INFINITY)) {
+      infiniteLen = -1;
+    }
+    boundLo[j] = l;
+    boundHi[j] = h;
     workingBounds(j);
+    markMoved(j);
     outsideValid = false;
   }
 
@@ -741,7 +851,11 @@ public final class RevisedDualSimplex {
     if (!factorValid) {
       factorize();
     }
-    placeNonbasic();
+    if (placed) {
+      placeMoved();
+    } else {
+      placeNonbasic();
+    }
     updateBeta();
     for (int iter = 0; iter < limit; iter++) {
       ops += 3L * m;
@@ -827,6 +941,8 @@ public final class RevisedDualSimplex {
       }
       d[p] = -thetaD;
       d[q] = 0;
+      placed = false;
+      dualsChecked = false;
       // the steepest-edge weights, from tau = B^-1 rho
       double wr = 0;
       for (int k = 0; k < rhoLen; k++) {
@@ -860,12 +976,42 @@ public final class RevisedDualSimplex {
         noteRow(r);
       }
       if (!stable
-          || lu.updates() >= REFACTOR_UPDATES
-          || lu.updateNonzeros() > 2 * (lu.factorNonzeros + m)) {
+          || lu.updates() >= refactorUpdates
+          || lu.updateNonzeros() > REFACTOR_FILL * (lu.factorNonzeros + m)
+          || solvesOutgrowFactor()) {
         refactor();
       }
     }
     return LIMIT;
+  }
+
+  // true when the solves with the updated factors cost more per pivot than a fresh factorization
+  // would cost spread over the pivots since: the average work per pivot, factorization included,
+  // is then past its minimum (Chvatal's rule: with a solve cost growing by b per update and a
+  // factorization of cost F the minimum is at sqrt(2F/b) updates)
+  private boolean solvesOutgrowFactor() {
+    if (refactorWeight <= 0) {
+      return false;
+    }
+    if (workOf != lu) {
+      // fresh factors: everything up to the end of this first pivot belongs to the factorization
+      workOf = lu;
+      factorWork = lu.ops + lu.build;
+      workMark = lu.ops;
+      pivotWork = 0;
+      recentWork = -1;
+      return false;
+    }
+    long w = lu.ops - workMark;
+    workMark = lu.ops;
+    pivotWork += w;
+    recentWork = recentWork < 0 ? w : recentWork + RECENT_WEIGHT * (w - recentWork);
+    int k = lu.updates() - 1;
+    if (k >= REFACTOR_MIN && recentWork * k > refactorWeight * factorWork + pivotWork) {
+      refactorsForWork++;
+      return true;
+    }
+    return false;
   }
 
   private void refactor() {
@@ -896,12 +1042,21 @@ public final class RevisedDualSimplex {
       updateBeta();
       return -1;
     }
-    if (lu.updates() > 0 && !dualsHold()) {
-      return -1;
+    // the reduced costs checked since the last pivot on the same factors are the same again
+    if (lu.updates() > 0) {
+      if (dualsChecked) {
+        ops += checkedWork;
+      } else if (!dualsHold()) {
+        return -1;
+      }
     }
     // a nonbasic column at an artificial bound that the objective pulls on: the bounds are too
     // close
-    for (int j = 0; j < cols; j++) {
+    if (infiniteLen < 0) {
+      listInfinite();
+    }
+    for (int k = 0; k < infiniteLen; k++) {
+      int j = infinite[k];
       if (row[j] < 0 && isArtificial(j, upper[j]) && lo[j] != hi[j]) {
         if (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL) {
           if (!enlarge()) {
@@ -922,6 +1077,7 @@ public final class RevisedDualSimplex {
    * values follow and the pivots go on.
    */
   private boolean dualsHold() {
+    long before = ops + (lu == null ? 0 : lu.ops);
     computeDuals();
     boolean held = true;
     for (int j = 0; j < cols; j++) {
@@ -933,7 +1089,18 @@ public final class RevisedDualSimplex {
       placeNonbasic();
       updateBeta();
     }
+    dualsChecked = held;
+    checkedWork = ops + (lu == null ? 0 : lu.ops) - before;
     return held;
+  }
+
+  private void listInfinite() {
+    infiniteLen = 0;
+    for (int j = 0; j < cols; j++) {
+      if (isArtificial(j, false) || isArtificial(j, true)) {
+        infinite[infiniteLen++] = j;
+      }
+    }
   }
 
   // enlarges the artificial bounds; false when they are at their largest
@@ -1122,6 +1289,8 @@ public final class RevisedDualSimplex {
     factorValid = false;
     betaValid = false;
     outsideValid = false;
+    placed = false;
+    dualsChecked = false;
     infeasibleRow = -1;
     return true;
   }
@@ -1693,15 +1862,33 @@ public final class RevisedDualSimplex {
   private void placeNonbasic() {
     ops += cols;
     for (int j = 0; j < cols; j++) {
-      if (row[j] < 0) {
-        if (d[j] > DUAL_TOL) {
-          upper[j] = false;
-        } else if (d[j] < -DUAL_TOL) {
-          upper[j] = true;
-        } else if (isArtificial(j, upper[j]) && !isArtificial(j, !upper[j])) {
-          // no pull either way: the finite bound
-          upper[j] = !upper[j];
-        }
+      place(j);
+    }
+    placed = true;
+  }
+
+  // places the columns whose bounds changed: the others are placed already
+  private void placeMoved() {
+    // charged as a pass over all columns, see checkedWork
+    ops += cols;
+    for (int k = 0; k < movedLen; k++) {
+      place(moved[k]);
+    }
+  }
+
+  private void place(int j) {
+    if (row[j] < 0) {
+      boolean was = upper[j];
+      if (d[j] > DUAL_TOL) {
+        upper[j] = false;
+      } else if (d[j] < -DUAL_TOL) {
+        upper[j] = true;
+      } else if (isArtificial(j, upper[j]) && !isArtificial(j, !upper[j])) {
+        // no pull either way: the finite bound
+        upper[j] = !upper[j];
+      }
+      if (upper[j] != was) {
+        markMoved(j);
       }
     }
   }
@@ -1713,20 +1900,28 @@ public final class RevisedDualSimplex {
       computeBeta();
       return;
     }
+    // only the columns in moved can be off at[]; in order, so the sums are those of a pass over all
+    // charged as a pass over all columns, see checkedWork
     ops += cols + m;
-    Arrays.fill(work, 0);
+    Arrays.sort(moved, 0, movedLen);
     boolean any = false;
-    for (int j = 0; j < cols; j++) {
+    for (int k = 0; k < movedLen; k++) {
+      int j = moved[k];
+      isMoved[j] = false;
       if (row[j] < 0) {
         double v = upper[j] ? hi[j] : lo[j];
         double delta = v - at[j];
         if (delta != 0) {
+          if (!any) {
+            Arrays.fill(work, 0);
+            any = true;
+          }
           addColumn(j, delta, work);
           at[j] = v;
-          any = true;
         }
       }
     }
+    movedLen = 0;
     if (any) {
       lu.ftran(work, tau);
       for (int i = 0; i < m; i++) {
@@ -1738,6 +1933,10 @@ public final class RevisedDualSimplex {
   // x_B = -B^-1 N x_N
   private void computeBeta() {
     betaValid = true;
+    for (int k = 0; k < movedLen; k++) {
+      isMoved[moved[k]] = false;
+    }
+    movedLen = 0;
     outsideValid = false;
     ops += cols + m + nonzeros;
     Arrays.fill(work, 0);
@@ -1761,6 +1960,8 @@ public final class RevisedDualSimplex {
       return;
     }
     ops += nonzeros + cols;
+    placed = false;
+    dualsChecked = false;
     double[] y = new double[m];
     double[] z = new double[m];
     for (int k = 0; k < m; k++) {

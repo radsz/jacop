@@ -407,6 +407,49 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void theRefactorizationRulesAgree() {
+    Random rnd = new Random(11);
+    int runs = Math.max(3, Integer.getInteger("jalp.test.runs", 3000) / 300);
+    long forWork = 0;
+    for (int run = 0; run < runs; run++) {
+      int m = 120 + rnd.nextInt(80);
+      int n = 150 + rnd.nextInt(150);
+      Lp p = new Lp(rnd, m, n, 5.0 / n, 1);
+      for (int j = 0; j < n; j++) {
+        p.lo[j] = -5.0 - rnd.nextInt(5);
+        p.hi[j] = 5.0 + rnd.nextInt(5);
+      }
+      // the fixed limit, the default weight, and a factorization so cheap it is rebuilt often
+      int status = -1;
+      double objective = 0;
+      for (double weight : new double[] {0, 1, 0.01}) {
+        String what = "run " + run + " weight " + weight;
+        RevisedDualSimplex lp = p.simplex(true);
+        lp.setRefactorWeight(weight);
+        int s = solveAndCheck(p, lp, true, what);
+        if (weight <= 0) {
+          status = s;
+          objective = s == RevisedDualSimplex.OPTIMAL ? lp.objective() : 0;
+          assertThat(lp.refactorsForWork()).as(what).isZero();
+          continue;
+        }
+        assertThat(s).as(what).isEqualTo(status);
+        if (s == RevisedDualSimplex.OPTIMAL) {
+          assertThat(lp.objective())
+              .as(what)
+              .isCloseTo(
+                  objective, org.assertj.core.data.Offset.offset(1e-6 * (1 + Math.abs(objective))));
+        }
+        if (weight < 1) {
+          forWork += lp.refactorsForWork();
+        }
+      }
+    }
+    // the cheap factorization makes the rule fire
+    assertThat(forWork).isPositive();
+  }
+
+  @Test
   void warmStartsAgreeWithFreshSolves() {
     Random rnd = new Random(5);
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 10;
@@ -452,6 +495,46 @@ class RevisedDualSimplexTest {
     }
     // a warm start after one bound change needs far fewer pivots than a fresh solve
     assertThat(warm * 3).isLessThan(fresh);
+  }
+
+  // the search changes a few bounds between solves, tightens and loosens them, and often changes
+  // none; the simplex only places and moves the columns whose bounds changed, and every answer must
+  // still hold by its certificate
+  @Test
+  void solvesAfterFewBoundChangesHoldTheirCertificates() {
+    Random rnd = new Random(11);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 20;
+    int[] counts = new int[4];
+    for (int run = 0; run < runs; run++) {
+      int n = 5 + rnd.nextInt(30);
+      Lp p = new Lp(rnd, 3 + rnd.nextInt(20), n, 4.0 / n, 1);
+      double[] wideLo = new double[n];
+      double[] wideHi = new double[n];
+      for (int j = 0; j < n; j++) {
+        wideLo[j] = p.lo[j] = -4.0 - rnd.nextInt(4);
+        wideHi[j] = p.hi[j] = 4.0 + rnd.nextInt(4);
+      }
+      RevisedDualSimplex lp = p.simplex(true);
+      for (int step = 0; step < 30; step++) {
+        counts[solveAndCheck(p, lp, true, "run " + run + " step " + step)]++;
+        for (int k = rnd.nextInt(4); k > 0; k--) {
+          int j = rnd.nextInt(n);
+          switch (rnd.nextInt(3)) {
+            case 0 -> p.lo[j] = Math.min(p.hi[j], p.lo[j] + 1);
+            case 1 -> p.hi[j] = Math.max(p.lo[j], p.hi[j] - 1);
+            default -> {
+              // a backtrack: the bounds go back
+              p.lo[j] = wideLo[j];
+              p.hi[j] = wideHi[j];
+            }
+          }
+          lp.setBounds(j, p.lo[j], p.hi[j]);
+        }
+      }
+    }
+    String found = java.util.Arrays.toString(counts);
+    assertThat(counts[RevisedDualSimplex.OPTIMAL]).as(found).isGreaterThan(runs);
+    assertThat(counts[RevisedDualSimplex.INFEASIBLE]).as(found).isGreaterThan(runs);
   }
 
   @Test
