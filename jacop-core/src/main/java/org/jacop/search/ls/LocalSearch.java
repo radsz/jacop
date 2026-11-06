@@ -492,23 +492,7 @@ public final class LocalSearch {
     List<Constraint> checked = new ArrayList<>();
     List<Violation> measured = new ArrayList<>();
     for (Constraint c : constraints) {
-      if (c instanceof LinearRelaxation r) {
-        // only adds pruning to the other constraints; its budget is the search's
-        relaxations.add(r);
-        continue;
-      }
-      if (c instanceof EnergyPrecedence) {
-        // only adds pruning to the other constraints
-        continue;
-      }
-      if (skipImplied && store.isImplied(c)) {
-        // redundant: every solution of the other constraints satisfies it
-        classes.merge("I:" + className(c), 1, Integer::sum);
-        continue;
-      }
-      if (symmetry.contains(c)) {
-        // the canonicalizer satisfies it once the others hold
-        classes.merge("S:" + className(c), 1, Integer::sum);
+      if (leftOut(c)) {
         continue;
       }
       int before = rows.size();
@@ -993,6 +977,32 @@ public final class LocalSearch {
       };
     }
     return null;
+  }
+
+  /**
+   * Whether a constraint is not evaluated: a linear relaxation or an energy precedence, which only
+   * add pruning to the others, a redundant constraint (every solution of the others satisfies it),
+   * or a symmetry breaking constraint, which the canonicalizer satisfies once the others hold.
+   */
+  private boolean leftOut(Constraint c) {
+    if (c instanceof LinearRelaxation r) {
+      // its budget is the search's
+      relaxations.add(r);
+      return true;
+    }
+    if (c instanceof EnergyPrecedence) {
+      return true;
+    }
+    String kind = null;
+    if (skipImplied && store.isImplied(c)) {
+      kind = "I:";
+    } else if (symmetry.contains(c)) {
+      kind = "S:";
+    }
+    if (kind != null) {
+      classes.merge(kind + className(c), 1, Integer::sum);
+    }
+    return kind != null;
   }
 
   private static String className(Constraint c) {

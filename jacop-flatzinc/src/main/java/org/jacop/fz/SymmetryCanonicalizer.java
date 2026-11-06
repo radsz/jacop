@@ -32,6 +32,7 @@ package org.jacop.fz;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -75,7 +76,7 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
   // lex-leader constraints: x <=lex y (or y <=lex x when largest), and the symmetry, from -> to
   private final List<IntVar[]> lexX = new ArrayList<>();
   private final List<IntVar[]> lexY = new ArrayList<>();
-  private final List<Boolean> lexLargest = new ArrayList<>();
+  private final BitSet lexLargest = new BitSet();
   private final List<IntVar[]> moveFrom = new ArrayList<>();
   private final List<IntVar[]> moveTo = new ArrayList<>();
   // a constraint whose symmetry is not known, or moves values too: no canonical form
@@ -107,7 +108,7 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
     }
     lexX.add(x);
     lexY.add(y);
-    lexLargest.add(largest);
+    lexLargest.set(lexX.size() - 1, largest);
     moveFrom.add(from);
     moveTo.add(to);
   }
@@ -146,7 +147,7 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
           return true;
         }
       }
-    } catch (MissingVariable e) {
+    } catch (MissingVariable _) {
       return false;
     }
     return false;

@@ -1648,10 +1648,12 @@ public class Store {
    * @param c the constraint, implied by the others.
    */
   public void markImplied(Constraint c) {
-    if (implied == null) {
-      implied = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<Constraint> marked = implied;
+    if (marked == null) {
+      marked = Collections.newSetFromMap(new IdentityHashMap<>());
+      implied = marked;
     }
-    implied.add(c);
+    marked.add(c);
   }
 
   /**

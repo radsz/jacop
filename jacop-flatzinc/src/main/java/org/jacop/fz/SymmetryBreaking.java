@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -646,7 +647,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
       store.impose(lex);
-      canonicalizer.lex(lex, x, y, descending, moves(g, varAt, true), moves(g, varAt, false));
+      canonicalizer.lex(
+          lex,
+          x,
+          y,
+          descending,
+          moves(g, varAt, true).orElse(null),
+          moves(g, varAt, false).orElse(null));
       note(descending ? "lex>" : "lex<", x, y);
       posted++;
     }
@@ -662,9 +669,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   /**
    * The variables a generator moves (from) or their images (to); the other vertices it moves stand
-   * for constraints and constants. Null when it maps a variable onto a vertex that is not one.
+   * for constraints and constants. Empty when it maps a variable onto a vertex that is not one.
    */
-  private static IntVar[] moves(GraphAutomorphisms.Permutation g, IntVar[] varAt, boolean from) {
+  private static Optional<IntVar[]> moves(
+      GraphAutomorphisms.Permutation g, IntVar[] varAt, boolean from) {
     int[] points = g.points();
     List<IntVar> out = new ArrayList<>();
     for (int i = 0; i < points.length; i++) {
@@ -674,11 +682,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       IntVar y = varAt[g.images()[i]];
       if (y == null) {
-        return null;
+        return Optional.empty();
       }
       out.add(from ? x : y);
     }
-    return out.toArray(new IntVar[0]);
+    return Optional.of(out.toArray(new IntVar[0]));
   }
 
   /**
