@@ -32,8 +32,9 @@ package org.jacop.search.lns;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
 import org.jacop.constraints.Routes;
 import org.jacop.core.IntVar;
 
@@ -56,14 +57,8 @@ import org.jacop.core.IntVar;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class RouteNeighbourhoods {
+final class RouteNeighbourhoods extends RouteStructure {
 
-  // the randomness of Shaw removal: the rank of the next customer is size * y^SHAW for y in [0, 1)
-  private static final double SHAW = 6;
-  // and of the next route of route removal
-  private static final double ROUTE_RANDOMNESS = 3;
-
-  private final int n;
   private final int[] tails;
   private final int[] heads;
   // the index of each arc's literal among the variables of the neighbourhoods, or -1
@@ -71,20 +66,13 @@ final class RouteNeighbourhoods {
   private final IntVar[] literals;
   // the cost of each arc in the objective, 0 when unknown
   private final long[] arcCost;
-  private final boolean costs;
   // arcs at each node (both directions), other than self loops
   private final int[][] arcsAt;
   // the variables other than arcs that belong to each node
   private final int[][] owned;
-  // the nodes other than the depot that have arcs
-  private final int[] customers;
 
   // the values of the literals in the best solution
   private final boolean[] used;
-
-  // the routes of the best solution: the route of each node (-1: none) and the nodes of each route
-  private int[] routeOf;
-  private int[][] routes = new int[0][];
 
   /**
    * Builds the neighbourhoods of one routing structure.
@@ -103,15 +91,11 @@ final class RouteNeighbourhoods {
       int[][] conVars,
       int[][] varCons,
       int varCount) {
+    super(nodeCount(routes));
     this.tails = routes.tails.clone();
     this.heads = routes.heads.clone();
     this.literals = routes.literals.clone();
     int m = tails.length;
-    int nodes = 0;
-    for (int k = 0; k < m; k++) {
-      nodes = Math.max(nodes, Math.max(tails[k], heads[k]) + 1);
-    }
-    this.n = nodes;
     arcVar = new int[m];
     arcCost = new long[m];
     boolean anyCost = false;
@@ -121,7 +105,6 @@ final class RouteNeighbourhoods {
       arcCost[k] = node >= 0 ? termCost[node] : 0;
       anyCost |= arcCost[k] != 0 && tails[k] != heads[k];
     }
-    costs = anyCost;
     int[] degree = new int[n];
     for (int k = 0; k < m; k++) {
       if (tails[k] != heads[k]) {
@@ -149,8 +132,29 @@ final class RouteNeighbourhoods {
     customers = cs.stream().mapToInt(Integer::intValue).toArray();
     owned = owners(literalNode, conVars, varCons, varCount);
     used = new boolean[m];
-    routeOf = new int[n];
-    Arrays.fill(routeOf, -1);
+    if (anyCost) {
+      // each neighbour once, at the cheaper of the two arcs
+      List<List<long[]>> costs = new ArrayList<>();
+      for (int v = 0; v < n; v++) {
+        Map<Integer, Long> best = new HashMap<>();
+        for (int k : arcsAt[v]) {
+          int w = tails[k] == v ? heads[k] : tails[k];
+          best.merge(w, arcCost[k], Math::min);
+        }
+        List<long[]> c = new ArrayList<>();
+        best.forEach((w, cost) -> c.add(new long[] {w, cost}));
+        costs.add(c);
+      }
+      setNear(costs, Integer.MAX_VALUE);
+    }
+  }
+
+  private static int nodeCount(Routes routes) {
+    int nodes = 0;
+    for (int k = 0; k < routes.tails.length; k++) {
+      nodes = Math.max(nodes, Math.max(routes.tails[k], routes.heads[k]) + 1);
+    }
+    return nodes;
   }
 
   /** The variables other than arcs that belong to each node. */
@@ -228,16 +232,8 @@ final class RouteNeighbourhoods {
     return true;
   }
 
-  /**
-   * Returns the number of customers.
-   *
-   * @return the nodes other than the depot that have arcs.
-   */
-  int customers() {
-    return customers.length;
-  }
-
   /** Records the routes of the best solution; the literals are all fixed. */
+  @Override
   void solution() {
     for (int k = 0; k < literals.length; k++) {
       used[k] = literals[k].singleton() && literals[k].value() == 1;
@@ -246,7 +242,8 @@ final class RouteNeighbourhoods {
   }
 
   /** The routes of the best solution, followed from the depot along the arcs at 1. */
-  private void readRoutes() {
+  @Override
+  void readRoutes() {
     if (routes != null) {
       return;
     }
@@ -281,156 +278,13 @@ final class RouteNeighbourhoods {
   }
 
   /**
-   * Route removal: the customers of a random route and of the routes nearest to it (by the cheapest
-   * arc from the customers removed so far), at least two routes when there are two.
-   *
-   * @param share the share of the customers to remove.
-   * @param random the source of randomness.
-   * @return the removed customers.
-   */
-  boolean[] routeRemoval(double share, Random random) {
-    readRoutes();
-    boolean[] removed = new boolean[n];
-    if (routes.length == 0) {
-      return removed;
-    }
-    int target = Math.max(2, (int) Math.round(share * customers.length));
-    boolean[] chosen = new boolean[routes.length];
-    int count = 0;
-    int routesChosen = 0;
-    int r = random.nextInt(routes.length);
-    while (r >= 0) {
-      chosen[r] = true;
-      routesChosen++;
-      for (int v : routes[r]) {
-        removed[v] = true;
-        count++;
-      }
-      if (count >= target && (routesChosen >= 2 || routes.length < 2)) {
-        break;
-      }
-      r = nextRoute(removed, chosen, random);
-    }
-    return removed;
-  }
-
-  /** The route to remove next: a route near the removed customers, or a random one. */
-  private int nextRoute(boolean[] removed, boolean[] chosen, Random random) {
-    long[] distance = new long[routes.length];
-    Arrays.fill(distance, Long.MAX_VALUE);
-    if (costs) {
-      for (int[] route : routes) {
-        for (int v : route) {
-          if (!removed[v]) {
-            continue;
-          }
-          for (int k : arcsAt[v]) {
-            int w = tails[k] == v ? heads[k] : tails[k];
-            int rw = w > 0 ? routeOf[w] : -1;
-            if (rw >= 0 && !chosen[rw]) {
-              distance[rw] = Math.min(distance[rw], arcCost[k]);
-            }
-          }
-        }
-      }
-    }
-    List<Integer> open = new ArrayList<>();
-    for (int r = 0; r < routes.length; r++) {
-      if (!chosen[r]) {
-        open.add(r);
-      }
-    }
-    if (open.isEmpty()) {
-      return -1;
-    }
-    open.sort((a, b) -> Long.compare(distance[a], distance[b]));
-    if (!costs || distance[open.get(0)] == Long.MAX_VALUE) {
-      return open.get(random.nextInt(open.size()));
-    }
-    return open.get(rank(open.size(), ROUTE_RANDOMNESS, random));
-  }
-
-  /**
-   * Shaw removal: from a random customer, the customers related to those removed so far, each next
-   * one near a random removed customer (by the cost of the arc between them) or, without costs,
-   * next to it on its route.
-   *
-   * @param share the share of the customers to remove.
-   * @param random the source of randomness.
-   * @return the removed customers.
-   */
-  boolean[] relatedRemoval(double share, Random random) {
-    readRoutes();
-    boolean[] removed = new boolean[n];
-    int target = Math.max(2, (int) Math.round(share * customers.length));
-    int[] list = new int[customers.length];
-    int count = 0;
-    int seed = customers[random.nextInt(customers.length)];
-    removed[seed] = true;
-    list[count++] = seed;
-    // the candidates near a removed customer, each once at the cheaper of its two arcs
-    long[] distance = new long[n];
-    int[] position = new int[n];
-    Arrays.fill(position, -1);
-    Integer[] candidates = new Integer[n];
-    while (count < target && count < customers.length) {
-      int from = list[random.nextInt(count)];
-      int size = 0;
-      for (int k : arcsAt[from]) {
-        int w = tails[k] == from ? heads[k] : tails[k];
-        if (w > 0 && !removed[w] && (costs || used[k])) {
-          if (position[w] < 0) {
-            position[w] = size;
-            candidates[size++] = w;
-            distance[w] = arcCost[k];
-          } else {
-            distance[w] = Math.min(distance[w], arcCost[k]);
-          }
-        }
-      }
-      int pick;
-      if (size == 0) {
-        pick = randomCustomer(removed, random);
-      } else {
-        Arrays.sort(candidates, 0, size, (a, b) -> Long.compare(distance[a], distance[b]));
-        pick = candidates[rank(size, SHAW, random)];
-        for (int j = 0; j < size; j++) {
-          position[candidates[j]] = -1;
-        }
-      }
-      if (pick < 0) {
-        break;
-      }
-      if (!removed[pick]) {
-        removed[pick] = true;
-        list[count++] = pick;
-      }
-    }
-    return removed;
-  }
-
-  private int randomCustomer(boolean[] removed, Random random) {
-    int start = random.nextInt(customers.length);
-    for (int j = 0; j < customers.length; j++) {
-      int v = customers[(start + j) % customers.length];
-      if (!removed[v]) {
-        return v;
-      }
-    }
-    return -1;
-  }
-
-  private static int rank(int size, double power, Random random) {
-    return Math.min(size - 1, (int) Math.floor(Math.pow(random.nextDouble(), power) * size));
-  }
-
-  /**
    * Marks the variables that removing the customers relaxes: the arcs with an end among them, and
    * the variables of the customers of the routes they are on and of the depot.
    *
    * @param removed the removed customers.
    * @param relax the variables to relax, marked here.
    */
+  @Override
   void relax(boolean[] removed, boolean[] relax) {
     readRoutes();
     for (int k = 0; k < tails.length; k++) {
@@ -461,15 +315,5 @@ final class RouteNeighbourhoods {
     for (int x : vars) {
       relax[x] = true;
     }
-  }
-
-  /**
-   * The routes of the best solution, for tests.
-   *
-   * @return the routes, each the list of its customers in order.
-   */
-  int[][] routes() {
-    readRoutes();
-    return routes.clone();
   }
 }

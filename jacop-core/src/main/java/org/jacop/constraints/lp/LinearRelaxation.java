@@ -1436,6 +1436,34 @@ public class LinearRelaxation extends Constraint
     return false;
   }
 
+  // the simplex the bounds were last given to, and those bounds: a call gives it only the bounds
+  // that changed since, which on most calls are few (the search changes a handful of variables
+  // between two solves); a simplex swapped in (the one with the extra rows, the one before the
+  // cuts) gets all of them
+  private LpSolver boundsOf;
+  private int[] sentMin = new int[0];
+  private int[] sentMax = new int[0];
+
+  private void sendBounds() {
+    int n = lp.columns();
+    boolean all = boundsOf != lp || sentMin.length != n;
+    if (all) {
+      boundsOf = lp;
+      sentMin = new int[n];
+      sentMax = new int[n];
+    }
+    for (int j = 0; j < n; j++) {
+      IntVar v = x[j];
+      int min = v.min();
+      int max = v.max();
+      if (all || min != sentMin[j] || max != sentMax[j]) {
+        sentMin[j] = min;
+        sentMax[j] = max;
+        lp.setBounds(j, min, max);
+      }
+    }
+  }
+
   private void solveAndPropagate(Store store) {
     if (rows() == 0 && (calls > 0 || extraColumns.length == 0)) {
       return; // the bounds of the variables alone deduce nothing
@@ -1446,9 +1474,7 @@ public class LinearRelaxation extends Constraint
     if (KEEP_BASES) {
       restoreBasis(store.level, jump);
     }
-    for (int j = 0; j < lp.columns(); j++) {
-      lp.setBounds(j, x[j].min(), x[j].max());
-    }
+    sendBounds();
     long size = Math.max(1, lp.pivotWork());
     if (beforeExtra != null && bySize && !anyLpOnly) {
       // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense

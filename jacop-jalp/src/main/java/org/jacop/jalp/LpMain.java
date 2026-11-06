@@ -36,7 +36,8 @@ import java.util.Locale;
 
 /**
  * Solves linear programs in MPS format and prints one line per file: the name, the status, the
- * objective, the pivots and the time in seconds.
+ * objective, the pivots, the factorizations, the times of reading and solving in seconds, and the
+ * factorizations made because the solves had grown more costly than a fresh factorization.
  *
  * <p>Usage: {@code java org.jacop.jalp.LpMain [-noscale] [-limit pivots] file.mps[.gz] ...}
  *
@@ -75,7 +76,7 @@ public final class LpMain {
         double z = (p.maximize ? -lp.objective() : lp.objective()) + p.costConstant;
         System.out.printf(
             Locale.ROOT,
-            "%s %s %.12g pivots %d factors %d read %.3f solve %.3f crash %d%n",
+            "%s %s %.12g pivots %d factors %d read %.3f solve %.3f crash %d work %d%n",
             p.name,
             STATUS[status],
             z,
@@ -83,7 +84,8 @@ public final class LpMain {
             lp.factorizations(),
             (t1 - t0) / 1e9,
             (t2 - t1) / 1e9,
-            lp.crashed());
+            lp.crashed(),
+            lp.refactorsForWork());
       }
     }
   }
