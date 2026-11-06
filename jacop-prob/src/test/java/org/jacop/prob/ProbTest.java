@@ -88,7 +88,7 @@ class ProbTest {
     Random random = new Random(1);
     for (int t = 0; t < 1000; t++) {
       double p = random.nextDouble();
-      long den = 1 + random.nextInt(1_000_000);
+      long den = 1L + random.nextInt(1_000_000);
       long lo = ProbArith.numerator(p, den, false);
       long hi = ProbArith.numerator(p, den, true);
       assertThat(hi - lo).isBetween(0L, 1L);
@@ -120,16 +120,36 @@ class ProbTest {
   }
 
   @Test
+  void testExactValueOfDoubles() {
+    assertThat(ProbArith.exactValue(0.1))
+        .isEqualByComparingTo("0.1000000000000000055511151231257827021181583404541015625");
+    assertThat(ProbArith.exactValue(-3.75)).isEqualByComparingTo("-3.75");
+    assertThat(ProbArith.exactValue(0.0)).isEqualByComparingTo("0");
+    Random random = new Random(3);
+    for (int t = 0; t < 1000; t++) {
+      double d = Double.longBitsToDouble(random.nextLong());
+      if (Double.isFinite(d)) {
+        java.math.BigDecimal v = ProbArith.exactValue(d);
+        assertThat(v.doubleValue()).as("" + d).isEqualTo(d);
+        assertThat(v.compareTo(ProbArith.exactValue(Math.nextUp(d)))).isLessThanOrEqualTo(0);
+        assertThat(v.compareTo(ProbArith.exactValue(Math.nextDown(d)))).isGreaterThanOrEqualTo(0);
+      }
+    }
+    assertThatThrownBy(() -> ProbArith.exactValue(Double.NaN))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
   void testEnclosure() {
     Random random = new Random(2);
     for (int t = 0; t < 1000; t++) {
-      long den = 1 + random.nextInt(Integer.MAX_VALUE);
+      long den = 1L + random.nextInt(Integer.MAX_VALUE);
       long num = random.nextLong(den + 1);
       double[] e = ProbArith.enclosure(num, den);
       assertThat(e[0]).isLessThanOrEqualTo(e[1]);
-      assertThat(new java.math.BigDecimal(e[0]).multiply(java.math.BigDecimal.valueOf(den)))
+      assertThat(ProbArith.exactValue(e[0]).multiply(java.math.BigDecimal.valueOf(den)))
           .isLessThanOrEqualTo(java.math.BigDecimal.valueOf(num));
-      assertThat(new java.math.BigDecimal(e[1]).multiply(java.math.BigDecimal.valueOf(den)))
+      assertThat(ProbArith.exactValue(e[1]).multiply(java.math.BigDecimal.valueOf(den)))
           .isGreaterThanOrEqualTo(java.math.BigDecimal.valueOf(num));
     }
   }
@@ -143,7 +163,7 @@ class ProbTest {
     assertThat(d.min()).isEqualTo(1);
     assertThat(d.max()).isEqualTo(3);
     assertThat(d.weight(1)).isEqualTo(4);
-    assertThat(d.meanNumerator()).isEqualTo(2 + 12);
+    assertThat(d.meanNumerator()).isEqualTo(14L);
     assertThat(d.cdfNumerator(2)).isEqualTo(2);
     assertThat(d.cdfNumerator(0)).isZero();
     assertThat(d.withDenominator(12)).isEqualTo(d);
@@ -482,7 +502,7 @@ class ProbTest {
   void testScenarioChanceIsNotWeakerThanExpansion() {
     // at the root, the native constraint removes at least the bounds the expansion removes
     for (int t = 0; t < TRIALS; t++) {
-      Instance in = new Instance(1_000_000 + t);
+      Instance in = new Instance(1_000_000L + t);
       Store natural = new Store();
       IntVar[] x = in.vars(natural);
       in.post(natural, x, t % 2 == 1);
@@ -511,7 +531,7 @@ class ProbTest {
     long own = 0;
     long generic = 0;
     for (int t = 0; t < TRIALS; t++) {
-      Instance in = new Instance(2_000_000 + t);
+      Instance in = new Instance(2_000_000L + t);
       Integer expected = null;
       {
         Store store = new Store();
@@ -563,7 +583,7 @@ class ProbTest {
   void testRelaxationRowsHoldForEverySolution() {
     // every solution, with its indicators, satisfies the big-M rows and the weighted sum
     for (int t = 0; t < TRIALS; t++) {
-      Instance in = new Instance(3_000_000 + t);
+      Instance in = new Instance(3_000_000L + t);
       Store store = new Store();
       IntVar[] x = in.vars(store);
       ScenarioChance c = in.post(store, x, true);

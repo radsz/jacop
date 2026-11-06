@@ -125,13 +125,11 @@ public final class ProbArith {
    * @param up whether to round up, else down
    * @return the numerator, from 0 to den
    */
-  @SuppressWarnings("PMD.AvoidDecimalLiteralsInBigDecimalConstructor")
   public static long numerator(double p, long den, boolean up) {
     if (!(p >= 0 && p <= 1) || den <= 0) {
       throw new IllegalArgumentException("Expected a probability and a positive denominator");
     }
-    // new BigDecimal(double) on purpose: the exact binary value, not its shortest decimal form
-    BigDecimal exact = new BigDecimal(p).multiply(BigDecimal.valueOf(den));
+    BigDecimal exact = exactValue(p).multiply(BigDecimal.valueOf(den));
     return exact.setScale(0, up ? RoundingMode.CEILING : RoundingMode.FLOOR).longValueExact();
   }
 
@@ -205,16 +203,46 @@ public final class ProbArith {
    * @param den the denominator, positive
    * @return {lo, hi} with lo &lt;= num / den &lt;= hi
    */
-  @SuppressWarnings("PMD.AvoidDecimalLiteralsInBigDecimalConstructor")
   public static double[] enclosure(long num, long den) {
     if (den <= 0) {
       throw new IllegalArgumentException("The denominator must be positive");
     }
     double d = (double) num / den;
     // compare the exact value of d with num / den: d * den against num
-    int c = new BigDecimal(d).multiply(BigDecimal.valueOf(den)).compareTo(BigDecimal.valueOf(num));
+    int c = exactValue(d).multiply(BigDecimal.valueOf(den)).compareTo(BigDecimal.valueOf(num));
     double lo = c <= 0 ? d : Math.nextDown(d);
     double hi = c >= 0 ? d : Math.nextUp(d);
     return new double[] {lo, hi};
+  }
+
+  /**
+   * Returns the exact value of a finite double, not its shortest decimal form: the mantissa times
+   * the power of two of its exponent.
+   *
+   * @param d a finite double
+   * @return its exact value
+   */
+  public static BigDecimal exactValue(double d) {
+    if (!Double.isFinite(d)) {
+      throw new IllegalArgumentException("Not a finite double: " + d);
+    }
+    long bits = Double.doubleToLongBits(d);
+    if ((bits & Long.MAX_VALUE) == 0) {
+      return BigDecimal.ZERO;
+    }
+    int exponent = (int) ((bits >> 52) & 0x7ff);
+    long mantissa = bits & 0xfffffffffffffL;
+    if (exponent == 0) {
+      exponent = 1;
+    } else {
+      mantissa |= 1L << 52;
+    }
+    exponent -= 1075;
+    BigDecimal m = BigDecimal.valueOf(bits < 0 ? -mantissa : mantissa);
+    // 2^-k = 5^k / 10^k, so a negative power of two is exact in decimal
+    return exponent >= 0
+        ? m.multiply(new BigDecimal(BigInteger.TWO.pow(exponent)))
+        : m.multiply(new BigDecimal(BigInteger.valueOf(5).pow(-exponent)))
+            .scaleByPowerOfTen(exponent);
   }
 }
