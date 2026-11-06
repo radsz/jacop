@@ -2524,23 +2524,27 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
-160. Scheduling objective bounds. WeightedCompletion takes resource
+163. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
      I. M. Isaacs, Bounds for the optimal scheduling of n jobs on m
      processors, Management Science 11(2), 1964), extended to release
-     dates and resource uses: the preemptive mean busy time relaxation of
-     a single machine of speed m (Goemans; A. S. Schulz, Scheduling to
-     minimize total weighted completion time: performance guarantees of
-     LP-based heuristics and lower bounds, IPCO 1996, LNCS 1084, for the
-     same bound as LP inequalities), without releases
-     LB1 / m + (m - 1) / (2m) * sum w * d. A free task's start is bounded
-     by the bound of the others plus its own completion. New constraint
-     LateCount(s, d, due, late) on a unary resource: the number of tasks
-     ending after their due date is at most late, bounded by the
-     algorithm of Moore and Hodgson (J. M. Moore, An n job, one machine
-     sequencing algorithm for minimizing the number of late jobs,
+     dates, resource uses and fixed tasks: a fluid relaxation of the
+     capacity left by the fixed tasks, where at every moment the released
+     task with the largest w / (r * d) takes it all, and each task adds
+     half its duration (the mean busy time bound of Goemans; A. S. Schulz,
+     Scheduling to minimize total weighted completion time: performance
+     guarantees of LP-based heuristics and lower bounds, IPCO 1996, LNCS
+     1084, gives the same bound as LP inequalities). Without releases it
+     is LB1 / m + (m - 1) / (2m) * sum w * d. A free task's start is
+     bounded by the bound of the others plus its own completion, an
+     overload of the fixed tasks fails, and under --lcg the constraint
+     explains with the start bounds and cost.max() instead of replay.
+     New constraint LateCount(s, d, due, late) on a unary resource: the
+     number of tasks ending after their due date is at most late, bounded
+     by the algorithm of Moore and Hodgson (J. M. Moore, An n job, one
+     machine sequencing algorithm for minimizing the number of late jobs,
      Management Science 15(1), 1968) with the release dates dropped and
      the tasks that must be on time kept on time by tightening the other
      due dates; a task that cannot be late (on time) without raising the
@@ -2554,7 +2558,18 @@ Version 5.0 (unreleased)
      LateCount where a sum in the objective counts tasks of a unary
      resource through bool2int of int_le_reif or int_lt_reif on a start
      or a later end (-Dorg.jacop.fz.lateCount=false).
-RESULTS
+     Random sets at 30 s (osolpro benchmarks/scheduling-bounds): on 60
+     1|r_j|sum U_j instances (n 10 to 60) optima proved go from 49 to 58
+     by default and from 48 to 58 with -f (Chuffed 33, CP-SAT 36); the
+     mean time at n = 40 drops from 11.5 s to 1.9 s. On 72 P|r_j|sum w C
+     instances (m 2 to 4, n 10 to 40) the best objective is better on 18
+     and worse on 7 by default (optima 44 to 43); with -f it is better
+     on 7 and worse on 16, against 10 and 12 between two runs of the
+     same jar, so a small loss (optima 42 to 41 in two rounds). Wide set
+     at 60 s: the detection fires on cargo challenge16 (172089 to 155318
+     by default) and code-generator gobmk (proved optimal in 16.5 s
+     with -f); solved 168 = 168 by default and 163 to 164 with -f, and
+     the other differences are on instances where nothing is posted.
 
 Version 4.11
 =============
