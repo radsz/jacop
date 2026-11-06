@@ -479,4 +479,85 @@ class RevisedDualSimplexTest {
     }
     assertThat(removed).isGreaterThan(50);
   }
+
+  @Test
+  void aRestoredBasisSolvesTheBoundsItWasSavedForAgain() {
+    Random rnd = new Random(11);
+    int restored = 0;
+    int withRows = 0;
+    for (int run = 0; run < 400; run++) {
+      int m = 10 + rnd.nextInt(30);
+      int n = 10 + rnd.nextInt(40);
+      Lp p = new Lp(rnd, m, n, 4.0 / n, 1);
+      for (int j = 0; j < n; j++) {
+        p.lo[j] = -5.0 - rnd.nextInt(5);
+        p.hi[j] = 5.0 + rnd.nextInt(5);
+      }
+      RevisedDualSimplex lp = p.simplex(true);
+      // the perturbed costs throughout, as in search, so that the saved basis is optimal for them
+      lp.setExact(false);
+      if (lp.solve(1_000_000) != RevisedDualSimplex.OPTIMAL) {
+        continue;
+      }
+      double root = lp.objective();
+      RevisedDualSimplex exact = p.simplex(true);
+      assertThat(solveAndCheck(p, exact, true, "run " + run)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(root)
+          .isCloseTo(
+              exact.objective(),
+              org.assertj.core.data.Offset.offset(1e-4 * (1 + Math.abs(exact.objective()))));
+      RevisedDualSimplex.Basis saved = lp.saveBasis();
+      assertThat(saved.rows()).isEqualTo(m);
+      double[] lo = p.lo.clone();
+      double[] hi = p.hi.clone();
+      // a dive: bounds halved around the solution, until infeasible or ten steps
+      for (int step = 0; step < 10; step++) {
+        for (int k = 0; k < 3; k++) {
+          int j = rnd.nextInt(n);
+          double v = Math.rint(lp.value(j));
+          p.lo[j] = Math.max(p.lo[j], v - 1);
+          p.hi[j] = Math.min(p.hi[j], v + 1);
+        }
+        p.bounds(lp);
+        if (lp.solve(1_000_000) != RevisedDualSimplex.OPTIMAL) {
+          break;
+        }
+      }
+      // a row added in the dive: its slack is basic in the restored basis
+      Lp q = p;
+      if (rnd.nextBoolean()) {
+        int j = rnd.nextInt(n);
+        q = copy(p);
+        q.cols = java.util.Arrays.copyOf(p.cols, m + 1);
+        q.vals = java.util.Arrays.copyOf(p.vals, m + 1);
+        q.rowLo = java.util.Arrays.copyOf(p.rowLo, m + 1);
+        q.rowHi = java.util.Arrays.copyOf(p.rowHi, m + 1);
+        q.cols[m] = new int[] {j};
+        q.vals[m] = new double[] {1};
+        q.rowLo[m] = -INF;
+        q.rowHi[m] = INF;
+        lp.addRows(
+            new int[][] {{j}}, new double[][] {{1}}, new double[] {-INF}, new double[] {INF});
+        withRows++;
+      }
+      // back at the bounds of the root: the restored basis is optimal again
+      q.lo = lo;
+      q.hi = hi;
+      q.bounds(lp);
+      assertThat(lp.restoreBasis(saved)).isTrue();
+      restored++;
+      long before = lp.pivots();
+      assertThat(lp.solve(1_000_000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.pivots() - before).as("run " + run).isZero();
+      assertThat(lp.objective())
+          .isCloseTo(root, org.assertj.core.data.Offset.offset(1e-9 * (1 + Math.abs(root))));
+      // after a removal of rows, and in another simplex, the basis is not restored
+      assertThat(lp.copy().restoreBasis(saved)).isFalse();
+      if (lp.removeRows(new int[] {rnd.nextInt(m)}) != null) {
+        assertThat(lp.restoreBasis(saved)).isFalse();
+      }
+    }
+    assertThat(restored).isGreaterThan(60);
+    assertThat(withRows).isGreaterThan(20);
+  }
 }

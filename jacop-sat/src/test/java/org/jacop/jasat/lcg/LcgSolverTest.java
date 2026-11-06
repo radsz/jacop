@@ -47,6 +47,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
@@ -4430,6 +4431,38 @@ class LcgSolverTest {
     assertThat(solver.coreSearch().noSolutionStops).isEqualTo(1);
   }
 
+  /**
+   * Under fixed search the core-guided phase runs only when branch and bound under the annotation
+   * found no solution in its share of the time (setCoresWithoutSolutionOnly): with one, branch and
+   * bound keeps the time and proves the optimum without a core.
+   */
+  @Test
+  void corePhaseOnlyWithoutASolutionOfBranchAndBound() {
+    for (boolean annotationSolves : new boolean[] {true, false}) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, n - 1);
+      }
+      store.impose(new Alldistinct(x));
+      IntVar obj = new IntVar(store, "obj", 0, n * n);
+      store.impose(new LinearInt(x, IntStream.range(0, n).map(i -> i + 1).toArray(), "==", obj));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), false);
+      solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+      // one conflict for branch and bound before the cores, or plenty
+      solver.setCoreDelay(0.15, annotationSolves ? 1_000_000 : 1, 0);
+      solver.setCoresWithoutSolutionOnly(true);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      // the optimum gives the largest weight the smallest value
+      assertThat(solver.value(obj)).isEqualTo(35);
+      if (annotationSolves) {
+        assertThat(solver.coreSearch().cores).isZero();
+      }
+    }
+  }
+
   @Test
   void coreGuidedSearchJumpsOverHolesOfTheTerms() {
     // cost variables of two values, 0 and 10, as jp-encoding's: a soft literal per level would
@@ -4600,6 +4633,8 @@ class LcgSolverTest {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
       solver.setCoreDelay(1, 1 + rnd.nextInt(5), rnd.nextInt(2));
+      // or the core-guided phase only without a solution of that branch and bound
+      solver.setCoresWithoutSolutionOnly(rnd.nextBoolean());
     }
     if (shared != null) {
       solver.setSharedBound(() -> shared);
