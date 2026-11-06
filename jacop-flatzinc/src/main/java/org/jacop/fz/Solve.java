@@ -58,6 +58,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -2601,6 +2602,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     AdaptiveLns lns =
         new AdaptiveLns(
             store, vars.toArray(new IntVar[0]), cost, new Random(Store.getRandom().nextLong()));
+    if (!"0".equals(options.freeConfig("lns-routes", "1"))) {
+      for (Routes r : dictionary.lnsRoutes()) {
+        lns.addRoutes(r);
+      }
+    } else {
+      lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
+    }
     String kinds = options.freeConfig("lns-kinds", "");
     if (!kinds.isEmpty()) {
       // the kinds to use, separated by '+', for example random+graph+objective
