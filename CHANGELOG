@@ -2548,9 +2548,9 @@ Version 5.0 (unreleased)
      (-Dorg.jacop.fz.convexAllocation=true/false overrides): with LCG a
      stronger cost bound cost gbac most of what the alternating restarts
      find (2020 UD10 417 to 8052). Of the MiniZinc Challenge instances
-     2008-2025 it fires on gbac only. Random balance instances (50, 30 s,
-     --lcg off): solved 12 to 26, square_b12 14760 to optimum 43 in
-     0.9 s; wide set (220, 30 s, --lcg off): 89 to 89 solved, gbac UD3
+     2008-2025 it fires on gbac only. Random balance and gbac instances
+     (50, 30 s, --lcg off): solved 13 to 35, square_b12 14760 to optimum
+     43 in 0.9 s, every squared dead zone solved within 3.4 s; wide set (220, 30 s, --lcg off): 89 to 89 solved, gbac UD3
      57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
      the other changes being run-to-run noise.
 
