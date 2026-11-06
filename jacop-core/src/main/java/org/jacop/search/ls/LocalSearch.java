@@ -58,6 +58,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.lp.LinearRelaxation;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -129,6 +130,7 @@ public final class LocalSearch {
   private final boolean jump;
   private final boolean permutations;
   private final boolean skipImplied;
+  private final boolean tableKeys;
   // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
   private final Set<Constraint> symmetry;
   private final Canonicalizer canonicalizer;
@@ -252,6 +254,7 @@ public final class LocalSearch {
     jump = b.jump;
     permutations = b.permutations;
     skipImplied = b.skipImplied;
+    tableKeys = b.tableKeys;
     symmetry = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     if (b.canonicalizer != null) {
       symmetry.addAll(b.symmetry);
@@ -627,11 +630,15 @@ public final class LocalSearch {
 
   // ------------------------------------------------------------ value counts
 
-  // per all different constraint, how often each value is taken: its violation and the change of
-  // it by a move in constant time (a differentiable invariant), instead of measuring it again
+  // per all different or count bounds constraint, how often each value is taken: its violation
+  // and the change of it by a move in constant time (a differentiable invariant), instead of
+  // measuring it again
   private Counter[] counters;
 
-  /** How often each value is taken by the variables of a constraint, and the duplicates. */
+  /**
+   * How often each value is taken by the variables of a constraint, and the violation: the
+   * duplicates for an all different, the counts out of their bounds for a global cardinality.
+   */
   static final class Counter {
     private int base;
     private int[] count = new int[0];
@@ -639,45 +646,70 @@ public final class LocalSearch {
 
     // the counts of values too far from the others (defined variables out of their domains)
     private final Map<Integer, Integer> far = new java.util.HashMap<>();
+    // the bounds of the counts, {lower, upper} by value; null for an all different, whose bounds
+    // are 0 and 1 for every value
+    private final Map<Integer, int[]> bounds;
+
+    Counter() {
+      this.bounds = null;
+    }
+
+    Counter(int[][] valueBounds) {
+      bounds = new java.util.HashMap<>();
+      for (int[] b : valueBounds) {
+        bounds.put(b[0], new int[] {b[1], b[2]});
+      }
+    }
+
+    // the violation of value v taken c times
+    private long penalty(int v, int c) {
+      if (bounds == null) {
+        return Math.max(0, c - 1);
+      }
+      int[] b = bounds.get(v);
+      return b == null ? 0 : Math.max(0, b[0] - c) + Math.max(0, c - b[1]);
+    }
 
     void add(int v) {
       int k = slot(v);
+      int c;
       if (k < 0) {
-        if (far.merge(v, 1, Integer::sum) > 1) {
-          duplicates++;
-        }
-      } else if (count[k]++ > 0) {
-        duplicates++;
+        c = far.merge(v, 1, Integer::sum);
+      } else {
+        c = ++count[k];
       }
+      duplicates += penalty(v, c) - penalty(v, c - 1);
     }
 
     void remove(int v) {
       int k = slot(v);
+      int c;
       if (k < 0) {
-        int left = far.merge(v, -1, Integer::sum);
-        if (left > 0) {
-          duplicates--;
-        } else {
+        c = far.merge(v, -1, Integer::sum);
+        if (c == 0) {
           far.remove(v);
         }
-      } else if (--count[k] > 0) {
-        duplicates--;
+      } else {
+        c = --count[k];
       }
+      duplicates += penalty(v, c) - penalty(v, c + 1);
     }
 
-    // the duplicates after one variable moves from value old to value v
+    // the violation after one variable moves from value old to value v
     long after(int old, int v) {
       if (old == v) {
         return duplicates;
       }
-      long d = duplicates;
-      if (taken(old) > 1) {
-        d--;
-      }
-      if (taken(v) > 0) {
-        d++;
-      }
-      return d;
+      int a = taken(old);
+      int b = taken(v);
+      return duplicates + penalty(old, a - 1) - penalty(old, a) + penalty(v, b + 1) - penalty(v, b);
+    }
+
+    // whether moving a variable away from value v can lower the violation: for an all different,
+    // another variable takes v; for a global cardinality, v loses nothing by one variable less
+    boolean conflict(int v) {
+      int c = taken(v);
+      return bounds == null ? c > 1 : penalty(v, c - 1) <= penalty(v, c);
     }
 
     int taken(int v) {
@@ -711,6 +743,12 @@ public final class LocalSearch {
       Arrays.fill(count, 0);
       far.clear();
       duplicates = 0;
+      if (bounds != null) {
+        // the values not taken at all
+        for (int[] b : bounds.values()) {
+          duplicates += Math.max(0, b[0]);
+        }
+      }
     }
   }
 
@@ -729,6 +767,16 @@ public final class LocalSearch {
         continue;
       }
       counters[c] = new Counter();
+    }
+    for (int k = 0; k < measuredConstraints.size(); k++) {
+      int c = linearCount + k;
+      // a global cardinality whose list holds each variable once: the scope is the list
+      if (measuredConstraints.get(k).getClass() == CountValuesBounds.class
+          && measuredConstraints.get(k) instanceof CountValuesBounds g
+          && scope[c].length == g.listLength()
+          && spread(scope[c]) <= (1 << 20)) {
+        counters[c] = new Counter(g.countBounds());
+      }
     }
   }
 
@@ -958,11 +1006,18 @@ public final class LocalSearch {
   private final List<Constraint> measuredConstraints = new ArrayList<>();
   private int measuredCount;
 
+  // the most cells of a table whose distance to the values is measured
+  private static final long TABLE_CELLS = 50_000;
+
   /**
    * The violation of a constraint that measures it itself, or of a reified or implied one whose
    * nested constraint does; null for other constraints.
    */
   private static Violation measure(Constraint c) {
+    if (c instanceof HybridTable t && (long) t.tupleCount() * t.columnCount() > TABLE_CELLS) {
+      // its distance scans every tuple: a large table is checked by propagation
+      return null;
+    }
     if (c instanceof Violation v) {
       return v;
     }
@@ -1141,6 +1196,9 @@ public final class LocalSearch {
         }
       }
     }
+    if (definedVars != null && tableKeys) {
+      keyedDefinitions(measuredSize, found, coefs, functions, inputs);
+    }
     defCount = found.size();
     defOut = new int[defCount];
     defKind = new int[defCount];
@@ -1156,6 +1214,80 @@ public final class LocalSearch {
     }
     orderDefinitions();
     queued = new boolean[defCount];
+  }
+
+  /**
+   * The other columns of a table with a key follow the key: each is a function of the key alone, so
+   * the table holds whenever the key takes a value of a tuple (a row lookup {@code x[j] = t[row,
+   * j]}, often merged from element constraints whose defines_var annotations are then lost). Every
+   * solution gives a column the value of its key's tuple, so the column need not be moved. A key is
+   * never defined itself, so the definitions form no cycle.
+   */
+  private void keyedDefinitions(
+      int measuredSize,
+      List<int[]> found,
+      List<Long> coefs,
+      List<Functional> functions,
+      List<int[]> inputs) {
+    boolean[] isKey = new boolean[vars.length];
+    for (int k = 0; k < measuredSize; k++) {
+      if (measuredConstraints.get(k) instanceof HybridTable t && t.keyColumn() >= 0) {
+        Integer i = index.get(t.column(t.keyColumn()));
+        if (i != null) {
+          isKey[i] = true;
+        }
+      }
+    }
+    for (int k = 0; k < measuredSize; k++) {
+      if (!(measuredConstraints.get(k) instanceof HybridTable t) || t.keyColumn() < 0) {
+        continue;
+      }
+      int key = t.keyColumn();
+      IntVar keyVar = t.column(key);
+      Integer from = index.get(keyVar);
+      if (from == null || defOf[from] >= 0) {
+        continue;
+      }
+      int c = linearCount + k;
+      int followers = 0;
+      for (int j = 0; j < t.columnCount(); j++) {
+        IntVar out = t.column(j);
+        Integer y = index.get(out);
+        if (j == key || y == null || defOf[y] >= 0 || isKey[y] || !keyed(y)) {
+          continue;
+        }
+        followers++;
+        int column = j;
+        defOf[y] = found.size();
+        found.add(new int[] {y, FUNCTION_DEFINITION, c});
+        coefs.add(0L);
+        functions.add(
+            new Functional() {
+              @Override
+              public IntVar functionalResult() {
+                return out;
+              }
+
+              @Override
+              public int functionalValue(ToIntFunction<IntVar> value) {
+                return t.keyedValue(column, value.applyAsInt(keyVar), value.applyAsInt(out));
+              }
+            });
+        inputs.add(new int[] {from});
+      }
+      if (followers == t.columnCount() - 1) {
+        // the columns follow a key that stays in its domain, pruned to the keys of the tuples: the
+        // table holds, and the store checks every solution
+        measures[c] = value -> 0;
+        classes.merge("K:HybridTable", 1, Integer::sum);
+        classes.computeIfPresent("M:HybridTable", (name, n) -> n > 1 ? n - 1 : null);
+      }
+    }
+  }
+
+  // a column that may follow the key of its table
+  private boolean keyed(int i) {
+    return !domains[i].singleton() && i != costIndex && (groupOf == null || groupOf[i] < 0);
   }
 
   private boolean isDefined(int i) {
@@ -1908,7 +2040,7 @@ public final class LocalSearch {
     double best = Double.MAX_VALUE;
     int ties = 0;
     int size = s.length + (enforcer[c] >= 0 ? 1 : 0);
-    // all of an all different constraint; on one step in four only the variables sharing a value
+    // all of a counted constraint; on one step in four only the variables sharing a value
     // (their violation, in Comet's terms): always would stall on quasigroups, where a conflict is
     // often repaired by moving a variable that has none in this constraint
     int scan = counters[c] != null ? size : Math.min(size, SCAN_LIMIT);
@@ -1923,7 +2055,7 @@ public final class LocalSearch {
       }
       int p = (offset + t) % size;
       int i = p < s.length ? s[p] : enforcer[c];
-      if (onlyConflicts && counters[c].taken(val[i]) <= 1) {
+      if (onlyConflicts && !counters[c].conflict(val[i])) {
         // moving a variable whose value no other one takes does not lower the duplicates
         continue;
       }
@@ -2709,6 +2841,7 @@ public final class LocalSearch {
     private boolean jump;
     private boolean permutations = true;
     private boolean skipImplied = true;
+    private boolean tableKeys = true;
     private Collection<? extends Constraint> symmetry = List.of();
     private Canonicalizer canonicalizer;
 
@@ -2824,6 +2957,19 @@ public final class LocalSearch {
      */
     public Builder permutations(boolean on) {
       permutations = on;
+      return this;
+    }
+
+    /**
+     * Whether the other columns of a table with a key column follow the key as definitions (default
+     * true), see {@link HybridTable#keyColumn()}; a table whose columns all follow is not
+     * evaluated.
+     *
+     * @param on true to define the columns by the key.
+     * @return this builder.
+     */
+    public Builder tableKeys(boolean on) {
+      tableKeys = on;
       return this;
     }
 
