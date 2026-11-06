@@ -31,6 +31,7 @@
 package org.jacop;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -83,6 +84,31 @@ class EnergyPrecedenceTest {
     assertTrue(store.consistency());
     // (2 * 10 + 2 * 2 + 2 * 8 + 2 * 8) / 4
     assertEquals(14, x.min());
+  }
+
+  @Test
+  void failsOnAViolatedPrecedenceBeforeTheHeightsAreFixed() {
+    // LcgFuzzTest seed 5335106: heights 0..2 give no energy, so the rule never prunes, and the
+    // violated precedences were found only once the heights were fixed too; the depth-first
+    // reference search, which fixes the heights last, ran for hours
+    Store store = new Store();
+    IntVar[] s = new IntVar[3];
+    IntVar[] d = new IntVar[3];
+    IntVar[] r = new IntVar[3];
+    IntVar x = new IntVar(store, "x", 1, 4);
+    for (int i = 0; i < 3; i++) {
+      s[i] = new IntVar(store, "s" + i, 0, 2);
+      d[i] = new IntVar(store, 1, 1);
+      r[i] = new IntVar(store, "r" + i, 0, 2);
+    }
+    store.impose(
+        new EnergyPrecedence(
+            s, d, r, new IntVar(store, 1, 1), s, new IntVar[] {x, x, x}, new int[] {2, 2, 2}));
+    assertTrue(store.consistency());
+    store.setLevel(store.level + 1);
+    x.domain.in(store.level, x, 1, 1);
+    // s0 + 2 <= x cannot hold: s0 >= 0
+    assertFalse(store.consistency());
   }
 
   @Test
