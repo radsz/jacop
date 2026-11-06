@@ -2464,6 +2464,38 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
+160. Scheduling objective bounds. WeightedCompletion takes resource
+     uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
+     with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
+     and Isaacs for identical machines (W. L. Eastman, S. Even and
+     I. M. Isaacs, Bounds for the optimal scheduling of n jobs on m
+     processors, Management Science 11(2), 1964), extended to release
+     dates and resource uses: the preemptive mean busy time relaxation of
+     a single machine of speed m (Goemans; A. S. Schulz, Scheduling to
+     minimize total weighted completion time: performance guarantees of
+     LP-based heuristics and lower bounds, IPCO 1996, LNCS 1084, for the
+     same bound as LP inequalities), without releases
+     LB1 / m + (m - 1) / (2m) * sum w * d. A free task's start is bounded
+     by the bound of the others plus its own completion. New constraint
+     LateCount(s, d, due, late) on a unary resource: the number of tasks
+     ending after their due date is at most late, bounded by the
+     algorithm of Moore and Hodgson (J. M. Moore, An n job, one machine
+     sequencing algorithm for minimizing the number of late jobs,
+     Management Science 15(1), 1968) with the release dates dropped and
+     the tasks that must be on time kept on time by tightening the other
+     due dates; a task that cannot be late (on time) without raising the
+     bound above late.max() gets its start bounded. Propagation for late
+     jobs with release dates follows the line of Ph. Baptiste, C. Le Pape
+     and L. Peridy, Global constraints for partial CSPs: a case-study of
+     resource and due date constraints, CP 1998, LNCS 1520. The FlatZinc
+     front end posts both as redundant constraints: WeightedCompletion on
+     cumulatives of capacity above 1 that are not unary
+     (-Dorg.jacop.fz.weightedCompletion.parallel=false turns it off), and
+     LateCount where a sum in the objective counts tasks of a unary
+     resource through bool2int of int_le_reif or int_lt_reif on a start
+     or a later end (-Dorg.jacop.fz.lateCount=false).
+RESULTS
+
 Version 4.11
 =============
 

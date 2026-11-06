@@ -32,11 +32,13 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.LateCount;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.WeightedCompletion;
 import org.jacop.core.IntDomain;
@@ -69,6 +71,11 @@ import org.jacop.fz.SimpleNode;
  * weighted tasks on a resource the constraint is posted on all its tasks, unweighted ones with
  * weight 0. All constraints are still posted as usual, so it only adds pruning.
  *
+ * <p>A {@code jacop_cumulative} of capacity above 1 that is not unary is a parallel resource: the
+ * constraint gets the resource uses and the capacity and bounds the cost by the Eastman, Even and
+ * Isaacs bound (identical machines, Management Science 11(2), 1964) with release dates. Setting
+ * {@code org.jacop.fz.weightedCompletion.parallel} to false leaves those resources out.
+ *
  * <p>Setting the system property {@code org.jacop.fz.weightedCompletion} to false turns the
  * detection off.
  *
@@ -86,6 +93,14 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
   // the largest number of constraints posted
   private static final int MAX_POSTED = 200;
 
+  // detection on cumulatives of capacity above 1: -Dorg.jacop.fz.weightedCompletion.parallel=false
+  private static final boolean PARALLEL =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.weightedCompletion.parallel"));
+
+  // detection of counts of late tasks: -Dorg.jacop.fz.lateCount=false turns it off
+  private static final boolean LATE =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.lateCount"));
+
   private final Support support;
 
   // the difference graph, reversed: to -> (from, lag) with to >= from + lag
@@ -100,7 +115,19 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
 
   private long work;
 
-  private final List<IntVar[][]> resources = new ArrayList<>();
+  // 0/1 variables of bool2int: the integer to the Boolean
+  private final Map<IntVar, IntVar> boolOf = new IdentityHashMap<>();
+
+  // reified thresholds: b holds exactly when x >= c (int_le_reif(c, x, b), int_lt_reif(c - 1, x,
+  // b))
+  private final Map<IntVar, Threshold> thresholds = new IdentityHashMap<>();
+
+  private record Threshold(IntVar x, int c) {}
+
+  private final List<Resource> resources = new ArrayList<>();
+
+  // tasks of a resource: start, duration (its minimum is used), use and capacity (1 if unary)
+  private record Resource(IntVar[] starts, IntVar[] durations, int[] uses, int capacity) {}
 
   private final List<ASTConstElem> linears = new ArrayList<>();
 
@@ -144,15 +171,19 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
         }
       }
     }
-    resources.addAll(support.unaryResources);
+    for (IntVar[][] unary : support.unaryResources) {
+      int[] one = new int[unary[0].length];
+      Arrays.fill(one, 1);
+      resources.add(new Resource(unary[0], unary[1], one, 1));
+    }
     objective(astTree);
     if (objective == null || resources.isEmpty() || linears.isEmpty()) {
       return;
     }
     // the variables that can bound a completion time: reachable from a start of a resource
     ArrayDeque<IntVar> queue = new ArrayDeque<>();
-    for (IntVar[][] resource : resources) {
-      for (IntVar v : resource[0]) {
+    for (Resource resource : resources) {
+      for (IntVar v : resource.starts()) {
         if (reachable.add(v)) {
           queue.add(v);
         }
@@ -162,6 +193,15 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       for (IntVar to : outOf.getOrDefault(queue.poll(), List.of())) {
         if (reachable.add(to)) {
           queue.add(to);
+        }
+      }
+    }
+    if (LATE && !thresholds.isEmpty()) {
+      int posted = 0;
+      for (ASTConstElem node : linears) {
+        posted += lateSum(node, MAX_POSTED - posted);
+        if (posted >= MAX_POSTED) {
+          break;
         }
       }
     }
@@ -217,9 +257,21 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       case "int_lin_eq" -> linear(node, true);
       case "int_le" -> arc(variable(node, 0), variable(node, 1), 0);
       case "int_lt" -> arc(variable(node, 0), variable(node, 1), 1);
+      case "int_le_reif" -> threshold(node, 0);
+      case "int_lt_reif" -> threshold(node, 1);
+      case "bool2int" -> boolOf.put(variable(node, 1), variable(node, 0));
       default -> {
         // not part of a weighted completion time
       }
+    }
+  }
+
+  // c <= x (plus 1 for <) reified by b, with c a constant
+  private void threshold(ASTConstElem node, int strict) {
+    IntVar c = variable(node, 0);
+    IntVar x = variable(node, 1);
+    if (c.singleton() && !x.singleton() && (long) c.value() + strict <= IntDomain.MAX_INT) {
+      thresholds.put(variable(node, 2), new Threshold(x, c.value() + strict));
     }
   }
 
@@ -231,7 +283,8 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
-  // a cumulative whose tasks pairwise exceed the capacity is a unary resource
+  // a cumulative whose tasks pairwise exceed the capacity is a unary resource, any other one with a
+  // capacity above 1 a parallel resource (Eastman, Even and Isaacs)
   private void cumulative(ASTConstElem node) {
     IntVar[] s = support.getVarArray(child(node, 0));
     IntVar[] d = support.getVarArray(child(node, 1));
@@ -239,12 +292,14 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     int capacity = variable(node, 3).max();
     List<IntVar> starts = new ArrayList<>();
     List<IntVar> durations = new ArrayList<>();
+    List<Integer> uses = new ArrayList<>();
     int least = Integer.MAX_VALUE;
     int count = 0;
     for (int i = 0; i < s.length; i++) {
       if (r[i].min() > 0 && d[i].min() > 0) {
         starts.add(s[i]);
         durations.add(d[i]);
+        uses.add(r[i].min());
         count++;
         least = Math.min(least, r[i].min());
       }
@@ -264,9 +319,25 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
         }
       }
     }
+    IntVar[] taskStarts = starts.toArray(new IntVar[0]);
+    IntVar[] taskDurations = durations.toArray(new IntVar[0]);
     if ((long) least + second > capacity) {
-      resources.add(
-          new IntVar[][] {starts.toArray(new IntVar[0]), durations.toArray(new IntVar[0])});
+      int[] one = new int[count];
+      Arrays.fill(one, 1);
+      resources.add(new Resource(taskStarts, taskDurations, one, 1));
+    } else if (PARALLEL && capacity > 1) {
+      long energy = 0;
+      for (int i = 0; i < count; i++) {
+        energy = Math.max(energy, (long) uses.get(i) * taskDurations[i].min());
+      }
+      if (energy <= IntDomain.MAX_INT) {
+        resources.add(
+            new Resource(
+                taskStarts,
+                taskDurations,
+                uses.stream().mapToInt(Integer::intValue).toArray(),
+                capacity));
+      }
     }
   }
 
@@ -363,8 +434,8 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
 
     int count = 0;
     for (int sign : equation ? new int[] {1, -1} : new int[] {1}) {
-      for (IntVar[][] resource : resources) {
-        if (count < room && post(a, x, c, sign, paths, resource[0], resource[1])) {
+      for (Resource resource : resources) {
+        if (count < room && post(a, x, c, sign, paths, resource)) {
           count++;
         }
       }
@@ -377,13 +448,9 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
    * when at least two tasks get a weight and a term is left for the cost.
    */
   private boolean post(
-      int[] a,
-      IntVar[] x,
-      int c,
-      int sign,
-      List<Map<IntVar, Long>> paths,
-      IntVar[] starts,
-      IntVar[] durations) {
+      int[] a, IntVar[] x, int c, int sign, List<Map<IntVar, Long>> paths, Resource resource) {
+    IntVar[] starts = resource.starts();
+    IntVar[] durations = resource.durations();
     int n = starts.length;
     long[] weight = new long[n];
     long offset = 0;
@@ -481,13 +548,156 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     coefficients[others.size()] = 1;
     support.delayedConstraints.add(
         new LinearInt(list, coefficients, "==", (int) constant).setDegreeWeight(0));
-    WeightedCompletion wc = new WeightedCompletion(starts, d, w, z);
+    WeightedCompletion wc =
+        resource.capacity() == 1
+            ? new WeightedCompletion(starts, d, w, z)
+            : new WeightedCompletion(starts, d, resource.uses(), w, resource.capacity(), z);
     // redundant, so degree-based variable selections see the degrees of the model
     wc.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println("% redundant " + wc);
     }
     support.delayedConstraints.add(wc);
+    return true;
+  }
+
+  /**
+   * It posts {@link LateCount} for each unary resource whose tasks the sum counts late: a term a *
+   * y with a &gt; 0 where y is a 0/1 variable (through bool2int) of a Boolean b that holds exactly
+   * when x &ge; c, and x &ge; s + L for the start s of a task by the difference constraints. Then s
+   * &ge; c - L implies b, so the task is late for the due date c - L + d - 1 (d its least duration)
+   * only if b holds, and a * y counts it at least once.
+   *
+   * @return the number of constraints posted.
+   */
+  private int lateSum(ASTConstElem node, int room) {
+    int[] a = support.getIntArray(child(node, 0));
+    IntVar[] x = support.getVarArray(child(node, 1));
+    if (a.length != x.length) {
+      return 0;
+    }
+    int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    boolean equation = node.getName().equals("int_lin_eq");
+    Threshold[] threshold = new Threshold[x.length];
+    List<Map<IntVar, Long>> paths = new ArrayList<>();
+    int candidates = 0;
+    for (int k = 0; k < x.length; k++) {
+      IntVar y = x[k];
+      Threshold t = y.min() >= 0 && y.max() <= 1 ? thresholds.get(boolOf.getOrDefault(y, y)) : null;
+      threshold[k] = t;
+      paths.add(t == null ? Map.of() : longestTo(t.x()));
+      candidates += t == null ? 0 : 1;
+    }
+    if (candidates < 2) {
+      return 0;
+    }
+    int count = 0;
+    for (int sign : equation ? new int[] {1, -1} : new int[] {1}) {
+      for (Resource resource : resources) {
+        if (count < room
+            && resource.capacity() == 1
+            && postLate(a, x, c, sign, threshold, paths, resource)) {
+          count++;
+        }
+      }
+    }
+    return count;
+  }
+
+  private boolean postLate(
+      int[] a,
+      IntVar[] x,
+      int c,
+      int sign,
+      Threshold[] threshold,
+      List<Map<IntVar, Long>> paths,
+      Resource resource) {
+    IntVar[] starts = resource.starts();
+    int n = starts.length;
+    int[] d = new int[n];
+    int[] due = new int[n];
+    Arrays.fill(due, Integer.MAX_VALUE);
+    boolean[] taken = new boolean[n];
+    boolean[] mapped = new boolean[x.length];
+    int count = 0;
+    for (int t = 0; t < n; t++) {
+      d[t] = resource.durations()[t].min();
+    }
+    for (int k = 0; k < x.length; k++) {
+      if (threshold[k] == null || (long) sign * a[k] <= 0) {
+        continue;
+      }
+      Map<IntVar, Long> dist = paths.get(k);
+      for (int t = 0; t < n; t++) {
+        Long lag = dist.get(starts[t]);
+        if (lag == null || taken[t]) {
+          continue;
+        }
+        long date = (long) threshold[k].c() - lag + d[t] - 1;
+        if (date < IntDomain.MIN_INT || date > IntDomain.MAX_INT) {
+          continue;
+        }
+        taken[t] = true;
+        mapped[k] = true;
+        due[t] = (int) date;
+        count++;
+        break;
+      }
+    }
+    if (count < 2) {
+      return false;
+    }
+    // z = sign * (c - sum(others) a * x) >= sum(mapped) sign * a * y >= number of late tasks
+    List<IntVar> others = new ArrayList<>();
+    List<Integer> otherWeights = new ArrayList<>();
+    long constant = (long) sign * c;
+    long low = constant;
+    long high = constant;
+    boolean bounded = false;
+    for (int k = 0; k < x.length; k++) {
+      if (mapped[k]) {
+        continue;
+      }
+      long b = -(long) sign * a[k];
+      if (x[k].singleton()) {
+        constant += b * x[k].value();
+        low += b * x[k].value();
+        high += b * x[k].value();
+        continue;
+      }
+      if (x[k] == objective && (long) sign * a[k] * direction < 0) {
+        bounded = true;
+      }
+      others.add(x[k]);
+      otherWeights.add(sign * a[k]);
+      low += Math.min(b * x[k].min(), b * x[k].max());
+      high += Math.max(b * x[k].min(), b * x[k].max());
+    }
+    low = Math.max(low, 0);
+    if (!bounded
+        || high > IntDomain.MAX_INT
+        || low > high
+        || constant > IntDomain.MAX_INT
+        || constant < IntDomain.MIN_INT) {
+      return false;
+    }
+    IntVar z = new IntVar(support.store, (int) low, (int) high);
+    IntVar[] list = new IntVar[others.size() + 1];
+    int[] coefficients = new int[others.size() + 1];
+    for (int j = 0; j < others.size(); j++) {
+      list[j] = others.get(j);
+      coefficients[j] = otherWeights.get(j);
+    }
+    list[others.size()] = z;
+    coefficients[others.size()] = 1;
+    support.delayedConstraints.add(
+        new LinearInt(list, coefficients, "==", (int) constant).setDegreeWeight(0));
+    LateCount lc = new LateCount(starts, d, due, z);
+    lc.setDegreeWeight(0);
+    if (support.options.debug()) {
+      FzConsole.println("% redundant " + lc);
+    }
+    support.delayedConstraints.add(lc);
     return true;
   }
 }
