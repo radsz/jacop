@@ -881,4 +881,19 @@ public class Nooverlap extends Constraint
     c.energyCheck = energyCheck;
     return c;
   }
+
+  /**
+   * Returns the variables of the rectangles, one row each: the origins in the two dimensions, then
+   * the lengths. Large neighbourhood search relaxes rectangles placed near each other.
+   *
+   * @return the rectangles' variables.
+   */
+  public IntVar[][] rectangles() {
+    IntVar[][] r = new IntVar[rectangle.length][];
+    for (int i = 0; i < rectangle.length; i++) {
+      Rectangle t = rectangle[i];
+      r[i] = new IntVar[] {t.origin[0], t.origin[1], t.length[0], t.length[1]};
+    }
+    return r;
+  }
 }

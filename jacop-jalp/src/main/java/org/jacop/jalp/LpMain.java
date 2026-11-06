@@ -75,14 +75,15 @@ public final class LpMain {
         double z = (p.maximize ? -lp.objective() : lp.objective()) + p.costConstant;
         System.out.printf(
             Locale.ROOT,
-            "%s %s %.12g pivots %d factors %d read %.3f solve %.3f%n",
+            "%s %s %.12g pivots %d factors %d read %.3f solve %.3f crash %d%n",
             p.name,
             STATUS[status],
             z,
             lp.pivots(),
             lp.factorizations(),
             (t1 - t0) / 1e9,
-            (t2 - t1) / 1e9);
+            (t2 - t1) / 1e9,
+            lp.crashed());
       }
     }
   }
