@@ -251,6 +251,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -417,6 +418,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -584,6 +586,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -751,6 +754,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
