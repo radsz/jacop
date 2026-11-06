@@ -572,6 +572,20 @@ public class GCC extends Constraint
     return getClass() == GCC.class && network().explainFailure(trail, out);
   }
 
+  // the counted variables, the counted values in increasing order and their counters, for the
+  // linear relaxation (Linearizations)
+  IntVar[] countedVariables() {
+    return x;
+  }
+
+  int[] countedValues() {
+    return domainHash == null ? new int[0] : domainHash;
+  }
+
+  IntVar[] valueCounters() {
+    return counters;
+  }
+
   @Override
   public String toString() {
 

@@ -48,6 +48,7 @@ import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
+import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -61,6 +62,7 @@ import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
+import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.satwrapper.SatTranslation;
@@ -276,6 +278,12 @@ public class Constraints implements ParserTreeConstants {
         new DisjunctiveCliqueDetector(support).detect(astTree);
       }
 
+      if (DifferenceCyclesDetector.enabled() && options.proof() == null) {
+        // fails on a negative cycle of the difference constraints that hold, with the cycle as
+        // reason
+        new DifferenceCyclesDetector(support).detect(astTree);
+      }
+
       // energy precedence when enabled, and the reservoirs
       new PrecedenceDetector(support).detect(astTree);
       // the weighted completion bound it adds is redundant, and --proof does not encode it
@@ -302,6 +310,11 @@ public class Constraints implements ParserTreeConstants {
 
       if (KnapsackDetector.enabled()) {
         new KnapsackDetector(support).detect(astTree);
+      }
+
+      // Gauss-Jordan elimination over the parity constraints, redundant; --proof does not encode it
+      if (XorSystemDetector.enabled() && options.proof() == null) {
+        new XorSystemDetector(support).detect(astTree);
       }
 
       support.detectBinPackingCliques();

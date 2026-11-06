@@ -2401,6 +2401,39 @@ class AtomicTrailTest {
     trail.detach();
   }
 
+  /**
+   * A counter's upper bound from the lower bounds of the other counters, over a network the flow
+   * does not explain (more than 2^20 arcs; on nmseq, where the counters are also counted variables,
+   * the flow ran out of its time share instead): c2 >= 1099 leaves one of the 1100 variables for
+   * value 1, and the reason is that lower bound alone, not the generic one.
+   */
+  @Test
+  void cardinalityCounterBoundFromTheOtherCounters() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[1100];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 1000);
+    }
+    IntVar[] c = new IntVar[1000];
+    for (int j = 0; j < c.length; j++) {
+      c[j] = new IntVar(store, "c" + (j + 1), 0, x.length);
+    }
+    GCC gcc = new GCC(x, c);
+    store.impose(gcc);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    c[1].domain.inMin(store.level, c[1], x.length - 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c[0].max()).isEqualTo(1);
+    int entry = trail.lastEntry(c[0], trail.size());
+    EntryList reason = new EntryList();
+    assertThat(gcc.explain(trail, entry, reason)).isTrue();
+    assertThat(variables(trail, reason)).containsExactly(c[1]);
+    assertThat(trail.minBefore(c[1], entry)).isEqualTo(x.length - 1);
+    trail.detach();
+  }
+
   private static List<IntVar> variables(AtomicTrail trail, EntryList reason) {
     List<IntVar> vars = new ArrayList<>();
     for (int k = 0; k < reason.size(); k++) {

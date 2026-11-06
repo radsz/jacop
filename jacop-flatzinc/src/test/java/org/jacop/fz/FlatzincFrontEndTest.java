@@ -3285,6 +3285,27 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void conditionalNegativeCycleFailsWithoutCreeping() {
+    // b -> x + 1 <= y closes the cycle y + 1 <= z, z + 1 <= x of weight -3. Bounds propagation
+    // after b = 1 moves the bounds by 3 each time round it, 10^8 times over these domains;
+    // DifferenceCycles fails at once with the reason b = 1, so the solution has b = 0.
+    String model =
+        """
+        array [1..2] of int: a = [1,-1];
+        var 0..300000000: x:: output_var;
+        var 0..300000000: y:: output_var;
+        var 0..300000000: z:: output_var;
+        var bool: b:: output_var;
+        constraint int_lin_le_imp(a,[x,y],-1,b);
+        constraint int_lin_le(a,[y,z],-1);
+        constraint int_lin_le(a,[z,x],-1);
+        solve :: bool_search([b],input_order,indomain_max,complete) satisfy;
+        """;
+    String out = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> run(model, "-s")[0]);
+    assertTrue(out.contains("b = false;"), out);
+  }
+
+  @Test
   void differenceBoundsKeepEverySolution() throws IOException {
     Random r = new Random(20261031);
     for (int run = 0; run < 150; run++) {
