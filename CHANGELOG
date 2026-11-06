@@ -2366,9 +2366,9 @@ Version 5.0 (unreleased)
      -reobjective (zero objective first, then the real one) run it. LP
      bench (659 LPs, 120 s): no wrong answer; the dual simplex makes the
      same pivots as before on all 636 it solves; after an objective
-     change the primal solves 617 against the dual's 626 in about the
-     same time (0.98 on solves over 0.5 s), and from scratch 610 against
-     636, 1.13 times slower on solves over 0.5 s.
+     change the primal solves 618 against the dual's 628 in about the
+     same time (1.01 on solves over 0.5 s), and from scratch 609 against
+     636, 2.1 times slower on solves over 0.5 s.
 
 Version 4.11
 =============
