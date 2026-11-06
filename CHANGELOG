@@ -2352,7 +2352,38 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
-155. The clique rows of tables (TableCliques) and new value encodings of
+155. New constraint DifferenceCycles over difference constraints
+     x - y <= c that hold always or when a 0/1 literal takes a value. It
+     fails as soon as the ones that hold close a cycle of negative
+     weight and, under LCG, explains the failure by the literals of the
+     cycle alone, so a job shop or RCPSP/max model whose precedences are
+     chosen by 0/1 variables no longer creeps round such a cycle by
+     bounds propagation (10^8 rounds over 0..3*10^8 in the regression
+     test). It keeps a feasible potential and repairs it from the head of
+     each new arc with a Dijkstra search over reduced costs (Ramalingam,
+     Song, Joskowicz and Miller, Algorithmica 23(3), 1999; Cotton and
+     Maler, Fast and flexible difference constraint propagation for
+     DPLL(T), SAT 2006, LNCS 4121), which backtracking keeps valid; the
+     first potential comes from Bellman-Ford with Tarjan's subtree
+     disassembly (Cherkassky and Goldberg, Math. Programming 85(2),
+     1999). Only arcs inside a strongly connected component are kept.
+     The FlatZinc front end posts it, as a redundant constraint, when a
+     reified or half-reified difference (int_lin_le/eq_imp/reif,
+     int_le/lt_imp/reif) lies on a cycle; it extends the posting-time
+     check of the always-true ones (DifferenceBoundsDetector).
+     -Dorg.jacop.fz.differenceCycles=false switches it off. Theory
+     propagation of implied literals and two-variable inequalities
+     (TVPI, Hochbaum and Naor, SIAM J. Computing 23(6), 1994; UTVPI,
+     Schutt and Stuckey, INFORMS J. Computing 22(4), 2010) are not
+     covered. Posted on 27 of the 220 wide instances; slow_convergence
+     has no conditional differences and is not touched. Wide set at
+     60 s: default 166 to 166 solved, -f 160 to 160; of the outcomes that
+     changed, 11 of 12 (default) and 19 of 21 (-f) are on instances where
+     nothing is posted (run-to-run noise). cyclic-rcpsp 10-30% faster
+     with up to 2.8x fewer failures, rectangle-packing rpp30 1.1 to
+     0.7 s, rcpsp_max psp_d_244 8.5 to 10.2 s.
+
+156. The clique rows of tables (TableCliques) and new value encodings of
      GCC, count, alldifferent, alldistinct and element use LP-only
      columns [x = v] (LpColumn) instead of store Booleans channelled with
      ChannelReif, so they add no variables or constraints to the store.
@@ -2375,7 +2406,7 @@ Version 5.0 (unreleased)
      except sudoku_fixed p28, where one more LP failure changes the
      search path.
 
-156. Root reduced-cost fixing for the linear relaxation (SCIP's
+157. Root reduced-cost fixing for the linear relaxation (SCIP's
      prop_rootredcost). The inequalities of the duals of the last optimal
      solve at the root level are kept; they are combinations of the rows,
      so they hold everywhere, and whenever the bound of the objective
