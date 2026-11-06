@@ -42,7 +42,9 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XltY;
 import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
@@ -170,6 +172,88 @@ class LocalSearchTest {
         assertTrue(v[i] != v[j] && v[i] + i != v[j] + j && v[i] - i != v[j] - j);
       }
     }
+  }
+
+  /**
+   * A Costas array of order 11: a permutation whose difference rows are all distinct, with the
+   * differences defined by the permutation. The permutation is kept by swaps, one variable has a
+   * smaller domain (x0 < x10), and the duplicates of each row are counted incrementally.
+   */
+  @Test
+  void findsCostasArrayBySwaps() {
+    costas(false);
+    costas(true);
+  }
+
+  private static void costas(boolean jump) {
+    int n = 11;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, n);
+    }
+    store.impose(new Alldistinct(x));
+    store.impose(new XltY(x[0], x[n - 1]));
+    List<IntVar> diffs = new ArrayList<>();
+    for (int d = 1; d < n - 1; d++) {
+      IntVar[] row = new IntVar[n - d];
+      for (int j = 0; j + d < n; j++) {
+        row[j] = new IntVar(store, "d" + d + "_" + j, -n + 1, n - 1);
+        // row[j] + x[j] = x[j + d]
+        store.impose(new XplusYeqZ(row[j], x[j], x[j + d]));
+        diffs.add(row[j]);
+      }
+      store.impose(new Alldistinct(row));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .order(x)
+            .defined(diffs)
+            .jump(jump)
+            .timeLimit(LIMIT)
+            .seed(11)
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(ls.toString().contains("P:Alldistinct=1"), ls.toString());
+    int[] v = ls.getSolution(x);
+    assertTrue(v[0] < v[n - 1]);
+    for (int d = 0; d < n - 1; d++) {
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (d == 0) {
+            assertTrue(v[i] != v[j]);
+          } else if (j + d < n) {
+            assertTrue(v[i + d] - v[i] != v[j + d] - v[j], "row " + d);
+          }
+        }
+      }
+    }
+  }
+
+  /** Without permutation groups the queens are still found, by value moves. */
+  @Test
+  void findsQueensWithoutPermutations() {
+    int n = 10;
+    Store store = new Store();
+    IntVar[] q = new IntVar[n];
+    IntVar[] up = new IntVar[n];
+    IntVar[] down = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, n - 1);
+      up[i] = new IntVar(store, "u" + i, 0, 2 * n);
+      down[i] = new IntVar(store, "d" + i, -n, n);
+      store.impose(new XplusCeqZ(q[i], i, up[i]));
+      store.impose(new XplusCeqZ(q[i], -i, down[i]));
+    }
+    store.impose(new Alldistinct(q));
+    store.impose(new Alldistinct(up));
+    store.impose(new Alldistinct(down));
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store).order(q).permutations(false).timeLimit(LIMIT).seed(3).build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(!ls.toString().contains("P:"), ls.toString());
   }
 
   /**

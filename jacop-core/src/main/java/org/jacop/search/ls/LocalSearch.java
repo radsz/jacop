@@ -126,6 +126,7 @@ public final class LocalSearch {
   private final long patienceMillis;
   private final Collection<? extends Constraint> extra;
   private final boolean jump;
+  private final boolean permutations;
 
   // the variables, their root domains and current values
   private IntVar[] vars;
@@ -244,6 +245,7 @@ public final class LocalSearch {
     patienceMillis = b.patienceMillis;
     extra = b.extra;
     jump = b.jump;
+    permutations = b.permutations;
   }
 
   /**
@@ -577,11 +579,356 @@ public final class LocalSearch {
       // a copy fails on the root domains; it cannot be evaluated
       scratch = null;
     }
+    if (permutations) {
+      buildGroups();
+    }
+    buildCounters();
     buildOccurrences();
     buildDefinitions(measured.size());
     violated = new int[m];
     violatedPos = new int[m];
     Arrays.fill(violatedPos, -1);
+  }
+
+  // ------------------------------------------------------------ value counts
+
+  // per all different constraint, how often each value is taken: its violation and the change of
+  // it by a move in constant time (a differentiable invariant), instead of measuring it again
+  private Counter[] counters;
+
+  /** How often each value is taken by the variables of a constraint, and the duplicates. */
+  static final class Counter {
+    private int base;
+    private int[] count = new int[0];
+    long duplicates;
+
+    // the counts of values too far from the others (defined variables out of their domains)
+    private final Map<Integer, Integer> far = new java.util.HashMap<>();
+
+    void add(int v) {
+      int k = slot(v);
+      if (k < 0) {
+        if (far.merge(v, 1, Integer::sum) > 1) {
+          duplicates++;
+        }
+      } else if (count[k]++ > 0) {
+        duplicates++;
+      }
+    }
+
+    void remove(int v) {
+      int k = slot(v);
+      if (k < 0) {
+        int left = far.merge(v, -1, Integer::sum);
+        if (left > 0) {
+          duplicates--;
+        } else {
+          far.remove(v);
+        }
+      } else if (--count[k] > 0) {
+        duplicates--;
+      }
+    }
+
+    // the duplicates after one variable moves from value old to value v
+    long after(int old, int v) {
+      if (old == v) {
+        return duplicates;
+      }
+      long d = duplicates;
+      if (taken(old) > 1) {
+        d--;
+      }
+      if (taken(v) > 0) {
+        d++;
+      }
+      return d;
+    }
+
+    int taken(int v) {
+      long k = (long) v - base;
+      return k >= 0 && k < count.length ? count[(int) k] : far.getOrDefault(v, 0);
+    }
+
+    private int slot(int v) {
+      if (count.length == 0) {
+        base = v;
+        count = new int[8];
+      }
+      long k = (long) v - base;
+      if (k < 0 || k >= count.length) {
+        long low = Math.min(base, (long) v);
+        long high = Math.max((long) base + count.length - 1, v);
+        long size = Math.max(high - low + 1, 2L * count.length);
+        if (size > (1 << 22)) {
+          return -1;
+        }
+        int[] grown = new int[(int) size];
+        System.arraycopy(count, 0, grown, (int) (base - low), count.length);
+        count = grown;
+        base = (int) low;
+        k = (long) v - base;
+      }
+      return (int) k;
+    }
+
+    void clear() {
+      Arrays.fill(count, 0);
+      far.clear();
+      duplicates = 0;
+    }
+  }
+
+  // the first position from p on, cyclically, of a variable that shares its value, or p
+  private int conflicting(int c, int p) {
+    int[] s = scope[c];
+    Counter k = counters[c];
+    for (int t = 0; t < s.length; t++) {
+      int q = (p + t) % s.length;
+      if (k.taken(val[s[q]]) > 1) {
+        return q;
+      }
+    }
+    return p;
+  }
+
+  private void buildCounters() {
+    counters = new Counter[m];
+    for (int k = 0; k < measuredConstraints.size(); k++) {
+      Constraint con = measuredConstraints.get(k);
+      int c = linearCount + k;
+      Class<?> type = con.getClass();
+      if (scope[c].length < 2
+          || (type != Alldifferent.class
+              && type != org.jacop.constraints.Alldiff.class
+              && type != Alldistinct.class)
+          || !distinctList(c)
+          || spread(scope[c]) > (1 << 20)) {
+        continue;
+      }
+      counters[c] = new Counter();
+    }
+  }
+
+  // whether the constraint holds when its variables take distinct values: no variable twice
+  private boolean distinctList(int c) {
+    Map<IntVar, Integer> at = new IdentityHashMap<>();
+    for (int k = 0; k < scope[c].length; k++) {
+      at.put(vars[scope[c][k]], k);
+    }
+    return measures[c].violation(x -> at.getOrDefault(x, -1 - at.size())) == 0;
+  }
+
+  private long spread(int[] s) {
+    long low = Long.MAX_VALUE;
+    long high = Long.MIN_VALUE;
+    for (int i : s) {
+      low = Math.min(low, domains[i].min());
+      high = Math.max(high, domains[i].max());
+    }
+    return high - low;
+  }
+
+  private void recount() {
+    for (int c = 0; c < m; c++) {
+      if (counters[c] != null) {
+        counters[c].clear();
+        for (int i : scope[c]) {
+          counters[c].add(val[i]);
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------ permutations
+
+  // the group of each variable, or -1; the variables of a group always hold a permutation of the
+  // values of their common domain and move only by swaps, so their all different constraint is
+  // kept by the moves and never evaluated (an implicit constraint of constraint-based local search)
+  private int[] groupOf;
+  private int[][] groups = new int[0][];
+  // partners of a swap tried for one variable
+  private static final int SWAP_SCAN = 64;
+  // variables of permutation groups whose swaps one step tries
+  private static final int SWAP_VARS = 1;
+  private int swapPartner;
+
+  /**
+   * Finds the all different constraints over variables that are not defined and share one domain of
+   * exactly as many values as there are variables. Their variables become a permutation group and
+   * the constraint is dropped from evaluation.
+   */
+  private void buildGroups() {
+    groupOf = new int[vars.length];
+    Arrays.fill(groupOf, -1);
+    List<int[]> found = new ArrayList<>();
+    for (int k = 0; k < measuredConstraints.size(); k++) {
+      Constraint con = measuredConstraints.get(k);
+      int c = linearCount + k;
+      if (!(con instanceof Alldifferent || con instanceof Alldistinct)) {
+        continue;
+      }
+      int[] s = scope[c];
+      if (s.length < 2 || !permutationScope(s)) {
+        continue;
+      }
+      for (int i : s) {
+        groupOf[i] = found.size();
+      }
+      found.add(s.clone());
+      scope[c] = new int[0];
+      measures[c] = value -> 0;
+      swaps[c] = false;
+      classes.merge("P:" + con.getClass().getSimpleName(), 1, Integer::sum);
+    }
+    groups = found.toArray(new int[0][]);
+  }
+
+  // groups larger than this are not kept a permutation (the matching that repairs them is cubic)
+  private static final int GROUP_LIMIT = 2000;
+
+  private boolean permutationScope(int[] s) {
+    if (s.length > GROUP_LIMIT) {
+      return false;
+    }
+    IntDomain union = domains[s[0]].cloneLight();
+    for (int i : s) {
+      if (groupOf[i] >= 0
+          || i == costIndex
+          || domains[i].singleton()
+          || (definedVars != null && definedVars.contains(vars[i]))) {
+        return false;
+      }
+      union.unionAdapt(domains[i]);
+      if (union.getSize() > s.length) {
+        return false;
+      }
+    }
+    // the same variable twice cannot be a permutation
+    return union.getSize() == s.length && Arrays.stream(s).distinct().count() == s.length;
+  }
+
+  /**
+   * Gives the variables of each group a permutation of their values, each in its domain, keeping as
+   * many of their current values as a greedy pass allows; groups that have none are dropped.
+   */
+  private void repairGroups() {
+    for (int g = 0; g < groups.length; g++) {
+      if (groups[g].length > 0 && !matchGroup(groups[g])) {
+        for (int i : groups[g]) {
+          groupOf[i] = -1;
+        }
+        groups[g] = new int[0];
+      }
+    }
+  }
+
+  // a perfect matching of the variables of a group to the values of their domains (Kuhn)
+  private boolean matchGroup(int[] g) {
+    Map<Integer, Integer> owner = new java.util.HashMap<>();
+    int[] value = new int[g.length];
+    Arrays.fill(value, Integer.MIN_VALUE);
+    for (int k = 0; k < g.length; k++) {
+      int v = val[g[k]];
+      if (domains[g[k]].contains(v) && owner.putIfAbsent(v, k) == null) {
+        value[k] = v;
+      }
+    }
+    for (int k = 0; k < g.length; k++) {
+      if (value[k] == Integer.MIN_VALUE
+          && !augment(g, k, owner, value, new java.util.HashSet<>())) {
+        return false;
+      }
+    }
+    for (int k = 0; k < g.length; k++) {
+      val[g[k]] = value[k];
+    }
+    return true;
+  }
+
+  private boolean augment(
+      int[] g, int k, Map<Integer, Integer> owner, int[] value, Set<Integer> seen) {
+    IntDomain d = domains[g[k]];
+    int size = d.getSize();
+    int offset = random.nextInt(size);
+    // free values first, then the values whose owner can move
+    for (int pass = 0; pass < 2; pass++) {
+      for (int t = 0; t < size; t++) {
+        int v = d.getElementAt((offset + t) % size);
+        Integer o = owner.get(v);
+        if (pass == 0 ? o != null : o == null || !seen.add(v)) {
+          continue;
+        }
+        if (o == null || augment(g, o, owner, value, seen)) {
+          owner.put(v, k);
+          value[k] = v;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // the change of the weighted violation if variables i and j swap their values
+  private double trySwap(int i, int j) {
+    int vi = val[i];
+    int vj = val[j];
+    double before = total;
+    trial = true;
+    recording = true;
+    undoSize = 0;
+    moveDefined(i, vj);
+    moveDefined(j, vi);
+    recording = false;
+    double d = total - before;
+    undo();
+    trial = false;
+    return d;
+  }
+
+  /**
+   * The best swap of variable i, of a permutation group, with another variable of its group: a tabu
+   * swap only when it lowers the weighted violation. Sets swapPartner (-1 for none).
+   */
+  private double bestSwap(int i) {
+    int[] g = groups[groupOf[i]];
+    double best = Double.MAX_VALUE;
+    int bj = -1;
+    int ties = 0;
+    boolean tabuI = tabu[i] > steps;
+    int scan = Math.min(g.length, SWAP_SCAN);
+    int offset = g.length > SWAP_SCAN ? random.nextInt(g.length) : 0;
+    for (int t = 0; t < scan; t++) {
+      int j = g[(offset + t) % g.length];
+      if (j == i || !domains[i].contains(val[j]) || !domains[j].contains(val[i])) {
+        continue;
+      }
+      double d = trySwap(i, j);
+      if ((tabuI || tabu[j] > steps) && d >= 0) {
+        continue;
+      }
+      if (d < best) {
+        best = d;
+        bj = j;
+        ties = 1;
+      } else if (Double.compare(d, best) == 0 && random.nextInt(++ties) == 0) {
+        bj = j;
+      }
+    }
+    swapPartner = bj;
+    return best;
+  }
+
+  private void swap(int i, int j) {
+    int vi = val[i];
+    move(i, val[j]);
+    move(j, vi);
+    tabu[i] = steps + 3 + random.nextInt(8);
+    tabu[j] = tabu[i];
+  }
+
+  private boolean grouped(int i) {
+    return groupOf != null && groupOf[i] >= 0;
   }
 
   // the constraints read through their own violation, in the order of measures
@@ -1218,6 +1565,7 @@ public final class LocalSearch {
         val[i] = nearestToZero(domains[i]);
       }
     }
+    repairGroups();
     evaluateAll();
     defineAll();
     bestAssignment = val.clone();
@@ -1239,6 +1587,7 @@ public final class LocalSearch {
     Arrays.fill(violatedPos, -1);
     Arrays.fill(viol, 0);
     total = 0;
+    recount();
     for (int c = 0; c < m; c++) {
       if (coef[c] != null) {
         long s = 0;
@@ -1256,6 +1605,9 @@ public final class LocalSearch {
   }
 
   private long currentViolation(int c) {
+    if (counters[c] != null) {
+      return counters[c].duplicates;
+    }
     if (measures[c] != null) {
       return measured(c, -1, 0);
     }
@@ -1282,6 +1634,10 @@ public final class LocalSearch {
       total += weight[c] * (scaled(v) - scaled(viol[c]));
     }
     viol[c] = v;
+    if (trial) {
+      // a tried move is undone before the list of violated constraints is read again
+      return;
+    }
     int p = violatedPos[c];
     if (v > 0 && p < 0) {
       violatedPos[c] = violatedCount;
@@ -1342,6 +1698,9 @@ public final class LocalSearch {
   // ---------------------------------------------------------------- moves
 
   private long violationAfter(int c, int i, int v, long a) {
+    if (counters[c] != null) {
+      return counters[c].after(val[i], v);
+    }
     if (measures[c] != null) {
       return measured(c, i, v);
     }
@@ -1373,7 +1732,18 @@ public final class LocalSearch {
 
   // large amounts would drown the 0/1 violations of the copied constraints
   private static double scaled(long amount) {
-    return amount <= 1 ? amount : 1 + Math.log(amount);
+    if (amount <= 1) {
+      return amount;
+    }
+    return amount < SCALED.length ? SCALED[(int) amount] : 1 + Math.log(amount);
+  }
+
+  private static final double[] SCALED = new double[1024];
+
+  static {
+    for (int a = 2; a < SCALED.length; a++) {
+      SCALED[a] = 1 + Math.log(a);
+    }
   }
 
   private void move(int i, int v) {
@@ -1402,6 +1772,9 @@ public final class LocalSearch {
       }
       if (coef[c] != null && as[k] != 0) {
         lhs[c] = sat(lhs[c] + as[k] * ((long) v - old));
+      } else if (counters[c] != null && v != old) {
+        counters[c].remove(old);
+        counters[c].add(v);
       }
       setViolation(c, currentViolation(c));
     }
@@ -1486,8 +1859,11 @@ public final class LocalSearch {
     double best = Double.MAX_VALUE;
     int ties = 0;
     int size = s.length + (enforcer[c] >= 0 ? 1 : 0);
-    int scan = Math.min(size, SCAN_LIMIT);
-    int offset = size > SCAN_LIMIT ? random.nextInt(size) : 0;
+    // all of an all different constraint: only the variables sharing a value are tried
+    int scan = counters[c] != null ? size : Math.min(size, SCAN_LIMIT);
+    int offset = size > SCAN_LIMIT || counters[c] != null ? random.nextInt(size) : 0;
+    int bestPartner = -1;
+    int swapped = 0;
     for (int t = 0; t < scan; t++) {
       if (t > 0 && expired()) {
         // a step on costly constraints can take long: the moves seen so far will do
@@ -1495,6 +1871,10 @@ public final class LocalSearch {
       }
       int p = (offset + t) % size;
       int i = p < s.length ? s[p] : enforcer[c];
+      if (counters[c] != null && counters[c].taken(val[i]) <= 1) {
+        // moving a variable whose value no other one takes does not lower the duplicates
+        continue;
+      }
       long a = p < s.length ? coef(c, p) : 0;
       if (defOf[i] >= 0) {
         // a defined variable follows the variables it is defined by: move one of them
@@ -1505,6 +1885,19 @@ public final class LocalSearch {
         }
       }
       if (domains[i].singleton()) {
+        continue;
+      }
+      if (grouped(i)) {
+        if (swapped++ >= SWAP_VARS) {
+          continue;
+        }
+        double d = bestSwap(i);
+        if (swapPartner >= 0 && d < best) {
+          best = d;
+          bestVar = i;
+          bestPartner = swapPartner;
+          ties = 1;
+        }
         continue;
       }
       boolean isTabu = tabu[i] > steps;
@@ -1519,16 +1912,17 @@ public final class LocalSearch {
           best = d;
           bestVar = i;
           bestVal = v;
+          bestPartner = -1;
           ties = 1;
         } else if (Double.compare(d, best) == 0 && random.nextInt(++ties) == 0) {
           bestVar = i;
           bestVal = v;
+          bestPartner = -1;
         }
       }
     }
     if (bestVar >= 0 && best < 0) {
-      move(bestVar, bestVal);
-      tabu[bestVar] = steps + 3 + random.nextInt(8);
+      makeMove(bestVar, bestVal, bestPartner);
       return;
     }
     // a local minimum for this constraint: weigh it more, and sometimes move anyway
@@ -1546,8 +1940,17 @@ public final class LocalSearch {
       changed[c] = clock;
     }
     if (bestVar >= 0 && random.nextInt(10) == 0) {
-      move(bestVar, bestVal);
-      tabu[bestVar] = steps + 3 + random.nextInt(8);
+      makeMove(bestVar, bestVal, bestPartner);
+    }
+  }
+
+  // moves variable i to value v, or swaps it with partner j when j >= 0
+  private void makeMove(int i, int v, int j) {
+    if (j >= 0) {
+      swap(i, j);
+    } else {
+      move(i, v);
+      tabu[i] = steps + 3 + random.nextInt(8);
     }
   }
 
@@ -1659,7 +2062,7 @@ public final class LocalSearch {
   private int jumpCandidates(int i) {
     IntDomain d = domains[i];
     int old = val[i];
-    if (d.singleton()) {
+    if (d.singleton() || grouped(i)) {
       return 0;
     }
     int[] cs = occ[i];
@@ -1720,6 +2123,10 @@ public final class LocalSearch {
       return -1;
     }
     int p = random.nextInt(size);
+    if (counters[c] != null) {
+      // a variable whose value another one takes too (its violation, in Comet's terms)
+      p = conflicting(c, p);
+    }
     int i = p < s.length ? s[p] : enforcer[c];
     if (defOf[i] >= 0) {
       i = upstream(i);
@@ -1739,6 +2146,9 @@ public final class LocalSearch {
     clock++;
     int bestVar = -1;
     double best = 0;
+    int bestSwapPartner = -1;
+    int anySwapPartner = -1;
+    int swapped = 0;
     // the best jump of the variables of violated constraints, even one that does not help
     int anyVar = -1;
     double any = Double.MAX_VALUE;
@@ -1762,20 +2172,43 @@ public final class LocalSearch {
         if (i < 0) {
           continue;
         }
+        if (grouped(i)) {
+          if (swapped++ >= SWAP_VARS) {
+            continue;
+          }
+          double s = bestSwap(i);
+          if (swapPartner >= 0 && s < best) {
+            best = s;
+            bestVar = i;
+            bestSwapPartner = swapPartner;
+          }
+          if (swapPartner >= 0 && s < any) {
+            any = s;
+            anyVar = i;
+            anySwapPartner = swapPartner;
+          }
+          continue;
+        }
         double s = jumpOf(i);
         if (s < best) {
           best = s;
           bestVar = i;
+          bestSwapPartner = -1;
         }
         if (s < any && jumpValue[i] != val[i]) {
           any = s;
           anyVar = i;
+          anySwapPartner = -1;
         }
       }
     }
     if (bestVar >= 0) {
-      int v = jumpValue[bestVar];
       clock++;
+      if (bestSwapPartner >= 0) {
+        swap(bestVar, bestSwapPartner);
+        return;
+      }
+      int v = jumpValue[bestVar];
       move(bestVar, v);
       jumpAt[bestVar] = -1;
       return;
@@ -1801,8 +2234,12 @@ public final class LocalSearch {
     // weights cannot lead out of a minimum of a few large constraints (all different): sometimes
     // make the least bad jump anyway
     if (anyVar >= 0 && random.nextInt(10) == 0) {
-      move(anyVar, jumpValue[anyVar]);
-      jumpAt[anyVar] = -1;
+      if (anySwapPartner >= 0) {
+        swap(anyVar, anySwapPartner);
+      } else {
+        move(anyVar, jumpValue[anyVar]);
+        jumpAt[anyVar] = -1;
+      }
     }
   }
 
@@ -1970,7 +2407,15 @@ public final class LocalSearch {
         continue;
       }
       IntDomain d = domains[i];
-      if (!d.singleton()) {
+      if (grouped(i)) {
+        int[] g = groups[groupOf[i]];
+        int j = g[random.nextInt(g.length)];
+        if (j != i && d.contains(val[j]) && domains[j].contains(val[i])) {
+          int vi = val[i];
+          move(i, val[j]);
+          move(j, vi);
+        }
+      } else if (!d.singleton()) {
         move(i, d.getElementAt(random.nextInt(d.getSize())));
       }
     }
@@ -2184,6 +2629,7 @@ public final class LocalSearch {
     private Collection<? extends Var> defined;
     private Collection<? extends Constraint> extra;
     private boolean jump;
+    private boolean permutations = true;
 
     private Builder(Store store) {
       this.store = store;
@@ -2285,6 +2731,18 @@ public final class LocalSearch {
      */
     public Builder jump(boolean jump) {
       this.jump = jump;
+      return this;
+    }
+
+    /**
+     * Keeps the variables of an all different constraint over one domain of as many values as
+     * variables a permutation, moved only by swaps (default true).
+     *
+     * @param on whether to.
+     * @return this builder.
+     */
+    public Builder permutations(boolean on) {
+      permutations = on;
       return this;
     }
 
