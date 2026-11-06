@@ -2814,6 +2814,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
+            .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (costVar instanceof IntVar c) {
@@ -2841,6 +2842,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("% " + localSearch + " " + status);
     }
     return status == LocalSearch.Status.SATISFIED ? localSearch : null;
+  }
+
+  // the scheduling neighbourhoods of local search named by ls-sched (ns, n1, n4 joined by +; 0 off)
+  private static int scheduleKinds(String spec) {
+    int kinds = 0;
+    for (String k : spec.split("\\+")) {
+      kinds |=
+          switch (k.trim()) {
+            case "ns" -> LocalSearch.SCHEDULE_NS;
+            case "n1" -> LocalSearch.SCHEDULE_N1;
+            case "n4" -> LocalSearch.SCHEDULE_N4;
+            case "0", "" -> 0;
+            default -> throw new IllegalArgumentException("ls-sched: unknown neighbourhood " + k);
+          };
+    }
+    return kinds;
   }
 
   // the integer variables of the store not fixed at the root, which a solution hint covers

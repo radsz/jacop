@@ -275,7 +275,12 @@ public class Options {
                 feasibility jump, the best jump of a sample of variables, all violated constraints
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many
-                values as variables is kept by moving its variables only by swaps)
+                values as variables is kept by moving its variables only by swaps),
+                ls-sched=<kind>+<kind>... (the critical-path neighbourhoods of the tabu search over
+                the machine sequences of a disjunctive scheduling model whose cost is the makespan,
+                of ns: swap the first two and last two operations of each critical block, n1: swap
+                any two adjacent ones, n4: move one to the front or back of its block; default
+                ns+n4; 0 = off)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
