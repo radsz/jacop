@@ -54,6 +54,7 @@ import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Among;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -65,6 +66,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
+import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LexChain;
@@ -76,11 +78,13 @@ import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Or;
+import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
+import org.jacop.constraints.Values;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XlteqC;
@@ -2087,6 +2091,180 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(own).isGreaterThan(10 * other);
+  }
+
+  /**
+   * {@link Increasing}, {@link Among}, {@link OverlappingAlldiff} and {@link Values} explain their
+   * own pruning: the answers agree with brute force, every reason is checked, and almost none is
+   * generic or replayed.
+   */
+  @Test
+  void increasingAmongAndOverlappingAlldiffExplanationsAgreeWithBruteForce() {
+    Random rnd = new Random(61);
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long other = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      boolean strict = rnd.nextBoolean();
+      List<Relation> relations = new ArrayList<>();
+      switch (rnd.nextInt(4)) {
+        case 3 ->
+            relations.add(
+                new Relation(
+                    new Values(new IntVar[] {x[0], x[1], x[2], x[3]}, x[4]),
+                    t -> Arrays.stream(t, 0, 4).distinct().count() == t[4]));
+        case 0 ->
+            relations.add(
+                new Relation(
+                    new Increasing(new IntVar[] {x[0], x[1], x[2], x[3]}, strict),
+                    t ->
+                        strict
+                            ? t[0] < t[1] && t[1] < t[2] && t[2] < t[3]
+                            : t[0] <= t[1] && t[1] <= t[2] && t[2] <= t[3]));
+        case 1 -> {
+          IntervalDomain k = new IntervalDomain(0, 1);
+          k.unionAdapt(3, 3);
+          relations.add(
+              new Relation(
+                  new Among(new IntVar[] {x[0], x[1], x[2], x[3]}, k, x[4]),
+                  t -> {
+                    int c = 0;
+                    for (int i = 0; i < 4; i++) {
+                      c += k.contains(t[i]) ? 1 : 0;
+                    }
+                    return c == t[4];
+                  }));
+        }
+        default -> {
+          IntVar[] s1 = {x[0], x[1], x[2], x[3]};
+          IntVar[] s2 = {x[1], x[2], x[3], x[4]};
+          relations.add(
+              new Relation(
+                  new OverlappingAlldiff(s1, s2),
+                  t -> distinct(t, 0, 1, 2, 3) && distinct(t, 1, 2, 3, 4)));
+        }
+      }
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      for (String name : new String[] {"Increasing", "Among", "OverlappingAlldiff", "Values"}) {
+        long[] counts = solver.explanationStatistics().get(name);
+        if (counts != null) {
+          long notOwn = counts[1] + counts[4] + counts[6] + counts[7];
+          own += counts[0] + counts[3] - notOwn;
+          other += notOwn;
+        }
+      }
+    }
+    System.out.printf(
+        "increasing, among, overlapping alldiff and values: %d sat, %d unsat, %d own and %d generic or"
+            + " replayed explanations%n",
+        sat, unsat, own, other);
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(own).isGreaterThan(10 * other);
+  }
+
+  private static boolean distinct(int[] t, int... at) {
+    for (int a = 0; a < at.length; a++) {
+      for (int b = a + 1; b < at.length; b++) {
+        if (t[at[a]] == t[at[b]]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * An all different over as many values as variables gets the clauses that each value is taken,
+   * and the answers still agree with brute force.
+   */
+  @Test
+  void permutationAlldiffGetsCoverClauses() {
+    Random rnd = new Random(67);
+    int sat = 0;
+    int unsat = 0;
+    long clauses = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      Store store = new Store();
+      int n = 5;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, n - 1);
+        if (rnd.nextInt(3) == 0) {
+          x[i].domain.subtractAdapt(rnd.nextInt(n));
+          x[i].refreshBounds();
+        }
+      }
+      List<Relation> relations = new ArrayList<>();
+      Constraint alldiff =
+          switch (rnd.nextInt(3)) {
+            case 0 -> new Alldiff(x);
+            case 1 -> new Alldistinct(x);
+            default -> new Alldifferent(x);
+          };
+      relations.add(new Relation(alldiff, t -> distinct(t, 0, 1, 2, 3, 4)));
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      clauses += solver.impliedClauses;
+    }
+    System.out.printf("cover clauses: %d sat, %d unsat, %d clauses%n", sat, unsat, clauses);
+    assertThat(sat).isGreaterThan(50);
+    assertThat(unsat).isGreaterThan(50);
+    assertThat(clauses).isGreaterThan(600);
   }
 
   // a cardinality constraint over 3 or 4 of the variables
@@ -4461,6 +4639,34 @@ class LcgSolverTest {
         assertThat(solver.coreSearch().cores).isZero();
       }
     }
+  }
+
+  /**
+   * Whether the core-guided phase could reach the objective's root bound: at three times the rate
+   * of its lower bound per unit of the solver's work since the mark, within the work given. Before
+   * a mark, and once the bound is there, it could.
+   */
+  @Test
+  void coreSearchReachesAValueAtThreeTimesItsRate() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 30);
+    store.impose(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 1, 1, -1}, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    CoreSearch cores = CoreSearch.of(solver, obj);
+    assertThat(cores).isNotNull();
+    long lb = cores.lowerBound;
+    assertThat(cores.canReach(lb + 100, 0)).isTrue(); // nothing measured yet
+    cores.mark();
+    assertThat(cores.canReach(lb, 0)).isTrue();
+    assertThat(cores.canReach(lb + 1, 1_000_000)).isFalse(); // the bound has not risen
+    cores.lowerBound += 10; // in no work: a rate of 10 per unit
+    assertThat(cores.canReach(lb + 10 + 30, 1)).isTrue();
+    assertThat(cores.canReach(lb + 10 + 31, 1)).isFalse();
   }
 
   @Test

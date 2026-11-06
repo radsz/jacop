@@ -373,4 +373,24 @@ public class ElementVariableFast extends AbstractElement
     }
     return value.applyAsInt(list[i]);
   }
+
+  /**
+   * A failure weighs the index, the value and the list variables the index can still select, not
+   * the whole list: on XCSP3 LangfordBin, where every cell of the sequence is in the list of every
+   * element, weighing the whole list made dom/wdeg branch on the cells instead of the positions.
+   */
+  @Override
+  public void increaseWeight() {
+    if (!IS_INCREASE_WEIGHT_ENABLED) {
+      return;
+    }
+    index.weight++;
+    value.weight++;
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      long p = (long) e.nextElement() - 1 - indexOffset;
+      if (p >= 0 && p < list.length) {
+        list[(int) p].weight++;
+      }
+    }
+  }
 }

@@ -148,6 +148,31 @@ class JalpSimplexTest {
     return s;
   }
 
+  /**
+   * The duals are those of the costs as given, not of the perturbed costs the simplex pivots with:
+   * min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10], is degenerate in x and y,
+   * and its duals are exactly 1, 1 and 0. Perturbed duals are off by about 1e-7 and, scaled to
+   * integers for the certificate, lose part of the bound.
+   */
+  @Test
+  void dualsAreThoseOfTheCostsAsGiven() {
+    double[][] a = {{1, -1, -1}, {0, 1, 1}, {0, 1, -1}};
+    double inf = Double.POSITIVE_INFINITY;
+    double[] rowLo = {0, 3, -inf};
+    double[] rowHi = {inf, inf, 1};
+    double[] cost = {1, 0, 0};
+    for (LpSolver lp :
+        new LpSolver[] {new DualSimplex(a, rowLo, rowHi, cost), jalp(a, rowLo, rowHi, cost)}) {
+      for (int j = 0; j < 3; j++) {
+        lp.setBounds(j, 0, 10);
+      }
+      assertThat(lp.solve(100)).isEqualTo(LpSolver.OPTIMAL);
+      assertThat(lp.value(0)).isCloseTo(3, CLOSE);
+      // + 0.0 turns -0.0 into 0.0
+      assertThat(Arrays.stream(lp.duals()).map(v -> v + 0.0).toArray()).containsExactly(1, 1, 0);
+    }
+  }
+
   @Test
   void smallLpsAgreeWithTheDenseSimplex() {
     Random rnd = new Random(7);

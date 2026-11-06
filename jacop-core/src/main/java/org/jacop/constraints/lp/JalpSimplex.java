@@ -43,6 +43,11 @@ import org.jacop.jalp.SparseLp;
  */
 class JalpSimplex implements LpSolver {
 
+  // the perturbation removed at the end of every solve, with the pivots that takes (JaLP's
+  // clean-up); off by default, as the duals for the costs as given over the final basis are
+  // enough for the certificates
+  private static final boolean EXACT = Boolean.getBoolean("org.jacop.lp.exact");
+
   private SparseLp lp;
 
   /**
@@ -55,7 +60,9 @@ class JalpSimplex implements LpSolver {
    * @param cost the objective over the n columns, minimized
    */
   JalpSimplex(int[][] columns, double[][] weights, double[] rowLo, double[] rowHi, double[] cost) {
-    lp = new RevisedDualSimplex(columns, weights, rowLo, rowHi, cost, true);
+    RevisedDualSimplex jalp = new RevisedDualSimplex(columns, weights, rowLo, rowHi, cost, true);
+    jalp.setExact(EXACT);
+    lp = jalp;
   }
 
   /**
@@ -129,7 +136,11 @@ class JalpSimplex implements LpSolver {
 
   @Override
   public double[] duals() {
-    return lp.duals();
+    // HiGHS solves the costs as given; JaLP perturbs them and recomputes the duals for the given
+    // ones
+    return DualSimplex.GIVEN_DUALS && lp instanceof RevisedDualSimplex jalp
+        ? jalp.givenDuals()
+        : lp.duals();
   }
 
   @Override
