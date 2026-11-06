@@ -2365,10 +2365,10 @@ Version 5.0 (unreleased)
      is for RINS and LP diving. LpMain -primal and
      -reobjective (zero objective first, then the real one) run it. LP
      bench (659 LPs, 120 s): no wrong answer; the dual simplex makes the
-     same pivots as before on all 636 it solves; after an objective
-     change the primal solves 618 against the dual's 628 in about the
-     same time (1.01 on solves over 0.5 s), and from scratch 609 against
-     636, 2.1 times slower on solves over 0.5 s.
+     same pivots as before on all 631 it solves; after an objective
+     change the primal solves 616 against the dual's 627 in about the
+     same time (0.94 on solves over 0.5 s), and from scratch 610 against
+     631, 1.27 times slower on solves over 0.5 s.
 
 Version 4.11
 =============
