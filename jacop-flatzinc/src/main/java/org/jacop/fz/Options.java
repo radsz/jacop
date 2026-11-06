@@ -211,6 +211,10 @@ public class Options {
                 annotation in every run; off never restarts, as before 5.0),
                 fixed-restarts-from=start|solution (restarts from the start or only after a
                 first solution),
+                fixed-core=<share> (with --lcg, without -f, a linear objective and an
+                annotation: when branch and bound under the annotation has no solution after
+                fixed-core-delay of the time, default 0.15, the core-guided phase of -f runs for
+                this share of the time, default 0.1; 0 = off),
                 lcg-lb=<share> (with --lcg: conflicts of objective lower-bound runs per
                 conflict of branch and bound, default 0.5; 0 = off),
                 lcg-shave=on|off (with --lcg: a lower-bound run tries obj <= lb + step - 1,

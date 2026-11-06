@@ -427,6 +427,8 @@ public final class LcgSolver implements ExternalPropagator {
   private double coreDelayShare;
   private long coreDelayBudget;
   private double coreProbeShare;
+  // the core-guided phase runs only without a solution of the branch and bound before it
+  private boolean coresWithoutSolutionOnly;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   // the run's time limit in milliseconds as given, 0 for none: the core-guided phase and the branch
   // and bound before it take their shares of its work (see WORK_PER_MS), not of the clock
@@ -2422,7 +2424,19 @@ public final class LcgSolver implements ExternalPropagator {
     }
     workEnd = millis > 0 ? sat.work() + millis * WORK_PER_MS : Long.MAX_VALUE;
     int result;
-    if (coreDelayShare > 0) {
+    if (coresWithoutSolutionOnly) {
+      result = firstSolutionBeforeCores();
+      if (result == CdclSolver.UNSAT) {
+        return result;
+      }
+      if (best != null) {
+        // a solution: branch and bound goes on, as without the core-guided phase
+        return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+      }
+      if (System.nanoTime() > sat.deadline()) {
+        return result;
+      }
+    } else if (coreDelayShare > 0) {
       if (coreProbeShare > 0) {
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
@@ -2605,6 +2619,25 @@ public final class LcgSolver implements ExternalPropagator {
    * is an assumption, not a clause: under a bound every stratum of the core-guided phase would have
    * to improve, which makes its strata hard. Clauses learnt under an assumption hold without it.
    */
+  /**
+   * Runs branch and bound for the share of the time left that {@link #setCoreDelay} gives it,
+   * before the core-guided phase that {@link #setCoresWithoutSolutionOnly} runs only without a
+   * solution. With one, branch and bound goes on as without the core-guided phase.
+   */
+  private int firstSolutionBeforeCores() {
+    long deadline = sat.deadline();
+    if (workEnd != Long.MAX_VALUE) {
+      setPhaseLimits(coreDelayShare, deadline);
+    } else {
+      sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
+    }
+    try {
+      return solve();
+    } finally {
+      endPhase(deadline);
+    }
+  }
+
   private int minimizeBeforeCores() {
     long deadline = sat.deadline();
     if (workEnd != Long.MAX_VALUE) {
@@ -2765,6 +2798,17 @@ public final class LcgSolver implements ExternalPropagator {
    * @param probe the share of the time left for core-guided search before that run, which proves
    *     the models where cores close the gap at once; 0 for none
    */
+  /**
+   * Sets whether the core-guided phase of {@link #minimize} runs only when a search for a first
+   * solution, for the share of the time that {@link #setCoreDelay} gives branch and bound, finds
+   * none. With a solution, branch and bound keeps the time.
+   *
+   * @param only true to skip the core-guided phase after a solution
+   */
+  public void setCoresWithoutSolutionOnly(boolean only) {
+    coresWithoutSolutionOnly = only;
+  }
+
   public void setCoreDelay(double share, long conflicts, double probe) {
     coreDelayShare = share;
     coreDelayBudget = Math.max(1, conflicts);

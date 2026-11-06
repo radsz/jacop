@@ -1986,7 +1986,52 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
-130. Large neighbourhood search gets two routing neighbourhoods over the
+132. The linear relaxation keeps the basis of the last optimal solve at
+     each level of the current branch (JaLP, the sparse simplex) and
+     restores the deepest one kept when the search jumps back two or
+     more levels (a restart, an LCG backjump), instead of going on from
+     the basis the deeper node left. On LP-heavy -f runs the solves after
+     a jump take 2 to 4 times fewer pivots (train 7.2 to 2.8, still_life2
+     16.8 to 6.6). JaLP gets RevisedDualSimplex.saveBasis/restoreBasis.
+     -Dorg.jacop.lp.keepBases=false turns it off; basisJump (2) and
+     maxBases (32) tune it. Stats lpJumpSolves, lpJumpPivots,
+     lpBasisRestores. The dense simplex (below 100 rows) is unchanged.
+
+133. The LP relaxation gets rows for more objective links: the convex
+     hull of element over a constant array (lower and upper chains of at
+     most 64 edges each, index domains up to 100,000 values), x div c
+     through the remainder x - c*z, if-then-else (ConditionalSelect)
+     as big-M rows from the root bounds, x in an interval under a
+     reification, and the FlatZinc reified x = c, x != c and x = y.
+     When not all candidate rows fit the tableau, the rows nearest to
+     the objective (breadth-first through the base rows) go first; they
+     used to be taken in model order and could all be cut before the
+     objective's own rows. -Dorg.jacop.lp.linearize=false switches the
+     rows off. tiny-cvrp medium 06 and 11: root bound 0 -> 729 and 747
+     (optima 1585 and 1737). gbac, cargo, train-scheduling and
+     city-position stay at 0: even an integer solve of all the rows
+     gives 0 for the first three (the bound sits in bin packing,
+     cumulative and disjunctive) and 256 / 309 against optima 2930 /
+     10477 for city-position. Wide set (220, 60 s, paired): -f solved
+     157 -> 158, 5 families better and 4 worse; default 164 -> 164, 1
+     better and 6 worse, all by small objective differences at the
+     time limit.
+     
+134. Under fixed search with --lcg (a search annotation, no -f), the
+     core-guided phase of -f runs when branch and bound under the
+     annotation has no solution after 15 % of the time, for 10 % of it;
+     with a solution, the run goes on as before. unit-commitment L12 had
+     no solution under its annotation in 60 s, while the cores'
+     assumptions find one in seconds. --free-config fixed-core=<share>
+     (0 = off) and fixed-core-delay=<share> set the shares. Running the
+     phase under fixed search from the start instead lost proofs
+     (city-position, triangular). Wide set (220, 60 s, both
+     configurations at once): solved 153 to 156, 23 better / 22 worse,
+     gap 0.144 to 0.142; unit-commitment no solution to 5,150,745,
+     flowshop-workers 5stat_ex6 no solution to OPT in 5.9 s; ptv
+     20_2b/20_3b lose their proofs and stable-goods s-d19 its solution.
+
+135. Large neighbourhood search gets two routing neighbourhoods over the
      vehicle routes of a Routes structure: ROUTES removes the customers
      of whole routes near each other, RELATED removes customers close to
      each other by the cost of their arcs in the objective (Shaw
@@ -2001,7 +2046,7 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
-132. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
+136. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
      derives each of its deductions. Under --proof the relaxation is built
      by LinearRelaxation.ofModel: its rows are the linear constraints whose
      proof model is their relation as a line (LinearForms.ofModelLine:
