@@ -182,12 +182,13 @@ public class LinearRelaxation extends Constraint
   // the row pool: whether the rows of other constraints and the cuts leave the simplex after
   // POOL_AGE optimal solves in which they are inactive (with lazy rows every row does, after
   // LAZY_AGE); and whether the rows of other constraints that the root trial does not keep, and
-  // the cuts of a round that does not move the bound, stay in the pool instead of being dropped
+  // the cuts of a round that does not move the bound, stay in the pool instead of being dropped.
+  // Both are off: such rows come back at the first solves in search, as its solution breaks them,
+  // which undoes the root's choice to leave them out, and neither moved a result on the wide set
   private static final boolean POOL = !"false".equals(System.getProperty("org.jacop.lp.pool"));
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
-  private static final boolean POOL_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.poolCuts"));
+  private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
   private static final long WORK = Long.getLong("org.jacop.lp.work", 20_000_000L);
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 

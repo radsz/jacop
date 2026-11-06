@@ -1970,6 +1970,22 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
+131. The rows of the linear relaxation (--lp) are one pool, of which the
+     simplex holds a part, with every simplex (before, only --lp lazy aged
+     rows). The model's own rows stay in the simplex. Linearised rows of
+     other constraints and cuts leave it after org.jacop.lp.poolAge (100)
+     optimal solves in which they are inactive, and come back when a
+     solution of the simplex breaks them; each return doubles the age, so
+     a row the search keeps needing stays. -Dorg.jacop.lp.pool=false turns
+     this off. org.jacop.lp.poolExtra and org.jacop.lp.poolCuts (both off)
+     keep the linearised rows the root trial rejects, and the cuts of a
+     round that does not move the root bound, in the pool instead of
+     dropping them. The dense simplex can now remove rows whose slacks are
+     basic. Wide set (220, 60 s): fixed search solved 163 -> 164, 7 better
+     / 2 worse; -f 158 -> 160, 17 / 11 (both with pooled cuts on; with
+     them off, the 34 instances where the pool moves rows are unchanged
+     in fixed search and 1 / 2 under -f).
+
 Version 4.11
 =============
 
