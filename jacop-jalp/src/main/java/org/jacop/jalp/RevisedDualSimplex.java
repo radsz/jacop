@@ -932,13 +932,29 @@ public final class RevisedDualSimplex {
    * @return the duals by row
    */
   public double[] duals() {
+    return duals(cost);
+  }
+
+  /**
+   * Returns the duals {@code c_B B^-1} of the rows for the costs as given, over the basis the last
+   * solve ended with. Without {@link #setExact(boolean)} that basis is optimal for the perturbed
+   * costs; these duals are free of the perturbation, and their reduced costs are off by at most the
+   * perturbation.
+   *
+   * @return the duals by row
+   */
+  public double[] givenDuals() {
+    return duals(trueCost);
+  }
+
+  private double[] duals(double[] c) {
     if (!factorValid) {
       factorize();
     }
     double[] y = new double[m];
     double[] z = new double[m];
     for (int k = 0; k < m; k++) {
-      z[k] = cost[basis[k]];
+      z[k] = c[basis[k]];
     }
     lu.btran(z, y);
     for (int i = 0; i < m; i++) {
