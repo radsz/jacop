@@ -58,6 +58,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -638,6 +639,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraDropped
             + "\n%%%mzn-stat: lpValueColumns="
             + r.valueColumns
+            + "\n%%%mzn-stat: lpJumpSolves="
+            + r.jumpSolves
+            + "\n%%%mzn-stat: lpJumpPivots="
+            + r.jumpPivots
+            + "\n%%%mzn-stat: lpBasisRestores="
+            + r.basisRestores
             + "\n%%%mzn-stat-end");
   }
 
@@ -2129,6 +2136,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setFixedRestarts(
           LcgSolver.FixedRestarts.valueOf(restarts.toUpperCase(Locale.ROOT)),
           "solution".equals(from));
+      // the core-guided phase of free search, but only when the annotation has no solution after
+      // fixed-core-delay of the time: unit-commitment L12 has none under its annotation in 60 s,
+      // while the cores' assumptions find one in seconds. With a solution the annotation keeps the
+      // time: core-guided search from the start lost the proofs of city-position and triangular.
+      double fixedCore = Double.parseDouble(options.freeConfig("fixed-core", "0.1"));
+      if (fixedCore > 0) {
+        lcg.setCoreSearch(
+            fixedCore, 100_000, Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
+        lcg.setCoreDelay(
+            Double.parseDouble(options.freeConfig("fixed-core-delay", "0.15")), 10_000, 0);
+        lcg.setCoresWithoutSolutionOnly(true);
+      }
     }
     if (options.getTimeOut() > 0) {
       // the time-out covers the whole run: reading and setting up the model took part of it
@@ -2583,8 +2602,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
-    return new AdaptiveLns(
-        store, vars.toArray(new IntVar[0]), cost, new Random(Store.getRandom().nextLong()));
+    AdaptiveLns lns =
+        new AdaptiveLns(
+            store, vars.toArray(new IntVar[0]), cost, new Random(Store.getRandom().nextLong()));
+    if (!"0".equals(options.freeConfig("lns-routes", "1"))) {
+      for (Routes r : dictionary.lnsRoutes()) {
+        lns.addRoutes(r);
+      }
+    } else {
+      lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
+    }
+    return lns;
   }
 
   private static String lnsStatistics(AdaptiveLns lns) {

@@ -169,6 +169,16 @@ class HandoffSimplex implements LpSolver {
   }
 
   @Override
+  public Object saveBasis() {
+    return lp.saveBasis();
+  }
+
+  @Override
+  public boolean restoreBasis(Object basis) {
+    return lp.restoreBasis(basis);
+  }
+
+  @Override
   public LpSolver copy() {
     LpSolver c = lp.copy();
     return new HandoffSimplex(highs == null ? null : (HighsSimplex) c, c, highsPivots, highsWork);

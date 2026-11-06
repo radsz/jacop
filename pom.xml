@@ -234,6 +234,7 @@ setup to run configuration. -->
                                 <include>**/HighsSimplexTest.java</include>
                                 <include>**/HandoffSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/HighsLpTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
@@ -398,6 +399,7 @@ setup to run configuration. -->
                                 <include>**/HighsSimplexTest.java</include>
                                 <include>**/HandoffSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/HighsLpTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
@@ -563,6 +565,7 @@ setup to run configuration. -->
                                 <include>**/HighsSimplexTest.java</include>
                                 <include>**/HandoffSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/HighsLpTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
@@ -728,6 +731,7 @@ setup to run configuration. -->
                                 <include>**/HighsSimplexTest.java</include>
                                 <include>**/HandoffSimplexTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
+                                <include>**/BasisLuTest.java</include>
                                 <include>**/HighsLpTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
