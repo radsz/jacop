@@ -2630,6 +2630,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objectiveVariable instanceof IntVar o) {
       vars.remove(o);
     }
+    if ("1".equals(options.freeConfig("lns-defined", "1"))) {
+      // a variable defined by a constraint follows from the others: fixed with them it adds
+      // nothing, fixed without them it keeps the relaxed ones from moving
+      Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+      defined.addAll(dictionary.definedVariables);
+      List<IntVar> independent = new ArrayList<>();
+      for (IntVar x : vars) {
+        if (!defined.contains(x)) {
+          independent.add(x);
+        }
+      }
+      if (!independent.isEmpty()) {
+        vars = new LinkedHashSet<>(independent);
+      }
+    }
     if (vars.isEmpty()) {
       return null;
     }
@@ -2642,6 +2657,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     } else {
       lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
+    }
+    String kinds = options.freeConfig("lns-kinds", "");
+    if (!kinds.isEmpty()) {
+      // the kinds to use, separated by '+', for example random+graph+objective
+      Set<String> chosen =
+          new java.util.HashSet<>(Arrays.asList(kinds.toUpperCase(Locale.ROOT).split("\\+")));
+      for (AdaptiveLns.Kind k : AdaptiveLns.Kind.values()) {
+        if (!chosen.contains(k.name())) {
+          lns.disable(k);
+        }
+      }
     }
     return lns;
   }
