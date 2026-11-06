@@ -296,6 +296,12 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: decisions taken from the model's search annotation. */
   public long annotationDecisions;
 
+  // the selection that starts the activity runs of fixed search with restarts, or null
+  private SelectChoicePoint<? extends Var> activityGuide;
+
+  /** Statistics: decisions taken from the selection that starts the activity runs. */
+  public long guideDecisions;
+
   /** How decisions are made outside the runs of the search annotation. */
   public enum Branching {
     /** On the most active integer variable, by the activity of its literals in learnt clauses. */
@@ -427,6 +433,8 @@ public final class LcgSolver implements ExternalPropagator {
   private double coreDelayShare;
   private long coreDelayBudget;
   private double coreProbeShare;
+  // the core-guided phase runs only without a solution of the branch and bound before it
+  private boolean coresWithoutSolutionOnly;
   private boolean coreMode; // solutions under assumptions end the search instead of bounding it
   // the run's time limit in milliseconds as given, 0 for none: the core-guided phase and the branch
   // and bound before it take their shares of its work (see WORK_PER_MS), not of the clock
@@ -2342,6 +2350,21 @@ public final class LcgSolver implements ExternalPropagator {
   // the most times the core-guided phase gets another share of the time
   private static final int MAX_CORE_EXTENSIONS = 8;
 
+  // -Djacop.lcg.coreSkip=false: the core-guided phase runs after its probe even when the probe's
+  // rate could not raise the bound to the objective's root bound
+  private static final boolean CORE_SKIP =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreSkip", Boolean.TRUE.toString()));
+
+  // the share of the core-guided phase that measures its rate when the objective's root bound is
+  // above the cores' lower bound
+  private static final double CORE_TRIAL =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreTrial", "0.1"));
+
+  /**
+   * Statistics: core-guided phases skipped after the probe, as below the objective's root bound.
+   */
+  public long coreSkips;
+
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
@@ -2349,7 +2372,19 @@ public final class LcgSolver implements ExternalPropagator {
     }
     workEnd = millis > 0 ? sat.work() + millis * WORK_PER_MS : Long.MAX_VALUE;
     int result;
-    if (coreDelayShare > 0) {
+    if (coresWithoutSolutionOnly) {
+      result = firstSolutionBeforeCores();
+      if (result == CdclSolver.UNSAT) {
+        return result;
+      }
+      if (best != null) {
+        // a solution: branch and bound goes on, as without the core-guided phase
+        return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+      }
+      if (System.nanoTime() > sat.deadline()) {
+        return result;
+      }
+    } else if (coreDelayShare > 0) {
       if (coreProbeShare > 0) {
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
@@ -2361,9 +2396,29 @@ public final class LcgSolver implements ExternalPropagator {
         return result;
       }
     }
+    double share = coreShare;
+    if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < root[objective].min()) {
+      // the root bound of the objective (from the linear relaxation, say) is above the cores' lower
+      // bound: a trial part of the phase measures how fast the cores raise it, and the rest of the
+      // phase runs only if they could reach the root bound at that rate. Below it they prove
+      // nothing, and branch and bound needs the time for the solutions: concert-hall-cap 2024
+      // 200_20 found no better solution during 32 s of cores that raised the bound a twentieth of
+      // the way to the root bound
+      coreSearch.mark();
+      result = runCores(CORE_TRIAL * coreShare, coreBudget, false);
+      if (result != CdclSolver.UNKNOWN) {
+        return result;
+      }
+      share = (1 - CORE_TRIAL) * coreShare / (1 - CORE_TRIAL * coreShare);
+      boolean reach = coreSearch.canReach(root[objective].min(), (long) (share * workLeft()));
+      if (!reach) {
+        coreSkips++;
+        return afterCores();
+      }
+    }
     double[] saved = CORE_RESTORE ? activity.clone() : null;
     double savedInc = activityInc;
-    result = runCores(coreShare, coreBudget, true);
+    result = runCores(share, coreBudget, true);
     if (result != CdclSolver.UNKNOWN) {
       return result;
     }
@@ -2377,6 +2432,11 @@ public final class LcgSolver implements ExternalPropagator {
       rebuildHeap(wide);
       rebuildHeap(lateHeap);
     }
+    return afterCores();
+  }
+
+  /** Branch and bound after the core-guided phase, from its best solution. */
+  private int afterCores() {
     if (!requireBetter()) {
       return CdclSolver.SAT;
     }
@@ -2532,6 +2592,25 @@ public final class LcgSolver implements ExternalPropagator {
    * is an assumption, not a clause: under a bound every stratum of the core-guided phase would have
    * to improve, which makes its strata hard. Clauses learnt under an assumption hold without it.
    */
+  /**
+   * Runs branch and bound for the share of the time left that {@link #setCoreDelay} gives it,
+   * before the core-guided phase that {@link #setCoresWithoutSolutionOnly} runs only without a
+   * solution. With one, branch and bound goes on as without the core-guided phase.
+   */
+  private int firstSolutionBeforeCores() {
+    long deadline = sat.deadline();
+    if (workEnd != Long.MAX_VALUE) {
+      setPhaseLimits(coreDelayShare, deadline);
+    } else {
+      sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
+    }
+    try {
+      return solve();
+    } finally {
+      endPhase(deadline);
+    }
+  }
+
   private int minimizeBeforeCores() {
     long deadline = sat.deadline();
     if (workEnd != Long.MAX_VALUE) {
@@ -2692,6 +2771,17 @@ public final class LcgSolver implements ExternalPropagator {
    * @param probe the share of the time left for core-guided search before that run, which proves
    *     the models where cores close the gap at once; 0 for none
    */
+  /**
+   * Sets whether the core-guided phase of {@link #minimize} runs only when a search for a first
+   * solution, for the share of the time that {@link #setCoreDelay} gives branch and bound, finds
+   * none. With a solution, branch and bound keeps the time.
+   *
+   * @param only true to skip the core-guided phase after a solution
+   */
+  public void setCoresWithoutSolutionOnly(boolean only) {
+    coresWithoutSolutionOnly = only;
+  }
+
   public void setCoreDelay(double share, long conflicts, double probe) {
     coreDelayShare = share;
     coreDelayBudget = Math.max(1, conflicts);
@@ -3127,6 +3217,19 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotationRun && branching == Branching.ALTERNATE) {
       activityBranching = true;
     }
+  }
+
+  /**
+   * Sets a selection that starts the runs of activity branching under fixed search with restarts
+   * (see {@link #setFixedRestarts}): its decisions come first in those runs, and activity branching
+   * takes over when it gives none. A selection that follows the solution of the linear relaxation
+   * gives those runs the relaxation's values, which the model's annotation may not find (the
+   * annotation of concert-hall-cap rejects every offer first). Set it before solving.
+   *
+   * @param select the selection, or null for none
+   */
+  public void setActivityGuide(SelectChoicePoint<? extends Var> select) {
+    activityGuide = select;
   }
 
   /**
@@ -4475,9 +4578,30 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     if (activityBranching) {
+      if (activityGuide != null && !freeSearch && annotation != null) {
+        int lit = guideDecision();
+        if (lit != 0) {
+          guideDecisions++;
+          return lit;
+        }
+      }
       return activityDecision();
     }
     return 0;
+  }
+
+  /** The next decision of the selection that starts the activity runs, or 0 when it has none. */
+  private int guideDecision() {
+    Var v = activityGuide.getChoiceVariable(0);
+    if (v == null) {
+      return 0;
+    }
+    int i = idOf(v);
+    if (i < 0 || vars[i].singleton()) {
+      return 0;
+    }
+    int value = activityGuide.getChoiceValue();
+    return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
   }
 
   /**
