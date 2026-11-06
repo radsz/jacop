@@ -2005,6 +2005,35 @@ Version 5.0 (unreleased)
      157 -> 158, 5 families better and 4 worse; default 164 -> 164, 1
      better and 6 worse, all by small objective differences at the
      time limit.
+     
+133. Under fixed search with --lcg (a search annotation, no -f), the
+     core-guided phase of -f runs when branch and bound under the
+     annotation has no solution after 15 % of the time, for 10 % of it;
+     with a solution, the run goes on as before. unit-commitment L12 had
+     no solution under its annotation in 60 s, while the cores'
+     assumptions find one in seconds. --free-config fixed-core=<share>
+     (0 = off) and fixed-core-delay=<share> set the shares. Running the
+     phase under fixed search from the start instead lost proofs
+     (city-position, triangular). Wide set (220, 60 s, both
+     configurations at once): solved 153 to 156, 23 better / 22 worse,
+     gap 0.144 to 0.142; unit-commitment no solution to 5,150,745,
+     flowshop-workers 5stat_ex6 no solution to OPT in 5.9 s; ptv
+     20_2b/20_3b lose their proofs and stable-goods s-d19 its solution.
+
+134. Large neighbourhood search gets two routing neighbourhoods over the
+     vehicle routes of a Routes structure: ROUTES removes the customers
+     of whole routes near each other, RELATED removes customers close to
+     each other by the cost of their arcs in the objective (Shaw
+     removal); the run relaxes the arcs at the removed customers and the
+     loads of the routes they were on, and reinserts them. AdaptiveLns
+     finds imposed Routes constraints, and addRoutes(Routes) gives routes
+     that are not imposed. Under -f the FlatZinc front end now runs the
+     vrp detector and gives the routes it finds to LNS even though the
+     Routes constraint stays off; --free-config lns-routes=0 turns this
+     off. On the 25 Challenge vrp instances (-f, 60 s, three seeds) the
+     mean gap to the best solution found falls from 7.0 % to 2.7 %
+     (17 / 5 better / worse by median objective). No wide-set instance
+     has these routes; its -f round is level (147 to 147 solved).
 
 Version 4.11
 =============
