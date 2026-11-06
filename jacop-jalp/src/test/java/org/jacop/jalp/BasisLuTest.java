@@ -118,6 +118,7 @@ class BasisLuTest {
   void hypersparseSolvesMatchDenseSolvesThroughUpdates() {
     Random rnd = new Random(11);
     int hyperSolves = 0;
+    int flipHyperSolves = 0;
     for (int run = 0; run < 30; run++) {
       int m = 200 + rnd.nextInt(200);
       int[][] idx = new int[m][];
@@ -159,6 +160,17 @@ class BasisLuTest {
         dense.ftran(d, td);
         int tn = sparse.ftran(s, si, xn, ts, yi, false);
         assertSame(td, ts, yi, tn, what + " ftran");
+        // the ftran of bound flips, with its own history
+        d = new double[m];
+        s = new double[m];
+        td = new double[m];
+        ts = new double[m];
+        xn = rhs(rnd, m, d, s, si);
+        dense.ftran(d, td);
+        tn = sparse.ftranFlips(s, si, xn, ts, yi);
+        assertSame(td, ts, yi, tn, what + " ftranFlips");
+        assertZero(s, what + " ftranFlips rhs");
+        flipHyperSolves += tn < m / 10 ? 1 : 0;
         // replace a position whose entry in the solved column is not small
         int r = -1;
         for (int k = 0; k < m && r < 0; k++) {
@@ -180,5 +192,6 @@ class BasisLuTest {
     }
     // the searches ran on most of the solves
     assertThat(hyperSolves).isGreaterThan(500);
+    assertThat(flipHyperSolves).isGreaterThan(500);
   }
 }

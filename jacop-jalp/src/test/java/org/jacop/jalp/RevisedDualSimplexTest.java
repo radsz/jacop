@@ -335,6 +335,28 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void givenDualsHaveNoPerturbation() {
+    // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{0, 1, 2}, {1, 2}, {1, 2}},
+            new double[][] {{1, -1, -1}, {1, 1}, {1, -1}},
+            new double[] {0, 3, -inf},
+            new double[] {inf, inf, 1},
+            new double[] {1, 0, 0},
+            true);
+    for (int j = 0; j < 3; j++) {
+      lp.setBounds(j, 0, 10);
+    }
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    // + 0.0 turns -0.0 into 0.0
+    assertThat(java.util.Arrays.stream(lp.givenDuals()).map(v -> v + 0.0).toArray())
+        .containsExactly(1, 1, 0);
+    assertThat(lp.duals()[0]).isNotEqualTo(1.0);
+  }
+
+  @Test
   void randomLpsAreAnsweredWithCertificates() {
     Random rnd = new Random(3);
     int[] counts = new int[4];
@@ -349,6 +371,39 @@ class RevisedDualSimplexTest {
     assertThat(counts[RevisedDualSimplex.OPTIMAL]).as(found).isGreaterThan(runs / 10);
     assertThat(counts[RevisedDualSimplex.INFEASIBLE]).as(found).isGreaterThan(runs / 10);
     assertThat(counts[RevisedDualSimplex.UNBOUNDED]).as(found).isGreaterThan(runs / 20);
+  }
+
+  @Test
+  void crashBasesAgreeWithTheSlackBasis() {
+    Random rnd = new Random(11);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
+    int crashed = 0;
+    for (int run = 0; run < runs; run++) {
+      boolean scale = rnd.nextBoolean();
+      int m = 1 + rnd.nextInt(12);
+      int n = 1 + rnd.nextInt(14);
+      Lp p = new Lp(rnd, m, n, 0.4, rnd.nextInt(3));
+      RevisedDualSimplex slack = p.simplex(scale);
+      slack.setCrash(-1);
+      int status = solveAndCheck(p, slack, scale, "run " + run + " slack basis");
+      assertThat(slack.crashed()).isZero();
+      for (int rows = 0; rows <= 2; rows++) {
+        String what = "run " + run + " crash " + rows;
+        RevisedDualSimplex lp = p.simplex(scale);
+        lp.setCrash(rows);
+        assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
+        crashed += lp.crashed() > 0 ? 1 : 0;
+        if (status == RevisedDualSimplex.OPTIMAL) {
+          assertThat(lp.objective())
+              .as(what)
+              .isCloseTo(
+                  slack.objective(),
+                  org.assertj.core.data.Offset.offset(
+                      objectiveTolerance(scale) * (1 + Math.abs(slack.objective()))));
+        }
+      }
+    }
+    assertThat(crashed).isGreaterThan(runs);
   }
 
   @Test

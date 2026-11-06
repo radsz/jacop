@@ -148,6 +148,9 @@ import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.Reservoir;
@@ -444,7 +447,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(22)) {
+      return switch (rnd.nextInt(26)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -502,6 +505,29 @@ class LcgFuzzTest {
                 1,
                 rnd.nextBoolean() ? null : pick(b, 3));
         case 20 -> routes();
+        case 21 ->
+            new CumulativeOptional(
+                p, constants(3, 1, 3), constants(3, 1, 2), constant(2), pick(b, 3));
+        case 22 ->
+            new CumulativeUnaryOptional(
+                p, constants(3, 1, 3), constants(3, 1, 1), constant(1), pick(b, 3));
+        case 23 -> {
+          // optional tasks as uses 0..1 of a unary resource, with the rules over optional tasks
+          CumulativeUnary unary =
+              new CumulativeUnary(p, constants(3, 1, 3), pick(b, 3), constant(1), true, true);
+          unary.setOptionalRules(rnd.nextBoolean());
+          yield unary;
+        }
+        case 24 ->
+            new Reservoir(
+                p,
+                new int[] {rnd.nextInt(5) - 2, rnd.nextInt(5) - 2, rnd.nextInt(5) - 2},
+                rnd.nextInt(2),
+                0,
+                2,
+                new IntVar[] {p[0]},
+                new IntVar[] {p[1 + rnd.nextInt(2)]},
+                new int[] {rnd.nextInt(3) - 1});
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
