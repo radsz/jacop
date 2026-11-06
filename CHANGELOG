@@ -2554,6 +2554,18 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
+164. The XorSystem detector also reads tables (jacop_table_int,
+     jacop_table_bool and short tables): the parity constraints a table
+     implies on its 0/1 variables, the equations of the affine hull over
+     GF(2) of its tuples allowed by the domains, become rows of the
+     system. A table that is an XOR gives its row, a table whose tuples
+     span every 0/1 point gives nothing. On the MiniZinc Challenge and
+     XCSP3 benchmarks no table builds a system: the cryptanalysis models
+     (PRESENT difference table, a + b + c != 1 truncated XORs of AES)
+     span the whole space, and code-generator, is and Nonogram imply only
+     isolated 2-variable rows. XCSP3 2025 Cryptanalysis gets systems from
+     its bool_xor (8 per instance) with no change in time or answers.
+
 Version 4.11
 =============
 
