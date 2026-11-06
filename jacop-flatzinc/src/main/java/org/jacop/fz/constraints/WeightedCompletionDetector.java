@@ -127,7 +127,36 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
   private final List<Resource> resources = new ArrayList<>();
 
   // tasks of a resource: start, duration (its minimum is used), use and capacity (1 if unary)
-  private record Resource(IntVar[] starts, IntVar[] durations, int[] uses, int capacity) {}
+  // a class, not a record: a record compares array components by reference (Sonar S6218)
+  private static final class Resource {
+    private final IntVar[] starts;
+    private final IntVar[] durations;
+    private final int[] uses;
+    private final int capacity;
+
+    Resource(IntVar[] starts, IntVar[] durations, int[] uses, int capacity) {
+      this.starts = starts;
+      this.durations = durations;
+      this.uses = uses;
+      this.capacity = capacity;
+    }
+
+    IntVar[] starts() {
+      return starts;
+    }
+
+    IntVar[] durations() {
+      return durations;
+    }
+
+    int[] uses() {
+      return uses;
+    }
+
+    int capacity() {
+      return capacity;
+    }
+  }
 
   private final List<ASTConstElem> linears = new ArrayList<>();
 
