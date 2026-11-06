@@ -57,8 +57,9 @@ import org.jacop.util.IntLattice;
  * for each variable x_j the congruence x_j ≡ x0_j (mod g_j), where g_j is the GCD of the j-th
  * coordinates of the lattice basis, and g_j = 0 fixes x_j. Bounds propagation of the single
  * equalities sees neither. Then the equalities set aside give their defined variable the congruence
- * that the congruences of the other variables imply. Every congruence removes from the domain the
- * values outside its residue class.
+ * that the congruences of the other variables imply. A congruence removes the values outside its
+ * residue class from a domain of at most 256 values, and rounds the bounds of a larger domain into
+ * the class.
  *
  * <p>Optionally, a component is reformulated as Aardal, Hurkens and Lenstra do for market split
  * problems ("Solving a system of linear Diophantine equations with lower and upper bounds on the
@@ -85,8 +86,12 @@ public final class LinearEqualities {
    */
   public record Row(IntVar[] x, int[] a, int b) {}
 
-  /** Values of a residue class within the bounds above which only the bounds are tightened. */
-  private static final long MAX_CLASS_VALUES = 100_000;
+  /**
+   * Domain size above which a congruence only tightens the bounds. Every hole is one more interval
+   * in the domain, which slows each later domain operation, and a few far apart values of a large
+   * domain (a value or a big M) change the LP encodings and the search more than they prune.
+   */
+  private static final long MAX_HOLES_DOMAIN = 256;
 
   private final Store store;
 
@@ -431,6 +436,9 @@ public final class LinearEqualities {
 
   private void prune(IntVar x, long mod, long res) {
     int before = x.getSize();
+    if (Boolean.getBoolean("tmp.lattice")) {
+      System.err.println("PRUNE " + x + " mod " + mod + " res " + res);
+    }
     if (mod == 0) {
       if (res < x.min() || res > x.max()) {
         throw Store.failException;
@@ -442,9 +450,8 @@ public final class LinearEqualities {
       if (first > last) {
         throw Store.failException;
       }
-      long count = (last - first) / mod + 1;
-      if (count <= MAX_CLASS_VALUES) {
-        IntervalDomain d = new IntervalDomain((int) count + 1);
+      if (before <= MAX_HOLES_DOMAIN) {
+        IntervalDomain d = new IntervalDomain((int) ((last - first) / mod) + 2);
         for (long v = first; v <= last; v += mod) {
           d.unionAdapt((int) v, (int) v);
         }

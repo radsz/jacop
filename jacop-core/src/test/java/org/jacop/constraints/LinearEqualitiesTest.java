@@ -76,6 +76,19 @@ class LinearEqualitiesTest {
     assertThat(le.prunedValues).isEqualTo(11);
   }
 
+  // a congruence on a large domain only rounds its bounds: thousands of holes slow every later
+  // domain operation (connect__0086_02 went from 5 s to over 60 s)
+  @Test
+  void largeDomainKeepsOneInterval() {
+    Store store = new Store();
+    IntVar[] x = vars(store, 2, -10, 10);
+    IntVar z = new IntVar(store, "z", 1, 100_000);
+    LinearEqualities le = new LinearEqualities(store);
+    le.apply(
+        List.of(new LinearEqualities.Row(new IntVar[] {x[0], x[1], z}, new int[] {30, 60, -1}, 0)));
+    assertThat(z.dom().toString()).isEqualTo("{30..99990}");
+  }
+
   // x + y = 1 and x - y = 0 have a rational solution only
   @Test
   void rationalOnlySystemFails() {
