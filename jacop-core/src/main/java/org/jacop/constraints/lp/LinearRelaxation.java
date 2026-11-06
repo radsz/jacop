@@ -30,6 +30,7 @@
 
 package org.jacop.constraints.lp;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -661,10 +662,72 @@ public class LinearRelaxation extends Constraint
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
     // can take a minute and then drop them all)
-    fitsSimplex(forms, candidates, simplex, auto, exempt, further);
+    if (!fitsSimplex(forms, candidates, simplex, auto, exempt, further) && objective != null) {
+      // not all fit: after the value encodings, the rows nearest to the objective first, since rows
+      // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
+      // of the rows of the objective, give the whole bound, and in model order they came too late
+      // to fit)
+      further.clear();
+      List<LinearForm> sorted = new ArrayList<>(candidates.subList(0, exempt));
+      sorted.addAll(byDistance(forms, candidates.subList(exempt, candidates.size()), objective));
+      fitsSimplex(forms, sorted, simplex, auto, exempt, further);
+    }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  /**
+   * Returns the candidates ordered by their distance from the objective (stable): a row over the
+   * objective has distance 0, a row over a variable of a row at distance d has distance d + 1,
+   * through the given rows and the candidates; rows not connected to the objective come last.
+   */
+  static List<LinearForm> byDistance(
+      List<LinearForm> forms, List<LinearForm> candidates, IntVar objective) {
+    List<LinearForm> all = new ArrayList<>(forms.size() + candidates.size());
+    all.addAll(forms);
+    all.addAll(candidates);
+    Map<IntVar, List<Integer>> rowsOf = new IdentityHashMap<>();
+    for (int i = 0; i < all.size(); i++) {
+      for (IntVar v : all.get(i).vars()) {
+        rowsOf.computeIfAbsent(v, k -> new ArrayList<>()).add(i);
+      }
+    }
+    int[] distance = new int[all.size()];
+    Arrays.fill(distance, Integer.MAX_VALUE);
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    ArrayDeque<IntVar> queue = new ArrayDeque<>();
+    Map<IntVar, Integer> depth = new IdentityHashMap<>();
+    seen.add(objective);
+    depth.put(objective, 0);
+    queue.add(objective);
+    while (!queue.isEmpty()) {
+      IntVar v = queue.poll();
+      int d = depth.get(v);
+      for (int i : rowsOf.getOrDefault(v, List.of())) {
+        if (distance[i] != Integer.MAX_VALUE) {
+          continue;
+        }
+        distance[i] = d;
+        for (IntVar u : all.get(i).vars()) {
+          if (seen.add(u)) {
+            depth.put(u, d + 1);
+            queue.add(u);
+          }
+        }
+      }
+    }
+    Integer[] order = new Integer[candidates.size()];
+    for (int i = 0; i < order.length; i++) {
+      order[i] = i;
+    }
+    int offset = forms.size();
+    Arrays.sort(order, Comparator.comparingInt(i -> distance[offset + i]));
+    List<LinearForm> sorted = new ArrayList<>(order.length);
+    for (int i : order) {
+      sorted.add(candidates.get(i));
+    }
+    return sorted;
   }
 
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
