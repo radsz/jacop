@@ -2130,6 +2130,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setFixedRestarts(
           LcgSolver.FixedRestarts.valueOf(restarts.toUpperCase(Locale.ROOT)),
           "solution".equals(from));
+      // the core-guided phase of free search, but only when the annotation has no solution after
+      // fixed-core-delay of the time: unit-commitment L12 has none under its annotation in 60 s,
+      // while the cores' assumptions find one in seconds. With a solution the annotation keeps the
+      // time: core-guided search from the start lost the proofs of city-position and triangular.
+      double fixedCore = Double.parseDouble(options.freeConfig("fixed-core", "0.1"));
+      if (fixedCore > 0) {
+        lcg.setCoreSearch(
+            fixedCore, 100_000, Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
+        lcg.setCoreDelay(
+            Double.parseDouble(options.freeConfig("fixed-core-delay", "0.15")), 10_000, 0);
+        lcg.setCoresWithoutSolutionOnly(true);
+      }
     }
     if (options.getTimeOut() > 0) {
       // the time-out covers the whole run: reading and setting up the model took part of it
