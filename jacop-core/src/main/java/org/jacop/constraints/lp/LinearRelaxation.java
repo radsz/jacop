@@ -120,6 +120,12 @@ public class LinearRelaxation extends Constraint
   // variable of the store, and whether there is any
   private final boolean[] lpOnly;
   private final boolean anyLpOnly;
+  // whether the relaxation holds the all-different-except encodings over auxiliary columns, which
+  // are the relaxation itself and are never dropped (the other encodings are extra rows like any)
+  private boolean keepEncodings;
+  // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
+  // are tried without them when all of them are not kept
+  private int plainExtra = Integer.MAX_VALUE;
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -224,9 +230,17 @@ public class LinearRelaxation extends Constraint
   private final List<IntVar> deducedVar = new ArrayList<>();
   private final List<LinearForm> deducedForm = new ArrayList<>();
   private final List<Integer> deducedLevel = new ArrayList<>();
+  // the auxiliary columns that the form of a deduction leaves at a bound the domain of their
+  // variable gives: j when [x = v] is 0 as v is not in the domain of x, ~j when it is 1 as x is v;
+  // the form holds only with these facts, which its explanation adds (null when there are none)
+  private final List<int[]> deducedFacts = new ArrayList<>();
 
-  // the form propagated when the last failure happened
+  // the form propagated when the last failure happened, and its facts
   private LinearForm failureForm;
+  private int[] failureFacts;
+
+  // the facts of the two inequalities of the last combine(): upper, lower
+  private final int[][] combineFacts = new int[2][];
 
   /**
    * How a deduction of a relaxation built for a proof ({@link #ofModel}) follows from the model:
@@ -414,6 +428,53 @@ public class LinearRelaxation extends Constraint
   // that moment, which hold for the whole search
   private boolean cutsTried;
 
+  // restarts, with org.jacop.lp.restartSolves=true: the relaxation is solved again at the level of
+  // its first solve whenever the bound of the objective has improved since the last solve there,
+  // with the root budget and, unless org.jacop.lp.restartCuts=false, new cut rounds over the bounds
+  // of the first solve; what it deduces there holds for the rest of the search. Off by default:
+  // on the wide set (220, 60 s) it was neutral under -f and cost the proof of ATSP instance10 in
+  // the default mode (LP time 0.4 s to 3.8 s), while the root reduced costs alone gain the same
+  // not final, so that tests can switch it on
+  static boolean restartSolvesOn = "true".equals(System.getProperty("org.jacop.lp.restartSolves"));
+  private static final boolean RESTART_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.restartCuts"));
+  private int rootLevel = -1;
+  private long rootObjective;
+  private boolean restarting;
+  private long[] rootLo;
+  private long[] rootHi;
+
+  /** Statistics: solves at the root level after the bound of the objective improved. */
+  public long restartSolves;
+
+  // root reduced-cost fixing (SCIP's prop_rootredcost): the inequalities of the duals of the last
+  // optimal solve at the root level are combinations of the rows, so they hold in the whole search;
+  // propagated again at the root level whenever the bound of the objective has improved, they fix
+  // the columns whose reduced cost no longer fits in the gap. Only there: propagated at every call
+  // they cost more than they prune (bus_scheduling, osolpro #169)
+  private static final boolean ROOT_REDUCED_COSTS =
+      !"false".equals(System.getProperty("org.jacop.lp.rootReducedCosts"));
+  private LinearForm[] rootForms = new LinearForm[0];
+  // the certificate of each root form, for a proof, or null
+  private Certificate[] rootCertificates = new Certificate[0];
+  private long[] solvedLo;
+  private long[] solvedHi;
+
+  // the simplex at the optimum of the last solve at the root level, with as many rows as it had
+  // then: a solve at a restart starts from its basis instead of the one search left, which is far
+  // from the root (table-layout: a restart solve took as long as the first one)
+  private static final boolean RESTART_FROM_ROOT =
+      !"false".equals(System.getProperty("org.jacop.lp.restartFromRoot"));
+  private int restartPeriod = 1;
+  private int restartsWaited;
+  private LpSolver rootSimplex;
+  private int rootSimplexRows;
+  // the model row of each simplex row of that copy: the row pool may have swapped rows since
+  private int[] rootSimplexLpRows;
+
+  /** Statistics: bounds tightened by the root reduced costs at restarts. */
+  public long rootPrunings;
+
   /**
    * Creates the relaxation of linear forms.
    *
@@ -588,8 +649,13 @@ public class LinearRelaxation extends Constraint
       baseCount = m;
     }
     queueIndex = 4;
-    // the auxiliary columns are not variables of the store: nothing to watch or prune there
-    setScope(Arrays.stream(x).filter(v -> !(v instanceof LpColumn)).map(v -> (Var) v));
+    // the auxiliary columns are not variables of the store: their variables are in the scope, as
+    // the bounds of a column in the simplex come from the domain of its variable
+    setScope(
+        Arrays.stream(x)
+            .map(v -> v instanceof LpColumn c ? c.variable() : v)
+            .distinct()
+            .map(v -> (Var) v));
   }
 
   // the sparse simplex, JaLP's
@@ -722,7 +788,11 @@ public class LinearRelaxation extends Constraint
     // the value encodings over auxiliary columns come first, so that a size cap leaves out other
     // rows before them; they are many rows by nature (a row per value and constraint) and are not
     // held to the trial cap of the sparse simplex chosen by size
-    List<LinearForm> columnRows = LINEARIZE ? Linearizations.valueColumns(constraints) : List.of();
+    Linearizations.ValueRows valueRows =
+        LINEARIZE
+            ? Linearizations.valueRows(constraints, extra)
+            : new Linearizations.ValueRows(List.of(), List.of());
+    List<LinearForm> columnRows = valueRows.kept();
     List<LinearForm> candidates = new ArrayList<>();
     int exempt = 0;
     for (LinearForm f : columnRows) {
@@ -733,13 +803,19 @@ public class LinearRelaxation extends Constraint
     }
     // the rows of the other constraints; rows over a variable that was substituted away are left
     // out
-    for (LinearForm f : relaxed) {
-      if (f.relation() != LinearForm.NE
-          && f.vars().length >= 2
-          && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
-        candidates.add(f);
+    // the value encodings of the counting, all-different and element constraints come last: they
+    // are tried at the first solve like the other rows, and kept only when they help
+    for (List<LinearForm> rows : List.of(relaxed, valueRows.tried())) {
+      for (LinearForm f : rows) {
+        if (f.relation() != LinearForm.NE
+            && f.vars().length >= 2
+            && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
+          candidates.add(f);
+        }
       }
     }
+    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
+    tried.addAll(valueRows.tried());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
     if (auto && !sparseTakes(forms)) {
       // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
@@ -772,17 +848,40 @@ public class LinearRelaxation extends Constraint
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
       // of the rows of the objective, give the whole bound, and in model order they came too late
-      // to fit)
+      // to fit); the tried value encodings stay after the other rows, since the retry without them
+      // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = new ArrayList<>(candidates.subList(0, exempt));
-      sorted.addAll(byDistance(forms, candidates.subList(exempt, candidates.size()), objective));
+      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, tried, objective);
       fitsSimplex(forms, sorted, simplex, auto, exempt, further);
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
+    r.keepEncodings = exempt > 0;
+    r.plainExtra = (int) r.extraForms.stream().filter(f -> !tried.contains(f)).count();
     r.pairCliques = pairCliques;
     r.capacity = separations;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  /**
+   * Returns the candidates in the order they are fitted when not all fit: the first exempt ones as
+   * they are, then the others by their distance from the objective, the tried ones last.
+   */
+  static List<LinearForm> fitOrder(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      int exempt,
+      Set<LinearForm> tried,
+      IntVar objective) {
+    List<LinearForm> plainRows = new ArrayList<>();
+    List<LinearForm> triedRows = new ArrayList<>();
+    for (LinearForm f : candidates.subList(exempt, candidates.size())) {
+      (tried.contains(f) ? triedRows : plainRows).add(f);
+    }
+    List<LinearForm> sorted = new ArrayList<>(candidates.subList(0, exempt));
+    sorted.addAll(byDistance(forms, plainRows, objective));
+    sorted.addAll(byDistance(forms, triedRows, objective));
+    return sorted;
   }
 
   /**
@@ -1342,6 +1441,25 @@ public class LinearRelaxation extends Constraint
     if (suspended) {
       return;
     }
+    if (rootLevel < 0) {
+      rootLevel = store.level;
+      rootObjective = objectiveBound();
+    } else if (store.level <= rootLevel && objectiveBound() != rootObjective) {
+      rootObjective = objectiveBound();
+      if (ROOT_REDUCED_COSTS) {
+        long pruned = prunings;
+        for (int k = 0; k < rootForms.length; k++) {
+          propagate(store, rootForms[k], rootCertificates[k]);
+        }
+        rootPrunings += prunings - pruned;
+      }
+      if (restartSolvesOn && rootBoundsChanged() && ++restartsWaited >= restartPeriod) {
+        restartsWaited = 0;
+        restartSolve(store);
+        checkGround();
+        return;
+      }
+    }
     credit = Math.min(credit + WORK_PER_CALL, WORK);
     if (++tick < period || credit < 0 || stalled >= IDLE_RUNS) {
       return;
@@ -1355,6 +1473,9 @@ public class LinearRelaxation extends Constraint
     long started = System.nanoTime();
     try {
       solveAndPropagate(store);
+      if (first) {
+        rememberRootBounds();
+      }
     } finally {
       solveNanos += System.nanoTime() - started;
       long cost =
@@ -1384,6 +1505,73 @@ public class LinearRelaxation extends Constraint
       }
     }
     checkGround();
+  }
+
+  // whether the bounds of a column other than the objective are tighter than at the last solve at
+  // the root level: with only the bound of the objective changed, a solve again finds the same
+  // optimum (or its infeasibility, which the root reduced costs already prove) and the same cuts
+  // (physician-scheduling: 40 to 50 restart solves, up to 20 s, no pruning)
+  private boolean rootBoundsChanged() {
+    if (solvedLo == null) {
+      return true;
+    }
+    for (int j = objective == null ? 0 : 1; j < x.length; j++) {
+      if (x[j].min() > solvedLo[j] || x[j].max() < solvedHi[j]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // the bounds of the columns at the last optimal solve at the root level
+  private void rememberRootBounds() {
+    if (solvedLo == null) {
+      solvedLo = new long[x.length];
+      solvedHi = new long[x.length];
+    }
+    for (int j = 0; j < x.length; j++) {
+      solvedLo[j] = x[j].min();
+      solvedHi[j] = x[j].max();
+    }
+  }
+
+  // the bound of the objective that improves with each solution, or 0 without an objective
+  private long objectiveBound() {
+    if (objective == null) {
+      return 0;
+    }
+    return maximize ? objective.min() : objective.max();
+  }
+
+  /**
+   * Solves the relaxation at the root level again, after the bound of the objective improved (a
+   * restart, or new solutions before the search left the root): with the root budget, and with new
+   * cut rounds over the bounds of the first solve, so that the cuts stay global.
+   */
+  private void restartSolve(Store store) {
+    restartSolves++;
+    long started = System.nanoTime();
+    long pruned = prunings;
+    restarting = true;
+    if (rootSimplex != null
+        && rootSimplexRows == rows()
+        && Arrays.equals(rootSimplexLpRows, lpRow)) {
+      droppedPivots += lp.pivots() - rootSimplex.pivots();
+      lp = rootSimplex;
+      rootSimplex = null;
+    }
+    try {
+      solveAndPropagate(store);
+      // also after a solve stopped at its limit: the next one waits for other bounds to change
+      rememberRootBounds();
+      // a solve that deduces nothing makes the next one wait for twice as many restarts
+      // (physician-scheduling: 47 restart solves took 23 s and pruned nothing)
+      restartPeriod = prunings > pruned ? 1 : Math.min(restartPeriod * 2, 1 << 20);
+    } finally {
+      restarting = false;
+      solveNanos += System.nanoTime() - started;
+      scanned = 0;
+    }
   }
 
   // fails when every variable is fixed and a row does not hold
@@ -1416,6 +1604,7 @@ public class LinearRelaxation extends Constraint
           w[k] = above ? ws[k] : -ws[k];
         }
         failureForm = new LinearForm(vars, w, above ? rowHi[i] : -rowLo[i], LinearForm.LE);
+        failureFacts = null;
         failureCertificate =
             rowSource == null
                 ? null
@@ -1424,6 +1613,20 @@ public class LinearRelaxation extends Constraint
         failures++;
         throw Store.failException;
       }
+    }
+  }
+
+  // the bounds of column j: those of its variable, or for an auxiliary column [x = v] 0 when v is
+  // not in the domain of x and 1 when x is v; the certificates take these bounds, and explain them
+  // by the facts x != v and x = v
+  private void setBounds(LpSolver solver, int j) {
+    if (lpOnly[j]) {
+      LpColumn c = (LpColumn) x[j];
+      IntVar v = c.variable();
+      int value = c.value();
+      solver.setBounds(j, v.singleton(value) ? 1 : 0, v.domain.contains(value) ? 1 : 0);
+    } else {
+      solver.setBounds(j, x[j].min(), x[j].max());
     }
   }
 
@@ -1453,9 +1656,17 @@ public class LinearRelaxation extends Constraint
       sentMax = new int[n];
     }
     for (int j = 0; j < n; j++) {
-      IntVar v = x[j];
-      int min = v.min();
-      int max = v.max();
+      int min;
+      int max;
+      if (lpOnly[j]) {
+        // an auxiliary column [x = v]: 0 when v is not in the domain of x, 1 when x is v
+        LpColumn c = (LpColumn) x[j];
+        min = c.variable().singleton(c.value()) ? 1 : 0;
+        max = c.variable().domain.contains(c.value()) ? 1 : 0;
+      } else {
+        min = x[j].min();
+        max = x[j].max();
+      }
       if (all || min != sentMin[j] || max != sentMax[j]) {
         sentMin[j] = min;
         sentMax[j] = max;
@@ -1476,7 +1687,7 @@ public class LinearRelaxation extends Constraint
     }
     sendBounds();
     long size = Math.max(1, lp.pivotWork());
-    if (beforeExtra != null && bySize && !anyLpOnly) {
+    if (beforeExtra != null && bySize && !keepEncodings) {
       // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense
       // tableau they would make, as before the choice: a sparse work unit takes two to four times
       // a dense entry, and the sparse limit alone keeps rows that slow every solve (slnb7x7)
@@ -1486,11 +1697,13 @@ public class LinearRelaxation extends Constraint
       }
     }
     int limit =
-        calls == 1
+        calls == 1 || restarting
             ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
     int status =
-        calls == 1 && simplex != Simplex.LAZY ? rootSolve(lp, limit, rootWork()) : solvePool(limit);
+        (calls == 1 || restarting) && simplex != Simplex.LAZY
+            ? rootSolve(lp, limit, rootWork())
+            : solvePool(limit);
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
     if (calls == 1 && extraColumns.length > 0) {
@@ -1499,8 +1712,7 @@ public class LinearRelaxation extends Constraint
     if (status == DualSimplex.OPTIMAL
         && objective != null
         && CUTS_ENABLED
-        && !cutsTried
-        && calls == 1) {
+        && (!cutsTried && calls == 1 || restarting && RESTART_CUTS && rootLo != null)) {
       cutsTried = true;
       status = cutRounds();
     }
@@ -1521,7 +1733,7 @@ public class LinearRelaxation extends Constraint
       // the value encodings over auxiliary columns are the relaxation: without them it is the
       // model's few linear rows, so they stay, and the back-off of the solves bounds their cost
       if (beforeExtra != null
-          && !anyLpOnly
+          && !keepEncodings
           && extraHits >= EXTRA_LIMITS
           && extraHits * 20 > calls
           && calls >= 20L * EXTRA_LIMITS) {
@@ -1561,10 +1773,28 @@ public class LinearRelaxation extends Constraint
       if (lambda == null) {
         return;
       }
+      int[][] facts = new int[2][];
       long[][] used = new long[2][];
-      LinearForm[] forms = certificate(lambda, used);
+      LinearForm[] forms = certificate(lambda, facts, used);
       if (forms == null) {
         continue; // the combination overflows: try a smaller scale
+      }
+      if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
+        List<LinearForm> kept = new ArrayList<>();
+        List<Certificate> keptCertificates = new ArrayList<>();
+        for (int k = 0; k < forms.length; k++) {
+          if (forms[k] != null) {
+            kept.add(forms[k]);
+            keptCertificates.add(certified(forms[k], used[k], k == 0));
+          }
+        }
+        rootForms = kept.toArray(new LinearForm[0]);
+        rootCertificates = keptCertificates.toArray(new Certificate[0]);
+        if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
+          rootSimplex = lp.copy();
+          rootSimplexRows = rows();
+          rootSimplexLpRows = lpRow.clone();
+        }
       }
       boolean fits = true;
       for (LinearForm f : forms) {
@@ -1573,7 +1803,7 @@ public class LinearRelaxation extends Constraint
       if (fits || s == SCALES.length - 1) {
         for (int k = 0; k < forms.length; k++) {
           if (forms[k] != null) {
-            propagate(store, forms[k], certified(forms[k], used[k], k == 0));
+            propagate(store, forms[k], facts[k], certified(forms[k], used[k], k == 0));
           }
         }
         if (status != LpSolver.INFEASIBLE) {
@@ -1641,18 +1871,17 @@ public class LinearRelaxation extends Constraint
    * common divisor of its weights with its side rounded down, which holds as every column is an
    * integer. Null when a combination overflows. The multipliers of each inequality go to used.
    */
-  private LinearForm[] certificate(long[] lambda, long[][] used) {
+  private LinearForm[] certificate(long[] lambda, int[][] facts, long[][] used) {
     Aggregate g = aggregate(lambda);
     if (g == null) {
       return null;
     }
     used[0] = lambda;
     used[1] = lambda;
-    if (!CLEAN) {
-      return combine(g);
-    }
     LinearForm[] forms = combine(g);
-    if (forms.length == 0) {
+    facts[0] = combineFacts[0];
+    facts[1] = combineFacts[1];
+    if (!CLEAN || forms.length == 0) {
       return forms;
     }
     if (!g.hasUpper()) {
@@ -1663,6 +1892,7 @@ public class LinearRelaxation extends Constraint
       }
       LinearForm[] c = combine(u);
       forms[0] = c.length > 0 ? c[0] : null;
+      facts[0] = combineFacts[0];
     }
     if (!g.hasLower()) {
       used[1] = sided(lambda, false);
@@ -1672,6 +1902,7 @@ public class LinearRelaxation extends Constraint
       }
       LinearForm[] c = combine(l);
       forms[1] = c.length > 1 ? c[1] : null;
+      facts[1] = combineFacts[1];
     }
     for (int k = 0; k < forms.length && rowSource == null; k++) {
       forms[k] = forms[k] == null ? null : divided(forms[k]);
@@ -2124,6 +2355,8 @@ public class LinearRelaxation extends Constraint
     long upper = g.upper();
     long lower = g.lower();
     int size = 0;
+    int[] upperFacts = new int[0];
+    int[] lowerFacts = new int[0];
     try {
       for (int k = 0; k < columns.length; k++) {
         if (coef[k] == 0) {
@@ -2133,11 +2366,25 @@ public class LinearRelaxation extends Constraint
         if (lpOnly[j]) {
           // an auxiliary column leaves the inequality at the bound that keeps it valid: sum c x
           // <= upper gives sum_rest c x <= upper - min(c lo, c hi), and sum c x >= lower gives
-          // sum_rest c x >= lower - max(c lo, c hi)
-          long a = Math.multiplyExact(coef[k], (long) x[j].min());
-          long b = Math.multiplyExact(coef[k], (long) x[j].max());
+          // sum_rest c x >= lower - max(c lo, c hi); lo and hi are those of the simplex, from the
+          // domain of the column's variable
+          LpColumn column = (LpColumn) x[j];
+          IntVar v = column.variable();
+          int lo = v.singleton(column.value()) ? 1 : 0;
+          int hi = v.domain.contains(column.value()) ? 1 : 0;
+          long a = coef[k] * (long) lo;
+          long b = coef[k] * (long) hi;
           upper = Math.subtractExact(upper, Math.min(a, b));
           lower = Math.subtractExact(lower, Math.max(a, b));
+          // the upper side takes c lo for c > 0 and c hi for c < 0, the lower side the other one
+          boolean low = lo != 0;
+          boolean high = hi != 1;
+          if (coef[k] > 0 ? low : high) {
+            upperFacts = appended(upperFacts, low && coef[k] > 0 ? ~j : j);
+          }
+          if (coef[k] > 0 ? high : low) {
+            lowerFacts = appended(lowerFacts, high && coef[k] > 0 ? j : ~j);
+          }
         } else {
           size++;
         }
@@ -2145,9 +2392,8 @@ public class LinearRelaxation extends Constraint
     } catch (ArithmeticException overflow) {
       return new LinearForm[0];
     }
-    if (size == 0) {
-      return new LinearForm[0];
-    }
+    combineFacts[0] = upperFacts.length == 0 ? null : upperFacts;
+    combineFacts[1] = lowerFacts.length == 0 ? null : lowerFacts;
     IntVar[] vars = new IntVar[size];
     long[] w = new long[size];
     long[] neg = new long[size];
@@ -2176,20 +2422,26 @@ public class LinearRelaxation extends Constraint
    * @return the status of the last solve
    */
   private int cutRounds() {
-    rootBound = lp.value(0);
-    if (!capacity.isEmpty()) {
-      int status = capacityRounds();
-      if (status != DualSimplex.OPTIMAL) {
-        return status;
+    int n = lp.columns();
+    if (rootLo == null) {
+      rootBound = lp.value(0);
+      rootLo = new long[x.length];
+      rootHi = new long[x.length];
+      for (int j = 0; j < x.length; j++) {
+        rootLo[j] = x[j].min();
+        rootHi[j] = x[j].max();
+      }
+      // the capacity cuts are made once, at the first solve
+      if (!capacity.isEmpty()) {
+        int status = capacityRounds();
+        if (status != DualSimplex.OPTIMAL) {
+          return status;
+        }
       }
     }
-    int n = lp.columns();
-    long[] lo = new long[n];
-    long[] hi = new long[n];
-    for (int j = 0; j < n; j++) {
-      lo[j] = x[j].min();
-      hi[j] = x[j].max();
-    }
+    // the bounds of the first solve, which hold everywhere, also for the cuts made at restarts
+    long[] lo = Arrays.copyOf(rootLo, n);
+    long[] hi = Arrays.copyOf(rootHi, n);
     int original = rows();
     // the rows themselves, sorted once: each round then costs their length, not rows x columns
     Aggregate[] unitRows = new Aggregate[original];
@@ -2198,52 +2450,8 @@ public class LinearRelaxation extends Constraint
     }
     Set<List<Long>> seen = new HashSet<>();
     int status = DualSimplex.OPTIMAL;
-    double[] value = new double[n];
     for (int round = 0; round < CUT_ROUNDS; round++) {
-      for (int j = 0; j < n; j++) {
-        value[j] = lp.value(j);
-      }
-      List<MirCut> found = new ArrayList<>();
-      List<Integer> sources = new ArrayList<>();
-      for (int j = 0; j < n; j++) {
-        double f = value[j] - Math.floor(value[j]);
-        if (lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
-          sources.add(j);
-        }
-      }
-      sources.sort(
-          Comparator.comparingDouble(j -> Math.abs(value[j] - Math.floor(value[j]) - 0.5)));
-      for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
-        long[] lambda = scaled(byRow(lp.inverseRow(lp.basicRow(j))), GOMORY_SCALE);
-        if (lambda != null) {
-          if (slackGomory) {
-            slackGomory(lambda, value, lo, hi, found);
-          }
-          mir(aggregate(lambda), value, lo, hi, found);
-        }
-      }
-      for (int i = 0; i < original; i++) {
-        mir(unitRows[i], value, lo, hi, found);
-      }
-      found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
-      List<MirCut> chosen = new ArrayList<>();
-      for (MirCut c : found) {
-        long m = (long) lp.rows() + chosen.size() + 1;
-        if (chosen.size() >= CUTS_PER_ROUND
-            || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
-          break;
-        }
-        List<Long> key = new ArrayList<>();
-        for (int k = 0; k < c.columns.length; k++) {
-          key.add((long) c.columns[k]);
-          key.add(c.weights[k]);
-        }
-        key.add(c.rhs);
-        if (!seen.contains(key) && orthogonal(c, chosen)) {
-          seen.add(key);
-          chosen.add(c);
-        }
-      }
+      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen);
       if (chosen.isEmpty()) {
         break;
       }
@@ -2272,7 +2480,7 @@ public class LinearRelaxation extends Constraint
         break;
       }
     }
-    if (status == DualSimplex.OPTIMAL) {
+    if (status == DualSimplex.OPTIMAL && !restarting) {
       cutBound = lp.value(0);
     }
     return status;
@@ -2540,6 +2748,66 @@ public class LinearRelaxation extends Constraint
     return key;
   }
 
+  /**
+   * Returns the cuts of one round from the current solution of the simplex, without changing the
+   * rows or the simplex; {@link #addCuts(List)} installs them.
+   *
+   * @param lo the global lower bounds by column, of the first solve
+   * @param hi the global upper bounds by column, of the first solve
+   * @param unitRows the rows that are not cuts, as aggregates
+   * @param seen the cuts chosen in earlier rounds, as keys; the cuts chosen are added
+   * @return the cuts chosen, most efficacious first
+   */
+  private List<MirCut> separateCuts(
+      long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen) {
+    int n = lp.columns();
+    double[] value = new double[n];
+    for (int j = 0; j < n; j++) {
+      value[j] = lp.value(j);
+    }
+    List<MirCut> found = new ArrayList<>();
+    List<Integer> sources = new ArrayList<>();
+    for (int j = 0; j < n; j++) {
+      double f = value[j] - Math.floor(value[j]);
+      if (lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
+        sources.add(j);
+      }
+    }
+    sources.sort(Comparator.comparingDouble(j -> Math.abs(value[j] - Math.floor(value[j]) - 0.5)));
+    for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
+      long[] lambda = scaled(byRow(lp.inverseRow(lp.basicRow(j))), GOMORY_SCALE);
+      if (lambda != null) {
+        if (slackGomory) {
+          slackGomory(lambda, value, lo, hi, found);
+        }
+        mir(aggregate(lambda), value, lo, hi, found);
+      }
+    }
+    for (Aggregate row : unitRows) {
+      mir(row, value, lo, hi, found);
+    }
+    found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+    List<MirCut> chosen = new ArrayList<>();
+    for (MirCut c : found) {
+      long m = (long) lp.rows() + chosen.size() + 1;
+      if (chosen.size() >= CUTS_PER_ROUND
+          || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+        break;
+      }
+      List<Long> key = new ArrayList<>();
+      for (int k = 0; k < c.columns.length; k++) {
+        key.add((long) c.columns[k]);
+        key.add(c.weights[k]);
+      }
+      key.add(c.rhs);
+      if (!seen.contains(key) && orthogonal(c, chosen)) {
+        seen.add(key);
+        chosen.add(c);
+      }
+    }
+    return chosen;
+  }
+
   // whether the cut is far enough from parallel to each of the cuts chosen
   private static boolean orthogonal(MirCut c, List<MirCut> chosen) {
     for (MirCut o : chosen) {
@@ -2609,6 +2877,55 @@ public class LinearRelaxation extends Constraint
       baseBound = before;
     }
     int m = rows();
+    int plain = Math.min(plainExtra, k);
+    // the value encodings are many rows over many columns: they are kept only when they make the
+    // relaxation infeasible or raise its bound, not for being few
+    LpSolver full = trialRows(status, before, m, k, x.length, plain == k);
+    int last = k;
+    if (full == null && plain > 0 && plain < k) {
+      // the value encodings come last: without them, the other rows are judged as on their own
+      int n = lp.columns();
+      for (int q = 0; q < plain; q++) {
+        for (int j : extraColumns[q]) {
+          n = Math.max(n, j + 1);
+        }
+      }
+      full = trialRows(status, before, m, plain, n, true);
+      last = plain;
+      if (full != null) {
+        k = plain;
+        extraForms = new ArrayList<>(extraForms.subList(0, plain));
+      }
+    }
+    extraColumns = new int[0][];
+    extraWeights = new long[0][];
+    if (full != null) {
+      keptExtraForms = extraForms;
+      extraRows = k;
+      beforeExtra = lp;
+      baseRows = m;
+      extraLimits = limits;
+      extraCall = calls;
+      droppedPivots += lp.pivots();
+      lp = full;
+      allRowsInSimplex(m + k);
+      return trialStatus;
+    }
+    // the rows of the last trial are the m + last rows
+    poolExtraRows(m, last);
+    return status;
+  }
+
+  // the status of the last root solve of trialRows
+  private int trialStatus;
+
+  /**
+   * Solves the given rows and the first k extra rows over the first n columns at the root, and
+   * returns that simplex when the rows are kept, null otherwise (the rows are then m + k, to be
+   * truncated by the caller). With few, at most SMALL_EXTRA rows are kept even when the bound
+   * stays.
+   */
+  private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
     rowColumns = Arrays.copyOf(rowColumns, m + k);
     rowWeights = Arrays.copyOf(rowWeights, m + k);
     rowLo = Arrays.copyOf(rowLo, m + k);
@@ -2624,7 +2941,6 @@ public class LinearRelaxation extends Constraint
       rowLo[i] = extraSide[q];
       rowHi[i] = extraSide[q];
     }
-    int n = x.length;
     double[] lo = new double[m + k];
     double[] hi = new double[m + k];
     for (int i = 0; i < m + k; i++) {
@@ -2648,7 +2964,7 @@ public class LinearRelaxation extends Constraint
       full = sparse(sparseRows(m + k), doubles(m + k), lo, hi, cost);
     }
     for (int j = 0; j < n; j++) {
-      full.setBounds(j, x[j].min(), x[j].max());
+      setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
     int withExtra = rootSolve(full, Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
@@ -2662,26 +2978,15 @@ public class LinearRelaxation extends Constraint
           status != DualSimplex.OPTIMAL
               || !Double.isNaN(before)
                   && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
-      keep = raised || k <= SMALL_EXTRA;
+      keep = raised || few && k <= SMALL_EXTRA;
     }
     keep |= keepExtra;
-    extraColumns = new int[0][];
-    extraWeights = new long[0][];
     if (keep) {
-      keptExtraForms = extraForms;
-      extraRows = k;
-      beforeExtra = lp;
-      baseRows = m;
-      extraLimits = limits;
-      extraCall = calls;
-      droppedPivots += lp.pivots();
-      lp = full;
-      allRowsInSimplex(m + k);
-      return withExtra;
+      trialStatus = withExtra;
+      return full;
     }
     droppedPivots += full.pivots();
-    poolExtraRows(m, k);
-    return status;
+    return null;
   }
 
   // the rows of the other constraints after the first m rows, which the root trial did not keep:
@@ -2772,26 +3077,25 @@ public class LinearRelaxation extends Constraint
     cuts -= k;
   }
 
-  // appends the cuts as rows sum w x <= rhs, to the rows and to the simplex
+  // appends the cuts as rows sum w x <= rhs, to the rows and to the simplex; the row arrays are
+  // built whole and then swapped in, so a reader of the old arrays never sees a half-filled row
   private void addCuts(List<MirCut> chosen) {
     int m = rows();
     int k = chosen.size();
-    rowColumns = Arrays.copyOf(rowColumns, m + k);
-    rowWeights = Arrays.copyOf(rowWeights, m + k);
-    rowLo = Arrays.copyOf(rowLo, m + k);
-    rowHi = Arrays.copyOf(rowHi, m + k);
-    hasLo = Arrays.copyOf(hasLo, m + k);
-    hasHi = Arrays.copyOf(hasHi, m + k);
+    int[][] newColumns = Arrays.copyOf(rowColumns, m + k);
+    long[][] newWeights = Arrays.copyOf(rowWeights, m + k);
+    long[] newHi = Arrays.copyOf(rowHi, m + k);
+    boolean[] newHasHi = Arrays.copyOf(hasHi, m + k);
     int[][] cs = new int[k][];
     double[][] ws = new double[k][];
     double[] lo = new double[k];
     double[] hi = new double[k];
     for (int q = 0; q < k; q++) {
       MirCut c = chosen.get(q);
-      rowColumns[m + q] = c.columns;
-      rowWeights[m + q] = c.weights;
-      rowHi[m + q] = c.rhs;
-      hasHi[m + q] = true;
+      newColumns[m + q] = c.columns;
+      newWeights[m + q] = c.weights;
+      newHi[m + q] = c.rhs;
+      newHasHi[m + q] = true;
       cs[q] = c.columns;
       ws[q] = new double[c.weights.length];
       for (int t = 0; t < c.columns.length; t++) {
@@ -2800,6 +3104,12 @@ public class LinearRelaxation extends Constraint
       lo[q] = Double.NEGATIVE_INFINITY;
       hi[q] = (double) c.rhs;
     }
+    rowLo = Arrays.copyOf(rowLo, m + k);
+    hasLo = Arrays.copyOf(hasLo, m + k);
+    rowHi = newHi;
+    hasHi = newHasHi;
+    rowWeights = newWeights;
+    rowColumns = newColumns;
     // the cuts go into the simplex at once, as rows its solution breaks
     inLp = Arrays.copyOf(inLp, m + k);
     int l = lpRow.length;
@@ -2815,7 +3125,7 @@ public class LinearRelaxation extends Constraint
   }
 
   // bounds propagation of sum w x <= c, exact; nothing on overflow
-  private void propagate(Store store, LinearForm f, Certificate certificate) {
+  private void propagate(Store store, LinearForm f, int[] facts, Certificate certificate) {
     IntVar[] vars = f.vars();
     long[] w = f.weights();
     long c = f.c();
@@ -2830,6 +3140,7 @@ public class LinearRelaxation extends Constraint
       return;
     }
     failureForm = f;
+    failureFacts = facts;
     failureCertificate = certificate;
     if (smallest > c) {
       failures++;
@@ -2854,23 +3165,24 @@ public class LinearRelaxation extends Constraint
       if (wk > 0) {
         long bound = Math.floorDiv(limit, wk);
         if (bound < v.max()) {
-          record(store, v, f, certificate);
+          record(store, v, f, facts, certificate);
           v.domain.inMax(store.level, v, (int) Math.max(bound, v.min() - 1L));
         }
       } else {
         long bound = Math.ceilDiv(limit, wk);
         if (bound > v.min()) {
-          record(store, v, f, certificate);
+          record(store, v, f, facts, certificate);
           v.domain.inMin(store.level, v, (int) Math.min(bound, v.max() + 1L));
         }
       }
     }
   }
 
-  private void record(Store store, IntVar v, LinearForm f, Certificate certificate) {
+  private void record(Store store, IntVar v, LinearForm f, int[] facts, Certificate certificate) {
     prunings++;
     deducedVar.add(v);
     deducedForm.add(f);
+    deducedFacts.add(facts);
     deducedCertificate.add(certificate);
     deducedLevel.add(store.level);
   }
@@ -2883,6 +3195,7 @@ public class LinearRelaxation extends Constraint
     }
     deducedVar.subList(k, deducedVar.size()).clear();
     deducedForm.subList(k, deducedForm.size()).clear();
+    deducedFacts.subList(k, deducedFacts.size()).clear();
     deducedCertificate.subList(k, deducedCertificate.size()).clear();
     deducedLevel.subList(k, deducedLevel.size()).clear();
   }
@@ -2894,7 +3207,8 @@ public class LinearRelaxation extends Constraint
     lastCertificate = null;
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
       if (deducedVar.get(k) == v) {
-        if (deducedForm.get(k).explain(trail, entry, out)) {
+        if (deducedForm.get(k).explain(trail, entry, out)
+            && addFacts(trail, deducedFacts.get(k), entry, out)) {
           lastCertificate = deducedCertificate.get(k);
           return true;
         }
@@ -2907,19 +3221,46 @@ public class LinearRelaxation extends Constraint
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     lastCertificate = failureCertificate;
-    return failureForm != null && failureForm.explainFailure(trail, out);
+    return failureForm != null
+        && failureForm.explainFailure(trail, out)
+        && addFacts(trail, failureFacts, trail.size(), out);
+  }
+
+  private static int[] appended(int[] a, int v) {
+    int[] b = Arrays.copyOf(a, a.length + 1);
+    b[a.length] = v;
+    return b;
+  }
+
+  // adds the entries of the facts of a form just before a trail position: x != v, or x = v
+  private boolean addFacts(AtomicTrail trail, int[] facts, int position, EntryList out) {
+    if (facts == null) {
+      return true;
+    }
+    for (int f : facts) {
+      LpColumn c = (LpColumn) x[f >= 0 ? f : ~f];
+      if (f >= 0) {
+        if (!trail.excludedBefore(c.variable(), c.value(), position, out)) {
+          return false;
+        }
+      } else {
+        trail.addLowerBound(c.variable(), position, out);
+        trail.addUpperBound(c.variable(), position, out);
+      }
+    }
+    return true;
   }
 
   @Override
   public LinearForm failureForm() {
-    return failureForm;
+    return failureFacts == null ? failureForm : null;
   }
 
   @Override
   public List<LinearForm> reasonForms(IntVar x) {
     List<LinearForm> forms = new ArrayList<>();
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
-      if (deducedVar.get(k) == x) {
+      if (deducedVar.get(k) == x && deducedFacts.get(k) == null) {
         forms.add(deducedForm.get(k));
       }
     }
@@ -2953,6 +3294,7 @@ public class LinearRelaxation extends Constraint
             copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
+    c.keepEncodings = keepEncodings;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));
     }

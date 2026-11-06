@@ -184,6 +184,15 @@ public class Count extends AbstractCount
     return !counter.domain.isIntersecting(sc.eq(), list.length - sc.notEq());
   }
 
+  // the counter and the counted value, for the linear relaxation (Linearizations)
+  IntVar counter() {
+    return counter;
+  }
+
+  int countedValue() {
+    return value;
+  }
+
   @Override
   public String toString() {
 
