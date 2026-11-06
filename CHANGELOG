@@ -2352,6 +2352,18 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
+155. Under --lcg, GCC and CountValues explain an upper bound of a counter
+     by the lower bounds of the other counters (the variables they take
+     leave too few for this value) before they try the flow network.
+     The reason was written but not called, so these bounds went to the
+     flow, which on nmseq (where the counters are also list variables)
+     ran out of its time share: 47 to 65 % of the GCC reasons were
+     generic. nmseq 202 and 395, fillomino 7x7_0: generic GCC reasons
+     to 0 %, average reason 59-67 to 7-9 atoms; nmseq 395 is solved in
+     44 s (60 s did not suffice), fillomino 7x7_0 --lcg 23 to 11 s.
+     Wide set (220, 60 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +4, -f S = +6 over two repetitions.
+
 Version 4.11
 =============
 
