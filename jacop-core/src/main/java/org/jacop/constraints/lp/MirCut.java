@@ -61,6 +61,9 @@ final class MirCut {
 
   private static final int MAX_DIVISORS = 8;
 
+  // whether a cut with weights too large or too far apart is scaled down instead of dropped
+  static final boolean REDUCE = !"false".equals(System.getProperty("org.jacop.lp.reduceCuts"));
+
   // the largest ratio of the weights of a cut, against badly scaled rows in the simplex
   private static final double MAX_RATIO = 1e4;
 
@@ -157,6 +160,33 @@ final class MirCut {
   }
 
   private static MirCut cut(int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
+    long[] g = rawCut(columns, c, b, value, lo, hi);
+    return g == null ? null : finishCut(columns, g, g[c.length], value, lo, hi, REDUCE, 2);
+  }
+
+  /**
+   * Returns the MIR cut of {@code sum c_k x_columns[k] <= b} over the given columns before the
+   * filters on its weights: {@code sum g_k x_columns[k] <= right}, with g aligned with columns
+   * (some entries may be zero), or null when none is violated enough or the arithmetic overflows.
+   *
+   * @param columns the columns of the row, each once (not changed)
+   * @param c the weights of the columns (not changed)
+   * @param b the right side
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @return {@code {g..., right}}: the weights followed by the right side, or null
+   */
+  static long[] raw(int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
+    try {
+      return rawCut(columns, c, b, value, lo, hi);
+    } catch (ArithmeticException _) {
+      return null;
+    }
+  }
+
+  private static long[] rawCut(
+      int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
     int n = c.length;
     long[] cc = new long[n];
     boolean[] up = new boolean[n];
@@ -165,14 +195,12 @@ final class MirCut {
     double[] inside = new double[n];
     int count = 0;
     long side = b;
-    int size = 0;
     for (int t = 0; t < n; t++) {
       long w = c[t];
       if (w == 0) {
         continue;
       }
       int j = columns[t];
-      size++;
       double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
       up[t] = hi[j] - v < v - lo[j];
       if (up[t]) {
@@ -190,10 +218,41 @@ final class MirCut {
         inside[count++] = in;
       }
     }
-    if (size < 2 || count == 0) {
+    if (count == 0) {
       return null;
     }
-    // the divisors: the weights of the variables farthest inside their bounds, then halved
+    long d = bestDivisor(cc, side, xs, divisor, inside, count);
+    if (d == 0) {
+      return null;
+    }
+    long r = Math.floorMod(side, d);
+    long k = d - r;
+    long right = Math.multiplyExact(Math.floorDiv(side, d), k);
+    long[] g = new long[n + 1];
+    for (int t = 0; t < n; t++) {
+      if (cc[t] == 0) {
+        continue;
+      }
+      int j = columns[t];
+      long gj =
+          Math.addExact(
+              Math.multiplyExact(Math.floorDiv(cc[t], d), k),
+              Math.max(0, Math.floorMod(cc[t], d) - r));
+      if (up[t]) {
+        g[t] = -gj;
+        right = Math.subtractExact(right, Math.multiplyExact(gj, hi[j]));
+      } else {
+        g[t] = gj;
+        right = Math.addExact(right, Math.multiplyExact(gj, lo[j]));
+      }
+    }
+    g[n] = right;
+    return g;
+  }
+
+  // the divisor of the most efficacious cut among the weights of the inside variables, halved
+  private static long bestDivisor(
+      long[] cc, long side, double[] xs, long[] divisor, double[] inside, int count) {
     Integer[] order = new Integer[count];
     for (int i = 0; i < count; i++) {
       order[i] = i;
@@ -225,79 +284,142 @@ final class MirCut {
         }
       }
     }
-    if (bestDivisor == 0) {
+    return bestDivisor;
+  }
+
+  /**
+   * Returns the cut {@code sum g_k x_columns[k] <= right}, one term or more, divided by the
+   * greatest common divisor of its weights, or null when it is not violated enough by the LP
+   * solution or its weights are too large or too far apart. With reduce, weights that are too large
+   * or too far apart are scaled down instead (see {@link #reduce}).
+   *
+   * @param columns the columns, each once (not changed)
+   * @param g the weights aligned with columns, some may be zero (not changed)
+   * @param right the right side
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @param reduce whether to scale large weights down instead of giving up
+   * @return the cut, or null
+   */
+  static MirCut finish(
+      int[] columns, long[] g, long right, double[] value, long[] lo, long[] hi, boolean reduce) {
+    try {
+      return finishCut(columns, g, right, value, lo, hi, reduce, 1);
+    } catch (ArithmeticException _) {
       return null;
     }
-    // the cut over x', then back over x
-    long d = bestDivisor;
-    long r = Math.floorMod(side, d);
-    long k = d - r;
-    long right = Math.multiplyExact(Math.floorDiv(side, d), k);
-    long[] g = new long[n];
+  }
+
+  private static MirCut finishCut(
+      int[] columns,
+      long[] g,
+      long right,
+      double[] value,
+      long[] lo,
+      long[] hi,
+      boolean reduce,
+      int terms) {
     int nonzero = 0;
-    for (int t = 0; t < n; t++) {
-      if (cc[t] == 0) {
-        continue;
-      }
-      int j = columns[t];
-      long gj =
-          Math.addExact(
-              Math.multiplyExact(Math.floorDiv(cc[t], d), k),
-              Math.max(0, Math.floorMod(cc[t], d) - r));
-      if (gj == 0) {
-        continue;
-      }
-      if (up[t]) {
-        // gj (hi - x)
-        g[t] = -gj;
-        right = Math.subtractExact(right, Math.multiplyExact(gj, hi[j]));
-      } else {
-        // gj (x - lo)
-        g[t] = gj;
-        right = Math.addExact(right, Math.multiplyExact(gj, lo[j]));
-      }
-      nonzero++;
-    }
-    if (nonzero < 2) {
-      return null;
-    }
     long gcd = 0;
-    for (long w : g) {
-      gcd = gcd(gcd, Math.absExact(w));
+    long largest = 0;
+    long smallest = Long.MAX_VALUE;
+    for (int t = 0; t < columns.length; t++) {
+      if (g[t] != 0) {
+        nonzero++;
+        long a = Math.absExact(g[t]);
+        gcd = gcd(gcd, a);
+        largest = Math.max(largest, a);
+        smallest = Math.min(smallest, a);
+      }
     }
-    if (gcd == 0) {
+    if (nonzero < terms || gcd == 0) {
       return null;
+    }
+    long[] w = new long[columns.length];
+    for (int t = 0; t < columns.length; t++) {
+      w[t] = g[t] / gcd;
+    }
+    // the weights are integers, so the right side rounds down: a Chvatal-Gomory step for free
+    long rhs = Math.floorDiv(right, gcd);
+    largest /= gcd;
+    smallest /= gcd;
+    if (reduce && (largest > MAX_WEIGHT || largest > MAX_RATIO * smallest)) {
+      // weights below the largest over MAX_RATIO leave the cut at their bounds, then the cut is
+      // divided by the least power of two that brings the largest weight within MAX_WEIGHT
+      long divisor = 1;
+      while (largest / divisor > MAX_WEIGHT) {
+        divisor *= 2;
+      }
+      rhs = reduce(columns, w, rhs, divisor, (double) largest / MAX_RATIO, value, lo, hi);
+      return finishCut(columns, w, rhs, value, lo, hi, false, terms);
     }
     int[] cutColumns = new int[nonzero];
     long[] weights = new long[nonzero];
     double activity = 0;
     double norm = 0;
     int q = 0;
-    for (int t = 0; t < n; t++) {
-      if (g[t] != 0) {
+    for (int t = 0; t < columns.length; t++) {
+      if (w[t] != 0) {
         int j = columns[t];
         cutColumns[q] = j;
-        long w = g[t] / gcd;
-        weights[q] = w;
+        weights[q] = w[t];
         q++;
-        double weight = (double) w;
+        double weight = (double) w[t];
         activity += weight * value[j];
         norm += weight * weight;
       }
     }
-    // the weights are integers, so the right side rounds down: a Chvatal-Gomory step for free
-    long rhs = Math.floorDiv(right, gcd);
     double efficacy = (activity - rhs) / Math.sqrt(norm);
-    long largest = 0;
-    long smallest = Long.MAX_VALUE;
-    for (long w : weights) {
-      largest = Math.max(largest, Math.absExact(w));
-      smallest = Math.min(smallest, Math.absExact(w));
-    }
     if (!(efficacy > MIN_EFFICACY) || largest > MAX_RATIO * smallest || largest > MAX_WEIGHT) {
       return null;
     }
     return new MirCut(cutColumns, weights, rhs, efficacy, Math.sqrt(norm));
+  }
+
+  /**
+   * Scales {@code sum w_k x_columns[k] <= rhs} down by divisor, exactly and safely: each weight
+   * becomes {@code q_k = w_k / divisor} rounded towards the side that keeps the cut tight at the LP
+   * solution, and the remainder {@code e_k = w_k - q_k divisor} goes to the right side at the bound
+   * where it is smallest ({@code e_k x >= min(e_k lo, e_k hi)}), so that {@code sum q x <=
+   * floor((rhs - sum min(e lo, e hi)) / divisor)} holds wherever the cut and the bounds do. Weights
+   * that round to zero leave the cut entirely. The weights are replaced in w.
+   *
+   * @return the new right side
+   * @throws ArithmeticException on overflow
+   */
+  static long reduce(
+      int[] columns,
+      long[] w,
+      long rhs,
+      long divisor,
+      double least,
+      double[] value,
+      long[] lo,
+      long[] hi) {
+    long side = rhs;
+    for (int t = 0; t < columns.length; t++) {
+      if (w[t] == 0) {
+        continue;
+      }
+      int j = columns[t];
+      if (Math.abs((double) w[t]) < least) {
+        // w x >= min(w lo, w hi): the term leaves the cut
+        side =
+            Math.subtractExact(
+                side, Math.min(Math.multiplyExact(w[t], lo[j]), Math.multiplyExact(w[t], hi[j])));
+        w[t] = 0;
+        continue;
+      }
+      // nearer the lower bound: round down, so e >= 0 and e x >= e lo costs e (x - lo) at x
+      boolean nearLo = value[j] - lo[j] <= hi[j] - value[j];
+      long q = nearLo ? Math.floorDiv(w[t], divisor) : Math.ceilDiv(w[t], divisor);
+      long e = w[t] - q * divisor;
+      long rest = Math.min(Math.multiplyExact(e, lo[j]), Math.multiplyExact(e, hi[j]));
+      side = Math.subtractExact(side, rest);
+      w[t] = q;
+    }
+    return Math.floorDiv(side, divisor);
   }
 
   // the violation over the norm of the cut with divisor d, over x' >= 0

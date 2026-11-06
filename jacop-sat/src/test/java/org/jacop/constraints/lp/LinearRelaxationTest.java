@@ -218,6 +218,51 @@ class LinearRelaxationTest {
   }
 
   @Test
+  void gomoryCutsOverTheSlacksKeepTheOptimum() {
+    int stronger = 0;
+    int weaker = 0;
+    for (int run = 0; run < RUNS; run++) {
+      Model probe = new Model(run);
+      if (probe.objective == null) {
+        continue;
+      }
+      long[] expected = search(probe);
+      if (expected[0] == 0) {
+        continue;
+      }
+      double[] bound = new double[2];
+      for (int k = 0; k < 2; k++) {
+        Model model = new Model(run);
+        LinearRelaxation r = new LinearRelaxation(model.rows, model.objective, model.maximize);
+        r.setSlackGomory(k == 1);
+        model.store.impose(r);
+        if (!model.store.consistency()) {
+          bound[k] = Double.NaN;
+          continue;
+        }
+        bound[k] = r.cutBound;
+        // the optimum of the cost minimized: the objective, or its negation
+        double optimum = model.maximize ? -expected[1] : expected[1];
+        if (!Double.isNaN(bound[k])) {
+          assertThat(model.maximize ? bound[k] : bound[k])
+              .as("seed %d slack %b", run, k == 1)
+              .satisfies(
+                  b ->
+                      assertThat(model.maximize ? b >= optimum - 1e-6 : b <= optimum + 1e-6)
+                          .as("bound %s optimum %s", b, optimum)
+                          .isTrue());
+        }
+      }
+      if (!Double.isNaN(bound[0]) && !Double.isNaN(bound[1])) {
+        double gain = probe.maximize ? bound[0] - bound[1] : bound[1] - bound[0];
+        stronger += gain > 1e-6 ? 1 : 0;
+        weaker += gain < -1e-6 ? 1 : 0;
+      }
+    }
+    assertThat(stronger).as("stronger %d weaker %d", stronger, weaker).isGreaterThan(weaker);
+  }
+
+  @Test
   void aloneAcceptsOnlyAssignmentsThatKeepTheRows() {
     for (int run = 0; run < RUNS / 5; run++) {
       Model model = new Model(run, false);
