@@ -514,28 +514,37 @@ public final class Linearizations {
     if (x == b || x.singleton() || !x.domain.contains(c)) {
       return out; // b is fixed by propagation
     }
-    if (!equal && c != x.min() && c != x.max()) {
+    LinearForm form = valueForm(x, c, equal);
+    if (form == null) {
       return out;
     }
     try {
-      int relation;
-      long bound;
-      if (c == x.max()) {
-        // x = c is x >= c, x != c is x <= c - 1
-        relation = equal ? LinearForm.GE : LinearForm.LE;
-        bound = equal ? c : c - 1L;
-      } else if (c == x.min()) {
-        relation = equal ? LinearForm.LE : LinearForm.GE;
-        bound = equal ? c : c + 1L;
-      } else {
-        relation = equal ? LinearForm.EQ : LinearForm.NE;
-        bound = c;
-      }
-      reified(new LinearForm(new IntVar[] {x}, new long[] {1}, bound, relation), b, both, out);
+      reified(form, b, both, out);
     } catch (ArithmeticException overflow) {
       out.clear();
     }
     return out;
+  }
+
+  // x = c (equal) or x != c as one linear relation on x: a bound form when c is a bound of x,
+  // otherwise x = c as EQ and, for x != c, null (no rows, see valueRows)
+  private static LinearForm valueForm(IntVar x, int c, boolean equal) {
+    int relation;
+    long bound;
+    if (c == x.max()) {
+      // x = c is x >= c, x != c is x <= c - 1
+      relation = equal ? LinearForm.GE : LinearForm.LE;
+      bound = equal ? c : c - 1L;
+    } else if (c == x.min()) {
+      relation = equal ? LinearForm.LE : LinearForm.GE;
+      bound = equal ? c : c + 1L;
+    } else if (equal) {
+      relation = LinearForm.EQ;
+      bound = c;
+    } else {
+      return null;
+    }
+    return new LinearForm(new IntVar[] {x}, new long[] {1}, bound, relation);
   }
 
   /**
