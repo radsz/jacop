@@ -536,24 +536,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     long start = timer.getCpuTime();
-    // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
-    // linear constraints are split into block sums: the relaxation gets the clauses as rows and
-    // the blocks substituted back, so it has the rows of the model as without --lcg
-    List<LinearForm> clauses = new ArrayList<>();
-    if (options.lcg()) {
-      for (IntVar[][] clause : sat.collectedClauses()) {
-        clauses.add(clauseRow(clause[0], clause[1]));
-      }
-    }
-    // the cliques of the binary tables, over Booleans of their values; only for an objective,
-    // whose bound they raise, since the new Booleans stay in the store when the rows do not help
     TableCliques.Result cliques = null;
-    if (objective != null && TABLE_CLIQUES && !dictionary.binaryTables().isEmpty()) {
-      cliques = TableCliques.rows(store, dictionary.binaryTables());
-      clauses.addAll(cliques.rows());
+    if (options.proof() != null) {
+      // a proof derives each deduction from the lines of the rows it combines: the rows of the
+      // linear constraints only, with no clause rows, cliques, substitution or cuts
+      linearRelaxation = LinearRelaxation.ofModel(store, objective, maximize, options.lpSimplex());
+    } else {
+      // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
+      // linear constraints are split into block sums: the relaxation gets the clauses as rows and
+      // the blocks substituted back, so it has the rows of the model as without --lcg
+      List<LinearForm> clauses = new ArrayList<>();
+      if (options.lcg()) {
+        for (IntVar[][] clause : sat.collectedClauses()) {
+          clauses.add(clauseRow(clause[0], clause[1]));
+        }
+      }
+      // the cliques of the binary tables, over Booleans of their values; only for an objective,
+      // whose bound they raise, since the new Booleans stay in the store when the rows do not help
+      if (objective != null && TABLE_CLIQUES && !dictionary.binaryTables().isEmpty()) {
+        cliques = TableCliques.rows(store, dictionary.binaryTables());
+        clauses.addAll(cliques.rows());
+      }
+      linearRelaxation =
+          LinearRelaxation.of(
+              store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     }
-    linearRelaxation =
-        LinearRelaxation.of(store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
