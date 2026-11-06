@@ -399,6 +399,12 @@ public final class RevisedDualSimplex {
     cost = o.cost.clone();
     trueCost = o.trueCost.clone();
     givenCost = o.givenCost.clone();
+    // the primal simplex keeps no state between its solves: the bounds are restored when it ends
+    primalStep = 0;
+    leavesAtUpper = false;
+    savedLo = null;
+    savedHi = null;
+    boundsPerturbed = false;
     perturbed = o.perturbed;
     seed = o.seed;
     exact = o.exact;
