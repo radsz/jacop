@@ -260,39 +260,60 @@ public final class DualFeasibleFunctions {
         parameter[d][m++] = distinct[i];
       }
     }
-    count[d] = m;
+    // the mapped sizes; a function that maps these sizes as the identity does, up to scale, gives
+    // the same test as the identity and is dropped
+    int kept = 0;
     for (int f = 0; f < m; f++) {
-      if (mapped[d][f].length < n) {
-        mapped[d][f] = new long[Math.max(n, 2 * mapped[d][f].length)];
-      }
-      long[] v = mapped[d][f];
+      int fk = kind[d][f];
       int p = parameter[d][f];
-      switch (kind[d][f]) {
+      kind[d][kept] = fk;
+      parameter[d][kept] = p;
+      if (mapped[d][kept].length < n) {
+        mapped[d][kept] = new long[Math.max(n, 2 * mapped[d][kept].length)];
+      }
+      long[] v = mapped[d][kept];
+      long cap;
+      switch (fk) {
         case FS1:
-          capacity[d][f] = (long) c * p;
+          cap = (long) c * p;
           for (int i = 0; i < n; i++) {
             v[i] = fs1(s[i], c, p);
           }
           break;
         case FS2:
-          capacity[d][f] = c;
+          cap = c;
           for (int i = 0; i < n; i++) {
             v[i] = fs2(s[i], c, p);
           }
           break;
         case CCM1:
-          capacity[d][f] = 2L * (c / p);
+          cap = 2L * (c / p);
           for (int i = 0; i < n; i++) {
             v[i] = ccm1(s[i], c, p);
           }
           break;
         default:
-          capacity[d][f] = c;
+          cap = c;
           for (int i = 0; i < n; i++) {
             v[i] = s[i];
           }
       }
+      capacity[d][kept] = cap;
+      if (fk == IDENTITY || !proportional(v, s, n, cap, c)) {
+        kept++;
+      }
     }
+    count[d] = kept;
+  }
+
+  // whether v[i] / cap = s[i] / c for every i
+  private static boolean proportional(long[] v, int[] s, int n, long cap, int c) {
+    for (int i = 0; i < n; i++) {
+      if (v[i] * c != s[i] * cap) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // the distinct parameters from 1 to c / 2 in ascending order, into distinct; returns their number
