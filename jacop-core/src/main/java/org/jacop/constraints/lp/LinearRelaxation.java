@@ -661,6 +661,8 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
+    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
+    tried.addAll(valueRows.tried());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
     if (auto && !sparseTakes(forms)) {
       // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
@@ -693,19 +695,38 @@ public class LinearRelaxation extends Constraint
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
       // of the rows of the objective, give the whole bound, and in model order they came too late
-      // to fit)
+      // to fit); the tried value encodings stay after the other rows, since the retry without them
+      // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = new ArrayList<>(candidates.subList(0, exempt));
-      sorted.addAll(byDistance(forms, candidates.subList(exempt, candidates.size()), objective));
+      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, tried, objective);
       fitsSimplex(forms, sorted, simplex, auto, exempt, further);
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
-    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
-    tried.addAll(valueRows.tried());
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !tried.contains(f)).count();
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  /**
+   * Returns the candidates in the order they are fitted when not all fit: the first exempt ones as
+   * they are, then the others by their distance from the objective, the tried ones last.
+   */
+  static List<LinearForm> fitOrder(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      int exempt,
+      Set<LinearForm> tried,
+      IntVar objective) {
+    List<LinearForm> plainRows = new ArrayList<>();
+    List<LinearForm> triedRows = new ArrayList<>();
+    for (LinearForm f : candidates.subList(exempt, candidates.size())) {
+      (tried.contains(f) ? triedRows : plainRows).add(f);
+    }
+    List<LinearForm> sorted = new ArrayList<>(candidates.subList(0, exempt));
+    sorted.addAll(byDistance(forms, plainRows, objective));
+    sorted.addAll(byDistance(forms, triedRows, objective));
+    return sorted;
   }
 
   /**

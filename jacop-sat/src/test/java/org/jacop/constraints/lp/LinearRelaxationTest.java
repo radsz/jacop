@@ -34,8 +34,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -1010,5 +1012,31 @@ class LinearRelaxationTest {
     LinearForm one = new LinearForm(new IntVar[] {y, z}, new long[] {1, -1}, 0, LinearForm.LE);
     assertThat(LinearRelaxation.byDistance(List.of(def), List.of(far, two, one), obj))
         .containsExactly(one, two, far);
+  }
+
+  @Test
+  void triedValueEncodingsStayAfterTheOtherRowsWhenNotAllFit() {
+    // the retry without the value encodings takes the extra rows before them: an encoding over
+    // the objective must not be sorted before a plain row far from it
+    Store store = new Store();
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    IntVar u = new IntVar(store, "u", 0, 10);
+    IntVar v = new IntVar(store, "v", 0, 10);
+    IntVar e = new IntVar(store, "e", 0, 10);
+    LinearForm def =
+        new LinearForm(new IntVar[] {x, y, obj}, new long[] {1, 1, -1}, 0, LinearForm.EQ);
+    LinearForm kept = new LinearForm(new IntVar[] {e, x}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm far = new LinearForm(new IntVar[] {u, v}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm near = new LinearForm(new IntVar[] {x, y}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm encoding =
+        new LinearForm(new IntVar[] {obj, x}, new long[] {1, -1}, 0, LinearForm.GE);
+    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
+    tried.add(encoding);
+    assertThat(
+            LinearRelaxation.fitOrder(
+                List.of(def), List.of(kept, encoding, far, near), 1, tried, obj))
+        .containsExactly(kept, near, far, encoding);
   }
 }
