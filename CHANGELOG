@@ -2524,6 +2524,27 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
+163. Local search (--free-config ls=...) no longer evaluates the
+     constraints JaCoP adds itself. The redundant constraints of the
+     detectors are marked implied when they are imposed
+     (Store.imposingImplied, Store.isImplied) and left out, since they
+     only add propagation. The symmetry breaking constraints of
+     --symmetry are left out too, and a solution is first moved onto a
+     symmetric one that satisfies them: lex chains over interchangeable
+     columns sort the columns, value precedence renames the values in
+     the order of their first use (Law and Lee, Constraints 11(2-3),
+     2006), and a lex-leader constraint x <=lex g(x) of a generator g
+     (Crawford, Ginsberg, Luks and Roy, KR 1996) replaces a solution s
+     that breaks it by s o g; the store checks the result. This keeps
+     the constraint model of the problem, as in Comet's constraint-based
+     local search (Van Hentenryck and Michel, MIT Press 2005).
+     --free-config ls-implied=0 and ls-sym=0 turn it off; statistic
+     lsCanonicalized. Local search only, 60 s, 54 local-search
+     instances: 19 to 24 with a solution (cutstock type04 and type10,
+     nsp 7, 60 and 87); local search steps 4x faster on golfers 5_3_6
+     and 23x on cars 65_09. Wide set at 60 s, -f ls=0.1: 162 to 161
+     solved, with solutions 192 to 192, within the noise of free search.
+
 Version 4.11
 =============
 
