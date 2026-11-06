@@ -34,6 +34,11 @@
         </dependency>
         <dependency>
             <groupId>org.jacop</groupId>
+            <artifactId>jacop-prob</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jacop</groupId>
             <artifactId>jacop-sat</artifactId>
             <version>${project.version}</version>
         </dependency>

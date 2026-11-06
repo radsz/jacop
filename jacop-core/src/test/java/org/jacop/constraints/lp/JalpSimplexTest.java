@@ -252,23 +252,41 @@ class JalpSimplexTest {
     assertThat(infeasible).isGreaterThan(200);
   }
 
+  /** Makes a simplex over the given rows. */
+  private interface Simplex {
+    LpSolver of(double[][] a, double[] rowLo, double[] rowHi, double[] cost);
+  }
+
   @Test
   void removedRowsWithBasicSlacksKeepTheBasis() {
-    Random rnd = new Random(13);
+    removedRowsKeepTheBasis(13, JalpSimplexTest::jalp, 3);
+  }
+
+  @Test
+  void denseRemovedRowsWithBasicSlacksKeepTheBasis() {
+    removedRowsKeepTheBasis(17, DualSimplex::new, 6);
+  }
+
+  /**
+   * Removes random rows from optimal LPs of a simplex and checks that the basis stays optimal (no
+   * pivot) and that later re-solves, through added rows, agree with a fresh dense simplex.
+   */
+  private static void removedRowsKeepTheBasis(long seed, Simplex simplex, int steps) {
+    Random rnd = new Random(seed);
     int removedRuns = 0;
     for (int run = 0; run < 2000; run++) {
       int m = 2 + rnd.nextInt(10);
       Lp p = new Lp(rnd, m, 2 + rnd.nextInt(10), 0.5, true);
-      LpSolver sparse = jalp(p.a, p.rowLo, p.rowHi, p.cost);
-      p.bounds(sparse);
-      if (sparse.solve(1000) != LpSolver.OPTIMAL) {
+      LpSolver removed = simplex.of(p.a, p.rowLo, p.rowHi, p.cost);
+      p.bounds(removed);
+      if (removed.solve(1000) != LpSolver.OPTIMAL) {
         continue;
       }
       int[] ask = new int[1 + rnd.nextInt(m)];
       for (int k = 0; k < ask.length; k++) {
         ask[k] = rnd.nextInt(m);
       }
-      int[] kept = sparse.removeRows(ask);
+      int[] kept = removed.removeRows(ask);
       if (kept == null) {
         continue;
       }
@@ -285,16 +303,16 @@ class JalpSimplexTest {
         q.rowLo[i] = p.rowLo[kept[i]];
         q.rowHi[i] = p.rowHi[kept[i]];
       }
-      assertThat(sparse.rows()).isEqualTo(kept.length);
+      assertThat(removed.rows()).isEqualTo(kept.length);
       // the basis is still optimal for the rows left: no pivot is needed
-      long before = sparse.pivots();
-      LpSolver dense = new DualSimplex(q.a, q.rowLo, q.rowHi, q.cost);
-      assertThat(compare(q, sparse, dense, "run " + run)).isEqualTo(LpSolver.OPTIMAL);
-      assertThat(sparse.pivots()).as("run %d", run).isEqualTo(before);
-      // and goes on from there
-      for (int step = 0; step < 3; step++) {
+      long before = removed.pivots();
+      LpSolver fresh = new DualSimplex(q.a, q.rowLo, q.rowHi, q.cost);
+      assertThat(compare(q, removed, fresh, "run " + run)).isEqualTo(LpSolver.OPTIMAL);
+      assertThat(removed.pivots()).as("run %d", run).isEqualTo(before);
+      // and goes on from there, through added rows and many pivots (refactorizations)
+      for (int step = 0; step < steps; step++) {
         q.tighten(rnd);
-        if (compare(q, sparse, dense, "run " + run + " step " + step) != LpSolver.OPTIMAL) {
+        if (compare(q, removed, fresh, "run " + run + " step " + step) != LpSolver.OPTIMAL) {
           break;
         }
       }
