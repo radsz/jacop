@@ -2206,6 +2206,27 @@ Version 5.0 (unreleased)
      wide-set instances, with the same results in both modes. Off:
      -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
 
+146. JaLP refactorizes its LU factors when the solves have grown more
+     costly than a fresh factorization, instead of every 100 updates:
+     after each pivot it rebuilds them when the recent solve work per
+     pivot (a moving average) is above the average work per pivot since
+     the factorization, the factorization included (Chvatal's rule). The
+     work is the deterministic op count of BasisLu; the factorization
+     adds the entries its pivot search looks at and a cost per row
+     (BasisLu.build), fitted to measured times on 29 LP bench instances.
+     The stability, drift and fill (2x) checks stay; at least 10 and at
+     most 1000 updates. -Dorg.jacop.jalp.refactorWeight=0 restores the
+     fixed 100 (refactorWeight 1, refactorUpdates 1000, refactorFill 2,
+     refactorMin 10); RevisedDualSimplex.refactorsForWork() counts the
+     refactorizations it asked for. LP bench (659 MPS up to upTo1min,
+     120 s): 625 solved instead of 623, a median of 32% fewer
+     factorizations, 1.11x faster on the 56 instances of 0.5 s or more
+     whose pivots stay the same (radiationm18-12-05 33.3 to 14.5 s,
+     neos-4722843-widden 20.8 to 10.5 s); pivot paths change on the
+     others, both ways (dano3_3 and dano3_5 lost, brazil3, uccase12 and
+     fome21 gained). Wide set (220, 60 s): solved 149 -> 149 fixed search
+     and 146 -> 147 under -f.
+
 Version 4.11
 =============
 
