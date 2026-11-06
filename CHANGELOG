@@ -2046,6 +2046,21 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+136. The route neighbourhoods of large neighbourhood search (ROUTES and
+     RELATED) also work on giant-tour models: the successors of a
+     Circuit or Subcircuit, split into routes by the links fixed at the
+     root (the end depot of one vehicle followed by the start depot of
+     the next), with the distances read from element constraints indexed
+     by the successors. Removing customers relaxes their successors and
+     those of the nodes before them; circuits over the same nodes (the
+     predecessors, the tours of other scenarios) lose the same customers.
+     On the 34 giant-tour Challenge instances (cvrp, vrplc, tsptw,
+     stochastic-vrp, vrp-submission; -f, 60 s, three seeds) the mean gap
+     to the best solution found falls from 10.4 % to 7.0 % (8 / 1 better
+     / worse by median objective; cvrp 16 to 20 % lower). The wide set is
+     level: -f 152 to 154 solved, fixed search (wide-quick) 48 to 47,
+     the one difference on an instance without a circuit.
+
 Version 4.11
 =============
 
