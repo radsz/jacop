@@ -551,10 +551,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
-      // the cliques of the binary tables, over Booleans of their values; only for an objective,
-      // whose bound they raise, since the new Booleans stay in the store when the rows do not help
-      if (objective != null && TABLE_CLIQUES && !dictionary.binaryTables().isEmpty()) {
-        cliques = TableCliques.rows(store, dictionary.binaryTables());
+      // the cliques of the tables, over columns of their values that the relaxation alone has;
+      // only for an objective, whose bound they raise
+      if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
+        cliques = TableCliques.rows(dictionary.tables());
         clauses.addAll(cliques.rows());
       }
       linearRelaxation =
@@ -574,8 +574,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
                       + cliques.rows().size()
-                      + "\n%%%mzn-stat: lpTableBooleans="
-                      + cliques.booleans())
+                      + "\n%%%mzn-stat: lpTableColumns="
+                      + cliques.columns())
               + "\n%%%mzn-stat-end");
     }
   }
@@ -644,6 +644,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpRestartSolves="
+            + r.restartSolves
+            + "\n%%%mzn-stat: lpRootPrunings="
+            + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
             + "\n%%%mzn-stat: lpCapacityCuts="

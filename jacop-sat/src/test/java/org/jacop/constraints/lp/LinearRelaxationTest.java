@@ -34,8 +34,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -44,12 +46,18 @@ import java.util.TreeMap;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExceptZero;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -215,6 +223,68 @@ class LinearRelaxationTest {
     assertThat(pruned).isPositive();
     assertThat(failures).isPositive();
     assertThat(cuts).isPositive();
+  }
+
+  /**
+   * Restarts: each solution found tightens the bound of the cost at the root level, where the
+   * relaxation propagates its root reduced costs and solves again with new cut rounds; whatever it
+   * deduces there must keep the optimum.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumOverRestarts(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    try {
+      LinearRelaxation.restartSolvesOn = false;
+      assertThat(restarts(simplex)[1]).isPositive();
+      LinearRelaxation.restartSolvesOn = true;
+      long[] counts = restarts(simplex);
+      assertThat(counts[0]).isPositive();
+      assertThat(counts[1]).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+    }
+  }
+
+  // solves each model with restarts after each solution; returns the restart solves and the root
+  // reduced-cost prunings
+  private static long[] restarts(LinearRelaxation.Simplex simplex) {
+    long restarts = 0;
+    long rootPruned = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long[] expected = search(new Model(run));
+      Model model = new Model(run);
+      if (model.objective == null) {
+        continue;
+      }
+      model.simplex = simplex;
+      LinearRelaxation r = model.relaxation();
+      IntVar cost = model.cost();
+      IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
+      vars[model.x.length] = cost;
+      long best = Long.MIN_VALUE;
+      while (model.store.consistency()) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.setAssignSolution(false);
+        search.getSolutionListener().recordSolutions(true);
+        if (!search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
+          break;
+        }
+        best = search.getSolution()[model.x.length].valueEnumeration().nextElement();
+        if (best == cost.min()) {
+          break;
+        }
+        // a restart: the bound of the cost tightens at the root level
+        cost.domain.inMax(model.store.level, cost, (int) best - 1);
+      }
+      assertThat(new long[] {best == Long.MIN_VALUE ? 0 : 1, best})
+          .as("seed %d", run)
+          .isEqualTo(expected);
+      restarts += r.restartSolves;
+      rootPruned += r.rootPrunings;
+    }
+    return new long[] {restarts, rootPruned};
   }
 
   @Test
@@ -943,6 +1013,138 @@ class LinearRelaxationTest {
   }
 
   /**
+   * A random assignment model: tasks get distinct values ({@link Alldiff}, {@link Alldistinct} or a
+   * {@link GCC} with counters of at most 1), each task pays the cost of its value ({@link
+   * ElementInteger} or {@link ElementIntegerFast}), some value is taken a given number of times
+   * ({@link Count}), and the total cost is minimized.
+   */
+  private static final class Assignment {
+    final Store store = new Store();
+    final IntVar[] x;
+    final List<IntVar> searched = new ArrayList<>();
+    final IntVar cost;
+
+    Assignment(long seed) {
+      Random rnd = new Random(seed);
+      int n = 3 + rnd.nextInt(3);
+      int m = n + rnd.nextInt(2);
+      x = new IntVar[n];
+      IntVar[] c = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 1, m);
+        searched.add(x[i]);
+        int[] costs = new int[m];
+        for (int v = 0; v < m; v++) {
+          costs[v] = rnd.nextInt(20);
+        }
+        c[i] = new IntVar(store, "c" + i, 0, 20);
+        store.impose(
+            rnd.nextBoolean()
+                ? new ElementInteger(x[i], costs, c[i], 0)
+                : new ElementIntegerFast(x[i], costs, c[i], 0));
+      }
+      switch (rnd.nextInt(3)) {
+        case 0 -> store.impose(new Alldiff(x));
+        case 1 -> store.impose(new Alldistinct(x));
+        default -> {
+          IntVar[] counters = new IntVar[m];
+          for (int v = 0; v < m; v++) {
+            counters[v] = new IntVar(store, "n" + v, 0, 1);
+          }
+          store.impose(new GCC(x, counters));
+        }
+      }
+      if (rnd.nextBoolean()) {
+        IntVar[] y = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          y[i] = new IntVar(store, "y" + i, 1, 3);
+          store.impose(new XneqY(y[i], x[i]));
+          searched.add(y[i]);
+        }
+        store.impose(new Count(y, new IntVar(store, "k", 1, 1 + rnd.nextInt(n - 1)), 2));
+      }
+      cost = new IntVar(store, "cost", 0, 20 * n);
+      int[] ones = new int[n + 1];
+      Arrays.fill(ones, 1);
+      ones[n] = -1;
+      IntVar[] vars = Arrays.copyOf(c, n + 1);
+      vars[n] = cost;
+      store.impose(new LinearInt(vars, ones, "==", 0));
+    }
+
+    // the least cost by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] all = searched.toArray(new IntVar[0]);
+      assertThat(search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
+    }
+  }
+
+  /**
+   * The value encodings of counting, all-different and element constraints over LP-only columns:
+   * the relaxation of random assignment models has them, keeps the optimum under depth-first search
+   * and under lazy clause generation with the explanation checker on, and its root bound is often
+   * above that of the model's own rows.
+   */
+  @Test
+  void valueEncodingsKeepTheOptimumOfAssignments() {
+    int tighter = 0;
+    long checked = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      long expected = new Assignment(run).optimum();
+
+      Assignment dfs = new Assignment(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(r.valueColumns).as("seed %d", run).isPositive();
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.rootBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      tighter += r.extraRows > 0 && r.rootBound > r.baseBound + 0.5 ? 1 : 0;
+
+      Assignment lcg = new Assignment(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(tighter).isGreaterThan(RUNS / 50);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * Every task is cheapest at value 1: the bounds of the costs give 4, the assignment polytope of
+   * the value encodings gives the optimum 31, which the root propagation sets as the bound.
+   */
+  @Test
+  void valueEncodingsBoundAnAssignmentByItsOptimum() {
+    Store store = new Store();
+    int n = 4;
+    IntVar[] x = new IntVar[n];
+    IntVar[] vars = new IntVar[n + 1];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, n);
+      vars[i] = new IntVar(store, "c" + i, 0, 10);
+      store.impose(new ElementInteger(x[i], new int[] {1, 10, 10, 10}, vars[i], 0));
+    }
+    store.impose(new Alldiff(x));
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    vars[n] = cost;
+    store.impose(new LinearInt(vars, new int[] {1, 1, 1, 1, -1}, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, cost, false);
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.baseBound).isEqualTo(4.0);
+    assertThat(cost.min()).isEqualTo(31);
+  }
+
+  /**
    * On a relaxation with value columns the LP-guided selection decides store variables only: a
    * value column [x = v] becomes the decision x = v, never a decision on the column, and the value
    * is in the domain. The selection that follows the root solution decides the same at the root.
@@ -1187,5 +1389,31 @@ class LinearRelaxationTest {
     LinearForm one = new LinearForm(new IntVar[] {y, z}, new long[] {1, -1}, 0, LinearForm.LE);
     assertThat(LinearRelaxation.byDistance(List.of(def), List.of(far, two, one), obj))
         .containsExactly(one, two, far);
+  }
+
+  @Test
+  void triedValueEncodingsStayAfterTheOtherRowsWhenNotAllFit() {
+    // the retry without the value encodings takes the extra rows before them: an encoding over
+    // the objective must not be sorted before a plain row far from it
+    Store store = new Store();
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    IntVar u = new IntVar(store, "u", 0, 10);
+    IntVar v = new IntVar(store, "v", 0, 10);
+    IntVar e = new IntVar(store, "e", 0, 10);
+    LinearForm def =
+        new LinearForm(new IntVar[] {x, y, obj}, new long[] {1, 1, -1}, 0, LinearForm.EQ);
+    LinearForm kept = new LinearForm(new IntVar[] {e, x}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm far = new LinearForm(new IntVar[] {u, v}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm near = new LinearForm(new IntVar[] {x, y}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm encoding =
+        new LinearForm(new IntVar[] {obj, x}, new long[] {1, -1}, 0, LinearForm.GE);
+    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
+    tried.add(encoding);
+    assertThat(
+            LinearRelaxation.fitOrder(
+                List.of(def), List.of(kept, encoding, far, near), 1, tried, obj))
+        .containsExactly(kept, near, far, encoding);
   }
 }

@@ -112,7 +112,9 @@ class OnRestartFlatzincTest {
     // minimize sum(i * x[i]) over a permutation x, int_search(x, input_order, indomain_min) and
     // restart_constant(3); st is status()
     String fzn = PERMUTATION_LNS;
-    String out = run(fzn, "-a", "--restart-limit", "200", "-r", "1");
+    // --lp off: the value encodings of the all-different give the LP the assignment bound 56,
+    // which would prove the optimum at the root
+    String out = run(fzn, "-a", "--restart-limit", "200", "-r", "1", "--lp", "off");
     checkLnsSolutions(out);
     // a neighbourhood explored to the end proves nothing, and the bound 55 does not fail at the
     // root, so the search ends only at the restart limit
@@ -122,7 +124,7 @@ class OnRestartFlatzincTest {
   @Test
   void lnsUnderFreeSearchRunsTheBuiltInsInEachRun() throws IOException {
     // free search runs the built-ins at the root of its own runs, limited by the model's restarts
-    String out = run(PERMUTATION_LNS, "-f", "-a", "-t", "1500", "-r", "1");
+    String out = run(PERMUTATION_LNS, "-f", "-a", "-t", "1500", "-r", "1", "--lp", "off");
     checkLnsSolutions(out);
     assertFalse(out.contains("=========="), out);
   }

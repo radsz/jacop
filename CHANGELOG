@@ -2364,6 +2364,118 @@ Version 5.0 (unreleased)
      solved before, n <= 16 now. Wide set at 60 s, -f ls=0.1: 159 to
      160 solved, with solutions 190 to 190; ls stays off by default.
 
+156. Under --lcg, GCC and CountValues explain an upper bound of a counter
+     by the lower bounds of the other counters (the variables they take
+     leave too few for this value) before they try the flow network.
+     The reason was written but not called, so these bounds went to the
+     flow, which on nmseq (where the counters are also list variables)
+     ran out of its time share: 47 to 65 % of the GCC reasons were
+     generic. nmseq 202 and 395, fillomino 7x7_0: generic GCC reasons
+     to 0 %, average reason 59-67 to 7-9 atoms; nmseq 395 is solved in
+     44 s (60 s did not suffice), fillomino 7x7_0 --lcg 23 to 11 s.
+     Wide set (220, 60 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +4, -f S = +6 over two repetitions.
+
+157. New constraint XorSystem (org.jacop.constraints): Gauss-Jordan
+     elimination over GF(2) for a system of parity constraints. The rows
+     are bit-packed and kept in reduced row echelon form over the unfixed
+     variables; a pivot change adds one row to the others, so nothing is
+     undone on backtracking. A row with one unfixed variable fixes it and
+     a fixed row with the wrong parity fails, which gives full
+     propagation of the conjunction. Under LCG the reason is the fixed
+     values of the other variables of the combined row. The FlatZinc
+     layer builds one redundant system per connected component of
+     array_bool_xor, bool_xor, bool_not, bool_eq, bool_eq_reif and
+     bool_ne_reif (with at least one row of three or more variables);
+     -Dorg.jacop.fz.xorSystem=false switches it off. A system that finds
+     fewer than 10 failures in 10,000 calls switches itself off, as
+     CryptoMiniSat disables its matrices. References: C.-S. Han and
+     J.-H. R. Jiang, When Boolean Satisfiability Meets Gaussian
+     Elimination in a Simplex Way, CAV 2012, LNCS 7358, 410-426;
+     T. Laitinen, T. Junttila and I. Niemela, Classifying and Propagating
+     Parity Constraints, CP 2012, LNCS 7514, 357-372 (arXiv:1406.4698);
+     M. Soos, S. Gocht and K. S. Meel, Tinted, Detached, and Lazy CNF-XOR
+     Solving and Its Applications to Counting and Sampling, CAV 2020,
+     LNCS 12224, 463-484; M. Soos, K. Nohl and C. Castelluccia, Extending
+     SAT Solvers to Cryptographic Problems, SAT 2009, LNCS 5584, 244-257.
+     parity-learning (7 instances, 60 s): 2 to 7 solved by default and
+     1 to 7 with -f, each in 1-8 s instead of 34 s or a timeout.
+     speck-optimisation: unchanged within seed noise. Wide set (220):
+     only parity-learning 52_26_6.1 and speck easy_3 get a system.
+
+158. New constraint DifferenceCycles over difference constraints
+     x - y <= c that hold always or when a 0/1 literal takes a value. It
+     fails as soon as the ones that hold close a cycle of negative
+     weight and, under LCG, explains the failure by the literals of the
+     cycle alone, so a job shop or RCPSP/max model whose precedences are
+     chosen by 0/1 variables no longer creeps round such a cycle by
+     bounds propagation (10^8 rounds over 0..3*10^8 in the regression
+     test). It keeps a feasible potential and repairs it from the head of
+     each new arc with a Dijkstra search over reduced costs (Ramalingam,
+     Song, Joskowicz and Miller, Algorithmica 23(3), 1999; Cotton and
+     Maler, Fast and flexible difference constraint propagation for
+     DPLL(T), SAT 2006, LNCS 4121), which backtracking keeps valid; the
+     first potential comes from Bellman-Ford with Tarjan's subtree
+     disassembly (Cherkassky and Goldberg, Math. Programming 85(2),
+     1999). Only arcs inside a strongly connected component are kept.
+     The FlatZinc front end posts it, as a redundant constraint, when a
+     reified or half-reified difference (int_lin_le/eq_imp/reif,
+     int_le/lt_imp/reif) lies on a cycle; it extends the posting-time
+     check of the always-true ones (DifferenceBoundsDetector).
+     -Dorg.jacop.fz.differenceCycles=false switches it off. Theory
+     propagation of implied literals and two-variable inequalities
+     (TVPI, Hochbaum and Naor, SIAM J. Computing 23(6), 1994; UTVPI,
+     Schutt and Stuckey, INFORMS J. Computing 22(4), 2010) are not
+     covered. Posted on 27 of the 220 wide instances; slow_convergence
+     has no conditional differences and is not touched. Wide set at
+     60 s: default 166 to 166 solved, -f 160 to 160; of the outcomes that
+     changed, 11 of 12 (default) and 19 of 21 (-f) are on instances where
+     nothing is posted (run-to-run noise). cyclic-rcpsp 10-30% faster
+     with up to 2.8x fewer failures, rectangle-packing rpp30 1.1 to
+     0.7 s, rcpsp_max psp_d_244 8.5 to 10.2 s.
+
+159. The clique rows of tables (TableCliques) and new value encodings of
+     GCC, count, alldifferent, alldistinct and element use LP-only
+     columns [x = v] (LpColumn) instead of store Booleans channelled with
+     ChannelReif, so they add no variables or constraints to the store.
+     Tables of up to 6 variables (org.jacop.lp.tableCliqueArity) are
+     projected on their pairs. The value encodings (x = sum v [x = v],
+     sum [x = v] = 1, counters, at most one per value, y = sum a[v] [x = v])
+     share one set of columns per variable and reuse the model's own
+     Booleans; they are tried at the first solve and kept only when they
+     raise the root bound or make it infeasible, and when they are not
+     kept the other extra rows are tried without them. In the simplex an
+     LP-only column is bounded by the domain of its variable.
+     -Dorg.jacop.lp.valueEncodings=false turns the new encodings off,
+     valueEncodingsDomain (64) and valueEncodingsMax (20,000) cap them;
+     the stat lpTableBooleans is now lpTableColumns. Infeasibility and
+     dual certificates use the simplex bounds of the LP-only columns, and
+     their LCG explanations add the facts x != v or x = v behind those
+     bounds. Wide set (220, 60 s): default 164 to 163 solved (3 families
+     better, 4 worse), -f 156 to 154 (3 / 5); the instances that change
+     have the same LP in both versions and swap outcomes when re-run,
+     except sudoku_fixed p28, where one more LP failure changes the
+     search path.
+
+160. Root reduced-cost fixing for the linear relaxation (SCIP's
+     prop_rootredcost). The inequalities of the duals of the last optimal
+     solve at the root level are kept; they are combinations of the rows,
+     so they hold everywhere, and whenever the bound of the objective
+     improves at the root level (a restart, or a backjump under LCG) they
+     are propagated again and fix the columns whose reduced cost no
+     longer fits in the gap. Statistic lpRootPrunings;
+     -Dorg.jacop.lp.rootReducedCosts=false turns it off. Re-solving the
+     relaxation at restarts, with new cut rounds, is there too but off by
+     default (-Dorg.jacop.lp.restartSolves=true): it solves only when
+     bounds other than the objective changed at the root, starts from the
+     basis of the last root optimum and backs off when it deduces nothing.
+     Wide set (220, 60 s, paired): root reduced costs prune on 17
+     instances by default and 6 under -f; default 10 better / 3 worse
+     (wmsmc-int proved in 11 s instead of 13 s), -f 14 / 11, solved
+     unchanged within noise. With re-solves on: -f 156 solved against
+     157 and 158 for two base runs, and ATSP instance10 lost its proof
+     by default (LP time 0.4 s to 3.8 s).
+
 Version 4.11
 =============
 
