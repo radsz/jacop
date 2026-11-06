@@ -321,18 +321,19 @@ final class DualSimplex implements LpSolver {
   @Override
   public int[] removeRows(int[] rows) {
     boolean[] gone = new boolean[m];
-    int removed = 0;
+    int m2 = m;
     for (int i : rows) {
       if (i >= 0 && i < m && !gone[i] && row[n + i] >= 0) {
         gone[i] = true;
-        removed++;
+        m2--;
       }
     }
-    if (removed == 0) {
-      return null;
-    }
-    int m2 = m - removed;
-    int cols2 = cols - removed;
+    return m2 == m ? null : removeRows(gone, m2);
+  }
+
+  /** Removes the rows marked gone, whose slacks are basic, leaving m2 rows. */
+  private int[] removeRows(boolean[] gone, int m2) {
+    int cols2 = cols - (m - m2);
     // the new index of each old column, -1 for a removed slack, and the old row of each new row
     int[] newColumn = new int[cols];
     int[] oldRow = new int[m2];
