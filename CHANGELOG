@@ -1996,13 +1996,19 @@ Version 5.0 (unreleased)
      -Dorg.jacop.lp.keepBases=false turns it off; basisJump (2) and
      maxBases (32) tune it. Stats lpJumpSolves, lpJumpPivots,
      lpBasisRestores. The dense simplex (below 100 rows) is unchanged.
+     Bases are not restored in the first 1,000 solves after the rows of
+     non-linear constraints are added (org.jacop.lp.basisProbation),
+     because those rows are dropped when early solves stop at the limit,
+     and a restored basis spared them that limit: slnb7x7 kept 404
+     big-M rows and took 25 s instead of 7 s.
 
 133. The LP relaxation gets rows for more objective links: the convex
      hull of element over a constant array (lower and upper chains of at
      most 64 edges each, index domains up to 100,000 values), x div c
      through the remainder x - c*z, if-then-else (ConditionalSelect)
      as big-M rows from the root bounds, x in an interval under a
-     reification, and the FlatZinc reified x = c, x != c and x = y.
+     reification, and the FlatZinc reified x = c, x = y and x != c (the
+     last only with c at a bound of x).
      When not all candidate rows fit the tableau, the rows nearest to
      the objective (breadth-first through the base rows) go first; they
      used to be taken in model order and could all be cut before the
@@ -2046,7 +2052,161 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
-136. The route neighbourhoods of large neighbourhood search (ROUTES and
+136. Reservoir, CumulativeOptional and CumulativeUnaryOptional explain
+     their pruning and failures for lazy clause generation instead of
+     taking the generic reason. Reservoir reasons over the level just
+     after an event, from the precedences, shared times and time bounds
+     that keep the other events before or after it, leaving out the
+     changes the excess does not need. The optional cumulatives cite the
+     presence of every task whose use they count, and explain an absent
+     task from its compulsory part or from the room left when it would
+     start. CumulativeUnary also explains a task whose 0..1 use drops to
+     0 (an optional task posted as a use) by overload, edge finding or
+     not-first over the other tasks, and keeps the shorter reason.
+     setOptionalRules(true) (-Djacop.cumulative.optionalRules=true) adds
+     Vilim's overload and edge finding over optional tasks to
+     CumulativeUnary; it is off by default because it lowers the node
+     rate more than it saves nodes. -Djacop.lcg.reservoirExplain=false
+     and -Djacop.lcg.optionalExplain=false switch the explanations off.
+     Generated reservoir scheduling kit (30 instances, 40 to 80 tasks,
+     60 s): proved 26 -> 29 with model search and 24 -> 28 with -f, none
+     worse. Optional kit posted with the optional classes
+     (org.jacop.fz.optionalAsUse=false; 85 instances): proved 29 -> 35,
+     35 better / 12 worse. With the default presence-as-use and on the
+     wide set (220, 60 s) the trees stay the same where model search is
+     fixed: solved 161 -> 161 and, with -f, 154 -> 154.
+
+137. Large neighbourhood search gets three structural neighbourhoods, as in
+     CP-SAT: CONSTRAINTS relaxes the variables of random constraints,
+     SCHEDULING the tasks of a cumulative or unary resource that start in a
+     window of time, and PACKING the rectangles of a diffn (Nooverlap) near
+     a random one. SCHEDULING and PACKING also relax the variables that
+     share a constraint of at most three variables with a relaxed task or
+     rectangle (on cargo, the reclaim times tied to a rectangle by one
+     row). OBJECTIVE now starts from the term with the largest regret (its
+     cost above the cheapest value of its root domain). Under -f the
+     FlatZinc front end leaves variables defined by a constraint
+     (defines_var) out of the neighbourhoods, so a neighbourhood frees
+     decision variables and the defined ones follow; --free-config
+     lns-defined=0 restores the old set, and lns-kinds=a+b+... restricts
+     the kinds. On 38 hard optimisation instances of 13 families where
+     JaCoP is far behind CP-SAT (-f, 60 s, three seeds) the sum of mean
+     primal gaps falls from 12.4 to 9.8 (18 / 4 better / worse; team
+     assignment data1_6_24 73457 against 15561, celar scen06 3571 against
+     4502). On the wide set under -f 6 of 12 families improve and 4 get
+     worse (159 to 160 solved, mean gap 0.104 to 0.100);
+     minimal-decision-sets australian_train5 loses its proof with
+     lns-defined=1.
+
+138. JaLP: the solve that moves the basic values after the bound flips of
+     the dual ratio test is hypersparse too. The flipped columns are
+     summed into a listed right-hand side, BasisLu.ftranFlips solves it
+     with a density history of its own, and only the rows of its result
+     change their values and are checked for the leaving row (before: a
+     dense solve, a pass over all rows and a rebuild of the rows outside
+     their bounds). The pivots are the same. LP bench (190 instances of
+     1 to 60 s, one job per engine): geometric mean 1.05x.
+
+139. The FlatZinc front end posts a union of singleton sets as one
+     membership clause per element. MiniZinc flattens a set
+     comprehension over variables, {e(i) | i in I}, into one singleton
+     set per element (set_card(S, 1), set_in(e, S)) and a chain of
+     set_union constraints, and under LCG every inner union of the chain
+     carried membership literals of its own (gt-sort: 3,657 unions for
+     11 sets). SetUnionDetector replaces a chain whose inner sets appear
+     nowhere else by [v in U] <-> OR_i [e_i = v] for each element v;
+     chains of fewer than 8 singletons stay as they are
+     (-Dorg.jacop.fz.setUnion.min), and -Dorg.jacop.fz.setUnion=false
+     turns it off. gt-sort, 60 s, model search: 3 of 5 optimal (none
+     before), the optimum found on all 4 instances with a known one.
+     Only gt-sort changes model on the wide set.
+
+140. LP duals are those of the costs as given. Both dual simplex engines
+     perturb the costs by about 1e-7 against dual degeneracy, and the
+     duals of the perturbed costs carried that noise into the integer
+     certificates of LinearRelaxation, where a large scale could turn it
+     into a multiplier of a row without the side it needs; dropping it
+     lost the bound. LpSolver.duals() now returns c_B B^-1 for the costs
+     as given over the basis the perturbed solve ends with (JaLP:
+     RevisedDualSimplex.givenDuals(), the same single BTRAN; dense: the
+     slack columns of the tableau), so the pivots are unchanged and no
+     primal clean-up is needed. On the 215 root LPs of the lp-bench
+     jacop-root set, JaLP's certificates keep 42 of the 42 LP bounds
+     that beat the column bounds (41 before; routing-flexible GCM_0007
+     lost 31767 to 31765), as many as JaLP's setExact clean-up. Wide
+     set (220, 60 s): solved 150 -> 150 by default, 152 -> 151 under
+     -f, within the noise of the run. -Dorg.jacop.lp.givenDuals=false
+     restores the old duals; -Dorg.jacop.lp.exact=true runs JaLP's
+     setExact clean-up in search.
+
+141. Under LCG an all_different over n variables whose domains hold n
+     values in all adds, for each value, the clause "some variable takes
+     it" over the value literals (Chuffed's alldiff_cheat). Constraints
+     give such clauses through the new ImpliedClauses interface, which
+     LcgSolver.encodeGraphs calls; stat lcgImpliedClauses. Off with
+     -Dorg.jacop.lcg.alldiffCover=false; skipped above 16384 (variable,
+     value) pairs (-Dorg.jacop.lcg.alldiffCoverLimit), since
+     NumberPartitioning-200/260 (40k and 67k pairs) got slower. XCSP3
+     Pentominoes (60 s): 4 -> 10 of 10 solved, Pentominoes-05-18 in 7.8 s
+     (Chuffed 0.6 s). 161 XCSP3 instances with such an all_different:
+     completed 76 -> 83, 22 faster / 16 slower.
+
+142. Increasing, Among and OverlappingAlldiff give their own LCG reasons
+     instead of the generic one, and Values (nvalue) gets a union-of-
+     domains rule so its reasons need no replays. TilingRythmicCanons
+     Increasing reasons 439 -> 2 atoms, SportsScheduling-dummy-14 Among
+     reasons 170 -> 12 atoms (solved in 17 s, before not in 60 s).
+     XmulYeqZ failures try a bounds-only reason and otherwise keep the
+     shortest per-variable reason, not the first: Molnar failure reasons
+     2,297 -> 4 atoms.
+
+143. Element over a variable array bumps on failure the weights of the
+     index, the value and only the list variables whose position is still
+     in the index domain, so dom/wdeg no longer prefers variables that
+     appear in every element (LangfordBin-040: solved with 195 failures,
+     before not in 60 s).
+
+     Changes 132-134 together: 88 XCSP3 instances of the families above
+     (60 s): completed 47 -> 54, 22 faster / 12 slower. Wide set (220,
+     60 s, default): solved 164 -> 166, 22 better / 5 worse, 6 of 12
+     families better and 1 worse; -f: solved 161 -> 162, 12 better /
+     14 worse, 5 families better and 4 worse (within the noise of two
+     runs of one build).
+
+144. Rounded capacity cuts in the linear relaxation, from each Routes
+     with its arcs among the columns: the routes enter a set S of
+     customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
+     form, the arcs inside S are at most |S| minus that). The sets come
+     from the LP solution at the root, as the connected components of
+     its support graph and sets grown greedily from each customer; up
+     to 50 rounds of 50 cuts run before the MIR cuts and are dropped if
+     they leave the bound where it was. -Dorg.jacop.lp.capacityCuts=false
+     turns them off. The FlatZinc Routes detection (item 122) is now on
+     by default, so the vrp models get them (-Dorg.jacop.fz.routes=false
+     turns it off). vrp A-n34-k5: root bound 375 to 756, optimum near
+     778. 25 vrp instances of the Challenge, 60 s, against develop-5.0:
+     default 21 better / 4 worse (objective geomean 0.916), 3 proved
+     optimal; -f 14 / 11 (0.988), 4 proved optimal. The wide set (220,
+     60 s) has no routes: solved 153 -> 155 fixed search and 146 -> 145
+     under -f, noise (the -f losses prove on a rerun with both jars).
+     The detector no longer aborts on a bool_lin_eq whose right-hand
+     side is a variable.
+
+145. The LP relaxation (--lp) merges rows that forbid two 0/1 literals
+     together (x + y <= 1, also stated as x + y - one <= 0 over a fixed
+     variable, or x - y <= 0) into rows over cliques of such literals,
+     on objective models. Pairwise rows let the LP take half of each set
+     of shifts that share a time; the clique row takes one.
+     roster-shifts-bool small (Challenge 2023): 25,803 rows become 1,791,
+     the root bound is the optimum 5,281, and the proof takes 6 s
+     (default) and 21 s (-f), where 60 s did not prove it before. Before,
+     its 25,803 rows were over the size cap of the sparse simplex and the
+     model got no LP at all. roster-shifts-bool large: bound 5,941,525 to
+     56,931 (best known 56,378). The rows change the LP of 8 of the 220
+     wide-set instances, with the same results in both modes. Off:
+     -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
+
+146. The route neighbourhoods of large neighbourhood search (ROUTES and
      RELATED) also work on giant-tour models: the successors of a
      Circuit or Subcircuit, split into routes by the links fixed at the
      root (the end depot of one vehicle followed by the start depot of

@@ -33,15 +33,19 @@ package org.jacop.constraints;
 
 import java.util.Arrays;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
 import org.jacop.lcg.EntryList;
 
 /**
  * Explanations of {@link Values} (nvalue) under lazy clause generation, by variables whose
  * intervals are pairwise disjoint: k such variables take k different values. That explains a lower
  * bound of the count, a failure against its upper bound, and a value removed from a variable when
- * the count's upper bound is already reached by variables whose intervals miss that value. Bounds
- * the propagator derives from holes or from the matching have no explanation here.
+ * the count's upper bound is already reached by variables whose intervals miss that value. By the
+ * union U of domains: the count is at most |U|, and when the other variables' domains have fewer
+ * values together than the count's lower bound, a variable takes a value outside them. Bounds the
+ * propagator derives from the matching otherwise have no explanation here.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -81,6 +85,13 @@ final class ValuesExplanation {
     }
     IntVar y = trail.variable(entry);
     if (y == count) {
+      if (trail.kind(entry) == AtomicTrail.LE) {
+        // the variables have at most as many values as their domains together
+        IntervalDomain union = union(entry, null);
+        return union != null
+            && union.getSize() <= trail.value(entry)
+            && within(union, entry, null, out);
+      }
       return trail.kind(entry) == AtomicTrail.GE
           && disjoint(trail.value(entry), entry, null, 1, 0, out);
     }
@@ -104,11 +115,71 @@ final class ValuesExplanation {
     while (hi > lo && trail.excludedBefore(y, hi, entry, out)) {
       hi--;
     }
+    int bounded = out.size();
     // y takes a value in lo..hi only as a value of its own, one more than count's upper bound
     trail.addUpperBound(count, entry, out);
-    if (lo > hi || !disjoint(trail.maxBefore(count, entry), entry, y, lo, hi, out)) {
-      out.truncate(mark);
-      return false;
+    if (lo <= hi && disjoint(trail.maxBefore(count, entry), entry, y, lo, hi, out)) {
+      return true;
+    }
+    out.truncate(bounded);
+    // the others' domains together have fewer values than count's lower bound, so y takes a value
+    // outside them, and lo..hi is inside them
+    IntervalDomain union = union(entry, y);
+    if (lo <= hi
+        && union != null
+        && union.getSize() < trail.minBefore(count, entry)
+        && removedInside(y, lo, hi, union, entry, out)
+        && within(union, entry, y, out)) {
+      trail.addLowerBound(count, entry, out);
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  // the union of the domains of the variables other than skip just before position, or null when
+  // it has more than HOLES values
+  private IntervalDomain union(int position, IntVar skip) {
+    IntervalDomain union = new IntervalDomain();
+    for (IntVar x : list) {
+      if (x == skip) {
+        continue;
+      }
+      int lo = trail.minBefore(x, position);
+      int hi = trail.maxBefore(x, position);
+      if ((long) hi - lo >= HOLES) {
+        return null;
+      }
+      for (int v = lo; v <= hi; v++) {
+        if (!union.contains(v) && !trail.excludedBefore(x, v, position, new EntryList())) {
+          union.unionAdapt(v, v);
+        }
+      }
+      if (union.getSize() > HOLES) {
+        return null;
+      }
+    }
+    return union;
+  }
+
+  // the reason that the domains of the variables other than skip are inside union
+  private boolean within(IntervalDomain union, int position, IntVar skip, EntryList out) {
+    for (IntVar x : list) {
+      if (x != skip && !DomainCover.domain(trail, x, position, (v, o) -> union.contains(v), out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether every value of lo..hi that y had just before position is in union; y's own removals
+  // of the others are already in out
+  private boolean removedInside(
+      IntVar y, int lo, int hi, IntervalDomain union, int position, EntryList out) {
+    for (int v = lo; v <= hi; v++) {
+      if (!union.contains(v) && !trail.excludedBefore(y, v, position, out)) {
+        return false;
+      }
     }
     return true;
   }
@@ -129,6 +200,15 @@ final class ValuesExplanation {
     int mark = out.size();
     trail.addUpperBound(count, position, out);
     if (max < list.length && disjoint(max + 1, position, null, 1, 0, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    // fewer values in all the domains together than count's lower bound
+    IntervalDomain union = union(position, null);
+    if (union != null
+        && union.getSize() < trail.minBefore(count, position)
+        && within(union, position, null, out)) {
+      trail.addLowerBound(count, position, out);
       return true;
     }
     out.truncate(mark);
