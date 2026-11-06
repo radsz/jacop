@@ -286,6 +286,15 @@ public class ElementIntegerFast extends AbstractElement
     return satisfiedForIntegerList(list, value);
   }
 
+  // the value variable and the list, for the linear relaxation (Linearizations)
+  IntVar valueVariable() {
+    return value;
+  }
+
+  int[] elementList() {
+    return list;
+  }
+
   @Override
   public String toString() {
     return buildToString("elementIntegerFast", list, value, false);

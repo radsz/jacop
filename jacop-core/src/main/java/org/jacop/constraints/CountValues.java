@@ -250,6 +250,11 @@ public class CountValues extends AbstractCountValues
     return getClass() == CountValues.class && network().explainFailure(trail, out);
   }
 
+  // the counters of the values, for the linear relaxation (Linearizations)
+  IntVar[] counters() {
+    return counter;
+  }
+
   @Override
   public String toString() {
 

@@ -48,6 +48,7 @@ import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
+import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -275,6 +276,12 @@ public class Constraints implements ParserTreeConstants {
       if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
         // the unary resources it adds explain by rules a proof's unit propagation does not reach
         new DisjunctiveCliqueDetector(support).detect(astTree);
+      }
+
+      if (DifferenceCyclesDetector.enabled() && options.proof() == null) {
+        // fails on a negative cycle of the difference constraints that hold, with the cycle as
+        // reason
+        new DifferenceCyclesDetector(support).detect(astTree);
       }
 
       // energy precedence when enabled, and the reservoirs
