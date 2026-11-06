@@ -252,7 +252,7 @@ final class BasisLu {
         dependent();
       }
       pack(lStepRow, lStepVal, uStepPos, uStepVal);
-      build = build / 3 + STEP_WORK * m;
+      build = build / 3 + (long) STEP_WORK * m;
     }
 
     // finds and makes one pivot; false when the active matrix has no nonzero left. A pivot must be

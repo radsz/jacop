@@ -399,6 +399,12 @@ public final class RevisedDualSimplex {
     refactorWeight = o.refactorWeight;
     refactorUpdates = o.refactorUpdates;
     refactorsForWork = o.refactorsForWork;
+    // the copy builds its own factors, and their work is counted from there
+    workOf = null;
+    factorWork = 0;
+    workMark = 0;
+    pivotWork = 0;
+    recentWork = -1;
     ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
     lu = null;
     touchedCount = 0;

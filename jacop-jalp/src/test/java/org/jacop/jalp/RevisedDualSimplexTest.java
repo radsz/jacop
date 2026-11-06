@@ -427,7 +427,7 @@ class RevisedDualSimplexTest {
         RevisedDualSimplex lp = p.simplex(true);
         lp.setRefactorWeight(weight);
         int s = solveAndCheck(p, lp, true, what);
-        if (weight == 0) {
+        if (weight <= 0) {
           status = s;
           objective = s == RevisedDualSimplex.OPTIMAL ? lp.objective() : 0;
           assertThat(lp.refactorsForWork()).as(what).isZero();
