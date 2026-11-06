@@ -60,6 +60,8 @@ import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.LinearReasons;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * The linear relaxation of the linear constraints of a store, solved by a dual simplex during
@@ -86,7 +88,7 @@ import org.jacop.lcg.LinearReasons;
  * @version 5.0
  */
 public class LinearRelaxation extends Constraint
-    implements Explainable, LinearReasons, Stateful, Copyable<LinearRelaxation> {
+    implements Explainable, LinearReasons, PbEncodable, Stateful, Copyable<LinearRelaxation> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -203,6 +205,45 @@ public class LinearRelaxation extends Constraint
 
   // the form propagated when the last failure happened
   private LinearForm failureForm;
+
+  /**
+   * How a deduction of a relaxation built for a proof ({@link #ofModel}) follows from the model:
+   * the form is the sum over k of {@code multipliers[k]} times the relation of the constraint
+   * {@code rows[k]}, its {@code <=} side for a positive multiplier and its {@code >=} side, times
+   * the absolute value, for a negative one. A proof writes it as a {@code pol} step over the lines
+   * of those constraints.
+   *
+   * @param form the form that is propagated, {@code sum w x <= c}
+   * @param rows the constraints of the rows combined
+   * @param multipliers the multiplier of each, not zero
+   */
+  public record Certificate(LinearForm form, Constraint[] rows, long[] multipliers) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Certificate c
+          && form == c.form
+          && Arrays.equals(rows, c.rows)
+          && Arrays.equals(multipliers, c.multipliers);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(rows) + Arrays.hashCode(multipliers);
+    }
+
+    @Override
+    public String toString() {
+      return "Certificate(" + rows.length + " rows)";
+    }
+  }
+
+  // for a proof: the constraint of each row, or null when the relaxation is not built for one
+  private Constraint[] rowSource;
+  // the certificate of each deduction (by deducedForm), of the last failure, and of the form that
+  // explained last
+  private final List<Certificate> deducedCertificate = new ArrayList<>();
+  private Certificate failureCertificate;
+  private Certificate lastCertificate;
 
   /** Statistics: propagations. */
   public long calls;
@@ -608,19 +649,7 @@ public class LinearRelaxation extends Constraint
       Collection<LinearForm> extra,
       Set<? extends IntVar> substituted,
       Simplex simplex) {
-    // the constraints of the variables in the store and of the named ones, such as Boolean
-    // variables, which have no store index
-    Set<Constraint> constraints = new LinkedHashSet<>();
-    for (int i = 0; i < store.size(); i++) {
-      constraints.addAll(store.vars[i].dom().constraints());
-      constraints.addAll(store.valueWatchers(store.vars[i]));
-    }
-    for (Var v : store.variablesHashMap.values()) {
-      constraints.addAll(v.dom().constraints());
-      // constraints that watch values, such as long pseudo-Boolean sums, are not in the domains
-      constraints.addAll(store.valueWatchers(v));
-    }
-    constraints.addAll(store.watchedLiteralConstraints());
+    Set<Constraint> constraints = constraintsOf(store);
     List<LinearForm> forms = new ArrayList<>();
     List<LinearForm> relaxed = new ArrayList<>();
     List<CapacityCuts> separations = new ArrayList<>();
@@ -722,6 +751,121 @@ public class LinearRelaxation extends Constraint
     r.pairCliques = pairCliques;
     r.capacity = separations;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  /**
+   * Creates the relaxation that a VeriPB proof can follow: its rows are the relations of the
+   * constraints whose proof model is that relation as a line ({@link LinearForms#ofModelLine}),
+   * with no rows of other constraints, no substitution and no cuts, and every deduction keeps the
+   * combination of rows it comes from ({@link #certificate()}). The deductions are not divided by
+   * the greatest common divisor of their weights, which changes no bound they propagate.
+   *
+   * @param store the store
+   * @param objective the variable to minimize, or null for satisfaction
+   * @param maximize whether the objective is maximized instead
+   * @param simplex the simplex; the dense one is replaced by the sparse one from {@code
+   *     org.jacop.lp.sparseRows} (100) rows, as in {@link #of}
+   * @return the relaxation, or null when it has fewer than two rows or is too large
+   */
+  public static LinearRelaxation ofModel(
+      Store store, IntVar objective, boolean maximize, Simplex simplex) {
+    List<LinearForm> forms = new ArrayList<>();
+    Map<LinearForm, Constraint> source = new IdentityHashMap<>();
+    for (Constraint c : constraintsOf(store)) {
+      LinearForm f = LinearForms.ofModelLine(c);
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+        forms.add(f);
+        source.put(f, c);
+      }
+    }
+    if (simplex == Simplex.DENSE
+        && SPARSE_ROWS >= 0
+        && sparseTakes(forms)
+        && (forms.size() >= SPARSE_ROWS || tooLarge(forms, Simplex.DENSE))) {
+      simplex = Simplex.SPARSE;
+    }
+    if (tooLarge(forms, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(forms, List.of(), objective, maximize, simplex);
+    r.rowSource = new Constraint[r.forms.size()];
+    for (int i = 0; i < r.rowSource.length; i++) {
+      r.rowSource[i] = source.get(r.forms.get(i));
+    }
+    r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  // the constraints of the variables in the store and of the named ones, such as Boolean
+  // variables, which have no store index
+  private static Set<Constraint> constraintsOf(Store store) {
+    Set<Constraint> constraints = new LinkedHashSet<>();
+    for (int i = 0; i < store.size(); i++) {
+      constraints.addAll(store.vars[i].dom().constraints());
+      constraints.addAll(store.valueWatchers(store.vars[i]));
+    }
+    for (Var v : store.variablesHashMap.values()) {
+      constraints.addAll(v.dom().constraints());
+      // constraints that watch values, such as long pseudo-Boolean sums, are not in the domains
+      constraints.addAll(store.valueWatchers(v));
+    }
+    constraints.addAll(store.watchedLiteralConstraints());
+    return constraints;
+  }
+
+  /**
+   * Returns whether the relaxation was built for a proof ({@link #ofModel}).
+   *
+   * @return true when its deductions have certificates
+   */
+  public boolean certifies() {
+    return rowSource != null;
+  }
+
+  /**
+   * Returns the certificate of the form that gave the last explanation, by {@link #explain} or
+   * {@link #explainFailure}, of a relaxation built for a proof.
+   *
+   * @return the certificate, or null
+   */
+  public Certificate certificate() {
+    return lastCertificate;
+  }
+
+  /**
+   * Writes nothing: the relaxation is implied by its rows, and a proof derives each of its
+   * deductions from the lines of their constraints. Only a relaxation built for a proof ({@link
+   * #ofModel}) has the certificates for that.
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    return certifies();
+  }
+
+  // the certificate of a combination of the rows by lambda, for the <= side (upper) or the >= side
+  private Certificate certified(LinearForm f, long[] lambda, boolean upper) {
+    if (rowSource == null || f == null) {
+      return null;
+    }
+    int n = 0;
+    for (long l : lambda) {
+      n += l != 0 ? 1 : 0;
+    }
+    // the multipliers of the scaled simplex share powers of two: the same sum divided by their
+    // greatest common divisor, exactly, keeps the proof's numbers small
+    long g = 0;
+    for (long l : lambda) {
+      g = gcd(g, Math.abs(l));
+    }
+    Constraint[] rows = new Constraint[n];
+    long[] multipliers = new long[n];
+    for (int i = 0, k = 0; i < lambda.length; i++) {
+      if (lambda[i] != 0) {
+        rows[k] = rowSource[i];
+        multipliers[k++] = (upper ? lambda[i] : -lambda[i]) / g;
+      }
+    }
+    return new Certificate(f, rows, multipliers);
   }
 
   /**
@@ -1240,6 +1384,11 @@ public class LinearRelaxation extends Constraint
           w[k] = above ? ws[k] : -ws[k];
         }
         failureForm = new LinearForm(vars, w, above ? rowHi[i] : -rowLo[i], LinearForm.LE);
+        failureCertificate =
+            rowSource == null
+                ? null
+                : new Certificate(
+                    failureForm, new Constraint[] {rowSource[i]}, new long[] {above ? 1 : -1});
         failures++;
         throw Store.failException;
       }
@@ -1356,7 +1505,8 @@ public class LinearRelaxation extends Constraint
       if (lambda == null) {
         return;
       }
-      LinearForm[] forms = certificate(lambda);
+      long[][] used = new long[2][];
+      LinearForm[] forms = certificate(lambda, used);
       if (forms == null) {
         continue; // the combination overflows: try a smaller scale
       }
@@ -1365,9 +1515,9 @@ public class LinearRelaxation extends Constraint
         fits &= f == null || fits(f);
       }
       if (fits || s == SCALES.length - 1) {
-        for (LinearForm f : forms) {
-          if (f != null) {
-            propagate(store, f);
+        for (int k = 0; k < forms.length; k++) {
+          if (forms[k] != null) {
+            propagate(store, forms[k], certified(forms[k], used[k], k == 0));
           }
         }
         if (status != LpSolver.INFEASIBLE) {
@@ -1433,13 +1583,15 @@ public class LinearRelaxation extends Constraint
    * Shcherbina): a multiplier whose row lacks the side its sign needs is dropped from that
    * inequality instead of losing the inequality, and each inequality is divided by the greatest
    * common divisor of its weights with its side rounded down, which holds as every column is an
-   * integer. Null when a combination overflows.
+   * integer. Null when a combination overflows. The multipliers of each inequality go to used.
    */
-  private LinearForm[] certificate(long[] lambda) {
+  private LinearForm[] certificate(long[] lambda, long[][] used) {
     Aggregate g = aggregate(lambda);
     if (g == null) {
       return null;
     }
+    used[0] = lambda;
+    used[1] = lambda;
     if (!CLEAN) {
       return combine(g);
     }
@@ -1448,7 +1600,8 @@ public class LinearRelaxation extends Constraint
       return forms;
     }
     if (!g.hasUpper()) {
-      Aggregate u = aggregate(sided(lambda, true));
+      used[0] = sided(lambda, true);
+      Aggregate u = aggregate(used[0]);
       if (u == null) {
         return null;
       }
@@ -1456,14 +1609,15 @@ public class LinearRelaxation extends Constraint
       forms[0] = c.length > 0 ? c[0] : null;
     }
     if (!g.hasLower()) {
-      Aggregate l = aggregate(sided(lambda, false));
+      used[1] = sided(lambda, false);
+      Aggregate l = aggregate(used[1]);
       if (l == null) {
         return null;
       }
       LinearForm[] c = combine(l);
       forms[1] = c.length > 1 ? c[1] : null;
     }
-    for (int k = 0; k < forms.length; k++) {
+    for (int k = 0; k < forms.length && rowSource == null; k++) {
       forms[k] = forms[k] == null ? null : divided(forms[k]);
     }
     return forms;
@@ -1960,6 +2114,9 @@ public class LinearRelaxation extends Constraint
       for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
         long[] lambda = scaled(byRow(lp.inverseRow(lp.basicRow(j))), GOMORY_SCALE);
         if (lambda != null) {
+          if (slackGomory) {
+            slackGomory(lambda, value, lo, hi, found);
+          }
           mir(aggregate(lambda), value, lo, hi, found);
         }
       }
@@ -2017,6 +2174,143 @@ public class LinearRelaxation extends Constraint
       cutBound = lp.value(0);
     }
     return status;
+  }
+
+  private static final boolean SLACK_GOMORY =
+      !"false".equals(System.getProperty("org.jacop.lp.slackGomory"));
+
+  private boolean slackGomory = SLACK_GOMORY;
+
+  /**
+   * Chooses the Gomory cuts of the root: over the rows and their slacks ({@link #slackGomory}, the
+   * default, {@code -Dorg.jacop.lp.slackGomory=false} turns it off) or the MIR of the aggregate of
+   * the rows alone.
+   *
+   * @param on true for the cuts over the slacks
+   */
+  public void setSlackGomory(boolean on) {
+    slackGomory = on;
+  }
+
+  /**
+   * The Gomory mixed-integer cut of a row of the tableau, exact. The row of the basis inverse,
+   * scaled and rounded into integers lambda, gives the integer equality {@code sum_j (lambda A)_j
+   * x_j - sum_i lambda_i s_i = 0} over the columns and the slacks {@code s_i = a_i x} of the rows.
+   * Every slack is an integer, as the rows have integer weights over integer columns, and lies
+   * within the sides of its row (or, for a side the row lacks, the bound its columns imply). The
+   * MIR of that equality, both ways, is taken over the columns and the slacks together, in longs,
+   * and the slacks are then replaced by their rows. Unlike the MIR of the aggregate {@code sum
+   * lambda a x <= sum lambda b}, which puts every slack at a side, a slack keeps its own rounding,
+   * which is what the Gomory cut of the textbook, with its real weights, does; its weights are the
+   * exact rationals of that cut over a common denominator, scaled down safely when large ({@link
+   * MirCut#reduce}).
+   */
+  private void slackGomory(
+      long[] lambda, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    int n = lp.columns();
+    int m = lambda.length;
+    long[] coef = new long[n];
+    int slacks = 0;
+    try {
+      for (int i = 0; i < m; i++) {
+        long l = lambda[i];
+        if (l == 0) {
+          continue;
+        }
+        slacks++;
+        int[] cs = rowColumns[i];
+        long[] ws = rowWeights[i];
+        for (int k = 0; k < cs.length; k++) {
+          coef[cs[k]] = Math.addExact(coef[cs[k]], Math.multiplyExact(l, ws[k]));
+        }
+      }
+      int size = slacks;
+      for (long c : coef) {
+        size += c != 0 ? 1 : 0;
+      }
+      int[] columns = new int[size];
+      long[] weights = new long[size];
+      long[] xlo = Arrays.copyOf(lo, n + m);
+      long[] xhi = Arrays.copyOf(hi, n + m);
+      double[] xv = Arrays.copyOf(value, n + m);
+      int q = 0;
+      for (int j = 0; j < n; j++) {
+        if (coef[j] != 0) {
+          columns[q] = j;
+          weights[q++] = coef[j];
+        }
+      }
+      for (int i = 0; i < m; i++) {
+        if (lambda[i] == 0) {
+          continue;
+        }
+        long least = 0;
+        long most = 0;
+        double v = 0;
+        int[] cs = rowColumns[i];
+        long[] ws = rowWeights[i];
+        for (int k = 0; k < cs.length; k++) {
+          long a = Math.multiplyExact(ws[k], lo[cs[k]]);
+          long b = Math.multiplyExact(ws[k], hi[cs[k]]);
+          least = Math.addExact(least, Math.min(a, b));
+          most = Math.addExact(most, Math.max(a, b));
+          v += ws[k] * value[cs[k]];
+        }
+        xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
+        xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
+        if (xlo[n + i] > xhi[n + i]) {
+          return;
+        }
+        xv[n + i] = v;
+        columns[q] = n + i;
+        weights[q++] = -lambda[i];
+      }
+      long[] neg = new long[size];
+      for (int k = 0; k < size; k++) {
+        neg[k] = Math.negateExact(weights[k]);
+      }
+      for (long[] w : new long[][] {weights, neg}) {
+        long[] g = MirCut.raw(columns, w, 0, xv, xlo, xhi);
+        if (g == null) {
+          continue;
+        }
+        // the slacks replaced by their rows: g_s s_i = g_s a_i x
+        long[] cut = new long[n];
+        for (int k = 0; k < size; k++) {
+          if (g[k] == 0) {
+            continue;
+          }
+          int c = columns[k];
+          if (c < n) {
+            cut[c] = Math.addExact(cut[c], g[k]);
+          } else {
+            int[] cs = rowColumns[c - n];
+            long[] ws = rowWeights[c - n];
+            for (int t = 0; t < cs.length; t++) {
+              cut[cs[t]] = Math.addExact(cut[cs[t]], Math.multiplyExact(g[k], ws[t]));
+            }
+          }
+        }
+        int nz = 0;
+        for (long c : cut) {
+          nz += c != 0 ? 1 : 0;
+        }
+        int[] cc = new int[nz];
+        long[] cw = new long[nz];
+        for (int j = 0, t = 0; j < n; j++) {
+          if (cut[j] != 0) {
+            cc[t] = j;
+            cw[t++] = cut[j];
+          }
+        }
+        MirCut c = MirCut.finish(cc, cw, g[size], value, lo, hi, true);
+        if (c != null) {
+          found.add(c);
+        }
+      }
+    } catch (ArithmeticException overflow) {
+      // no cut from this row
+    }
   }
 
   /**
@@ -2377,7 +2671,7 @@ public class LinearRelaxation extends Constraint
   }
 
   // bounds propagation of sum w x <= c, exact; nothing on overflow
-  private void propagate(Store store, LinearForm f) {
+  private void propagate(Store store, LinearForm f, Certificate certificate) {
     IntVar[] vars = f.vars();
     long[] w = f.weights();
     long c = f.c();
@@ -2392,6 +2686,7 @@ public class LinearRelaxation extends Constraint
       return;
     }
     failureForm = f;
+    failureCertificate = certificate;
     if (smallest > c) {
       failures++;
       throw Store.failException;
@@ -2415,23 +2710,24 @@ public class LinearRelaxation extends Constraint
       if (wk > 0) {
         long bound = Math.floorDiv(limit, wk);
         if (bound < v.max()) {
-          record(store, v, f);
+          record(store, v, f, certificate);
           v.domain.inMax(store.level, v, (int) Math.max(bound, v.min() - 1L));
         }
       } else {
         long bound = Math.ceilDiv(limit, wk);
         if (bound > v.min()) {
-          record(store, v, f);
+          record(store, v, f, certificate);
           v.domain.inMin(store.level, v, (int) Math.min(bound, v.max() + 1L));
         }
       }
     }
   }
 
-  private void record(Store store, IntVar v, LinearForm f) {
+  private void record(Store store, IntVar v, LinearForm f, Certificate certificate) {
     prunings++;
     deducedVar.add(v);
     deducedForm.add(f);
+    deducedCertificate.add(certificate);
     deducedLevel.add(store.level);
   }
 
@@ -2443,6 +2739,7 @@ public class LinearRelaxation extends Constraint
     }
     deducedVar.subList(k, deducedVar.size()).clear();
     deducedForm.subList(k, deducedForm.size()).clear();
+    deducedCertificate.subList(k, deducedCertificate.size()).clear();
     deducedLevel.subList(k, deducedLevel.size()).clear();
   }
 
@@ -2450,9 +2747,11 @@ public class LinearRelaxation extends Constraint
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     IntVar v = trail.variable(entry);
     int mark = out.size();
+    lastCertificate = null;
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
       if (deducedVar.get(k) == v) {
         if (deducedForm.get(k).explain(trail, entry, out)) {
+          lastCertificate = deducedCertificate.get(k);
           return true;
         }
         out.truncate(mark);
@@ -2463,6 +2762,7 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    lastCertificate = failureCertificate;
     return failureForm != null && failureForm.explainFailure(trail, out);
   }
 
