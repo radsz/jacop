@@ -2230,6 +2230,7 @@ public final class RevisedDualSimplex {
   // and the step and the bound of the leaving column found by the ratio test
   private double[] devex = {};
   private double[] phaseOne = {};
+  private double[] phaseY = {};
   private double primalStep;
   private boolean leavesAtUpper;
 
@@ -2384,6 +2385,9 @@ public final class RevisedDualSimplex {
       devex = new double[cols];
       phaseOne = new double[cols];
     }
+    if (phaseY.length < m) {
+      phaseY = new double[m];
+    }
     Arrays.fill(devex, 0, cols, 1);
     boolean wasPhaseOne = false;
     int degenerate = 0;
@@ -2405,8 +2409,8 @@ public final class RevisedDualSimplex {
         continue;
       }
       double dir = dd[q] < 0 ? 1 : -1;
-      column(q, work);
-      lu.ftranColumn(work, alphaQ);
+      clear(alphaQ, alphaIdx, alphaLen);
+      alphaLen = lu.ftran(rhs, rhsIdx, columnInto(q, rhs, rhsIdx), alphaQ, alphaIdx, true);
       int r = primalLeaving(dir);
       double range = enteringRange(q, dir);
       if (r < 0 && range == Double.POSITIVE_INFINITY) {
@@ -2438,7 +2442,7 @@ public final class RevisedDualSimplex {
         continue;
       }
       int p = basis[r];
-      unitRowOfInverse(r, rho);
+      rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
       pivotRow();
       double fromRow = alphaRow[q];
       double fromColumn = alphaQ[r];
@@ -2476,8 +2480,9 @@ public final class RevisedDualSimplex {
       devex[p] = Math.max(wq / (fromRow * fromRow), 1);
       // the dual steepest-edge weight of the row, for a dual solve that follows
       double wr = 0;
-      for (int i = 0; i < m; i++) {
-        wr += rho[i] * rho[i];
+      for (int k = 0; k < rhoLen; k++) {
+        double v = rho[rhoIdx[k]];
+        wr += v * v;
       }
       weight[r] = Math.max(wr / (fromColumn * fromColumn), 1e-12);
       clearTouched();
@@ -2561,11 +2566,9 @@ public final class RevisedDualSimplex {
     if (step == 0) {
       return;
     }
-    for (int i = 0; i < m; i++) {
-      double v = alphaQ[i];
-      if (v != 0) {
-        beta[i] -= v * step;
-      }
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
+      beta[i] -= alphaQ[i] * step;
     }
   }
 
@@ -2601,7 +2604,9 @@ public final class RevisedDualSimplex {
       return false;
     }
     ops += nonzeros + cols;
-    lu.btran(work, rho);
+    // into phaseY, since rho keeps its nonzeros listed in rhoIdx for the pivot row
+    double[] y = phaseY;
+    lu.btran(work, y);
     for (int j = 0; j < n; j++) {
       if (row[j] >= 0) {
         phaseOne[j] = 0;
@@ -2611,12 +2616,12 @@ public final class RevisedDualSimplex {
       int[] ci = colIdx[j];
       double[] cv = colVal[j];
       for (int e = 0; e < colLen[j]; e++) {
-        s -= rho[ci[e]] * cv[e];
+        s -= y[ci[e]] * cv[e];
       }
       phaseOne[j] = s;
     }
     for (int i = 0; i < m; i++) {
-      phaseOne[n + i] = row[n + i] >= 0 ? 0 : rho[i];
+      phaseOne[n + i] = row[n + i] >= 0 ? 0 : y[i];
     }
     return true;
   }
@@ -2667,9 +2672,10 @@ public final class RevisedDualSimplex {
    * @return the leaving row, or -1 when no basic column blocks; the step goes into primalStep
    */
   private int primalLeaving(double dir) {
-    ops += 2L * m;
+    ops += 2L * alphaLen;
     double bound = Double.POSITIVE_INFINITY;
-    for (int i = 0; i < m; i++) {
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
       double rate = -alphaQ[i] * dir;
       if (Math.abs(rate) >= PIVOT_TOL) {
         double slack = slackTo(i, rate);
@@ -2686,7 +2692,8 @@ public final class RevisedDualSimplex {
     int r = -1;
     double pivot = 0;
     boolean atUpper = false;
-    for (int i = 0; i < m; i++) {
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
       double rate = -alphaQ[i] * dir;
       if (Math.abs(rate) > pivot) {
         double slack = slackTo(i, rate);
