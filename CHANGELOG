@@ -1998,9 +1998,9 @@ Version 5.0 (unreleased)
      liner-sf-repositioning tp7_4: generic LinearIntDom failures 45 % to
      0 % (--lcg) and 18 % to 0 % (--lcg -f); --lcg -f proves the known
      optimum 150674 in 41 s (before 160071 in 60 s, not proved). Wide set
-     (220, 60 s, osolpro #231 scoring): --lcg S = -10, --lcg -f S = -12;
-     the only decided instance with generic LinearIntDom failures is
-     tp7_4 (-f +1, H1), the others are search-order noise.
+     (220, 60 s, osolpro #231 scoring, two -f repetitions): --lcg S = +6,
+     --lcg -f S = +9; the only decided instance with generic LinearIntDom
+     failures is tp7_4 (-f +1, H1), the others are search-order noise.
 
 Version 4.11
 =============
