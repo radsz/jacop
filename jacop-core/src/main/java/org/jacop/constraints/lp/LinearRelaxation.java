@@ -248,6 +248,28 @@ public class LinearRelaxation extends Constraint
   /** Statistics: the objective bound of the first solve without those rows, or NaN. */
   public double baseBound = Double.NaN;
 
+  /** Statistics: solves at least {@code org.jacop.lp.basisJump} levels above the last solve. */
+  public long jumpSolves;
+
+  /** Statistics: the pivots of those solves. */
+  public long jumpPivots;
+
+  /** Statistics: bases restored for those solves. */
+  public long basisRestores;
+
+  // the bases of the last optimal solve at each of the levels of the current branch, shallowest
+  // first, restored when the search jumps back from deeper levels (a restart, a long backjump):
+  // the basis the deeper node left is optimal for bounds far from the current ones, the kept one
+  // for bounds close to them (roadmap A5)
+  private static final boolean KEEP_BASES =
+      !"false".equals(System.getProperty("org.jacop.lp.keepBases"));
+  private static final int BASIS_JUMP = Integer.getInteger("org.jacop.lp.basisJump", 2);
+  private static final int MAX_BASES = Integer.getInteger("org.jacop.lp.maxBases", 32);
+  private final List<Object> bases = new ArrayList<>();
+  private int[] basisLevel = new int[0];
+  private LpSolver basesOf;
+  private int lastSolveLevel = -1;
+
   // whether the rows of constraints that are not linear relations are added (Linearizations)
   private static final boolean LINEARIZE =
       !"false".equals(System.getProperty("org.jacop.lp.linearize"));
@@ -1162,6 +1184,11 @@ public class LinearRelaxation extends Constraint
       return; // the bounds of the variables alone deduce nothing
     }
     calls++;
+    boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
+    long pivotsBefore = lp.pivots();
+    if (KEEP_BASES) {
+      restoreBasis(store.level, jump);
+    }
     for (int j = 0; j < lp.columns(); j++) {
       lp.setBounds(j, x[j].min(), x[j].max());
     }
@@ -1195,6 +1222,14 @@ public class LinearRelaxation extends Constraint
         && calls == 1) {
       cutsTried = true;
       status = cutRounds();
+    }
+    lastSolveLevel = store.level;
+    if (jump) {
+      jumpSolves++;
+      jumpPivots += lp.pivots() - pivotsBefore;
+    }
+    if (KEEP_BASES && status == LpSolver.OPTIMAL) {
+      saveBasis(store.level);
     }
     if (status == DualSimplex.LIMIT) {
       limits++;
@@ -1261,6 +1296,54 @@ public class LinearRelaxation extends Constraint
         // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
       }
       // the bounds reasoning on the form would overflow: try a smaller scale
+    }
+  }
+
+  // drops the bases of levels below the current one, and after a jump restores the basis of the
+  // deepest level kept, when it is closer to the current level than the last solve was
+  private void restoreBasis(int level, boolean jump) {
+    if (basesOf != lp) {
+      bases.clear();
+      basesOf = lp;
+    }
+    int k = bases.size();
+    while (k > 0 && basisLevel[k - 1] > level) {
+      k--;
+    }
+    bases.subList(k, bases.size()).clear();
+    if (!jump || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
+      return;
+    }
+    if (lp.restoreBasis(bases.get(k - 1))) {
+      basisRestores++;
+    } else {
+      bases.clear(); // rows were removed since: none of the bases holds
+    }
+  }
+
+  // keeps the basis of an optimal solve as the one of its level
+  private void saveBasis(int level) {
+    if (basesOf != lp) {
+      bases.clear();
+      basesOf = lp;
+    }
+    int k = bases.size();
+    if (k > 0 && basisLevel[k - 1] == level) {
+      Object b = lp.saveBasis();
+      if (b == null) {
+        return;
+      }
+      bases.set(k - 1, b);
+    } else if (k < MAX_BASES && (k == 0 || basisLevel[k - 1] < level)) {
+      Object b = lp.saveBasis();
+      if (b == null) {
+        return;
+      }
+      if (basisLevel.length == k) {
+        basisLevel = Arrays.copyOf(basisLevel, 2 * k + 1);
+      }
+      basisLevel[k] = level;
+      bases.add(b);
     }
   }
 
