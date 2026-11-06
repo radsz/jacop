@@ -2352,7 +2352,7 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
-149. The clique rows of tables (TableCliques) and new value encodings of
+155. The clique rows of tables (TableCliques) and new value encodings of
      GCC, count, alldifferent, alldistinct and element use LP-only
      columns [x = v] (LpColumn) instead of store Booleans channelled with
      ChannelReif, so they add no variables or constraints to the store.
@@ -2374,6 +2374,25 @@ Version 5.0 (unreleased)
      have the same LP in both versions and swap outcomes when re-run,
      except sudoku_fixed p28, where one more LP failure changes the
      search path.
+
+156. Root reduced-cost fixing for the linear relaxation (SCIP's
+     prop_rootredcost). The inequalities of the duals of the last optimal
+     solve at the root level are kept; they are combinations of the rows,
+     so they hold everywhere, and whenever the bound of the objective
+     improves at the root level (a restart, or a backjump under LCG) they
+     are propagated again and fix the columns whose reduced cost no
+     longer fits in the gap. Statistic lpRootPrunings;
+     -Dorg.jacop.lp.rootReducedCosts=false turns it off. Re-solving the
+     relaxation at restarts, with new cut rounds, is there too but off by
+     default (-Dorg.jacop.lp.restartSolves=true): it solves only when
+     bounds other than the objective changed at the root, starts from the
+     basis of the last root optimum and backs off when it deduces nothing.
+     Wide set (220, 60 s, paired): root reduced costs prune on 17
+     instances by default and 6 under -f; default 10 better / 3 worse
+     (wmsmc-int proved in 11 s instead of 13 s), -f 14 / 11, solved
+     unchanged within noise. With re-solves on: -f 156 solved against
+     157 and 158 for two base runs, and ATSP instance10 lost its proof
+     by default (LP time 0.4 s to 3.8 s).
 
 Version 4.11
 =============

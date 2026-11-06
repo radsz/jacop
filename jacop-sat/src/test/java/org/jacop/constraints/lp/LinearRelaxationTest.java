@@ -225,6 +225,68 @@ class LinearRelaxationTest {
     assertThat(cuts).isPositive();
   }
 
+  /**
+   * Restarts: each solution found tightens the bound of the cost at the root level, where the
+   * relaxation propagates its root reduced costs and solves again with new cut rounds; whatever it
+   * deduces there must keep the optimum.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumOverRestarts(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    try {
+      LinearRelaxation.restartSolvesOn = false;
+      assertThat(restarts(simplex)[1]).isPositive();
+      LinearRelaxation.restartSolvesOn = true;
+      long[] counts = restarts(simplex);
+      assertThat(counts[0]).isPositive();
+      assertThat(counts[1]).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+    }
+  }
+
+  // solves each model with restarts after each solution; returns the restart solves and the root
+  // reduced-cost prunings
+  private static long[] restarts(LinearRelaxation.Simplex simplex) {
+    long restarts = 0;
+    long rootPruned = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long[] expected = search(new Model(run));
+      Model model = new Model(run);
+      if (model.objective == null) {
+        continue;
+      }
+      model.simplex = simplex;
+      LinearRelaxation r = model.relaxation();
+      IntVar cost = model.cost();
+      IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
+      vars[model.x.length] = cost;
+      long best = Long.MIN_VALUE;
+      while (model.store.consistency()) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.setAssignSolution(false);
+        search.getSolutionListener().recordSolutions(true);
+        if (!search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
+          break;
+        }
+        best = search.getSolution()[model.x.length].valueEnumeration().nextElement();
+        if (best == cost.min()) {
+          break;
+        }
+        // a restart: the bound of the cost tightens at the root level
+        cost.domain.inMax(model.store.level, cost, (int) best - 1);
+      }
+      assertThat(new long[] {best == Long.MIN_VALUE ? 0 : 1, best})
+          .as("seed %d", run)
+          .isEqualTo(expected);
+      restarts += r.restartSolves;
+      rootPruned += r.rootPrunings;
+    }
+    return new long[] {restarts, rootPruned};
+  }
+
   @Test
   void gomoryCutsOverTheSlacksKeepTheOptimum() {
     int stronger = 0;
