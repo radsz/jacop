@@ -2001,6 +2001,28 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+132. Large neighbourhood search gets three structural neighbourhoods, as in
+     CP-SAT: CONSTRAINTS relaxes the variables of random constraints,
+     SCHEDULING the tasks of a cumulative or unary resource that start in a
+     window of time, and PACKING the rectangles of a diffn (Nooverlap) near
+     a random one. SCHEDULING and PACKING also relax the variables that
+     share a constraint of at most three variables with a relaxed task or
+     rectangle (on cargo, the reclaim times tied to a rectangle by one
+     row). OBJECTIVE now starts from the term with the largest regret (its
+     cost above the cheapest value of its root domain). Under -f the
+     FlatZinc front end leaves variables defined by a constraint
+     (defines_var) out of the neighbourhoods, so a neighbourhood frees
+     decision variables and the defined ones follow; --free-config
+     lns-defined=0 restores the old set, and lns-kinds=a+b+... restricts
+     the kinds. On 38 hard optimisation instances of 13 families where
+     JaCoP is far behind CP-SAT (-f, 60 s, three seeds) the sum of mean
+     primal gaps falls from 12.4 to 9.8 (18 / 4 better / worse; team
+     assignment data1_6_24 73457 against 15561, celar scen06 3571 against
+     4502). On the wide set under -f 6 of 12 families improve and 4 get
+     worse (159 to 160 solved, mean gap 0.104 to 0.100);
+     minimal-decision-sets australian_train5 loses its proof with
+     lns-defined=1.
+
 Version 4.11
 =============
 
