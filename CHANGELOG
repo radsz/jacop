@@ -1996,6 +1996,11 @@ Version 5.0 (unreleased)
      -Dorg.jacop.lp.keepBases=false turns it off; basisJump (2) and
      maxBases (32) tune it. Stats lpJumpSolves, lpJumpPivots,
      lpBasisRestores. The dense simplex (below 100 rows) is unchanged.
+     Bases are not restored in the first 1,000 solves after the rows of
+     non-linear constraints are added (org.jacop.lp.basisProbation),
+     because those rows are dropped when early solves stop at the limit,
+     and a restored basis spared them that limit: slnb7x7 kept 404
+     big-M rows and took 25 s instead of 7 s.
 
 133. The LP relaxation gets rows for more objective links: the convex
      hull of element over a constant array (lower and upper chains of at

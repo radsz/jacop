@@ -269,6 +269,11 @@ public class LinearRelaxation extends Constraint
       !"false".equals(System.getProperty("org.jacop.lp.keepBases"));
   private static final int BASIS_JUMP = Integer.getInteger("org.jacop.lp.basisJump", 2);
   private static final int MAX_BASES = Integer.getInteger("org.jacop.lp.maxBases", 32);
+  // while the rows of the other constraints are judged by the solves that stop at the limit, the
+  // first solves after a jump start from the basis the deeper node left, as before bases were
+  // kept: a restored basis spares them the limit and keeps rows that slow every later solve
+  // (slnb7x7: 404 big-M rows kept, 4x the LP time)
+  private static final long BASIS_PROBATION = Long.getLong("org.jacop.lp.basisProbation", 1000L);
   private final List<Object> bases = new ArrayList<>();
   private int[] basisLevel = new int[0];
   private LpSolver basesOf;
@@ -301,6 +306,8 @@ public class LinearRelaxation extends Constraint
   private int baseRows;
   private long extraLimits;
   private static final int EXTRA_LIMITS = 3;
+  // the call at which the extra rows were added
+  private long extraCall;
 
   // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
   private boolean bySize;
@@ -1384,7 +1391,8 @@ public class LinearRelaxation extends Constraint
       k--;
     }
     bases.subList(k, bases.size()).clear();
-    if (!jump || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
+    boolean judging = beforeExtra != null && calls - extraCall < BASIS_PROBATION;
+    if (!jump || judging || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
       return;
     }
     if (lp.restoreBasis(bases.get(k - 1))) {
@@ -2269,6 +2277,7 @@ public class LinearRelaxation extends Constraint
       beforeExtra = lp;
       baseRows = m;
       extraLimits = limits;
+      extraCall = calls;
       droppedPivots += lp.pivots();
       lp = full;
       return withExtra;
