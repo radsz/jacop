@@ -33,11 +33,13 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jacop.constraints.lp.LpColumn;
@@ -168,6 +170,15 @@ public final class Linearizations {
   private static final int VALUE_COLUMNS_MAX =
       Integer.getInteger("org.jacop.lp.valueColumnsMax", 20_000);
 
+  // the value encodings of counting, all-different and element constraints: on or off, the
+  // largest domain encoded, and the most columns made for a model
+  private static final boolean VALUE_ENCODINGS =
+      !"false".equals(System.getProperty("org.jacop.lp.valueEncodings"));
+  private static final int VALUE_ENCODINGS_DOMAIN =
+      Integer.getInteger("org.jacop.lp.valueEncodingsDomain", 64);
+  private static final int VALUE_ENCODINGS_MAX =
+      Integer.getInteger("org.jacop.lp.valueEncodingsMax", 20_000);
+
   /**
    * Returns the value encodings of the variables of all-different-except constraints over auxiliary
    * columns of the relaxation ({@link LpColumn}), the rows that make the constraints per value, and
@@ -192,9 +203,80 @@ public final class Linearizations {
    * @return the rows, empty when no constraint qualifies
    */
   public static List<LinearForm> valueColumns(Collection<Constraint> constraints) {
-    if (!VALUE_COLUMNS) {
-      return List.of();
+    return valueRows(constraints, List.of()).kept();
+  }
+
+  /**
+   * The rows over LP-only columns ({@link LpColumn}) of a relaxation.
+   *
+   * @param kept the encodings of the all-different-except constraints ({@link #valueColumns}),
+   *     which the relaxation keeps
+   * @param tried the value encodings of the counting, all-different and element constraints ({@link
+   *     #valueRows}), which the relaxation keeps when they help at its first solve
+   */
+  public record ValueRows(List<LinearForm> kept, List<LinearForm> tried) {}
+
+  /**
+   * Returns the rows of {@link #valueColumns}, and the value encodings of the variables of {@link
+   * GCC}, {@link CountValues}, {@link Count}, all-different ({@link Alldiff}, {@link Alldifferent},
+   * {@link Alldistinct}) and element ({@link ElementInteger}, {@link ElementIntegerFast} on the
+   * index) constraints over the same kind of columns. Each such variable x gets a column {@code x_v
+   * = [x = v]} for every value of its domain (the Boolean of the model, or a column made for {@link
+   * #valueColumns} or for the extra rows, when there is one), with {@code sum x_v = 1} and {@code x
+   * = sum v x_v}; then each counter c of a value v gets {@code c = sum_i x_iv} (plus the variables
+   * fixed to v), each all-different gets {@code sum_i x_iv <= 1} for every value v of two or more
+   * of its variables, each element {@code y = a[x]} gets {@code y = sum a[v] x_v}, and each {@code
+   * b <-> x op c} over an encoded x gets the row of {@link #valueColumns}. These are the rows of
+   * the assignment model of a MIP: an objective over counts or element costs is bounded by the
+   * assignment polytope instead of the bounds of the variables alone.
+   *
+   * <p>Only variables with at most {@code org.jacop.lp.valueEncodingsDomain} (64) values are
+   * encoded, and at most {@code org.jacop.lp.valueEncodingsMax} (20,000) columns are made; a
+   * constraint with a variable that is not encoded gets no rows. {@code
+   * -Dorg.jacop.lp.valueEncodings=false} turns these rows off.
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, whose LP-only columns are reused (null entries
+   *     are skipped)
+   * @return the rows of {@link #valueColumns} and the further encodings
+   */
+  public static ValueRows valueRows(
+      Collection<Constraint> constraints, Collection<LinearForm> extra) {
+    Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
+    Set<IntVar> byModel = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : given.entrySet()) {
+      if (covers(e.getKey(), e.getValue())) {
+        byModel.add(e.getKey());
+      }
     }
+    for (LinearForm f : extra) {
+      if (f == null) {
+        continue;
+      }
+      for (IntVar v : f.vars()) {
+        if (v instanceof LpColumn c) {
+          given.computeIfAbsent(c.variable(), k -> new LinkedHashMap<>()).putIfAbsent(c.value(), c);
+        }
+      }
+    }
+    Map<IntVar, Map<Integer, IntVar>> encoded = new LinkedHashMap<>();
+    List<LinearForm> kept = VALUE_COLUMNS ? exceptRows(constraints, given, encoded) : List.of();
+    if (!VALUE_ENCODINGS) {
+      return new ValueRows(kept, List.of());
+    }
+    Encoder e = new Encoder(given, encoded, byModel);
+    for (Constraint c : constraints) {
+      e.rows(c);
+    }
+    e.links(constraints);
+    return new ValueRows(kept, e.out);
+  }
+
+  // the rows of valueColumns, with the columns of each encoded variable put in encoded
+  private static List<LinearForm> exceptRows(
+      Collection<Constraint> constraints,
+      Map<IntVar, Map<Integer, IntVar>> given,
+      Map<IntVar, Map<Integer, IntVar>> encoded) {
     List<AlldifferentExcept> lists = new ArrayList<>();
     for (Constraint c : constraints) {
       if ((c.getClass() == AlldifferentExcept.class || c.getClass() == AlldifferentExceptZero.class)
@@ -205,9 +287,7 @@ public final class Linearizations {
     if (lists.isEmpty()) {
       return List.of();
     }
-    Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
     // the columns of each encoded variable by value; 0 is left implicit
-    Map<IntVar, Map<Integer, IntVar>> encoded = new LinkedHashMap<>();
     List<LinearForm> out = new ArrayList<>();
     int made = 0;
     for (AlldifferentExcept a : lists) {
@@ -256,6 +336,221 @@ public final class Linearizations {
       }
     }
     return out;
+  }
+
+  // whether the Booleans of x, two or more, cover its domain (encodings gives their rows then)
+  private static boolean covers(IntVar x, Map<Integer, IntVar> m) {
+    if (x.singleton() || m.containsValue(x)) {
+      return false;
+    }
+    int k = 0;
+    for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); k++) {
+      if (!m.containsKey(en.nextElement())) {
+        return false;
+      }
+    }
+    return k >= 2;
+  }
+
+  /** The value encodings of valueRows: the columns of each variable and the rows made. */
+  private static final class Encoder {
+
+    // the Booleans of the model and the columns of the extra rows
+    private final Map<IntVar, Map<Integer, IntVar>> given;
+    // the columns of the all-different-except encodings, with 0 implicit
+    private final Map<IntVar, Map<Integer, IntVar>> encoded;
+    // the variables whose Booleans in the model cover the domain
+    private final Set<IntVar> byModel;
+    // the column of every value of each variable, or null when it is not encoded
+    private final Map<IntVar, Map<Integer, IntVar>> full = new IdentityHashMap<>();
+    // the variables in full, in the order they were encoded
+    private final List<IntVar> order = new ArrayList<>();
+    private final List<LinearForm> out = new ArrayList<>();
+    private int made;
+
+    Encoder(
+        Map<IntVar, Map<Integer, IntVar>> given,
+        Map<IntVar, Map<Integer, IntVar>> encoded,
+        Set<IntVar> byModel) {
+      this.given = given;
+      this.encoded = encoded;
+      this.byModel = byModel;
+    }
+
+    // the columns of x by value, made with their rows sum x_v = 1 and x = sum v x_v when some are
+    // new; null when x is too large to encode
+    Map<Integer, IntVar> of(IntVar x) {
+      if (full.containsKey(x)) {
+        return full.get(x);
+      }
+      Map<Integer, IntVar> result = null;
+      if (!x.singleton() && x.getSize() <= VALUE_ENCODINGS_DOMAIN) {
+        Map<Integer, IntVar> m = encoded.getOrDefault(x, given.getOrDefault(x, Map.of()));
+        int fresh = 0;
+        for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); ) {
+          IntVar b = m.get(en.nextElement());
+          fresh += b == null || b == x ? 1 : 0;
+        }
+        if (made + fresh <= VALUE_ENCODINGS_MAX) {
+          made += fresh;
+          result = new LinkedHashMap<>();
+          for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); ) {
+            int v = en.nextElement();
+            IntVar b = m.get(v);
+            result.put(v, b == null || b == x ? new LpColumn(x, v) : b);
+          }
+          if (fresh > 0) {
+            encode(x, result, out);
+          }
+          order.add(x);
+        }
+      }
+      full.put(x, result);
+      return result;
+    }
+
+    // the columns of the unfixed variables of a list, or null when one is not encoded
+    private Map<IntVar, Map<Integer, IntVar>> of(IntVar[] list) {
+      Map<IntVar, Map<Integer, IntVar>> m = new IdentityHashMap<>();
+      for (IntVar x : list) {
+        if (!x.singleton()) {
+          Map<Integer, IntVar> cs = of(x);
+          if (cs == null) {
+            return null;
+          }
+          m.put(x, cs);
+        }
+      }
+      return m;
+    }
+
+    void rows(Constraint c) {
+      Class<?> k = c.getClass();
+      if (k == GCC.class) {
+        GCC g = (GCC) c;
+        counts(g.countedVariables(), g.countedValues(), g.valueCounters());
+      } else if (k == CountValues.class) {
+        CountValues cv = (CountValues) c;
+        counts(cv.list, cv.values, cv.counters());
+      } else if (k == Count.class) {
+        Count ct = (Count) c;
+        counts(ct.list, new int[] {ct.countedValue()}, new IntVar[] {ct.counter()});
+      } else if (k == Alldiff.class || k == Alldifferent.class) {
+        distinct(((Alldifferent) c).list);
+      } else if (k == Alldistinct.class) {
+        distinct(((Alldistinct) c).list);
+      } else if (k == ElementInteger.class) {
+        ElementInteger el = (ElementInteger) c;
+        if (!byModel.contains(el.index)) {
+          element(el.index, el.list, el.indexOffset, el.value);
+        }
+      } else if (k == ElementIntegerFast.class) {
+        ElementIntegerFast el = (ElementIntegerFast) c;
+        element(el.index, el.elementList(), el.indexOffset, el.valueVariable());
+      }
+    }
+
+    // counters[k] = sum_i [list_i = values[k]]
+    private void counts(IntVar[] list, int[] values, IntVar[] counters) {
+      Map<IntVar, Map<Integer, IntVar>> m = of(list);
+      if (m == null) {
+        return;
+      }
+      for (int k = 0; k < values.length; k++) {
+        List<IntVar> vars = new ArrayList<>();
+        List<Long> w = new ArrayList<>();
+        long fixed = 0;
+        for (IntVar x : list) {
+          if (x.singleton()) {
+            fixed += x.value() == values[k] ? 1 : 0;
+          } else if (x.domain.contains(values[k])) {
+            vars.add(m.get(x).get(values[k]));
+            w.add(1L);
+          }
+        }
+        if (vars.isEmpty()) {
+          continue;
+        }
+        vars.add(counters[k]);
+        w.add(-1L);
+        out.add(row(vars, w, -fixed, LinearForm.EQ));
+      }
+    }
+
+    // sum_i [list_i = v] <= 1 for every value v of two or more of the unfixed variables
+    private void distinct(IntVar[] list) {
+      if (list.length < 2 || Arrays.stream(list).distinct().count() != list.length) {
+        return;
+      }
+      Map<IntVar, Map<Integer, IntVar>> m = of(list);
+      if (m == null) {
+        return;
+      }
+      Map<Integer, List<IntVar>> byValue = new TreeMap<>();
+      for (IntVar x : list) {
+        if (!x.singleton()) {
+          for (Map.Entry<Integer, IntVar> e : m.get(x).entrySet()) {
+            byValue.computeIfAbsent(e.getKey(), v -> new ArrayList<>()).add(e.getValue());
+          }
+        }
+      }
+      for (List<IntVar> bs : byValue.values()) {
+        if (bs.size() >= 2) {
+          out.add(row(bs, Collections.nCopies(bs.size(), 1L), 1, LinearForm.LE));
+        }
+      }
+    }
+
+    // value = sum list[v - offset - 1] [index = v]
+    private void element(IntVar index, int[] list, int offset, IntVar value) {
+      if (index == value || index.singleton()) {
+        return;
+      }
+      for (ValueEnumeration en = index.domain.valueEnumeration(); en.hasMoreElements(); ) {
+        int position = en.nextElement() - offset - 1;
+        if (position < 0 || position >= list.length) {
+          return;
+        }
+      }
+      Map<Integer, IntVar> m = of(index);
+      if (m == null || m.containsValue(value)) {
+        return;
+      }
+      List<IntVar> vars = new ArrayList<>();
+      List<Long> w = new ArrayList<>();
+      for (Map.Entry<Integer, IntVar> e : m.entrySet()) {
+        vars.add(e.getValue());
+        w.add((long) list[e.getKey() - offset - 1]);
+      }
+      vars.add(value);
+      w.add(-1L);
+      out.add(row(vars, w, 0, LinearForm.EQ));
+    }
+
+    // b <-> x op c and b -> x op c over the encoded variables, as in valueColumns
+    void links(Collection<Constraint> constraints) {
+      for (Constraint c : constraints) {
+        if (c instanceof AbstractReifiedConstraint r
+            && (c.getClass() == Reified.class || c.getClass() == Implies.class)
+            && r.c instanceof AbstractXcompC cmp
+            && comparison(cmp)
+            && boolean01(r.b)
+            && !encoded.containsKey(cmp.x)) {
+          Map<Integer, IntVar> m = full.get(cmp.x);
+          if (m != null && m.get(cmp.c) != r.b && !m.containsValue(r.b)) {
+            link(cmp, r.b, c.getClass() == Reified.class, m, out);
+          }
+        }
+      }
+    }
+
+    private static LinearForm row(List<IntVar> vars, List<Long> w, long c, int relation) {
+      long[] ws = new long[w.size()];
+      for (int i = 0; i < ws.length; i++) {
+        ws[i] = w.get(i);
+      }
+      return new LinearForm(vars.toArray(new IntVar[0]), ws, c, relation);
+    }
   }
 
   // a list of distinct variables with small domains

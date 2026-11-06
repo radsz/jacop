@@ -39,7 +39,15 @@ import java.util.Locale;
  * objective, the pivots, the factorizations, the times of reading and solving in seconds, and the
  * factorizations made because the solves had grown more costly than a fresh factorization.
  *
- * <p>Usage: {@code java org.jacop.jalp.LpMain [-noscale] [-limit pivots] file.mps[.gz] ...}
+ * <p>Usage: {@code java org.jacop.jalp.LpMain [-noscale] [-limit pivots] [-primal] [-reobjective]
+ * file.mps[.gz] ...}
+ *
+ * <p>{@code -primal} solves with the primal simplex from the slack basis. {@code -reobjective}
+ * first solves the problem with no objective by the dual simplex, then sets the objective and
+ * solves again from that basis (by the primal simplex with {@code -primal}, by the dual one
+ * otherwise); the pivots and the time printed are those of the second solve. The system property
+ * {@code org.jacop.jalp.main} (a comma-separated list of {@code primal} and {@code reobjective})
+ * sets the same options.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -59,19 +67,40 @@ public final class LpMain {
   public static void main(String[] args) throws IOException {
     boolean scale = true;
     int limit = Integer.MAX_VALUE;
+    String modes = "," + System.getProperty("org.jacop.jalp.main", "") + ",";
+    boolean primal = modes.contains(",primal,");
+    boolean reobjective = modes.contains(",reobjective,");
     for (int a = 0; a < args.length; a++) {
       String arg = args[a];
       if (arg.equals("-noscale")) {
         scale = false;
       } else if (arg.equals("-limit")) {
         limit = Integer.parseInt(args[++a]);
+      } else if (arg.equals("-primal")) {
+        primal = true;
+      } else if (arg.equals("-reobjective")) {
+        reobjective = true;
       } else {
         long t0 = System.nanoTime();
         LpProblem p = MpsReader.read(Path.of(arg));
         long t1 = System.nanoTime();
         RevisedDualSimplex lp = p.simplex(scale);
         lp.setExact(true);
-        int status = lp.solve(limit);
+        long pivots = 0;
+        int status;
+        if (reobjective) {
+          double[] cost = new double[p.columns()];
+          lp.setCost(cost);
+          status = lp.solve(limit);
+          pivots = lp.pivots();
+          t1 = System.nanoTime();
+          if (status == RevisedDualSimplex.OPTIMAL) {
+            lp.setCost(p.maximize ? negate(p.cost) : p.cost);
+            status = primal ? lp.solvePrimal(limit) : lp.solve(limit);
+          }
+        } else {
+          status = primal ? lp.solvePrimal(limit) : lp.solve(limit);
+        }
         long t2 = System.nanoTime();
         double z = (p.maximize ? -lp.objective() : lp.objective()) + p.costConstant;
         System.out.printf(
@@ -80,7 +109,7 @@ public final class LpMain {
             p.name,
             STATUS[status],
             z,
-            lp.pivots(),
+            lp.pivots() - pivots,
             lp.factorizations(),
             (t1 - t0) / 1e9,
             (t2 - t1) / 1e9,
@@ -88,5 +117,13 @@ public final class LpMain {
             lp.refactorsForWork());
       }
     }
+  }
+
+  private static double[] negate(double[] c) {
+    double[] r = new double[c.length];
+    for (int j = 0; j < c.length; j++) {
+      r[j] = -c[j];
+    }
+    return r;
   }
 }

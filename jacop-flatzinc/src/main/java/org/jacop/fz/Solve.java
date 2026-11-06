@@ -551,10 +551,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
-      // the cliques of the binary tables, over Booleans of their values; only for an objective,
-      // whose bound they raise, since the new Booleans stay in the store when the rows do not help
-      if (objective != null && TABLE_CLIQUES && !dictionary.binaryTables().isEmpty()) {
-        cliques = TableCliques.rows(store, dictionary.binaryTables());
+      // the cliques of the tables, over columns of their values that the relaxation alone has;
+      // only for an objective, whose bound they raise
+      if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
+        cliques = TableCliques.rows(dictionary.tables());
         clauses.addAll(cliques.rows());
       }
       linearRelaxation =
@@ -574,8 +574,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
                       + cliques.rows().size()
-                      + "\n%%%mzn-stat: lpTableBooleans="
-                      + cliques.booleans())
+                      + "\n%%%mzn-stat: lpTableColumns="
+                      + cliques.columns())
               + "\n%%%mzn-stat-end");
     }
   }
@@ -644,6 +644,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpRestartSolves="
+            + r.restartSolves
+            + "\n%%%mzn-stat: lpRootPrunings="
+            + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
             + "\n%%%mzn-stat: lpCapacityCuts="
@@ -2809,6 +2813,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .timeLimit(Duration.ofMillis(budget))
             .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
+            .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (costVar instanceof IntVar c) {

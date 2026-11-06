@@ -251,6 +251,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -268,6 +269,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/XorSystemTest.java</include>
+                                <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -418,6 +421,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -435,6 +439,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/XorSystemTest.java</include>
+                                <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -586,6 +592,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -603,6 +610,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/XorSystemTest.java</include>
+                                <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -754,6 +763,7 @@ setup to run configuration. -->
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
                                 <include>**/RoutesTest.java</include>
+                                <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
@@ -771,6 +781,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/XorSystemTest.java</include>
+                                <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>

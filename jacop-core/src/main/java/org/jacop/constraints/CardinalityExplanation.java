@@ -276,11 +276,28 @@ final class CardinalityExplanation {
       }
     }
 
+    /* The counting reason of a bound of counter j, if there is one. */
+    private boolean counterBound(
+        AtomicTrail trail, int j, int kind, int position, int value, EntryList out) {
+      if (kind == AtomicTrail.GE) {
+        if (fixedTo(trail, values[j], position, null, value, null)) {
+          fixedTo(trail, values[j], position, null, value, out);
+          return true;
+        }
+        return false;
+      }
+      return kind == AtomicTrail.LE
+          && (excludedFromOthers(trail, values[j], position, value, out)
+              || takenByOthers(trail, j, position, value, out));
+    }
+
     /*
      * Counting reasons, tried before the flow network: a value removed from a variable, or a
      * failure, because other variables fixed to it reach its upper bound; a counter's lower bound
-     * from the variables fixed to its value. They cite only those variables' bounds and the
-     * counter's, and cost a pass over the variables.
+     * from the variables fixed to its value; a counter's upper bound from the variables that can
+     * no longer take its value, or from the other counters' lower bounds, which leave no more
+     * variables for it. They cite only those variables' bounds and the counters', and cost a pass
+     * over the variables.
      */
     private boolean counting(AtomicTrail trail, int entry, EntryList out) {
       int position = entry;
@@ -289,15 +306,7 @@ final class CardinalityExplanation {
       int value = trail.value(entry);
       if (counters != null) {
         for (int j = 0; j < counters.length; j++) {
-          if (counters[j] != y) {
-            continue;
-          }
-          if (kind == AtomicTrail.GE && fixedTo(trail, values[j], position, null, value, null)) {
-            fixedTo(trail, values[j], position, null, value, out);
-            return true;
-          }
-          if (kind == AtomicTrail.LE
-              && excludedFromOthers(trail, values[j], position, value, out)) {
+          if (counters[j] == y && counterBound(trail, j, kind, position, value, out)) {
             return true;
           }
         }
