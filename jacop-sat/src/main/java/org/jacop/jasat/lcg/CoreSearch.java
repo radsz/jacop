@@ -936,6 +936,33 @@ public final class CoreSearch {
     return rate * (end - now) >= best - lowerBound;
   }
 
+  // the solver's work and the lower bound at the last mark (see #mark), -1 before
+  private long markWork = -1;
+  private long markBound;
+
+  /** Marks the solver's work and the lower bound now, from which {@link #canReach} measures. */
+  void mark() {
+    markWork = sat.work();
+    markBound = lowerBound;
+  }
+
+  /**
+   * Whether the lower bound could reach the given value within the given work, at {@link
+   * #RATE_SLACK} times its rate per unit of work since the last {@link #mark}. True when it is
+   * already there and when nothing was marked.
+   *
+   * @param target the value of the objective
+   * @param work the solver's work the phase may still do
+   * @return whether the phase may reach the value
+   */
+  boolean canReach(long target, long work) {
+    if (lowerBound >= target || markWork < 0) {
+      return true;
+    }
+    double rate = (double) (lowerBound - markBound) / Math.max(1, sat.work() - markWork);
+    return RATE_SLACK * rate * work >= target - lowerBound;
+  }
+
   /** Whether the lower bound rose in the last run. */
   boolean rose() {
     return lowerBound > runBound;

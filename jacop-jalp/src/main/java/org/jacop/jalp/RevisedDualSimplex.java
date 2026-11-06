@@ -154,6 +154,9 @@ public final class RevisedDualSimplex {
 
   private int infeasibleRow = -1;
 
+  // counts the removals of rows: a saved basis is for the rows of one count
+  private long rowEpoch;
+
   // work arrays by row or position, and by column for the row of the tableau (see allocateWork)
   private double[] rho = {};
   private double[] work = {};
@@ -172,6 +175,10 @@ public final class RevisedDualSimplex {
   private int tauLen;
   private double[] rhs = {};
   private int[] rhsIdx = {};
+  private boolean[] inRhs = {};
+  // the change of the basic values from the bound flips, zero between pivots, and its nonzeros
+  private double[] flipTau = {};
+  private int[] flipIdx = {};
 
   // the rows whose basic values are outside their bounds, kept up by the pivots (and rows back
   // inside, until the next choice of a leaving row drops them); not valid after any other change
@@ -325,6 +332,7 @@ public final class RevisedDualSimplex {
     factorValid = false; // the copy factorizes its basis again when it is solved
     weightsFrom = o.weightsFrom;
     infeasibleRow = o.infeasibleRow;
+    rowEpoch = o.rowEpoch;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
     ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
@@ -445,6 +453,9 @@ public final class RevisedDualSimplex {
     tauLen = 0;
     rhs = new double[m];
     rhsIdx = new int[m];
+    inRhs = new boolean[m];
+    flipTau = new double[m];
+    flipIdx = new int[m];
     outside = new int[m];
     outsideRow = new boolean[m];
     outsideLen = 0;
@@ -735,20 +746,7 @@ public final class RevisedDualSimplex {
         continue;
       }
       if (flips > 0) {
-        Arrays.fill(work, 0);
-        for (int k = 0; k < flips; k++) {
-          int j = flipped[k];
-          double old = upper[j] ? hi[j] : lo[j];
-          upper[j] = !upper[j];
-          double now = upper[j] ? hi[j] : lo[j];
-          at[j] = now;
-          addColumn(j, now - old, work);
-        }
-        lu.ftran(work, tau);
-        for (int i = 0; i < m; i++) {
-          beta[i] -= tau[i];
-        }
-        outsideValid = false;
+        flipBounds();
       }
       // the primal step: x_q moves until x_p reaches the bound it leaves at
       double bound = toLower ? lo[p] : hi[p];
@@ -934,13 +932,29 @@ public final class RevisedDualSimplex {
    * @return the duals by row
    */
   public double[] duals() {
+    return duals(cost);
+  }
+
+  /**
+   * Returns the duals {@code c_B B^-1} of the rows for the costs as given, over the basis the last
+   * solve ended with. Without {@link #setExact(boolean)} that basis is optimal for the perturbed
+   * costs; these duals are free of the perturbation, and their reduced costs are off by at most the
+   * perturbation.
+   *
+   * @return the duals by row
+   */
+  public double[] givenDuals() {
+    return duals(trueCost);
+  }
+
+  private double[] duals(double[] c) {
     if (!factorValid) {
       factorize();
     }
     double[] y = new double[m];
     double[] z = new double[m];
     for (int k = 0; k < m; k++) {
-      z[k] = cost[basis[k]];
+      z[k] = c[basis[k]];
     }
     lu.btran(z, y);
     for (int i = 0; i < m; i++) {
@@ -973,6 +987,83 @@ public final class RevisedDualSimplex {
   public double value(int j) {
     double v = row[j] >= 0 ? beta[row[j]] : upper[j] ? hi[j] : lo[j];
     return j < n ? v * colScale[j] : v / rowScale[j - n];
+  }
+
+  /**
+   * A basis saved by {@link #saveBasis}: the basic column of each row, the bound of each nonbasic
+   * column, and the steepest-edge weights. It holds for the rows of the simplex when it was saved
+   * and for the rows added since, whose slacks it makes basic.
+   */
+  public static final class Basis {
+    private final RevisedDualSimplex owner;
+    private final long epoch;
+    private final int[] basic;
+    private final boolean[] atUpper;
+    private final double[] weights;
+    private final int weightsKnown;
+
+    private Basis(RevisedDualSimplex s) {
+      owner = s;
+      epoch = s.rowEpoch;
+      basic = Arrays.copyOf(s.basis, s.m);
+      atUpper = Arrays.copyOf(s.upper, s.cols);
+      weights = Arrays.copyOf(s.weight, s.m);
+      weightsKnown = Math.min(s.weightsFrom, s.m);
+    }
+
+    /**
+     * Returns the number of rows the basis is for.
+     *
+     * @return the rows
+     */
+    public int rows() {
+      return basic.length;
+    }
+  }
+
+  /**
+   * Saves the current basis, to be restored by {@link #restoreBasis} after the bounds have moved
+   * far from those it was optimal for (a restart, a long backjump).
+   *
+   * @return the basis
+   */
+  public Basis saveBasis() {
+    ops += cols + 2L * m;
+    return new Basis(this);
+  }
+
+  /**
+   * Makes a saved basis the current one. The slacks of the rows added since it was saved are basic,
+   * so the basis stays nonsingular and dual feasible, as it was when it was saved; the next solve
+   * factorizes it. A basis saved before rows were removed, or by another simplex, is not restored.
+   *
+   * @param b the basis
+   * @return whether it was restored
+   */
+  public boolean restoreBasis(Basis b) {
+    if (b.owner != this || b.epoch != rowEpoch || b.basic.length > m) {
+      return false;
+    }
+    int k = b.basic.length;
+    ops += cols + 2L * m;
+    Arrays.fill(row, 0, cols, -1);
+    System.arraycopy(b.basic, 0, basis, 0, k);
+    for (int r = k; r < m; r++) {
+      basis[r] = n + r;
+    }
+    for (int r = 0; r < m; r++) {
+      row[basis[r]] = r;
+    }
+    System.arraycopy(b.atUpper, 0, upper, 0, b.atUpper.length);
+    Arrays.fill(upper, b.atUpper.length, cols, false);
+    System.arraycopy(b.weights, 0, weight, 0, k);
+    // the weights of the rows added since are computed again at the factorization
+    weightsFrom = b.weightsKnown;
+    factorValid = false;
+    betaValid = false;
+    outsideValid = false;
+    infeasibleRow = -1;
+    return true;
   }
 
   /**
@@ -1122,6 +1213,7 @@ public final class RevisedDualSimplex {
     cols = cols2;
     factorValid = false;
     infeasibleRow = -1;
+    rowEpoch++;
     allocateWork();
     return oldRow;
   }
@@ -1157,6 +1249,64 @@ public final class RevisedDualSimplex {
     for (int k = 0; k < yn; k++) {
       y[yi[k]] = 0;
     }
+  }
+
+  // the flipped columns move to their other bounds, and the basic values with them: the sum of
+  // the flipped columns is listed in rhs, and its ftran gives the rows whose values move, which
+  // also keep up the rows outside their bounds
+  private void flipBounds() {
+    int len = 0;
+    for (int k = 0; k < flips; k++) {
+      int j = flipped[k];
+      double old = upper[j] ? hi[j] : lo[j];
+      upper[j] = !upper[j];
+      double now = upper[j] ? hi[j] : lo[j];
+      at[j] = now;
+      len = addListed(j, now - old, len);
+    }
+    for (int k = 0; k < len; k++) {
+      inRhs[rhsIdx[k]] = false;
+    }
+    int yn = lu.ftranFlips(rhs, rhsIdx, len, flipTau, flipIdx);
+    for (int k = 0; k < yn; k++) {
+      int i = flipIdx[k];
+      beta[i] -= flipTau[i];
+      flipTau[i] = 0;
+    }
+    if (outsideValid) {
+      for (int k = 0; k < yn; k++) {
+        noteRow(flipIdx[k]);
+      }
+    }
+    ops += len + yn;
+  }
+
+  // rhs += f times the column j of [A -I], as addColumn, with the rows of rhs listed in rhsIdx
+  // (len of them, marked in inRhs); returns the new number of rows listed
+  private int addListed(int j, double f, int len) {
+    if (f == 0) {
+      return len;
+    }
+    if (j < n) {
+      int[] ci = colIdx[j];
+      double[] cv = colVal[j];
+      for (int e = 0; e < colLen[j]; e++) {
+        int i = ci[e];
+        if (!inRhs[i]) {
+          inRhs[i] = true;
+          rhsIdx[len++] = i;
+        }
+        rhs[i] += f * cv[e];
+      }
+    } else {
+      int i = j - n;
+      if (!inRhs[i]) {
+        inRhs[i] = true;
+        rhsIdx[len++] = i;
+      }
+      rhs[i] -= f;
+    }
+    return len;
   }
 
   // the column j of [A -I] into x, zero before; returns the number of its nonzeros, listed in xi
