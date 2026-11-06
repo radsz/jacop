@@ -39,6 +39,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -48,7 +51,8 @@ import org.jacop.lcg.PbModel;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Increasing extends Constraint implements Copyable<Increasing>, PbEncodable {
+public class Increasing extends Constraint
+    implements Copyable<Increasing>, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   final IntVar[] x;
@@ -150,6 +154,57 @@ public class Increasing extends Constraint implements Copyable<Increasing>, PbEn
       }
     }
     return true;
+  }
+
+  /**
+   * Explains a bound by the neighbour that pushed it: x[i] &gt;= v by x[i - 1] &gt;= v - strict,
+   * x[i] &lt;= v by x[i + 1] &lt;= v + strict, each lifted to the weakest bound on the trail that
+   * serves.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != Increasing.class || trail.kind(entry) == AtomicTrail.NE) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    boolean ge = trail.kind(entry) == AtomicTrail.GE;
+    int bound = trail.skippedBound(entry);
+    for (int i = 0; i < n; i++) {
+      if (x[i] != y) {
+        continue;
+      }
+      if (ge && i > 0 && (long) trail.minBefore(x[i - 1], entry) + strict >= bound) {
+        trail.addSkippedHoles(entry, bound, out);
+        trail.addBoundReaching(x[i - 1], entry, true, (long) bound - strict, out);
+        return true;
+      }
+      if (!ge && i < n - 1 && (long) trail.maxBefore(x[i + 1], entry) - strict <= bound) {
+        trail.addSkippedHoles(entry, bound, out);
+        trail.addBoundReaching(x[i + 1], entry, false, (long) bound + strict, out);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** A failure is a pair of neighbours whose bounds leave no room: x[i - 1] + strict &gt; x[i]. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != Increasing.class) {
+      return false;
+    }
+    int now = trail.size();
+    for (int i = 1; i < n; i++) {
+      long lb = (long) trail.minBefore(x[i - 1], now) + strict;
+      int ub = trail.maxBefore(x[i], now);
+      if (lb > ub) {
+        // x[i - 1] >= ub - strict + 1 and x[i] <= ub cannot both hold
+        trail.addBoundReaching(x[i - 1], now, true, (long) ub - strict + 1, out);
+        trail.addUpperBound(x[i], now, out);
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

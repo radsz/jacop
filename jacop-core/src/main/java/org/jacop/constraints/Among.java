@@ -48,6 +48,10 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Among constraint in its simplest form. It establishes the following relation. The given number N
@@ -62,7 +66,7 @@ import org.jacop.core.Var;
  */
 @Slf4j
 public class Among extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Among> {
+    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<Among>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
   private static final boolean DEBUG_ALL = false;
@@ -274,6 +278,120 @@ public class Among extends Constraint
     if (v != n) {
       variableQueue.add((IntVar) v);
     }
+  }
+
+  // whether x's domain just before position lies inside kSet (in) or outside it (!in); its reason
+  // is added to out, which is left as it was when the answer is no
+  private boolean side(AtomicTrail trail, IntVar x, int position, boolean in, EntryList out) {
+    int lo = trail.minBefore(x, position);
+    int hi = trail.maxBefore(x, position);
+    if (in ? kSet.contains(lo, hi) : !kSet.isIntersecting(lo, hi)) {
+      trail.addLowerBound(x, position, out);
+      trail.addUpperBound(x, position, out);
+      return true;
+    }
+    if (in ? !kSet.contains(lo) || !kSet.contains(hi) : kSet.contains(lo) || kSet.contains(hi)) {
+      return false;
+    }
+    int mark = out.size();
+    if (DomainCover.domain(trail, x, position, (v, o) -> kSet.contains(v) == in, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  // adds the reasons of `count` variables of list other than skip that are inside kSet (in) or
+  // outside it (!in) just before position; false when there are fewer
+  private boolean sides(
+      AtomicTrail trail, int position, IntVar skip, long count, boolean in, EntryList out) {
+    int mark = out.size();
+    long found = 0;
+    for (int i = 0; i < list.length && found < count; i++) {
+      if (list[i] != skip && side(trail, list[i], position, in, out)) {
+        found++;
+      }
+    }
+    if (found < count) {
+      out.truncate(mark);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Explains by counting: n &gt;= c by c variables inside the set, n &lt;= c by all but c outside
+   * it, and a variable pushed out of (into) the set by n &lt;= c (n &gt;= c) and c other variables
+   * inside (all but c outside).
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != Among.class) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    if (y == n) {
+      if (kind == AtomicTrail.NE) {
+        return false;
+      }
+      int bound = trail.skippedBound(entry);
+      boolean ge = kind == AtomicTrail.GE;
+      int mark = out.size();
+      trail.addSkippedHoles(entry, bound, out);
+      boolean ok =
+          ge
+              ? sides(trail, entry, null, bound, true, out)
+              : sides(trail, entry, null, (long) list.length - bound, false, out);
+      if (!ok) {
+        out.truncate(mark);
+      }
+      return ok;
+    }
+    int mark = out.size();
+    // pushed out of the set: n <= c and c others inside
+    int c = trail.maxBefore(n, entry);
+    if (sides(trail, entry, y, c, true, out)) {
+      int reasons = out.size();
+      if (DomainCover.entry(trail, entry, (v, o) -> kSet.contains(v), out)) {
+        trail.addUpperBound(n, entry, out);
+        return true;
+      }
+      out.truncate(reasons);
+    }
+    out.truncate(mark);
+    // pushed into the set: n >= c and all but c others outside
+    c = trail.minBefore(n, entry);
+    if (sides(trail, entry, y, (long) list.length - c, false, out)) {
+      if (DomainCover.entry(trail, entry, (v, o) -> !kSet.contains(v), out)) {
+        trail.addLowerBound(n, entry, out);
+        return true;
+      }
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  /** A failure: more variables inside the set than n allows, or fewer that may be in it. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != Among.class) {
+      return false;
+    }
+    int now = trail.size();
+    int mark = out.size();
+    long most = trail.maxBefore(n, now);
+    if (sides(trail, now, null, most + 1, true, out)) {
+      trail.addUpperBound(n, now, out);
+      return true;
+    }
+    long least = trail.minBefore(n, now);
+    if (sides(trail, now, null, list.length - least + 1, false, out)) {
+      trail.addLowerBound(n, now, out);
+      return true;
+    }
+    out.truncate(mark);
+    return false;
   }
 
   @Override

@@ -473,4 +473,21 @@ class LinearizationsTest {
     search.labeling(store, new SimpleSelect<>(scope, null, new IndomainMin<>()));
     return found;
   }
+
+  /**
+   * x != c with c inside the domain of x gives no rows: they would be the big-M pair of !b -> x = c
+   * alone, which raised the nodes of still_life_no_border slnb7x7 from 22k to 32k. At a bound of x,
+   * x != c is linear and keeps its rows.
+   */
+  @Test
+  void notEqualRowsOnlyAtTheBounds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 8);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    assertThat(Linearizations.valueRows(x, 3, b, true, false)).isEmpty();
+    assertThat(Linearizations.valueRows(x, 3, b, false, false)).isEmpty();
+    assertThat(Linearizations.valueRows(x, 0, b, true, false)).isNotEmpty();
+    assertThat(Linearizations.valueRows(x, 8, b, false, false)).isNotEmpty();
+    assertThat(Linearizations.valueRows(x, 3, b, true, true)).isNotEmpty();
+  }
 }
