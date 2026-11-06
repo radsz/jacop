@@ -62,13 +62,13 @@ public class ConditionalSelect extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The 0/1 conditions; the first one equal to 1 selects the branch. */
-  private final IntVar[] b;
+  final IntVar[] b;
 
   /** The branch values. */
-  private final IntVar[] x;
+  final IntVar[] x;
 
   /** The selected value. */
-  private final IntVar y;
+  final IntVar y;
 
   /**
    * It constructs a ConditionalSelect constraint.
