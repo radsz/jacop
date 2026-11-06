@@ -962,4 +962,24 @@ class LinearRelaxationTest {
       return search.getCostValue();
     }
   }
+
+  @Test
+  void candidatesNearestTheObjectiveComeFirst() {
+    // obj = x + y; a chain y - z <= 0, z - w <= 0 and an unconnected row u - v <= 0
+    Store store = new Store();
+    IntVar obj = new IntVar(store, "obj", 0, 20);
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    IntVar z = new IntVar(store, "z", 0, 10);
+    IntVar w = new IntVar(store, "w", 0, 10);
+    IntVar u = new IntVar(store, "u", 0, 10);
+    IntVar v = new IntVar(store, "v", 0, 10);
+    LinearForm def =
+        new LinearForm(new IntVar[] {x, y, obj}, new long[] {1, 1, -1}, 0, LinearForm.EQ);
+    LinearForm far = new LinearForm(new IntVar[] {u, v}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm two = new LinearForm(new IntVar[] {z, w}, new long[] {1, -1}, 0, LinearForm.LE);
+    LinearForm one = new LinearForm(new IntVar[] {y, z}, new long[] {1, -1}, 0, LinearForm.LE);
+    assertThat(LinearRelaxation.byDistance(List.of(def), List.of(far, two, one), obj))
+        .containsExactly(one, two, far);
+  }
 }
