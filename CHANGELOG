@@ -2352,7 +2352,34 @@ Version 5.0 (unreleased)
      flowshop-workers 5stat_ex6 49 to 24 s, ptv pax_period 20_3b 18 to
      51 s and network_50_cstr 2204150001 12 to 22 s.
 
-155. New constraint DifferenceCycles over difference constraints
+155. New constraint XorSystem (org.jacop.constraints): Gauss-Jordan
+     elimination over GF(2) for a system of parity constraints. The rows
+     are bit-packed and kept in reduced row echelon form over the unfixed
+     variables; a pivot change adds one row to the others, so nothing is
+     undone on backtracking. A row with one unfixed variable fixes it and
+     a fixed row with the wrong parity fails, which gives full
+     propagation of the conjunction. Under LCG the reason is the fixed
+     values of the other variables of the combined row. The FlatZinc
+     layer builds one redundant system per connected component of
+     array_bool_xor, bool_xor, bool_not, bool_eq, bool_eq_reif and
+     bool_ne_reif (with at least one row of three or more variables);
+     -Dorg.jacop.fz.xorSystem=false switches it off. A system that finds
+     fewer than 10 failures in 10,000 calls switches itself off, as
+     CryptoMiniSat disables its matrices. References: C.-S. Han and
+     J.-H. R. Jiang, When Boolean Satisfiability Meets Gaussian
+     Elimination in a Simplex Way, CAV 2012, LNCS 7358, 410-426;
+     T. Laitinen, T. Junttila and I. Niemela, Classifying and Propagating
+     Parity Constraints, CP 2012, LNCS 7514, 357-372 (arXiv:1406.4698);
+     M. Soos, S. Gocht and K. S. Meel, Tinted, Detached, and Lazy CNF-XOR
+     Solving and Its Applications to Counting and Sampling, CAV 2020,
+     LNCS 12224, 463-484; M. Soos, K. Nohl and C. Castelluccia, Extending
+     SAT Solvers to Cryptographic Problems, SAT 2009, LNCS 5584, 244-257.
+     parity-learning (7 instances, 60 s): 2 to 7 solved by default and
+     1 to 7 with -f, each in 1-8 s instead of 34 s or a timeout.
+     speck-optimisation: unchanged within seed noise. Wide set (220):
+     only parity-learning 52_26_6.1 and speck easy_3 get a system.
+
+156. New constraint DifferenceCycles over difference constraints
      x - y <= c that hold always or when a 0/1 literal takes a value. It
      fails as soon as the ones that hold close a cycle of negative
      weight and, under LCG, explains the failure by the literals of the
@@ -2383,7 +2410,7 @@ Version 5.0 (unreleased)
      with up to 2.8x fewer failures, rectangle-packing rpp30 1.1 to
      0.7 s, rcpsp_max psp_d_244 8.5 to 10.2 s.
 
-156. The clique rows of tables (TableCliques) and new value encodings of
+157. The clique rows of tables (TableCliques) and new value encodings of
      GCC, count, alldifferent, alldistinct and element use LP-only
      columns [x = v] (LpColumn) instead of store Booleans channelled with
      ChannelReif, so they add no variables or constraints to the store.
@@ -2406,7 +2433,7 @@ Version 5.0 (unreleased)
      except sudoku_fixed p28, where one more LP failure changes the
      search path.
 
-157. Root reduced-cost fixing for the linear relaxation (SCIP's
+158. Root reduced-cost fixing for the linear relaxation (SCIP's
      prop_rootredcost). The inequalities of the duals of the last optimal
      solve at the root level are kept; they are combinations of the rows,
      so they hold everywhere, and whenever the bound of the objective

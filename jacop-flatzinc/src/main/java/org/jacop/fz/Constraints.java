@@ -62,6 +62,7 @@ import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
+import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.satwrapper.SatTranslation;
@@ -309,6 +310,11 @@ public class Constraints implements ParserTreeConstants {
 
       if (KnapsackDetector.enabled()) {
         new KnapsackDetector(support).detect(astTree);
+      }
+
+      // Gauss-Jordan elimination over the parity constraints, redundant; --proof does not encode it
+      if (XorSystemDetector.enabled() && options.proof() == null) {
+        new XorSystemDetector(support).detect(astTree);
       }
 
       support.detectBinPackingCliques();
