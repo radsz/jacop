@@ -133,26 +133,37 @@ public class EinA extends PrimitiveConstraint implements Copyable<EinA>, Explain
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    SetExplanation.Relation r = relation(true);
-    return r != null && SetExplanation.explain(trail, entry, new SetVar[] {a}, r, out);
+    return explain(trail, entry, relation(true), out);
   }
 
   @Override
   public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
-    SetExplanation.Relation r = relation(false);
-    return r != null && SetExplanation.explain(trail, entry, new SetVar[] {a}, r, out);
+    return explain(trail, entry, relation(false), out);
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    SetExplanation.Relation r = relation(true);
-    return r != null && SetExplanation.explainFailure(trail, new SetVar[] {a}, r, out);
+    return explainFailure(trail, relation(true), out);
   }
 
   @Override
   public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
-    SetExplanation.Relation r = relation(false);
-    return r != null && SetExplanation.explainFailure(trail, new SetVar[] {a}, r, out);
+    return explainFailure(trail, relation(false), out);
+  }
+
+  // the element's membership, or what a's domain derives from it (cardinality, other elements)
+  private boolean explain(AtomicTrail trail, int entry, SetExplanation.Relation r, EntryList out) {
+    SetVar[] sets = {a};
+    return r != null
+        && (SetExplanation.explain(trail, entry, sets, r, out)
+            || SetExplanation.explainCardinality(trail, entry, sets, r, out));
+  }
+
+  private boolean explainFailure(AtomicTrail trail, SetExplanation.Relation r, EntryList out) {
+    SetVar[] sets = {a};
+    return r != null
+        && (SetExplanation.explainFailure(trail, sets, r, out)
+            || SetExplanation.explainCardinalityFailure(trail, sets, r, out));
   }
 
   @Override
