@@ -83,8 +83,22 @@ public final class RevisedDualSimplex {
   private static final double PERTURBATION =
       Double.parseDouble(System.getProperty("org.jacop.jalp.perturbation", "1e-6"));
 
-  // refactorizations after this many updates, against the growth and drift of the eta file
-  private static final int REFACTOR_UPDATES = 100;
+  // the factors are rebuilt when the solves of the last pivots cost more than the average pivot
+  // since the factorization, with the factorization counted REFACTOR_WEIGHT times its own work
+  // (org.jacop.jalp.refactorWeight); at most REFACTOR_UPDATES updates
+  // (org.jacop.jalp.refactorUpdates) and REFACTOR_FILL times the nonzeros of the factors in the
+  // updates (org.jacop.jalp.refactorFill), never before REFACTOR_MIN updates
+  // (org.jacop.jalp.refactorMin); a weight of 0 restores the fixed limit of FIXED_UPDATES updates
+  private static final double REFACTOR_WEIGHT =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.refactorWeight", "1"));
+  private static final int REFACTOR_UPDATES =
+      Integer.getInteger("org.jacop.jalp.refactorUpdates", 1000);
+  private static final int FIXED_UPDATES = 100;
+  private static final double REFACTOR_FILL =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.refactorFill", "2"));
+  private static final int REFACTOR_MIN = Integer.getInteger("org.jacop.jalp.refactorMin", 10);
+  // the weight of the last pivot in the moving average of the solve work per pivot
+  private static final double RECENT_WEIGHT = 0.1;
 
   // the pivot of the row and of the column must agree this closely, or the basis is refactorized
   private static final double PIVOT_AGREEMENT = 1e-7;
@@ -242,6 +256,20 @@ public final class RevisedDualSimplex {
   private long factorizations;
   private long ops;
 
+  // the refactorization rule: the weight of the factorization (0 for the fixed limit) and the
+  // updates allowed
+  private double refactorWeight = REFACTOR_WEIGHT;
+  private int refactorUpdates = REFACTOR_WEIGHT > 0 ? REFACTOR_UPDATES : FIXED_UPDATES;
+
+  // the work of the factors since they were built: the factorization with the solves that follow
+  // it, the solves of the pivots since, and their recent average per pivot
+  private BasisLu workOf;
+  private long factorWork;
+  private long workMark;
+  private long pivotWork;
+  private double recentWork;
+  private long refactorsForWork;
+
   /**
    * Creates the problem with the slack basis, scaled.
    *
@@ -368,6 +396,15 @@ public final class RevisedDualSimplex {
     crashed = o.crashed;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
+    refactorWeight = o.refactorWeight;
+    refactorUpdates = o.refactorUpdates;
+    refactorsForWork = o.refactorsForWork;
+    // the copy builds its own factors, and their work is counted from there
+    workOf = null;
+    factorWork = 0;
+    workMark = 0;
+    pivotWork = 0;
+    recentWork = -1;
     ops = o.ops + (o.lu == null ? 0 : o.lu.ops);
     lu = null;
     touchedCount = 0;
@@ -674,6 +711,27 @@ public final class RevisedDualSimplex {
     return factorizations;
   }
 
+  /**
+   * Returns the factorizations made because the solves with the updated factors had grown more
+   * costly than a fresh factorization.
+   *
+   * @return those factorizations
+   */
+  public long refactorsForWork() {
+    return refactorsForWork;
+  }
+
+  /**
+   * Sets the refactorization rule: a positive weight of the work of a factorization against the
+   * work of the solves, or 0 for a refactorization every 100 updates.
+   *
+   * @param weight the weight, or 0
+   */
+  void setRefactorWeight(double weight) {
+    refactorWeight = weight;
+    refactorUpdates = weight > 0 ? REFACTOR_UPDATES : FIXED_UPDATES;
+  }
+
   // a sparse operation, with its indirect access, against an update of a dense tableau entry
   private static final long OP_COST = 3;
 
@@ -860,12 +918,42 @@ public final class RevisedDualSimplex {
         noteRow(r);
       }
       if (!stable
-          || lu.updates() >= REFACTOR_UPDATES
-          || lu.updateNonzeros() > 2 * (lu.factorNonzeros + m)) {
+          || lu.updates() >= refactorUpdates
+          || lu.updateNonzeros() > REFACTOR_FILL * (lu.factorNonzeros + m)
+          || solvesOutgrowFactor()) {
         refactor();
       }
     }
     return LIMIT;
+  }
+
+  // true when the solves with the updated factors cost more per pivot than a fresh factorization
+  // would cost spread over the pivots since: the average work per pivot, factorization included,
+  // is then past its minimum (Chvatal's rule: with a solve cost growing by b per update and a
+  // factorization of cost F the minimum is at sqrt(2F/b) updates)
+  private boolean solvesOutgrowFactor() {
+    if (refactorWeight <= 0) {
+      return false;
+    }
+    if (workOf != lu) {
+      // fresh factors: everything up to the end of this first pivot belongs to the factorization
+      workOf = lu;
+      factorWork = lu.ops + lu.build;
+      workMark = lu.ops;
+      pivotWork = 0;
+      recentWork = -1;
+      return false;
+    }
+    long w = lu.ops - workMark;
+    workMark = lu.ops;
+    pivotWork += w;
+    recentWork = recentWork < 0 ? w : recentWork + RECENT_WEIGHT * (w - recentWork);
+    int k = lu.updates() - 1;
+    if (k >= REFACTOR_MIN && recentWork * k > refactorWeight * factorWork + pivotWork) {
+      refactorsForWork++;
+      return true;
+    }
+    return false;
   }
 
   private void refactor() {

@@ -2206,7 +2206,28 @@ Version 5.0 (unreleased)
      wide-set instances, with the same results in both modes. Off:
      -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
 
-146. The rows of the linear relaxation (--lp) are one pool, of which the
+146. JaLP refactorizes its LU factors when the solves have grown more
+     costly than a fresh factorization, instead of every 100 updates:
+     after each pivot it rebuilds them when the recent solve work per
+     pivot (a moving average) is above the average work per pivot since
+     the factorization, the factorization included (Chvatal's rule). The
+     work is the deterministic op count of BasisLu; the factorization
+     adds the entries its pivot search looks at and a cost per row
+     (BasisLu.build), fitted to measured times on 29 LP bench instances.
+     The stability, drift and fill (2x) checks stay; at least 10 and at
+     most 1000 updates. -Dorg.jacop.jalp.refactorWeight=0 restores the
+     fixed 100 (refactorWeight 1, refactorUpdates 1000, refactorFill 2,
+     refactorMin 10); RevisedDualSimplex.refactorsForWork() counts the
+     refactorizations it asked for. LP bench (659 MPS up to upTo1min,
+     120 s): 625 solved instead of 623, a median of 32% fewer
+     factorizations, 1.11x faster on the 56 instances of 0.5 s or more
+     whose pivots stay the same (radiationm18-12-05 33.3 to 14.5 s,
+     neos-4722843-widden 20.8 to 10.5 s); pivot paths change on the
+     others, both ways (dano3_3 and dano3_5 lost, brazil3, uccase12 and
+     fome21 gained). Wide set (220, 60 s): solved 149 -> 149 fixed search
+     and 146 -> 147 under -f.
+
+147. The rows of the linear relaxation (--lp) are one pool, of which the
      simplex holds a part, with every simplex (before, only --lp lazy aged
      rows). The model's own rows stay in the simplex. Linearised rows of
      other constraints and cuts leave it after org.jacop.lp.poolAge (100)
@@ -2222,7 +2243,7 @@ Version 5.0 (unreleased)
      them off, the 34 instances where the pool moves rows are unchanged
      in fixed search and 1 / 2 under -f).
 
-147. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
+148. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
      with exact probabilities: integer numerators over a common
      denominator. ProbArith compares, rescales and rounds them outward;
      Dist is a discrete distribution and ScenarioSet a finite set of
@@ -2235,7 +2256,7 @@ Version 5.0 (unreleased)
      the expectation of a sum with random coefficients. The MiniZinc
      library jacop_prob.mzn has scenario_chance and jacop_expected_sum.
 
-148. LCG explains the failures of a linear equality (LinearIntDom, and
+149. LCG explains the failures of a linear equality (LinearIntDom, and
      SumWeight's failure reason) that its bounds do not violate. When the
      other variables' bounds leave one variable a window with no value
      in its domain, the reason is that window's removals and the bounds
@@ -2251,7 +2272,7 @@ Version 5.0 (unreleased)
      --lcg -f S = +9; the only decided instance with generic LinearIntDom
      failures is tp7_4 (-f +1, H1), the others are search-order noise.
 
-149. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
+150. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
      derives each of its deductions. Under --proof the relaxation is built
      by LinearRelaxation.ofModel: its rows are the linear constraints whose
      proof model is their relation as a line (LinearForms.ofModelLine:
@@ -2267,7 +2288,7 @@ Version 5.0 (unreleased)
      changes no bound they propagate. The pol steps are deleted at the
      next restart. Before, --proof turned --lp off.
 
-150. The LP cut rounds at the root add exact Gomory cuts over the rows and
+151. The LP cut rounds at the root add exact Gomory cuts over the rows and
      their slacks. A tableau row gives the integer equality
      sum (lambda A)_j x_j - sum lambda_i s_i = 0 with s_i = a_i x; its MIR
      is taken over the columns and the slacks (bounded by the row sides
@@ -2283,7 +2304,7 @@ Version 5.0 (unreleased)
      -Dorg.jacop.lp.reduceCuts=false switch them off. Wide set at 60 s:
      default 162 to 162 solved (7 families better, 0 worse), -f 152 to 154.
 
-151. Under --lcg without -f, the output variables that a search
+152. Under --lcg without -f, the output variables that a search
      annotation leaves open are decided after it in input order, lower
      half first, as fixed search without --lcg does, instead of by
      activity branching. On connect, whose annotation covers about 760
