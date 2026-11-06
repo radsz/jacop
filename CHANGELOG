@@ -2060,10 +2060,12 @@ Version 5.0 (unreleased)
      LP-only column is bounded by the domain of its variable.
      -Dorg.jacop.lp.valueEncodings=false turns the new encodings off,
      valueEncodingsDomain (64) and valueEncodingsMax (20,000) cap them;
-     the stat lpTableBooleans is now lpTableColumns. Wide set (220, 60 s):
-     -f 155 to 155 solved (4 families better, 4 worse), default 164 to
-     162 (0 / 5), where the losses are near the time limit or keep rows
-     that raise a weak bound (lot-sizing, peaceable queens).
+     the stat lpTableBooleans is now lpTableColumns. Infeasibility and
+     dual certificates use the simplex bounds of the LP-only columns, and
+     their LCG explanations add the facts x != v or x = v behind those
+     bounds. Wide set (220, 60 s): default 164 to 162 solved (4 families
+     better, 1 worse), -f 152 to 152 (4 / 4); sudoku_fixed p28 is lost in
+     both modes since one more LP failure changes its search path.
 
 Version 4.11
 =============
