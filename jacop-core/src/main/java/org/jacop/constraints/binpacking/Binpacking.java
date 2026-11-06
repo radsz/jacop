@@ -66,6 +66,7 @@ import org.jacop.lcg.Explainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
+import org.jacop.util.DualFeasibleFunctions;
 
 /**
  * Binpacking constraint implements bin packing problem. It ensures that items are packed into bins
@@ -1345,11 +1346,12 @@ public class Binpacking extends Constraint
   }
 
   /**
-   * Tells whether the dual feasible function f_CCM1 of Carlier, Clautiaux and Moukrim (2007) shows
-   * that the items x (in descending order) need more than nb bins of the given capacity. A dual
-   * feasible function maps the sizes so that items fitting together in a bin still fit after the
-   * mapping, so ceil(sum f(x) / f(capacity)) is a lower bound. Its parameter lambda (1 to capacity
-   * / 2) is tried at the distinct item sizes, as for L2.
+   * Tells whether the dual feasible function f_CCM1 of Carlier, Clautiaux and Moukrim (2007, see
+   * {@link DualFeasibleFunctions#ccm1(int, int, int)} for the reference) shows that the items x (in
+   * descending order) need more than nb bins of the given capacity. A dual feasible function maps
+   * the sizes so that items fitting together in a bin still fit after the mapping, so ceil(sum f(x)
+   * / f(capacity)) is a lower bound. Its parameter lambda (1 to capacity / 2) is tried at the
+   * distinct item sizes, as for L2.
    */
   private static boolean ccm1Fails(int[] x, int capacity, int nb, int[] sizes, int[] counts) {
     int half = capacity / 2;
@@ -1376,16 +1378,7 @@ public class Binpacking extends Constraint
       long sum = 0;
       // sizes below lambda map to 0
       for (int i = 0; i < d && sizes[i] >= lambda; i++) {
-        int w = sizes[i];
-        long f;
-        if (w > capacity - w) {
-          f = 2 * (capacityLambda - (capacity - w) / lambda);
-        } else if (w == capacity - w) {
-          f = capacityLambda;
-        } else {
-          f = 2L * (w / lambda);
-        }
-        sum += f * counts[i];
+        sum += DualFeasibleFunctions.ccm1(sizes[i], capacity, lambda) * counts[i];
       }
       // ceil(sum / f(capacity)) > nb, with f(capacity) = 2 * capacityLambda
       if (sum > 2 * capacityLambda * nb) {

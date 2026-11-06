@@ -457,6 +457,8 @@ public class LinearRelaxation extends Constraint
   private LinearForm[] rootForms = new LinearForm[0];
   // the certificate of each root form, for a proof, or null
   private Certificate[] rootCertificates = new Certificate[0];
+  // the LP-only column facts of each root form, for its explanation
+  private int[][] rootFacts = new int[0][];
   private long[] solvedLo;
   private long[] solvedHi;
 
@@ -1449,7 +1451,7 @@ public class LinearRelaxation extends Constraint
       if (ROOT_REDUCED_COSTS) {
         long pruned = prunings;
         for (int k = 0; k < rootForms.length; k++) {
-          propagate(store, rootForms[k], rootCertificates[k]);
+          propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
         }
         rootPrunings += prunings - pruned;
       }
@@ -1782,14 +1784,17 @@ public class LinearRelaxation extends Constraint
       if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
         List<LinearForm> kept = new ArrayList<>();
         List<Certificate> keptCertificates = new ArrayList<>();
+        List<int[]> keptFacts = new ArrayList<>();
         for (int k = 0; k < forms.length; k++) {
           if (forms[k] != null) {
             kept.add(forms[k]);
             keptCertificates.add(certified(forms[k], used[k], k == 0));
+            keptFacts.add(facts[k]);
           }
         }
         rootForms = kept.toArray(new LinearForm[0]);
         rootCertificates = keptCertificates.toArray(new Certificate[0]);
+        rootFacts = keptFacts.toArray(new int[0][]);
         if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
           rootSimplex = lp.copy();
           rootSimplexRows = rows();

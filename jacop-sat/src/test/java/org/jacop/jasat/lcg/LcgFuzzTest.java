@@ -156,6 +156,7 @@ import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
@@ -992,6 +993,86 @@ class LcgFuzzTest {
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
     return search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+  }
+
+  /**
+   * Diffn's area check, with its dual feasible functions, explains a failure by the rectangles in a
+   * window. On random tight packings LCG with checked explanations must agree with search over the
+   * pairwise rule only, and give a packing.
+   */
+  @Test
+  void diffnAreaReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(100, RUNS / 4);
+    long diffnFailures = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = packing(seed, false) != null;
+      Object[] lcg = packing(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      diffnFailures += (Long) lcg[1];
+    }
+    assertThat(diffnFailures).isPositive();
+  }
+
+  // a random packing of squares and rectangles in a small square: search over the pairwise rule
+  // (null if none), or LCG over Diffn ({status, own failure reasons of Diffn})
+  private static Object[] packing(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int side = 4 + rnd.nextInt(3);
+    int n = 3 + rnd.nextInt(3);
+    IntVar[] x = new IntVar[n];
+    IntVar[] y = new IntVar[n];
+    IntVar[] w = new IntVar[n];
+    IntVar[] h = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      int wMin = 1 + rnd.nextInt(3);
+      int hMin = rnd.nextBoolean() ? wMin : 1 + rnd.nextInt(3);
+      w[i] = new IntVar(store, "w" + i, wMin, wMin + (rnd.nextInt(3) == 0 ? 1 : 0));
+      h[i] = new IntVar(store, "h" + i, hMin, hMin + (rnd.nextInt(3) == 0 ? 1 : 0));
+      x[i] = new IntVar(store, "x" + i, 0, side - wMin);
+      y[i] = new IntVar(store, "y" + i, 0, side - hMin);
+      store.impose(new XplusYlteqZ(x[i], w[i], new IntVar(store, side, side)));
+      store.impose(new XplusYlteqZ(y[i], h[i], new IntVar(store, side, side)));
+    }
+    IntVar[] vars = new IntVar[4 * n];
+    for (int i = 0; i < n; i++) {
+      vars[4 * i] = x[i];
+      vars[4 * i + 1] = y[i];
+      vars[4 * i + 2] = w[i];
+      vars[4 * i + 3] = h[i];
+    }
+    if (!lcg) {
+      store.impose(new Nooverlap(x, y, w, h).pairwiseOnly());
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    store.impose(new Diffn(x, y, w, h));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          boolean apart =
+              solver.value(x[i]) + solver.value(w[i]) <= solver.value(x[j])
+                  || solver.value(x[j]) + solver.value(w[j]) <= solver.value(x[i])
+                  || solver.value(y[i]) + solver.value(h[i]) <= solver.value(y[j])
+                  || solver.value(y[j]) + solver.value(h[j]) <= solver.value(y[i]);
+          assertThat(apart).as("seed %d: rectangles %d and %d overlap", seed, i, j).isTrue();
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("Diffn");
+    return new Object[] {status, counts == null ? 0L : counts[3] - counts[4]};
   }
 
   @Test

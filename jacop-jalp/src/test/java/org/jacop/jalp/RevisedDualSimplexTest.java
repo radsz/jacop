@@ -298,15 +298,21 @@ class RevisedDualSimplexTest {
 
   // solves and checks one answer; returns the status
   private static int solveAndCheck(Lp p, RevisedDualSimplex lp, boolean scale, String what) {
+    return solveAndCheck(p, lp, scale, false, what);
+  }
+
+  private static int solveAndCheck(
+      Lp p, RevisedDualSimplex lp, boolean scale, boolean primal, String what) {
     try {
-      return solveAndCheckOnce(p, lp, scale, what);
+      return solveAndCheckOnce(p, lp, scale, primal, what);
     } catch (AssertionError e) {
       throw new AssertionError(e.getMessage() + "\nscaled " + scale + p, e);
     }
   }
 
-  private static int solveAndCheckOnce(Lp p, RevisedDualSimplex lp, boolean scale, String what) {
-    int status = lp.solve(1_000_000);
+  private static int solveAndCheckOnce(
+      Lp p, RevisedDualSimplex lp, boolean scale, boolean primal, String what) {
+    int status = primal ? lp.solvePrimal(1_000_000) : lp.solve(1_000_000);
     switch (status) {
       case RevisedDualSimplex.OPTIMAL -> {
         checkOptimal(p, lp, what);
@@ -447,6 +453,93 @@ class RevisedDualSimplexTest {
     }
     // the cheap factorization makes the rule fire
     assertThat(forWork).isPositive();
+  }
+
+  @Test
+  void thePrimalSimplexAnswersRandomLpsWithCertificates() {
+    Random rnd = new Random(7);
+    int[] counts = new int[4];
+    int runs = Integer.getInteger("jalp.test.runs", 3000);
+    for (int run = 0; run < runs; run++) {
+      boolean scale = rnd.nextBoolean();
+      Lp p = new Lp(rnd, 1 + rnd.nextInt(8), 1 + rnd.nextInt(9), 0.6, rnd.nextInt(3));
+      RevisedDualSimplex lp = p.simplex(scale);
+      int status = solveAndCheck(p, lp, scale, true, "primal run " + run);
+      counts[status]++;
+      assertThat(p.simplex(scale).solve(1_000_000))
+          .as("primal run %d, dual", run)
+          .isEqualTo(status);
+    }
+    String found = java.util.Arrays.toString(counts);
+    assertThat(counts[RevisedDualSimplex.OPTIMAL]).as(found).isGreaterThan(runs / 10);
+    assertThat(counts[RevisedDualSimplex.INFEASIBLE]).as(found).isGreaterThan(runs / 10);
+    assertThat(counts[RevisedDualSimplex.UNBOUNDED]).as(found).isGreaterThan(runs / 20);
+  }
+
+  @Test
+  void objectiveChangesAreSolvedByThePrimalSimplexFromTheBasisKept() {
+    Random rnd = new Random(11);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 10;
+    long warm = 0;
+    long fresh = 0;
+    long warmDual = 0;
+    int solved = 0;
+    for (int run = 0; run < runs; run++) {
+      int m = 10 + rnd.nextInt(40);
+      int n = 10 + rnd.nextInt(60);
+      Lp p = new Lp(rnd, m, n, 4.0 / n, 1);
+      for (int j = 0; j < n; j++) {
+        p.lo[j] = -5.0 - rnd.nextInt(5);
+        p.hi[j] = 5.0 + rnd.nextInt(5);
+      }
+      RevisedDualSimplex lp = p.simplex(true);
+      if (lp.solve(1_000_000) != RevisedDualSimplex.OPTIMAL) {
+        continue;
+      }
+      for (int step = 0; step < 5; step++) {
+        String what = "run " + run + " step " + step;
+        // a new objective: some costs change, some change sign
+        double[] c = p.cost.clone();
+        for (int j = 0; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            c[j] = rnd.nextInt(7) - 3.0;
+          }
+        }
+        p.cost = c;
+        RevisedDualSimplex dual = lp.copy();
+        lp.setCost(c);
+        dual.setCost(c);
+        long before = lp.pivots();
+        long dualBefore = dual.pivots();
+        assertThat(dual.solve(1_000_000)).as(what + " dual").isEqualTo(RevisedDualSimplex.OPTIMAL);
+        warmDual += dual.pivots() - dualBefore;
+        int status = solveAndCheck(p, lp, true, true, what);
+        assertThat(status).as(what).isEqualTo(RevisedDualSimplex.OPTIMAL);
+        RevisedDualSimplex again = p.simplex(true);
+        assertThat(again.solve(1_000_000)).as(what + " fresh").isEqualTo(status);
+        assertThat(again.objective())
+            .as(what)
+            .isCloseTo(
+                lp.objective(),
+                org.assertj.core.data.Offset.offset(1e-6 * (1 + Math.abs(lp.objective()))));
+        warm += lp.pivots() - before;
+        fresh += again.pivots();
+        solved++;
+        // and a bound change on top, solved by the dual simplex
+        int j = rnd.nextInt(n);
+        p.hi[j] = Math.max(p.lo[j], Math.floor(lp.value(j) - 0.5));
+        p.bounds(lp);
+        if (solveAndCheck(p, lp, true, what + " bound") != RevisedDualSimplex.OPTIMAL) {
+          break;
+        }
+      }
+    }
+    assertThat(solved).isGreaterThan(runs / 2);
+    // the basis pivots after a new objective: far fewer than a fresh solve, about as many as the
+    // dual simplex makes from the same basis (660 and 595 of 2933, with the flips not counted)
+    String found = "primal " + warm + " dual " + warmDual + " fresh " + fresh;
+    assertThat(warm * 2).as(found).isLessThan(fresh);
+    assertThat(warm).as(found).isLessThan(2 * warmDual);
   }
 
   @Test
