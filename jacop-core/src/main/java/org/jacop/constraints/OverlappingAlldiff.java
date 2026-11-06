@@ -40,6 +40,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * OverlappingAlldiff is the conjunction alldifferent(s) and alldifferent(t) of two alldifferent
@@ -81,7 +84,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class OverlappingAlldiff extends Constraint
-    implements SatisfiedPresent, Copyable<OverlappingAlldiff> {
+    implements SatisfiedPresent, Copyable<OverlappingAlldiff>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -371,6 +374,41 @@ public class OverlappingAlldiff extends Constraint
         }
       }
     }
+  }
+
+  // the bounds of every variable just before position: the propagation reads nothing else
+  private void addBounds(AtomicTrail trail, int position, EntryList out) {
+    for (IntVar[] g : group) {
+      for (IntVar v : g) {
+        trail.addLowerBound(v, position, out);
+        trail.addUpperBound(v, position, out);
+      }
+    }
+  }
+
+  /**
+   * Explains a bound by the bounds of all the variables before it, without their holes: the
+   * propagation reads only bounds, so these imply it, with the holes the moved bound skipped.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != OverlappingAlldiff.class || trail.kind(entry) == AtomicTrail.NE) {
+      return false;
+    }
+    boolean ge = trail.kind(entry) == AtomicTrail.GE;
+    trail.addSkippedHoles(entry, ge ? Integer.MIN_VALUE : Integer.MAX_VALUE, out);
+    addBounds(trail, entry, out);
+    return true;
+  }
+
+  /** A failure, by the bounds of all the variables. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != OverlappingAlldiff.class) {
+      return false;
+    }
+    addBounds(trail, trail.size(), out);
+    return true;
   }
 
   @Override
