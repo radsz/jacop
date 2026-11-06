@@ -54,9 +54,9 @@ import org.jacop.lcg.Explainable;
  * greedy algorithm over marginal costs of Hochbaum's resource allocation framework: since every
  * f<sub>i</sub> is convex, its marginal costs f<sub>i</sub>(v) - f<sub>i</sub>(v - 1) do not
  * decrease, and taking the cheapest units first is optimal (D. S. Hochbaum, "Lower and upper bounds
- * for allocation problems and other nonlinear optimization problems", Mathematics of Operations
- * Research 19(2), 1994). The threshold version is used: for a marginal cost &lambda;, each x[i]
- * takes all units of marginal cost at most &lambda;, and a binary search on &lambda; finds the
+ * for the allocation problem and other nonlinear optimization problems", Mathematics of Operations
+ * Research 19(2), 390-409, 1994). The threshold version is used: for a marginal cost &lambda;, each
+ * x[i] takes all units of marginal cost at most &lambda;, and a binary search on &lambda; finds the
  * threshold that reaches t, so G(t) costs O(n log D log M), D the widest domain and M the largest
  * marginal cost.
  *
@@ -66,18 +66,19 @@ import org.jacop.lcg.Explainable;
  *   <li>each bound of x[i] is the least or greatest v for which some assignment of the others
  *       within their bounds, with x[i] = v and a total within its bounds, costs at most cost.max.
  *       With at most {@link #EXACT_LIMIT} variables this least cost F<sub>i</sub>(v) is computed
- *       exactly (bounds(Z) consistency for the relaxation), otherwise it is bounded by Lagrangian
- *       reduced costs at the optimal marginal cost &lambda;, which costs O(n log D) per pass;
+ *       exactly (bounds(Z) consistency for the relaxation) by walking x[i] away from an optimal
+ *       assignment while the others follow greedily, O(n) per unit, otherwise it is bounded by
+ *       Lagrangian reduced costs at the optimal marginal cost &lambda;, which costs O(n log D) per
+ *       pass;
  *   <li>the sum itself is propagated on bounds.
  * </ul>
  *
  * <p>The constraint generalizes the spread constraint (G. Pesant and J.-C. R&eacute;gin, "SPREAD: A
  * balancing constraint based on statistics", CP 2005, LNCS 3709) and the deviation constraint (P.
  * Schaus, Y. Deville, P. Dupont and J.-C. R&eacute;gin, "The deviation constraint", CPAIOR 2007,
- * LNCS 4510; and "Simplification and extension of the SPREAD constraint", CP 2007 workshop, which
- * this implementation also follows for the shape of the filtering), which are the cases
- * f<sub>i</sub>(v) = (n &middot; v - s)<sup>2</sup> and |n &middot; v - s| with a fixed sum s;
- * {@link Spread} and {@link Deviation} remain the faster choice for those.
+ * LNCS 4510), which are the cases f<sub>i</sub>(v) = (n &middot; v - s)<sup>2</sup> and |n &middot;
+ * v - s| with a fixed sum s; {@link Spread} and {@link Deviation} remain the faster choice for
+ * those.
  *
  * <p>Under lazy clause generation the propagation is explained by the Lagrangian bound at a
  * marginal cost &lambda;: G(t) &ge; &Sigma;<sub>i</sub> min<sub>v</sub>(f<sub>i</sub>(v) - &lambda;
@@ -132,8 +133,19 @@ public class ConvexAllocation extends Constraint
   // an optimal assignment of the current pass
   private final long[] best;
 
+  // the others' values while walking one variable away from best
+  private final long[] walk;
+
+  // the steps a walk makes before the rest of the bound is found by binary search
+  private static final int WALK_LIMIT = 256;
+
   // whether the bounds of x are computed exactly
   private boolean exact;
+
+  // the costs over the initial domains, null for a domain too wide to tabulate
+  private final long[][] values;
+
+  private static final int TABLE_LIMIT = 1 << 16;
 
   /**
    * It constructs the constraint sum of x = total and cost &ge; sum of f[i](x[i]).
@@ -161,6 +173,7 @@ public class ConvexAllocation extends Constraint
     this.lo = new long[n];
     this.hi = new long[n];
     this.best = new long[n];
+    this.walk = new long[n];
     // the sum of all costs, and every marginal cost times a sum of widths, stays far from overflow
     long limit = (1L << 60) / (n + 2);
     long widest = 1;
@@ -190,6 +203,19 @@ public class ConvexAllocation extends Constraint
       } catch (ArithmeticException e) {
         throw new IllegalArgumentException(
             "ConvexAllocation needs smaller costs for " + x[i] + ", not " + f[i] + ".", e);
+      }
+    }
+    this.values = new long[n][];
+    long cells = 0;
+    for (int i = 0; i < n; i++) {
+      long width = max0[i] - min0[i] + 1;
+      if (width <= TABLE_LIMIT && cells + width <= 4L * TABLE_LIMIT) {
+        cells += width;
+        long[] t = new long[(int) width];
+        for (int k = 0; k < t.length; k++) {
+          t[k] = f[i].value(min0[i] + k);
+        }
+        values[i] = t;
       }
     }
     this.exact = n <= EXACT_LIMIT;
@@ -223,8 +249,27 @@ public class ConvexAllocation extends Constraint
 
   // ---- the least costs over the bounds in lo and hi
 
+  // f[j] at v, from the table inside the initial domain
+  private long val(int j, long v) {
+    long[] t = values[j];
+    if (t != null) {
+      long k = v - min0[j];
+      if (k >= 0 && k < t.length) {
+        return t[(int) k];
+      }
+    }
+    return val(j, v);
+  }
+
   private long marginal(int j, long v) {
-    return f[j].value(v) - f[j].value(v - 1);
+    long[] t = values[j];
+    if (t != null) {
+      long k = v - min0[j];
+      if (k >= 1 && k < t.length) {
+        return t[(int) k] - t[(int) k - 1];
+      }
+    }
+    return val(j, v) - val(j, v - 1);
   }
 
   // the greatest v in [lo, hi] with v = lo or a marginal cost of v of at most lambda
@@ -256,7 +301,7 @@ public class ConvexAllocation extends Constraint
     long s = 0;
     for (int j = 0; j < n; j++) {
       if (j != skip) {
-        s += f[j].value(at(j, lambda));
+        s += val(j, at(j, lambda));
       }
     }
     return s;
@@ -397,7 +442,7 @@ public class ConvexAllocation extends Constraint
       long lambda = optimum(t);
       long lower = 0;
       for (int j = 0; j < n; j++) {
-        lower += f[j].value(best[j]);
+        lower += val(j, best[j]);
       }
       if (lower > cost.max()) {
         throw Store.failException;
@@ -469,10 +514,82 @@ public class ConvexAllocation extends Constraint
     }
   }
 
+  /*
+   * The farthest value of x[i] in direction d (1 up, -1 down), at most to bound, whose least cost
+   * is within limit. It walks x[i] away from best[i] one unit at a time while the others follow
+   * greedily: with x[i] one unit further the others' sum must lie in [smin - v, smax - v], so they
+   * give back (or take) a unit when the window forces it or when that unit's marginal cost makes
+   * it worth it, always the unit with the greatest (least) marginal cost. From an optimal
+   * assignment, and with convex costs, this keeps the others optimal for every v (Hochbaum 1994),
+   * so each step costs O(n) instead of a search over lambda. After WALK_LIMIT steps the rest is
+   * found by binary search on cost(i, v).
+   */
+  private long exactBound(int i, int d, long bound, long smin, long smax, long lower, long limit) {
+    System.arraycopy(best, 0, walk, 0, n);
+    long others = lower - val(i, best[i]);
+    long sum = 0;
+    for (int j = 0; j < n; j++) {
+      if (j != i) {
+        sum += walk[j];
+      }
+    }
+    long v = best[i];
+    for (int step = 0; step < WALK_LIMIT && v != bound; step++) {
+      long next = v + d;
+      long from = smin - next;
+      long to = smax - next;
+      // d = 1: the others give back the unit with the greatest marginal cost
+      int pick = -1;
+      long gain = 0;
+      for (int j = 0; j < n; j++) {
+        if (j == i) {
+          continue;
+        }
+        if (d > 0 ? walk[j] > lo[j] : walk[j] < hi[j]) {
+          long m = d > 0 ? marginal(j, walk[j]) : marginal(j, walk[j] + 1);
+          if (pick < 0 || (d > 0 ? m > gain : m < gain)) {
+            pick = j;
+            gain = m;
+          }
+        }
+      }
+      boolean forced = d > 0 ? sum > to : sum < from;
+      boolean worth =
+          pick >= 0 && (d > 0 ? gain > 0 && sum - 1 >= from : gain < 0 && sum + 1 <= to);
+      if (forced || worth) {
+        if (pick < 0) {
+          return v;
+        }
+        walk[pick] -= d;
+        sum -= d;
+        others -= d * gain;
+      }
+      if (sum < from || sum > to || val(i, next) + others > limit) {
+        return v;
+      }
+      v = next;
+    }
+    if (v == bound || cost(i, bound, smin, smax) <= limit) {
+      return bound;
+    }
+    // cost(i, v) is within limit and cost(i, bound) is not
+    long l = v;
+    long h = bound;
+    while (Math.abs(h - l) > 1) {
+      long m = l + (h - l) / 2;
+      if (cost(i, m, smin, smax) <= limit) {
+        l = m;
+      } else {
+        h = m;
+      }
+    }
+    return l;
+  }
+
   // the least cost with x[i] = v, INFINITE if no assignment of the others fits
   private long cost(int i, long v, long smin, long smax) {
     long rest = leastWithin(i, smin - v, smax - v);
-    return rest == INFINITE ? INFINITE : f[i].value(v) + rest;
+    return rest == INFINITE ? INFINITE : val(i, v) + rest;
   }
 
   private void narrow(
@@ -480,14 +597,14 @@ public class ConvexAllocation extends Constraint
     long centre = best[i];
     // Lagrangian bounds lower + f(v) - f(u) - lambda * (v - u), u the least f(u) - lambda * u
     long ua = at(i, alpha);
-    long fa = f[i].value(ua);
+    long fa = val(i, ua);
     long ub = at(i, beta);
-    long fb = f[i].value(ub);
+    long fb = val(i, ub);
     long l = centre;
     long h = hi[i];
     while (l < h) {
       long m = h - (h - l) / 2;
-      if (lower + f[i].value(m) - fa - alpha * (m - ua) <= limit) {
+      if (lower + val(i, m) - fa - alpha * (m - ua) <= limit) {
         l = m;
       } else {
         h = m - 1;
@@ -498,7 +615,7 @@ public class ConvexAllocation extends Constraint
     h = centre;
     while (l < h) {
       long m = l + (h - l) / 2;
-      if (lower + f[i].value(m) - fb - beta * (m - ub) <= limit) {
+      if (lower + val(i, m) - fb - beta * (m - ub) <= limit) {
         h = m;
       } else {
         l = m + 1;
@@ -507,31 +624,11 @@ public class ConvexAllocation extends Constraint
     long min = l;
 
     if (exact) {
-      if (max > centre && cost(i, max, smin, smax) > limit) {
-        l = centre;
-        h = max - 1;
-        while (l < h) {
-          long m = h - (h - l) / 2;
-          if (cost(i, m, smin, smax) <= limit) {
-            l = m;
-          } else {
-            h = m - 1;
-          }
-        }
-        max = l;
+      if (max > centre) {
+        max = exactBound(i, 1, max, smin, smax, lower, limit);
       }
-      if (min < centre && cost(i, min, smin, smax) > limit) {
-        l = min + 1;
-        h = centre;
-        while (l < h) {
-          long m = l + (h - l) / 2;
-          if (cost(i, m, smin, smax) <= limit) {
-            h = m;
-          } else {
-            l = m + 1;
-          }
-        }
-        min = l;
+      if (min < centre) {
+        min = exactBound(i, -1, min, smin, smax, lower, limit);
       }
     }
 
@@ -552,7 +649,7 @@ public class ConvexAllocation extends Constraint
         return false;
       }
       sum += x[i].value();
-      value += f[i].value(x[i].value());
+      value += val(i, x[i].value());
     }
     return sum == total.value() && value <= cost.min();
   }
@@ -582,7 +679,7 @@ public class ConvexAllocation extends Constraint
     for (int j = 0; j < n; j++) {
       if (j != skip) {
         long v = at(j, lambda);
-        s += f[j].value(v) - lambda * (v - lo[j]);
+        s += val(j, v) - lambda * (v - lo[j]);
       }
     }
     return s;
@@ -782,7 +879,7 @@ public class ConvexAllocation extends Constraint
       if (ge ? w0 > min0[i] && marginal(i, w0) > c : w0 < max0[i] && marginal(i, w0 + 1) < c) {
         continue;
       }
-      long s = lagrangian(i, c) + f[i].value(w0) + c * ((c >= 0 ? smin : smax) - w0 - olo);
+      long s = lagrangian(i, c) + val(i, w0) + c * ((c >= 0 ? smin : smax) - w0 - olo);
       if (s > cmax) {
         lagrangianReason(trail, entry, i, c, out);
         trail.addUpperBound(cost, entry, out);

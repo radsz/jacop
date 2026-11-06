@@ -137,12 +137,21 @@ public class ConvexAllocationDetector implements ParserTreeConstants {
   }
 
   /**
-   * It tells if the detection is on.
+   * It tells if the detection is on. By default it is on for search without lazy clause generation
+   * only: under LCG the stronger bound costs the balanced academic curriculum instances the large
+   * improvements its restarts find (2 better, 12 worse of 14 with the search annotation), while
+   * without LCG it wins on all of them. The system property org.jacop.fz.convexAllocation set to
+   * true or false turns it on or off in both cases.
    *
-   * @return false if the system property org.jacop.fz.convexAllocation is false.
+   * @param lcg true when the model is solved with lazy clause generation.
+   * @return true if the detection runs.
    */
-  public static boolean enabled() {
-    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.convexAllocation"));
+  public static boolean enabled(boolean lcg) {
+    String p = System.getProperty("org.jacop.fz.convexAllocation");
+    if (p == null) {
+      return !lcg;
+    }
+    return Boolean.parseBoolean(p);
   }
 
   /**

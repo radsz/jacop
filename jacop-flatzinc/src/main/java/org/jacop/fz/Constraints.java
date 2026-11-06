@@ -308,7 +308,7 @@ public class Constraints implements ParserTreeConstants {
       }
 
       // the allocations it adds are redundant, and --proof does not encode them
-      if (ConvexAllocationDetector.enabled() && options.proof() == null) {
+      if (ConvexAllocationDetector.enabled(options.lcg()) && options.proof() == null) {
         new ConvexAllocationDetector(support, balanced).detect(astTree);
       }
 

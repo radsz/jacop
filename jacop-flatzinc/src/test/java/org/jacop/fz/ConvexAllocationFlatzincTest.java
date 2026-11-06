@@ -394,7 +394,13 @@ class ConvexAllocationFlatzincTest {
       if (!model.fzn().contains("minimize")) {
         continue;
       }
-      String[] mode = trial % 2 == 0 ? new String[] {"-debug"} : new String[] {"-debug", "-f"};
+      String[] mode =
+          switch (trial % 4) {
+            case 0 -> new String[] {"-debug", "--lcg", "on"};
+            case 1 -> new String[] {"-debug", "--lcg", "on", "-f"};
+            case 2 -> new String[] {"-debug", "--lcg", "off"};
+            default -> new String[] {"-debug", "--lcg", "off", "-f"};
+          };
       String on = run(model.fzn(), mode);
       String off;
       String property = "org.jacop.fz.convexAllocation";
@@ -461,6 +467,9 @@ class ConvexAllocationFlatzincTest {
         """;
     String out = run(fzn, "-debug");
     assertTrue(out.contains("redundant ConvexAllocation"), out);
+    // by default the detection runs without LCG only
+    assertTrue(runAsIs(fzn, "-debug", "--lcg", "off").contains("redundant ConvexAllocation"));
+    assertFalse(runAsIs(fzn, "-debug", "--lcg", "on").contains("redundant ConvexAllocation"));
     // 15 units over three periods with ideal load 5: perfect balance 5, 5, 5 with 3+2, 4+1, 5
     assertTrue(out.contains("objective = 0;"), out);
   }
@@ -483,6 +492,22 @@ class ConvexAllocationFlatzincTest {
   }
 
   private String run(String model, String... options) throws IOException {
+    // the detection is off by default under LCG; the tests turn it on unless they turn it off
+    String property = "org.jacop.fz.convexAllocation";
+    boolean set = System.getProperty(property) == null;
+    if (set) {
+      System.setProperty(property, "true");
+    }
+    try {
+      return runAsIs(model, options);
+    } finally {
+      if (set) {
+        System.clearProperty(property);
+      }
+    }
+  }
+
+  private String runAsIs(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
