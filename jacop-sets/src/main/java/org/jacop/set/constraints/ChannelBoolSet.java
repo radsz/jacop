@@ -137,6 +137,14 @@ public class ChannelBoolSet extends Constraint
       int i = e.nextElement();
       b[i - offset].domain.in(store.level, b[i - offset], 1, 1);
     }
+
+    // and its LUB: an element out of the set has its Boolean 0
+    IntDomain lub = s.dom().lub();
+    for (int i = 0; i < n; i++) {
+      if (b[i].max() != 0 && !lub.contains(i + offset)) {
+        b[i].domain.in(store.level, b[i], 0, 0);
+      }
+    }
   }
 
   @Override

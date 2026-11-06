@@ -1135,6 +1135,24 @@ class SingleConstraintTest {
     trail.detach();
   }
 
+  /** ChannelBoolSet sets the Boolean of an element that leaves the set's least upper bound to 0. */
+  @Test
+  void channelBoolSetPrunesTheBooleanOfAnElementOut() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", 1, 3);
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    store.impose(new ChannelBoolSet(b, s, 1));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    s.domain.inLub(store.level, s, new IntervalDomain(1, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b[2].max()).isZero();
+    assertThat(b[0].dom().getSize()).isEqualTo(2);
+  }
+
   private static List<IntVar> reasonVariables(AtomicTrail trail, EntryList reason) {
     List<IntVar> vars = new ArrayList<>();
     for (int k = 0; k < reason.size(); k++) {
