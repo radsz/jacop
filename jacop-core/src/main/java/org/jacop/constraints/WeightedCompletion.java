@@ -40,6 +40,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Total weighted completion time on a unary resource (Kovács and Beck, "A global constraint for
@@ -78,7 +81,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class WeightedCompletion extends Constraint
-    implements SatisfiedPresent, Copyable<WeightedCompletion> {
+    implements SatisfiedPresent, Copyable<WeightedCompletion>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -100,6 +103,16 @@ public class WeightedCompletion extends Constraint
 
   // fixed tasks by start and by end, for the profile check of a parallel resource
   private final long[] endKey;
+  private int fixedUsed;
+
+  // the load of the fixed tasks of a parallel resource: from changeTime[k] on it is changeLoad[k]
+  private final long[] changeTime;
+  private final long[] changeLoad;
+  private int changes;
+
+  // per job of the fluid relaxation: energy left and the integral of t over its processing
+  private final double[] fluidRem;
+  private final double[] fluidMoment;
 
   // tasks of the relaxation (not fixed, positive duration) by increasing release, and their release
   private final int[] jobs;
@@ -220,6 +233,10 @@ public class WeightedCompletion extends Constraint
       }
     }
     this.endKey = new long[parallel ? n : 0];
+    this.changeTime = new long[parallel ? 2 * n : 0];
+    this.changeLoad = new long[parallel ? 2 * n : 0];
+    this.fluidRem = new double[parallel ? n : 0];
+    this.fluidMoment = new double[parallel ? n : 0];
 
     this.jobs = new int[n];
     this.release = new long[n];
@@ -823,29 +840,24 @@ public class WeightedCompletion extends Constraint
 
   /**
    * The bound of Eastman, Even and Isaacs (1964) for a resource of capacity m &gt; 1, with release
-   * dates: any schedule is a fluid schedule of a single machine of speed m that processes the
-   * energy e = r * d of each task, at most r per time unit, after its earliest start. The weighted
-   * mean busy time over the fluid schedules is smallest for the preemptive schedule that runs the
-   * released task with the largest w / e first (Goemans), and a task completes d / 2 after its mean
-   * busy time in a schedule without preemption, so sum(i) w * (M + d / 2) bounds the cost. Times
-   * are scaled by m so that the simulation of the unary case runs unchanged; without release dates
-   * this is LB1 / m + (m - 1) / (2m) * sum(i) w * d with LB1 the bound of Smith's rule (Eastman,
-   * Even and Isaacs; Schulz, IPCO 1996, for the LP form). Fixed tasks count with their own
-   * completion and are left out of the relaxation. A free task i at start t adds w * (t + d) to the
-   * bound of the others, which removes the starts above the largest fitting t.
+   * dates and fixed tasks: any schedule is a fluid schedule that processes the energy e = r * d of
+   * each free task after its earliest start within the capacity the fixed tasks leave. The weighted
+   * mean busy time over the fluid schedules is smallest for the greedy schedule that gives all of
+   * it to the released task with the largest w / e ({@link #fluid(int)}), and a task completes d /
+   * 2 after its mean busy time in a schedule without preemption, so sum(i) w * (M + d / 2) bounds
+   * the cost. Without release dates and fixed tasks this is LB1 / m + (m - 1) / (2m) * sum(i) w * d
+   * with LB1 the bound of Smith's rule (Eastman, Even and Isaacs; Schulz, IPCO 1996, for the LP
+   * form). A free task i at start t adds w * (t + d) to the bound of the others, which removes the
+   * starts above the largest fitting t.
    */
   private void consistencyParallel(Store store) {
-    int[] overload = overloadedAt();
-    if (overload != null) {
+    if (overloadedAt() != null) {
       throw Store.failException;
     }
+    // before sortBy, which reuses the keys of the fixed tasks
+    profile();
     long twice = 0;
     jobCount = 0;
-    fixedCount = 0;
-    long first = Long.MAX_VALUE;
-    long last = Long.MIN_VALUE;
-    long energy = 0;
-    long weightSum = 0;
     for (int i = 0; i < n; i++) {
       IntVar s = starts[i];
       if (s.singleton()) {
@@ -855,32 +867,11 @@ public class WeightedCompletion extends Constraint
       } else {
         twice += (long) weights[i] * durations[i];
         jobs[jobCount++] = i;
-        first = Math.min(first, s.min());
-        last = Math.max(last, s.min());
-        energy += proc[i];
-        weightSum += weights[i];
       }
     }
     double constant = twice / 2.0;
-    double bound = constant;
-    // the scaled times and their squares must stay within long
-    boolean relax =
-        jobCount > 0 && (double) (last - first) * capacity + energy < (double) (1L << 31);
-    if (relax) {
-      sortBy(jobs, jobCount);
-      for (int k = 0; k < jobCount; k++) {
-        release[k] = ((long) starts[jobs[k]].min() - first) * capacity;
-      }
-      limit = Double.POSITIVE_INFINITY;
-      simulate(-1, 0, false);
-      bound += (double) first * weightSum + q0 / capacity;
-    } else {
-      for (int k = 0; k < jobCount; k++) {
-        int j = jobs[k];
-        bound += weights[j] * ((double) starts[j].min() + durations[j] / 2.0);
-      }
-    }
-
+    sortBy(jobs, jobCount);
+    double bound = constant + fluid(-1);
     double max = cost.max();
     double best = bound;
     for (int i = 0; i < n; i++) {
@@ -899,13 +890,7 @@ public class WeightedCompletion extends Constraint
         if (highest + slack(highest) <= max) {
           continue;
         }
-        if (relax) {
-          limit = Double.POSITIVE_INFINITY;
-          simulate(i, 0, false);
-          others = constant - w * d / 2.0 + (double) first * (weightSum - w) + q0 / capacity;
-        } else {
-          others = bound - w * ((double) s.min() + d);
-        }
+        others = constant - w * d / 2.0 + fluid(i);
       }
       long latest = (long) Math.floor((max - others + slack(max)) / w) - d;
       if (latest < s.max()) {
@@ -924,6 +909,114 @@ public class WeightedCompletion extends Constraint
   }
 
   /**
+   * It builds the free capacity left by the fixed tasks as change points: from changeTime[k] on the
+   * fixed tasks use changeLoad[k] units. It reads the fixed tasks sorted in key and endKey by
+   * {@link #overloadedAt()}.
+   */
+  private void profile() {
+    changes = 0;
+    int e = 0;
+    long load = 0;
+    for (int k = 0; k < fixedUsed; k++) {
+      long time = key[k] >> 24;
+      while (e < fixedUsed && endKey[e] >> 24 <= time) {
+        long end = endKey[e] >> 24;
+        load -= resources[(int) (endKey[e++] & 0xFFFFFF)];
+        change(end, load);
+      }
+      load += resources[(int) (key[k] & 0xFFFFFF)];
+      change(time, load);
+    }
+    while (e < fixedUsed) {
+      long end = endKey[e] >> 24;
+      load -= resources[(int) (endKey[e++] & 0xFFFFFF)];
+      change(end, load);
+    }
+  }
+
+  private void change(long time, long load) {
+    if (changes > 0 && changeTime[changes - 1] == time) {
+      changeLoad[changes - 1] = load;
+    } else {
+      changeTime[changes] = time;
+      changeLoad[changes++] = load;
+    }
+  }
+
+  /**
+   * The fluid relaxation of a parallel resource: the free tasks other than i are released at the
+   * minimum of their start and share the capacity the fixed tasks leave, all of it going at every
+   * moment to the released task with the largest w / e (e = r * d its energy). This greedy schedule
+   * minimises the weighted mean busy time over the fluid schedules, whatever the capacity profile
+   * (exchange argument), and every schedule of the tasks is one.
+   *
+   * @return sum(j) w[j] * M[j] over the free tasks j other than i, M[j] the mean busy time.
+   */
+  private double fluid(int i) {
+    for (int k = 0; k < jobCount; k++) {
+      fluidRem[k] = proc[jobs[k]];
+      fluidMoment[k] = 0;
+    }
+    int size = 0;
+    int next = 0;
+    int change = 0;
+    long load = 0;
+    double cur = Double.NEGATIVE_INFINITY;
+    while (true) {
+      while (next < jobCount && jobs[next] == i) {
+        next++;
+      }
+      if (size == 0) {
+        if (next == jobCount) {
+          break;
+        }
+        cur = Math.max(cur, starts[jobs[next]].min());
+      }
+      while (next < jobCount && (jobs[next] == i || starts[jobs[next]].min() <= cur)) {
+        if (jobs[next] != i) {
+          size = push(size, next);
+        }
+        next++;
+      }
+      while (change < changes && changeTime[change] <= cur) {
+        load = changeLoad[change++];
+      }
+      double event = Double.POSITIVE_INFINITY;
+      if (next < jobCount) {
+        event = starts[jobs[next]].min();
+      }
+      if (change < changes) {
+        event = Math.min(event, changeTime[change]);
+      }
+      long speed = capacity - load;
+      if (speed <= 0) {
+        cur = event;
+        continue;
+      }
+      int k = heap[0];
+      double finish = cur + fluidRem[k] / speed;
+      double end = Math.min(finish, event);
+      // the energy speed * (end - cur) processed at the mean time (cur + end) / 2
+      fluidMoment[k] += speed * (end - cur) * (cur + end) / 2;
+      if (finish <= event) {
+        fluidRem[k] = 0;
+        size = pop(size);
+      } else {
+        fluidRem[k] -= speed * (end - cur);
+      }
+      cur = end;
+    }
+    double total = 0;
+    for (int k = 0; k < jobCount; k++) {
+      int j = jobs[k];
+      if (j != i && weights[j] > 0) {
+        total += weights[j] * fluidMoment[k] / proc[j];
+      }
+    }
+    return total;
+  }
+
+  /**
    * It checks the profile of the fixed tasks of a parallel resource.
    *
    * @return null if it stays within the capacity, otherwise a non null array.
@@ -938,6 +1031,7 @@ public class WeightedCompletion extends Constraint
     }
     Arrays.sort(key, 0, count);
     Arrays.sort(endKey, 0, count);
+    fixedUsed = count;
     long load = 0;
     int e = 0;
     for (int k = 0; k < count; k++) {
@@ -951,6 +1045,40 @@ public class WeightedCompletion extends Constraint
       }
     }
     return null;
+  }
+
+  /**
+   * On a parallel resource the bound reads only the minima of the free starts, the values of the
+   * fixed ones and, to prune starts, the maximum of the cost: every schedule within those bounds
+   * costs at least the bound, so those atoms explain the minimum of the cost, the latest starts and
+   * a failure. The unary case uses the replayed or generic reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (!parallel) {
+      return false;
+    }
+    reason(trail, entry, out);
+    return true;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (!parallel) {
+      return false;
+    }
+    reason(trail, trail.size(), out);
+    return true;
+  }
+
+  private void reason(AtomicTrail trail, int position, EntryList out) {
+    for (IntVar s : starts) {
+      trail.addLowerBound(s, position, out);
+      if (trail.minBefore(s, position) == trail.maxBefore(s, position)) {
+        trail.addUpperBound(s, position, out);
+      }
+    }
+    trail.addUpperBound(cost, position, out);
   }
 
   @Override
