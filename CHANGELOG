@@ -2206,7 +2206,36 @@ Version 5.0 (unreleased)
      wide-set instances, with the same results in both modes. Off:
      -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
 
-146. LCG explains the failures of a linear equality (LinearIntDom, and
+146. The rows of the linear relaxation (--lp) are one pool, of which the
+     simplex holds a part, with every simplex (before, only --lp lazy aged
+     rows). The model's own rows stay in the simplex. Linearised rows of
+     other constraints and cuts leave it after org.jacop.lp.poolAge (100)
+     optimal solves in which they are inactive, and come back when a
+     solution of the simplex breaks them; each return doubles the age, so
+     a row the search keeps needing stays. -Dorg.jacop.lp.pool=false turns
+     this off. org.jacop.lp.poolExtra and org.jacop.lp.poolCuts (both off)
+     keep the linearised rows the root trial rejects, and the cuts of a
+     round that does not move the root bound, in the pool instead of
+     dropping them. The dense simplex can now remove rows whose slacks are
+     basic. Wide set (220, 60 s): fixed search solved 163 -> 164, 7 better
+     / 2 worse; -f 158 -> 160, 17 / 11 (both with pooled cuts on; with
+     them off, the 34 instances where the pool moves rows are unchanged
+     in fixed search and 1 / 2 under -f).
+
+147. New module jacop-prob (org.jacop.prob) for probabilistic reasoning
+     with exact probabilities: integer numerators over a common
+     denominator. ProbArith compares, rescales and rounds them outward;
+     Dist is a discrete distribution and ScenarioSet a finite set of
+     scenarios. ScenarioChance(x, a, b, w, alpha[, ok]) states that the
+     scenarios s with a[s] x <= b[s] weigh at least alpha (a chance
+     constraint over scenarios). It prunes each variable by the weight
+     of the scenarios a value would kill, explains its pruning for lazy
+     clause generation, and with the indicators ok gives the linear
+     relaxation the big-M rows of the usual expansion. ExpectedSum is
+     the expectation of a sum with random coefficients. The MiniZinc
+     library jacop_prob.mzn has scenario_chance and jacop_expected_sum.
+
+148. LCG explains the failures of a linear equality (LinearIntDom, and
      SumWeight's failure reason) that its bounds do not violate. When the
      other variables' bounds leave one variable a window with no value
      in its domain, the reason is that window's removals and the bounds
@@ -2222,7 +2251,7 @@ Version 5.0 (unreleased)
      --lcg -f S = +9; the only decided instance with generic LinearIntDom
      failures is tp7_4 (-f +1, H1), the others are search-order noise.
 
-147. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
+149. --proof keeps the linear relaxation (--lp) on, and the VeriPB proof
      derives each of its deductions. Under --proof the relaxation is built
      by LinearRelaxation.ofModel: its rows are the linear constraints whose
      proof model is their relation as a line (LinearForms.ofModelLine:
@@ -2238,7 +2267,7 @@ Version 5.0 (unreleased)
      changes no bound they propagate. The pol steps are deleted at the
      next restart. Before, --proof turned --lp off.
 
-148. The LP cut rounds at the root add exact Gomory cuts over the rows and
+150. The LP cut rounds at the root add exact Gomory cuts over the rows and
      their slacks. A tableau row gives the integer equality
      sum (lambda A)_j x_j - sum lambda_i s_i = 0 with s_i = a_i x; its MIR
      is taken over the columns and the slacks (bounded by the row sides
@@ -2254,7 +2283,7 @@ Version 5.0 (unreleased)
      -Dorg.jacop.lp.reduceCuts=false switch them off. Wide set at 60 s:
      default 162 to 162 solved (7 families better, 0 worse), -f 152 to 154.
 
-149. Under --lcg without -f, the output variables that a search
+151. Under --lcg without -f, the output variables that a search
      annotation leaves open are decided after it in input order, lower
      half first, as fixed search without --lcg does, instead of by
      activity branching. On connect, whose annotation covers about 760
