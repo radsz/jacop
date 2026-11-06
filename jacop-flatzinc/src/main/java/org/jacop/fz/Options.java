@@ -290,8 +290,10 @@ public class Options {
                 <prefix>.pbp and the OPB model it is checked against to <prefix>.opb
                 (veripb <prefix>.opb <prefix>.pbp); one thread, the core-guided phase (without
                 its at-most-one groups) and branch and bound, without lower-bound and
-                neighbourhood runs, --lp off, bounds consistency (as -b); a search stopped by the
-                time limit concludes the lower bound it proved. The model is the store
+                neighbourhood runs, bounds consistency (as -b), the linear relaxation over
+                the linear constraints only (no cuts, no rows of other constraints), each
+                deduction of it a pol step; a search stopped by the time limit concludes the
+                lower bound it proved. The model is the store
                 at the start of the search, over linear, clause and reified linear constraints.
             --lp <value> the linear relaxation of the linear constraints as a propagator, solved
                 by a dual simplex during search; its deductions are integer combinations of the
@@ -1094,8 +1096,9 @@ public class Options {
    * @return false when --lp off was given
    */
   public boolean lp() {
-    // LP deductions combine rows, which a proof's unit propagation does not derive
-    return lp && proof == null;
+    // under --proof the relaxation has the linear constraints' rows only, whose combinations the
+    // proof writes as pol steps
+    return lp;
   }
 
   /**

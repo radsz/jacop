@@ -57,6 +57,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -606,6 +607,10 @@ public final class LcgSolver implements ExternalPropagator {
   // the position literals of the circuits of the proof model
   private Map<Constraint, OpbEncoder.CircuitLines> proofCircuits = Map.of();
   private Map<Constraint, OpbEncoder.TimetableLines> proofTimetables = Map.of();
+  // the lines of the linear relations of the proof model, which the steps of the linear
+  // relaxation combine, and the ids of those steps not deleted yet
+  private Map<Constraint, long[]> proofLinearLines = Map.of();
+  private final List<Long> proofLpSteps = new ArrayList<>();
   private long[] proofChains;
   private IntDomain[] proofModelDomains;
   // the auxiliary variables the proof defines, named y<number>
@@ -852,6 +857,7 @@ public final class LcgSolver implements ExternalPropagator {
     proofAllEqualities = model.allEqualityLines();
     proofCircuits = model.circuitLines();
     proofTimetables = model.timetableLines();
+    proofLinearLines = model.linearLines();
     proofChains = model.chainLines();
     proofModelDomains = domains;
     if (!model.unsupported().isEmpty()) {
@@ -899,6 +905,11 @@ public final class LcgSolver implements ExternalPropagator {
         // the row of the reason, which the root propagation did not ask for
         k.explain(rootTrail, e, new EntryList());
       }
+      if (c instanceof LinearRelaxation r) {
+        // the form of the reason and its certificate, which the root propagation did not ask for
+        r.explain(rootTrail, e, new EntryList());
+        proofLp(c, none, 0, e);
+      }
       proofLinearBounds(c, none, 0, e);
       proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
       reached[i] = next;
@@ -909,6 +920,10 @@ public final class LcgSolver implements ExternalPropagator {
       proofEnergy(failedAtRoot, none, 0, -1);
       if (failedAtRoot instanceof Knapsack k) {
         k.explainFailure(rootTrail, new EntryList());
+      }
+      if (failedAtRoot instanceof LinearRelaxation r) {
+        r.explainFailure(rootTrail, new EntryList());
+        proofLp(failedAtRoot, none, 0, -1);
       }
       proofLinearBounds(failedAtRoot, none, 0, -1);
       rootRefuted = true;
@@ -1369,6 +1384,65 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+  }
+
+  /**
+   * Writes the step that makes a reason of the linear relaxation a rup step. A relaxation built for
+   * a proof ({@link LinearRelaxation#ofModel}) keeps, for each form it propagates, the rows it
+   * combines and their integer multipliers ({@link LinearRelaxation.Certificate}): the form is the
+   * {@code pol} sum of the lines of those rows' constraints times the multipliers, the line {@code
+   * sum <= c} for a positive one and {@code sum >= c} for a negative one. Unit propagation on the
+   * sum derives the reason, as on the line of a linear constraint, with the steps of {@link
+   * #proofLinearBounds} past removed values. A line of a constraint folds the variables fixed at
+   * the root into its constant, which the root units give back. The sums are deleted at the next
+   * restart, after the clauses of their conflicts.
+   *
+   * @param c the constraint
+   * @param atoms the atoms of the reason, from position from
+   * @param from the first atom of the reason
+   * @param entry the entry explained, or -1 for a failure
+   */
+  private void proofLp(Constraint c, EntryList atoms, int from, int entry) {
+    if (!(c instanceof LinearRelaxation r) || !proofStarted || !r.certifies()) {
+      return;
+    }
+    LinearRelaxation.Certificate certificate = r.certificate();
+    if (certificate == null) {
+      proof.comment("a reason of the linear relaxation without a certificate");
+      return;
+    }
+    Constraint[] rows = certificate.rows();
+    long[] multipliers = certificate.multipliers();
+    StringBuilder pol = new StringBuilder();
+    for (int k = 0; k < rows.length; k++) {
+      long[] ids = proofLinearLines.get(rows[k]);
+      long id = ids == null ? 0 : ids[multipliers[k] > 0 ? 1 : 0];
+      if (id == 0) {
+        proof.comment("a row of the linear relaxation without its line: " + rows[k].id());
+        return;
+      }
+      long a = Math.abs(multipliers[k]);
+      pol.append(k == 0 ? "" : " ").append(id).append(a == 1 ? "" : " " + a + " *");
+      pol.append(k == 0 ? "" : " +");
+    }
+    if (rows.length > 1) {
+      // one row is its line already, whatever its multiplier
+      proofLpSteps.add(proof.pol(pol));
+    }
+    proofLinearBounds(certificate.form(), atoms, from, entry);
+  }
+
+  // deletes the sums of the linear relaxation, whose clauses are all written at a restart
+  private void deleteLpSteps() {
+    if (proof == null || proofLpSteps.isEmpty()) {
+      return;
+    }
+    long[] ids = new long[proofLpSteps.size()];
+    for (int k = 0; k < ids.length; k++) {
+      ids[k] = proofLpSteps.get(k);
+    }
+    proofLpSteps.clear();
+    proof.deleteSteps(ids);
   }
 
   // the time a task started at s with duration d spends in [a, b)
@@ -3661,6 +3735,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
+    deleteLpSteps();
     if (onBound != null && objective >= 0 && store.level == baseLevel) {
       rootBound();
     }
@@ -4250,6 +4325,7 @@ public final class LcgSolver implements ExternalPropagator {
           proofCardinality(store.recentlyFailedConstraint, atoms, 0, -1);
           proofCircuit(store.recentlyFailedConstraint, atoms, 0, -1);
           proofEnergy(store.recentlyFailedConstraint, atoms, 0, -1);
+          proofLp(store.recentlyFailedConstraint, atoms, 0, -1);
           proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
@@ -4287,6 +4363,7 @@ public final class LcgSolver implements ExternalPropagator {
       proofCardinality(trail.reason(e), out, mark, e);
       proofCircuit(trail.reason(e), out, mark, e);
       proofEnergy(trail.reason(e), out, mark, e);
+      proofLp(trail.reason(e), out, mark, e);
       proofLinearBounds(trail.reason(e), out, mark, e);
     }
     if (!own && e < pushed && trail.kind(e) == AtomicTrail.NE && !inSolver(e)) {
