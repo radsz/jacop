@@ -97,6 +97,7 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -1659,8 +1660,8 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
-      if (v.length == 2) {
-        support.dictionary.addBinaryTable(v, t);
+      if (v.length <= TableCliques.MAX_ARITY) {
+        support.dictionary.addTable(v, t);
       }
       poseTableBySize(v, t);
     }

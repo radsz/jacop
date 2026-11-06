@@ -35,54 +35,62 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.lp.LpColumn;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
 
 /**
- * At-most-one rows of the linear relaxation from binary tables (CP-SAT's table expansion with
- * {@code TransformIntoMaxCliques}). Each variable of a binary table with a small domain gets a
- * Boolean {@code b_v <-> x = v} for every value: the Booleans the model already has ({@link
- * ChannelReif}, {@link Reified} {@link XeqC}), and a {@link ChannelReif} over new Booleans for the
- * other values, so that {@link Linearizations#encodings} gives {@code sum b_v = 1} and {@code x =
- * sum v b_v}. A pair of values {@code (a, b)} that no tuple of a table over {@code (x, y)} allows
- * is a conflict {@code b_{x,a} + b_{y,b} <= 1}; together with the values of one variable, which
- * conflict pairwise, the conflicts are the edges of a graph on the Booleans. Each edge not yet in a
- * row is extended greedily to a maximal clique of that graph, and the clique is a row {@code sum b
- * <= 1}, unless it holds the values of one variable only, which its encoding already bounds.
+ * At-most-one rows of the linear relaxation from tables (CP-SAT's table expansion with {@code
+ * TransformIntoMaxCliques}). Each variable of a table with a small domain gets a 0/1 column {@code
+ * b_v = [x = v]} for every value: the Boolean the model already has ({@link ChannelReif}, {@link
+ * Reified} {@link XeqC}), or an {@link LpColumn} of the relaxation, which is not a variable of the
+ * store, with {@code sum b_v = 1} and {@code x = sum v b_v}. A pair of values {@code (a, b)} that
+ * no tuple of a table allows for two of its variables {@code (x, y)} is a conflict {@code b_{x,a} +
+ * b_{y,b} <= 1}; a table over more than two variables gives the conflicts of its projection on each
+ * pair. Together with the values of one variable, which conflict pairwise, the conflicts are the
+ * edges of a graph on the columns. Each edge not yet in a row is extended greedily to a maximal
+ * clique of that graph, and the clique is a row {@code sum b <= 1}, unless it holds the values of
+ * one variable only, which its encoding already bounds.
  *
- * <p>The rows hold for every solution, and the cliques make the relaxation much stronger than the
- * conflicts on their own: on the spot5 instances of the MiniZinc Challenge, a weighted sum of
- * Booleans over binary tables, the relaxation of the cliques is within 4 to 7 % of the optimum,
- * that of the conflicts within about half.
+ * <p>The rows hold for every solution with the columns at the indicators of its values, and the
+ * cliques make the relaxation much stronger than the conflicts on their own: on the spot5 instances
+ * of the MiniZinc Challenge, a weighted sum of Booleans over binary tables, the relaxation of the
+ * cliques is within 4 to 7 % of the optimum, that of the conflicts within about half. Nothing is
+ * imposed on the store: the columns live in the relaxation only, so rows that do not help cost the
+ * search nothing.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public final class TableCliques {
 
-  /** The largest domain of a variable that gets Booleans for its values. */
+  /** The largest domain of a variable that gets columns for its values. */
   static final int MAX_DOMAIN = Integer.getInteger("org.jacop.lp.tableCliqueDomain", 16);
 
-  /** The most Booleans of the graph; a larger graph makes no rows. */
+  /** The most columns of the graph; a larger graph makes no rows. */
   static final int MAX_LITERALS = Integer.getInteger("org.jacop.lp.tableCliqueLiterals", 8_000);
 
   /** The most rows. */
   static final int MAX_ROWS = Integer.getInteger("org.jacop.lp.tableCliqueRows", 20_000);
 
+  /** The largest table, in variables, whose projections on pairs give conflicts. */
+  public static final int MAX_ARITY = Integer.getInteger("org.jacop.lp.tableCliqueArity", 6);
+
+  // the most tuples times pairs read from one table
+  private static final long MAX_PROJECTION = 2_000_000;
+
   private TableCliques() {}
 
   /**
-   * A table constraint over two variables and its allowed tuples.
+   * A table constraint and its allowed tuples.
    *
-   * @param x the two variables
-   * @param tuples the allowed tuples, each of length 2
+   * @param x the variables, distinct
+   * @param tuples the allowed tuples, each of the length of x
    */
   public record Table(IntVar[] x, int[][] tuples) {
 
@@ -102,40 +110,57 @@ public final class TableCliques {
     }
   }
 
-  /** The rows and the number of new Booleans. */
-  public record Result(List<LinearForm> rows, int booleans) {}
+  /**
+   * The rows: the cliques and the encodings of the variables that got new columns.
+   *
+   * @param rows the rows
+   * @param columns the number of new columns ({@link LpColumn})
+   */
+  public record Result(List<LinearForm> rows, int columns) {}
+
+  // two variables of a table, by position
+  private record Pair(Table table, int i, int j) {}
 
   /**
-   * Returns the clique rows of the binary tables, and imposes the {@link ChannelReif} that gives
-   * their variables a Boolean for each value they lack one for. Must be called at the root, before
-   * the linear relaxation is made; with no conflict among two variables, nothing is imposed.
+   * Returns the clique rows of the tables over columns of their values, and the encodings of the
+   * values that have no Boolean in the model. Nothing is imposed; with no conflict among two
+   * variables, there are no rows. Must be called at the root, before the linear relaxation is made.
    *
-   * @param store the store
-   * @param tables the binary tables
-   * @return the rows and the count of new Booleans
+   * @param tables the tables
+   * @return the rows and the count of new columns
    */
-  public static Result rows(Store store, List<Table> tables) {
-    // the tables over two distinct variables with small domains, still unfixed
-    List<Table> used = new ArrayList<>();
+  public static Result rows(List<Table> tables) {
+    // the pairs of distinct variables with small domains, still unfixed, of the tables
+    List<Pair> used = new ArrayList<>();
     Map<IntVar, Integer> first = new IdentityHashMap<>();
     List<IntVar> vars = new ArrayList<>();
     int literals = 0;
     for (Table t : tables) {
-      IntVar x = t.x()[0];
-      IntVar y = t.x()[1];
-      if (x == y || x.singleton() || y.singleton() || !small(x) || !small(y)) {
+      int arity = t.x().length;
+      if (arity < 2
+          || arity > MAX_ARITY
+          || (long) t.tuples().length * arity * (arity - 1) / 2 > MAX_PROJECTION) {
         continue;
       }
-      for (IntVar v : t.x()) {
-        if (!first.containsKey(v)) {
-          first.put(v, literals);
-          vars.add(v);
-          literals += v.getSize();
+      for (int i = 0; i < arity; i++) {
+        for (int j = i + 1; j < arity; j++) {
+          IntVar x = t.x()[i];
+          IntVar y = t.x()[j];
+          if (x == y || x.singleton() || y.singleton() || !small(x) || !small(y)) {
+            continue;
+          }
+          for (IntVar v : new IntVar[] {x, y}) {
+            if (!first.containsKey(v)) {
+              first.put(v, literals);
+              vars.add(v);
+              literals += v.getSize();
+            }
+          }
+          used.add(new Pair(t, i, j));
+          if (literals > MAX_LITERALS) {
+            return new Result(List.of(), 0);
+          }
         }
-      }
-      used.add(t);
-      if (literals > MAX_LITERALS) {
-        return new Result(List.of(), 0);
       }
     }
     if (used.isEmpty()) {
@@ -157,12 +182,12 @@ public final class TableCliques {
       adj[i] = new BitSet(n);
     }
     boolean conflicts = false;
-    for (Table t : used) {
-      IntVar x = t.x()[0];
-      IntVar y = t.x()[1];
+    for (Pair p : used) {
+      IntVar x = p.table().x()[p.i()];
+      IntVar y = p.table().x()[p.j()];
       Set<Long> allowed = new HashSet<>();
-      for (int[] tuple : t.tuples()) {
-        allowed.add(pair(tuple[0], tuple[1]));
+      for (int[] tuple : p.table().tuples()) {
+        allowed.add(pair(tuple[p.i()], tuple[p.j()]));
       }
       int fx = first.get(x);
       int fy = first.get(y);
@@ -186,18 +211,22 @@ public final class TableCliques {
         adj[i].clear(i);
       }
     }
-    int[] created = new int[1];
-    IntVar[] booleans = booleans(store, vars, first, value, created);
+    List<LinearForm> rows = new ArrayList<>();
+    IntVar[] columns = columns(vars, first, value, rows);
+    int made = 0;
+    for (IntVar c : columns) {
+      made += c instanceof LpColumn ? 1 : 0;
+    }
+    int encodingRows = rows.size();
     int[] degree = new int[n];
     for (int i = 0; i < n; i++) {
       degree[i] = adj[i].cardinality();
     }
-    List<LinearForm> rows = new ArrayList<>();
     BitSet[] covered = new BitSet[n];
     for (int i = 0; i < n; i++) {
       covered[i] = new BitSet(n);
     }
-    for (int u = 0; u < n && rows.size() < MAX_ROWS; u++) {
+    for (int u = 0; u < n && rows.size() - encodingRows < MAX_ROWS; u++) {
       for (int v = adj[u].nextSetBit(u + 1); v >= 0; v = adj[u].nextSetBit(v + 1)) {
         if (covered[u].get(v) || owner[u] == owner[v]) {
           continue;
@@ -218,7 +247,7 @@ public final class TableCliques {
         IntVar[] bs = new IntVar[clique.size()];
         for (int k = 0; k < bs.length; k++) {
           int a = clique.get(k);
-          bs[k] = booleans[a];
+          bs[k] = columns[a];
           for (int b : clique) {
             covered[a].set(b);
           }
@@ -228,7 +257,7 @@ public final class TableCliques {
         rows.add(new LinearForm(bs, ones, 1, LinearForm.LE));
       }
     }
-    return new Result(rows, created[0]);
+    return new Result(rows, made);
   }
 
   private static boolean small(IntVar x) {
@@ -239,9 +268,11 @@ public final class TableCliques {
     return ((long) a << 32) ^ (b & 0xffffffffL);
   }
 
-  // the Boolean of each literal: the model's own, or a new one channelled to its variable
-  private static IntVar[] booleans(
-      Store store, List<IntVar> vars, Map<IntVar, Integer> first, int[] value, int[] created) {
+  // the column of each literal: the model's own Boolean, or a new LP-only column; the variables
+  // with new columns get their encoding rows, sum b = 1 and x = sum v b (those the model's
+  // Booleans cover have them from Linearizations.encodings)
+  private static IntVar[] columns(
+      List<IntVar> vars, Map<IntVar, Integer> first, int[] value, List<LinearForm> rows) {
     Set<Constraint> constraints = new LinkedHashSet<>();
     for (IntVar x : vars) {
       constraints.addAll(x.dom().constraints());
@@ -250,19 +281,30 @@ public final class TableCliques {
     IntVar[] b = new IntVar[value.length];
     for (IntVar x : vars) {
       Map<Integer, IntVar> own = known.getOrDefault(x, Map.of());
-      Map<Integer, IntVar> missing = new LinkedHashMap<>();
       int fx = first.get(x);
+      boolean fresh = false;
       for (int i = fx; i < fx + x.getSize(); i++) {
         IntVar bi = own.get(value[i]);
         if (bi == null || bi == x) {
-          bi = new IntVar(store, 0, 1);
-          missing.put(value[i], bi);
+          bi = new LpColumn(x, value[i]);
+          fresh = true;
         }
         b[i] = bi;
       }
-      if (!missing.isEmpty()) {
-        store.impose(new ChannelReif(x, missing));
-        created[0] += missing.size();
+      if (fresh) {
+        int k = x.getSize();
+        IntVar[] bs = Arrays.copyOfRange(b, fx, fx + k);
+        long[] ones = new long[k];
+        Arrays.fill(ones, 1);
+        rows.add(new LinearForm(bs, ones, 1, LinearForm.EQ));
+        IntVar[] withX = Arrays.copyOf(bs, k + 1);
+        long[] w = new long[k + 1];
+        for (int i = 0; i < k; i++) {
+          w[i] = value[fx + i];
+        }
+        withX[k] = x;
+        w[k] = -1;
+        rows.add(new LinearForm(withX, w, 0, LinearForm.EQ));
       }
     }
     return b;

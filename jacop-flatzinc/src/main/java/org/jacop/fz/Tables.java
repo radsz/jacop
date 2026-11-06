@@ -105,8 +105,8 @@ public class Tables {
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
 
-  // the binary tables of the model, for the clique rows of the linear relaxation
-  private final ArrayList<TableCliques.Table> binaryTables = new ArrayList<>();
+  // the tables of the model, for the clique rows of the linear relaxation
+  private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
 
   // vehicle routes found in the model and not imposed, for the route neighbourhoods of LNS
   private final ArrayList<Routes> lnsRoutes = new ArrayList<>();
@@ -779,13 +779,13 @@ public class Tables {
   }
 
   /**
-   * Records a table over two variables for the clique rows of the linear relaxation.
+   * Records a table over distinct variables for the clique rows of the linear relaxation.
    *
-   * @param x the two variables
+   * @param x the variables
    * @param tuples the allowed tuples
    */
-  public void addBinaryTable(IntVar[] x, int[][] tuples) {
-    binaryTables.add(new TableCliques.Table(x, tuples));
+  public void addTable(IntVar[] x, int[][] tuples) {
+    tables.add(new TableCliques.Table(x, tuples));
   }
 
   /**
@@ -808,12 +808,12 @@ public class Tables {
   }
 
   /**
-   * Returns the tables over two variables of the model.
+   * Returns the tables of the model recorded for the clique rows of the linear relaxation.
    *
    * @return the tables
    */
-  public List<TableCliques.Table> binaryTables() {
-    return binaryTables;
+  public List<TableCliques.Table> tables() {
+    return tables;
   }
 
   /**
