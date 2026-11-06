@@ -119,7 +119,9 @@ interface LpSolver {
   double[] farkas();
 
   /**
-   * Returns the dual values of the rows at an optimal basis, {@code c_B B^-1}.
+   * Returns the dual values of the rows at an optimal basis, {@code c_B B^-1}, for the costs as
+   * given: the simplex pivots with perturbed costs, and duals of those carry the perturbation into
+   * every certificate made from them ({@code -Dorg.jacop.lp.givenDuals=false} returns them).
    *
    * @return y, by row
    */

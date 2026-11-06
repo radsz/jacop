@@ -50,6 +50,9 @@ final class DualSimplex implements LpSolver {
 
   private static final double PERTURBATION = 1e-7;
 
+  // duals for the costs as given (true) or for the perturbed costs the simplex pivots with
+  static final boolean GIVEN_DUALS = !"false".equals(System.getProperty("org.jacop.lp.givenDuals"));
+
   // refactorizations after this many pivots, against the drift of the tableau
   private static final int REFACTOR_PIVOTS = 400;
 
@@ -58,6 +61,8 @@ final class DualSimplex implements LpSolver {
   private int cols;
   private double[][] a;
   private double[] cost;
+  // the costs as given, without the perturbation, over the n columns
+  private final double[] given;
   private double[] lo;
   private double[] hi;
 
@@ -103,6 +108,7 @@ final class DualSimplex implements LpSolver {
     this.cols = n + m;
     this.a = a;
     this.cost = new double[cols];
+    this.given = cost.clone();
     // a small perturbation of the costs against dual degeneracy, which makes the dual simplex
     // cycle, above all without an objective
     Random rnd = new Random(n * 31L + m);
@@ -137,6 +143,7 @@ final class DualSimplex implements LpSolver {
     cols = o.cols;
     a = o.a.clone(); // the rows themselves are never changed
     cost = o.cost.clone();
+    given = o.given;
     lo = o.lo.clone();
     hi = o.hi.clone();
     t = new double[m][];
@@ -462,8 +469,24 @@ final class DualSimplex implements LpSolver {
    */
   @Override
   public double[] duals() {
-    // the reduced cost of the slack of row i is 0 - c_B B^-1 (-e_i), the dual value of the row
-    return Arrays.copyOfRange(d, n, cols);
+    if (!GIVEN_DUALS) {
+      // the reduced cost of the slack of row i is 0 - c_B B^-1 (-e_i), the dual value of the row
+      return Arrays.copyOfRange(d, n, cols);
+    }
+    // c_B B^-1 for the costs as given: the column of the slack of row i in the tableau is
+    // B^-1 (-e_i), so y_i = -sum_k c_basis[k] t[k][n + i]
+    double[] y = new double[m];
+    for (int k = 0; k < m; k++) {
+      int b = basis[k];
+      double c = b < n ? given[b] : 0;
+      if (c != 0) {
+        double[] tk = t[k];
+        for (int i = 0; i < m; i++) {
+          y[i] -= c * tk[n + i];
+        }
+      }
+    }
+    return y;
   }
 
   /**

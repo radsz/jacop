@@ -50,6 +50,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Linearizations;
+import org.jacop.constraints.Routes;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -255,6 +256,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: rows of other constraints the root trial did not keep, kept in the pool. */
   public long pooledExtra;
 
+  /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
+  public int pairCliques;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -336,6 +340,27 @@ public class LinearRelaxation extends Constraint
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
   private static final double MAX_PARALLELISM = 0.9;
+
+  // rounded capacity cuts of the Routes constraints at the root, before the MIR cuts: rounds and
+  // the share of the rows they may add; the rounds stop when no cut is violated or the bound
+  // stalls, and the cuts are dropped when they do not move the bound
+  private static final boolean CAPACITY_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.capacityCuts"));
+  private static final int CAPACITY_ROUNDS = Integer.getInteger("org.jacop.lp.capacityRounds", 50);
+  private static final int CAPACITY_STALL = 3;
+
+  // the separations of the capacity cuts, one for each Routes with its arcs among the columns
+  private List<CapacityCuts> capacity = new ArrayList<>();
+
+  // the capacity cuts kept, as rows: they follow from the Routes, not from the rows, so a copy
+  // takes them as rows of its own
+  private List<LinearForm> capacityForms = new ArrayList<>();
+
+  /** Statistics: rounded capacity cuts added. */
+  public long capacityCuts;
+
+  /** Statistics: the objective bound after the capacity cuts, before the MIR cuts, or NaN. */
+  public double capacityBound = Double.NaN;
 
   // the cuts are made at the first solve only, before any search decision: they use the bounds of
   // that moment, which hold for the whole search
@@ -623,7 +648,11 @@ public class LinearRelaxation extends Constraint
     constraints.addAll(store.watchedLiteralConstraints());
     List<LinearForm> forms = new ArrayList<>();
     List<LinearForm> relaxed = new ArrayList<>();
+    List<CapacityCuts> separations = new ArrayList<>();
     for (Constraint c : constraints) {
+      if (CAPACITY_CUTS && c instanceof Routes routes) {
+        separations.add(new CapacityCuts(routes));
+      }
       LinearForm f = LinearForms.of(c);
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         forms.add(f);
@@ -638,6 +667,15 @@ public class LinearRelaxation extends Constraint
       if (f != null) {
         relaxed.add(f);
       }
+    }
+    int pairCliques = 0;
+    // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
+    // rows only make each call dearer
+    if (PAIR_CLIQUES && objective != null) {
+      PairCliques merged = PairCliques.merge(forms, relaxed);
+      forms = merged.rows;
+      relaxed = merged.further;
+      pairCliques = merged.cliques;
     }
     if (!substituted.isEmpty()) {
       forms = substitute(forms, substituted, objective);
@@ -706,6 +744,8 @@ public class LinearRelaxation extends Constraint
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
+    r.pairCliques = pairCliques;
+    r.capacity = separations;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -765,6 +805,10 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the conflicts of pairs of 0/1 literals merged into clique rows
+  private static final boolean PAIR_CLIQUES =
+      !"false".equals(System.getProperty("org.jacop.lp.pairCliques"));
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
@@ -1032,6 +1076,31 @@ public class LinearRelaxation extends Constraint
     return solution[j];
   }
 
+  // the last optimal solution of the simplex at the lowest store level solved, and that level
+  private double[] rootSolution = new double[0];
+  private int rootSolutionLevel = Integer.MAX_VALUE;
+
+  /**
+   * Returns the number of columns of the root solution (see {@link #rootSolutionValue}).
+   *
+   * @return the columns of the root solution, 0 before the first one
+   */
+  public int rootSolutionColumns() {
+    return rootSolution.length;
+  }
+
+  /**
+   * Returns the value of a column in the last optimal solution of the simplex at the lowest store
+   * level it solved at, usually the root: unlike {@link #solutionValue}, it does not follow the
+   * branches of the search. Kept only after {@link #keepSolutions()}.
+   *
+   * @param j the column, below {@link #rootSolutionColumns()}
+   * @return its value
+   */
+  public double rootSolutionValue(int j) {
+    return rootSolution[j];
+  }
+
   /**
    * Returns the store level of the last optimal solution of the simplex.
    *
@@ -1288,6 +1357,10 @@ public class LinearRelaxation extends Constraint
         solution[j] = lp.value(j);
       }
       solutionLevel = store.level;
+      if (store.level <= rootSolutionLevel) {
+        rootSolution = solution.clone();
+        rootSolutionLevel = store.level;
+      }
     }
     double[] y;
     if (status == DualSimplex.INFEASIBLE) {
@@ -1720,9 +1793,9 @@ public class LinearRelaxation extends Constraint
   }
 
   // y scaled so that its largest entry is about scale, rounded; null when y is zero. With the
-  // certificate cleaning on, entries below 1e-12 of the largest are noise of the simplex (its cost
-  // perturbation and eta file) and are zeroed, so that a large scale does not turn them into
-  // multipliers of rows without the side they need
+  // certificate cleaning on, entries below 1e-11 of the largest are noise of the simplex (the
+  // round-off of its factors and updates) and are zeroed, so that a large scale does not turn
+  // them into multipliers of rows without the side they need
   private static long[] scaled(double[] y, long scale) {
     double largest = 0;
     for (double v : y) {
@@ -1916,6 +1989,12 @@ public class LinearRelaxation extends Constraint
    */
   private int cutRounds() {
     rootBound = lp.value(0);
+    if (!capacity.isEmpty()) {
+      int status = capacityRounds();
+      if (status != DualSimplex.OPTIMAL) {
+        return status;
+      }
+    }
     int n = lp.columns();
     long[] lo = new long[n];
     long[] hi = new long[n];
@@ -2006,6 +2085,131 @@ public class LinearRelaxation extends Constraint
       cutBound = lp.value(0);
     }
     return status;
+  }
+
+  /**
+   * Rounds of rounded capacity cuts ({@link CapacityCuts}) of the Routes constraints at the root,
+   * each followed by a re-solve. The rounds stop when no cut is violated, the bound has not moved
+   * for a few rounds, or a solve stops at its limit (that round's cuts are dropped); when the cuts
+   * leave the bound where it was they are all dropped.
+   *
+   * @return the status of the last solve
+   */
+  private int capacityRounds() {
+    Map<IntVar, Integer> columnOf = new IdentityHashMap<>();
+    for (int j = 0; j < lp.columns(); j++) {
+      columnOf.put(x[j], j);
+    }
+    double start = lp.value(0);
+    int firstCount = rows();
+    LpSolver first = lp.copy();
+    int[] firstRows = lpRow;
+    int added = 0;
+    int stall = 0;
+    int status = DualSimplex.OPTIMAL;
+    Set<List<Long>> seen = new HashSet<>();
+    for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
+      List<MirCut> chosen = new ArrayList<>();
+      int n = lp.columns();
+      for (CapacityCuts cc : capacity) {
+        IntVar[] literals = cc.literals();
+        int[] column = new int[literals.length];
+        double[] value = new double[literals.length];
+        for (int a = 0; a < literals.length; a++) {
+          Integer j = columnOf.get(literals[a]);
+          column[a] = j == null ? -1 : j;
+          value[a] = j == null ? literals[a].min() : lp.value(j);
+        }
+        for (CapacityCuts.Cut cut : cc.separate(value, CUTS_PER_ROUND)) {
+          MirCut row = row(cut, column);
+          long m = (long) lp.rows() + chosen.size() + 1;
+          if (chosen.size() >= CUTS_PER_ROUND
+              || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+            break;
+          }
+          if (row != null && seen.add(key(row))) {
+            chosen.add(row);
+          }
+        }
+      }
+      if (chosen.isEmpty()) {
+        break;
+      }
+      LpSolver kept = lp.copy();
+      int[] keptRows = lpRow;
+      double before = lp.value(0);
+      addCuts(chosen);
+      long size = Math.max(1, lp.pivotWork());
+      status =
+          rootSolve(
+              lp,
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              rootWork() / CUT_ROUNDS);
+      if (status == DualSimplex.LIMIT) {
+        dropCuts(chosen.size(), kept, keptRows);
+        status = DualSimplex.OPTIMAL;
+        break;
+      }
+      added += chosen.size();
+      if (status != DualSimplex.OPTIMAL) {
+        break;
+      }
+      boolean moved = Math.abs(lp.value(0) - before) > 1e-6 * (1 + Math.abs(before));
+      stall = moved ? 0 : stall + 1;
+    }
+    if (status == DualSimplex.OPTIMAL
+        && added > 0
+        && Math.abs(lp.value(0) - start) <= 1e-6 * (1 + Math.abs(start))) {
+      // cuts that do not move the bound only make each solve dearer
+      dropCuts(added, first, firstRows);
+      added = 0;
+    }
+    capacityCuts += added;
+    for (int i = firstCount; i < firstCount + added; i++) {
+      IntVar[] vars = new IntVar[rowColumns[i].length];
+      for (int k = 0; k < vars.length; k++) {
+        vars[k] = x[rowColumns[i][k]];
+      }
+      capacityForms.add(new LinearForm(vars, rowWeights[i].clone(), rowHi[i], LinearForm.LE));
+    }
+    if (status == DualSimplex.OPTIMAL) {
+      capacityBound = lp.value(0);
+    }
+    return status;
+  }
+
+  // the cut as a row sum w x <= rhs over the columns, or null when an arc is not a column
+  private static MirCut row(CapacityCuts.Cut cut, int[] column) {
+    Map<Integer, Long> weights = new java.util.TreeMap<>();
+    long sign = cut.entering() ? -1 : 1;
+    for (int a : cut.arcs()) {
+      if (column[a] < 0) {
+        return null;
+      }
+      weights.merge(column[a], sign, Long::sum);
+    }
+    weights.values().removeIf(w -> w == 0);
+    if (weights.isEmpty()) {
+      return null;
+    }
+    int[] cs = new int[weights.size()];
+    long[] ws = new long[weights.size()];
+    int k = 0;
+    for (Map.Entry<Integer, Long> e : weights.entrySet()) {
+      cs[k] = e.getKey();
+      ws[k++] = e.getValue();
+    }
+    return MirCut.row(cs, ws, sign * cut.bound(), cut.efficacy());
+  }
+
+  private static List<Long> key(MirCut c) {
+    List<Long> key = new ArrayList<>();
+    for (int k = 0; k < c.columns.length; k++) {
+      key.add((long) c.columns[k]);
+      key.add(c.weights[k]);
+    }
+    key.add(c.rhs);
+    return key;
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen
@@ -2400,6 +2604,10 @@ public class LinearRelaxation extends Constraint
     for (LinearForm f : forms) {
       copies.add(new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
     }
+    // the capacity cuts are rows of the copy: the prunings made with them stay explained by them
+    for (LinearForm f : capacityForms) {
+      copies.add(new LinearForm(copied(f.vars(), map, columns), f.weights(), f.c(), f.relation()));
+    }
     List<LinearForm> extraCopies = new ArrayList<>();
     for (LinearForm f : keptExtraForms.isEmpty() ? extraForms : keptExtraForms) {
       extraCopies.add(
@@ -2410,6 +2618,9 @@ public class LinearRelaxation extends Constraint
             copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
+    for (CapacityCuts cc : capacity) {
+      c.capacity.add(cc.copy(map));
+    }
     return c;
   }
 

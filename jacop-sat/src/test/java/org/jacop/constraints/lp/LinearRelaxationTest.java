@@ -47,6 +47,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.core.IntVar;
@@ -349,6 +350,84 @@ class LinearRelaxationTest {
     store.impose(r);
     assertThat(store.consistency()).isTrue();
     assertThat(cost.min()).isEqualTo(n / 2);
+  }
+
+  // shifts that overlap pairwise: the pair rows x_i + x_j <= 1 allow half of each set of shifts
+  // that
+  // share a time in the LP, the clique rows of those sets 1 (the graph of intervals is perfect, so
+  // the bound is the optimum); some pairs are stated over a fixed variable, x_i + x_j - one <= 0,
+  // and some over a negated literal, x_i - y <= 0 with y = 1 - x_j
+  @Test
+  void mergesThePairsOfConflictingShiftsIntoCliques() {
+    int[][] shifts = {{0, 4}, {1, 5}, {2, 6}, {3, 8}, {5, 9}, {6, 10}, {7, 12}, {9, 13}, {11, 14}};
+    int[] value = {3, 2, 4, 5, 2, 3, 4, 2, 3};
+    Store store = new Store();
+    int n = shifts.length;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new LinearInt(new IntVar[] {x[8], y}, new int[] {1, 1}, "==", 1));
+    int pairs = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (shifts[i][0] < shifts[j][1] && shifts[j][0] < shifts[i][1]) {
+          IntVar[] row;
+          int[] w;
+          int side;
+          if (j == 8) {
+            row = new IntVar[] {x[i], y};
+            w = new int[] {1, -1};
+            side = 0;
+          } else if (pairs % 2 == 0) {
+            row = new IntVar[] {x[i], x[j], one};
+            w = new int[] {1, 1, -1};
+            side = 0;
+          } else {
+            row = new IntVar[] {x[i], x[j]};
+            w = new int[] {1, 1};
+            side = 1;
+          }
+          store.impose(new LinearInt(row, w, "<=", side));
+          pairs++;
+        }
+      }
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    IntVar[] all = Arrays.copyOf(x, n + 1);
+    all[n] = cost;
+    int[] w = Arrays.copyOf(value, n + 1);
+    w[n] = -1;
+    store.impose(new LinearInt(all, w, "==", 0));
+    // the optimum, by enumeration
+    int best = 0;
+    for (int mask = 0; mask < 1 << n; mask++) {
+      boolean ok = true;
+      int sum = 0;
+      for (int i = 0; i < n && ok; i++) {
+        if ((mask >> i & 1) == 1) {
+          sum += value[i];
+          for (int j = i + 1; j < n; j++) {
+            if ((mask >> j & 1) == 1
+                && shifts[i][0] < shifts[j][1]
+                && shifts[j][0] < shifts[i][1]) {
+              ok = false;
+            }
+          }
+        }
+      }
+      if (ok) {
+        best = Math.max(best, sum);
+      }
+    }
+    LinearRelaxation r = LinearRelaxation.of(store, cost, true);
+    assertThat(r).isNotNull();
+    // PC assertThat(r.pairCliques).isPositive();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(cost.max()).isEqualTo(best);
   }
 
   // rows x_i + x_(i+1) <= 3 over a chain of m + 1 variables
@@ -818,6 +897,89 @@ class LinearRelaxationTest {
     assertThat(checked).isPositive();
   }
 
+  /**
+   * On a relaxation with value columns the LP-guided selection decides store variables only: a
+   * value column [x = v] becomes the decision x = v, never a decision on the column, and the value
+   * is in the domain. The selection that follows the root solution decides the same at the root.
+   */
+  @Test
+  void lpGuidedSelectDecidesTheValuesOfValueColumns() {
+    int halls = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      Halls h = new Halls(run);
+      LinearRelaxation r = LinearRelaxation.of(h.store, h.objective, true);
+      h.store.impose(r);
+      LpGuidedSelect last = new LpGuidedSelect(r, null);
+      LpGuidedSelect root = new LpGuidedSelect(r, null, true);
+      assertThat(root.getChoiceVariable(0)).isNull(); // no solution yet
+      assertThat(h.store.consistency()).as("seed %d", run).isTrue();
+      assertThat(r.rootSolutionColumns()).as("seed %d", run).isEqualTo(r.solutionColumns());
+      for (LpGuidedSelect select : List.of(last, root)) {
+        Var v = select.getChoiceVariable(0);
+        if (v == null) {
+          continue;
+        }
+        assertThat(v).as("seed %d", run).isNotInstanceOf(LpColumn.class);
+        IntVar x = (IntVar) v;
+        assertThat(x.singleton()).as("seed %d", run).isFalse();
+        assertThat(x.domain.contains(select.getChoiceValue())).as("seed %d", run).isTrue();
+        halls += Arrays.asList(h.assign).contains(x) && select.getChoiceValue() > 0 ? 1 : 0;
+      }
+    }
+    // the decision is often a hall for an offer, from a value column
+    assertThat(halls).isPositive();
+  }
+
+  /**
+   * Following the root solution, the selection decides only when the relaxation has value columns
+   * and its root solution is near integral on them: on 0/1 columns alone it gives no decision,
+   * where the last solution decides. Seat-moving 2021 sm-10-13-00, whose root solution had none of
+   * its value columns, took twice as long with activity runs started from its 0/1 columns.
+   */
+  @Test
+  void rootGuideNeedsValueColumns() {
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntVar z = new IntVar(store, "z", 0, 10);
+    store.impose(new LinearInt(b, new int[] {1, 1, 1}, "==", 1));
+    store.impose(
+        new LinearInt(new IntVar[] {b[0], b[1], b[2], z}, new int[] {2, 3, 5, -1}, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, z, false);
+    store.impose(r);
+    LpGuidedSelect last = new LpGuidedSelect(r, null);
+    LpGuidedSelect root = new LpGuidedSelect(r, null, true);
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.rootSolutionColumns()).isPositive();
+    assertThat(last.getChoiceVariable(0)).isSameAs(b[0]);
+    assertThat(last.getChoiceValue()).isEqualTo(1);
+    assertThat(root.getChoiceVariable(0)).isNull();
+  }
+
+  /**
+   * Fixed search with restarts whose activity runs start from the relaxation's root solution keeps
+   * the optimum of hall assignments, with the explanation checker on. Most of these models are
+   * solved before the first activity run; the guide's decisions are checked on the selection above.
+   */
+  @Test
+  void activityRunsGuidedByTheRelaxationKeepTheOptimum() {
+    for (int run = 0; run < RUNS / 5; run++) {
+      long expected = new Halls(run).optimum();
+      Halls h = new Halls(run);
+      LinearRelaxation l = LinearRelaxation.of(h.store, h.objective, true);
+      h.store.impose(l);
+      LcgSolver solver = new LcgSolver(h.store);
+      solver.setChecking(true);
+      solver.setAnnotation(new SimpleSelect<>(h.assign, null, new IndomainMin<>()), false);
+      solver.setFixedRestarts(LcgSolver.FixedRestarts.TURNS, false);
+      solver.setActivityGuide(new LpGuidedSelect(l, null, true));
+      assertThat(solver.minimize(h.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(h.objective)).as("seed %d", run).isEqualTo(expected);
+    }
+  }
+
   /** A copy of a relaxation with LP-only columns gets its own columns over the copied variables. */
   @Test
   void copyMakesItsOwnValueColumns() {
@@ -851,6 +1013,114 @@ class LinearRelaxationTest {
       } else {
         assertThat(copies).containsValue(v);
       }
+    }
+  }
+
+  /**
+   * The rounded capacity cuts of a Routes raise the root bound of random capacitated vehicle
+   * routing models (the degree rows alone give a weak bound), and keep the optimum under
+   * depth-first search and under lazy clause generation with the explanation checker on.
+   */
+  @Test
+  void capacityCutsKeepTheOptimumOfVehicleRouting() {
+    int raised = 0;
+    long checked = 0;
+    for (int run = 0; run < 12; run++) {
+      long expected = new Cvrp(run).optimum();
+
+      Cvrp dfs = new Cvrp(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.cutBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      raised += r.capacityCuts > 0 && r.capacityBound > r.rootBound + 0.5 ? 1 : 0;
+
+      Cvrp lcg = new Cvrp(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(raised).isGreaterThan(3);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * A random capacitated vehicle routing model: customers in the plane with demands, an arc between
+   * every two nodes, one arc out of and one into each customer as linear rows, a Routes with the
+   * demands and the capacity, and the length of the arcs used minimized.
+   */
+  private static final class Cvrp {
+    final Store store = new Store();
+    final IntVar[] x;
+    final IntVar cost;
+
+    Cvrp(long seed) {
+      Random rnd = new Random(seed);
+      int n = 6 + rnd.nextInt(2);
+      int[] px = new int[n];
+      int[] py = new int[n];
+      int[] demands = new int[n];
+      for (int v = 0; v < n; v++) {
+        px[v] = rnd.nextInt(20);
+        py[v] = rnd.nextInt(20);
+        demands[v] = v == 0 ? 0 : 1 + rnd.nextInt(4);
+      }
+      int capacity = 5 + rnd.nextInt(3);
+      int m = n * (n - 1);
+      int[] tails = new int[m];
+      int[] heads = new int[m];
+      int[] length = new int[m + 1];
+      x = new IntVar[m];
+      int a = 0;
+      for (int t = 0; t < n; t++) {
+        for (int h = 0; h < n; h++) {
+          if (t != h) {
+            tails[a] = t;
+            heads[a] = h;
+            length[a] = (int) Math.round(Math.hypot(px[t] - px[h], py[t] - py[h]));
+            x[a] = new IntVar(store, "x" + t + "_" + h, 0, 1);
+            a++;
+          }
+        }
+      }
+      for (int v = 1; v < n; v++) {
+        List<IntVar> out = new ArrayList<>();
+        List<IntVar> in = new ArrayList<>();
+        for (int k = 0; k < m; k++) {
+          if (tails[k] == v) {
+            out.add(x[k]);
+          }
+          if (heads[k] == v) {
+            in.add(x[k]);
+          }
+        }
+        int[] ones = new int[n - 1];
+        Arrays.fill(ones, 1);
+        store.impose(new LinearInt(out.toArray(new IntVar[0]), ones, "==", 1));
+        store.impose(new LinearInt(in.toArray(new IntVar[0]), ones, "==", 1));
+      }
+      Routes r = new Routes(tails, heads, x, demands, capacity);
+      r.setDegrees(false);
+      store.impose(r);
+      cost = new IntVar(store, "cost", 0, 2000);
+      IntVar[] vars = Arrays.copyOf(x, m + 1);
+      vars[m] = cost;
+      length[m] = -1;
+      store.impose(new LinearInt(vars, length, "==", 0));
+    }
+
+    // the least cost by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
     }
   }
 
