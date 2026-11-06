@@ -2046,7 +2046,16 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
-136. The FlatZinc front end posts a union of singleton sets as one
+136. JaLP: the solve that moves the basic values after the bound flips of
+     the dual ratio test is hypersparse too. The flipped columns are
+     summed into a listed right-hand side, BasisLu.ftranFlips solves it
+     with a density history of its own, and only the rows of its result
+     change their values and are checked for the leaving row (before: a
+     dense solve, a pass over all rows and a rebuild of the rows outside
+     their bounds). The pivots are the same. LP bench (190 instances of
+     1 to 60 s, one job per engine): geometric mean 1.05x.
+
+137. The FlatZinc front end posts a union of singleton sets as one
      membership clause per element. MiniZinc flattens a set
      comprehension over variables, {e(i) | i in I}, into one singleton
      set per element (set_card(S, 1), set_in(e, S)) and a chain of
@@ -2060,7 +2069,7 @@ Version 5.0 (unreleased)
      before), the optimum found on all 4 instances with a known one.
      Only gt-sort changes model on the wide set.
 
-137. LP duals are those of the costs as given. Both dual simplex engines
+138. LP duals are those of the costs as given. Both dual simplex engines
      perturb the costs by about 1e-7 against dual degeneracy, and the
      duals of the perturbed costs carried that noise into the integer
      certificates of LinearRelaxation, where a large scale could turn it
@@ -2078,7 +2087,7 @@ Version 5.0 (unreleased)
      restores the old duals; -Dorg.jacop.lp.exact=true runs JaLP's
      setExact clean-up in search.
 
-138. Under LCG an all_different over n variables whose domains hold n
+139. Under LCG an all_different over n variables whose domains hold n
      values in all adds, for each value, the clause "some variable takes
      it" over the value literals (Chuffed's alldiff_cheat). Constraints
      give such clauses through the new ImpliedClauses interface, which
@@ -2090,7 +2099,7 @@ Version 5.0 (unreleased)
      (Chuffed 0.6 s). 161 XCSP3 instances with such an all_different:
      completed 76 -> 83, 22 faster / 16 slower.
 
-139. Increasing, Among and OverlappingAlldiff give their own LCG reasons
+140. Increasing, Among and OverlappingAlldiff give their own LCG reasons
      instead of the generic one, and Values (nvalue) gets a union-of-
      domains rule so its reasons need no replays. TilingRythmicCanons
      Increasing reasons 439 -> 2 atoms, SportsScheduling-dummy-14 Among
@@ -2099,7 +2108,7 @@ Version 5.0 (unreleased)
      shortest per-variable reason, not the first: Molnar failure reasons
      2,297 -> 4 atoms.
 
-140. Element over a variable array bumps on failure the weights of the
+141. Element over a variable array bumps on failure the weights of the
      index, the value and only the list variables whose position is still
      in the index domain, so dom/wdeg no longer prefers variables that
      appear in every element (LangfordBin-040: solved with 195 failures,
@@ -2112,7 +2121,7 @@ Version 5.0 (unreleased)
      14 worse, 5 families better and 4 worse (within the noise of two
      runs of one build).
 
-141. Rounded capacity cuts in the linear relaxation, from each Routes
+142. Rounded capacity cuts in the linear relaxation, from each Routes
      with its arcs among the columns: the routes enter a set S of
      customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
      form, the arcs inside S are at most |S| minus that). The sets come
@@ -2131,7 +2140,7 @@ Version 5.0 (unreleased)
      The detector no longer aborts on a bool_lin_eq whose right-hand
      side is a variable.
 
-142. The LP relaxation (--lp) merges rows that forbid two 0/1 literals
+143. The LP relaxation (--lp) merges rows that forbid two 0/1 literals
      together (x + y <= 1, also stated as x + y - one <= 0 over a fixed
      variable, or x - y <= 0) into rows over cliques of such literals,
      on objective models. Pairwise rows let the LP take half of each set
