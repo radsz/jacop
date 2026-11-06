@@ -32,6 +32,7 @@
 package org.jacop.search.lns;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashSet;
@@ -39,6 +40,8 @@ import java.util.Random;
 import java.util.Set;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.diffn.Diffn;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
@@ -109,14 +112,16 @@ class AdaptiveLnsTest {
       }
       lns.outcome(k % 3 == 0 ? AdaptiveLns.Outcome.IMPROVED : AdaptiveLns.Outcome.LIMIT);
     }
-    // every kind was used, the objective's terms included
+    // every kind the model allows was used, the objective's terms included
+    assertTrue(lns.usable(AdaptiveLns.Kind.OBJECTIVE));
+    assertTrue(lns.usable(AdaptiveLns.Kind.CONSTRAINTS));
+    assertFalse(lns.usable(AdaptiveLns.Kind.SCHEDULING));
+    assertFalse(lns.usable(AdaptiveLns.Kind.PACKING));
     for (AdaptiveLns.Kind kind : AdaptiveLns.Kind.values()) {
-      if (kind == AdaptiveLns.Kind.ROUTES || kind == AdaptiveLns.Kind.RELATED) {
-        // no routes in this model
-        assertTrue(lns.statistics().contains(kind + " 0/"), lns.statistics());
-        continue;
-      }
-      assertTrue(!lns.statistics().contains(kind + " 0/"), lns.statistics());
+      assertEquals(
+          lns.usable(kind),
+          !lns.statistics().contains(kind + " 0/"),
+          kind + " " + lns.statistics());
     }
     assertEquals(400, lns.runs());
   }
@@ -139,5 +144,114 @@ class AdaptiveLnsTest {
       lns.outcome(AdaptiveLns.Outcome.EXHAUSTED);
     }
     assertTrue(last < first, first + " " + last);
+  }
+
+  /** The variables a neighbourhood leaves free: those it does not fix. */
+  private static boolean[] relaxed(int[] fixed, int n) {
+    boolean[] free = new boolean[n];
+    java.util.Arrays.fill(free, true);
+    for (int i : fixed) {
+      free[i] = false;
+    }
+    return free;
+  }
+
+  @Test
+  void schedulingRelaxesTasksInATimeWindow() {
+    // 12 unit tasks on a resource of capacity 1; the decision variables are the starts
+    Store s = new Store();
+    int n = 12;
+    IntVar[] start = new IntVar[n];
+    IntVar[] one = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      start[i] = new IntVar(s, "t" + i, 0, 2 * n);
+      one[i] = new IntVar(s, 1, 1);
+    }
+    s.impose(new Cumulative(start, one, one, new IntVar(s, 1, 1)));
+    IntVar c = new IntVar(s, "c", 0, 1000);
+    AdaptiveLns lns = new AdaptiveLns(s, start, c, new Random(4));
+    assertTrue(lns.usable(AdaptiveLns.Kind.SCHEDULING));
+    // task i starts at 2 * (n - 1 - i)
+    s.setLevel(s.level + 1);
+    for (int i = 0; i < n; i++) {
+      start[i].domain.inValue(s.level, start[i], 2 * (n - 1 - i));
+    }
+    assertTrue(s.consistency());
+    lns.solution();
+    s.removeLevel(s.level);
+    s.setLevel(s.level - 1);
+    for (int k = 0; k < 50; k++) {
+      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.SCHEDULING), n);
+      // the relaxed tasks are consecutive in time
+      int first = -1;
+      int last = -1;
+      int count = 0;
+      for (int i = 0; i < n; i++) {
+        if (free[i]) {
+          first = first < 0 ? i : first;
+          last = i;
+          count++;
+        }
+      }
+      assertTrue(count >= 2);
+      assertEquals(last - first + 1, count, java.util.Arrays.toString(free));
+      lns.outcome(AdaptiveLns.Outcome.EXHAUSTED);
+    }
+  }
+
+  @Test
+  void packingRelaxesRectanglesNearEachOther() {
+    // 16 unit squares; the decision variables are their x and y origins
+    Store s = new Store();
+    int side = 4;
+    int n = side * side;
+    IntVar[][] rects = new IntVar[n][];
+    IntVar[] xy = new IntVar[2 * n];
+    for (int i = 0; i < n; i++) {
+      IntVar x = new IntVar(s, "x" + i, 0, 2 * side);
+      IntVar y = new IntVar(s, "y" + i, 0, 2 * side);
+      rects[i] = new IntVar[] {x, y, new IntVar(s, 1, 1), new IntVar(s, 1, 1)};
+      xy[2 * i] = x;
+      xy[2 * i + 1] = y;
+    }
+    s.impose(new Diffn(rects));
+    IntVar c = new IntVar(s, "c", 0, 1000);
+    AdaptiveLns lns = new AdaptiveLns(s, xy, c, new Random(5));
+    assertTrue(lns.usable(AdaptiveLns.Kind.PACKING));
+    // square i at (i % side, i / side)
+    s.setLevel(s.level + 1);
+    for (int i = 0; i < n; i++) {
+      xy[2 * i].domain.inValue(s.level, xy[2 * i], i % side);
+      xy[2 * i + 1].domain.inValue(s.level, xy[2 * i + 1], i / side);
+    }
+    assertTrue(s.consistency());
+    lns.solution();
+    s.removeLevel(s.level);
+    s.setLevel(s.level - 1);
+    for (int k = 0; k < 50; k++) {
+      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.PACKING), 2 * n);
+      // a square is relaxed whole, and the relaxed squares fit in a box of side at most
+      // ceil(sqrt(count)) + 1 cells
+      int count = 0;
+      int minX = side;
+      int maxX = -1;
+      int minY = side;
+      int maxY = -1;
+      for (int i = 0; i < n; i++) {
+        assertEquals(free[2 * i], free[2 * i + 1], i + " " + java.util.Arrays.toString(free));
+        if (free[2 * i]) {
+          count++;
+          minX = Math.min(minX, i % side);
+          maxX = Math.max(maxX, i % side);
+          minY = Math.min(minY, i / side);
+          maxY = Math.max(maxY, i / side);
+        }
+      }
+      if (count < n) {
+        int box = (int) Math.ceil(Math.sqrt(count)) + 2;
+        assertTrue(maxX - minX < box && maxY - minY < box, java.util.Arrays.toString(free));
+      }
+      lns.outcome(AdaptiveLns.Outcome.LIMIT);
+    }
   }
 }

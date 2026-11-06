@@ -227,11 +227,27 @@ class RoutesFlatzincTest {
   }
 
   @Test
-  void detectionIsOffByDefault() throws IOException {
+  void detectionIsOnByDefault() throws IOException {
     Model model = randomModel(new Random(3), false);
-    assertTrue(run(model.fzn(), "-debug").contains("% redundant Routes"));
     System.clearProperty(PROPERTY);
+    assertTrue(run(model.fzn(), "-debug").contains("% redundant Routes"));
+    System.setProperty(PROPERTY, "false");
     assertFalse(run(model.fzn(), "-debug").contains("% redundant Routes"));
+  }
+
+  @Test
+  void boolLinEqWithVariableRightHandSideIsSkipped() throws IOException {
+    // bool_lin_eq takes a var int right-hand side; reading it as a parameter aborted the model
+    String model =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var 0..2: count:: output_var:: is_defined_var;
+        constraint bool_lin_eq([1,1],[a,b],count):: defines_var(count);
+        solve satisfy;
+        """;
+    System.clearProperty(PROPERTY);
+    assertEquals(4, solutions(run(model, "-a")).size());
   }
 
   private String run(String model, String... options) throws IOException {
