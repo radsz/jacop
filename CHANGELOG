@@ -2046,6 +2046,30 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+136. Reservoir, CumulativeOptional and CumulativeUnaryOptional explain
+     their pruning and failures for lazy clause generation instead of
+     taking the generic reason. Reservoir reasons over the level just
+     after an event, from the precedences, shared times and time bounds
+     that keep the other events before or after it, leaving out the
+     changes the excess does not need. The optional cumulatives cite the
+     presence of every task whose use they count, and explain an absent
+     task from its compulsory part or from the room left when it would
+     start. CumulativeUnary also explains a task whose 0..1 use drops to
+     0 (an optional task posted as a use) by overload, edge finding or
+     not-first over the other tasks, and keeps the shorter reason.
+     setOptionalRules(true) (-Djacop.cumulative.optionalRules=true) adds
+     Vilim's overload and edge finding over optional tasks to
+     CumulativeUnary; it is off by default because it lowers the node
+     rate more than it saves nodes. -Djacop.lcg.reservoirExplain=false
+     and -Djacop.lcg.optionalExplain=false switch the explanations off.
+     Generated reservoir scheduling kit (30 instances, 40 to 80 tasks,
+     60 s): proved 26 -> 29 with model search and 24 -> 28 with -f, none
+     worse. Optional kit posted with the optional classes
+     (org.jacop.fz.optionalAsUse=false; 85 instances): proved 29 -> 35,
+     35 better / 12 worse. With the default presence-as-use and on the
+     wide set (220, 60 s) the trees stay the same where model search is
+     fixed: solved 161 -> 161 and, with -f, 154 -> 154.
+
 Version 4.11
 =============
 
