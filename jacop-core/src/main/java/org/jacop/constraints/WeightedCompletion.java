@@ -851,7 +851,7 @@ public class WeightedCompletion extends Constraint
    * starts above the largest fitting t.
    */
   private void consistencyParallel(Store store) {
-    if (overloadedAt() != null) {
+    if (overloaded()) {
       throw Store.failException;
     }
     // before sortBy, which reuses the keys of the fixed tasks
@@ -911,7 +911,7 @@ public class WeightedCompletion extends Constraint
   /**
    * It builds the free capacity left by the fixed tasks as change points: from changeTime[k] on the
    * fixed tasks use changeLoad[k] units. It reads the fixed tasks sorted in key and endKey by
-   * {@link #overloadedAt()}.
+   * {@link #overloaded()}.
    */
   private void profile() {
     changes = 0;
@@ -986,7 +986,7 @@ public class WeightedCompletion extends Constraint
         event = starts[jobs[next]].min();
       }
       if (change < changes) {
-        event = Math.min(event, changeTime[change]);
+        event = Math.min(event, (double) changeTime[change]);
       }
       long speed = capacity - load;
       if (speed <= 0) {
@@ -1019,9 +1019,9 @@ public class WeightedCompletion extends Constraint
   /**
    * It checks the profile of the fixed tasks of a parallel resource.
    *
-   * @return null if it stays within the capacity, otherwise a non null array.
+   * @return true if the fixed tasks use more than the capacity at some time.
    */
-  private int[] overloadedAt() {
+  private boolean overloaded() {
     int count = 0;
     for (int i = 0; i < n; i++) {
       if (starts[i].singleton() && durations[i] > 0 && resources[i] > 0) {
@@ -1041,10 +1041,10 @@ public class WeightedCompletion extends Constraint
       }
       load += resources[(int) (key[k] & 0xFFFFFF)];
       if (load > capacity) {
-        return new int[] {(int) time};
+        return true;
       }
     }
-    return null;
+    return false;
   }
 
   /**
@@ -1096,7 +1096,7 @@ public class WeightedCompletion extends Constraint
       total += (long) weights[i] * starts[i].value() + (long) weights[i] * durations[i];
     }
     if (parallel) {
-      return overloadedAt() == null && total <= cost.min();
+      return !overloaded() && total <= cost.min();
     }
     for (int i = 0; i < n; i++) {
       if (durations[i] > 0 && resources[i] > capacity) {

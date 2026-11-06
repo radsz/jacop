@@ -94,12 +94,16 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
   private static final int MAX_POSTED = 200;
 
   // detection on cumulatives of capacity above 1: -Dorg.jacop.fz.weightedCompletion.parallel=false
+  private static final String OFF = "false";
+
+  private static final String INT_LIN_EQ = "int_lin_eq";
+
   private static final boolean PARALLEL =
-      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.weightedCompletion.parallel"));
+      !OFF.equalsIgnoreCase(System.getProperty("org.jacop.fz.weightedCompletion.parallel"));
 
   // detection of counts of late tasks: -Dorg.jacop.fz.lateCount=false turns it off
   private static final boolean LATE =
-      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.lateCount"));
+      !OFF.equalsIgnoreCase(System.getProperty("org.jacop.fz.lateCount"));
 
   private final Support support;
 
@@ -118,8 +122,8 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
   // 0/1 variables of bool2int: the integer to the Boolean
   private final Map<IntVar, IntVar> boolOf = new IdentityHashMap<>();
 
-  // reified thresholds: b holds exactly when x >= c (int_le_reif(c, x, b), int_lt_reif(c - 1, x,
-  // b))
+  // reified thresholds: b holds exactly when x >= c, from int_le_reif on c and x or int_lt_reif on
+  // c - 1 and x
   private final Map<IntVar, Threshold> thresholds = new IdentityHashMap<>();
 
   private record Threshold(IntVar x, int c) {}
@@ -179,7 +183,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
    * @return false if the system property org.jacop.fz.weightedCompletion is false.
    */
   public static boolean enabled() {
-    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.weightedCompletion"));
+    return !OFF.equalsIgnoreCase(System.getProperty("org.jacop.fz.weightedCompletion"));
   }
 
   /**
@@ -283,7 +287,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     switch (node.getName()) {
       case "jacop_cumulative" -> cumulative(node);
       case "int_lin_le" -> linear(node, false);
-      case "int_lin_eq" -> linear(node, true);
+      case INT_LIN_EQ -> linear(node, true);
       case "int_le" -> arc(variable(node, 0), variable(node, 1), 0);
       case "int_lt" -> arc(variable(node, 0), variable(node, 1), 1);
       case "int_le_reif" -> threshold(node, 0);
@@ -442,7 +446,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       return 0;
     }
     int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    boolean equation = node.getName().equals("int_lin_eq");
+    boolean equation = node.getName().equals(INT_LIN_EQ);
 
     // at least two terms of one sign that a task can bound
     int positive = 0;
@@ -606,7 +610,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
       return 0;
     }
     int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
-    boolean equation = node.getName().equals("int_lin_eq");
+    boolean equation = node.getName().equals(INT_LIN_EQ);
     Threshold[] threshold = new Threshold[x.length];
     List<Map<IntVar, Long>> paths = new ArrayList<>();
     int candidates = 0;
@@ -662,7 +666,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
         if (lag == null || taken[t]) {
           continue;
         }
-        long date = (long) threshold[k].c() - lag + d[t] - 1;
+        long date = threshold[k].c() - lag + d[t] - 1;
         if (date < IntDomain.MIN_INT || date > IntDomain.MAX_INT) {
           continue;
         }
