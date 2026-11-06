@@ -2060,10 +2060,10 @@ Version 5.0 (unreleased)
      LP calls and made still-life-wastage 13 take 46 s instead of 30 s.
      28 LP-heavy wide-set runs (30 s, three paired runs each): LP time
      per call 0.965x by geometric mean (0.76x to 1.15x), nodes per
-     second 1.00x. Wide set (220,
-     60 s, paired): default 164 -> 164 solved, 7 better / 1 worse;
-     -f 155 -> 155, 12 / 16 (an earlier round on another machine:
-     14 / 9), all by time-limit differences of -f's clock-based phases.
+     second 1.00x. Wide set (220, 60 s, paired): default 164 -> 164
+     solved, 7 better / 1 worse; -f 155 -> 155, 12 / 16 (an earlier
+     round on another machine: 14 / 9), all by time-limit differences
+     of -f's clock-based phases.
 
 Version 4.11
 =============
