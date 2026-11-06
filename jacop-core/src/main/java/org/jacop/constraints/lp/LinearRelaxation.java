@@ -1194,8 +1194,7 @@ public class LinearRelaxation extends Constraint
     boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
     long pivotsBefore = lp.pivots();
     if (KEEP_BASES) {
-      restoreBasis(
-          store.level, jump && (beforeExtra == null || calls - extraCall >= BASIS_PROBATION));
+      restoreBasis(store.level, jump);
     }
     for (int j = 0; j < lp.columns(); j++) {
       lp.setBounds(j, x[j].min(), x[j].max());
@@ -1319,7 +1318,8 @@ public class LinearRelaxation extends Constraint
       k--;
     }
     bases.subList(k, bases.size()).clear();
-    if (!jump || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
+    boolean judging = beforeExtra != null && calls - extraCall < BASIS_PROBATION;
+    if (!jump || judging || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
       return;
     }
     if (lp.restoreBasis(bases.get(k - 1))) {
