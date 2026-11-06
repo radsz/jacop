@@ -57,6 +57,7 @@ import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
+import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
@@ -188,6 +189,18 @@ public class Constraints implements ParserTreeConstants {
         if (!elements.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(elements.replaced());
+        }
+      }
+
+      // the membership clauses replace set unions, which --proof encodes as they are
+      if (SetUnionDetector.enabled() && options.proof() == null) {
+        SetUnionDetector unions = new SetUnionDetector(support);
+        unions.detect(astTree);
+        if (!unions.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(unions.replaced());
+          dictionary.removeFromDefaultSearch(unions.unconstrained());
+          dictionary.unusedVariables.addAll(unions.unconstrained());
         }
       }
 

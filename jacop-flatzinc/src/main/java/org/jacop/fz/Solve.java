@@ -45,6 +45,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -634,6 +635,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootBound
             + "\n%%%mzn-stat: lpCuts="
             + r.cuts
+            + "\n%%%mzn-stat: lpPairCliques="
+            + r.pairCliques
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
             + "\n%%%mzn-stat: lpCapacityCuts="
@@ -1918,8 +1921,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private void mirrorSetVariables() {
     List<SetVar> sets = new ArrayList<>();
+    // sets whose constraints a reformulation replaced need no literals
+    Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
     for (int i = 0; i < store.size(); i++) {
-      if (store.vars[i] instanceof SetVar s && !s.singleton()) {
+      if (store.vars[i] instanceof SetVar s && !s.singleton() && !unused.contains(s)) {
         sets.add(s);
       }
     }
@@ -2479,6 +2484,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgImpliedClauses="
+            + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
@@ -2623,6 +2630,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objectiveVariable instanceof IntVar o) {
       vars.remove(o);
     }
+    if ("1".equals(options.freeConfig("lns-defined", "1"))) {
+      // a variable defined by a constraint follows from the others: fixed with them it adds
+      // nothing, fixed without them it keeps the relaxed ones from moving
+      Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+      defined.addAll(dictionary.definedVariables);
+      List<IntVar> independent = new ArrayList<>();
+      for (IntVar x : vars) {
+        if (!defined.contains(x)) {
+          independent.add(x);
+        }
+      }
+      if (!independent.isEmpty()) {
+        vars = new LinkedHashSet<>(independent);
+      }
+    }
     if (vars.isEmpty()) {
       return null;
     }
@@ -2635,6 +2657,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     } else {
       lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
+    }
+    String kinds = options.freeConfig("lns-kinds", "");
+    if (!kinds.isEmpty()) {
+      // the kinds to use, separated by '+', for example random+graph+objective
+      Set<String> chosen =
+          new java.util.HashSet<>(Arrays.asList(kinds.toUpperCase(Locale.ROOT).split("\\+")));
+      for (AdaptiveLns.Kind k : AdaptiveLns.Kind.values()) {
+        if (!chosen.contains(k.name())) {
+          lns.disable(k);
+        }
+      }
     }
     return lns;
   }

@@ -228,6 +228,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: cuts added. */
   public long cuts;
 
+  /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
+  public int pairCliques;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -266,6 +269,11 @@ public class LinearRelaxation extends Constraint
       !"false".equals(System.getProperty("org.jacop.lp.keepBases"));
   private static final int BASIS_JUMP = Integer.getInteger("org.jacop.lp.basisJump", 2);
   private static final int MAX_BASES = Integer.getInteger("org.jacop.lp.maxBases", 32);
+  // while the rows of the other constraints are judged by the solves that stop at the limit, the
+  // first solves after a jump start from the basis the deeper node left, as before bases were
+  // kept: a restored basis spares them the limit and keeps rows that slow every later solve
+  // (slnb7x7: 404 big-M rows kept, 4x the LP time)
+  private static final long BASIS_PROBATION = Long.getLong("org.jacop.lp.basisProbation", 1000L);
   private final List<Object> bases = new ArrayList<>();
   private int[] basisLevel = new int[0];
   private LpSolver basesOf;
@@ -298,6 +306,8 @@ public class LinearRelaxation extends Constraint
   private int baseRows;
   private long extraLimits;
   private static final int EXTRA_LIMITS = 3;
+  // the call at which the extra rows were added
+  private long extraCall;
 
   // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
   private boolean bySize;
@@ -633,6 +643,15 @@ public class LinearRelaxation extends Constraint
         relaxed.add(f);
       }
     }
+    int pairCliques = 0;
+    // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
+    // rows only make each call dearer
+    if (PAIR_CLIQUES && objective != null) {
+      PairCliques merged = PairCliques.merge(forms, relaxed);
+      forms = merged.rows;
+      relaxed = merged.further;
+      pairCliques = merged.cliques;
+    }
     if (!substituted.isEmpty()) {
       forms = substitute(forms, substituted, objective);
     }
@@ -700,6 +719,7 @@ public class LinearRelaxation extends Constraint
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
+    r.pairCliques = pairCliques;
     r.capacity = separations;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
@@ -760,6 +780,10 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the conflicts of pairs of 0/1 literals merged into clique rows
+  private static final boolean PAIR_CLIQUES =
+      !"false".equals(System.getProperty("org.jacop.lp.pairCliques"));
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
@@ -1367,7 +1391,8 @@ public class LinearRelaxation extends Constraint
       k--;
     }
     bases.subList(k, bases.size()).clear();
-    if (!jump || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
+    boolean judging = beforeExtra != null && calls - extraCall < BASIS_PROBATION;
+    if (!jump || judging || k == 0 || level - basisLevel[k - 1] >= lastSolveLevel - level) {
       return;
     }
     if (lp.restoreBasis(bases.get(k - 1))) {
@@ -1700,9 +1725,9 @@ public class LinearRelaxation extends Constraint
   }
 
   // y scaled so that its largest entry is about scale, rounded; null when y is zero. With the
-  // certificate cleaning on, entries below 1e-12 of the largest are noise of the simplex (its cost
-  // perturbation and eta file) and are zeroed, so that a large scale does not turn them into
-  // multipliers of rows without the side they need
+  // certificate cleaning on, entries below 1e-11 of the largest are noise of the simplex (the
+  // round-off of its factors and updates) and are zeroed, so that a large scale does not turn
+  // them into multipliers of rows without the side they need
   private static long[] scaled(double[] y, long scale) {
     double largest = 0;
     for (double v : y) {
@@ -2392,6 +2417,7 @@ public class LinearRelaxation extends Constraint
       beforeExtra = lp;
       baseRows = m;
       extraLimits = limits;
+      extraCall = calls;
       droppedPivots += lp.pivots();
       lp = full;
       return withExtra;
