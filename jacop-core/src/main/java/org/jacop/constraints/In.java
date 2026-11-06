@@ -60,10 +60,10 @@ public class In extends PrimitiveConstraint implements Copyable<In>, Explainable
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** It specifies variable x whose domain must lie within a specified domain. */
-  private final IntVar x;
+  final IntVar x;
 
   /** It specifies domain d which restricts the possible value of the specified variable. */
-  private final IntDomain dom;
+  final IntDomain dom;
 
   /** It specifies all the values which can not be taken by a variable. */
   private final IntDomain domComplement;

@@ -197,6 +197,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the linear relaxation (--lp), or null
   private LinearRelaxation linearRelaxation;
 
+  // fixed search's activity runs follow the relaxation's root solution, not its last one, which
+  // comes from another branch
+  private static final boolean LP_GUIDE_ROOT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.lpGuideRoot", Boolean.TRUE.toString()));
+
   // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
   // turns them off)
   private static final boolean TABLE_CLIQUES =
@@ -633,6 +638,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pairCliques
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpCapacityCuts="
+            + r.capacityCuts
+            + "\n%%%mzn-stat: lpCapacityBound="
+            + r.capacityBound
             + "\n%%%mzn-stat: lpBaseBound="
             + r.baseBound
             + "\n%%%mzn-stat: lpExtraRows="
@@ -641,6 +650,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraDropped
             + "\n%%%mzn-stat: lpValueColumns="
             + r.valueColumns
+            + "\n%%%mzn-stat: lpJumpSolves="
+            + r.jumpSolves
+            + "\n%%%mzn-stat: lpJumpPivots="
+            + r.jumpPivots
+            + "\n%%%mzn-stat: lpBasisRestores="
+            + r.basisRestores
             + "\n%%%mzn-stat-end");
   }
 
@@ -2050,12 +2065,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
     }
-    if (free
-        && linearRelaxation != null
-        && annotated != null
-        && "on".equals(options.freeConfig("lcg-lp-branching", "off"))) {
+    // decisions from the solution of the linear relaxation: on, off, or auto, on when the
+    // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
+    // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
+    // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
+    // it in 60 s
+    String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
+    boolean lpGuided =
+        linearRelaxation != null
+            && ("on".equals(lpBranching)
+                || "auto".equals(lpBranching) && linearRelaxation.valueColumns > 0);
+    if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
+    }
+    if (!free && lpGuided) {
+      // fixed search: the runs of activity branching between the annotation's runs start from it
+      lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
     }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
@@ -2132,6 +2158,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setFixedRestarts(
           LcgSolver.FixedRestarts.valueOf(restarts.toUpperCase(Locale.ROOT)),
           "solution".equals(from));
+      // the core-guided phase of free search, but only when the annotation has no solution after
+      // fixed-core-delay of the time: unit-commitment L12 has none under its annotation in 60 s,
+      // while the cores' assumptions find one in seconds. With a solution the annotation keeps the
+      // time: core-guided search from the start lost the proofs of city-position and triangular.
+      double fixedCore = Double.parseDouble(options.freeConfig("fixed-core", "0.1"));
+      if (fixedCore > 0) {
+        lcg.setCoreSearch(
+            fixedCore, 100_000, Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
+        lcg.setCoreDelay(
+            Double.parseDouble(options.freeConfig("fixed-core-delay", "0.15")), 10_000, 0);
+        lcg.setCoresWithoutSolutionOnly(true);
+      }
     }
     if (options.getTimeOut() > 0) {
       // the time-out covers the whole run: reading and setting up the model took part of it
@@ -2463,6 +2501,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.represolveEntailed
             + "\n%%%mzn-stat: lcgAnnotationDecisions="
             + lcg.annotationDecisions
+            + "\n%%%mzn-stat: lcgGuideDecisions="
+            + lcg.guideDecisions
             + "\n%%%mzn-stat: lcgSearchDecisions="
             + lcg.searchDecisions
             + "\n%%%mzn-stat: lcgBooleanVariables="
@@ -2557,6 +2597,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
         + lcg.clockStops
+        + "\n%%%mzn-stat: lcgCoreSkips="
+        + lcg.coreSkips
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="

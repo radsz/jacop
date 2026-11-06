@@ -1986,7 +1986,52 @@ Version 5.0 (unreleased)
      and 12 / 20 better / worse, within the noise of two runs of the
      same build.
 
-130. Large neighbourhood search gets two routing neighbourhoods over the
+132. The linear relaxation keeps the basis of the last optimal solve at
+     each level of the current branch (JaLP, the sparse simplex) and
+     restores the deepest one kept when the search jumps back two or
+     more levels (a restart, an LCG backjump), instead of going on from
+     the basis the deeper node left. On LP-heavy -f runs the solves after
+     a jump take 2 to 4 times fewer pivots (train 7.2 to 2.8, still_life2
+     16.8 to 6.6). JaLP gets RevisedDualSimplex.saveBasis/restoreBasis.
+     -Dorg.jacop.lp.keepBases=false turns it off; basisJump (2) and
+     maxBases (32) tune it. Stats lpJumpSolves, lpJumpPivots,
+     lpBasisRestores. The dense simplex (below 100 rows) is unchanged.
+
+133. The LP relaxation gets rows for more objective links: the convex
+     hull of element over a constant array (lower and upper chains of at
+     most 64 edges each, index domains up to 100,000 values), x div c
+     through the remainder x - c*z, if-then-else (ConditionalSelect)
+     as big-M rows from the root bounds, x in an interval under a
+     reification, and the FlatZinc reified x = c, x != c and x = y.
+     When not all candidate rows fit the tableau, the rows nearest to
+     the objective (breadth-first through the base rows) go first; they
+     used to be taken in model order and could all be cut before the
+     objective's own rows. -Dorg.jacop.lp.linearize=false switches the
+     rows off. tiny-cvrp medium 06 and 11: root bound 0 -> 729 and 747
+     (optima 1585 and 1737). gbac, cargo, train-scheduling and
+     city-position stay at 0: even an integer solve of all the rows
+     gives 0 for the first three (the bound sits in bin packing,
+     cumulative and disjunctive) and 256 / 309 against optima 2930 /
+     10477 for city-position. Wide set (220, 60 s, paired): -f solved
+     157 -> 158, 5 families better and 4 worse; default 164 -> 164, 1
+     better and 6 worse, all by small objective differences at the
+     time limit.
+     
+134. Under fixed search with --lcg (a search annotation, no -f), the
+     core-guided phase of -f runs when branch and bound under the
+     annotation has no solution after 15 % of the time, for 10 % of it;
+     with a solution, the run goes on as before. unit-commitment L12 had
+     no solution under its annotation in 60 s, while the cores'
+     assumptions find one in seconds. --free-config fixed-core=<share>
+     (0 = off) and fixed-core-delay=<share> set the shares. Running the
+     phase under fixed search from the start instead lost proofs
+     (city-position, triangular). Wide set (220, 60 s, both
+     configurations at once): solved 153 to 156, 23 better / 22 worse,
+     gap 0.144 to 0.142; unit-commitment no solution to 5,150,745,
+     flowshop-workers 5stat_ex6 no solution to OPT in 5.9 s; ptv
+     20_2b/20_3b lose their proofs and stable-goods s-d19 its solution.
+
+135. Large neighbourhood search gets two routing neighbourhoods over the
      vehicle routes of a Routes structure: ROUTES removes the customers
      of whole routes near each other, RELATED removes customers close to
      each other by the cost of their arcs in the objective (Shaw
@@ -2001,7 +2046,26 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
-132. The LP relaxation (--lp) merges rows that forbid two 0/1 literals
+132. Rounded capacity cuts in the linear relaxation, from each Routes
+     with its arcs among the columns: the routes enter a set S of
+     customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
+     form, the arcs inside S are at most |S| minus that). The sets come
+     from the LP solution at the root, as the connected components of
+     its support graph and sets grown greedily from each customer; up
+     to 50 rounds of 50 cuts run before the MIR cuts and are dropped if
+     they leave the bound where it was. -Dorg.jacop.lp.capacityCuts=false
+     turns them off. The FlatZinc Routes detection (item 122) is now on
+     by default, so the vrp models get them (-Dorg.jacop.fz.routes=false
+     turns it off). vrp A-n34-k5: root bound 375 to 756, optimum near
+     778. 25 vrp instances of the Challenge, 60 s, against develop-5.0:
+     default 21 better / 4 worse (objective geomean 0.916), 3 proved
+     optimal; -f 14 / 11 (0.988), 4 proved optimal. The wide set (220,
+     60 s) has no routes: solved 153 -> 155 fixed search and 146 -> 145
+     under -f, noise (the -f losses prove on a rerun with both jars).
+     The detector no longer aborts on a bool_lin_eq whose right-hand
+     side is a variable.
+
+136. The LP relaxation (--lp) merges rows that forbid two 0/1 literals
      together (x + y <= 1, also stated as x + y - one <= 0 over a fixed
      variable, or x - y <= 0) into rows over cliques of such literals,
      on objective models. Pairwise rows let the LP take half of each set
