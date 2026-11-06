@@ -2046,6 +2046,25 @@ Version 5.0 (unreleased)
      (17 / 5 better / worse by median objective). No wide-set instance
      has these routes; its -f round is level (147 to 147 solved).
 
+132. Rounded capacity cuts in the linear relaxation, from each Routes
+     with its arcs among the columns: the routes enter a set S of
+     customers at least max(1, ceil(d(S) / Q)) times (or, the shorter
+     form, the arcs inside S are at most |S| minus that). The sets come
+     from the LP solution at the root, as the connected components of
+     its support graph and sets grown greedily from each customer; up
+     to 50 rounds of 50 cuts run before the MIR cuts and are dropped if
+     they leave the bound where it was. -Dorg.jacop.lp.capacityCuts=false
+     turns them off. The FlatZinc Routes detection (item 122) is now on
+     by default, so the vrp models get them (-Dorg.jacop.fz.routes=false
+     turns it off). vrp A-n34-k5: root bound 375 to 756, optimum near
+     778. 25 vrp instances of the Challenge, 60 s, against develop-5.0:
+     default 21 better / 4 worse (objective geomean 0.916), 3 proved
+     optimal; -f 14 / 11 (0.988), 4 proved optimal. The wide set (220,
+     60 s) has no routes: solved 153 -> 155 fixed search and 146 -> 145
+     under -f, noise (the -f losses prove on a rerun with both jars).
+     The detector no longer aborts on a bool_lin_eq whose right-hand
+     side is a variable.
+
 Version 4.11
 =============
 

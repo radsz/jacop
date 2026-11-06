@@ -47,6 +47,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.core.IntVar;
@@ -934,6 +935,114 @@ class LinearRelaxationTest {
       } else {
         assertThat(copies).containsValue(v);
       }
+    }
+  }
+
+  /**
+   * The rounded capacity cuts of a Routes raise the root bound of random capacitated vehicle
+   * routing models (the degree rows alone give a weak bound), and keep the optimum under
+   * depth-first search and under lazy clause generation with the explanation checker on.
+   */
+  @Test
+  void capacityCutsKeepTheOptimumOfVehicleRouting() {
+    int raised = 0;
+    long checked = 0;
+    for (int run = 0; run < 12; run++) {
+      long expected = new Cvrp(run).optimum();
+
+      Cvrp dfs = new Cvrp(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.cutBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      raised += r.capacityCuts > 0 && r.capacityBound > r.rootBound + 0.5 ? 1 : 0;
+
+      Cvrp lcg = new Cvrp(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(raised).isGreaterThan(3);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * A random capacitated vehicle routing model: customers in the plane with demands, an arc between
+   * every two nodes, one arc out of and one into each customer as linear rows, a Routes with the
+   * demands and the capacity, and the length of the arcs used minimized.
+   */
+  private static final class Cvrp {
+    final Store store = new Store();
+    final IntVar[] x;
+    final IntVar cost;
+
+    Cvrp(long seed) {
+      Random rnd = new Random(seed);
+      int n = 6 + rnd.nextInt(2);
+      int[] px = new int[n];
+      int[] py = new int[n];
+      int[] demands = new int[n];
+      for (int v = 0; v < n; v++) {
+        px[v] = rnd.nextInt(20);
+        py[v] = rnd.nextInt(20);
+        demands[v] = v == 0 ? 0 : 1 + rnd.nextInt(4);
+      }
+      int capacity = 5 + rnd.nextInt(3);
+      int m = n * (n - 1);
+      int[] tails = new int[m];
+      int[] heads = new int[m];
+      int[] length = new int[m + 1];
+      x = new IntVar[m];
+      int a = 0;
+      for (int t = 0; t < n; t++) {
+        for (int h = 0; h < n; h++) {
+          if (t != h) {
+            tails[a] = t;
+            heads[a] = h;
+            length[a] = (int) Math.round(Math.hypot(px[t] - px[h], py[t] - py[h]));
+            x[a] = new IntVar(store, "x" + t + "_" + h, 0, 1);
+            a++;
+          }
+        }
+      }
+      for (int v = 1; v < n; v++) {
+        List<IntVar> out = new ArrayList<>();
+        List<IntVar> in = new ArrayList<>();
+        for (int k = 0; k < m; k++) {
+          if (tails[k] == v) {
+            out.add(x[k]);
+          }
+          if (heads[k] == v) {
+            in.add(x[k]);
+          }
+        }
+        int[] ones = new int[n - 1];
+        Arrays.fill(ones, 1);
+        store.impose(new LinearInt(out.toArray(new IntVar[0]), ones, "==", 1));
+        store.impose(new LinearInt(in.toArray(new IntVar[0]), ones, "==", 1));
+      }
+      Routes r = new Routes(tails, heads, x, demands, capacity);
+      r.setDegrees(false);
+      store.impose(r);
+      cost = new IntVar(store, "cost", 0, 2000);
+      IntVar[] vars = Arrays.copyOf(x, m + 1);
+      vars[m] = cost;
+      length[m] = -1;
+      store.impose(new LinearInt(vars, length, "==", 0));
+    }
+
+    // the least cost by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
     }
   }
 
