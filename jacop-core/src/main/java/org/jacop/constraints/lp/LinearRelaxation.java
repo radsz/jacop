@@ -205,9 +205,17 @@ public class LinearRelaxation extends Constraint
   private final List<IntVar> deducedVar = new ArrayList<>();
   private final List<LinearForm> deducedForm = new ArrayList<>();
   private final List<Integer> deducedLevel = new ArrayList<>();
+  // whether the form of a deduction leaves an auxiliary column at a bound that the domain of its
+  // variable gives ([x = v] is 0 when v is not in the domain of x, 1 when x is v): such a form
+  // holds only in the current domains, so its deductions take the generic reason
+  private final List<Boolean> deducedFacts = new ArrayList<>();
 
-  // the form propagated when the last failure happened
+  // the form propagated when the last failure happened, and whether it has such column bounds
   private LinearForm failureForm;
+  private boolean failureFacts;
+
+  // whether the inequalities of the last combine() use column bounds from the domains: upper, lower
+  private final boolean[] combineFacts = new boolean[2];
 
   /** Statistics: propagations. */
   public long calls;
@@ -489,8 +497,13 @@ public class LinearRelaxation extends Constraint
           }
         };
     queueIndex = 4;
-    // the auxiliary columns are not variables of the store: nothing to watch or prune there
-    setScope(Arrays.stream(x).filter(v -> !(v instanceof LpColumn)).map(v -> (Var) v));
+    // the auxiliary columns are not variables of the store: their variables are in the scope, as
+    // the bounds of a column in the simplex come from the domain of its variable
+    setScope(
+        Arrays.stream(x)
+            .map(v -> v instanceof LpColumn c ? c.variable() : v)
+            .distinct()
+            .map(v -> (Var) v));
   }
 
   // the sparse simplex, JaLP's
@@ -1182,6 +1195,7 @@ public class LinearRelaxation extends Constraint
           w[k] = above ? ws[k] : -ws[k];
         }
         failureForm = new LinearForm(vars, w, above ? rowHi[i] : -rowLo[i], LinearForm.LE);
+        failureFacts = false;
         failures++;
         throw Store.failException;
       }
@@ -1308,7 +1322,8 @@ public class LinearRelaxation extends Constraint
       if (lambda == null) {
         return;
       }
-      LinearForm[] forms = certificate(lambda);
+      boolean[] facts = new boolean[2];
+      LinearForm[] forms = certificate(lambda, facts);
       if (forms == null) {
         continue; // the combination overflows: try a smaller scale
       }
@@ -1317,9 +1332,9 @@ public class LinearRelaxation extends Constraint
         fits &= f == null || fits(f);
       }
       if (fits || s == SCALES.length - 1) {
-        for (LinearForm f : forms) {
-          if (f != null) {
-            propagate(store, f);
+        for (int k = 0; k < forms.length; k++) {
+          if (forms[k] != null) {
+            propagate(store, forms[k], facts[k]);
           }
         }
         if (status != LpSolver.INFEASIBLE) {
@@ -1386,16 +1401,15 @@ public class LinearRelaxation extends Constraint
    * common divisor of its weights with its side rounded down, which holds as every column is an
    * integer. Null when a combination overflows.
    */
-  private LinearForm[] certificate(long[] lambda) {
+  private LinearForm[] certificate(long[] lambda, boolean[] facts) {
     Aggregate g = aggregate(lambda);
     if (g == null) {
       return null;
     }
-    if (!CLEAN) {
-      return combine(g);
-    }
     LinearForm[] forms = combine(g);
-    if (forms.length == 0) {
+    facts[0] = combineFacts[0];
+    facts[1] = combineFacts[1];
+    if (!CLEAN || forms.length == 0) {
       return forms;
     }
     if (!g.hasUpper()) {
@@ -1405,6 +1419,7 @@ public class LinearRelaxation extends Constraint
       }
       LinearForm[] c = combine(u);
       forms[0] = c.length > 0 ? c[0] : null;
+      facts[0] = combineFacts[0];
     }
     if (!g.hasLower()) {
       Aggregate l = aggregate(sided(lambda, false));
@@ -1413,6 +1428,7 @@ public class LinearRelaxation extends Constraint
       }
       LinearForm[] c = combine(l);
       forms[1] = c.length > 1 ? c[1] : null;
+      facts[1] = combineFacts[1];
     }
     for (int k = 0; k < forms.length; k++) {
       forms[k] = forms[k] == null ? null : divided(forms[k]);
@@ -1819,6 +1835,8 @@ public class LinearRelaxation extends Constraint
     long upper = g.upper();
     long lower = g.lower();
     int size = 0;
+    combineFacts[0] = false;
+    combineFacts[1] = false;
     try {
       for (int k = 0; k < columns.length; k++) {
         if (coef[k] == 0) {
@@ -1828,19 +1846,26 @@ public class LinearRelaxation extends Constraint
         if (lpOnly[j]) {
           // an auxiliary column leaves the inequality at the bound that keeps it valid: sum c x
           // <= upper gives sum_rest c x <= upper - min(c lo, c hi), and sum c x >= lower gives
-          // sum_rest c x >= lower - max(c lo, c hi)
-          long a = Math.multiplyExact(coef[k], (long) x[j].min());
-          long b = Math.multiplyExact(coef[k], (long) x[j].max());
+          // sum_rest c x >= lower - max(c lo, c hi); lo and hi are those of the simplex, from the
+          // domain of the column's variable
+          LpColumn column = (LpColumn) x[j];
+          IntVar v = column.variable();
+          int lo = v.singleton(column.value()) ? 1 : 0;
+          int hi = v.domain.contains(column.value()) ? 1 : 0;
+          long a = coef[k] * (long) lo;
+          long b = coef[k] * (long) hi;
           upper = Math.subtractExact(upper, Math.min(a, b));
           lower = Math.subtractExact(lower, Math.max(a, b));
+          // the upper side takes c lo for c > 0 and c hi for c < 0, the lower side the other one
+          boolean low = lo != 0;
+          boolean high = hi != 1;
+          combineFacts[0] |= coef[k] > 0 ? low : high;
+          combineFacts[1] |= coef[k] > 0 ? high : low;
         } else {
           size++;
         }
       }
     } catch (ArithmeticException overflow) {
-      return new LinearForm[0];
-    }
-    if (size == 0) {
       return new LinearForm[0];
     }
     IntVar[] vars = new IntVar[size];
@@ -2230,7 +2255,7 @@ public class LinearRelaxation extends Constraint
   }
 
   // bounds propagation of sum w x <= c, exact; nothing on overflow
-  private void propagate(Store store, LinearForm f) {
+  private void propagate(Store store, LinearForm f, boolean facts) {
     IntVar[] vars = f.vars();
     long[] w = f.weights();
     long c = f.c();
@@ -2245,6 +2270,7 @@ public class LinearRelaxation extends Constraint
       return;
     }
     failureForm = f;
+    failureFacts = facts;
     if (smallest > c) {
       failures++;
       throw Store.failException;
@@ -2268,23 +2294,24 @@ public class LinearRelaxation extends Constraint
       if (wk > 0) {
         long bound = Math.floorDiv(limit, wk);
         if (bound < v.max()) {
-          record(store, v, f);
+          record(store, v, f, facts);
           v.domain.inMax(store.level, v, (int) Math.max(bound, v.min() - 1L));
         }
       } else {
         long bound = Math.ceilDiv(limit, wk);
         if (bound > v.min()) {
-          record(store, v, f);
+          record(store, v, f, facts);
           v.domain.inMin(store.level, v, (int) Math.min(bound, v.max() + 1L));
         }
       }
     }
   }
 
-  private void record(Store store, IntVar v, LinearForm f) {
+  private void record(Store store, IntVar v, LinearForm f, boolean facts) {
     prunings++;
     deducedVar.add(v);
     deducedForm.add(f);
+    deducedFacts.add(facts);
     deducedLevel.add(store.level);
   }
 
@@ -2296,6 +2323,7 @@ public class LinearRelaxation extends Constraint
     }
     deducedVar.subList(k, deducedVar.size()).clear();
     deducedForm.subList(k, deducedForm.size()).clear();
+    deducedFacts.subList(k, deducedFacts.size()).clear();
     deducedLevel.subList(k, deducedLevel.size()).clear();
   }
 
@@ -2304,7 +2332,7 @@ public class LinearRelaxation extends Constraint
     IntVar v = trail.variable(entry);
     int mark = out.size();
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
-      if (deducedVar.get(k) == v) {
+      if (deducedVar.get(k) == v && !deducedFacts.get(k)) {
         if (deducedForm.get(k).explain(trail, entry, out)) {
           return true;
         }
@@ -2316,19 +2344,19 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return failureForm != null && failureForm.explainFailure(trail, out);
+    return failureForm != null && !failureFacts && failureForm.explainFailure(trail, out);
   }
 
   @Override
   public LinearForm failureForm() {
-    return failureForm;
+    return failureFacts ? null : failureForm;
   }
 
   @Override
   public List<LinearForm> reasonForms(IntVar x) {
     List<LinearForm> forms = new ArrayList<>();
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
-      if (deducedVar.get(k) == x) {
+      if (deducedVar.get(k) == x && !deducedFacts.get(k)) {
         forms.add(deducedForm.get(k));
       }
     }
