@@ -2117,6 +2117,20 @@ Version 5.0 (unreleased)
      The detector no longer aborts on a bool_lin_eq whose right-hand
      side is a variable.
 
+136. The LP relaxation (--lp) merges rows that forbid two 0/1 literals
+     together (x + y <= 1, also stated as x + y - one <= 0 over a fixed
+     variable, or x - y <= 0) into rows over cliques of such literals,
+     on objective models. Pairwise rows let the LP take half of each set
+     of shifts that share a time; the clique row takes one.
+     roster-shifts-bool small (Challenge 2023): 25,803 rows become 1,791,
+     the root bound is the optimum 5,281, and the proof takes 6 s
+     (default) and 21 s (-f), where 60 s did not prove it before. Before,
+     its 25,803 rows were over the size cap of the sparse simplex and the
+     model got no LP at all. roster-shifts-bool large: bound 5,941,525 to
+     56,931 (best known 56,378). The rows change the LP of 8 of the 220
+     wide-set instances, with the same results in both modes. Off:
+     -Dorg.jacop.lp.pairCliques=false; statistic lpPairCliques.
+
 Version 4.11
 =============
 

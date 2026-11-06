@@ -352,6 +352,84 @@ class LinearRelaxationTest {
     assertThat(cost.min()).isEqualTo(n / 2);
   }
 
+  // shifts that overlap pairwise: the pair rows x_i + x_j <= 1 allow half of each set of shifts
+  // that
+  // share a time in the LP, the clique rows of those sets 1 (the graph of intervals is perfect, so
+  // the bound is the optimum); some pairs are stated over a fixed variable, x_i + x_j - one <= 0,
+  // and some over a negated literal, x_i - y <= 0 with y = 1 - x_j
+  @Test
+  void mergesThePairsOfConflictingShiftsIntoCliques() {
+    int[][] shifts = {{0, 4}, {1, 5}, {2, 6}, {3, 8}, {5, 9}, {6, 10}, {7, 12}, {9, 13}, {11, 14}};
+    int[] value = {3, 2, 4, 5, 2, 3, 4, 2, 3};
+    Store store = new Store();
+    int n = shifts.length;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new LinearInt(new IntVar[] {x[8], y}, new int[] {1, 1}, "==", 1));
+    int pairs = 0;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (shifts[i][0] < shifts[j][1] && shifts[j][0] < shifts[i][1]) {
+          IntVar[] row;
+          int[] w;
+          int side;
+          if (j == 8) {
+            row = new IntVar[] {x[i], y};
+            w = new int[] {1, -1};
+            side = 0;
+          } else if (pairs % 2 == 0) {
+            row = new IntVar[] {x[i], x[j], one};
+            w = new int[] {1, 1, -1};
+            side = 0;
+          } else {
+            row = new IntVar[] {x[i], x[j]};
+            w = new int[] {1, 1};
+            side = 1;
+          }
+          store.impose(new LinearInt(row, w, "<=", side));
+          pairs++;
+        }
+      }
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 100);
+    IntVar[] all = Arrays.copyOf(x, n + 1);
+    all[n] = cost;
+    int[] w = Arrays.copyOf(value, n + 1);
+    w[n] = -1;
+    store.impose(new LinearInt(all, w, "==", 0));
+    // the optimum, by enumeration
+    int best = 0;
+    for (int mask = 0; mask < 1 << n; mask++) {
+      boolean ok = true;
+      int sum = 0;
+      for (int i = 0; i < n && ok; i++) {
+        if ((mask >> i & 1) == 1) {
+          sum += value[i];
+          for (int j = i + 1; j < n; j++) {
+            if ((mask >> j & 1) == 1
+                && shifts[i][0] < shifts[j][1]
+                && shifts[j][0] < shifts[i][1]) {
+              ok = false;
+            }
+          }
+        }
+      }
+      if (ok) {
+        best = Math.max(best, sum);
+      }
+    }
+    LinearRelaxation r = LinearRelaxation.of(store, cost, true);
+    assertThat(r).isNotNull();
+    // PC assertThat(r.pairCliques).isPositive();
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    assertThat(cost.max()).isEqualTo(best);
+  }
+
   // rows x_i + x_(i+1) <= 3 over a chain of m + 1 variables
   private static LinearRelaxation chain(int m) {
     Store store = new Store();
