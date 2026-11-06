@@ -2286,6 +2286,7 @@ public final class RevisedDualSimplex {
   // the bounds as given while they are perturbed, or null
   private double[] savedLo;
   private double[] savedHi;
+  private boolean boundsPerturbed;
 
   // the status of a primal solve that hands over to the dual simplex
   private static final int DUAL = -2;
@@ -2301,25 +2302,28 @@ public final class RevisedDualSimplex {
   private static final double BOUND_PERTURBATION =
       Double.parseDouble(System.getProperty("org.jacop.jalp.boundPerturbation", "5e-6"));
 
-  // widens each finite bound of the columns by a small random amount: the current point stays
-  // within the bounds, and degenerate basic columns move off theirs with the nonbasic ones
+  // widens the finite bounds by small random amounts, except the bound a nonbasic column is at:
+  // the point stays where it is, and the basic columns at their bounds move off them
   private void perturbBounds() {
-    savedLo = boundLo.clone();
-    savedHi = boundHi.clone();
+    boundsPerturbed = true;
+    if (savedLo == null) {
+      savedLo = boundLo.clone();
+      savedHi = boundHi.clone();
+    }
     Random rnd = new Random(seed + totalPivots);
     for (int j = 0; j < cols; j++) {
       if (boundLo[j] == boundHi[j]) {
         continue;
       }
-      if (boundLo[j] != Double.NEGATIVE_INFINITY) {
+      boolean basic = row[j] >= 0;
+      if (boundLo[j] != Double.NEGATIVE_INFINITY && (basic || upper[j])) {
         boundLo[j] -= BOUND_PERTURBATION * (1 + rnd.nextDouble()) * (1 + Math.abs(boundLo[j]));
       }
-      if (boundHi[j] != Double.POSITIVE_INFINITY) {
+      if (boundHi[j] != Double.POSITIVE_INFINITY && (basic || !upper[j])) {
         boundHi[j] += BOUND_PERTURBATION * (1 + rnd.nextDouble()) * (1 + Math.abs(boundHi[j]));
       }
       workingBounds(j);
     }
-    updateBeta();
   }
 
   // moves the bounds of the basic columns just outside them to their values (bound shifting),
@@ -2347,6 +2351,7 @@ public final class RevisedDualSimplex {
     System.arraycopy(savedHi, 0, boundHi, 0, cols);
     savedLo = null;
     savedHi = null;
+    boundsPerturbed = false;
     for (int j = 0; j < cols; j++) {
       workingBounds(j);
     }
@@ -2492,7 +2497,7 @@ public final class RevisedDualSimplex {
         primalRefactor();
         wasPhaseOne = false;
       }
-      if (degenerate >= DEGENERATE_RUN && savedLo == null) {
+      if (degenerate >= DEGENERATE_RUN && !boundsPerturbed) {
         perturbBounds();
         degenerate = 0;
       }
