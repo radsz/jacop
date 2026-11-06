@@ -536,24 +536,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     long start = timer.getCpuTime();
-    // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
-    // linear constraints are split into block sums: the relaxation gets the clauses as rows and
-    // the blocks substituted back, so it has the rows of the model as without --lcg
-    List<LinearForm> clauses = new ArrayList<>();
-    if (options.lcg()) {
-      for (IntVar[][] clause : sat.collectedClauses()) {
-        clauses.add(clauseRow(clause[0], clause[1]));
-      }
-    }
-    // the cliques of the tables, over columns of their values that the relaxation alone has; only
-    // for an objective, whose bound they raise
     TableCliques.Result cliques = null;
-    if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
-      cliques = TableCliques.rows(dictionary.tables());
-      clauses.addAll(cliques.rows());
+    if (options.proof() != null) {
+      // a proof derives each deduction from the lines of the rows it combines: the rows of the
+      // linear constraints only, with no clause rows, cliques, substitution or cuts
+      linearRelaxation = LinearRelaxation.ofModel(store, objective, maximize, options.lpSimplex());
+    } else {
+      // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
+      // linear constraints are split into block sums: the relaxation gets the clauses as rows and
+      // the blocks substituted back, so it has the rows of the model as without --lcg
+      List<LinearForm> clauses = new ArrayList<>();
+      if (options.lcg()) {
+        for (IntVar[][] clause : sat.collectedClauses()) {
+          clauses.add(clauseRow(clause[0], clause[1]));
+        }
+      }
+      // the cliques of the tables, over columns of their values that the relaxation alone has;
+      // only for an objective, whose bound they raise
+      if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
+        cliques = TableCliques.rows(dictionary.tables());
+        clauses.addAll(cliques.rows());
+      }
+      linearRelaxation =
+          LinearRelaxation.of(
+              store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     }
-    linearRelaxation =
-        LinearRelaxation.of(store, objective, maximize, clauses, splitSums(), options.lpSimplex());
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
     }
@@ -2067,6 +2074,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
+    }
+    if (!free
+        && annotated != null
+        && !"activity".equals(options.freeConfig("fixed-completion", "output"))) {
+      // after the annotation, the output variables in input order, lower half first, as the
+      // complementary search of fixed search without LCG
+      DefaultSearchVars out = new DefaultSearchVars(dictionary);
+      out.outputVars();
+      List<IntVar> rest = new ArrayList<>();
+      for (IntVar v : out.getIntVars()) {
+        if (!v.singleton()) {
+          rest.add(v);
+        }
+      }
+      for (IntVar v : out.getBoolVars()) {
+        if (!v.singleton()) {
+          rest.add(v);
+        }
+      }
+      if (!rest.isEmpty()) {
+        annotated =
+            new SequenceSelect(
+                List.of(
+                    annotated,
+                    new SplitSelect<>(rest.toArray(new IntVar[0]), null, new IndomainMiddle<>())));
+      }
     }
     // decisions from the solution of the linear relaxation: on, off, or auto, on when the
     // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
