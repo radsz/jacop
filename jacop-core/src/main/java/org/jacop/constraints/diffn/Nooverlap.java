@@ -82,6 +82,10 @@ public class Nooverlap extends Constraint
 
   boolean doAreaCheck = true;
 
+  // doAreaCheck holds when this many times the minimum area of the last rectangle and those that
+  // may overlap it exceeds its space; Diffn's dual feasible functions can fail below the area
+  int areaCheckFactor = 1;
+
   // bounds of the rectangles per dimension, read again whenever a domain changed (see syncBounds)
   int[][] est;
   int[][] lst;
@@ -633,7 +637,7 @@ public class Nooverlap extends Constraint
       }
     }
 
-    doAreaCheck = rSpace < minArea;
+    doAreaCheck = rSpace < areaCheckFactor * minArea;
   }
 
   // the flag energyCheck(r, rects) sets, for a rectangle that it would not fail
@@ -643,7 +647,7 @@ public class Nooverlap extends Constraint
     for (int j = rects.nextSetBit(0); j >= 0; j = rects.nextSetBit(j + 1)) {
       minArea += (long) rectangle[j].getLength(X).min() * rectangle[j].getLength(Y).min();
     }
-    return rSpace < minArea;
+    return rSpace < areaCheckFactor * minArea;
   }
 
   // registers the constraint in the constraint store

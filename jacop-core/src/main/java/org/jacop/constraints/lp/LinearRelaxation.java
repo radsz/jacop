@@ -457,8 +457,7 @@ public class LinearRelaxation extends Constraint
   private LinearForm[] rootForms = new LinearForm[0];
   // the certificate of each root form, for a proof, or null
   private Certificate[] rootCertificates = new Certificate[0];
-
-  // the facts behind the LP-only column bounds of each root form
+  // the LP-only column facts of each root form, for its explanation
   private int[][] rootFacts = new int[0][];
   private long[] solvedLo;
   private long[] solvedHi;
@@ -1789,8 +1788,8 @@ public class LinearRelaxation extends Constraint
         for (int k = 0; k < forms.length; k++) {
           if (forms[k] != null) {
             kept.add(forms[k]);
-            keptFacts.add(facts[k]);
             keptCertificates.add(certified(forms[k], used[k], k == 0));
+            keptFacts.add(facts[k]);
           }
         }
         rootForms = kept.toArray(new LinearForm[0]);

@@ -2813,6 +2813,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .timeLimit(Duration.ofMillis(budget))
             .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
+            .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (costVar instanceof IntVar c) {
