@@ -51,6 +51,9 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.util.DualFeasibleFunctions;
 
 /**
  * Diffn constraint assures that any two rectangles from a vector of rectangles does not overlap in
@@ -91,6 +94,22 @@ public class Diffn extends Nooverlap {
       (o1, o2) -> o1.date() == o2.date() ? o1.type() - o2.type() : o1.date() - o2.date();
   private boolean[] inProfile;
   private final List<Interval> sweepLine = new ArrayList<>();
+
+  // the dual feasible functions in the area check: 0 off, 1 when the minimum area of the last
+  // rectangle examined and those that may overlap it exceeds half its space, 2 at every fixpoint
+  static final int DFF_OFF = 0;
+  static final int DFF_GATED = 1;
+  static final int DFF_ALWAYS = 2;
+  static final int DFF_MODE = Integer.getInteger("org.jacop.diffn.dff", DFF_GATED);
+  private DualFeasibleFunctions dffs;
+  private int[] dffWidth = new int[0];
+  private int[] dffHeight = new int[0];
+  private int[] window = new int[0];
+  private int windowCount;
+
+  // whether a failure of the area check is explained by the rectangles in the window only
+  static final boolean AREA_REASONS =
+      !"false".equals(System.getProperty("org.jacop.diffn.areaReasons"));
 
   /**
    * It specifies a diff constraint.
@@ -209,11 +228,32 @@ public class Diffn extends Nooverlap {
 
     if (store.propagationHasOccurred) {
       store.addChanged(this);
-    } else if (doAreaCheck) {
+    } else if (doAreaCheck || DFF_MODE == DFF_ALWAYS) {
       areaCheck();
     }
   }
 
+  @Override
+  public void impose(Store store) {
+    super.impose(store);
+    if (DFF_MODE == DFF_GATED) {
+      // Steinberg's theorem: below half the space the rectangles always fit
+      areaCheckFactor = 2;
+    }
+  }
+
+  /**
+   * The area check. For each rectangle k, the window is the space k may occupy, and every other
+   * rectangle j must cover a part of the window of at least {@code partialCommonArea(k, j, X)} by
+   * {@code partialCommonArea(k, j, Y)}. These parts and k itself must be packed in the window
+   * without overlap. The check fails when their area exceeds the window's, or when a pair of the
+   * dual feasible functions of Fekete and Schepers and of Carlier, Clautiaux and Moukrim shows that
+   * they cannot be packed (S. P. Fekete and J. Schepers, A general framework for bounds for
+   * higher-dimensional orthogonal packing problems, Mathematical Methods of Operations Research
+   * 60(2):311-329, 2004; see {@link DualFeasibleFunctions} for the functions and the other
+   * references). The failure depends on the bounds of k and of the rectangles with a part in the
+   * window only, which explain it under LCG.
+   */
   private void areaCheck() {
     startPass(AREA_PASS);
     int n = rectangle.length;
@@ -230,17 +270,111 @@ public class Diffn extends Nooverlap {
         read = true;
       }
       bounds(k);
-      int commonArea = 0;
       for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
         bounds(j);
-        int partialCommonArea = partialCommonArea(k, j, 0) * partialCommonArea(k, j, 1);
-        commonArea += partialCommonArea;
       }
-      if (commonArea + lMin[X][k] * lMin[Y][k]
-          > (lst[X][k] + lMax[X][k] - est[X][k]) * (lst[Y][k] + lMax[Y][k] - est[Y][k])) {
+      if (areaFails(k, o)) {
         throw Store.failException;
       }
     }
+  }
+
+  /**
+   * Whether the area check fails for rectangle k and the rectangles o, on the bounds in est, lst,
+   * lMin and lMax. The rectangles with a part in k's window are left in window[1..windowCount),
+   * after k in window[0].
+   */
+  private boolean areaFails(int k, BitSet o) {
+    int n = rectangle.length;
+    if (window.length < n + 1) {
+      window = new int[n + 1];
+      dffWidth = new int[n + 1];
+      dffHeight = new int[n + 1];
+    }
+    int width = lst[X][k] + lMax[X][k] - est[X][k];
+    int height = lst[Y][k] + lMax[Y][k] - est[Y][k];
+    int m = 0;
+    window[m++] = k;
+    long commonArea = (long) lMin[X][k] * lMin[Y][k];
+    for (int j = o.nextSetBit(0); j >= 0; j = o.nextSetBit(j + 1)) {
+      int px = partialCommonArea(k, j, 0);
+      int py = partialCommonArea(k, j, 1);
+      if (px > 0 && py > 0) {
+        commonArea += (long) px * py;
+        window[m++] = j;
+      }
+    }
+    windowCount = m;
+    if (commonArea > (long) width * height) {
+      return true;
+    }
+    if (DFF_MODE == DFF_OFF) {
+      return false;
+    }
+    dffWidth[0] = lMin[X][k];
+    dffHeight[0] = lMin[Y][k];
+    for (int i = 1; i < m; i++) {
+      dffWidth[i] = Math.min(partialCommonArea(k, window[i], 0), width);
+      dffHeight[i] = Math.min(partialCommonArea(k, window[i], 1), height);
+    }
+    return dffs().packingFails(width, height, dffWidth, dffHeight, m);
+  }
+
+  private DualFeasibleFunctions dffs() {
+    if (dffs == null) {
+      dffs = new DualFeasibleFunctions();
+    }
+    return dffs;
+  }
+
+  /**
+   * Explains a failure by the pairwise rule as {@link Nooverlap} does, or else, when the area check
+   * fails for a rectangle k on the bounds at the failure, by the bounds of k and of the rectangles
+   * with a part in its window: the origins' bounds and the lengths' minimums, and k's maximum
+   * lengths. Other failures (the profile) are explained by all bounds.
+   */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != Diffn.class || !AREA_REASONS || est == null) {
+      return super.explainFailure(trail, out);
+    }
+    int mark = out.size();
+    if (DiffnExplanation.explainFailure(trail, rectangle, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    int position = trail.size();
+    int n = rectangle.length;
+    for (int i = 0; i < n; i++) {
+      Rectangle r = rectangle[i];
+      for (int d = 0; d < 2; d++) {
+        est[d][i] = trail.minBefore(r.origin[d], position);
+        lst[d][i] = trail.maxBefore(r.origin[d], position);
+        lMin[d][i] = trail.minBefore(r.length[d], position);
+        lMax[d][i] = trail.maxBefore(r.length[d], position);
+      }
+    }
+    // the bounds now differ from those read by bounds(i)
+    invalidateBounds();
+    for (int k = 0; k < n; k++) {
+      BitSet o = overlapping[k].value();
+      if (!o.isEmpty() && areaFails(k, o)) {
+        for (int i = 0; i < windowCount; i++) {
+          Rectangle r = rectangle[window[i]];
+          for (int d = 0; d < 2; d++) {
+            trail.addLowerBound(r.origin[d], position, out);
+            trail.addUpperBound(r.origin[d], position, out);
+            trail.addLowerBound(r.length[d], position, out);
+            if (i == 0) {
+              trail.addUpperBound(r.length[d], position, out);
+            }
+          }
+        }
+        out.sortUnique(mark);
+        return true;
+      }
+    }
+    return super.explainFailure(trail, out);
   }
 
   // the part of rectangle s that must lie within the extent of rectangle r in dimension d
