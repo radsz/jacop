@@ -190,39 +190,6 @@ public final class LinearExplanation {
   }
 
   /**
-   * Adds the removals, before the position, of the values of from..to that y had in its root
-   * domain; false when there are more than 4096 such values.
-   */
-  private static boolean removalsBetween(
-      AtomicTrail trail, int position, IntVar y, long from, long to, EntryList out) {
-    IntDomain root = trail.rootDomain(y);
-    long last = Math.min(to, root.max());
-    long u = Math.max(from, root.min());
-    if (u > last) {
-      return true;
-    }
-    if (!root.contains((int) u)) {
-      int next = root.nextValue((int) u);
-      if (next <= u) {
-        return true;
-      }
-      u = next;
-    }
-    for (int checked = 0; u <= last; checked++) {
-      if (checked >= 4096) {
-        return false;
-      }
-      trail.excludedBefore(y, (int) u, position, out);
-      int next = root.nextValue((int) u);
-      if (next <= u) {
-        break;
-      }
-      u = next;
-    }
-    return true;
-  }
-
-  /**
    * Adds the removals of the values of from..to that y had in its root domain, which a bound
    * skipped; false when one of them was still in y's domain before the entry, or there are more
    * than 4096. The holes of the root domain need no atom, so a variable over sparse values (cubes)
@@ -230,6 +197,22 @@ public final class LinearExplanation {
    */
   private static boolean holesBetween(
       AtomicTrail trail, int entry, IntVar y, long from, long to, EntryList out) {
+    return removalsBetween(trail, entry, y, from, to, true, out);
+  }
+
+  /**
+   * Adds the removals, before the entry, of the values of from..to that y had in its root domain;
+   * false when there are more than 4096 such values or, when {@code allRemoved} is set, one of them
+   * was still in y's domain before the entry.
+   */
+  private static boolean removalsBetween(
+      AtomicTrail trail,
+      int entry,
+      IntVar y,
+      long from,
+      long to,
+      boolean allRemoved,
+      EntryList out) {
     IntDomain root = trail.rootDomain(y);
     long last = Math.min(to, root.max());
     long u = Math.max(from, root.min());
@@ -244,7 +227,7 @@ public final class LinearExplanation {
       u = next;
     }
     for (int checked = 0; u <= last; checked++) {
-      if (checked >= 4096 || !trail.excludedBefore(y, (int) u, entry, out)) {
+      if (checked >= 4096 || !trail.excludedBefore(y, (int) u, entry, out) && allRemoved) {
         return false;
       }
       int next = root.nextValue((int) u);
@@ -356,6 +339,8 @@ public final class LinearExplanation {
     long[] keys = new long[n];
     long[] lows = new long[n];
     long[] highs = new long[n];
+    long[] restHighs = new long[n];
+    long[] restLows = new long[n];
     int m = 0;
     try {
       long smallest = 0;
@@ -379,6 +364,8 @@ public final class LinearExplanation {
         // the others leave w * x between restLow and restHigh
         long restHigh = Math.subtractExact(c, Math.subtractExact(smallest, lows[i]));
         long restLow = Math.subtractExact(c, Math.subtractExact(largest, highs[i]));
+        restHighs[i] = restHigh;
+        restLows[i] = restLow;
         long from = w > 0 ? -Math.floorDiv(-restLow, w) : -Math.floorDiv(restHigh, -w);
         long to = w > 0 ? Math.floorDiv(restHigh, w) : Math.floorDiv(-restLow, -w);
         lows[i] = from;
@@ -415,18 +402,8 @@ public final class LinearExplanation {
             Math.multiplyExact(w, w > 0 ? Math.addExact(to, 1) : Math.subtractExact(from, 1));
         long below =
             Math.multiplyExact(w, w > 0 ? Math.subtractExact(from, 1) : Math.addExact(to, 1));
-        long restHigh = c;
-        long restLow = c;
-        for (int j = 0; j < n; j++) {
-          if (j != i) {
-            long lo = Math.multiplyExact(weights[j], trail.minBefore(vars[j], now));
-            long hi = Math.multiplyExact(weights[j], trail.maxBefore(vars[j], now));
-            restHigh = Math.subtractExact(restHigh, Math.min(lo, hi));
-            restLow = Math.subtractExact(restLow, Math.max(lo, hi));
-          }
-        }
-        long upperSlack = Math.subtractExact(Math.subtractExact(above, 1), restHigh);
-        long lowerSlack = Math.subtractExact(Math.subtractExact(restLow, 1), below);
+        long upperSlack = Math.subtractExact(Math.subtractExact(above, 1), restHighs[i]);
+        long lowerSlack = Math.subtractExact(Math.subtractExact(restLows[i], 1), below);
         addLiftedBounds(trail, now, vars, weights, i, null, true, upperSlack, out);
         addLiftedBounds(trail, now, vars, weights, i, null, false, lowerSlack, out);
       } catch (ArithmeticException overflow) {
@@ -448,7 +425,8 @@ public final class LinearExplanation {
       int max = trail.maxBefore(x, now);
       trail.addLowerBound(x, now, out);
       trail.addUpperBound(x, now, out);
-      if (!removalsBetween(trail, now, x, Math.max(lows[i], min), Math.min(highs[i], max), out)) {
+      if (!removalsBetween(
+          trail, now, x, Math.max(lows[i], min), Math.min(highs[i], max), false, out)) {
         out.truncate(mark);
         return false;
       }
