@@ -233,24 +233,29 @@ public final class IntLattice {
     int k = 1;
     int steps = 0;
     while (k < d) {
-      for (int j = k - 1; j >= 0; j--) {
-        double q = Math.rint(mu[k][j]);
-        if (Math.abs(q) > 1e15) {
+      // size reduction, repeated since a large coefficient is only rounded to double precision
+      for (int round = 0; round < 64; round++) {
+        boolean changed = false;
+        for (int j = k - 1; j >= 0; j--) {
+          double q = Math.rint(mu[k][j]);
+          if (q != 0) {
+            changed = true;
+            BigInteger bq = new java.math.BigDecimal(q).toBigInteger();
+            for (int c = 0; c < n; c++) {
+              basis[k][c] = basis[k][c].subtract(bq.multiply(basis[j][c]));
+            }
+            for (int i = 0; i < j; i++) {
+              mu[k][i] -= q * mu[j][i];
+            }
+            mu[k][j] -= q;
+          }
+        }
+        if (!orthogonalise(basis, star, norms, mu, k)) {
           return false;
         }
-        if (q != 0) {
-          BigInteger bq = BigInteger.valueOf((long) q);
-          for (int c = 0; c < n; c++) {
-            basis[k][c] = basis[k][c].subtract(bq.multiply(basis[j][c]));
-          }
-          for (int i = 0; i < j; i++) {
-            mu[k][i] -= q * mu[j][i];
-          }
-          mu[k][j] -= q;
+        if (!changed) {
+          break;
         }
-      }
-      if (!orthogonalise(basis, star, norms, mu, k)) {
-        return false;
       }
       if (norms[k] >= (0.99 - mu[k][k - 1] * mu[k][k - 1]) * norms[k - 1]) {
         k++;
@@ -339,25 +344,32 @@ public final class IntLattice {
     if (!orthogonalise(basis, star, norms, mu, 0)) {
       return;
     }
-    double[] t = new double[n];
-    for (int c = 0; c < n; c++) {
-      t[c] = x0[c].doubleValue() - target[c];
-    }
-    for (int k = d - 1; k >= 0; k--) {
-      if (norms[k] == 0) {
-        continue;
-      }
-      double dot = 0;
+    for (int pass = 0; pass < 8; pass++) {
+      double[] t = new double[n];
       for (int c = 0; c < n; c++) {
-        dot += t[c] * star[k][c];
+        t[c] = x0[c].doubleValue() - target[c];
       }
-      double q = Math.rint(dot / norms[k]);
-      if (q != 0 && Math.abs(q) < 1e15) {
-        BigInteger bq = BigInteger.valueOf((long) q);
-        for (int c = 0; c < n; c++) {
-          x0[c] = x0[c].subtract(bq.multiply(basis[k][c]));
-          t[c] -= q * basis[k][c].doubleValue();
+      boolean moved = false;
+      for (int k = d - 1; k >= 0; k--) {
+        if (norms[k] == 0) {
+          continue;
         }
+        double dot = 0;
+        for (int c = 0; c < n; c++) {
+          dot += t[c] * star[k][c];
+        }
+        double q = Math.rint(dot / norms[k]);
+        if (q != 0 && Double.isFinite(q)) {
+          moved = true;
+          BigInteger bq = new java.math.BigDecimal(q).toBigInteger();
+          for (int c = 0; c < n; c++) {
+            x0[c] = x0[c].subtract(bq.multiply(basis[k][c]));
+            t[c] -= q * basis[k][c].doubleValue();
+          }
+        }
+      }
+      if (!moved) {
+        return;
       }
     }
   }

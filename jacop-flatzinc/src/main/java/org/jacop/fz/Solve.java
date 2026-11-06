@@ -2076,7 +2076,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
     }
     SelectChoicePoint<? extends Var> annotated =
-        free && "none".equals(interleave) ? null : annotationSelect(annotatedSearch);
+        free && "none".equals(interleave) ? null : latticeFirst(annotationSelect(annotatedSearch));
     if (free && annotated == null && !"none".equals(interleave)) {
       annotated = lcgDefaultSelect(costVar);
     }
@@ -2995,7 +2995,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SelectChoicePoint<? extends Var> annotated =
         "none".equals(interleave) || allSolutions
             ? null
-            : withObjectiveCosts(annotationSelect(annotatedSearch));
+            : withObjectiveCosts(latticeFirst(annotationSelect(annotatedSearch)));
     if (annotated != null) {
       // free search completes what the annotation leaves unfixed
       builder.alternateWith(
@@ -3167,6 +3167,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * The branching of a search annotation, or null when there is none or it cannot be expressed as a
    * selection (priority search).
    */
+  /**
+   * The lattice variables of an Aardal-Hurkens-Lenstra reformulation ({@link
+   * org.jacop.fz.constraints.LinearSystemDetector}) are searched before the annotation, middle
+   * value first, as in their branch and bound.
+   */
+  private SelectChoicePoint<? extends Var> latticeFirst(SelectChoicePoint<? extends Var> select) {
+    List<IntVar> first = new ArrayList<>();
+    for (Var v : dictionary.searchFirst()) {
+      if (v instanceof IntVar x && !x.singleton()) {
+        first.add(x);
+      }
+    }
+    if (first.isEmpty()) {
+      return select;
+    }
+    SelectChoicePoint<IntVar> lattice =
+        new SimpleSelect<>(first.toArray(new IntVar[0]), null, new IndomainMiddle<>());
+    return select == null ? lattice : new SequenceSelect(List.of(lattice, select));
+  }
+
   private SelectChoicePoint<? extends Var> annotationSelect(SearchItem<T> item) {
     if (item == null || item.type() == null) {
       return null;

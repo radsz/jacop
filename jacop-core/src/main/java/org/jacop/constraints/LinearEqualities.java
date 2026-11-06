@@ -38,6 +38,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -93,7 +94,7 @@ public final class LinearEqualities {
 
   private int maxRows = 300;
 
-  private boolean reformulate;
+  private Predicate<List<Row>> reformulate = c -> false;
 
   // the equalities, normalised, by variable index
   private final List<int[]> vars = new ArrayList<>();
@@ -154,7 +155,18 @@ public final class LinearEqualities {
    * @param on true to reformulate the components.
    */
   public void setReformulate(boolean on) {
-    this.reformulate = on;
+    this.reformulate = c -> on;
+  }
+
+  /**
+   * It switches the Aardal-Hurkens-Lenstra reformulation on for the components that a filter
+   * accepts.
+   *
+   * @param filter given the equalities of a component, normalised (divided by their GCD, fixed
+   *     variables moved to the right-hand side), it tells whether to reformulate it.
+   */
+  public void setReformulate(Predicate<List<Row>> filter) {
+    this.reformulate = filter;
   }
 
   /**
@@ -368,9 +380,27 @@ public final class LinearEqualities {
       modulus[global[j]] = mod;
       residue[global[j]] = r.longValueExact();
     }
-    if (reformulate && basis.length > 0) {
+    if (basis.length > 0 && reformulate.test(rowsOf(rows))) {
       reformulate(s, global);
     }
+  }
+
+  private List<Row> rowsOf(List<Integer> rows) {
+    List<Row> out = new ArrayList<>();
+    for (int r : rows) {
+      int[] v = vars.get(r);
+      long[] c = coefs.get(r);
+      IntVar[] x = new IntVar[v.length];
+      int[] a = new int[v.length];
+      for (int k = 0; k < v.length; k++) {
+        x[k] = variables.get(v[k]);
+        a[k] = (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, c[k]));
+      }
+      out.add(
+          new Row(
+              x, a, (int) Math.max(Integer.MIN_VALUE, Math.min(Integer.MAX_VALUE, rhs.get(r)))));
+    }
+    return out;
   }
 
   // x_v = c (b - Σ a_u x_u) with c = ±1: the congruence of the sum

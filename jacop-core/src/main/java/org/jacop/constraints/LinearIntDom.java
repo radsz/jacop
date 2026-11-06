@@ -107,6 +107,21 @@ public class LinearIntDom extends LinearInt {
   /** How the supports of an equality are found, one of the SUMSET_ constants. */
   int sumset = SUMSET_DEFAULT;
 
+  /**
+   * It chooses how the supports of an equality are found, for tests and comparisons.
+   *
+   * @param mode "off" for the enumeration only, "always" for sumsets whenever within their limit,
+   *     anything else for the cheaper of the two.
+   */
+  public void setSumsets(String mode) {
+    sumset =
+        switch (mode) {
+          case "off" -> SUMSET_OFF;
+          case "always" -> SUMSET_ALWAYS;
+          default -> SUMSET_AUTO;
+        };
+  }
+
   /** Statistics: the sumset passes made. */
   long sumsetPasses;
 

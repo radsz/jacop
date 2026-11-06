@@ -54,6 +54,7 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
+import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
@@ -315,6 +316,14 @@ public class Constraints implements ParserTreeConstants {
       // Gauss-Jordan elimination over the parity constraints, redundant; --proof does not encode it
       if (XorSystemDetector.enabled() && options.proof() == null) {
         new XorSystemDetector(support).detect(astTree);
+      }
+
+      // the lattices of the equalities: congruences, and the reformulation of market split
+      // systems; --proof derives neither
+      if (LinearSystemDetector.enabled() && options.proof() == null) {
+        LinearSystemDetector lattice = new LinearSystemDetector(support);
+        lattice.detect(astTree, options.lp());
+        dictionary.searchFirst(lattice.lattice());
       }
 
       support.detectBinPackingCliques();

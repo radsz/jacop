@@ -2464,6 +2464,44 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
+160. Lattice methods for linear equalities.
+     - LinearIntDom finds the supports of an equality by bitset sumsets
+       when that is estimated cheaper than enumerating them: a forward
+       pass of shifts gives the reachable partial sums after each
+       variable, a backward pass keeps those that still reach the
+       right-hand side, in O(sum |D_i| * W / 64) for a window of W
+       partial sums. It stays domain consistent on long equalities with
+       small coefficients, where the enumeration (product of the domain
+       sizes up to 10^7) fell back to bounds. This is the knapsack dynamic
+       program of Trick (Annals of OR 118, 2003) and the sumset view of
+       subset sum of Koiliaris and Xu (SODA 2017; ACM TALG 15(3), 2019)
+       and Bringmann (SODA 2017), on bitsets rather than FFT.
+       -Dorg.jacop.constraints.LinearIntDom.sumset=off|auto|always.
+     - New class LinearEqualities and org.jacop.util.IntLattice: the
+       integer solutions of a system A x = b as x0 plus a lattice basis,
+       by a column Hermite normal form (Hermite 1851; Kannan and Bachem,
+       SIAM J. Computing 8(4), 1979), and LLL reduction (Lenstra, Lenstra
+       and Lovasz, Math. Annalen 261, 1982) with floating-point
+       Gram-Schmidt as in Schnorr and Euchner (Math. Programming 66,
+       1994). The FlatZinc front end (LinearSystemDetector) gives it the
+       int_lin_eq constraints: each is divided by the GCD of its
+       coefficients (infeasible when it does not divide the constant),
+       equalities that only define a variable are set aside, and each
+       remaining component is solved over the integers, which proves it
+       infeasible or gives every variable a congruence x = x0 (mod g)
+       whose other values are removed; the variables the set-aside
+       equalities define get the congruence of their sum.
+     - Market split systems (at least two equalities of five or more
+       variables, a coefficient of at least 10, domains of at most 100
+       values) are reformulated as Aardal, Hurkens and Lenstra do (Math.
+       of OR 25(3), 2000): x = x0 + sum_k lambda_k q_k over the reduced
+       basis, with x0 moved near the centre of the box (Babai,
+       Combinatorica 6, 1986). The linear relaxation takes these rows in
+       and lambda is searched first, last basis vector first, middle
+       value first. RESULTS_MS
+       -Dorg.jacop.fz.lattice=false turns the detector off;
+       -Dorg.jacop.fz.latticeReformulate=auto|on|off. RESULTS_WIDE
+
 Version 4.11
 =============
 
