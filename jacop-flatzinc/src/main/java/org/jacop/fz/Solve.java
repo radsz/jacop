@@ -556,15 +556,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
-      // the cliques of the tables, over columns of their values that the relaxation alone has;
-      // only for an objective, whose bound they raise
+      // the cliques and the convex hulls of the tables, over columns of their values that the
+      // relaxation alone has; only for an objective, whose bound they raise. They are tried at the
+      // first solve with a share of the size cap of their own: table-layout has 172 rows of its
+      // own and 2,702 table rows, which raise its root bound from 1,344 to 1,427
       if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
-        cliques = TableCliques.rows(dictionary.tables());
-        clauses.addAll(cliques.rows());
+        cliques =
+            TableCliques.rows(
+                dictionary.tables(),
+                options.lcg() ? implications(sat.collectedClauses()) : Map.of());
       }
       linearRelaxation =
           LinearRelaxation.of(
-              store, objective, maximize, clauses, splitSums(), options.lpSimplex());
+              store,
+              objective,
+              maximize,
+              clauses,
+              cliques == null ? List.of() : cliques.all(),
+              splitSums(),
+              options.lpSimplex());
     }
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
@@ -579,10 +589,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
                       + cliques.rows().size()
+                      + "\n%%%mzn-stat: lpTableHulls="
+                      + cliques.hulls().size()
                       + "\n%%%mzn-stat: lpTableColumns="
-                      + cliques.columns())
+                      + (cliques.columns() + cliques.hullColumns()))
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  // the implications z -> a of the binary clauses (not z or a) given to the SAT solver
+  private static Map<IntVar, List<IntVar>> implications(List<IntVar[][]> clauses) {
+    Map<IntVar, List<IntVar>> implied = new IdentityHashMap<>();
+    for (IntVar[][] clause : clauses) {
+      if (clause[0].length == 1 && clause[1].length == 1) {
+        implied.computeIfAbsent(clause[1][0], k -> new ArrayList<>()).add(clause[0][0]);
+      }
+    }
+    return implied;
   }
 
   // the block sums of the split linear constraints that are still variables
@@ -657,6 +680,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cutBound
             + "\n%%%mzn-stat: lpCapacityCuts="
             + r.capacityCuts
+            + "\n%%%mzn-stat: lpEnergyCuts="
+            + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
             + "\n%%%mzn-stat: lpBaseBound="

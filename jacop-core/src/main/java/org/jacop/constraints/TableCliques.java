@@ -33,8 +33,10 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +66,17 @@ import org.jacop.lcg.LinearForm;
  * imposed on the store: the columns live in the relaxation only, so rows that do not help cost the
  * search nothing.
  *
+ * <p>Each table also gets the rows of its convex hull over a column {@code l_t} per tuple t still
+ * allowed by the domains (the formulation of a disjunction of points by Balas, "Disjunctive
+ * programming", Annals of Discrete Mathematics 5, 1979, as used for tables by Bergman, Cire, van
+ * Hoeve and Hooker, "Decision Diagrams for Optimization", Springer 2016, section 2.2): {@code sum
+ * l_t = 1}, {@code sum of l_t over the tuples with x = v = b_{x,v}} for a variable with a small
+ * domain, and {@code x = sum t_x l_t} for a variable with a large one, such as the result of a
+ * two-dimensional element. When the values of one variable with a small domain tell the tuples
+ * apart, as the index of elements merged into a table, its own columns are the tuple columns.
+ * Otherwise a tuple column is a further LP-only column bounded by the domain of one variable of the
+ * table. {@code -Dorg.jacop.lp.tableEncodings=false} leaves these rows out.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -83,6 +96,16 @@ public final class TableCliques {
 
   // the most tuples times pairs read from one table
   private static final long MAX_PROJECTION = 2_000_000;
+
+  /** Whether the tables get the rows of their convex hull over tuple columns. */
+  static final boolean TABLE_ENCODINGS =
+      !"false".equals(System.getProperty("org.jacop.lp.tableEncodings"));
+
+  /** The most tuple columns over all tables; a table that would go beyond gets no hull rows. */
+  static final int MAX_TUPLE_COLUMNS = Integer.getInteger("org.jacop.lp.tableTupleColumns", 20_000);
+
+  /** The most tuples of a table that gets hull rows. */
+  static final int MAX_TUPLES = Integer.getInteger("org.jacop.lp.tableTuples", 2_000);
 
   private TableCliques() {}
 
@@ -111,12 +134,28 @@ public final class TableCliques {
   }
 
   /**
-   * The rows: the cliques and the encodings of the variables that got new columns.
+   * The rows: the cliques and the encodings of the variables that got new columns, and the convex
+   * hulls of the tables with the encodings of the further columns they need.
    *
-   * @param rows the rows
-   * @param columns the number of new columns ({@link LpColumn})
+   * @param rows the rows of the cliques and the encodings of their new value columns
+   * @param columns the number of new value columns of the cliques ({@link LpColumn})
+   * @param hulls the rows of the hulls, with the encodings of the value columns they add
+   * @param hullColumns the number of new columns of the hulls, tuple and value columns
    */
-  public record Result(List<LinearForm> rows, int columns) {}
+  public record Result(
+      List<LinearForm> rows, int columns, List<LinearForm> hulls, int hullColumns) {
+
+    /**
+     * Returns the rows of the cliques and of the hulls.
+     *
+     * @return the rows
+     */
+    public List<LinearForm> all() {
+      List<LinearForm> all = new ArrayList<>(rows);
+      all.addAll(hulls);
+      return all;
+    }
+  }
 
   // two variables of a table, by position
   private record Pair(Table table, int i, int j) {}
@@ -130,6 +169,37 @@ public final class TableCliques {
    * @return the rows and the count of new columns
    */
   public static Result rows(List<Table> tables) {
+    return rows(tables, Map.of());
+  }
+
+  /**
+   * Returns the rows of {@link #rows(List)}, with the implications {@code z -> a} between Booleans
+   * that the store does not hold as conjunctions, such as the binary clauses given to a SAT solver:
+   * a Boolean that implies values of two or more variables of a table is at most the sum of the
+   * columns of the tuples with those values.
+   *
+   * @param tables the tables
+   * @param implied the Booleans each Boolean implies
+   * @return the rows and the count of new columns
+   */
+  public static Result rows(List<Table> tables, Map<IntVar, List<IntVar>> implied) {
+    Columns columns = new Columns(tables, implied);
+    List<LinearForm> rows = new ArrayList<>();
+    cliques(tables, columns, rows);
+    List<LinearForm> all = new ArrayList<>(columns.rows);
+    all.addAll(rows);
+    int cliqueColumns = columns.count;
+    // the encodings of the value columns made for the hulls go with them
+    List<LinearForm> hulls = new ArrayList<>();
+    columns.rows = hulls;
+    if (TABLE_ENCODINGS) {
+      hulls(tables, columns, hulls);
+    }
+    return new Result(all, cliqueColumns, hulls, columns.count - cliqueColumns);
+  }
+
+  // the clique rows of the conflicts of the tables
+  private static void cliques(List<Table> tables, Columns cols, List<LinearForm> rows) {
     // the pairs of distinct variables with small domains, still unfixed, of the tables
     List<Pair> used = new ArrayList<>();
     Map<IntVar, Integer> first = new IdentityHashMap<>();
@@ -158,13 +228,13 @@ public final class TableCliques {
           }
           used.add(new Pair(t, i, j));
           if (literals > MAX_LITERALS) {
-            return new Result(List.of(), 0);
+            return;
           }
         }
       }
     }
     if (used.isEmpty()) {
-      return new Result(List.of(), 0);
+      return;
     }
     // literal first(x) + k is x = the k-th value of the domain of x
     int n = literals;
@@ -202,7 +272,7 @@ public final class TableCliques {
       }
     }
     if (!conflicts) {
-      return new Result(List.of(), 0);
+      return;
     }
     for (IntVar x : vars) {
       int fx = first.get(x);
@@ -211,11 +281,9 @@ public final class TableCliques {
         adj[i].clear(i);
       }
     }
-    List<LinearForm> rows = new ArrayList<>();
-    IntVar[] columns = columns(vars, first, value, rows);
-    int made = 0;
-    for (IntVar c : columns) {
-      made += c instanceof LpColumn ? 1 : 0;
+    IntVar[] columns = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      columns[i] = cols.column(owner[i], value[i]);
     }
     int encodingRows = rows.size();
     int[] degree = new int[n];
@@ -257,7 +325,190 @@ public final class TableCliques {
         rows.add(new LinearForm(bs, ones, 1, LinearForm.LE));
       }
     }
-    return new Result(rows, made);
+  }
+
+  // the rows of the convex hull of each table over its tuple columns
+  private static void hulls(List<Table> tables, Columns cols, List<LinearForm> rows) {
+    int made = 0;
+    for (Table t : tables) {
+      IntVar[] x = t.x();
+      int arity = x.length;
+      if (arity < 2 || t.tuples().length > MAX_TUPLES) {
+        continue;
+      }
+      List<int[]> live = new ArrayList<>();
+      for (int[] tuple : t.tuples()) {
+        if (allowed(x, tuple)) {
+          live.add(tuple);
+        }
+      }
+      if (live.size() < 2) {
+        continue;
+      }
+      // a position with a small domain, and one whose values tell the tuples apart
+      int some = -1;
+      int key = -1;
+      for (int j = 0; j < arity; j++) {
+        if (!x[j].singleton() && small(x[j])) {
+          some = some < 0 ? j : some;
+          key = key < 0 && distinct(live, j) ? j : key;
+        }
+      }
+      if (some < 0 || key < 0 && made + live.size() > MAX_TUPLE_COLUMNS) {
+        continue;
+      }
+      int size = live.size();
+      IntVar[] tupleColumn = new IntVar[size];
+      for (int k = 0; k < size; k++) {
+        tupleColumn[k] =
+            key >= 0
+                ? cols.column(x[key], live.get(k)[key])
+                : LpColumn.arc(x[some], live.get(k)[some]);
+      }
+      if (key < 0) {
+        made += size;
+        cols.count += size;
+        long[] ones = new long[size];
+        Arrays.fill(ones, 1);
+        rows.add(new LinearForm(tupleColumn, ones, 1, LinearForm.EQ));
+      }
+      conjunctions(x, live, tupleColumn, cols, rows);
+      for (int j = 0; j < arity; j++) {
+        if (j == key || x[j].singleton()) {
+          continue;
+        }
+        // the values of x_j tie the tuples to other rows over its columns; when the tuples have
+        // columns of their own, which only these rows link, and x_j has no columns yet, its value
+        // is enough (a key's columns, as for the merged elements of table-layout)
+        if (small(x[j]) && (key < 0 || cols.made.containsKey(x[j]))) {
+          valueRows(x[j], j, live, tupleColumn, cols, rows);
+        } else {
+          // x_j = sum of its values in the tuples, weighted by their columns
+          IntVar[] vs = Arrays.copyOf(tupleColumn, size + 1);
+          long[] w = new long[size + 1];
+          for (int k = 0; k < size; k++) {
+            w[k] = live.get(k)[j];
+          }
+          vs[size] = x[j];
+          w[size] = -1;
+          rows.add(new LinearForm(vs, w, 0, LinearForm.EQ));
+        }
+      }
+    }
+  }
+
+  // z <= the sum of the columns of the tuples that agree with the value Booleans [x = v] that z
+  // implies, for each Boolean z that implies values of two or more variables of the table (a
+  // conjunction of their values): z = 1 makes every such x = v, so the tuple of the solution is one
+  // of them
+  private static void conjunctions(
+      IntVar[] x, List<int[]> live, IntVar[] tupleColumn, Columns cols, List<LinearForm> rows) {
+    Map<IntVar, Integer> position = new IdentityHashMap<>();
+    for (int j = 0; j < x.length; j++) {
+      position.put(x[j], j);
+    }
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar xj : x) {
+      for (IntVar b : cols.known.getOrDefault(xj, Map.of()).values()) {
+        for (IntVar z : cols.impliedBy.getOrDefault(b, List.of())) {
+          if (z.singleton() || !seen.add(z)) {
+            continue;
+          }
+          int[] value = new int[x.length];
+          boolean[] set = new boolean[x.length];
+          int count = 0;
+          boolean consistent = true;
+          for (IntVar a : cols.implies.get(z)) {
+            Literal l = cols.literal.get(a);
+            Integer j = l == null ? null : position.get(l.x());
+            if (j == null) {
+              continue;
+            }
+            if (set[j] && value[j] != l.v()) {
+              consistent = false;
+            } else if (!set[j]) {
+              set[j] = true;
+              value[j] = l.v();
+              count++;
+            }
+          }
+          if (!consistent || count < 2) {
+            continue;
+          }
+          List<IntVar> agreeing = new ArrayList<>();
+          List<IntVar> others = new ArrayList<>();
+          for (int k = 0; k < live.size(); k++) {
+            (agrees(live.get(k), value, set) ? agreeing : others).add(tupleColumn[k]);
+          }
+          if (others.isEmpty()) {
+            continue;
+          }
+          // the tuple columns sum to 1, so z <= sum of the agreeing ones is z + sum of the others
+          // <= 1, the shorter of the two, which also keeps a z that no tuple agrees with in a row
+          boolean below = !agreeing.isEmpty() && agreeing.size() <= others.size();
+          List<IntVar> vs = new ArrayList<>();
+          vs.add(z);
+          vs.addAll(below ? agreeing : others);
+          long[] w = new long[vs.size()];
+          Arrays.fill(w, below ? -1 : 1);
+          w[0] = 1;
+          rows.add(new LinearForm(vs.toArray(new IntVar[0]), w, below ? 0 : 1, LinearForm.LE));
+        }
+      }
+    }
+  }
+
+  private static boolean agrees(int[] tuple, int[] value, boolean[] set) {
+    for (int j = 0; j < tuple.length; j++) {
+      if (set[j] && tuple[j] != value[j]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // [x = v] = the sum of the columns of the tuples with value v at position j
+  private static void valueRows(
+      IntVar x,
+      int j,
+      List<int[]> live,
+      IntVar[] tupleColumn,
+      Columns cols,
+      List<LinearForm> rows) {
+    for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      List<IntVar> vs = new ArrayList<>();
+      for (int k = 0; k < live.size(); k++) {
+        if (live.get(k)[j] == v) {
+          vs.add(tupleColumn[k]);
+        }
+      }
+      vs.add(cols.column(x, v));
+      long[] w = new long[vs.size()];
+      Arrays.fill(w, 1);
+      w[w.length - 1] = -1;
+      rows.add(new LinearForm(vs.toArray(new IntVar[0]), w, 0, LinearForm.EQ));
+    }
+  }
+
+  private static boolean allowed(IntVar[] x, int[] tuple) {
+    for (int j = 0; j < x.length; j++) {
+      if (!x[j].domain.contains(tuple[j])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether the tuples have distinct values at position j
+  private static boolean distinct(List<int[]> tuples, int j) {
+    Set<Integer> seen = new HashSet<>();
+    for (int[] tuple : tuples) {
+      if (!seen.add(tuple[j])) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static boolean small(IntVar x) {
@@ -268,45 +519,110 @@ public final class TableCliques {
     return ((long) a << 32) ^ (b & 0xffffffffL);
   }
 
-  // the column of each literal: the model's own Boolean, or a new LP-only column; the variables
-  // with new columns get their encoding rows, sum b = 1 and x = sum v b (those the model's
-  // Booleans cover have them from Linearizations.encodings)
-  private static IntVar[] columns(
-      List<IntVar> vars, Map<IntVar, Integer> first, int[] value, List<LinearForm> rows) {
-    Set<Constraint> constraints = new LinkedHashSet<>();
-    for (IntVar x : vars) {
-      constraints.addAll(x.dom().constraints());
-    }
-    Map<IntVar, Map<Integer, IntVar>> known = Linearizations.valueBooleans(constraints);
-    IntVar[] b = new IntVar[value.length];
-    for (IntVar x : vars) {
-      Map<Integer, IntVar> own = known.getOrDefault(x, Map.of());
-      int fx = first.get(x);
-      boolean fresh = false;
-      for (int i = fx; i < fx + x.getSize(); i++) {
-        IntVar bi = own.get(value[i]);
-        if (bi == null || bi == x) {
-          bi = new LpColumn(x, value[i]);
-          fresh = true;
+  // the column [x = v] of each value of the variables with small domains: the model's own Boolean,
+  // or a new LP-only column; the variables with new columns get their encoding rows, sum b = 1 and
+  // x = sum v b (those the model's Booleans cover have them from Linearizations.encodings)
+  // the value v of variable x
+  private record Literal(IntVar x, int v) {}
+
+  private static final class Columns {
+    final Map<IntVar, Map<Integer, IntVar>> known;
+    // the value Boolean of the model behind each Boolean [x = v]
+    final Map<IntVar, Literal> literal = new IdentityHashMap<>();
+    final Map<IntVar, Map<Integer, IntVar>> made = new IdentityHashMap<>();
+    // where the encodings of new columns go
+    List<LinearForm> rows = new ArrayList<>();
+    int count;
+
+    Columns(List<Table> tables, Map<IntVar, List<IntVar>> given) {
+      Set<Constraint> constraints = new LinkedHashSet<>();
+      Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Table t : tables) {
+        for (IntVar x : t.x()) {
+          if (small(x) && seen.add(x)) {
+            constraints.addAll(x.dom().constraints());
+          }
         }
-        b[i] = bi;
       }
-      if (fresh) {
-        int k = x.getSize();
-        IntVar[] bs = Arrays.copyOfRange(b, fx, fx + k);
-        long[] ones = new long[k];
-        Arrays.fill(ones, 1);
-        rows.add(new LinearForm(bs, ones, 1, LinearForm.EQ));
-        IntVar[] withX = Arrays.copyOf(bs, k + 1);
-        long[] w = new long[k + 1];
-        for (int i = 0; i < k; i++) {
-          w[i] = value[fx + i];
+      known = Linearizations.valueBooleans(constraints);
+      for (Map.Entry<IntVar, Map<Integer, IntVar>> e : known.entrySet()) {
+        for (Map.Entry<Integer, IntVar> b : e.getValue().entrySet()) {
+          if (b.getValue() != e.getKey()) {
+            literal.putIfAbsent(b.getValue(), new Literal(e.getKey(), b.getKey()));
+          }
         }
-        withX[k] = x;
-        w[k] = -1;
-        rows.add(new LinearForm(withX, w, 0, LinearForm.EQ));
+      }
+      // the conjunctions of the store over the value Booleans: their result implies each of them
+      Set<Constraint> conjunctions = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (IntVar b : literal.keySet()) {
+        for (Constraint c : b.dom().constraints()) {
+          if ((c.getClass() == AndBoolSimple.class || c.getClass() == AndBoolVector.class)
+              && conjunctions.add(c)) {
+            if (c instanceof AndBoolSimple a) {
+              implication(a.result, a.a);
+              implication(a.result, a.b);
+            } else {
+              AndBoolVector a = (AndBoolVector) c;
+              for (IntVar l : a.list) {
+                implication(a.result, l);
+              }
+            }
+          }
+        }
+      }
+      for (Map.Entry<IntVar, List<IntVar>> e : given.entrySet()) {
+        for (IntVar a : e.getValue()) {
+          implication(e.getKey(), a);
+        }
       }
     }
-    return b;
+
+    // the Booleans each Boolean z implies (z -> a), and the inverse
+    final Map<IntVar, List<IntVar>> implies = new IdentityHashMap<>();
+    final Map<IntVar, List<IntVar>> impliedBy = new IdentityHashMap<>();
+
+    void implication(IntVar z, IntVar a) {
+      if (literal.containsKey(a)) {
+        implies.computeIfAbsent(z, k -> new ArrayList<>()).add(a);
+        impliedBy.computeIfAbsent(a, k -> new ArrayList<>()).add(z);
+      }
+    }
+
+    IntVar column(IntVar x, int v) {
+      Map<Integer, IntVar> m = made.get(x);
+      if (m == null) {
+        m = new LinkedHashMap<>();
+        Map<Integer, IntVar> own = known.getOrDefault(x, Map.of());
+        boolean fresh = false;
+        for (ValueEnumeration e = x.domain.valueEnumeration(); e.hasMoreElements(); ) {
+          int value = e.nextElement();
+          IntVar b = own.get(value);
+          if (b == null || b == x) {
+            b = new LpColumn(x, value);
+            fresh = true;
+            count++;
+          }
+          m.put(value, b);
+        }
+        if (fresh) {
+          int k = m.size();
+          IntVar[] bs = m.values().toArray(new IntVar[0]);
+          long[] ones = new long[k];
+          Arrays.fill(ones, 1);
+          rows.add(new LinearForm(bs, ones, 1, LinearForm.EQ));
+          IntVar[] withX = Arrays.copyOf(bs, k + 1);
+          long[] w = new long[k + 1];
+          int i = 0;
+          for (int value : m.keySet()) {
+            w[i++] = value;
+          }
+          withX[k] = x;
+          w[k] = -1;
+          rows.add(new LinearForm(withX, w, 0, LinearForm.EQ));
+        }
+        made.put(x, m);
+      }
+      return m.get(v);
+    }
   }
 }

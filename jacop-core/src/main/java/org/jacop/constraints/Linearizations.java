@@ -42,6 +42,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.constraints.regular.Regular;
@@ -402,6 +403,12 @@ public final class Linearizations {
     return k >= 2;
   }
 
+  // the assignment rows of bin packing among the tried value encodings, off by default: on gbac
+  // the LP bound stays 0 with them (fractional assignments balance the loads), and their value
+  // columns, though the root trial drops the rows, turn the auto LP guide on, which loses there
+  // (2017 UD8 at 60 s: 89 without them, 342 with them). Package-visible for the tests
+  static boolean binpackingRows = Boolean.getBoolean("org.jacop.lp.binpackingRows");
+
   /** The value encodings of valueRows: the columns of each variable and the rows made. */
   private static final class Encoder {
 
@@ -496,6 +503,9 @@ public final class Linearizations {
         if (!byModel.contains(el.index)) {
           element(el.index, el.list, el.indexOffset, el.value);
         }
+      } else if (k == Binpacking.class && binpackingRows) {
+        Binpacking bp = (Binpacking) c;
+        binpacking(bp.binVariables(), bp.itemWeights(), bp.loads(), bp.minBin());
       } else if (k == ElementIntegerFast.class) {
         ElementIntegerFast el = (ElementIntegerFast) c;
         element(el.index, el.elementList(), el.indexOffset, el.valueVariable());
@@ -611,6 +621,39 @@ public final class Linearizations {
         vars.add(counters[k]);
         w.add(-1L);
         out.add(row(vars, w, -fixed, LinearForm.EQ));
+      }
+    }
+
+    /**
+     * Adds the assignment model of a bin packing: {@code load_b = sum_i w_i [bin_i = b]} for each
+     * bin b, over the value columns of the bins of the items, the formulation of L. V. Kantorovich
+     * (Mathematical methods of organizing and planning production, 1939; Management Science 6
+     * (1960) 366-422), which the knapsack (MIR) cuts of the root then strengthen.
+     */
+    private void binpacking(IntVar[] bins, int[] w, IntVar[] loads, int first) {
+      Map<IntVar, Map<Integer, IntVar>> m = of(bins);
+      if (m == null) {
+        return;
+      }
+      for (int j = 0; j < loads.length; j++) {
+        int b = first + j;
+        List<IntVar> vars = new ArrayList<>();
+        List<Long> ws = new ArrayList<>();
+        long fixed = 0;
+        for (int i = 0; i < bins.length; i++) {
+          if (bins[i].singleton()) {
+            fixed += bins[i].value() == b ? w[i] : 0;
+          } else if (bins[i].domain.contains(b) && w[i] != 0) {
+            vars.add(m.get(bins[i]).get(b));
+            ws.add((long) w[i]);
+          }
+        }
+        if (vars.isEmpty()) {
+          continue;
+        }
+        vars.add(loads[j]);
+        ws.add(-1L);
+        out.add(row(vars, ws, -fixed, LinearForm.EQ));
       }
     }
 
