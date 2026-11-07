@@ -52,13 +52,23 @@ import org.jacop.core.IntVar;
  * <p>The sets are found from the values of the arcs in an LP solution (Lysgaard, Letchford and
  * Eglese, CVRPSEP): the connected components of the support graph over the customers, and the sets
  * grown greedily from each customer by the customer with the largest flow to and from the set,
- * every set on the way being checked. The cuts use the demands, the capacity and the bounds of the
- * self loops at the root, so they hold for the whole search.
+ * every set on the way being checked. Over the same sets it also separates the multistar cuts (N.
+ * R. Araque, L. Hall and T. L. Magnanti, Capacitated trees, capacitated routing and associated
+ * polyhedra, CORE discussion paper 9061, 1990; A. N. Letchford, R. W. Eglese and J. Lysgaard,
+ * Multistars, partial multistars and the capacitated vehicle routing problem, Mathematical
+ * Programming 94, 2002, 21-40), which weigh the arcs into and out of S by the demands of their ends
+ * outside S, for the sets whose rounded capacity cut holds. The cuts use the demands, the capacity
+ * and the bounds of the self loops at the first separation (the root), so they hold for the whole
+ * search, also when separated later.
  */
 public final class CapacityCuts {
 
   // the least violation of a cut
   private static final double MIN_VIOLATION = 1e-4;
+
+  // the multistar cuts, also separated over the sets of the capacity cuts
+  private static final boolean MULTISTAR =
+      !"false".equals(System.getProperty("org.jacop.lp.multistarCuts"));
 
   // flows below this are taken as zero in the support graph
   private static final double EPSILON = 1e-6;
@@ -69,24 +79,22 @@ public final class CapacityCuts {
   private final int[] demands;
   private final long capacity;
   private final int n;
+  private boolean[] mandatory;
 
   /**
-   * A cut over arcs of the routes: {@code sum x[arcs] >= bound} when entering, else {@code sum
-   * x[arcs] <= bound}.
-   *
-   * @param arcs the indices of the arcs
-   * @param entering whether the cut counts the arcs into the set
-   * @param bound the side of the cut
-   * @param efficacy the violation over the Euclidean norm of the cut
+   * A cut over arcs of the routes: {@code sum w[k] x[arcs[k]] >= bound} when entering, else {@code
+   * sum w[k] x[arcs[k]] <= bound}.
    */
   public static final class Cut {
     private final int[] arcs;
+    private final long[] weights;
     private final boolean entering;
     private final long bound;
     private final double efficacy;
 
-    Cut(int[] arcs, boolean entering, long bound, double efficacy) {
+    Cut(int[] arcs, long[] weights, boolean entering, long bound, double efficacy) {
       this.arcs = arcs;
+      this.weights = weights;
       this.entering = entering;
       this.bound = bound;
       this.efficacy = efficacy;
@@ -102,10 +110,19 @@ public final class CapacityCuts {
     }
 
     /**
+     * It returns the weights of the arcs of the cut.
+     *
+     * @return the weight of each arc of {@link #arcs()}, a copy
+     */
+    public long[] weights() {
+      return weights.clone();
+    }
+
+    /**
      * It tells the sense of the cut.
      *
-     * @return true for {@code sum x >= bound} over the arcs into the set, false for {@code sum x <=
-     *     bound} over the arcs inside it
+     * @return true for {@code sum w x >= bound} (the arcs into the set), false for {@code sum w x
+     *     <= bound} (the arcs inside it)
      */
     public boolean entering() {
       return entering;
@@ -131,7 +148,11 @@ public final class CapacityCuts {
 
     @Override
     public String toString() {
-      return "sum x" + Arrays.toString(arcs) + (entering ? " >= " : " <= ") + bound;
+      StringBuilder b = new StringBuilder();
+      for (int k = 0; k < arcs.length; k++) {
+        b.append(k == 0 ? "" : " + ").append(weights[k]).append("*x[").append(arcs[k]).append(']');
+      }
+      return b + (entering ? " >= " : " <= ") + bound;
     }
   }
 
@@ -177,7 +198,9 @@ public final class CapacityCuts {
     for (int k = 0; k < copied.length; k++) {
       copied[k] = map.get(literals[k]);
     }
-    return new CapacityCuts(tails, heads, copied, demands, capacity);
+    CapacityCuts c = new CapacityCuts(tails, heads, copied, demands, capacity);
+    c.mandatory = mandatory;
+    return c;
   }
 
   /**
@@ -188,15 +211,18 @@ public final class CapacityCuts {
    * @return the cuts
    */
   public List<Cut> separate(double[] value, int limit) {
-    // the nodes every route must visit: a self loop that is fixed to 0 or none
-    boolean[] mandatory = new boolean[n];
-    Arrays.fill(mandatory, 1, n, true);
-    for (int k = 0; k < tails.length; k++) {
-      if (tails[k] == heads[k] && literals[k].max() > 0) {
-        mandatory[tails[k]] = false;
+    // the nodes every route must visit: a self loop that is fixed to 0 or none, at the first
+    // separation (the root), so that the cuts made later in the search hold everywhere too
+    if (mandatory == null) {
+      mandatory = new boolean[n];
+      Arrays.fill(mandatory, 1, n, true);
+      for (int k = 0; k < tails.length; k++) {
+        if (tails[k] == heads[k] && literals[k].max() > 0) {
+          mandatory[tails[k]] = false;
+        }
       }
+      mandatory[0] = false;
     }
-    mandatory[0] = false;
     // the flow between each pair of nodes, either way, and the flow into each node
     double[][] flow = new double[n][n];
     double[] in = new double[n];
@@ -224,6 +250,12 @@ public final class CapacityCuts {
         Cut c = cut(s, value);
         if (c != null) {
           cuts.add(c);
+        }
+        // a multistar cut only where the capacity cut holds: at the root they took the slots of
+        // the capacity cuts and the bound fell
+        Cut m = MULTISTAR && c == null ? multistar(s, value) : null;
+        if (m != null) {
+          cuts.add(m);
         }
       }
     }
@@ -339,6 +371,58 @@ public final class CapacityCuts {
     List<Integer> arcs = byEntering ? enteringArcs : insideArcs;
     double violation = byEntering ? k - entering : inside - (size - k);
     int[] a = arcs.stream().mapToInt(Integer::intValue).toArray();
-    return new Cut(a, byEntering, byEntering ? k : size - k, violation / Math.sqrt(a.length));
+    long[] w = new long[a.length];
+    Arrays.fill(w, 1);
+    return new Cut(a, w, byEntering, byEntering ? k : size - k, violation / Math.sqrt(a.length));
+  }
+
+  // the multistar cut of a set (Letchford, Eglese and Lysgaard), directed: each route that visits S
+  // carries d(S) plus the demands of the customers just before it enters S and just after it
+  // leaves S, so Q x(into S) >= d(S) + sum_j d_j (x(j into S) + x(S into j)) over the customers j
+  // outside S, that is sum (Q - d_t) x(t, h) over the arcs into S minus sum d_h x(t, h) over the
+  // arcs out of S is at least d(S). A route that enters S k >= 2 times counts a customer outside S
+  // at most twice, and 2Q <= kQ. Null without demands, or when the values do not violate it.
+  private Cut multistar(BitSet s, double[] value) {
+    if (demands == null || capacity <= 0) {
+      return null;
+    }
+    long d = 0;
+    for (int v = s.nextSetBit(0); v >= 0; v = s.nextSetBit(v + 1)) {
+      d += demands[v];
+    }
+    List<Integer> arcs = new ArrayList<>();
+    List<Long> weights = new ArrayList<>();
+    double lhs = 0;
+    double norm = 0;
+    for (int a = 0; a < tails.length; a++) {
+      int t = tails[a];
+      int h = heads[a];
+      long w;
+      if (t == h) {
+        continue;
+      } else if (s.get(h) && !s.get(t)) {
+        w = capacity - (t == 0 ? 0 : demands[t]);
+      } else if (s.get(t) && !s.get(h) && h != 0) {
+        w = -demands[h];
+      } else {
+        continue;
+      }
+      if (w != 0) {
+        arcs.add(a);
+        weights.add(w);
+        lhs += w * value[a];
+        norm += (double) w * w;
+      }
+    }
+    double violation = d - lhs;
+    if (arcs.isEmpty() || violation <= MIN_VIOLATION * Math.max(1, capacity)) {
+      return null;
+    }
+    return new Cut(
+        arcs.stream().mapToInt(Integer::intValue).toArray(),
+        weights.stream().mapToLong(Long::longValue).toArray(),
+        true,
+        d,
+        violation / Math.sqrt(norm));
   }
 }

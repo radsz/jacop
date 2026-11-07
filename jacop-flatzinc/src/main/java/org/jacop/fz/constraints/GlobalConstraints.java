@@ -489,11 +489,12 @@ class GlobalConstraints implements ParserTreeConstants {
     if (p != null) {
       useCumulativeUnary = Boolean.parseBoolean(p);
     }
+    // both are redundant: local search does not evaluate them
     if (useCumulativeUnary) {
-      impliedCumulativeUnaryConstraints(s, d, r, b);
+      support.implied(() -> impliedCumulativeUnaryConstraints(s, d, r, b));
     }
     if (useDisjunctions) {
-      impliedDisjunctionConstraints(s, d, r, b);
+      support.implied(() -> impliedDisjunctionConstraints(s, d, r, b));
     }
   }
 
@@ -507,7 +508,8 @@ class GlobalConstraints implements ParserTreeConstants {
     String mode = System.getProperty("fz_cumulative_flow", FALSE);
     boolean unit = Arrays.stream(r).allMatch(v -> v.singleton(1));
     if ("true".equals(mode) || "unit".equals(mode) && unit) {
-      support.delayedConstraints.add(new HornFlow(s, d, r, b));
+      // redundant: local search does not evaluate it
+      support.implied(() -> support.delayedConstraints.add(new HornFlow(s, d, r, b)));
     }
   }
 
@@ -660,7 +662,7 @@ class GlobalConstraints implements ParserTreeConstants {
   private void addImpliedAlldistinct(IntVar[] v) {
     if (!support.options.getBoundConsistency()
         && (support.domainConsistency || v.length >= CIRCUIT_ALLDISTINCT_MIN_SIZE)) {
-      support.parameterListForAlldistincts.add(v);
+      support.addImpliedAlldistinct(v);
     }
   }
 
@@ -1172,11 +1174,12 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
       // projection then only adds cost (accap), unless all of them cross one line (filters)
+      // the projections are redundant: local search does not evaluate them
       if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
-        poseCumulative(x, lx, ly, span(y, ly));
+        support.implied(() -> poseCumulative(x, lx, ly, span(y, ly)));
       }
       if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
-        poseCumulative(y, ly, lx, span(x, lx));
+        support.implied(() -> poseCumulative(y, ly, lx, span(x, lx)));
       }
     }
     diffnProjections.clear();
@@ -2067,7 +2070,7 @@ class GlobalConstraints implements ParserTreeConstants {
             .getBoundConsistency()) { // we add additional implied constraint if domain consistency
       // is
       // required
-      support.parameterListForAlldistincts.add(f);
+      support.addImpliedAlldistinct(f);
     }
 
     support.delayedConstraints.add(new Assignment(f, invf, indexF, indexInvf));

@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -248,7 +249,12 @@ public class ElementTableDetector implements ParserTreeConstants {
     if (rows.isEmpty()) {
       throw Store.failException;
     }
-    support.pose(new HybridTable(vars, rows.toArray(new int[0][])));
+    int[][] tuples = rows.toArray(new int[0][]);
+    if (vars.length <= TableCliques.MAX_ARITY) {
+      // for the linear relaxation: the results of the elements over the columns of the index
+      support.dictionary.addTable(vars, tuples);
+    }
+    support.pose(new HybridTable(vars, tuples));
     for (Element e : group) {
       replaced.add(e.node());
     }
