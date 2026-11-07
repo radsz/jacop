@@ -702,6 +702,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.valueColumns
             + "\n%%%mzn-stat: lpSimplexValueColumns="
             + r.simplexValueColumns()
+            + "\n%%%mzn-stat: lpFreeColumns="
+            + r.freeColumns
+            + "\n%%%mzn-stat: lpSimplexFreeColumns="
+            + r.simplexFreeColumns()
+            + "\n%%%mzn-stat: lpAlldiffCuts="
+            + r.alldiffCuts
+            + "\n%%%mzn-stat: lpAlldiffBound="
+            + r.alldiffBound
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
