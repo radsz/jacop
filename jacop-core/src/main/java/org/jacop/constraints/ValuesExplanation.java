@@ -32,6 +32,8 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.lcg.AtomicTrail;
@@ -44,8 +46,13 @@ import org.jacop.lcg.EntryList;
  * bound of the count, a failure against its upper bound, and a value removed from a variable when
  * the count's upper bound is already reached by variables whose intervals miss that value. By the
  * union U of domains: the count is at most |U|, and when the other variables' domains have fewer
- * values together than the count's lower bound, a variable takes a value outside them. Bounds the
- * propagator derives from the matching otherwise have no explanation here.
+ * values together than the count's lower bound, a variable takes a value outside them. By a maximum
+ * matching between the variables and their values, which bounds the count from above: the count's
+ * upper bound, a failure against its lower bound, and a value whose taking would make the matching
+ * smaller than the lower bound are explained by König's vertex cover of the matching (the domains
+ * of the variables reachable from an unmatched one by alternating paths lie inside the values
+ * reachable from them), as in the explanation of alldifferent by Hall sets (Downing, Feydy and
+ * Stuckey, "Explaining alldifferent", ACSC 2012).
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -88,9 +95,17 @@ final class ValuesExplanation {
       if (trail.kind(entry) == AtomicTrail.LE) {
         // the variables have at most as many values as their domains together
         IntervalDomain union = union(entry, null);
-        return union != null
+        if (union != null
             && union.getSize() <= trail.value(entry)
-            && within(union, entry, null, out);
+            && within(union, entry, null, out)) {
+          return true;
+        }
+        int mark = out.size();
+        if (matchingCover(entry, null, null, trail.value(entry), out)) {
+          return true;
+        }
+        out.truncate(mark);
+        return false;
       }
       return trail.kind(entry) == AtomicTrail.GE
           && disjoint(trail.value(entry), entry, null, 1, 0, out);
@@ -133,7 +148,156 @@ final class ValuesExplanation {
       trail.addLowerBound(count, entry, out);
       return true;
     }
+    out.truncate(bounded);
+    // with y in lo..hi a maximum matching between the variables and their values is smaller than
+    // count's lower bound
+    int[] removed =
+        lo <= hi && (long) hi - lo < HOLES ? removedValues(y, lo, hi, entry, out) : null;
+    if (removed != null
+        && matchingCover(entry, y, removed, trail.minBefore(count, entry) - 1, out)) {
+      trail.addLowerBound(count, entry, out);
+      return true;
+    }
     out.truncate(mark);
+    return false;
+  }
+
+  // the values of lo..hi that y had just before position, adding the reasons of the others to out
+  private int[] removedValues(IntVar y, int lo, int hi, int position, EntryList out) {
+    int[] values = new int[hi - lo + 1];
+    int size = 0;
+    for (int v = lo; v <= hi; v++) {
+      if (!trail.excludedBefore(y, v, position, out)) {
+        values[size++] = v;
+      }
+    }
+    return size == 0 ? null : Arrays.copyOf(values, size);
+  }
+
+  /**
+   * Adds the reason why the variables take at most bound different values: a maximum matching
+   * between the variables and their values just before position (skip taking a value of skipValues
+   * instead) has at most bound edges. By König's theorem the variables reachable from an unmatched
+   * variable by alternating paths, Z, have their domains inside the values matched to them, V, and
+   * |V| + (n - |Z|) is the size of the matching; the reason is that the domains of Z other than
+   * skip lie inside V. False when the matching is larger or a domain is too wide.
+   */
+  private boolean matchingCover(
+      int position, IntVar skip, int[] skipValues, int bound, EntryList out) {
+    int n = list.length;
+    if (bound >= n) {
+      return false;
+    }
+    int[][] domains = new int[n][];
+    int[] index = new int[0];
+    int numberValues = 0;
+    Map<Integer, Integer> valueIndex = new HashMap<>();
+    EntryList ignored = new EntryList();
+    for (int i = 0; i < n; i++) {
+      int[] d;
+      if (list[i] == skip) {
+        d = skipValues;
+      } else {
+        int lo = trail.minBefore(list[i], position);
+        int hi = trail.maxBefore(list[i], position);
+        if ((long) hi - lo >= HOLES) {
+          return false;
+        }
+        d = new int[hi - lo + 1];
+        int size = 0;
+        for (int v = lo; v <= hi; v++) {
+          if (!trail.excludedBefore(list[i], v, position, ignored)) {
+            d[size++] = v;
+          }
+        }
+        d = Arrays.copyOf(d, size);
+      }
+      int[] ids = new int[d.length];
+      for (int k = 0; k < d.length; k++) {
+        Integer id = valueIndex.get(d[k]);
+        if (id == null) {
+          id = numberValues++;
+          valueIndex.put(d[k], id);
+        }
+        ids[k] = id;
+      }
+      domains[i] = ids;
+    }
+    int[] mateOfValue = new int[numberValues];
+    Arrays.fill(mateOfValue, -1);
+    int[] mateOfVariable = new int[n];
+    Arrays.fill(mateOfVariable, -1);
+    int size = 0;
+    int[] seen = new int[numberValues];
+    int stamp = 0;
+    for (int i = 0; i < n; i++) {
+      stamp++;
+      if (augment(i, domains, mateOfValue, mateOfVariable, seen, stamp)) {
+        if (++size > bound) {
+          return false;
+        }
+      }
+    }
+    // Z: the variables reachable from unmatched ones, and V: the values reachable from Z
+    boolean[] inZ = new boolean[n];
+    boolean[] inV = new boolean[numberValues];
+    int[] queue = new int[n];
+    int head = 0;
+    int tail = 0;
+    for (int i = 0; i < n; i++) {
+      if (mateOfVariable[i] < 0) {
+        inZ[i] = true;
+        queue[tail++] = i;
+      }
+    }
+    while (head < tail) {
+      int i = queue[head++];
+      for (int id : domains[i]) {
+        if (!inV[id]) {
+          inV[id] = true;
+          int j = mateOfValue[id];
+          if (j >= 0 && !inZ[j]) {
+            inZ[j] = true;
+            queue[tail++] = j;
+          }
+        }
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      if (inZ[i] && list[i] != skip) {
+        IntVar x = list[i];
+        boolean covered =
+            DomainCover.domain(
+                trail,
+                x,
+                position,
+                (v, o) -> {
+                  Integer id = valueIndex.get(v);
+                  return id != null && inV[id];
+                },
+                out);
+        if (!covered) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // Kuhn's augmenting path from variable i
+  private static boolean augment(
+      int i, int[][] domains, int[] mateOfValue, int[] mateOfVariable, int[] seen, int stamp) {
+    for (int id : domains[i]) {
+      if (seen[id] != stamp) {
+        seen[id] = stamp;
+        if (mateOfValue[id] < 0
+            || augment(mateOfValue[id], domains, mateOfValue, mateOfVariable, seen, stamp)) {
+          mateOfValue[id] = i;
+          mateOfVariable[i] = id;
+          return true;
+        }
+      }
+    }
     return false;
   }
 
@@ -208,6 +372,12 @@ final class ValuesExplanation {
     if (union != null
         && union.getSize() < trail.minBefore(count, position)
         && within(union, position, null, out)) {
+      trail.addLowerBound(count, position, out);
+      return true;
+    }
+    out.truncate(mark);
+    // a maximum matching smaller than count's lower bound
+    if (matchingCover(position, null, null, trail.minBefore(count, position) - 1, out)) {
       trail.addLowerBound(count, position, out);
       return true;
     }

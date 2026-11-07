@@ -8873,6 +8873,96 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /**
+   * Under LCG, nvalue explains the count's upper bound from the maximum matching by König's cover:
+   * three variables in 1..2 take at most two values, so four variables take at most three, which
+   * the union of the domains (1..10) does not show (word_equations_03_track_31 under -f gave 78 %
+   * of its Values reasons the generic one).
+   */
+  @Test
+  void valuesExplainsTheMatchingBoundByKoenigsCover() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 10);
+    }
+    IntVar n = new IntVar(store, "n", 1, 4);
+    Values values = new Values(x, n);
+    store.impose(values);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < 3; i++) {
+      x[i].domain.inMax(store.level, x[i], 2);
+    }
+    assertThat(store.consistency()).isTrue();
+    assertThat(n.max()).isEqualTo(3);
+    int found = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) != n || trail.kind(e) != AtomicTrail.LE) {
+        continue;
+      }
+      found++;
+      EntryList reason = new EntryList();
+      assertThat(values.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+      Set<IntVar> vars = new HashSet<>();
+      for (int f = 0; f < reason.size(); f++) {
+        vars.add(trail.variable(reason.get(f)));
+      }
+      assertThat(vars).containsExactlyInAnyOrder(x[0], x[1], x[2]);
+    }
+    assertThat(found).isEqualTo(1);
+    trail.detach();
+  }
+
+  /**
+   * Under LCG, nvalue explains a value removed because taking it leaves a maximum matching smaller
+   * than the count's lower bound: with x0, x1 in 1..2 and four different values, x2 takes neither 1
+   * nor 2, because x0, x1 and x2 would then share two values.
+   */
+  @Test
+  void valuesExplainsARemovalThatShrinksTheMatching() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 10);
+    }
+    IntVar n = new IntVar(store, "n", 1, 4);
+    Values values = new Values(x, n);
+    store.impose(values);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    n.domain.inMin(store.level, n, 4);
+    x[0].domain.inMax(store.level, x[0], 2);
+    x[1].domain.inMax(store.level, x[1], 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[2].min()).isEqualTo(3);
+    int found = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) != x[2]) {
+        continue;
+      }
+      found++;
+      EntryList reason = new EntryList();
+      assertThat(values.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+      // x2's own earlier atoms may bound the removed values
+      Set<IntVar> vars = new HashSet<>();
+      for (int f = 0; f < reason.size(); f++) {
+        if (trail.variable(reason.get(f)) != x[2]) {
+          vars.add(trail.variable(reason.get(f)));
+        }
+      }
+      StringBuilder atoms = new StringBuilder(trail.atomString(e));
+      for (int f = 0; f < reason.size(); f++) {
+        atoms.append(' ').append(trail.atomString(reason.get(f)));
+      }
+      assertThat(vars).as(atoms.toString()).containsExactlyInAnyOrder(x[0], x[1], n);
+    }
+    assertThat(found).isPositive();
+    trail.detach();
+  }
+
+  /**
    * Under LCG, x + y = c explains a hole or a bound of one variable by the mirrored atom of the
    * other (cgt_5_h27 gave 35 % of its XplusYeqC reasons the generic one, with 39 atoms on average).
    */
