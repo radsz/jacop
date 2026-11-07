@@ -167,6 +167,43 @@ class LocalSearchFlatzincTest {
     }
   }
 
+  /**
+   * The window rows of a detected sequence are implied by it: local search evaluates the sequence
+   * and leaves the rows out.
+   */
+  @Test
+  void slidingWindowRowsAreImpliedBySequence() throws IOException {
+    int n = 12;
+    int q = 3;
+    StringBuilder model = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      model.append("var 0..1: y").append(i).append(":: output_var;\n");
+    }
+    for (int i = 1; i + q - 1 <= n; i++) {
+      model.append("constraint int_lin_le([1,1,1],[y").append(i).append(",y").append(i + 1);
+      model.append(",y").append(i + 2).append("],2);\n");
+    }
+    model.append("constraint int_lin_eq([1,1,1,1,1,1,1,1,1,1,1,1],[");
+    for (int i = 1; i <= n; i++) {
+      model.append(i > 1 ? "," : "").append('y').append(i);
+    }
+    model.append("],8);\n");
+    model.append("solve satisfy;\n");
+    String out =
+        run(model.toString(), "--lcg", "off", "-f", "-debug", "--search-statistics", "-t", "5000");
+    assertTrue(out.contains("M:AmongSeq=1"), out);
+    assertTrue(Pattern.compile("I:\\w+=" + (n - q + 1)).matcher(out).find(), out);
+    int[] y = new int[n + 1];
+    Matcher m = Pattern.compile("y(\\d+) = (\\d+);").matcher(out);
+    while (m.find()) {
+      y[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
+    }
+    assertEquals(8, Arrays.stream(y).sum(), out);
+    for (int i = 1; i + q - 1 <= n; i++) {
+      assertTrue(y[i] + y[i + 1] + y[i + 2] <= 2, out);
+    }
+  }
+
   /** Columns are sorted, interchangeable values renamed by first use, and lex-leaders descended. */
   @Test
   void canonicalizerMovesToTheLexLeader() {
