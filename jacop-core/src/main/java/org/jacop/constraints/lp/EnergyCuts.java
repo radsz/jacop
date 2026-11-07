@@ -136,7 +136,7 @@ public final class EnergyCuts {
     List<Integer> all = new ArrayList<>();
     List<Integer> unary = new ArrayList<>();
     for (int j = 0; j < starts.length; j++) {
-      if (column[j] >= 0) {
+      if (column[j] >= 0 && dur[j] > 0) {
         all.add(j);
         if (2 * use[j] > cap) {
           unary.add(j);

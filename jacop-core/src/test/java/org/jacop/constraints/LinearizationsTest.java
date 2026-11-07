@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
@@ -489,8 +490,22 @@ class LinearizationsTest {
         for (IntVar v : list) {
           union.unionAdapt(v.dom());
         }
-        switch (rnd.nextInt(7)) {
+        switch (rnd.nextInt(8)) {
           case 0 -> cs.add(new Alldiff(list));
+          case 5 -> {
+            int[] w = new int[list.length];
+            int total = 0;
+            for (int i = 0; i < w.length; i++) {
+              w[i] = rnd.nextInt(4);
+              total += w[i];
+            }
+            IntVar[] loads = new IntVar[union.max() - union.min() + 1];
+            for (int v = 0; v < loads.length; v++) {
+              loads[v] = new IntVar(store, "l" + k + "_" + v, 0, total);
+              scope.add(loads[v]);
+            }
+            cs.add(new Binpacking(list, loads, w, union.min()));
+          }
           case 1 -> cs.add(new Alldistinct(list));
           case 2 -> {
             IntVar[] counters = new IntVar[union.getSize()];
