@@ -2550,6 +2550,21 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
+165. ChannelBoolSet (jacop_link_set_to_booleans and the set unions found
+     by SetUnionDetector)
+     sets the Boolean of an element to 0 when the element leaves the
+     set's least upper bound; before, the Boolean kept 1 in its domain.
+     Under --lcg it explains its own atoms and failures: a Boolean
+     and its membership literal explain each other, and the cardinality
+     bounds and memberships derived from them are explained by counting
+     the elements in and out of the set (the members fixed at the root
+     counted as constants), instead of a generic reason. On gt-sort
+     n9_ub10_75.0 the generic reasons go from 73,899 of 74,913 to none
+     and the average reason from 41 to 13 atoms (--lcg) and from 22 to
+     6 atoms (-f). Wide set (220, 60 s, paired, scored by section 7 of
+     the scoring rules): --lcg S = +1, -f S = -7 over two repetitions,
+     from one instance (cgt) that posts no set constraint.
+
 Version 4.11
 =============
 
