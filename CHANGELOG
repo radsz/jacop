@@ -3027,7 +3027,18 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
-182. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
+182. The automatic LP guide of the FlatZinc front end
+     (--free-config lcg-lp-branching=auto) turns on only when the simplex
+     has value columns. Before, it also turned on for the columns of
+     tried value encodings that the root trial dropped. New
+     LinearRelaxation.simplexValueColumns() and stat
+     lpSimplexValueColumns. This turns the guide off on 43 wide-set
+     instances. At 600 s the same number are solved in both modes;
+     with -f tower 2025 goes from 111 to 24 s and spot5 28 from 25 to
+     12 s, but vrplc9_5_10_s2 goes from 17 to 150 s
+     (lcg-lp-branching=on restores the guide there).
+
+183. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
      two Booleans) and XplusYeqC (x + y = c) explain their own atoms and
      failures instead of a replayed or generic reason. A result of AND
      fixed to 0 cites the operand at 0, a result fixed to 1 both
@@ -3043,7 +3054,7 @@ Version 5.0 (unreleased)
      constraints (240 s, paired, scored by section 7 of the scoring
      rules): --lcg S = +14, -f S = +1 over two repetitions.
 
-183. Symmetry detection in fzn-jacop builds the graph of a constant array
+184. Symmetry detection in fzn-jacop builds the graph of a constant array
      once per content: an array whose elements are all constants (a table
      of tuples, given by name or written out) becomes one key shared by
      every constraint that uses the same contents, instead of one vertex
@@ -3062,7 +3073,7 @@ Version 5.0 (unreleased)
      proved at 549 s before, not by 600 s now); the 10 changed wide
      instances 8 to 8 in both modes.
 
-184. The dense simplex (below 100 rows) keeps and restores bases too,
+185. The dense simplex (below 100 rows) keeps and restores bases too,
      like JaLP in 132: DualSimplex gets saveBasis/restoreBasis, which
      copy the tableau, the basis and the edge norms, and refuse a basis
      saved before rows were added or removed or in another copy. Since a
@@ -3083,7 +3094,7 @@ Version 5.0 (unreleased)
      families better and none worse; city-position is slower with -f
      (city-5-06 222 s to 307 s).
 
-185. Capacity cuts of a Routes (item 144) are also separated in search:
+186. Capacity cuts of a Routes (item 144) are also separated in search:
      every few optimal LP solves after the root (from 4, doubled up to
      1024 while nothing is violated, halved when cuts are found), up to
      10 cuts go into the row pool, where they age out like other cuts.

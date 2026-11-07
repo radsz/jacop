@@ -1456,6 +1456,25 @@ public class LinearRelaxation extends Constraint
     return x.length;
   }
 
+  /**
+   * Returns the number of auxiliary columns ({@link LpColumn}) in the simplex. Before the first
+   * solve it is {@link #valueColumns}; after it, the columns of the extra rows that the root trial
+   * dropped are not counted, and neither are those of the rows dropped later in search.
+   *
+   * @return the auxiliary columns of the simplex
+   */
+  public int simplexValueColumns() {
+    if (calls == 0) {
+      return valueColumns;
+    }
+    int n = Math.min(lp.columns(), x.length);
+    int count = 0;
+    for (int j = 0; j < n; j++) {
+      count += lpOnly[j] ? 1 : 0;
+    }
+    return count;
+  }
+
   // the values of the columns in the last optimal solution of the simplex, and its store level
   private double[] solution = new double[0];
   private int solutionLevel = -1;
