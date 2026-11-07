@@ -109,8 +109,8 @@ public class Diffn extends Nooverlap {
 
   // energetic reasoning on the strips across each dimension: 0 off, 1 with the dual feasible
   // functions (as the area check uses them), 2 with the plain energy only
-  static final int ENERGETIC = Integer.getInteger("org.jacop.diffn.energetic", 0);
-  private int energetic = ENERGETIC;
+  static final int ENERGETIC_DEFAULT = Integer.getInteger("org.jacop.diffn.energetic", 0);
+  private int energetic = ENERGETIC_DEFAULT;
   private long[] stripDates = new long[0];
   private int[] stripWidth = new int[0];
   private int[] stripHeight = new int[0];
