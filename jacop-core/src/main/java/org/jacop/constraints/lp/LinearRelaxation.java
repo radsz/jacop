@@ -767,6 +767,34 @@ public class LinearRelaxation extends Constraint
       Collection<LinearForm> extra,
       Set<? extends IntVar> substituted,
       Simplex simplex) {
+    return of(store, objective, maximize, extra, List.of(), substituted, simplex);
+  }
+
+  /**
+   * Creates the relaxation of {@link #of(Store, IntVar, boolean, Collection, Set, Simplex)} with
+   * further rows that are tried at the first solve like the value encodings of the constraints, and
+   * kept only when they raise the bound of the objective or make the relaxation infeasible, such as
+   * the convex hulls of tables ({@link org.jacop.constraints.TableCliques}). They have a share of
+   * the size cap of the sparse simplex of their own, so that the other rows do not leave them out.
+   *
+   * @param store the store
+   * @param objective the variable to minimize, or null for satisfaction
+   * @param maximize whether the objective is maximized instead
+   * @param extra rows to add to those of the store's constraints
+   * @param tried rows tried at the first solve after the others
+   * @param substituted variables to replace by their definitions
+   * @param simplex the simplex
+   * @return the relaxation, or null as for {@link #of(Store, IntVar, boolean, Collection, Set,
+   *     Simplex)}
+   */
+  public static LinearRelaxation of(
+      Store store,
+      IntVar objective,
+      boolean maximize,
+      Collection<LinearForm> extra,
+      Collection<LinearForm> tried,
+      Set<? extends IntVar> substituted,
+      Simplex simplex) {
     Set<Constraint> constraints = constraintsOf(store);
     List<LinearForm> forms = new ArrayList<>();
     List<LinearForm> relaxed = new ArrayList<>();
@@ -835,7 +863,10 @@ public class LinearRelaxation extends Constraint
     // out
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
-    for (List<LinearForm> rows : List.of(relaxed, valueRows.tried(), valueRows.flow())) {
+    List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
+    List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
+    triedRows.addAll(ownTried);
+    for (List<LinearForm> rows : List.of(relaxed, triedRows, valueRows.flow())) {
       for (LinearForm f : rows) {
         if (f.relation() != LinearForm.NE
             && f.vars().length >= 2
@@ -844,9 +875,11 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
-    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
-    tried.addAll(valueRows.tried());
-    tried.addAll(valueRows.flow());
+    Set<LinearForm> triedSet = Collections.newSetFromMap(new IdentityHashMap<>());
+    triedSet.addAll(triedRows);
+    triedSet.addAll(valueRows.flow());
+    Set<LinearForm> own = Collections.newSetFromMap(new IdentityHashMap<>());
+    own.addAll(ownTried);
     Set<LinearForm> flow = Collections.newSetFromMap(new IdentityHashMap<>());
     flow.addAll(valueRows.flow());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
@@ -877,20 +910,20 @@ public class LinearRelaxation extends Constraint
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
     // can take a minute and then drop them all)
-    if (!fitsSimplex(forms, candidates, simplex, auto, exempt, further) && objective != null) {
+    if (!fitsSimplex(forms, candidates, simplex, auto, exempt, own, further) && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
       // of the rows of the objective, give the whole bound, and in model order they came too late
       // to fit); the tried value encodings stay after the other rows, since the retry without them
       // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, tried, flow, objective);
-      fitsSimplex(forms, sorted, simplex, auto, exempt, further);
+      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, triedSet, flow, objective);
+      fitsSimplex(forms, sorted, simplex, auto, exempt, own, further);
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
-    r.plainExtra = (int) r.extraForms.stream().filter(f -> !tried.contains(f)).count();
+    r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
     r.capacity = separations;
@@ -1205,6 +1238,7 @@ public class LinearRelaxation extends Constraint
       Simplex simplex,
       boolean denseCap,
       int exempt,
+      Set<LinearForm> own,
       List<LinearForm> further) {
     if (tooLarge(forms, simplex)) {
       return false;
@@ -1217,25 +1251,39 @@ public class LinearRelaxation extends Constraint
       rows++;
       nonzeros += f.vars().length;
     }
+    // the rows with a share of their own are not counted in the share of the others
+    int counted = 0;
+    boolean fitted = true;
     for (LinearForm f : candidates) {
       int added = 0;
       for (IntVar v : f.vars()) {
         added += vars.contains(v) ? 0 : 1;
       }
+      boolean ownShare = own.contains(f);
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS
-              || denseCap
-                  && (further.size() >= 2L * forms.size() + SPARSE_ROWS + exempt
-                      || vars.size() + added > SPARSE_MAX_COLUMNS)) {
+              || denseCap && vars.size() + added > SPARSE_MAX_COLUMNS) {
         return false;
       }
+      if (denseCap
+          && simplex != Simplex.DENSE
+          && !ownShare
+          && counted >= 2L * forms.size() + SPARSE_ROWS + exempt) {
+        if (own.isEmpty()) {
+          return false;
+        }
+        // the share of the others is full: the rows with a share of their own may still come
+        fitted = false;
+        continue;
+      }
+      counted += ownShare ? 0 : 1;
       further.add(f);
       vars.addAll(Arrays.asList(f.vars()));
       rows++;
       nonzeros += f.vars().length;
     }
-    return true;
+    return fitted;
   }
 
   /**
