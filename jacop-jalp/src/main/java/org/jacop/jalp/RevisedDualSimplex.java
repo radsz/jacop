@@ -2147,7 +2147,9 @@ public final class RevisedDualSimplex {
       factorizations += red.factorizations;
       refactorsForWork += red.refactorsForWork;
       ops += red.ops + (red.lu == null ? 0 : red.lu.ops);
-      if (status != OPTIMAL) {
+      // the dual simplex keeps its basis dual feasible: an infeasible end or the limit leave a
+      // basis worth carrying over too, only an unbounded end does not
+      if (status == UNBOUNDED) {
         return pivots;
       }
       for (int c = 0; c < nr + mr; c++) {
