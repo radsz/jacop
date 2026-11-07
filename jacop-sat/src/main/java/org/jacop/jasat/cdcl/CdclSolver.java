@@ -121,6 +121,27 @@ public final class CdclSolver {
   private int targetAssigned;
   private double[] activity = new double[0];
   private byte[] seen = new byte[0];
+
+  /**
+   * Which literals of an analysis besides the learnt ones go to {@link
+   * ExternalPropagator#notifyAnalysedLiteral}.
+   */
+  private int analysedNotify = ANALYSED_NONE;
+
+  /** Per variable: the conflict stamp of the last {@link #notifyAnalysed} that named it. */
+  private int[] analysedMark = new int[0];
+
+  private int analysedStamp;
+
+  /** Analysed literals: none, only the learnt ones go to the propagator. */
+  public static final int ANALYSED_NONE = 0;
+
+  /** Analysed literals: every variable the analysis met (resolved or minimised away too). */
+  public static final int ANALYSED_SEEN = 1;
+
+  /** Analysed literals: as {@link #ANALYSED_SEEN}, and the reasons of the learnt literals. */
+  public static final int ANALYSED_REASONS = 2;
+
   private final VarHeap order = new VarHeap();
 
   private int[] trail = new int[0];
@@ -365,6 +386,7 @@ public final class CdclSolver {
       bestSign = Arrays.copyOf(bestSign, c);
       activity = Arrays.copyOf(activity, c);
       seen = Arrays.copyOf(seen, c);
+      analysedMark = Arrays.copyOf(analysedMark, c);
       trail = Arrays.copyOf(trail, c);
       trailPos = Arrays.copyOf(trailPos, c);
       shrinkMark = Arrays.copyOf(shrinkMark, c);
@@ -757,6 +779,22 @@ public final class CdclSolver {
    *
    * @param size the largest reason kept, at least 2
    */
+  /**
+   * Sets which literals of each conflict analysis, besides the learnt clause's, the external
+   * propagator hears of through {@link ExternalPropagator#notifyAnalysedLiteral}: {@link
+   * #ANALYSED_NONE} (the default), {@link #ANALYSED_SEEN} every variable the analysis resolved or
+   * minimised away, as MiniSat bumps them (N. Eén, N. Sörensson, An Extensible SAT-solver, SAT
+   * 2003), or {@link #ANALYSED_REASONS} also the variables of the reasons of the learnt literals,
+   * the "reason side" of J. H. Liang, V. Ganesh, P. Poupart, K. Czarnecki, Learning Rate Based
+   * Branching Heuristic for SAT Solvers, SAT 2016. Only reasons already computed are read, so no
+   * lazy explanation is asked for.
+   *
+   * @param mode the mode
+   */
+  public void setAnalysedNotify(int mode) {
+    analysedNotify = mode;
+  }
+
   public void setExternalReasonKeep(int size) {
     externalReasonKeep = Math.max(2, size);
   }
@@ -1558,6 +1596,8 @@ public final class CdclSolver {
     } while (pathCount > 0);
     learnt[0] = p ^ 1;
 
+    int analysedEnd = toClearSize;
+
     // recursive minimisation
     if (++poisonStamp == Integer.MAX_VALUE) {
       Arrays.fill(poisonMark, 0);
@@ -1591,6 +1631,9 @@ public final class CdclSolver {
       for (int i = 0; i < learntSize; i++) {
         external.notifyLearntLiteral(toDimacs(learnt[i]));
       }
+      if (analysedNotify != ANALYSED_NONE) {
+        notifyAnalysed(analysedEnd);
+      }
     }
 
     if (learntSize == 1) {
@@ -1606,6 +1649,52 @@ public final class CdclSolver {
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
     return level[learnt[1] >> 1];
+  }
+
+  /**
+   * Tells the external propagator of the variables the analysis met that are not in the learnt
+   * clause: the first {@code end} of {@code toClear}, and with {@link #ANALYSED_REASONS} the
+   * literals of the reasons the learnt literals already have.
+   */
+  private void notifyAnalysed(int end) {
+    if (++analysedStamp == Integer.MAX_VALUE) {
+      Arrays.fill(analysedMark, 0);
+      analysedStamp = 1;
+    }
+    int stamp = analysedStamp;
+    for (int i = 0; i < learntSize; i++) {
+      analysedMark[learnt[i] >> 1] = stamp;
+    }
+    for (int i = 0; i < end; i++) {
+      notifyAnalysedVar(toClear[i], stamp);
+    }
+    if (analysedNotify != ANALYSED_REASONS) {
+      return;
+    }
+    for (int i = 0; i < learntSize; i++) {
+      int v = learnt[i] >> 1;
+      int r = reason[v];
+      if (r == NO_REASON || r == UNIT_REASON || r == EXTERNAL_REASON) {
+        continue;
+      }
+      if (r < NO_REASON) {
+        notifyAnalysedVar((-2 - r) >> 1, stamp);
+      } else {
+        int[] a = reasonArena(r);
+        int off = reasonOffset(r);
+        int size = a[off + SIZE];
+        for (int k = 0; k < size; k++) {
+          notifyAnalysedVar(a[off + HEADER + k] >> 1, stamp);
+        }
+      }
+    }
+  }
+
+  private void notifyAnalysedVar(int v, int stamp) {
+    if (analysedMark[v] != stamp && level[v] > 0) {
+      analysedMark[v] = stamp;
+      external.notifyAnalysedLiteral(v + 1);
+    }
   }
 
   /** Counts a conflict-level literal of the analysis under its integer variable. */
