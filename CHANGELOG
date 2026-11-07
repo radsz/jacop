@@ -2762,6 +2762,41 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
+171. The FlatZinc front end finds vehicle routes written as a giant tour
+     (circuit(x) over the customers and a start and an end node per
+     vehicle, with each end node's successor fixed to the next start
+     node: cvrp, vrplc, stochastic-vrp and vrp-submission of the
+     Challenge; P. Kilby and P. Shaw, Vehicle Routing, Handbook of
+     Constraint Programming, 2006) and posts a redundant Routes (item
+     122) over new arc Booleans b[i,j] <-> x[i] = j between customers,
+     with one depot arc out of and into each customer and their degree
+     rows. A quantity accumulated along the tour (T[x[n]] >= T[n] + q[n]
+     with q >= 0, such as the load) gives the demands and the capacity,
+     so the linear relaxation gets the rounded capacity cuts of item 144
+     (J. Lysgaard, A. N. Letchford and R. W. Eglese, Mathematical
+     Programming 100(2), 2004). Each element d = c[x[i]] over a constant
+     array gets the row d = sum c[j] b[i,j], and every accumulated
+     quantity the row sum T[x[n]] = sum T[m] over the nodes, which holds
+     because x is a permutation: it ties an objective written as the
+     arrival times at the end nodes (cvrp) to the arc costs. Root LP
+     bounds go from 0 to 34 on cvrp simple2 (optimal, proved in 224
+     nodes), 0 to 446 on P-n16-k8 (optimum 450), 0 to 661 on A-n37-k5
+     and 0 to 461 on vrp-submission A_4v_22l (best known 481); vrplc
+     9_5_10_s1 61 to 146 (optimum 351, time windows). The new Booleans
+     are branched on last under lazy clause generation, and the route
+     neighbourhoods of LNS keep using the circuit itself.
+     -Dorg.jacop.fz.giantTour=false turns the detection off. 34
+     giant-tour instances of the Challenge, 60 s: optima proved 14 to 19
+     by default and 14 to 20 with -f (A_4v_22l 820 to 481 optimal), 13
+     better / 9 worse by default (objective geomean 0.976) and 13 / 5
+     with -f (0.987); vrplc13_11_20_s4 finds no solution in 60 s in
+     either mode (its first solution comes after 46 s without the
+     detection). Wide set (220, 60 s): the detection fires on the 4
+     giant-tour instances only; solved 166 to 164 by default and 156 to
+     157 with -f, all changes outside them are run-to-run noise
+     (vrplc9_5_10_s2 finds its optimum 329 at 9.7 s instead of 17 s
+     but no longer proves it in 60 s by default).
+
 Version 4.11
 =============
 
