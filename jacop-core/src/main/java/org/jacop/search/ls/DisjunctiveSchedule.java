@@ -121,7 +121,7 @@ final class DisjunctiveSchedule {
 
   final int n;
   // the local-search variable of each task's start, its duration, release and deadline
-  final int[] var;
+  final int[] aVar;
   final int[] dur;
   private final int[] release;
   private final int[] deadline;
@@ -154,7 +154,7 @@ final class DisjunctiveSchedule {
   private long applied;
 
   DisjunctiveSchedule(
-      int[] var,
+      int[] aVar,
       int[] dur,
       int[] release,
       int[] deadline,
@@ -162,8 +162,8 @@ final class DisjunctiveSchedule {
       List<int[]> machines,
       int kinds,
       SplittableRandom random) {
-    this.n = var.length;
-    this.var = var;
+    this.n = aVar.length;
+    this.aVar = aVar;
     this.dur = dur;
     this.release = release;
     this.deadline = deadline;

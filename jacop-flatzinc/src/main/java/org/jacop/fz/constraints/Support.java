@@ -1278,7 +1278,7 @@ public class Support implements ParserTreeConstants {
     final int c;
     final IntVar b;
     final boolean isReified;
-    final int numberId;
+    final int fzNumberId;
 
     FzXeqC(IntVar x, int c, IntVar b, boolean isReified) {
       super(new IntVar[] {x, b});
@@ -1286,7 +1286,7 @@ public class Support implements ParserTreeConstants {
       this.c = c;
       this.b = b;
       this.isReified = isReified;
-      this.numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
+      this.fzNumberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
     }
 
     @Override
@@ -1334,15 +1334,15 @@ public class Support implements ParserTreeConstants {
     @Override
     public String toString() {
       if (isReified) {
-        return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+        return "fzXeqCreified" + fzNumberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
       } else {
-        return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+        return "fzXeqCimplied" + fzNumberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
     }
 
     @Override
     public String id() {
-      return isReified ? "fzXeqCreified" + numberId : "fzXeqCimplied" + numberId;
+      return isReified ? "fzXeqCreified" + fzNumberId : "fzXeqCimplied" + fzNumberId;
     }
 
     // the reified constraint, for its explanations
@@ -1398,7 +1398,7 @@ public class Support implements ParserTreeConstants {
     final int c;
     final IntVar b;
     final boolean isReified;
-    final int numberId;
+    final int fzNumberId;
 
     FzXneqC(IntVar x, int c, IntVar b, boolean isReified) {
       super(new IntVar[] {x, b});
@@ -1406,7 +1406,7 @@ public class Support implements ParserTreeConstants {
       this.c = c;
       this.b = b;
       this.isReified = isReified;
-      this.numberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
+      this.fzNumberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
     }
 
     @Override
@@ -1433,15 +1433,15 @@ public class Support implements ParserTreeConstants {
     @Override
     public String toString() {
       if (isReified) {
-        return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+        return "fzXneqCreified" + fzNumberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
       } else {
-        return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+        return "fzXneqCImpled" + fzNumberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
     }
 
     @Override
     public String id() {
-      return isReified ? "fzXneqCreified" + numberId : "fzXneqCimplied" + numberId;
+      return isReified ? "fzXneqCreified" + fzNumberId : "fzXneqCimplied" + fzNumberId;
     }
 
     // the reified constraint, for its explanations
@@ -1502,7 +1502,7 @@ public class Support implements ParserTreeConstants {
     final IntVar y;
     final IntVar b;
     final boolean isReified;
-    final int numberId;
+    final int fzNumberId;
 
     FzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
       super(new IntVar[] {x, y, b});
@@ -1510,7 +1510,7 @@ public class Support implements ParserTreeConstants {
       this.y = y;
       this.b = b;
       this.isReified = isReified;
-      this.numberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
+      this.fzNumberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
     }
 
     @Override
@@ -1532,15 +1532,15 @@ public class Support implements ParserTreeConstants {
     @Override
     public String toString() {
       if (isReified) {
-        return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
+        return "fzXeYCReified" + fzNumberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
       } else {
-        return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
+        return "fzXeqYimplied" + fzNumberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
       }
     }
 
     @Override
     public String id() {
-      return isReified ? "fzXeqYreified" + numberId : "fzXeqYimplied" + numberId;
+      return isReified ? "fzXeqYreified" + fzNumberId : "fzXeqYimplied" + fzNumberId;
     }
 
     // the reified constraint, for its explanations
@@ -1609,13 +1609,13 @@ public class Support implements ParserTreeConstants {
 
     final IntVar b;
     final IntVar x;
-    final int numberId;
+    final int fzNumberId;
 
     FzIfThenBool(IntVar b, IntVar x) {
       super(new IntVar[] {b, x});
       this.b = b;
       this.x = x;
-      this.numberId = n7.incrementAndGet();
+      this.fzNumberId = n7.incrementAndGet();
     }
 
     @Override
@@ -1643,12 +1643,12 @@ public class Support implements ParserTreeConstants {
 
     @Override
     public String toString() {
-      return "fzIfThenBool" + numberId + ": IfThenBool(" + b + ", " + x + " )";
+      return "fzIfThenBool" + fzNumberId + ": IfThenBool(" + b + ", " + x + " )";
     }
 
     @Override
     public String id() {
-      return "fzIfThenBool" + numberId;
+      return "fzIfThenBool" + fzNumberId;
     }
 
     @Override

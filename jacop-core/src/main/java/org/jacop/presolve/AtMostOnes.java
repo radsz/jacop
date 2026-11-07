@@ -334,7 +334,7 @@ public final class AtMostOnes {
           cliqueSource.add(source);
         }
       }
-    } catch (ArithmeticException e) {
+    } catch (ArithmeticException _) {
       // weights or bounds too large to reason on: the constraint is left alone
     }
   }

@@ -183,7 +183,7 @@ class UnaryTimetableTest {
     store.setLevel(1);
     try {
       c.unaryProfile(store);
-    } catch (FailException e) {
+    } catch (FailException _) {
       return null;
     }
     return domains(inst, v);

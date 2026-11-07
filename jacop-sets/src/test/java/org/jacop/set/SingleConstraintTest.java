@@ -90,7 +90,7 @@ class SingleConstraintTest {
     try {
       // The new lub {2..3} does not contain the current glb {1}.
       x.domain.in(1, x, new IntervalDomain(), new IntervalDomain(2, 3));
-    } catch (FailException e) {
+    } catch (FailException _) {
       failed = true;
     }
     assertThat(failed).isTrue();
@@ -200,7 +200,7 @@ class SingleConstraintTest {
             x.domain.inLubComplement(store.level, x, v);
           }
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           consistent = false;
         }
         if (consistent) {
@@ -424,7 +424,7 @@ class SingleConstraintTest {
       try {
         constraint.consistency(store);
         after = domains(constraint);
-      } catch (FailException e) {
+      } catch (FailException _) {
         after = "fail";
       }
       if (!after.equals(before)) {
@@ -507,7 +507,7 @@ class SingleConstraintTest {
           a.domain.in(store.level, a, set, set);
           total.domain.in(store.level, total, t, t);
           accepted = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           accepted = false;
         }
         assertThat(accepted)

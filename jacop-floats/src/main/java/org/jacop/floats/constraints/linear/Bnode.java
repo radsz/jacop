@@ -166,9 +166,9 @@ public class Bnode extends BinaryNode {
     double siblingMinValue = sibling.min();
     double siblingMaxValue = sibling.max();
 
-    FloatDomain bound = FloatDomain.subBounds(min, max, siblingMinValue, siblingMaxValue);
-    double newNodeMinValue = bound.min();
-    double newNodeMaxValue = bound.max();
+    FloatDomain localBound = FloatDomain.subBounds(min, max, siblingMinValue, siblingMaxValue);
+    double newNodeMinValue = localBound.min();
+    double newNodeMaxValue = localBound.max();
 
     double lb = node.lb();
     double ub = node.ub();

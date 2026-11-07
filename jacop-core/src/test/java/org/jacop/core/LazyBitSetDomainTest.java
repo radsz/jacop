@@ -423,7 +423,7 @@ class LazyBitSetDomainTest {
     try {
       step.apply(side);
       return false;
-    } catch (FailException e) {
+    } catch (FailException _) {
       return true;
     }
   }

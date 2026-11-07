@@ -161,7 +161,7 @@ class LinearIntDomSumsetTest {
   private static boolean consistent(Store s) {
     try {
       return s.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
   }

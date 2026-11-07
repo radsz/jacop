@@ -1084,13 +1084,14 @@ public final class RevisedDualSimplex {
     }
     for (int k = 0; k < infiniteLen; k++) {
       int j = infinite[k];
-      if (row[j] < 0 && isArtificial(j, upper[j]) && lo[j] != hi[j]) {
-        if (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL) {
-          if (!enlarge()) {
-            return UNBOUNDED;
-          }
-          return -1;
+      if (row[j] < 0
+          && isArtificial(j, upper[j])
+          && lo[j] != hi[j]
+          && (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL)) {
+        if (!enlarge()) {
+          return UNBOUNDED;
         }
+        return -1;
       }
     }
     return OPTIMAL;

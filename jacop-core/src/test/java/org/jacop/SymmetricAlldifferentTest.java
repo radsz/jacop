@@ -86,7 +86,6 @@ class SymmetricAlldifferentTest {
     for (int instance = 0; instance < INSTANCES; instance++) {
       int n = 1 + rnd.nextInt(7);
       int offset = rnd.nextInt(3) - 1;
-      int[][] doms = new int[n][];
       Store store = new Store();
       IntVar[] x = new IntVar[n];
       for (int i = 0; i < n; i++) {
@@ -120,7 +119,7 @@ class SymmetricAlldifferentTest {
           } else {
             v.domain.inComplement(store.level, v, value);
           }
-        } catch (FailException e) {
+        } catch (FailException _) {
           break;
         }
         if (!propagateAndCheck(store, x, offset, where + " step " + step)) {

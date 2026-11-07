@@ -214,11 +214,11 @@ public class PartitionSet extends Constraint implements Copyable<PartitionSet>, 
 
     constraints = new ArrayList<>();
 
-    AunionBeqC[] union = unionConstraints();
+    AunionBeqC[] localUnion = unionConstraints();
     List<AdisjointB> intersect = disjointConstraints();
 
     constraints = new ArrayList<>();
-    constraints.addAll(Arrays.asList(union));
+    constraints.addAll(Arrays.asList(localUnion));
     constraints.addAll(intersect);
 
     return constraints;

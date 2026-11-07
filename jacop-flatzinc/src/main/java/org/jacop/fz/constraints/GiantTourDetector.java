@@ -550,7 +550,7 @@ public class GiantTourDetector implements ParserTreeConstants {
       }
       // the least increment into the successor of each customer
       long[] demand = new long[k + 1];
-      boolean rows = false;
+      boolean localRows = false;
       boolean nonNegative = true;
       for (int i = 1; i <= k && demand != null; i++) {
         int v = customers.get(i);
@@ -558,12 +558,12 @@ public class GiantTourDetector implements ParserTreeConstants {
         if (q == null) {
           demand = null;
         } else {
-          rows |= a[v] != t[v];
+          localRows |= a[v] != t[v];
           nonNegative &= q >= 0;
           demand[i] = q;
         }
       }
-      if (demand == null || !rows) {
+      if (demand == null || !localRows) {
         continue;
       }
       // sum over the nodes not fixed of T[x[n]] = sum of T over the nodes no fixed link enters

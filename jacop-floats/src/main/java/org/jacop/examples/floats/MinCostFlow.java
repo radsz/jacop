@@ -150,9 +150,6 @@ public class MinCostFlow {
       System.out.printf("%.2f, ", xVar.value());
     }
     log.info("");
-    //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
-    // result =" +
-    //       (double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
 
     log.info("\nPrecision = " + FloatDomain.precision());
   }

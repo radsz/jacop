@@ -504,7 +504,7 @@ class GlobalCardinalityTest {
             } else {
               continue;
             }
-          } catch (org.jacop.core.FailException e) {
+          } catch (org.jacop.core.FailException _) {
             break;
           }
         }

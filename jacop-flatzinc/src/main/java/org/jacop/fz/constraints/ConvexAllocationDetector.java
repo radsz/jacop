@@ -181,20 +181,20 @@ public class ConvexAllocationDetector implements ParserTreeConstants {
         linears.add(node);
       }
       case "int_lin_le" -> linears.add(node);
-      case "int_abs" -> absolute.put(var(node, 1), var(node, 0));
+      case "int_abs" -> absolute.put(aVar(node, 1), aVar(node, 0));
       case "int_times" -> {
-        IntVar t = var(node, 0);
-        if (t == var(node, 1)) {
-          square.put(var(node, 2), t);
+        IntVar t = aVar(node, 0);
+        if (t == aVar(node, 1)) {
+          square.put(aVar(node, 2), t);
         }
       }
       case "int_pow" -> {
-        IntVar e = var(node, 1);
+        IntVar e = aVar(node, 1);
         if (e.singleton() && e.value() == 2) {
-          square.put(var(node, 2), var(node, 0));
+          square.put(aVar(node, 2), aVar(node, 0));
         }
       }
-      case "int_max" -> maximum.put(var(node, 2), new IntVar[] {var(node, 0), var(node, 1)});
+      case "int_max" -> maximum.put(aVar(node, 2), new IntVar[] {aVar(node, 0), aVar(node, 1)});
       case "jacop_bin_packing" -> binPacking(node);
       default -> {
         // not part of a convex cost
@@ -206,7 +206,7 @@ public class ConvexAllocationDetector implements ParserTreeConstants {
     return (SimpleNode) node.jjtGetChild(i);
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar aVar(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
@@ -516,7 +516,7 @@ public class ConvexAllocationDetector implements ParserTreeConstants {
         least += f[i].value(f[i].argMin(lo, hi));
         most += Math.max(f[i].value(lo), f[i].value(hi));
       }
-    } catch (ArithmeticException e) {
+    } catch (ArithmeticException _) {
       return null;
     }
     if (!fits(least) || !fits(most)) {
@@ -527,7 +527,7 @@ public class ConvexAllocationDetector implements ParserTreeConstants {
     ConvexAllocation allocation;
     try {
       allocation = new ConvexAllocation(g.x, f, total, cost);
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       // a cost too large for exact arithmetic
       return null;
     }

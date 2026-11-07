@@ -449,10 +449,10 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
 
   private void increaseVariableWeights(int k) {
     int[] positions = scopePositions[k];
-    int unfixed = 0;
+    int localUnfixed = 0;
     for (int p = 0; p < positions.length; p += 2) {
       if (!vars[positions[p]].singleton()) {
-        unfixed++;
+        localUnfixed++;
       }
     }
     for (int p = 0; p < positions.length; p += 2) {
@@ -460,7 +460,7 @@ public class DomWdeg implements SelectChoicePoint<IntVar>, SearchMonitor {
       if (!v.singleton()) {
         // the domain may be empty in the failed state
         varWeights[positions[p]][positions[p + 1]] +=
-            1.0d / ((double) unfixed * Math.max(1, v.getSize()));
+            1.0d / ((double) localUnfixed * Math.max(1, v.getSize()));
       }
     }
   }

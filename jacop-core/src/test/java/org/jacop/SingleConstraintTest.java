@@ -2931,7 +2931,7 @@ class SingleConstraintTest extends TestHelper {
 
       try {
         store.impose(new ConditionalSelect(b, x, y));
-      } catch (FailException e) {
+      } catch (FailException _) {
         assertThat(expected).as("trial %d: failed at imposition", trial).isZero();
         continue;
       }
@@ -3248,7 +3248,7 @@ class SingleConstraintTest extends TestHelper {
     try {
       c.consistency(store);
       result = domainsOf(vars);
-    } catch (FailException e) {
+    } catch (FailException _) {
       result = "FAIL";
     }
     store.removeLevel(level + 1);
@@ -4741,7 +4741,7 @@ class SingleConstraintTest extends TestHelper {
           } else if (x.domain.contains(v) && !x.singleton()) {
             x.domain.inComplement(store.level, x, v);
           }
-        } catch (FailException e) {
+        } catch (FailException _) {
           break;
         }
         if (!store.consistency()) {
@@ -6250,7 +6250,6 @@ class SingleConstraintTest extends TestHelper {
   void testVariableBasedSoftGccMatchesItsDefinition() {
 
     Random random = new Random(7);
-    int satisfiable = 0;
     for (int instance = 0; instance < 60; instance++) {
       int n = 1 + random.nextInt(3);
       int[] values = random.nextBoolean() ? new int[] {1, 0} : new int[] {0, 2};

@@ -144,30 +144,30 @@ public class AllEqual extends PrimitiveConstraint
     if (n < 2) {
       return false;
     }
-    int position = trail.size();
+    int localPosition = trail.size();
     IntVar low = x[0];
     IntVar high = x[0];
     for (IntVar y : x) {
-      if (trail.minBefore(y, position) > trail.minBefore(low, position)) {
+      if (trail.minBefore(y, localPosition) > trail.minBefore(low, localPosition)) {
         low = y;
       }
-      if (trail.maxBefore(y, position) < trail.maxBefore(high, position)) {
+      if (trail.maxBefore(y, localPosition) < trail.maxBefore(high, localPosition)) {
         high = y;
       }
     }
-    int lo = trail.minBefore(low, position);
-    int hi = trail.maxBefore(high, position);
-    trail.addLowerBound(low, position, out);
-    trail.addUpperBound(high, position, out);
+    int lo = trail.minBefore(low, localPosition);
+    int hi = trail.maxBefore(high, localPosition);
+    trail.addLowerBound(low, localPosition, out);
+    trail.addUpperBound(high, localPosition, out);
     final IntVar first = low;
     return lo > hi
         || DomainCover.range(
             trail,
             low,
-            position,
+            localPosition,
             lo,
             hi,
-            (u, o) -> excludedElsewhere(trail, first, u, position, o),
+            (u, o) -> excludedElsewhere(trail, first, u, localPosition, o),
             out);
   }
 

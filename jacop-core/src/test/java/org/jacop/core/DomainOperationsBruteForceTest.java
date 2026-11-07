@@ -464,7 +464,7 @@ class DomainOperationsBruteForceTest {
   }
 
   private interface Pruning {
-    void apply(IntDomain domain, int level, IntVar var);
+    void apply(IntDomain domain, int level, IntVar aVar);
   }
 
   /**
@@ -510,7 +510,7 @@ class DomainOperationsBruteForceTest {
     boolean failed = false;
     try {
       pruning.apply(x.domain, store.level, x);
-    } catch (FailException e) {
+    } catch (FailException _) {
       failed = true;
     }
     assertThat(failed).as(operation + " (same level) failure").isEqualTo(expected.isEmpty());
@@ -535,7 +535,7 @@ class DomainOperationsBruteForceTest {
     boolean failed = false;
     try {
       pruning.apply(x.domain, store.level, x);
-    } catch (FailException e) {
+    } catch (FailException _) {
       failed = true;
     }
     assertThat(failed).as(operation + " failure").isEqualTo(expected.isEmpty());

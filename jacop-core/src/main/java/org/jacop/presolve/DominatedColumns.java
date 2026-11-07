@@ -178,11 +178,9 @@ final class DominatedColumns {
 
   private void add(IntVar v, Term t) {
     Map<Integer, Term> m = terms.get(v);
-    if (m != null) {
+    if (m != null && m.put(t.constraint(), t) != null) {
       // a variable a constraint reads twice is ruled out rather than merged
-      if (m.put(t.constraint(), t) != null) {
-        blocked.add(v);
-      }
+      blocked.add(v);
     }
   }
 

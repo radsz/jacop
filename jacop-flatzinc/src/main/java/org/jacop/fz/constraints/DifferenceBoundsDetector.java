@@ -228,8 +228,8 @@ public class DifferenceBoundsDetector implements ParserTreeConstants {
     switch (node.getName()) {
       case "int_lin_le" -> linear(node, false);
       case "int_lin_eq" -> linear(node, true);
-      case "int_le" -> edge(var(node, 0), var(node, 1), 0);
-      case "int_lt" -> edge(var(node, 0), var(node, 1), -1);
+      case "int_le" -> edge(variable(node, 0), variable(node, 1), 0);
+      case "int_lt" -> edge(variable(node, 0), variable(node, 1), -1);
       default -> {
         // not a difference constraint
       }
@@ -255,7 +255,7 @@ public class DifferenceBoundsDetector implements ParserTreeConstants {
     }
   }
 
-  private IntVar var(ASTConstElem node, int i) {
+  private IntVar variable(ASTConstElem node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 

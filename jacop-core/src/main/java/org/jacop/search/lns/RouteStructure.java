@@ -97,7 +97,7 @@ abstract class RouteStructure {
    *
    * @return the nodes that removal may take.
    */
-  int customers() {
+  int customerCount() {
     return customers.length;
   }
 
@@ -106,7 +106,7 @@ abstract class RouteStructure {
    *
    * @return the routes, each the list of its customers in order.
    */
-  int[][] routes() {
+  int[][] bestRoutes() {
     readRoutes();
     return routes.clone();
   }

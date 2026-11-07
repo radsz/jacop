@@ -3027,7 +3027,40 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
-182. The automatic LP guide of the FlatZinc front end
+182. DiffnK explains its pruning and failures under --lcg by the boxes
+     of the rule that fired, instead of by the bounds of all boxes:
+     a pairwise separation by the origin and length bounds of the two
+     boxes (with the holes skipped by the pruned bound), a volume or fit
+     failure by the boxes it counted, and the exclusion of a
+     non-strict box by the atoms that make it zero-sized or absent. The
+     average reason drops from about 149 to about 15 atoms on
+     products-and-shelves (-Dorg.jacop.diffnk.reasons=false restores
+     the generic reason).
+     Diffn has a new energetic check on strips (setEnergetic,
+     -Dorg.jacop.diffn.energetic=0|1|2, off by default): for each
+     dimension and each strip [t1, t2) with t1 an earliest or latest
+     start and t2 an earliest or latest end, the minimal parts of the
+     rectangles inside the strip must pack into the strip, tested with
+     the dual feasible functions of item 155 (mode 1) or by area only
+     (mode 2) (F. Clautiaux, A. Jouglet, J. Carlier and A. Moukrim, A new
+     constraint programming approach for the orthogonal packing problem,
+     Comput. Oper. Res. 35(3):944-959, 2008; S. P. Fekete and
+     J. Schepers, Math. Methods Oper. Res. 60(2):311-329, 2004). Its
+     failures are explained by the strip rectangles' bounds that place
+     them in the strip and the extent.
+     At 600 s (three rounds each, default and -f search, same jar with
+     the generic reason as base) the five 2025 products-and-shelves
+     instances all reach the optimum in every round: ps-50-09 is proved
+     in 109-125 s by default and 240-326 s with -f, where the base finds
+     the optimum but proves nothing in 600 s; ps-25-01 goes from 154-180
+     s to 28-35 s (default) and from 374-394 s to 24-27 s (-f); ps-25-03
+     from 60-72 s to 5-7 s; ps-50-06 from 34-39 s to 14-18 s. The
+     energetic check stays off: on the 70 hardest Challenge Diffn
+     instances at 240 s it solves 28 -> 18 (mode 1) and 28 -> 25
+     (mode 2), and on the 25 carpet-cutting instances at 600 s mode 2
+     solves 12 -> 11 with 8 better and 8 worse.
+
+183. The automatic LP guide of the FlatZinc front end
      (--free-config lcg-lp-branching=auto) turns on only when the simplex
      has value columns. Before, it also turned on for the columns of
      tried value encodings that the root trial dropped. New
@@ -3038,7 +3071,7 @@ Version 5.0 (unreleased)
      12 s, but vrplc9_5_10_s2 goes from 17 to 150 s
      (lcg-lp-branching=on restores the guide there).
 
-183. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
+184. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
      two Booleans) and XplusYeqC (x + y = c) explain their own atoms and
      failures instead of a replayed or generic reason. A result of AND
      fixed to 0 cites the operand at 0, a result fixed to 1 both
@@ -3054,7 +3087,7 @@ Version 5.0 (unreleased)
      constraints (240 s, paired, scored by section 7 of the scoring
      rules): --lcg S = +14, -f S = +1 over two repetitions.
 
-184. Symmetry detection in fzn-jacop builds the graph of a constant array
+185. Symmetry detection in fzn-jacop builds the graph of a constant array
      once per content: an array whose elements are all constants (a table
      of tuples, given by name or written out) becomes one key shared by
      every constraint that uses the same contents, instead of one vertex
@@ -3073,7 +3106,7 @@ Version 5.0 (unreleased)
      proved at 549 s before, not by 600 s now); the 10 changed wide
      instances 8 to 8 in both modes.
 
-185. The dense simplex (below 100 rows) keeps and restores bases too,
+186. The dense simplex (below 100 rows) keeps and restores bases too,
      like JaLP in 132: DualSimplex gets saveBasis/restoreBasis, which
      copy the tableau, the basis and the edge norms, and refuse a basis
      saved before rows were added or removed or in another copy. Since a
@@ -3094,7 +3127,7 @@ Version 5.0 (unreleased)
      families better and none worse; city-position is slower with -f
      (city-5-06 222 s to 307 s).
 
-186. Capacity cuts of a Routes (item 144) are also separated in search:
+187. Capacity cuts of a Routes (item 144) are also separated in search:
      every few optimal LP solves after the root (from 4, doubled up to
      1024 while nothing is violated, halved when cuts are found), up to
      10 cuts go into the row pool, where they age out like other cuts.

@@ -565,7 +565,7 @@ public final class Derivation implements VarMap {
         outcome = Outcome.INFEASIBLE;
         return;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       outcome = Outcome.INFEASIBLE;
       return;
     } finally {
@@ -680,7 +680,7 @@ public final class Derivation implements VarMap {
     }
 
     // rule 2: the equalities that define affine classes are replaced by substitution
-    AffineSubstitution affine = null;
+    AffineSubstitution localAffine = null;
     if (rules && this.affine) {
       // variables the child needs as themselves: those of the clauses, which go to the SAT solver,
       // and those of the constraints the reification cleanup rewrites or relaxes
@@ -697,12 +697,12 @@ public final class Derivation implements VarMap {
         }
       }
       // a merged alias is named by the constraints but takes the copy of its class
-      affine = AffineSubstitution.find(plain, views, aliases::containsKey, pinned::contains);
-      if (affine.definingCount() > 0) {
-        carried.removeIf(affine::defines);
-        dropped += affine.definingCount();
+      localAffine = AffineSubstitution.find(plain, views, aliases::containsKey, pinned::contains);
+      if (localAffine.definingCount() > 0) {
+        carried.removeIf(localAffine::defines);
+        dropped += localAffine.definingCount();
       } else {
-        affine = null;
+        localAffine = null;
       }
     }
 
@@ -728,7 +728,7 @@ public final class Derivation implements VarMap {
         && aliases.isEmpty()
         && reifications.simplified() + reifications.halfReified() + reifications.dropped() == 0
         && entries.isEmpty()
-        && affine == null) {
+        && localAffine == null) {
       // the rules only narrowed domains and imposed constraints, which the parent has: it is
       // searched itself, as it was loaded, rather than a copy that would search differently
       live();
@@ -744,11 +744,11 @@ public final class Derivation implements VarMap {
           // merged into another variable, or eliminated by rule 8
           continue;
         }
-        if (affine != null && affine.relation(v) != null) {
+        if (localAffine != null && localAffine.relation(v) != null) {
           // a member of an affine class, mapped once its representative has a counterpart
           continue;
         }
-        if (used.contains(v) || !rules || affine != null && affine.isRoot(v)) {
+        if (used.contains(v) || !rules || localAffine != null && localAffine.isRoot(v)) {
           keep(v);
         } else if (eliminatedVars.contains(v) && !v.singleton()) {
           entries.put(v, new Entry.Eliminated());
@@ -761,19 +761,19 @@ public final class Derivation implements VarMap {
           entries.put(v, new Entry.Free());
         }
       }
-    } catch (UnsupportedOperationException e) {
+    } catch (UnsupportedOperationException _) {
       // a variable class without copyTo
       live();
       return;
     }
     int childConstraints = carried.size();
-    if (affine != null) {
+    if (localAffine != null) {
       try {
         // an equality that ties a member to its representative stands for a dropped definition
-        int tied = substitute(affine, carried, aliases);
+        int tied = substitute(localAffine, carried, aliases);
         dropped -= tied;
         childConstraints += tied;
-      } catch (FailException e) {
+      } catch (FailException _) {
         outcome = Outcome.INFEASIBLE;
         child = null;
         return;
@@ -917,7 +917,7 @@ public final class Derivation implements VarMap {
         IntVar x = e.getKey();
         x.domain.in(level, x, e.getValue(), e.getValue());
       }
-    } catch (FailException f) {
+    } catch (FailException _) {
       return false;
     }
     if (!parent.consistency()) {
@@ -1529,7 +1529,7 @@ public final class Derivation implements VarMap {
             accepted[0] =
                 (eliminationReconstruction == null || eliminationReconstruction.apply(parent))
                     && parent.consistency();
-          } catch (FailException f) {
+          } catch (FailException _) {
             accepted[0] = false;
           }
         });

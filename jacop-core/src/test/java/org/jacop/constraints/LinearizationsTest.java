@@ -607,8 +607,8 @@ class LinearizationsTest {
 
   private static boolean holds(LinearForm f, IntVar[] scope, long[] value) {
     Function<IntVar, Long> v =
-        var -> {
-          if (var instanceof LpColumn c) {
+        aVar -> {
+          if (aVar instanceof LpColumn c) {
             // [x = v], from the value of x
             for (int i = 0; i < scope.length; i++) {
               if (scope[i] == c.variable()) {
@@ -617,11 +617,11 @@ class LinearizationsTest {
             }
           }
           for (int i = 0; i < scope.length; i++) {
-            if (scope[i] == var) {
+            if (scope[i] == aVar) {
               return value[i];
             }
           }
-          throw new IllegalStateException(var + " outside the scope");
+          throw new IllegalStateException(aVar + " outside the scope");
         };
     long sum = 0;
     for (int i = 0; i < f.vars().length; i++) {
