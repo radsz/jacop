@@ -2524,7 +2524,30 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
-163. Sequence (sliding among) as a global for local search and lazy
+163. Flow model of Regular and ExtensionalSupportMdd in the linear
+     relaxation (Cote, Gendron and Rousseau, "Modeling the regular
+     constraint with integer programming", CPAIOR 2007): one LP-only arc
+     column per group of edges with the same level and value on a path of
+     the layered graph (the value column itself when the group is a single
+     edge), a row sum arcs = [x = v] per group, one unit of flow out of the
+     source and conservation at every inner node. The flow polytope of a
+     layered graph is integral. The arc columns are bounded by the domain
+     of their variable (LpColumn.arc) and are not used to guide the
+     search. The rows come after the value encodings and are kept only when
+     they raise the integer bound of the objective above that of the rows
+     before them. -Dorg.jacop.lp.flowEncodings=false turns them off. The
+     value encodings of item 161 are no longer tried on models without an
+     objective, where they cannot raise a bound. Wide set (220, 60 s,
+     paired): default 161 to 161 solved (5 families better, 5 worse), -f
+     162 to 162 (6 / 3); the LP differs only on the 8 satisfaction models
+     that lose their value columns and on 2 peaceable-queens instances
+     where the flow rows are built but not kept, and none of the outcomes
+     that changed is on those. On the 55 Challenge instances with Regular
+     or MDD and an objective, the flow rows rarely fit in the sparse
+     simplex (handball: none of 1664) and, without that cap, raise the
+     integer root bound only on peaceable queens (pq_n12 72 to 71).
+
+164. Sequence (sliding among) as a global for local search and lazy
      clause generation, and found where a model states it window by
      window. AmongSeq, the domain consistent propagator of Sequence on the
      cumulative-sums network of Brand, Narodytska, Quimper, Stuckey and
@@ -2559,7 +2582,7 @@ Version 5.0 (unreleased)
      solved by default and 163 -> 163 under -f, with chains on 4 of its
      220 instances (the other changes are run-to-run noise).
 
-164. Local search (--free-config ls=...) no longer evaluates the
+165. Local search (--free-config ls=...) no longer evaluates the
      constraints JaCoP adds itself. The redundant constraints of the
      detectors are marked implied when they are imposed
      (Store.imposingImplied, Store.isImplied) and left out, since they
@@ -2580,7 +2603,7 @@ Version 5.0 (unreleased)
      and 23x on cars 65_09. Wide set at 60 s, -f ls=0.1: 162 to 161
      solved, with solutions 192 to 192, within the noise of free search.
 
-165. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
+166. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
      f[i](s[i]) <= cost under precedences s[j] >= s[i] + d over an
      acyclic graph, where each f[i] is convex piecewise linear, given as
      earliness and tardiness terms e * max(0, b - s) + t * max(0, s - b).
@@ -2610,7 +2633,7 @@ Version 5.0 (unreleased)
      J.-N. Monette, Y. Deville and P. Van Hentenryck, Just-In-Time
      Scheduling with Constraint Programming, ICAPS 2009.
 
-166. The XorSystem detector also reads tables (jacop_table_int,
+167. The XorSystem detector also reads tables (jacop_table_int,
      jacop_table_bool and short tables): the parity constraints a table
      implies on its 0/1 variables, the equations of the affine hull over
      GF(2) of its tuples allowed by the domains, become rows of the
@@ -2622,7 +2645,7 @@ Version 5.0 (unreleased)
      isolated 2-variable rows. XCSP3 2025 Cryptanalysis gets systems from
      its bool_xor (8 per instance) with no change in time or answers.
 
-167. Under --lcg, EinA (set_in_reif with a set variable)
+168. Under --lcg, EinA (set_in_reif with a set variable)
      explains what the set's cardinality derives inside the constraint:
      when the cardinality bound leaves no room for the element, or when
      the other members already fill it, the reason cites the
@@ -2636,7 +2659,63 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
-168. Scheduling objective bounds. WeightedCompletion takes resource
+169. Lattice methods for linear equalities.
+     - LinearIntDom finds the supports of an equality by bitset sumsets
+       when that is estimated cheaper than enumerating them: a forward
+       pass of shifts gives the reachable partial sums after each
+       variable, a backward pass keeps those that still reach the
+       right-hand side, in O(sum |D_i| * W / 64) for a window of W
+       partial sums. It stays domain consistent on long equalities with
+       small coefficients, where the enumeration (product of the domain
+       sizes up to 10^7) fell back to bounds. This is the knapsack dynamic
+       program of Trick (Annals of OR 118, 2003) and the sumset view of
+       subset sum of Koiliaris and Xu (SODA 2017; ACM TALG 15(3), 2019)
+       and Bringmann (SODA 2017), on bitsets rather than FFT.
+       -Dorg.jacop.constraints.LinearIntDom.sumset=off|auto|always.
+     - New class LinearEqualities and org.jacop.util.IntLattice: the
+       integer solutions of a system A x = b as x0 plus a lattice basis,
+       by a column Hermite normal form (Hermite 1851; Kannan and Bachem,
+       SIAM J. Computing 8(4), 1979), and LLL reduction (Lenstra, Lenstra
+       and Lovasz, Math. Annalen 261, 1982) with floating-point
+       Gram-Schmidt as in Schnorr and Euchner (Math. Programming 66,
+       1994). The FlatZinc front end (LinearSystemDetector) gives it the
+       int_lin_eq constraints: each is divided by the GCD of its
+       coefficients (infeasible when it does not divide the constant),
+       equalities that only define a variable are set aside, and each
+       remaining component is solved over the integers, which proves it
+       infeasible or gives every variable a congruence x = x0 (mod g)
+       whose other values are removed from domains of at most 256 values
+       (larger domains only get their bounds rounded); the variables the set-aside
+       equalities define get the congruence of their sum.
+     - Market split systems (at least two equalities of five or more
+       variables, a coefficient of at least 10, domains of at most 100
+       values) are reformulated as Aardal, Hurkens and Lenstra do (Math.
+       of OR 25(3), 2000): x = x0 + sum_k lambda_k q_k over the reduced
+       basis, with x0 moved near the centre of the box (Babai,
+       Combinatorica 6, 1986). The linear relaxation takes these rows in
+       and lambda is searched first, last basis vector first, middle
+       value first. Without the relaxation the lambda search is
+       slower than the x search, so it is only done with the relaxation
+       on (the default). On 20
+       market split instances (Cornuejols and Dawande, IPCO 1998;
+       m = 3..6 equalities, n = 10(m-1) binaries, 60 s) solved 8 -> 18
+       by default and 6 -> 18 with -f; m = 5 takes 2-5 s against
+       time-outs, and 2 of the 5 m = 6 instances stay open. The column
+       Hermite normal form reduces each row by its smallest entry
+       (nearest-multiple subtraction rather than pairwise extended
+       Euclid, whose multipliers grew U to millions of bits on
+       lights_out) and gives up on a component beyond 256 bits.
+       -Dorg.jacop.fz.lattice=false turns the detector off;
+       -Dorg.jacop.fz.latticeReformulate=auto|on|off. Wide set (220,
+       60 s, paired): congruences prune on 16 instances and no wide
+       instance is reformulated; solved 168 -> 167 by default (one evm
+       proof at 59.4 s lost) and 160 -> 161 with -f, instances 6 better
+       / 6 worse and 13 / 13, the rest of the differences being on
+       instances whose model does not change. ptv pax_period_20_3b is
+       proved in 28 s instead of 58 s (4.4 s instead of 7.4 s with -f),
+       harmony canon in 18 s instead of 23 s (36 s instead of 48 s).
+
+170. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
@@ -2683,7 +2762,37 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
-169. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
+169. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
+     sum x_i = total and convex costs f_i (ConvexCost: weighted maxima
+     of affine pieces, their squares, or tables). The minimum of the
+     separable convex allocation is found by the greedy on marginal
+     costs (Hochbaum, "Lower and upper bounds for the allocation problem
+     and other nonlinear optimization problems", Mathematics of
+     Operations Research 19(2), 390-409, 1994); it generalises the
+     bounds of Spread (Pesant and Regin, "SPREAD: a balancing constraint
+     based on statistics", CP 2005, LNCS 3709) and Deviation (Schaus,
+     Deville, Dupont and Regin, "The deviation constraint", CPAIOR 2007,
+     LNCS 4510). The minimum bounds cost, the marginal cost lambda gives
+     reduced costs that bound every x_i, and for up to 64 variables
+     (-Djacop.convexAllocation.exact) each bound of x_i is exact over
+     the integer intervals (bounds(Z)), found by walking x_i away from its
+     minimiser while the others follow greedily. Under LCG it explains
+     its prunings with the Lagrangian bound at lambda.
+     ConvexAllocationDetector posts it in FlatZinc next to the model's
+     own constraints for objectives that sum abs, squares or maxima of
+     affine terms of variables whose sum is fixed or a variable (unit
+     int_lin_eq of 3 or more variables, or bin_packing loads). It is on
+     by default without LCG and off under LCG
+     (-Dorg.jacop.fz.convexAllocation=true/false overrides): with LCG a
+     stronger cost bound cost gbac most of what the alternating restarts
+     find (2020 UD10 417 to 8052). Of the MiniZinc Challenge instances
+     2008-2025 it fires on gbac only. Random balance and gbac instances
+     (50, 30 s, --lcg off): solved 13 to 35, square_b12 14760 to optimum
+     43 in 0.9 s, every squared dead zone solved within 3.4 s; wide set (220, 30 s, --lcg off): 89 to 89 solved, gbac UD3
+     57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
+     the other changes being run-to-run noise.
+
+171. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
      for cumulative scheduling: the preemptive relaxation checked by a
      maximum flow from tasks to elementary intervals, after W. A. Horn,
      Some simple scheduling algorithms, Naval Research Logistics

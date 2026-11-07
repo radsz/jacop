@@ -64,6 +64,8 @@ import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ConvexAllocation;
+import org.jacop.constraints.ConvexCost;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -452,7 +454,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(30)) {
+      return switch (rnd.nextInt(31)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -548,7 +550,8 @@ class LcgFuzzTest {
                 new int[] {1 + rnd.nextInt(2), rnd.nextInt(3), 1 + rnd.nextInt(2)},
                 new int[] {rnd.nextInt(5), rnd.nextInt(5), rnd.nextInt(5)},
                 intVar("lc", 0, 1 + rnd.nextInt(2)));
-        case 28 -> {
+        case 28 -> convexAllocation(p);
+        case 29 -> {
           // the preemptive flow check alone, unit or larger uses, with or without compulsory parts
           int k = 3 + rnd.nextInt(2);
           HornFlow flow =
@@ -562,6 +565,27 @@ class LcgFuzzTest {
         }
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // sum of p = total and cost >= sum of random convex costs (absolute values, squares, squared
+    // dead zones, affine functions), sometimes with the reduced-cost bounds only
+    private ConvexAllocation convexAllocation(IntVar[] p) {
+      ConvexCost[] f = new ConvexCost[p.length];
+      for (int i = 0; i < p.length; i++) {
+        long w = 1 + rnd.nextInt(2);
+        long c = rnd.nextInt(5) - 1;
+        f[i] =
+            switch (rnd.nextInt(4)) {
+              case 0 -> ConvexCost.abs(w, 1, -c);
+              case 1 -> ConvexCost.square(w, 1, -c);
+              case 2 -> ConvexCost.squaredMax(w, new long[] {1, -1}, new long[] {-c, c - 1});
+              default -> ConvexCost.linear(rnd.nextInt(5) - 2, 0).plus(ConvexCost.abs(w, 1, -c));
+            };
+      }
+      IntVar total = rnd.nextBoolean() ? intVar("at", 0, 6) : one();
+      ConvexAllocation a = new ConvexAllocation(p, f, total, intVar("ac", 0, 6 + rnd.nextInt(20)));
+      a.lagrangianOnly(rnd.nextInt(3) == 0);
+      return a;
     }
 
     // three starts under precedences with lags, earliness and tardiness at most a cost variable
@@ -934,12 +958,24 @@ class LcgFuzzTest {
               new int[] {2, 2, 2});
         }
         case 78, 79 -> recentGlobal();
-        case 63 ->
-            new LinearIntDom(
-                p,
-                new int[] {1 + rnd.nextInt(2), -1, 2},
-                new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
-                value() + 2);
+        case 63 -> {
+          if (rnd.nextInt(3) == 0) {
+            // a longer equality, propagated by sumsets
+            IntVar[] qs = pick(x, 5);
+            int[] w = new int[qs.length];
+            for (int i = 0; i < w.length; i++) {
+              w[i] = (1 + rnd.nextInt(3)) * (i % 2 == 0 ? 1 : -1);
+            }
+            LinearIntDom c = new LinearIntDom(qs, w, "==", value());
+            c.setSumsets("always");
+            yield c;
+          }
+          yield new LinearIntDom(
+              p,
+              new int[] {1 + rnd.nextInt(2), -1, 2},
+              new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
+              value() + 2);
+        }
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {

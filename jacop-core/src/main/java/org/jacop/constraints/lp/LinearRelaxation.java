@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
@@ -126,6 +127,10 @@ public class LinearRelaxation extends Constraint
   // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
   // are tried without them when all of them are not kept
   private int plainExtra = Integer.MAX_VALUE;
+  // the extra rows before the flow models of layered graphs, which come after the other tried
+  // value encodings; the rows before them are tried without them when all are not kept, and are
+  // kept instead of all when they give the same bound
+  private int triedExtra = Integer.MAX_VALUE;
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -789,10 +794,13 @@ public class LinearRelaxation extends Constraint
     }
     // the value encodings over auxiliary columns come first, so that a size cap leaves out other
     // rows before them; they are many rows by nature (a row per value and constraint) and are not
-    // held to the trial cap of the sparse simplex chosen by size
+    // held to the trial cap of the sparse simplex chosen by size. The further encodings, tried at
+    // the first solve, are made only for an objective: they are kept when they raise its bound or
+    // make the LP infeasible, and without an objective only the latter is left: rows kept for one
+    // infeasible LP then slow every solve and move the search path (sudoku_fixed p28)
     Linearizations.ValueRows valueRows =
         LINEARIZE
-            ? Linearizations.valueRows(constraints, extra)
+            ? Linearizations.valueRows(constraints, extra, objective != null)
             : new Linearizations.ValueRows(List.of(), List.of());
     List<LinearForm> columnRows = valueRows.kept();
     List<LinearForm> candidates = new ArrayList<>();
@@ -807,7 +815,7 @@ public class LinearRelaxation extends Constraint
     // out
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
-    for (List<LinearForm> rows : List.of(relaxed, valueRows.tried())) {
+    for (List<LinearForm> rows : List.of(relaxed, valueRows.tried(), valueRows.flow())) {
       for (LinearForm f : rows) {
         if (f.relation() != LinearForm.NE
             && f.vars().length >= 2
@@ -818,6 +826,9 @@ public class LinearRelaxation extends Constraint
     }
     Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
     tried.addAll(valueRows.tried());
+    tried.addAll(valueRows.flow());
+    Set<LinearForm> flow = Collections.newSetFromMap(new IdentityHashMap<>());
+    flow.addAll(valueRows.flow());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
     if (auto && !sparseTakes(forms)) {
       // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
@@ -853,13 +864,14 @@ public class LinearRelaxation extends Constraint
       // to fit); the tried value encodings stay after the other rows, since the retry without them
       // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, tried, objective);
+      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, tried, flow, objective);
       fitsSimplex(forms, sorted, simplex, auto, exempt, further);
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !tried.contains(f)).count();
+    r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
     r.capacity = separations;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
@@ -875,14 +887,35 @@ public class LinearRelaxation extends Constraint
       int exempt,
       Set<LinearForm> tried,
       IntVar objective) {
+    return fitOrder(forms, candidates, exempt, tried, Set.of(), objective);
+  }
+
+  /**
+   * Returns the candidates in the order they are fitted when not all fit: the first exempt ones as
+   * they are, then the others by their distance from the objective, the tried ones after them and
+   * the flow models of layered graphs (a subset of the tried ones) last.
+   */
+  static List<LinearForm> fitOrder(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      int exempt,
+      Set<LinearForm> tried,
+      Set<LinearForm> flow,
+      IntVar objective) {
     List<LinearForm> plainRows = new ArrayList<>();
     List<LinearForm> triedRows = new ArrayList<>();
+    List<LinearForm> flowRows = new ArrayList<>();
     for (LinearForm f : candidates.subList(exempt, candidates.size())) {
-      (tried.contains(f) ? triedRows : plainRows).add(f);
+      if (flow.contains(f)) {
+        flowRows.add(f);
+      } else {
+        (tried.contains(f) ? triedRows : plainRows).add(f);
+      }
     }
     List<LinearForm> sorted = new ArrayList<>(candidates.subList(0, exempt));
     sorted.addAll(byDistance(forms, plainRows, objective));
     sorted.addAll(byDistance(forms, triedRows, objective));
+    sorted.addAll(byDistance(forms, flowRows, objective));
     return sorted;
   }
 
@@ -1619,14 +1652,13 @@ public class LinearRelaxation extends Constraint
   }
 
   // the bounds of column j: those of its variable, or for an auxiliary column [x = v] 0 when v is
-  // not in the domain of x and 1 when x is v; the certificates take these bounds, and explain them
+  // not in the domain of x and 1 when x is v (an arc column of a layered graph is never 1 by its
+  // domain); the certificates take these bounds, and explain them
   // by the facts x != v and x = v
   private void setBounds(LpSolver solver, int j) {
     if (lpOnly[j]) {
       LpColumn c = (LpColumn) x[j];
-      IntVar v = c.variable();
-      int value = c.value();
-      solver.setBounds(j, v.singleton(value) ? 1 : 0, v.domain.contains(value) ? 1 : 0);
+      solver.setBounds(j, c.lower(), c.upper());
     } else {
       solver.setBounds(j, x[j].min(), x[j].max());
     }
@@ -1663,8 +1695,8 @@ public class LinearRelaxation extends Constraint
       if (lpOnly[j]) {
         // an auxiliary column [x = v]: 0 when v is not in the domain of x, 1 when x is v
         LpColumn c = (LpColumn) x[j];
-        min = c.variable().singleton(c.value()) ? 1 : 0;
-        max = c.variable().domain.contains(c.value()) ? 1 : 0;
+        min = c.lower();
+        max = c.upper();
       } else {
         min = x[j].min();
         max = x[j].max();
@@ -2374,9 +2406,8 @@ public class LinearRelaxation extends Constraint
           // sum_rest c x >= lower - max(c lo, c hi); lo and hi are those of the simplex, from the
           // domain of the column's variable
           LpColumn column = (LpColumn) x[j];
-          IntVar v = column.variable();
-          int lo = v.singleton(column.value()) ? 1 : 0;
-          int hi = v.domain.contains(column.value()) ? 1 : 0;
+          int lo = column.lower();
+          int hi = column.upper();
           long a = coef[k] * (long) lo;
           long b = coef[k] * (long) hi;
           upper = Math.subtractExact(upper, Math.min(a, b));
@@ -2883,24 +2914,49 @@ public class LinearRelaxation extends Constraint
     }
     int m = rows();
     int plain = Math.min(plainExtra, k);
-    // the value encodings are many rows over many columns: they are kept only when they make the
-    // relaxation infeasible or raise its bound, not for being few
-    LpSolver full = trialRows(status, before, m, k, x.length, plain == k);
+    int tiered = Math.min(Math.max(triedExtra, plain), k);
+    // the prefixes of the extra rows tried, the longest first: all of them, those before the flow
+    // models of layered graphs, and those before every value encoding. The value encodings are many
+    // rows over many columns: they are kept only when they make the relaxation infeasible or raise
+    // its bound, not for being few. Once a prefix is kept, only the flow models are tried without:
+    // they are kept only when they do better than the rows before them
+    int[] prefixes = IntStream.of(k, tiered, plain).filter(q -> q > 0).distinct().toArray();
+    LpSolver full = null;
+    int kept = 0;
+    int keptStatus = status;
     int last = k;
-    if (full == null && plain > 0 && plain < k) {
-      // the value encodings come last: without them, the other rows are judged as on their own
-      int n = lp.columns();
-      for (int q = 0; q < plain; q++) {
-        for (int j : extraColumns[q]) {
-          n = Math.max(n, j + 1);
+    for (int p : prefixes) {
+      if (full != null && p < tiered) {
+        break;
+      }
+      LpSolver trial = trialRows(status, before, m, p, columnsOf(p), p == plain);
+      last = p;
+      if (trial == null) {
+        if (full != null) {
+          // the shorter prefix does not help: the longer one kept stays
+          break;
         }
+        continue;
       }
-      full = trialRows(status, before, m, plain, n, true);
-      last = plain;
+      if (full != null && !sameBound(full, keptStatus, trial, trialStatus)) {
+        // the longer prefix does better
+        droppedPivots += trial.pivots();
+        break;
+      }
       if (full != null) {
-        k = plain;
-        extraForms = new ArrayList<>(extraForms.subList(0, plain));
+        droppedPivots += full.pivots();
       }
+      full = trial;
+      kept = p;
+      keptStatus = trialStatus;
+    }
+    if (full != null && kept != last) {
+      // a shorter prefix was tried after the one kept
+      setExtraRows(m, kept);
+    }
+    if (full != null && kept < k) {
+      k = kept;
+      extraForms = new ArrayList<>(extraForms.subList(0, kept));
     }
     extraColumns = new int[0][];
     extraWeights = new long[0][];
@@ -2914,23 +2970,47 @@ public class LinearRelaxation extends Constraint
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
-      return trialStatus;
+      return keptStatus;
     }
     // the rows of the last trial are the m + last rows
     poolExtraRows(m, last);
     return status;
   }
 
-  // the status of the last root solve of trialRows
-  private int trialStatus;
+  // the columns of the base rows and the first p extra rows
+  private int columnsOf(int p) {
+    if (p == extraColumns.length) {
+      return x.length;
+    }
+    int n = lp.columns();
+    for (int q = 0; q < p; q++) {
+      for (int j : extraColumns[q]) {
+        n = Math.max(n, j + 1);
+      }
+    }
+    return n;
+  }
 
-  /**
-   * Solves the given rows and the first k extra rows over the first n columns at the root, and
-   * returns that simplex when the rows are kept, null otherwise (the rows are then m + k, to be
-   * truncated by the caller). With few, at most SMALL_EXTRA rows are kept even when the bound
-   * stays.
-   */
-  private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
+  // whether two root trials end the same: both infeasible, or both optimal at the same bound of
+  // the integer objective (its LP bound rounded up when minimizing, down when maximizing), so that
+  // the flow rows are kept only for a bound the search can use
+  private boolean sameBound(LpSolver a, int statusA, LpSolver b, int statusB) {
+    if (statusA != statusB) {
+      return false;
+    }
+    if (statusA != DualSimplex.OPTIMAL || objective == null) {
+      return true;
+    }
+    return integerBound(a.value(0)) == integerBound(b.value(0));
+  }
+
+  private double integerBound(double v) {
+    double slack = 1e-6 * (1 + Math.abs(v));
+    return maximize ? Math.floor(v + slack) : Math.ceil(v - slack);
+  }
+
+  // the rows are the m given ones and the first k extra rows
+  private void setExtraRows(int m, int k) {
     rowColumns = Arrays.copyOf(rowColumns, m + k);
     rowWeights = Arrays.copyOf(rowWeights, m + k);
     rowLo = Arrays.copyOf(rowLo, m + k);
@@ -2946,6 +3026,19 @@ public class LinearRelaxation extends Constraint
       rowLo[i] = extraSide[q];
       rowHi[i] = extraSide[q];
     }
+  }
+
+  // the status of the last root solve of trialRows
+  private int trialStatus;
+
+  /**
+   * Solves the given rows and the first k extra rows over the first n columns at the root, and
+   * returns that simplex when the rows are kept, null otherwise (the rows are then m + k, to be
+   * truncated by the caller). With few, at most SMALL_EXTRA rows are kept even when the bound
+   * stays.
+   */
+  private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
+    setExtraRows(m, k);
     double[] lo = new double[m + k];
     double[] hi = new double[m + k];
     for (int i = 0; i < m + k; i++) {

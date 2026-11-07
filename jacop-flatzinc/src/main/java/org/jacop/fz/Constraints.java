@@ -47,6 +47,7 @@ import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
+import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -54,6 +55,7 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
+import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
@@ -310,8 +312,16 @@ public class Constraints implements ParserTreeConstants {
         increasing.postSums();
       }
 
+      Set<ASTConstElem> balanced = Set.of();
       if (BalanceDetector.enabled()) {
-        new BalanceDetector(support).detect(astTree);
+        BalanceDetector balance = new BalanceDetector(support);
+        balance.detect(astTree);
+        balanced = balance.handled();
+      }
+
+      // the allocations it adds are redundant, and --proof does not encode them
+      if (ConvexAllocationDetector.enabled(options.lcg()) && options.proof() == null) {
+        new ConvexAllocationDetector(support, balanced).detect(astTree);
       }
 
       // the stocking cost it adds is redundant, and --proof does not encode it
@@ -328,6 +338,14 @@ public class Constraints implements ParserTreeConstants {
         new XorSystemDetector(support).detect(astTree);
       }
       store.imposingImplied(false);
+
+      // the lattices of the equalities: congruences, and the reformulation of market split
+      // systems; --proof derives neither
+      if (LinearSystemDetector.enabled() && options.proof() == null) {
+        LinearSystemDetector lattice = new LinearSystemDetector(support);
+        lattice.detect(astTree, options.lp());
+        dictionary.searchFirst(lattice.lattice());
+      }
 
       // earliness and tardiness costs under precedences, redundant; --proof does not encode it
       if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {
