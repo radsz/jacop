@@ -2362,6 +2362,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the start variables lcgDefaultSelect gave to set times, for the statistics
   private int setTimesStarts;
 
+  // the element positions lcgDefaultSelect branches on first, for the statistics
+  private int elementPositionCount;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
    * annotation. A model with cumulative or unary resources gets set times on the start variables of
@@ -2398,6 +2401,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     IntVar[] positions = elementPositions(vars);
+    elementPositionCount = positions.length;
     if (positions.length > 0) {
       // a model of elements over variable lists only, such as x[p[i]] = i (LangfordBin): dom/wdeg
       // on the positions p; the list cells follow from them. On the cells, each in every element's
@@ -2614,6 +2618,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="
             + setTimesStarts
+            + "\n%%%mzn-stat: lcgElementPositions="
+            + elementPositionCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
