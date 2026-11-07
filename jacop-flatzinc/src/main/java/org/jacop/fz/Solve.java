@@ -595,13 +595,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private void initialOrder(LcgSolver lcg) {
     LcgSolver.InitialOrder order =
         LcgSolver.InitialOrder.valueOf(
-            options.freeConfig("lcg-init", "none").toUpperCase(Locale.ROOT));
+            options.freeConfig("lcg-init", "degree").toUpperCase(Locale.ROOT));
     lcg.setInitialOrder(
         order,
         Double.parseDouble(options.freeConfig("lcg-init-scale", "1")),
         "1".equals(options.freeConfig("lcg-init-literals", "0")),
-        Double.parseDouble(options.freeConfig("lcg-init-restart", "0")));
-    double lpScale = Double.parseDouble(options.freeConfig("lcg-init-lp", "0"));
+        Double.parseDouble(options.freeConfig("lcg-init-restart", "1")));
+    double lpScale = Double.parseDouble(options.freeConfig("lcg-init-lp", "1"));
     LinearRelaxation lp = linearRelaxation;
     if (lpScale <= 0 || lp == null) {
       return;
