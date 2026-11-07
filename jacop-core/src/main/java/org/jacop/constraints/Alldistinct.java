@@ -51,6 +51,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.TrailedInts;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
@@ -85,6 +86,14 @@ import org.jacop.lcg.PbModel;
  * are found to form a single component, as they do in most executions during search (Zhang et al.,
  * Early and Efficient Identification of Useless Constraint Propagation for Alldifferent
  * Constraints, IJCAI 2020).
+ *
+ * <p>After the pruning no edge joins two components, so they are independent alldifferent
+ * constraints and stay so below in the search tree. The components are kept (trailed) between
+ * executions and an execution works only on the components with a changed variable, the others
+ * already being at a fixpoint (I. P. Gent, I. Miguel and P. Nightingale, Generalised arc
+ * consistency for the AllDifferent constraint: An empirical survey, Artificial Intelligence
+ * 172(18), 2008, Section 5.2). The matching, the components and the pruning, in its order, are the
+ * same as when all variables are processed.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
@@ -178,6 +187,35 @@ public class Alldistinct extends Constraint
   // failure (inconsistency) discovered during imposition
   private boolean impositionFailure;
 
+  // Components of not grounded variables (Gent, Miguel and Nightingale 2008), trailed. A component
+  // is labelled with the index of one of its variables, the leader, and the component of a not
+  // grounded leader always keeps its label, so labels of different components differ.
+  private TrailedInts componentLabel;
+
+  // Labels of the components with a changed variable since the last fixpoint.
+  private final int[] dirtyLabel;
+  private int dirtyGeneration = 1;
+
+  // Variables (indexes) of the changed components, in the order of position, see selectActive.
+  private final int[] active;
+  private int activeNo;
+
+  // Labels given to the components found by the last execution.
+  private final int[] pieceLabel;
+  private final int[] pieceStamp;
+  private final int[] labelStamp;
+  private int labelGeneration;
+
+  // Index of a variable from its store index: storeOffset[index - minStoreIndex], or by binary
+  // search in sortedStoreIndex (variable indexes in sortedStorePosition).
+  private int minStoreIndex;
+  private int[] storeOffset;
+  private int[] sortedStoreIndex;
+  private int[] sortedStorePosition;
+
+  // False turns off the use of components between executions (tests compare both).
+  boolean keepComponents = true;
+
   IntVar guideVariable;
   int guideValue;
 
@@ -261,7 +299,8 @@ public class Alldistinct extends Constraint
     int noNodes = words > 0 ? 0 : n + 1;
     dfsNumber = new int[noNodes];
     lowLink = new int[noNodes];
-    component = new int[noNodes];
+    // components of variables, also in bit mode
+    component = new int[n + 1];
     edgeCursor = new int[noNodes];
     callStack = new int[noNodes];
     sccStack = new int[noNodes];
@@ -270,6 +309,12 @@ public class Alldistinct extends Constraint
     visitedValue = new int[words > 0 ? 0 : noValues];
     freeVariables = new int[n];
     pendingVariables = new IntVar[Math.max(4, n)];
+
+    dirtyLabel = new int[n];
+    active = new int[n];
+    pieceLabel = new int[n + 2];
+    pieceStamp = new int[n + 2];
+    labelStamp = new int[n];
 
     setScope(list);
   }
@@ -290,6 +335,13 @@ public class Alldistinct extends Constraint
     super.impose(store);
 
     notGrounded = new TimeStamp<>(store, list.length);
+
+    // one component, label 0, which is changed
+    componentLabel = new TrailedInts(store, list.length);
+    if (list.length > 0) {
+      dirtyLabel[0] = dirtyGeneration;
+    }
+    indexStoreIndexes();
 
     // the initial maximum matching needs to be computed, failure is reported by consistency
     if (words > 0) {
@@ -329,6 +381,55 @@ public class Alldistinct extends Constraint
       pendingVariables = Arrays.copyOf(pendingVariables, 2 * pendingSize);
     }
     pendingVariables[pendingSize++] = (IntVar) v;
+    int i = componentLabel == null ? -1 : indexOf(v);
+    if (i >= 0) {
+      dirtyLabel[componentLabel.get(i)] = dirtyGeneration;
+    }
+  }
+
+  private void indexStoreIndexes() {
+    int n = list.length;
+    int min = Integer.MAX_VALUE;
+    int max = Integer.MIN_VALUE;
+    for (IntVar x : list) {
+      min = Math.min(min, x.index());
+      max = Math.max(max, x.index());
+    }
+    minStoreIndex = min;
+    if (n > 0 && (long) max - min < 4L * n + 64) {
+      storeOffset = new int[max - min + 1];
+      Arrays.fill(storeOffset, -1);
+      for (int i = 0; i < n; i++) {
+        storeOffset[list[i].index() - min] = i;
+      }
+    } else {
+      long[] pairs = new long[n];
+      for (int i = 0; i < n; i++) {
+        pairs[i] = ((long) list[i].index() << 32) | i;
+      }
+      Arrays.sort(pairs);
+      sortedStoreIndex = new int[n];
+      sortedStorePosition = new int[n];
+      for (int k = 0; k < n; k++) {
+        sortedStoreIndex[k] = (int) (pairs[k] >> 32);
+        sortedStorePosition[k] = (int) pairs[k];
+      }
+    }
+  }
+
+  // It returns the index of the variable in list, or -1.
+  private int indexOf(Var v) {
+    int index = v.index();
+    if (storeOffset != null) {
+      int k = index - minStoreIndex;
+      int i = k >= 0 && k < storeOffset.length ? storeOffset[k] : -1;
+      return i >= 0 && list[i] == v ? i : -1;
+    }
+    if (sortedStoreIndex == null) {
+      return -1;
+    }
+    int k = Arrays.binarySearch(sortedStoreIndex, index);
+    return k >= 0 && list[sortedStorePosition[k]] == v ? sortedStorePosition[k] : -1;
   }
 
   @Override
@@ -352,24 +453,109 @@ public class Alldistinct extends Constraint
 
     int notGroundedNo = removeGrounded(store);
 
-    if (notGroundedNo > 1) {
+    if (notGroundedNo > 1 && selectActive(notGroundedNo) > 0) {
       if (words > 0) {
-        if (!repairMatchingBits(notGroundedNo)) {
+        if (!repairMatchingBits()) {
           throw Store.failException;
         }
-        filterBits(store, notGroundedNo);
+        if (filterBits(store) > 1) {
+          relabel();
+        }
       } else {
-        if (!repairMatching(notGroundedNo)) {
+        if (!repairMatching()) {
           throw Store.failException;
         }
-        if (computeComponents(notGroundedNo) > 1) {
-          prune(store, notGroundedNo);
+        if (computeComponents() > 1) {
+          prune(store);
+          relabel();
         }
       }
     }
 
     // Regin's filtering is idempotent, all events caused by this execution are already handled.
     pendingSize = 0;
+    dirtyGeneration++;
+    if (dirtyGeneration == Integer.MAX_VALUE) {
+      Arrays.fill(dirtyLabel, 0);
+      dirtyGeneration = 1;
+    }
+  }
+
+  /**
+   * It selects the not grounded variables of the components with a changed variable, keeping the
+   * order of position. A variable without a matched value, left by a failed execution, changes its
+   * component too. The other components are at a fixpoint and share no value with the selected
+   * ones.
+   *
+   * @return the number of selected variables.
+   */
+  private int selectActive(int notGroundedNo) {
+
+    if (!keepComponents) {
+      System.arraycopy(position, 0, active, 0, notGroundedNo);
+      activeNo = notGroundedNo;
+      return activeNo;
+    }
+
+    for (int j = 0; j < notGroundedNo; j++) {
+      int i = position[j];
+      if (varMatch[i] < 0) {
+        dirtyLabel[componentLabel.get(i)] = dirtyGeneration;
+      }
+    }
+    int k = 0;
+    for (int j = 0; j < notGroundedNo; j++) {
+      int i = position[j];
+      if (dirtyLabel[componentLabel.get(i)] == dirtyGeneration) {
+        active[k++] = i;
+      }
+    }
+    activeNo = k;
+    return k;
+  }
+
+  /**
+   * It labels the components found by the last execution, given in component for the selected
+   * variables. The component holding the leader of a label keeps the label; when the leader is
+   * grounded the first component of that label keeps it. The other components are labelled with
+   * their first variable, which is a not grounded variable of no other component.
+   */
+  private void relabel() {
+
+    if (!keepComponents) {
+      return;
+    }
+
+    labelGeneration++;
+    if (labelGeneration == Integer.MAX_VALUE) {
+      Arrays.fill(pieceStamp, 0);
+      Arrays.fill(labelStamp, 0);
+      labelGeneration = 1;
+    }
+
+    for (int k = 0; k < activeNo; k++) {
+      int i = active[k];
+      if (componentLabel.get(i) == i) {
+        pieceLabel[component[i]] = i;
+        pieceStamp[component[i]] = labelGeneration;
+        labelStamp[i] = labelGeneration;
+      }
+    }
+
+    for (int k = 0; k < activeNo; k++) {
+      int i = active[k];
+      int p = component[i];
+      if (pieceStamp[p] != labelGeneration) {
+        int label = componentLabel.get(i);
+        if (labelStamp[label] == labelGeneration) {
+          label = i;
+        }
+        pieceLabel[p] = label;
+        pieceStamp[p] = labelGeneration;
+        labelStamp[label] = labelGeneration;
+      }
+      componentLabel.set(i, pieceLabel[p]);
+    }
   }
 
   /**
@@ -507,12 +693,12 @@ public class Alldistinct extends Constraint
    *
    * @return false if there is no matching covering all variables.
    */
-  private boolean repairMatching(int notGroundedNo) {
+  private boolean repairMatching() {
 
     int noFree = 0;
 
-    for (int j = 0; j < notGroundedNo; j++) {
-      int i = position[j];
+    for (int j = 0; j < activeNo; j++) {
+      int i = active[j];
       buildAdjacency(i);
       int a = varMatch[i];
       if (a < 0 || !list[i].domain.contains(values[a])) {
@@ -584,12 +770,12 @@ public class Alldistinct extends Constraint
    *
    * @return the number of components.
    */
-  private int computeComponents(int notGroundedNo) {
+  private int computeComponents() {
 
     int sink = list.length;
 
-    for (int j = 0; j < notGroundedNo; j++) {
-      dfsNumber[position[j]] = 0;
+    for (int j = 0; j < activeNo; j++) {
+      dfsNumber[active[j]] = 0;
     }
     dfsNumber[sink] = 0;
 
@@ -597,9 +783,9 @@ public class Alldistinct extends Constraint
     int sccTop = 0;
     int componentId = 0;
 
-    for (int j = 0; j < notGroundedNo; j++) {
+    for (int j = 0; j < activeNo; j++) {
 
-      int root = position[j];
+      int root = active[j];
       if (dfsNumber[root] != 0) {
         continue;
       }
@@ -631,8 +817,8 @@ public class Alldistinct extends Constraint
               break;
             }
           }
-        } else if (cursor < notGroundedNo) {
-          next = position[cursor++];
+        } else if (cursor < activeNo) {
+          next = active[cursor++];
         }
         edgeCursor[node] = cursor;
 
@@ -711,7 +897,7 @@ public class Alldistinct extends Constraint
    *
    * @return false if there is no matching covering all variables.
    */
-  private boolean repairMatchingBits(int notGroundedNo) {
+  private boolean repairMatchingBits() {
 
     Arrays.fill(taken, 0);
     for (int i = 0; i < list.length; i++) {
@@ -722,8 +908,8 @@ public class Alldistinct extends Constraint
     }
 
     int noFree = 0;
-    for (int j = 0; j < notGroundedNo; j++) {
-      int i = position[j];
+    for (int j = 0; j < activeNo; j++) {
+      int i = active[j];
       readBits(i);
       int a = varMatch[i];
       if (a < 0 || (domainBits[i * words + (a >>> 6)] & (1L << a)) == 0) {
@@ -807,12 +993,12 @@ public class Alldistinct extends Constraint
    * starting with the component of the free values, and the computation stops when the remaining
    * variables form a single component.
    */
-  private void filterBits(Store store, int notGroundedNo) {
+  private int filterBits(Store store) {
 
     Arrays.fill(matched, 0);
     Arrays.fill(free, 0);
-    for (int j = 0; j < notGroundedNo; j++) {
-      int i = position[j];
+    for (int j = 0; j < activeNo; j++) {
+      int i = active[j];
       int a = varMatch[i];
       matched[a >>> 6] |= 1L << a;
       int base = i * words;
@@ -828,12 +1014,13 @@ public class Alldistinct extends Constraint
     }
 
     boolean first = true;
+    int found = 0;
     if (anyFree) {
       // the variables which reach a free value form one component with the free values
       Arrays.fill(back, 0);
       reachBackward(free);
-      if (pruneComponent(store, back, true)) {
-        return;
+      if (pruneComponent(store, back, true, ++found)) {
+        return found;
       }
       first = false;
     }
@@ -848,8 +1035,8 @@ public class Alldistinct extends Constraint
       Arrays.fill(back, 0);
       back[w0] = rootBit;
       reachBackward(back);
-      if (pruneComponent(store, back, first)) {
-        return;
+      if (pruneComponent(store, back, first, ++found)) {
+        return found;
       }
       first = false;
     }
@@ -918,11 +1105,12 @@ public class Alldistinct extends Constraint
   /**
    * It removes from the variables of the component the values matched with variables of other
    * components, and removes the component from the alive variables. The variables of the first
-   * component have no such values if it contains all variables.
+   * component have no such values if it contains all variables. The variables of the component get
+   * number id in the component array.
    *
    * @return true if the component contains all alive variables, it is the last one.
    */
-  private boolean pruneComponent(Store store, long[] component, boolean first) {
+  private boolean pruneComponent(Store store, long[] component, boolean first, int id) {
 
     boolean all = true;
     for (int w = 0; w < words; w++) {
@@ -941,6 +1129,7 @@ public class Alldistinct extends Constraint
         long b = c & -c;
         c ^= b;
         int i = valMatch[(w << 6) + Long.numberOfTrailingZeros(b)];
+        this.component[i] = id;
         int base = i * words;
         for (int v = 0; v < words; v++) {
           // reach is not needed any more and keeps the values to remove
@@ -1011,10 +1200,10 @@ public class Alldistinct extends Constraint
    * It removes all values matched with a variable from a different component. Values which are
    * matched with the variable itself or free are always consistent.
    */
-  private void prune(Store store, int notGroundedNo) {
+  private void prune(Store store) {
 
-    for (int j = 0; j < notGroundedNo; j++) {
-      int i = position[j];
+    for (int j = 0; j < activeNo; j++) {
+      int i = active[j];
       int xComponent = component[i];
       int matched = varMatch[i];
       int[] adj = adjacency[i];
