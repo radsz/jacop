@@ -281,6 +281,9 @@ public class Options {
                 of ns: swap the first two and last two operations of each critical block, n1: swap
                 any two adjacent ones, n4: move one to the front or back of its block; default
                 ns+n4; 0 = off)
+                ls-implied=1|0 (1, the default: the redundant constraints JaCoP adds are not
+                evaluated), ls-sym=1|0 (1, the default: the symmetry breaking constraints JaCoP
+                adds are not evaluated; a solution is moved onto a symmetric one that holds them)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

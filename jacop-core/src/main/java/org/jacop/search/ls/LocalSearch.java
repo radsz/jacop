@@ -49,6 +49,7 @@ import org.jacop.api.Violation;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
@@ -141,6 +142,10 @@ public final class LocalSearch {
   private final boolean jump;
   private final boolean permutations;
   private final int scheduling;
+  private final boolean skipImplied;
+  // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
+  private final Set<Constraint> symmetry;
+  private final Canonicalizer canonicalizer;
 
   // the variables, their root domains and current values
   private IntVar[] vars;
@@ -261,6 +266,33 @@ public final class LocalSearch {
     jump = b.jump;
     permutations = b.permutations;
     scheduling = b.scheduling;
+    skipImplied = b.skipImplied;
+    symmetry = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    if (b.canonicalizer != null) {
+      symmetry.addAll(b.symmetry);
+    }
+    canonicalizer = b.canonicalizer;
+  }
+
+  /**
+   * Maps an assignment that satisfies the model without its symmetry breaking constraints onto a
+   * symmetric one, also a solution of the model, that satisfies them as well. Local search does not
+   * evaluate symmetry breaking constraints given with a canonicalizer: they make the landscape
+   * rugged and are costly to check, and a search for one solution of each class of symmetric ones
+   * finds any of the class as easily.
+   */
+  @FunctionalInterface
+  public interface Canonicalizer {
+
+    /**
+     * Changes the values in place to those of a symmetric solution meant to satisfy the symmetry
+     * breaking constraints. The store checks the result, so a canonicalizer may also give up.
+     *
+     * @param vars the variables of the local search.
+     * @param values their values, changed in place.
+     * @return false to give up, keeping the assignment rejected.
+     */
+    boolean canonicalize(IntVar[] vars, int[] values);
   }
 
   /**
@@ -389,6 +421,15 @@ public final class LocalSearch {
   }
 
   /**
+   * Returns how many times a solution was moved to a symmetric one by the canonicalizer.
+   *
+   * @return the number of canonicalized solutions.
+   */
+  public long getCanonicalized() {
+    return canonicalized;
+  }
+
+  /**
    * Returns how many constraints were evaluated as linear rows, by a copy, and not at all.
    *
    * @return linear, copied and unsupported constraints.
@@ -475,13 +516,7 @@ public final class LocalSearch {
     List<Constraint> checked = new ArrayList<>();
     List<Violation> measured = new ArrayList<>();
     for (Constraint c : constraints) {
-      if (c instanceof LinearRelaxation r) {
-        // only adds pruning to the other constraints; its budget is the search's
-        relaxations.add(r);
-        continue;
-      }
-      if (c instanceof EnergyPrecedence) {
-        // only adds pruning to the other constraints
+      if (leftOut(c)) {
         continue;
       }
       int before = rows.size();
@@ -708,9 +743,14 @@ public final class LocalSearch {
 
   private void buildCounters() {
     counters = new Counter[m];
+    windows = new Windows[m];
     for (int k = 0; k < measuredConstraints.size(); k++) {
       Constraint con = measuredConstraints.get(k);
       int c = linearCount + k;
+      if (con instanceof AmongSeq seq && seq.windows() > 0) {
+        windows[c] = new Windows(seq);
+        continue;
+      }
       Class<?> type = con.getClass();
       if (scope[c].length < 2
           || (type != Alldifferent.class
@@ -745,12 +785,115 @@ public final class LocalSearch {
 
   private void recount() {
     for (int c = 0; c < m; c++) {
+      if (windows[c] != null) {
+        windows[c].recount();
+      }
       if (counters[c] != null) {
         counters[c].clear();
         for (int i : scope[c]) {
           counters[c].add(val[i]);
         }
       }
+    }
+  }
+
+  // per sequence constraint, the count of each window: its violation and the change of it by a
+  // move in O(q), as Comet's differentiable sequence constraint
+  private Windows[] windows;
+
+  /**
+   * The counts of the windows of an {@link AmongSeq} over the current values, and its violation,
+   * the sum over the windows of the distance of their counts to min..max.
+   */
+  final class Windows {
+    private final AmongSeq seq;
+    private final int q;
+    private final int[] list;
+    private final int[] count;
+    // the variables of the list, sorted, and the positions of each of them in the list
+    private final int[] keys;
+    private final int[][] positions;
+    long violation;
+
+    Windows(AmongSeq seq) {
+      this.seq = seq;
+      this.q = seq.windowSize();
+      IntVar[] xs = seq.list();
+      list = new int[xs.length];
+      Map<Integer, List<Integer>> at = new java.util.TreeMap<>();
+      for (int p = 0; p < xs.length; p++) {
+        list[p] = indexOf(xs[p]);
+        at.computeIfAbsent(list[p], key -> new ArrayList<>()).add(p);
+      }
+      keys = new int[at.size()];
+      positions = new int[at.size()][];
+      int k = 0;
+      for (Map.Entry<Integer, List<Integer>> e : at.entrySet()) {
+        keys[k] = e.getKey();
+        positions[k++] = e.getValue().stream().mapToInt(Integer::intValue).toArray();
+      }
+      count = new int[seq.windows()];
+    }
+
+    void recount() {
+      Arrays.fill(count, 0);
+      violation = 0;
+      for (int p = 0; p < list.length; p++) {
+        if (seq.inSet(val[list[p]])) {
+          for (int w = Math.max(0, p - q + 1); w <= Math.min(p, count.length - 1); w++) {
+            count[w]++;
+          }
+        }
+      }
+      for (int w = 0; w < count.length; w++) {
+        violation += seq.windowViolation(count[w]);
+      }
+    }
+
+    // variable i moves from value old to value v
+    void move(int i, int old, int v) {
+      int d = (seq.inSet(v) ? 1 : 0) - (seq.inSet(old) ? 1 : 0);
+      if (d == 0) {
+        return;
+      }
+      int k = Arrays.binarySearch(keys, i);
+      if (k < 0) {
+        return;
+      }
+      for (int p : positions[k]) {
+        for (int w = Math.max(0, p - q + 1); w <= Math.min(p, count.length - 1); w++) {
+          violation += seq.windowViolation(count[w] + d) - seq.windowViolation(count[w]);
+          count[w] += d;
+        }
+      }
+    }
+
+    // the violation after variable i moves from value old to value v
+    long after(int i, int old, int v) {
+      if (seq.inSet(v) == seq.inSet(old)) {
+        return violation;
+      }
+      long before = violation;
+      move(i, old, v);
+      long result = violation;
+      move(i, v, old);
+      violation = before;
+      return result;
+    }
+
+    /**
+     * The variables of a window that is violated, chosen at random, or null when none is: moving
+     * one of them is what can repair it (their violation, in Comet's terms).
+     */
+    int[] violatedWindow() {
+      int start = random.nextInt(count.length);
+      for (int t = 0; t < count.length; t++) {
+        int w = (start + t) % count.length;
+        if (seq.windowViolation(count[w]) > 0) {
+          return Arrays.copyOfRange(list, w, w + q);
+        }
+      }
+      return null;
     }
   }
 
@@ -1228,6 +1371,32 @@ public final class LocalSearch {
     return null;
   }
 
+  /**
+   * Whether a constraint is not evaluated: a linear relaxation or an energy precedence, which only
+   * add pruning to the others, a redundant constraint (every solution of the others satisfies it),
+   * or a symmetry breaking constraint, which the canonicalizer satisfies once the others hold.
+   */
+  private boolean leftOut(Constraint c) {
+    if (c instanceof LinearRelaxation r) {
+      // its budget is the search's
+      relaxations.add(r);
+      return true;
+    }
+    if (c instanceof EnergyPrecedence) {
+      return true;
+    }
+    String kind = null;
+    if (skipImplied && store.isImplied(c)) {
+      kind = "I:";
+    } else if (symmetry.contains(c)) {
+      kind = "S:";
+    }
+    if (kind != null) {
+      classes.merge(kind + className(c), 1, Integer::sum);
+    }
+    return kind != null;
+  }
+
   private static String className(Constraint c) {
     String name = c.getClass().getSimpleName();
     return c instanceof AbstractReifiedConstraint r
@@ -1236,7 +1405,8 @@ public final class LocalSearch {
   }
 
   private static boolean swapsValues(Constraint c) {
-    return c instanceof Alldistinct
+    return c instanceof AmongSeq
+        || c instanceof Alldistinct
         || c instanceof Alldifferent
         || c instanceof CountValues
         || c instanceof CountValuesBounds;
@@ -1877,6 +2047,9 @@ public final class LocalSearch {
   }
 
   private long currentViolation(int c) {
+    if (windows[c] != null) {
+      return windows[c].violation;
+    }
     if (counters[c] != null) {
       return counters[c].duplicates;
     }
@@ -1970,6 +2143,9 @@ public final class LocalSearch {
   // ---------------------------------------------------------------- moves
 
   private long violationAfter(int c, int i, int v, long a) {
+    if (windows[c] != null) {
+      return windows[c].after(i, val[i], v);
+    }
     if (counters[c] != null) {
       return counters[c].after(val[i], v);
     }
@@ -2047,6 +2223,8 @@ public final class LocalSearch {
       } else if (counters[c] != null && v != old) {
         counters[c].remove(old);
         counters[c].add(v);
+      } else if (windows[c] != null && v != old) {
+        windows[c].move(i, old, v);
       }
       setViolation(c, currentViolation(c));
     }
@@ -2129,11 +2307,17 @@ public final class LocalSearch {
       return;
     }
     int[] s = scope[c];
+    if (windows[c] != null) {
+      int[] w = windows[c].violatedWindow();
+      if (w != null) {
+        s = w;
+      }
+    }
     int bestVar = -1;
     int bestVal = 0;
     double best = Double.MAX_VALUE;
     int ties = 0;
-    int size = s.length + (enforcer[c] >= 0 ? 1 : 0);
+    int size = s.length + (enforcer[c] >= 0 && s == scope[c] ? 1 : 0);
     // all of an all different constraint; on one step in four only the variables sharing a value
     // (their violation, in Comet's terms): always would stall on quasigroups, where a conflict is
     // often repaired by moving a variable that has none in this constraint
@@ -2528,11 +2712,16 @@ public final class LocalSearch {
     if (s.length < 2) {
       return false;
     }
+    // a sequence swaps a variable of a violated window with any other one
+    int[] from = windows[c] != null ? windows[c].violatedWindow() : null;
+    if (from == null) {
+      from = s;
+    }
     double best = 0;
     int bi = -1;
     int bj = -1;
     for (int t = 0; t < SCAN_LIMIT; t++) {
-      int i = s[random.nextInt(s.length)];
+      int i = from[random.nextInt(from.length)];
       int j = s[random.nextInt(s.length)];
       int vi = val[i];
       int vj = val[j];
@@ -2625,6 +2814,20 @@ public final class LocalSearch {
         out[n++] = r;
       }
     }
+    if (windows[c] != null) {
+      // a value on the other side of the set changes the counts of the windows
+      AmongSeq seq = windows[c].seq;
+      boolean in = seq.inSet(old);
+      for (int t = 0; t < 8; t++) {
+        r = d.getElementAt(random.nextInt(d.getSize()));
+        if (seq.inSet(r) != in) {
+          if (!has(out, n, r)) {
+            out[n++] = r;
+          }
+          break;
+        }
+      }
+    }
     return n;
   }
 
@@ -2702,6 +2905,10 @@ public final class LocalSearch {
    * @return false when the store rejected it.
    */
   private boolean feasible() {
+    if (canonicalizer != null && !canonicalize()) {
+      rejected++;
+      return false;
+    }
     return feasible(null);
   }
 
@@ -2745,6 +2952,32 @@ public final class LocalSearch {
     }
     return true;
   }
+
+  /**
+   * Moves the assignment, which satisfies every evaluated constraint, to the symmetric one the
+   * canonicalizer gives. An assignment the canonicalizer gives up on, or one that breaks an
+   * evaluated constraint, is kept as it was.
+   */
+  private boolean canonicalize() {
+    int[] before = val.clone();
+    if (!canonicalizer.canonicalize(vars, val)) {
+      System.arraycopy(before, 0, val, 0, val.length);
+      return false;
+    }
+    if (Arrays.equals(before, val)) {
+      return true;
+    }
+    canonicalized++;
+    evaluateAll();
+    if (violatedCount == 0) {
+      return true;
+    }
+    System.arraycopy(before, 0, val, 0, val.length);
+    evaluateAll();
+    return false;
+  }
+
+  private long canonicalized;
 
   /**
    * Fixes the variables of the given order to their values and propagates; then the other
@@ -2935,6 +3168,9 @@ public final class LocalSearch {
     private boolean jump;
     private boolean permutations = true;
     private int scheduling = SCHEDULE_NS | SCHEDULE_N4;
+    private boolean skipImplied = true;
+    private Collection<? extends Constraint> symmetry = List.of();
+    private Canonicalizer canonicalizer;
 
     private Builder(Store store) {
       this.store = store;
@@ -3063,6 +3299,34 @@ public final class LocalSearch {
      */
     public Builder permutations(boolean on) {
       permutations = on;
+      return this;
+    }
+
+    /**
+     * Whether the constraints the store marks as implied by the others ({@link
+     * Store#isImplied(Constraint)}) are left out of the evaluation (default true). The store still
+     * checks every solution against them.
+     *
+     * @param skip true to leave them out.
+     * @return this builder.
+     */
+    public Builder skipImplied(boolean skip) {
+      skipImplied = skip;
+      return this;
+    }
+
+    /**
+     * Leaves symmetry breaking constraints out of the evaluation: an assignment that satisfies the
+     * others is mapped by the canonicalizer onto a symmetric one before the store checks it.
+     *
+     * @param constraints the symmetry breaking constraints.
+     * @param canonicalizer the mapping onto solutions that satisfy them.
+     * @return this builder.
+     */
+    public Builder symmetry(
+        Collection<? extends Constraint> constraints, Canonicalizer canonicalizer) {
+      this.symmetry = constraints;
+      this.canonicalizer = canonicalizer;
       return this;
     }
 

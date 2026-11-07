@@ -37,8 +37,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AmongSeq;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
@@ -257,6 +260,59 @@ class LocalSearchTest {
   }
 
   /**
+   * Car sequencing (CSPLib prob001, the example of Dincbas et al. 1988): the classes of 10 cars
+   * with at most max[o] cars needing option o in each block of size[o]. The options are sequence
+   * constraints over the classes, whose window counts local search keeps up to date (M:AmongSeq),
+   * and the class counts are kept by swaps.
+   */
+  @Test
+  void sequencesCarsByWindowCounts() {
+    int[] max = {1, 2, 1, 2, 1};
+    int[] size = {2, 3, 3, 5, 5};
+    int[] cars = {1, 1, 2, 2, 2, 2};
+    int[][] need = {
+      {1, 0, 1, 1, 0},
+      {0, 0, 0, 1, 0},
+      {0, 1, 0, 0, 1},
+      {0, 1, 0, 1, 0},
+      {1, 0, 1, 0, 0},
+      {1, 1, 0, 0, 0}
+    };
+    Store store = new Store();
+    IntVar[] x = new IntVar[10];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, cars.length);
+    }
+    for (int c = 0; c < cars.length; c++) {
+      store.impose(new Count(x, new IntVar(store, cars[c], cars[c]), c + 1));
+    }
+    IntervalDomain[] sets = new IntervalDomain[max.length];
+    for (int o = 0; o < max.length; o++) {
+      sets[o] = new IntervalDomain();
+      for (int c = 0; c < cars.length; c++) {
+        if (need[c][o] == 1) {
+          sets[o].unionAdapt(c + 1, c + 1);
+        }
+      }
+      store.impose(new AmongSeq(x, sets[o], size[o], 0, max[o]));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(LIMIT).seed(5).build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(ls.toString().contains("M:AmongSeq=5"), ls.toString());
+    int[] v = ls.getSolution(x);
+    for (int o = 0; o < max.length; o++) {
+      for (int i = 0; i + size[o] <= v.length; i++) {
+        int count = 0;
+        for (int j = i; j < i + size[o]; j++) {
+          count += sets[o].contains(v[j]) ? 1 : 0;
+        }
+        assertTrue(count <= max[o], "option " + o + " window " + i);
+      }
+    }
+  }
+
+  /**
    * An all different whose small domains lie far apart is not a permutation; looking for one must
    * not build a small dense union wider than 64 values.
    */
@@ -273,6 +329,76 @@ class LocalSearchTest {
     LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(LIMIT).seed(1).build();
     assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
     assertTrue(!ls.toString().contains("P:"), ls.toString());
+  }
+
+  /**
+   * A constraint imposed as implied by the others is not evaluated, but the store still checks
+   * every solution against it.
+   */
+  @Test
+  void skipsImpliedConstraints() {
+    for (boolean skip : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 4);
+      }
+      store.impose(new Alldistinct(x));
+      store.imposingImplied(true);
+      store.impose(new LinearInt(x, new int[] {1, 1, 1, 1, 1}, "==", 10));
+      store.imposingImplied(false);
+      assertTrue(store.consistency());
+      LocalSearch ls =
+          LocalSearch.builder(store).order(x).skipImplied(skip).timeLimit(LIMIT).seed(1).build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+      assertEquals(skip, ls.toString().contains("I:LinearInt=1"), ls.toString());
+    }
+  }
+
+  /**
+   * A symmetry breaking constraint given with a canonicalizer is not evaluated: a solution that
+   * breaks it is moved to the symmetric one, which the store accepts.
+   */
+  @Test
+  void canonicalizesSymmetricSolutions() {
+    long canonicalized = 0;
+    for (int seed = 1; seed <= 20; seed++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[6];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      store.impose(new Alldistinct(x));
+      // the weights of x4 and x5 are equal, so the two are interchangeable; x4 < x5 breaks that
+      store.impose(new LinearInt(x, new int[] {1, 2, 3, 4, 5, 5}, "==", 52));
+      XltY lex = new XltY(x[4], x[5]);
+      store.impose(lex);
+      assertTrue(store.consistency());
+      LocalSearch.Canonicalizer swap =
+          (vars, values) -> {
+            int i = Arrays.asList(vars).indexOf(x[4]);
+            int j = Arrays.asList(vars).indexOf(x[5]);
+            if (values[i] > values[j]) {
+              int v = values[i];
+              values[i] = values[j];
+              values[j] = v;
+            }
+            return true;
+          };
+      LocalSearch ls =
+          LocalSearch.builder(store)
+              .order(x)
+              .symmetry(List.of(lex), swap)
+              .timeLimit(LIMIT)
+              .seed(seed)
+              .build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+      assertTrue(ls.toString().contains("S:XltY=1"), ls.toString());
+      int[] s = ls.getSolution(x);
+      assertTrue(s[4] < s[5], Arrays.toString(s));
+      canonicalized += ls.getCanonicalized();
+    }
+    assertTrue(canonicalized > 0);
   }
 
   /**
