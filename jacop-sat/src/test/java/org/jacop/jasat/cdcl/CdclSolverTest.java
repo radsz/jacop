@@ -34,6 +34,7 @@ package org.jacop.jasat.cdcl;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -353,6 +354,42 @@ class CdclSolverTest {
     s.setDeadline(System.nanoTime() - 1);
     assertNotNull(s.probe(vars + 1));
     assertFalse(early[0], "a decision with " + (vars - implied[0]) + " root consequences to come");
+  }
+
+  @Test
+  void probeKeepsARootConflictFoundAfterAnExternalClauseUndidItsLevel() {
+    // The probe of 1 sets 3 false at level 1; the external clause (3 or 4), with 4 false at the
+    // root, then asserts 3 at level 0, which undoes the probe's level, and 3 at the root falsifies
+    // (-3 or 2) and (-3 or -2). The probe took that root conflict for a failure of its literal and
+    // returned with the formula still open, so variable elimination later met an empty clause
+    // (ArrayIndexOutOfBoundsException in Eliminator.subsume, XorSystemFuzzTest without XorSystem)
+    for (boolean elimination : new boolean[] {true, false}) {
+      CdclSolver s = new CdclSolver();
+      s.setChecking(true);
+      s.setElimination(elimination);
+      s.addClause(-4);
+      s.addClause(-1, -3);
+      s.addClause(-3, 2);
+      s.addClause(-3, -2);
+      boolean[] given = {false};
+      s.connect(
+          new ExternalPropagator() {
+            @Override
+            public int[] externalClause() {
+              if (given[0] || s.value(1) <= 0) {
+                return null;
+              }
+              given[0] = true;
+              return new int[] {3, 4};
+            }
+          });
+      for (int v = 1; v <= 4; v++) {
+        s.observe(v);
+      }
+      assertNull(s.probe(1));
+      assertTrue(given[0], "the external clause was not asked for");
+      assertEquals(CdclSolver.UNSAT, s.solve());
+    }
   }
 
   @Test
