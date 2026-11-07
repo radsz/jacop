@@ -2563,9 +2563,13 @@ Version 5.0 (unreleased)
        slower than the x search, so it is only done with the relaxation
        on (the default). On 20
        market split instances (Cornuejols and Dawande, IPCO 1998;
-       m = 3..6 equalities, n = 10(m-1) binaries, 60 s) solved 8 -> 17
-       by default and 6 -> 16 with -f; m = 5 takes 1-7 s against
-       time-outs, and 3 of the 5 m = 6 instances stay open.
+       m = 3..6 equalities, n = 10(m-1) binaries, 60 s) solved 8 -> 18
+       by default and 6 -> 18 with -f; m = 5 takes 2-5 s against
+       time-outs, and 2 of the 5 m = 6 instances stay open. The column
+       Hermite normal form reduces each row by its smallest entry
+       (nearest-multiple subtraction rather than pairwise extended
+       Euclid, whose multipliers grew U to millions of bits on
+       lights_out) and gives up on a component beyond 256 bits.
        -Dorg.jacop.fz.lattice=false turns the detector off;
        -Dorg.jacop.fz.latticeReformulate=auto|on|off. Wide set (220,
        60 s, paired): congruences prune on 16 instances and no wide
