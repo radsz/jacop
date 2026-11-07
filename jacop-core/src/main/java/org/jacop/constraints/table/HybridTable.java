@@ -37,12 +37,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
@@ -99,7 +101,8 @@ public class HybridTable extends Constraint
         Simplifiable,
         Copyable<HybridTable>,
         Explainable,
-        PbEncodable {
+        PbEncodable,
+        Violation {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -1894,6 +1897,119 @@ public class HybridTable extends Constraint
       }
     }
     return false;
+  }
+
+  /**
+   * The violation for local search: 0 when some hybrid tuple accepts the values, otherwise the
+   * fewest columns that any hybrid tuple rejects, the Hamming distance from the values to the
+   * table. A move that brings the values closer to a tuple lowers it, which a 0/1 violation would
+   * not show (the distances of constraint-based local search, Van Hentenryck and Michel,
+   * "Constraint-Based Local Search", MIT Press 2005).
+   */
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int[] v = new int[arity];
+    for (int i = 0; i < arity; i++) {
+      v[i] = value.applyAsInt(x[i]);
+    }
+    int best = arity;
+    for (int t = 0; t < tupleCount && best > 0; t++) {
+      int base = t * arity;
+      int missed = 0;
+      for (int i = 0; i < arity && missed < best; i++) {
+        Restriction r = cells[base + i];
+        if (r.isBinary() ? !r.accepts(v[i], v[r.column]) : !r.accepts(v[i])) {
+          missed++;
+        }
+      }
+      best = Math.min(best, missed);
+    }
+    return best;
+  }
+
+  // the cells keyColumn() was computed for, the column, and the tuple of each key value
+  private Restriction[] keyedCells;
+  private int keyColumn = -1;
+  private Map<Integer, Integer> keyTuple;
+
+  /**
+   * Finds a key: a column in which every hybrid tuple has a different {@code = v}, when every other
+   * column of every tuple is {@code = v} too. Each other column is then a function of the key, as
+   * in a row lookup {@code x[j] = t[row, j]} of a constant matrix.
+   *
+   * @return the column of the key, or -1 if there is none.
+   */
+  public int keyColumn() {
+    if (keyedCells == cells) {
+      return keyColumn;
+    }
+    keyedCells = cells;
+    keyColumn = -1;
+    keyTuple = null;
+    for (Restriction r : cells) {
+      if (r.kind != Restriction.Kind.EQ) {
+        return -1;
+      }
+    }
+    for (int i = 0; i < arity; i++) {
+      Map<Integer, Integer> tuple = new HashMap<>();
+      for (int t = 0; t < tupleCount; t++) {
+        if (tuple.put(cells[t * arity + i].value, t) != null) {
+          tuple = null;
+          break;
+        }
+      }
+      if (tuple != null) {
+        keyColumn = i;
+        keyTuple = tuple;
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Returns the value of a column in the tuple with the given key value.
+   *
+   * @param column the column.
+   * @param key the value of the key column, see {@link #keyColumn()}.
+   * @param otherwise the value returned when no tuple has the key.
+   * @return the value of the column, or otherwise.
+   */
+  public int keyedValue(int column, int key, int otherwise) {
+    if (keyColumn() < 0) {
+      return otherwise;
+    }
+    Integer t = keyTuple.get(key);
+    return t == null ? otherwise : cells[t * arity + column].value;
+  }
+
+  /**
+   * Returns the number of hybrid tuples.
+   *
+   * @return the number of tuples.
+   */
+  public int tupleCount() {
+    return tupleCount;
+  }
+
+  /**
+   * Returns the number of columns.
+   *
+   * @return the arity of the table.
+   */
+  public int columnCount() {
+    return arity;
+  }
+
+  /**
+   * Returns the variable of a column.
+   *
+   * @param column the column.
+   * @return its variable.
+   */
+  public IntVar column(int column) {
+    return x[column];
   }
 
   /**

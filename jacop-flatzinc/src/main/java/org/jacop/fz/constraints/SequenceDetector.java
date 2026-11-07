@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -44,9 +45,11 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Sequence;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.fz.ASTAnnotation;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
+import org.jacop.fz.Node;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
@@ -93,11 +96,14 @@ public class SequenceDetector implements ParserTreeConstants {
     private final IntVar[] y;
     private final int kind;
     private final int bound;
+    // the row, or null if it defines a variable and so is not implied by the sequence alone
+    private final SimpleNode row;
 
-    Window(IntVar[] y, int kind, int bound) {
+    Window(IntVar[] y, int kind, int bound, SimpleNode row) {
       this.y = y;
       this.kind = kind;
       this.bound = bound;
+      this.row = row;
     }
 
     IntVar[] y() {
@@ -143,6 +149,7 @@ public class SequenceDetector implements ParserTreeConstants {
   }
 
   private final List<Window> windows = new ArrayList<>();
+  private final Set<SimpleNode> impliedRows = Collections.newSetFromMap(new IdentityHashMap<>());
   private final Map<IntVar, Channel> channels = new IdentityHashMap<>();
 
   /**
@@ -175,6 +182,7 @@ public class SequenceDetector implements ParserTreeConstants {
     }
     // the bounds of each list: min and max by the list of the chain
     Map<List<IntVar>, int[]> bounds = new LinkedHashMap<>();
+    Map<List<IntVar>, List<SimpleNode>> rows = new HashMap<>();
     for (List<Window> chain : chains()) {
       if (chain.size() < MIN_WINDOWS) {
         continue;
@@ -185,10 +193,12 @@ public class SequenceDetector implements ParserTreeConstants {
       for (int k = 1; k < chain.size(); k++) {
         list[q + k - 1] = chain.get(k).y()[q - 1];
       }
-      int[] b = bounds.computeIfAbsent(new IdentityList(list), key -> new int[] {0, q, q, 0});
+      IdentityList key = new IdentityList(list);
+      int[] b = bounds.computeIfAbsent(key, k -> new int[] {0, q, q, 0});
       if (b[2] != q) {
         continue;
       }
+      addRows(rows.computeIfAbsent(key, k -> new ArrayList<>()), chain);
       if (first.kind() != AT_LEAST) {
         b[1] = Math.min(b[1], first.bound());
       }
@@ -204,6 +214,7 @@ public class SequenceDetector implements ParserTreeConstants {
       }
       post(e.getKey().toArray(new IntVar[0]), b[2], b[0], b[1]);
       windowsCovered += b[3];
+      impliedRows.addAll(rows.get(e.getKey()));
     }
     if (support.options.debug() && posted > 0) {
       FzConsole.println(
@@ -214,6 +225,25 @@ public class SequenceDetector implements ParserTreeConstants {
               + " over element indices) of "
               + windowsCovered
               + " windows");
+    }
+  }
+
+  /**
+   * It returns the window rows that the posted sequences imply. Each is the constraint element of a
+   * constraint item; the rows are still posted, but local search need not evaluate them, as it
+   * evaluates the sequence.
+   *
+   * @return the implied rows, compared by identity.
+   */
+  public Set<SimpleNode> impliedRows() {
+    return impliedRows;
+  }
+
+  private static void addRows(List<SimpleNode> rows, List<Window> chain) {
+    for (Window w : chain) {
+      if (w.row != null) {
+        rows.add(w.row);
+      }
     }
   }
 
@@ -260,7 +290,7 @@ public class SequenceDetector implements ParserTreeConstants {
       tails.add(key(w, Arrays.copyOfRange(w.y(), 1, w.y().length)));
     }
     List<List<Window>> result = new ArrayList<>();
-    Set<Window> used = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<Window> used = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Window w : windows) {
       if (used.contains(w) || tails.contains(key(w, Arrays.copyOf(w.y(), w.y().length - 1)))) {
         continue;
@@ -324,7 +354,19 @@ public class SequenceDetector implements ParserTreeConstants {
       kind = AT_LEAST;
       bound = -rhs;
     }
-    windows.add(new Window(y.clone(), kind, bound));
+    windows.add(new Window(y.clone(), kind, bound, definesVariable(node) ? null : node));
+  }
+
+  // the annotations are children of the constraint item, the parent of the element
+  private static boolean definesVariable(ASTConstElem node) {
+    Node item = node.jjtGetParent();
+    for (int i = 0; item != null && i < item.jjtGetNumChildren(); i++) {
+      if (item.jjtGetChild(i) instanceof ASTAnnotation ann
+          && "defines_var".equals(ann.getAnnId())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void channel(ASTConstElem node, int first) {
