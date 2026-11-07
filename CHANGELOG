@@ -2762,6 +2762,36 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
+169. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
+     sum x_i = total and convex costs f_i (ConvexCost: weighted maxima
+     of affine pieces, their squares, or tables). The minimum of the
+     separable convex allocation is found by the greedy on marginal
+     costs (Hochbaum, "Lower and upper bounds for the allocation problem
+     and other nonlinear optimization problems", Mathematics of
+     Operations Research 19(2), 390-409, 1994); it generalises the
+     bounds of Spread (Pesant and Regin, "SPREAD: a balancing constraint
+     based on statistics", CP 2005, LNCS 3709) and Deviation (Schaus,
+     Deville, Dupont and Regin, "The deviation constraint", CPAIOR 2007,
+     LNCS 4510). The minimum bounds cost, the marginal cost lambda gives
+     reduced costs that bound every x_i, and for up to 64 variables
+     (-Djacop.convexAllocation.exact) each bound of x_i is exact over
+     the integer intervals (bounds(Z)), found by walking x_i away from its
+     minimiser while the others follow greedily. Under LCG it explains
+     its prunings with the Lagrangian bound at lambda.
+     ConvexAllocationDetector posts it in FlatZinc next to the model's
+     own constraints for objectives that sum abs, squares or maxima of
+     affine terms of variables whose sum is fixed or a variable (unit
+     int_lin_eq of 3 or more variables, or bin_packing loads). It is on
+     by default without LCG and off under LCG
+     (-Dorg.jacop.fz.convexAllocation=true/false overrides): with LCG a
+     stronger cost bound cost gbac most of what the alternating restarts
+     find (2020 UD10 417 to 8052). Of the MiniZinc Challenge instances
+     2008-2025 it fires on gbac only. Random balance and gbac instances
+     (50, 30 s, --lcg off): solved 13 to 35, square_b12 14760 to optimum
+     43 in 0.9 s, every squared dead zone solved within 3.4 s; wide set (220, 30 s, --lcg off): 89 to 89 solved, gbac UD3
+     57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
+     the other changes being run-to-run noise.
+
 Version 4.11
 =============
 
