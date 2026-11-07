@@ -257,6 +257,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: atoms propagated to the solver. */
   public long atomsPropagated;
 
+  /** Statistics: literals implied by extended nogoods ({@link #extendedNogood}). */
+  public long extendedPropagations;
+
   /** Statistics: reason literals replaced by a weaker literal the solver already has. */
   public long liftedLiterals;
 
@@ -357,6 +360,22 @@ public final class LcgSolver implements ExternalPropagator {
   private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
   private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
+  // extended UIPs and extended nogood propagation (CPIP), on unless -Djacop.lcg.extended=false;
+  // jacop.lcg.extendedLimit caps the literals one nogood may imply
+  private final boolean extended = !"false".equals(System.getProperty("jacop.lcg.extended"));
+  private final int extendedLimit = Integer.getInteger("jacop.lcg.extendedLimit", 16);
+  // how many extended nogoods are kept for later propagation (0: none)
+  private final int extendedKeep = Integer.getInteger("jacop.lcg.extendedKeep", 20_000);
+  // the literals an extended nogood implies, not yet returned by propagate, and their reasons
+  private int[] extendedLits = new int[16];
+  private int[][] extendedReasons = new int[16][];
+  private int numExtended;
+  // per DIMACS variable implied by an extended nogood: its reason (propagated[] holds EXTENDED)
+  private int[][] extendedReason = new int[16][];
+  private static final int EXTENDED = Integer.MIN_VALUE;
+  private long[] holeScratch = new long[16];
+  private int[] keptScratch = new int[16];
+  private final EntryList removedBefore = new EntryList();
   private final double[] activity;
   // the variables by activity; with Booleans first only the 0/1 ones, the others in wide, which
   // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search
@@ -3591,6 +3610,7 @@ public final class LcgSolver implements ExternalPropagator {
     failed = false;
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
+    numExtended = 0;
     release(level);
     if (linear != null) {
       imposeLearntLinear(level);
@@ -3979,6 +3999,384 @@ public final class LcgSolver implements ExternalPropagator {
     return orZero(d, 1);
   }
 
+  /**
+   * An extended UIP (CPIP, Marijnissen, Flippo and Demirovic, CP 2026): true atoms of one variable
+   * whose conjunction no single atom equals. The values they leave are an interval {@code [lo, hi]}
+   * with holes; the nogood removes them again after the backjump, the parts at a root bound by one
+   * bound literal each and the values strictly inside by one {@code x != v} literal each, which
+   * must be at most {@code jacop.lcg.extendedLimit} literals. Keeps the atoms of the two bounds and
+   * the holes inside them.
+   */
+  @Override
+  public int extendedUip(int[] lits, int size) {
+    if (!extended) {
+      return 0;
+    }
+    int i = litVar[Math.abs(lits[0])];
+    long rmin = root[i].min();
+    long rmax = root[i].max();
+    long lo = rmin;
+    long hi = rmax;
+    int loK = -1;
+    int hiK = -1;
+    for (int k = 0; k < size; k++) {
+      int d = Math.abs(lits[k]);
+      long v = litValue[d];
+      if (litKind[d] == GE_KIND) {
+        if (lits[k] > 0 && v > lo) {
+          lo = v;
+          loK = k;
+        } else if (lits[k] < 0 && v - 1 < hi) {
+          hi = v - 1;
+          hiK = k;
+        }
+      } else if (lits[k] > 0) {
+        return 0; // x = v: equal to its own atom, a semantic UIP
+      }
+    }
+    if (lo > hi) {
+      return 0;
+    }
+    if (keptScratch.length < size) {
+      keptScratch = new int[2 * size];
+      holeScratch = new long[2 * size];
+    }
+    int kept = 0;
+    int holes = 0;
+    if (loK >= 0) {
+      keptScratch[kept++] = lits[loK];
+    }
+    if (hiK >= 0) {
+      keptScratch[kept++] = lits[hiK];
+    }
+    for (int k = 0; k < size; k++) {
+      int d = Math.abs(lits[k]);
+      if (litKind[d] == EQ_KIND && litValue[d] >= lo && litValue[d] <= hi) {
+        keptScratch[kept++] = lits[k];
+        holeScratch[holes++] = litValue[d];
+      }
+    }
+    if (kept < 2
+        || extendedCost(lo, hi, rmin, rmax, holeScratch, holes) > extendedLimit
+        || !forbidsBefore(i, lo, hi, holes)) {
+      return 0;
+    }
+    int j = kept;
+    for (int k = 0; k < size; k++) {
+      boolean in = false;
+      for (int m = 0; m < kept && !in; m++) {
+        in = keptScratch[m] == lits[k];
+      }
+      if (!in) {
+        lits[j++] = lits[k];
+      }
+    }
+    System.arraycopy(keptScratch, 0, lits, 0, kept);
+    return kept;
+  }
+
+  // the literals that remove [lo, hi] without the holes: one per part at a root bound, one per
+  // value inside; 0 when nothing is left to remove, and a large number for the whole root domain
+  private static long extendedCost(
+      long lo, long hi, long rmin, long rmax, long[] holes, int numHoles) {
+    Arrays.sort(holes, 0, numHoles);
+    long cost = 0;
+    long s = lo;
+    for (int k = 0; k <= numHoles; k++) {
+      long e = k < numHoles ? holes[k] - 1 : hi;
+      if (s <= e) {
+        if (s <= rmin && e >= rmax) {
+          return Long.MAX_VALUE;
+        }
+        cost += s <= rmin || e >= rmax ? 1 : e - s + 1;
+      }
+      if (k < numHoles) {
+        s = holes[k] + 1;
+      }
+    }
+    return cost == 0 ? Long.MAX_VALUE : cost;
+  }
+
+  /**
+   * Whether the domain before the conflict level still has a value of {@code [lo, hi]} without the
+   * holes (sorted in {@link #holeScratch}). Without one the nogood is implied by the domains below
+   * the conflict level, for example when the conflict empties the variable's domain, so it would
+   * remove nothing after the backjump and the same conflict would come back.
+   */
+  private boolean forbidsBefore(int i, long lo, long hi, int holes) {
+    IntVar x = vars[i];
+    int pos = levelStart(store.level);
+    long s = lo;
+    int tries = 0;
+    for (int k = 0; k <= holes; k++) {
+      long e = k < holes ? holeScratch[k] - 1 : hi;
+      long a = Math.max(s, trail.minBefore(x, pos));
+      long b = Math.min(e, trail.maxBefore(x, pos));
+      for (long v = a; v <= b && tries++ < 4 * extendedLimit; v++) {
+        removedBefore.clear();
+        if (!trail.excludedBefore(x, (int) v, pos, removedBefore)) {
+          return true;
+        }
+      }
+      if (k < holes) {
+        s = holeScratch[k] + 1;
+      }
+    }
+    return false;
+  }
+
+  // the first trail entry recorded at a store level or above
+  private int levelStart(int level) {
+    int a = 0;
+    int b = trail.size();
+    while (a < b) {
+      int m = (a + b) >>> 1;
+      if (trail.level(m) < level) {
+        a = m + 1;
+      } else {
+        b = m;
+      }
+    }
+    return a;
+  }
+
+  /**
+   * Propagates a nogood learnt at an extended UIP after the backjump: its unassigned literals are
+   * atoms of one variable that forbid {@code [lo, hi]} without some holes, given its false
+   * literals. Queues, for {@link #propagate}, a bound literal for each forbidden part at a root
+   * bound, and {@code x != v} for each forbidden value inside that the domain still has, each with
+   * the false literals as its reason (extended nogood propagation, Marijnissen, Flippo and
+   * Demirovic, CP 2026).
+   */
+  @Override
+  public void extendedNogood(int[] clause) {
+    numExtended = 0;
+    int i = litVar[Math.abs(clause[0])];
+    int numFalse = 0;
+    for (int l : clause) {
+      int value = sat.value(l);
+      if (value > 0 || value == 0 && litVar[Math.abs(l)] != i) {
+        return;
+      }
+      numFalse += value < 0 ? 1 : 0;
+    }
+    int[] rest = new int[numFalse];
+    int[] open = new int[clause.length - numFalse];
+    int r = 0;
+    int o = 0;
+    for (int l : clause) {
+      if (sat.value(l) < 0) {
+        rest[r++] = l;
+      } else {
+        open[o++] = l;
+      }
+    }
+    queueForbidden(i, open, rest);
+    if (extendedKeep > 0 && proof == null && !sat.hasProof()) {
+      keepNogood(i, open, rest);
+    }
+  }
+
+  /**
+   * Queues the literals that remove from x's domain the values where every literal of {@code open},
+   * all atoms of x, is false, each with the literals of {@code rest}, all false, as its reason.
+   */
+  private void queueForbidden(int i, int[] open, int[] rest) {
+    long rmin = root[i].min();
+    long rmax = root[i].max();
+    long lo = rmin;
+    long hi = rmax;
+    int holes = 0;
+    if (holeScratch.length < open.length) {
+      holeScratch = new long[2 * open.length];
+    }
+    for (int l : open) {
+      if (sat.value(l) > 0) {
+        return;
+      }
+      int d = Math.abs(l);
+      long v = litValue[d];
+      int atom = -l; // true in the forbidden values
+      if (litKind[d] == GE_KIND) {
+        if (atom > 0) {
+          lo = Math.max(lo, v);
+        } else {
+          hi = Math.min(hi, v - 1);
+        }
+      } else if (atom > 0) {
+        lo = Math.max(lo, v);
+        hi = Math.min(hi, v);
+      } else {
+        holeScratch[holes++] = v;
+      }
+    }
+    Arrays.sort(holeScratch, 0, holes);
+    IntVar x = vars[i];
+    if (x.domain.isEmpty()) {
+      return;
+    }
+    long s = lo;
+    for (int k = 0; k <= holes; k++) {
+      long e = k < holes ? Math.min(holeScratch[k] - 1, hi) : hi;
+      if (s <= e && !(s <= rmin && e >= rmax)) {
+        if (s <= rmin) {
+          if (x.min() <= e) {
+            queueExtended(geVar(i, (int) e + 1), rest);
+          }
+        } else if (e >= rmax) {
+          if (x.max() >= s) {
+            queueExtended(-geVar(i, (int) s), rest);
+          }
+        } else {
+          for (long v = Math.max(s, x.min()); v <= Math.min(e, x.max()); v++) {
+            if (x.domain.contains((int) v)) {
+              queueExtended(-eqVar(i, (int) v), rest);
+            }
+          }
+        }
+      }
+      if (k < holes) {
+        s = Math.max(s, holeScratch[k] + 1);
+      }
+    }
+  }
+
+  // ---- extended nogoods kept for later propagation: each watches one of its other literals, and
+  // when all of them are false it removes its values again (Marijnissen, Flippo and Demirovic,
+  // CP 2026). They are copies of learnt clauses, valid after the clause database drops them.
+
+  private int[] nogoodVar = new int[16];
+  private int[][] nogoodOpen = new int[16][];
+  private int[][] nogoodRest = new int[16][];
+  private int numNogoods;
+  // per literal (2 * DIMACS variable + 1 if negative) that makes a watched literal false: nogoods
+  private int[][] nogoodWatch = new int[16][];
+  private int[] nogoodWatchSize = new int[16];
+
+  /** Statistics: kept extended nogoods that removed values again later. */
+  public long extendedRepropagations;
+
+  private static int watchIndex(int lit) {
+    return 2 * Math.abs(lit) + (lit < 0 ? 1 : 0);
+  }
+
+  private void keepNogood(int i, int[] open, int[] rest) {
+    if (rest.length == 0) {
+      return; // propagated at the root for good
+    }
+    for (int l : rest) {
+      if (litVar[Math.abs(l)] < 0) {
+        return; // the solver tells this propagator only about atoms
+      }
+    }
+    if (numNogoods >= extendedKeep) {
+      dropOldNogoods();
+    }
+    if (numNogoods == nogoodVar.length) {
+      int n = 2 * numNogoods;
+      nogoodVar = Arrays.copyOf(nogoodVar, n);
+      nogoodOpen = Arrays.copyOf(nogoodOpen, n);
+      nogoodRest = Arrays.copyOf(nogoodRest, n);
+    }
+    // watch the literal that became false last, at the highest level
+    int w = 0;
+    for (int k = 1; k < rest.length; k++) {
+      if (sat.levelOf(rest[k]) > sat.levelOf(rest[w])) {
+        w = k;
+      }
+    }
+    int tmp = rest[0];
+    rest[0] = rest[w];
+    rest[w] = tmp;
+    int id = numNogoods++;
+    nogoodVar[id] = i;
+    nogoodOpen[id] = open;
+    nogoodRest[id] = rest;
+    addNogoodWatch(-rest[0], id);
+  }
+
+  private void addNogoodWatch(int lit, int id) {
+    int w = watchIndex(lit);
+    if (w >= nogoodWatch.length) {
+      int n = Math.max(w + 1, 2 * nogoodWatch.length);
+      nogoodWatch = Arrays.copyOf(nogoodWatch, n);
+      nogoodWatchSize = Arrays.copyOf(nogoodWatchSize, n);
+    }
+    int[] ws = nogoodWatch[w];
+    if (ws == null) {
+      ws = nogoodWatch[w] = new int[4];
+    } else if (nogoodWatchSize[w] == ws.length) {
+      ws = nogoodWatch[w] = Arrays.copyOf(ws, 2 * ws.length);
+    }
+    ws[nogoodWatchSize[w]++] = id;
+  }
+
+  // keeps the newer half of the nogoods
+  private void dropOldNogoods() {
+    int from = numNogoods / 2;
+    int n = numNogoods - from;
+    System.arraycopy(nogoodVar, from, nogoodVar, 0, n);
+    System.arraycopy(nogoodOpen, from, nogoodOpen, 0, n);
+    System.arraycopy(nogoodRest, from, nogoodRest, 0, n);
+    Arrays.fill(nogoodOpen, n, numNogoods, null);
+    Arrays.fill(nogoodRest, n, numNogoods, null);
+    numNogoods = n;
+    Arrays.fill(nogoodWatchSize, 0);
+    for (int id = 0; id < n; id++) {
+      addNogoodWatch(-nogoodRest[id][0], id);
+    }
+  }
+
+  /**
+   * Visits the kept nogoods watching a literal just made true: each moves its watch to another of
+   * its literals that is not false, or, when all are false, queues the removal of its values.
+   */
+  private void visitNogoods(int lit) {
+    int w = watchIndex(lit);
+    if (w >= nogoodWatch.length || nogoodWatchSize[w] == 0) {
+      return;
+    }
+    int[] ws = nogoodWatch[w];
+    int n = nogoodWatchSize[w];
+    int j = 0;
+    for (int k = 0; k < n; k++) {
+      int id = ws[k];
+      int[] rest = nogoodRest[id];
+      int found = -1;
+      for (int m = 1; m < rest.length && found < 0; m++) {
+        if (sat.value(rest[m]) >= 0) {
+          found = m;
+        }
+      }
+      if (found >= 0) {
+        int tmp = rest[0];
+        rest[0] = rest[found];
+        rest[found] = tmp;
+        addNogoodWatch(-rest[0], id); // another list: the literals of a nogood differ
+        continue;
+      }
+      ws[j++] = id;
+      int before = numExtended;
+      queueForbidden(nogoodVar[id], nogoodOpen[id], rest);
+      if (numExtended > before) {
+        extendedRepropagations++;
+      }
+    }
+    nogoodWatchSize[w] = j;
+  }
+
+  private void queueExtended(int lit, int[] rest) {
+    if (numExtended == extendedLits.length) {
+      extendedLits = Arrays.copyOf(extendedLits, 2 * numExtended);
+      extendedReasons = Arrays.copyOf(extendedReasons, 2 * numExtended);
+    }
+    int[] r = new int[rest.length + 1];
+    r[0] = lit;
+    System.arraycopy(rest, 0, r, 1, rest.length);
+    extendedLits[numExtended] = lit;
+    extendedReasons[numExtended++] = r;
+  }
+
   private static int orZero(int d, int sign) {
     return d == LiteralMap.NONE ? 0 : sign * d;
   }
@@ -4252,6 +4650,24 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     while (true) {
+      while (numExtended > 0) {
+        int lit = extendedLits[--numExtended];
+        int value = sat.value(lit);
+        if (value < 0) {
+          pushedReason = extendedReasons[numExtended];
+          return lit;
+        }
+        if (value == 0) {
+          int d = Math.abs(lit);
+          setPropagated(d, EXTENDED);
+          if (d >= extendedReason.length) {
+            extendedReason = Arrays.copyOf(extendedReason, Math.max(d + 1, 2 * d));
+          }
+          extendedReason[d] = extendedReasons[numExtended];
+          extendedPropagations++;
+          return lit;
+        }
+      }
       while (numImplied > 0) {
         int lit = impliedLits[--numImplied];
         if (sat.value(lit) <= 0) {
@@ -4291,6 +4707,11 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
         return 0;
+      }
+      if (numNogoods > 0) {
+        for (int k = 0; k < numPending; k++) {
+          visitNogoods(pending[k]);
+        }
       }
       int from = trail.size();
       for (int k = 0; k < numPending; k++) {
@@ -4603,6 +5024,11 @@ public final class LcgSolver implements ExternalPropagator {
       return r;
     }
     int e = propagated[Math.abs(lit)];
+    if (e == EXTENDED) {
+      reasons++;
+      reasonLiterals += extendedReason[Math.abs(lit)].length;
+      return extendedReason[Math.abs(lit)];
+    }
     if (linear != null && linear.usable(trail.reason(e))) {
       noteOrigin(lit, trail.reason(e));
     }

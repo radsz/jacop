@@ -338,6 +338,18 @@ public final class CdclSolver {
   /** Statistics: conflicts whose analysis stopped at a semantic UIP before the first UIP. */
   public long semanticUips;
 
+  /**
+   * Statistics: conflicts whose analysis stopped where the open conflict-level literals were atoms
+   * of one integer variable without an equivalent atom, learning a nogood the external propagator
+   * propagates on the domain (extended nogood propagation).
+   */
+  public long extendedUips;
+
+  // set by analyze when the learnt clause has two or more literals at the conflict level, all atoms
+  // of one integer variable, to be propagated by the external propagator; only search() allows it
+  private boolean extendedAllowed;
+  private boolean extendedLearnt;
+
   /** Creates an empty solver. */
   public CdclSolver() {
     // arrays grow with the variables
@@ -1542,9 +1554,13 @@ public final class CdclSolver {
         index--;
       }
       if (notifying && pathCount >= 2 && groupsOpen == 1 && ungroupedOpen == 0) {
-        int uip = semanticUip(index, pathCount);
+        int n = collectFrontier(index, pathCount);
+        int uip = semanticUip(n);
         if (uip >= 0) {
           p = uip;
+          break;
+        }
+        if (extendedAllowed && stopExtended(n)) {
           break;
         }
       }
@@ -1556,26 +1572,33 @@ public final class CdclSolver {
         closeFrontier(p >> 1);
       }
     } while (pathCount > 0);
-    learnt[0] = p ^ 1;
+    boolean extended = extendedLearnt;
+    if (!extended) {
+      learnt[0] = p ^ 1;
+    }
 
-    // recursive minimisation
+    // recursive minimisation (the conflict-level literals of an extended nogood stay)
     if (++poisonStamp == Integer.MAX_VALUE) {
       Arrays.fill(poisonMark, 0);
       poisonStamp = 1;
     }
     int abstractLevels = 0;
     for (int i = 1; i < learntSize; i++) {
-      abstractLevels |= 1 << (level[learnt[i] >> 1] & 31);
+      if (level[learnt[i] >> 1] < decisionLevel) {
+        abstractLevels |= 1 << (level[learnt[i] >> 1] & 31);
+      }
     }
     int j = 1;
     for (int i = 1; i < learntSize; i++) {
       int v = learnt[i] >> 1;
-      if (reason[v] == NO_REASON || !redundant(learnt[i], abstractLevels)) {
+      if (reason[v] == NO_REASON
+          || level[v] == decisionLevel
+          || !redundant(learnt[i], abstractLevels)) {
         learnt[j++] = learnt[i];
       }
     }
     learntSize = j;
-    if (shrink && learntSize > 2) {
+    if (shrink && !extended && learntSize > 2) {
       shrinkLearnt();
     }
     if (notifying && learntSize > 1) {
@@ -1593,6 +1616,9 @@ public final class CdclSolver {
       }
     }
 
+    if (extended) {
+      return extendedLevel();
+    }
     if (learntSize == 1) {
       return 0;
     }
@@ -1639,17 +1665,7 @@ public final class CdclSolver {
    * which then cuts the conflict like a UIP (the 1UIP over integer variables of Pumpkin's CPIP).
    * Returns that literal, with the analysis state cleared, or -1.
    */
-  private int semanticUip(int index, int open) {
-    if (frontier.length < open) {
-      frontier = new int[2 * open];
-    }
-    int n = 0;
-    for (int t = index; n < open; t--) {
-      int v = trail[t] >> 1;
-      if (seen[v] != 0 && level[v] == decisionLevel) {
-        frontier[n++] = toDimacs(trail[t]);
-      }
-    }
+  private int semanticUip(int n) {
     int d = external.semanticUip(frontier, n);
     if (d == 0) {
       return -1;
@@ -1665,6 +1681,84 @@ public final class CdclSolver {
     }
     semanticUips++;
     return lit;
+  }
+
+  /** Puts the open conflict-level literals into {@link #frontier}, in DIMACS form; their count. */
+  private int collectFrontier(int index, int open) {
+    if (frontier.length < open) {
+      frontier = new int[2 * open];
+    }
+    int n = 0;
+    for (int t = index; n < open; t--) {
+      int v = trail[t] >> 1;
+      if (seen[v] != 0 && level[v] == decisionLevel) {
+        frontier[n++] = toDimacs(trail[t]);
+      }
+    }
+    return n;
+  }
+
+  /**
+   * Stops the analysis at the open conflict-level literals when the external propagator takes them
+   * as an extended UIP (CPIP, Marijnissen, Flippo and Demirovic, CP 2026): their negations, the
+   * ones it keeps, join the learnt clause, the first in place of the asserting literal. Returns
+   * whether it stopped.
+   */
+  private boolean stopExtended(int n) {
+    int kept = external.extendedUip(frontier, n);
+    if (kept < 2) {
+      return false;
+    }
+    for (int k = 0; k < n; k++) {
+      int v = Math.abs(frontier[k]) - 1;
+      closeFrontier(v);
+      if (k >= kept) {
+        seen[v] = 0; // not in the clause: minimisation must not lean on it
+      }
+    }
+    learnt[0] = toLit(frontier[0]) ^ 1;
+    for (int k = 1; k < kept; k++) {
+      addLearnt(toLit(frontier[k]) ^ 1);
+    }
+    extendedLearnt = true;
+    return true;
+  }
+
+  /**
+   * Orders the learnt clause of an extended UIP after minimisation: two conflict-level literals
+   * first, as the watches, and returns the backjump level, the highest of the others. With one
+   * conflict-level literal left the clause is asserting as usual.
+   */
+  private int extendedLevel() {
+    int open = 0;
+    for (int i = 0; i < learntSize; i++) {
+      if (level[learnt[i] >> 1] == decisionLevel) {
+        int tmp = learnt[open];
+        learnt[open++] = learnt[i];
+        learnt[i] = tmp;
+      }
+    }
+    int bt = 0;
+    for (int i = open; i < learntSize; i++) {
+      bt = Math.max(bt, level[learnt[i] >> 1]);
+    }
+    if (open < 2) {
+      extendedLearnt = false;
+      if (learntSize > 1) {
+        int maxIndex = 1;
+        for (int i = 2; i < learntSize; i++) {
+          if (level[learnt[i] >> 1] > level[learnt[maxIndex] >> 1]) {
+            maxIndex = i;
+          }
+        }
+        int tmp = learnt[1];
+        learnt[1] = learnt[maxIndex];
+        learnt[maxIndex] = tmp;
+      }
+      return bt;
+    }
+    extendedUips++;
+    return bt;
   }
 
   /** Lets the external propagator remove learnt literals that imply others it knows about. */
@@ -2477,7 +2571,9 @@ public final class CdclSolver {
         }
         trailQueuePush(trailSize);
         updateTargetAndBest();
+        extendedAllowed = external != null;
         int btLevel = analyze();
+        extendedAllowed = false;
         if (chrono && learntSize > 1 && decisionLevel - btLevel > chronoLimit) {
           btLevel = decisionLevel - 1;
         }
@@ -2993,7 +3089,24 @@ public final class CdclSolver {
 
   private void learnClause() {
     int lbd;
-    if (learntSize == 1) {
+    boolean extended = extendedLearnt;
+    extendedLearnt = false;
+    if (extended && learntSize == 2) {
+      lbd = 2;
+      if (proof != null) {
+        proof.add(learnt, 0, 2);
+      }
+      addLearntBinary(learnt[0], learnt[1]);
+    } else if (extended) {
+      lbd = computeLbd(learnt, 0, learntSize);
+      if (proof != null) {
+        proof.add(learnt, 0, learntSize);
+      }
+      int ref = allocate(learnt, learntSize, true, lbd);
+      learnts = push(learnts, numLearnts++, ref);
+      attach(ref);
+      bumpClause(ref);
+    } else if (learntSize == 1) {
       lbd = 1;
       if (proof != null) {
         proof.add(learnt, 0, 1);
@@ -3023,6 +3136,13 @@ public final class CdclSolver {
         dimacs[i] = toDimacs(learnt[i]);
       }
       external.notifyLearnt(dimacs, lbd);
+    }
+    if (extended) {
+      int[] dimacs = new int[learntSize];
+      for (int i = 0; i < learntSize; i++) {
+        dimacs[i] = toDimacs(learnt[i]);
+      }
+      external.extendedNogood(dimacs);
     }
     lbdSum += lbd;
     emaFastBeta *= 1 - 0.03;

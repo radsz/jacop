@@ -138,6 +138,33 @@ public interface ExternalPropagator {
   }
 
   /**
+   * Whether conflict analysis may stop at true atoms of one integer variable, all set at the
+   * conflict level, that no single atom is equivalent to: the clause learnt then has the negations
+   * of two or more of them and is not asserting, so after the backjump the propagator removes the
+   * values it forbids from the variable's domain ({@link #extendedNogood}). This is the extended
+   * UIP of CPIP (I. Marijnissen, M. Flippo, E. Demirovic, From Literals to Atomic Constraints:
+   * Generalising Conflict-Driven Clause Learning for Constraint Programming, CP 2026).
+   *
+   * @param lits the true literals, in DIMACS form, all of one {@link #integerVariable}; the ones to
+   *     keep in the learnt clause are moved to the front, the others imply nothing they do not
+   * @param size the number of literals
+   * @return the number of literals to keep, at least 2 to stop the analysis there, or 0
+   */
+  default int extendedUip(int[] lits, int size) {
+    return 0;
+  }
+
+  /**
+   * A clause learnt at an extended UIP ({@link #extendedUip}), just added after the backjump: its
+   * first two literals, and maybe more, are unassigned atoms of one integer variable and the others
+   * are false. The propagator implies, at its next {@link #propagate}, literals that remove the
+   * values the clause forbids, each with the clause's false literals as its reason.
+   *
+   * @param clause the clause, in DIMACS form
+   */
+  default void extendedNogood(int[] clause) {}
+
+  /**
    * Checks a complete assignment.
    *
    * @param model the value of every variable, as {@code model[v-1] = v} or {@code -v}

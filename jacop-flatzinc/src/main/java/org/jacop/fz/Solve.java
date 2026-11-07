@@ -2616,6 +2616,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().semanticallyRemoved
             + "\n%%%mzn-stat: lcgSemanticUips="
             + lcg.sat().semanticUips
+            + "\n%%%mzn-stat: lcgExtendedUips="
+            + lcg.sat().extendedUips
+            + "\n%%%mzn-stat: lcgExtendedPropagations="
+            + lcg.extendedPropagations
+            + "\n%%%mzn-stat: lcgExtendedRepropagations="
+            + lcg.extendedRepropagations
             + "\n%%%mzn-stat: lcgLowerBoundRuns="
             + lcg.lowerBoundRuns
             + "\n%%%mzn-stat: lcgLowerBoundRaised="

@@ -590,6 +590,81 @@ class LcgSolverTest {
   }
 
   /**
+   * Extended UIPs and extended nogood propagation (CPIP, Marijnissen, Flippo and Demirovic, CP
+   * 2026) keep the optimum: random weighted sums over a permutation with random side constraints,
+   * where conflicts often end on the values of one variable, solved with and without them, every
+   * explanation checked. Both the propagation of the nogood learnt at the backjump and later
+   * propagations of kept nogoods occur.
+   */
+  @Test
+  void extendedNogoodsKeepTheOptimum() {
+    Random rnd = new Random(71);
+    long extendedUips = 0;
+    long propagations = 0;
+    long repropagations = 0;
+    for (int instance = 0; instance < 30; instance++) {
+      long seed = rnd.nextLong();
+      int[] optimum = new int[2];
+      int[] status = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 8;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, n + 1);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 5; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(7) - 3;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(10)));
+        }
+        IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = r.nextInt(41) - 20;
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        String old = System.getProperty("jacop.lcg.extended");
+        System.setProperty("jacop.lcg.extended", Boolean.toString(run == 1));
+        LcgSolver solver;
+        try {
+          solver = new LcgSolver(store);
+        } finally {
+          if (old == null) {
+            System.clearProperty("jacop.lcg.extended");
+          } else {
+            System.setProperty("jacop.lcg.extended", old);
+          }
+        }
+        solver.setChecking(true);
+        status[run] = solver.minimize(cost);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(cost);
+        }
+        if (run == 0) {
+          assertThat(solver.sat().extendedUips).isZero();
+        } else {
+          extendedUips += solver.sat().extendedUips;
+          propagations += solver.extendedPropagations;
+          repropagations += solver.extendedRepropagations;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(extendedUips).isPositive();
+    assertThat(propagations).isPositive();
+    assertThat(repropagations).isPositive();
+  }
+
+  /**
    * Objective shaving keeps the optimum and raises the lower bound by steps of more than one: the
    * sum of pairwise different values, whose root bound is far below the optimum, is minimised with
    * and without shaving, on random linear side constraints, and both find the same optimum.
