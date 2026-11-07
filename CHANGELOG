@@ -2659,7 +2659,22 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
-169. Lattice methods for linear equalities.
+169. ChannelBoolSet (jacop_link_set_to_booleans and the set unions found
+     by SetUnionDetector)
+     sets the Boolean of an element to 0 when the element leaves the
+     set's least upper bound; before, the Boolean kept 1 in its domain.
+     Under --lcg it explains its own atoms and failures: a Boolean
+     and its membership literal explain each other, and the cardinality
+     bounds and memberships derived from them are explained by counting
+     the elements in and out of the set (the members fixed at the root
+     counted as constants), instead of a generic reason. On gt-sort
+     n9_ub10_75.0 the generic reasons go from 73,899 of 74,913 to none
+     and the average reason from 41 to 13 atoms (--lcg) and from 22 to
+     6 atoms (-f). Wide set (220, 60 s, paired, scored by section 7 of
+     the scoring rules): --lcg S = +1, -f S = -7 over two repetitions,
+     from one instance (cgt) that posts no set constraint.
+
+170. Lattice methods for linear equalities.
      - LinearIntDom finds the supports of an equality by bitset sumsets
        when that is estimated cheaper than enumerating them: a forward
        pass of shifts gives the reachable partial sums after each
@@ -2715,7 +2730,7 @@ Version 5.0 (unreleased)
        proved in 28 s instead of 58 s (4.4 s instead of 7.4 s with -f),
        harmony canon in 18 s instead of 23 s (36 s instead of 48 s).
 
-170. Scheduling objective bounds. WeightedCompletion takes resource
+171. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
@@ -2762,7 +2777,7 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
-169. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
+172. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
      sum x_i = total and convex costs f_i (ConvexCost: weighted maxima
      of affine pieces, their squares, or tables). The minimum of the
      separable convex allocation is found by the greedy on marginal
