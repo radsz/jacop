@@ -403,9 +403,11 @@ public final class Linearizations {
     return k >= 2;
   }
 
-  // the assignment rows of bin packing among the tried value encodings
-  private static final boolean BINPACKING_ROWS =
-      !"false".equals(System.getProperty("org.jacop.lp.binpackingRows"));
+  // the assignment rows of bin packing among the tried value encodings, off by default: on gbac
+  // the LP bound stays 0 with them (fractional assignments balance the loads), and their value
+  // columns, though the root trial drops the rows, turn the auto LP guide on, which loses there
+  // (2017 UD8 at 60 s: 89 without them, 342 with them). Package-visible for the tests
+  static boolean binpackingRows = Boolean.getBoolean("org.jacop.lp.binpackingRows");
 
   /** The value encodings of valueRows: the columns of each variable and the rows made. */
   private static final class Encoder {
@@ -501,7 +503,7 @@ public final class Linearizations {
         if (!byModel.contains(el.index)) {
           element(el.index, el.list, el.indexOffset, el.value);
         }
-      } else if (k == Binpacking.class && BINPACKING_ROWS) {
+      } else if (k == Binpacking.class && binpackingRows) {
         Binpacking bp = (Binpacking) c;
         binpacking(bp.binVariables(), bp.itemWeights(), bp.loads(), bp.minBin());
       } else if (k == ElementIntegerFast.class) {

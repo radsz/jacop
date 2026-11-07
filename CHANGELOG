@@ -2905,7 +2905,11 @@ Version 5.0 (unreleased)
      Bin packing adds the assignment rows load_b = sum_i w_i [bin_i = b]
      (L. V. Kantorovich, Mathematical methods of organizing and planning
      production, 1939, Management Science 6(4) (1960) 366-422) as tried
-     LP rows over value columns, switch -Dorg.jacop.lp.binpackingRows=false.
+     LP rows over value columns, off by default
+     (-Dorg.jacop.lp.binpackingRows=true): on gbac the LP bound stays 0
+     with them, as fractional assignments balance the loads, and their
+     value columns turn the auto LP guide on although the rows are dropped
+     (2017 gbac UD8 at 60 s: 89 without, 342 with them).
      Root bounds go from 0 to 52-1619 on six cargo instances (2013
      challenge04 0 to 379, optimum 714) and from 66 to 90 on trains12;
      gbac stays at 0 since fractional assignments balance the loads, and

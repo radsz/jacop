@@ -463,118 +463,126 @@ class LinearizationsTest {
    */
   @Test
   void valueEncodingsHoldForEverySolution() {
-    Random rnd = new Random(17);
-    int rows = 0;
-    int columns = 0;
-    for (int run = 0; run < 600; run++) {
-      Store store = new Store();
-      int n = 3 + rnd.nextInt(2);
-      IntVar[] x = new IntVar[n];
-      for (int i = 0; i < n; i++) {
-        int lo = rnd.nextInt(3) - 1;
-        x[i] = new IntVar(store, "x" + i, lo, lo + 1 + rnd.nextInt(3));
-        if (rnd.nextBoolean() && x[i].getSize() > 2) {
-          // a hole inside the domain
-          x[i].domain.inComplement(0, x[i], x[i].min() + 1 + rnd.nextInt(x[i].getSize() - 2));
-        }
-      }
-      List<IntVar> scope = new ArrayList<>(List.of(x));
-      List<Constraint> cs = new ArrayList<>();
-      for (int k = 0; k < 2; k++) {
-        List<IntVar> pool = new ArrayList<>(List.of(x));
-        IntVar[] list = new IntVar[2 + rnd.nextInt(n - 1)];
-        for (int i = 0; i < list.length; i++) {
-          list[i] = pool.remove(rnd.nextInt(pool.size()));
-        }
-        IntervalDomain union = new IntervalDomain();
-        for (IntVar v : list) {
-          union.unionAdapt(v.dom());
-        }
-        switch (rnd.nextInt(8)) {
-          case 0 -> cs.add(new Alldiff(list));
-          case 5 -> {
-            int[] w = new int[list.length];
-            int total = 0;
-            for (int i = 0; i < w.length; i++) {
-              w[i] = rnd.nextInt(4);
-              total += w[i];
-            }
-            IntVar[] loads = new IntVar[union.max() - union.min() + 1];
-            for (int v = 0; v < loads.length; v++) {
-              loads[v] = new IntVar(store, "l" + k + "_" + v, 0, total);
-              scope.add(loads[v]);
-            }
-            cs.add(new Binpacking(list, loads, w, union.min()));
-          }
-          case 1 -> cs.add(new Alldistinct(list));
-          case 2 -> {
-            IntVar[] counters = new IntVar[union.getSize()];
-            for (int v = 0; v < counters.length; v++) {
-              counters[v] = new IntVar(store, "g" + k + "_" + v, 0, list.length);
-              scope.add(counters[v]);
-            }
-            cs.add(new GCC(list, counters));
-          }
-          case 3 -> {
-            int[] values = {union.min(), union.max()};
-            IntVar[] counters = new IntVar[2];
-            for (int v = 0; v < 2; v++) {
-              counters[v] = new IntVar(store, "v" + k + "_" + v, 0, list.length);
-              scope.add(counters[v]);
-            }
-            cs.add(new CountValues(list, counters, values));
-          }
-          case 4 -> {
-            IntVar counter = new IntVar(store, "n" + k, 0, list.length);
-            scope.add(counter);
-            cs.add(
-                new Count(list, counter, union.min() + rnd.nextInt(union.max() - union.min() + 1)));
-          }
-          default -> {
-            IntVar index = list[0];
-            int[] table = new int[index.max() - index.min() + 1];
-            for (int i = 0; i < table.length; i++) {
-              table[i] = rnd.nextInt(7) - 3;
-            }
-            IntVar y = new IntVar(store, "y" + k, -3, 3);
-            scope.add(y);
-            int offset = index.min() - 1;
-            cs.add(
-                rnd.nextBoolean()
-                    ? new ElementInteger(index, table, y, offset)
-                    : new ElementIntegerFast(index, table, y, offset));
+    boolean binpacking = Linearizations.binpackingRows;
+    // the bin packing rows are off by default
+    Linearizations.binpackingRows = true;
+    try {
+      Random rnd = new Random(17);
+      int rows = 0;
+      int columns = 0;
+      for (int run = 0; run < 600; run++) {
+        Store store = new Store();
+        int n = 3 + rnd.nextInt(2);
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          int lo = rnd.nextInt(3) - 1;
+          x[i] = new IntVar(store, "x" + i, lo, lo + 1 + rnd.nextInt(3));
+          if (rnd.nextBoolean() && x[i].getSize() > 2) {
+            // a hole inside the domain
+            x[i].domain.inComplement(0, x[i], x[i].min() + 1 + rnd.nextInt(x[i].getSize() - 2));
           }
         }
-      }
-      for (int r = 0; r < 2; r++) {
-        IntVar b = new IntVar(store, "b" + r, 0, 1);
-        scope.add(b);
-        IntVar y = x[rnd.nextInt(n)];
-        int c = rnd.nextInt(5) - 1;
-        PrimitiveConstraint cmp = rnd.nextBoolean() ? new XlteqC(y, c) : new XeqC(y, c);
-        cs.add(rnd.nextBoolean() ? new Reified(cmp, b) : new Implies(b, cmp));
-      }
-      List<LinearForm> made = Linearizations.valueRows(cs, List.of()).tried();
-      rows += made.size();
-      for (LinearForm f : made) {
-        for (IntVar v : f.vars()) {
-          columns += v instanceof LpColumn ? 1 : 0;
+        List<IntVar> scope = new ArrayList<>(List.of(x));
+        List<Constraint> cs = new ArrayList<>();
+        for (int k = 0; k < 2; k++) {
+          List<IntVar> pool = new ArrayList<>(List.of(x));
+          IntVar[] list = new IntVar[2 + rnd.nextInt(n - 1)];
+          for (int i = 0; i < list.length; i++) {
+            list[i] = pool.remove(rnd.nextInt(pool.size()));
+          }
+          IntervalDomain union = new IntervalDomain();
+          for (IntVar v : list) {
+            union.unionAdapt(v.dom());
+          }
+          switch (rnd.nextInt(8)) {
+            case 0 -> cs.add(new Alldiff(list));
+            case 5 -> {
+              int[] w = new int[list.length];
+              int total = 0;
+              for (int i = 0; i < w.length; i++) {
+                w[i] = rnd.nextInt(4);
+                total += w[i];
+              }
+              IntVar[] loads = new IntVar[union.max() - union.min() + 1];
+              for (int v = 0; v < loads.length; v++) {
+                loads[v] = new IntVar(store, "l" + k + "_" + v, 0, total);
+                scope.add(loads[v]);
+              }
+              cs.add(new Binpacking(list, loads, w, union.min()));
+            }
+            case 1 -> cs.add(new Alldistinct(list));
+            case 2 -> {
+              IntVar[] counters = new IntVar[union.getSize()];
+              for (int v = 0; v < counters.length; v++) {
+                counters[v] = new IntVar(store, "g" + k + "_" + v, 0, list.length);
+                scope.add(counters[v]);
+              }
+              cs.add(new GCC(list, counters));
+            }
+            case 3 -> {
+              int[] values = {union.min(), union.max()};
+              IntVar[] counters = new IntVar[2];
+              for (int v = 0; v < 2; v++) {
+                counters[v] = new IntVar(store, "v" + k + "_" + v, 0, list.length);
+                scope.add(counters[v]);
+              }
+              cs.add(new CountValues(list, counters, values));
+            }
+            case 4 -> {
+              IntVar counter = new IntVar(store, "n" + k, 0, list.length);
+              scope.add(counter);
+              cs.add(
+                  new Count(
+                      list, counter, union.min() + rnd.nextInt(union.max() - union.min() + 1)));
+            }
+            default -> {
+              IntVar index = list[0];
+              int[] table = new int[index.max() - index.min() + 1];
+              for (int i = 0; i < table.length; i++) {
+                table[i] = rnd.nextInt(7) - 3;
+              }
+              IntVar y = new IntVar(store, "y" + k, -3, 3);
+              scope.add(y);
+              int offset = index.min() - 1;
+              cs.add(
+                  rnd.nextBoolean()
+                      ? new ElementInteger(index, table, y, offset)
+                      : new ElementIntegerFast(index, table, y, offset));
+            }
+          }
         }
-      }
-      for (Constraint c : cs) {
-        store.impose(c);
-      }
-      IntVar[] all = scope.toArray(new IntVar[0]);
-      for (long[] solution : solutions(store, all)) {
+        for (int r = 0; r < 2; r++) {
+          IntVar b = new IntVar(store, "b" + r, 0, 1);
+          scope.add(b);
+          IntVar y = x[rnd.nextInt(n)];
+          int c = rnd.nextInt(5) - 1;
+          PrimitiveConstraint cmp = rnd.nextBoolean() ? new XlteqC(y, c) : new XeqC(y, c);
+          cs.add(rnd.nextBoolean() ? new Reified(cmp, b) : new Implies(b, cmp));
+        }
+        List<LinearForm> made = Linearizations.valueRows(cs, List.of()).tried();
+        rows += made.size();
         for (LinearForm f : made) {
-          assertThat(holds(f, all, solution))
-              .as("run %d %s at %s", run, f, Arrays.toString(solution))
-              .isTrue();
+          for (IntVar v : f.vars()) {
+            columns += v instanceof LpColumn ? 1 : 0;
+          }
+        }
+        for (Constraint c : cs) {
+          store.impose(c);
+        }
+        IntVar[] all = scope.toArray(new IntVar[0]);
+        for (long[] solution : solutions(store, all)) {
+          for (LinearForm f : made) {
+            assertThat(holds(f, all, solution))
+                .as("run %d %s at %s", run, f, Arrays.toString(solution))
+                .isTrue();
+          }
         }
       }
+      assertThat(rows).isGreaterThan(3000);
+      assertThat(columns).isGreaterThan(3000);
+    } finally {
+      Linearizations.binpackingRows = binpacking;
     }
-    assertThat(rows).isGreaterThan(3000);
-    assertThat(columns).isGreaterThan(3000);
   }
 
   // the assignments of x[k..] in the domains of x that every table allows, given a[0..k)
