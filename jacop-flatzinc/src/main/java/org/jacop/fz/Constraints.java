@@ -59,6 +59,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
+import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
@@ -229,6 +230,11 @@ public class Constraints implements ParserTreeConstants {
             replaced.addAll(nvalues);
           }
         }
+      }
+
+      // a redundant Sequence over sliding-window sums, which --proof does not encode
+      if (SequenceDetector.enabled() && options.proof() == null) {
+        new SequenceDetector(support).detect(astTree);
       }
 
       // before any constraint propagates: bounds propagation creeps round a negative cycle

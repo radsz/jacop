@@ -34,16 +34,22 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.DomainCover;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * AmongSeq is a domain consistent propagator of the Sequence (sliding among) constraint: every
@@ -78,11 +84,45 @@ import org.jacop.core.Var;
  * variable is allowed: the pruning stays correct and an assignment is accepted only if it satisfies
  * the constraint.
  *
+ * <p>For local search it measures its violation as in constraint-based local search (Van Hentenryck
+ * and Michel, "Constraint-Based Local Search", MIT Press 2005, the sequence constraint of Comet's
+ * car sequencing): the sum over the windows of how far the count of the window is below min or
+ * above max. {@link #windows()}, {@link #inSet(int)} and {@link #windowViolation(int)} let a local
+ * search keep the window counts and the violation up to date after each move.
+ *
+ * <p>Under lazy clause generation it explains its pruning by the network: the value of list[i] that
+ * it removes would close a cycle of negative weight with a path from i to i + 1 (or back), and the
+ * reason is the memberships of the variables whose edges that path uses; a failure is explained by
+ * a negative cycle in the same way. These are the explanations of the cumulative-sums encoding
+ * (Brand et al. 2007), whose difference constraints explain by the paths of a negative cycle
+ * (Cherkassky and Goldberg, "Negative-cycle detection algorithms", Mathematical Programming 85,
+ * 1999), without the auxiliary variables S_i. Among the paths it picks one of fewest memberships.
+ *
+ * <p>References:
+ *
+ * <ul>
+ *   <li>N. Beldiceanu and E. Contejean, "Introducing global constraints in CHIP", Mathematical and
+ *       Computer Modelling 20(12), 1994 (the among constraint).
+ *   <li>J.-C. R&eacute;gin and J.-F. Puget, "A filtering algorithm for global sequencing
+ *       constraints", CP 1997 (the sequence constraint, as a sequence of global cardinality
+ *       constraints).
+ *   <li>W.-J. van Hoeve, G. Pesant, L.-M. Rousseau and A. Sabharwal, "Revisiting the sequence
+ *       constraint", CP 2006 (the first domain consistent algorithm, O(n^3)).
+ *   <li>S. Brand, N. Narodytska, C.-G. Quimper, P. Stuckey and T. Walsh, "Encodings of the sequence
+ *       constraint", CP 2007 (the cumulative-sums encoding and the O(n^2) domain consistent
+ *       propagator by a simple temporal network used here).
+ * </ul>
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public class AmongSeq extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Copyable<AmongSeq> {
+    implements UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Copyable<AmongSeq>,
+        Violation,
+        Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -867,6 +907,351 @@ public class AmongSeq extends Constraint
         return false;
       }
     }
+    return true;
+  }
+
+  /**
+   * It tells whether a value is counted, that is, whether it is in the set.
+   *
+   * @param value the value.
+   * @return true if the value is in the set.
+   */
+  public boolean inSet(int value) {
+    if (setIsEmpty) {
+      return false;
+    }
+    return setIsInterval ? value >= setMin && value <= setMax : set.contains(value);
+  }
+
+  /**
+   * It gives the variables of the sequence, in their order (a variable may occur more than once).
+   *
+   * @return a copy of the list.
+   */
+  public IntVar[] list() {
+    return Arrays.copyOf(list, n);
+  }
+
+  /**
+   * It gives the length of the windows.
+   *
+   * @return q.
+   */
+  public int windowSize() {
+    return q;
+  }
+
+  /**
+   * It gives the number of windows, n - q + 1, or 0 when the list is shorter than a window.
+   *
+   * @return the number of windows.
+   */
+  public int windows() {
+    return windows;
+  }
+
+  /**
+   * It gives how far a window with the given count of values from the set is from min..max.
+   *
+   * @param count the number of variables of the window that take a value from the set.
+   * @return 0 when min &lt;= count &lt;= max, otherwise the distance to the nearest bound.
+   */
+  public long windowViolation(int count) {
+    if (count < min) {
+      return (long) min - count;
+    }
+    return count > max ? (long) count - max : 0;
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    if (windows == 0) {
+      return 0;
+    }
+    int[] in = new int[n];
+    for (int i = 0; i < n; i++) {
+      in[i] = inSet(value.applyAsInt(list[i])) ? 1 : 0;
+    }
+    long result = 0;
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+      count += in[i];
+      if (i >= q) {
+        count -= in[i - q];
+      }
+      if (i >= q - 1) {
+        result += windowViolation(count);
+      }
+    }
+    return result;
+  }
+
+  // ------------------------------------------------------------------ explanations
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar x = trail.variable(entry);
+    int[] at = positions.get(x);
+    if (at == null || windows == 0) {
+      return false;
+    }
+    // the atom removed values of the set (x was forced out) or values outside it (forced in)
+    boolean forcedOut = removesSetValue(trail, entry);
+    int[] state = stateBefore(trail, entry);
+    EntryList path = new EntryList();
+    for (int p : at) {
+      path.clear();
+      // forced out: a path from p to p + 1 of weight at most 0 closes a negative cycle with
+      // S_{p+1} - S_p >= 1; forced in: a path from p + 1 to p of weight at most -1 with
+      // S_{p+1} - S_p <= 0
+      boolean found =
+          forcedOut
+              ? shortestPath(state, p, p + 1, 0, trail, entry, path)
+              : shortestPath(state, p + 1, p, -1, trail, entry, path);
+      if (found) {
+        boolean[] cited = {false};
+        int mark = out.size();
+        boolean covered =
+            DomainCover.entry(
+                trail,
+                entry,
+                (v, o) -> {
+                  if (inSet(v) != forcedOut) {
+                    return false;
+                  }
+                  if (!cited[0]) {
+                    cited[0] = true;
+                    for (int k = 0; k < path.size(); k++) {
+                      o.addFrom(path, k);
+                    }
+                  }
+                  return true;
+                },
+                out);
+        if (covered) {
+          return true;
+        }
+        out.truncate(mark);
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (windows == 0) {
+      return false;
+    }
+    int position = trail.size();
+    int[] state = stateBefore(trail, position);
+    return negativeCycle(state, trail, position, out);
+  }
+
+  // whether the values an atom removes, of those still in the domain before it, include one of
+  // the set; the atom of a propagation that forced the variable into the set removes none
+  private boolean removesSetValue(AtomicTrail trail, int entry) {
+    IntVar x = trail.variable(entry);
+    int lo = Math.max(trail.removedMin(entry), trail.minBefore(x, entry));
+    int hi = Math.min(trail.removedMax(entry), trail.maxBefore(x, entry));
+    EntryList scratch = new EntryList();
+    for (long v = lo; v <= hi && v - lo < DomainCover.RANGE_LIMIT; v++) {
+      scratch.clear();
+      if (!trail.excludedBefore(x, (int) v, entry, scratch)) {
+        return inSet((int) v);
+      }
+    }
+    return false;
+  }
+
+  private static final int FREE = 0;
+  private static final int SURE_IN = 1;
+  private static final int SURE_OUT = 2;
+
+  // for each position, whether its variable was surely in the set, surely out of it, or neither
+  private int[] stateBefore(AtomicTrail trail, int position) {
+    int[] state = new int[n];
+    EntryList scratch = new EntryList();
+    for (int i = 0; i < n; i++) {
+      scratch.clear();
+      if (memberBefore(trail, list[i], position, true, scratch)) {
+        state[i] = SURE_IN;
+      } else {
+        scratch.clear();
+        if (memberBefore(trail, list[i], position, false, scratch)) {
+          state[i] = SURE_OUT;
+        }
+      }
+    }
+    return state;
+  }
+
+  // whether x was surely in (or out of) the set just before a position; the reason goes to out
+  private boolean memberBefore(
+      AtomicTrail trail, IntVar x, int position, boolean in, EntryList out) {
+    return DomainCover.domain(trail, x, position, (v, o) -> inSet(v) == in, out);
+  }
+
+  // the reason of the membership of position i that an edge of the network uses
+  private boolean addMembership(AtomicTrail trail, int i, boolean in, int position, EntryList out) {
+    return memberBefore(trail, list[i], position, in, out);
+  }
+
+  /*
+   * The edges of node u of the network over S_0..S_n: u -> u+1 of weight 1, or 0 when list[u] is
+   * surely out; u+1 -> u of weight 0, or -1 when list[u] is surely in; u -> u+q of weight max and
+   * u+q -> u of weight -min. An edge of weight 0 forward or -1 backward costs one membership.
+   * Paths are compared by weight, then by memberships.
+   */
+  private long edgeCost(int[] state, int from, int to, int scale) {
+    if (to == from + 1) {
+      return state[from] == SURE_OUT ? 1 : (long) scale;
+    }
+    if (to == from - 1) {
+      return state[to] == SURE_IN ? -(long) scale + 1 : 0;
+    }
+    return to == from + q ? (long) max * scale : -(long) min * scale;
+  }
+
+  private int[] neighbours(int u, int[] buffer) {
+    int k = 0;
+    if (u < n) {
+      buffer[k++] = u + 1;
+    }
+    if (u > 0) {
+      buffer[k++] = u - 1;
+    }
+    if (u + q <= n) {
+      buffer[k++] = u + q;
+    }
+    if (u - q >= 0) {
+      buffer[k++] = u - q;
+    }
+    return buffer;
+  }
+
+  private int degree(int u) {
+    return (u < n ? 1 : 0) + (u > 0 ? 1 : 0) + (u + q <= n ? 1 : 0) + (u - q >= 0 ? 1 : 0);
+  }
+
+  /*
+   * A path from source to target of weight at most limit, of fewest memberships among the
+   * lightest, by label correcting (Bellman-Ford with a queue); its memberships go to out.
+   */
+  private boolean shortestPath(
+      int[] state,
+      int source,
+      int target,
+      int limit,
+      AtomicTrail trail,
+      int position,
+      EntryList out) {
+    int nodes = n + 1;
+    // weight * scale + memberships: a path has at most 2n memberships
+    int scale = 2 * nodes + 1;
+    long[] dist = new long[nodes];
+    Arrays.fill(dist, Long.MAX_VALUE);
+    int[] from = new int[nodes];
+    int[] relaxations = new int[nodes];
+    boolean[] queued = new boolean[nodes];
+    int[] ring = new int[nodes];
+    int head = 0;
+    int size = 0;
+    dist[source] = 0;
+    from[source] = -1;
+    ring[0] = source;
+    queued[source] = true;
+    size = 1;
+    int[] buffer = new int[4];
+    while (size > 0) {
+      int u = ring[head];
+      head = (head + 1) % nodes;
+      size--;
+      queued[u] = false;
+      neighbours(u, buffer);
+      for (int k = degree(u) - 1; k >= 0; k--) {
+        int v = buffer[k];
+        long d = dist[u] + edgeCost(state, u, v, scale);
+        if (d < dist[v]) {
+          dist[v] = d;
+          from[v] = u;
+          if (++relaxations[v] > nodes) {
+            // a negative cycle: the state cannot hold; no path reason
+            return false;
+          }
+          if (!queued[v]) {
+            queued[v] = true;
+            ring[(head + size) % nodes] = v;
+            size++;
+          }
+        }
+      }
+    }
+    if (dist[target] == Long.MAX_VALUE || Math.floorDiv(dist[target], scale) > limit) {
+      return false;
+    }
+    for (int v = target; v != source; v = from[v]) {
+      if (!addEdgeReason(state, from[v], v, trail, position, out)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean addEdgeReason(
+      int[] state, int u, int v, AtomicTrail trail, int position, EntryList out) {
+    if (v == u + 1 && state[u] == SURE_OUT) {
+      return addMembership(trail, u, false, position, out);
+    }
+    if (v == u - 1 && state[v] == SURE_IN) {
+      return addMembership(trail, v, true, position, out);
+    }
+    return true;
+  }
+
+  // a cycle of negative weight, by Bellman-Ford from all nodes at once; its memberships go to out
+  private boolean negativeCycle(int[] state, AtomicTrail trail, int position, EntryList out) {
+    int nodes = n + 1;
+    // with the memberships as the lesser part of the cost, a cycle of negative cost is one of
+    // negative weight
+    int scale = 2 * nodes + 1;
+    long[] dist = new long[nodes];
+    int[] from = new int[nodes];
+    Arrays.fill(from, -1);
+    int[] buffer = new int[4];
+    int last = -1;
+    for (int round = 0; round <= nodes; round++) {
+      last = -1;
+      for (int u = 0; u < nodes; u++) {
+        neighbours(u, buffer);
+        for (int k = degree(u) - 1; k >= 0; k--) {
+          int v = buffer[k];
+          long d = dist[u] + edgeCost(state, u, v, scale);
+          if (d < dist[v]) {
+            dist[v] = d;
+            from[v] = u;
+            last = v;
+          }
+        }
+      }
+      if (last < 0) {
+        System.err.println(
+            "NOCYCLE " + Arrays.toString(state) + " q=" + q + " " + min + ".." + max + " " + this);
+        return false;
+      }
+    }
+    // a node on the cycle: walk back as many steps as there are nodes
+    int v = last;
+    for (int k = 0; k < nodes; k++) {
+      v = from[v];
+    }
+    int start = v;
+    do {
+      int u = from[v];
+      if (!addEdgeReason(state, u, v, trail, position, out)) {
+        return false;
+      }
+      v = u;
+    } while (v != start);
     return true;
   }
 

@@ -47,6 +47,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
@@ -1061,6 +1062,130 @@ class LcgFuzzTest {
       diffnFailures += (Long) lcg[1];
     }
     assertThat(diffnFailures).isPositive();
+  }
+
+  /**
+   * AmongSeq explains its pruning and failures by paths and negative cycles of its network. On
+   * random small car-sequencing models (sequences over class variables, with repeated variables and
+   * exact class counts) LCG with checked explanations must agree with search over the windows
+   * posted one by one as Among, and give a solution of the windows.
+   */
+  @Test
+  void amongSeqReasonsAgreeWithWindowSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = sequences(seed, false) != null;
+      Object[] lcg = sequences(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // a random car sequencing model: search over windows posted as Among (null if no solution), or
+  // LCG over AmongSeq ({status, own reasons and failures of AmongSeq})
+  private static Object[] sequences(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 6 + rnd.nextInt(6);
+    int classes = 2 + rnd.nextInt(3);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, classes);
+      if (rnd.nextInt(4) == 0) {
+        x[i].domain.subtractAdapt(1 + rnd.nextInt(classes));
+        x[i].refreshBounds();
+      }
+    }
+    int sequences = 1 + rnd.nextInt(3);
+    List<Object[]> posted = new ArrayList<>();
+    for (int k = 0; k < sequences; k++) {
+      IntVar[] list = x.clone();
+      if (rnd.nextInt(5) == 0) {
+        // a repeated variable
+        int to = rnd.nextInt(n);
+        int from = rnd.nextInt(n);
+        list[to] = list[from];
+      }
+      IntervalDomain set = new IntervalDomain();
+      for (int v = 1; v <= classes; v++) {
+        if (rnd.nextBoolean()) {
+          set.unionAdapt(v, v);
+        }
+      }
+      int q = 2 + rnd.nextInt(3);
+      int min = rnd.nextInt(3) == 0 ? 1 : 0;
+      int max = Math.max(min, 1 + rnd.nextInt(q - 1));
+      posted.add(new Object[] {list, set, q, min, max});
+    }
+    if (rnd.nextBoolean()) {
+      // the cars of each class
+      int left = n;
+      for (int v = 1; v < classes && left > 0; v++) {
+        int c = rnd.nextInt(left + 1);
+        store.impose(new Count(x, new IntVar(store, c, c), v));
+        left -= c;
+      }
+    }
+    for (Object[] p : posted) {
+      IntVar[] list = (IntVar[]) p[0];
+      IntervalDomain set = (IntervalDomain) p[1];
+      int q = (Integer) p[2];
+      int min = (Integer) p[3];
+      int max = (Integer) p[4];
+      if (lcg) {
+        store.impose(new AmongSeq(list, set, q, min, max));
+      } else {
+        // membership of each position, then the count of each window
+        IntVar[] in = new IntVar[list.length];
+        for (int i = 0; i < list.length; i++) {
+          in[i] = new BooleanVar(store);
+          store.impose(new Reified(new In(list[i], set), in[i]));
+        }
+        for (int i = 0; i + q <= list.length; i++) {
+          IntVar[] w = Arrays.copyOfRange(in, i, i + q);
+          store.impose(new SumBool(w, "<=", new IntVar(store, max, max)));
+          store.impose(new SumBool(w, ">=", new IntVar(store, min, min)));
+        }
+      }
+    }
+    if (!lcg) {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (Object[] p : posted) {
+        IntVar[] list = (IntVar[]) p[0];
+        IntervalDomain set = (IntervalDomain) p[1];
+        int q = (Integer) p[2];
+        for (int i = 0; i + q <= list.length; i++) {
+          int count = 0;
+          for (int j = i; j < i + q; j++) {
+            count += set.contains(solver.value(list[j])) ? 1 : 0;
+          }
+          assertThat(count)
+              .as("seed %d: window %d", seed, i)
+              .isBetween((Integer) p[3], (Integer) p[4]);
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("AmongSeq");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
   }
 
   // a random packing of squares and rectangles in a small square: search over the pairwise rule
