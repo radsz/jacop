@@ -53,6 +53,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
@@ -210,6 +211,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
   // LcgSolver is between two runs and holds no solution
   int lcgLastCost;
+  // the cost of the best solution printed by any search, Integer.MAX_VALUE before the first one;
+  // a later search that starts afresh (the local search and free search after LCG gave way) must
+  // beat it
+  private final AtomicInteger bestPrintedCost = new AtomicInteger(Integer.MAX_VALUE);
   // the search annotation of the model, interleaved with free search
   SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
@@ -2826,10 +2831,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     if (costVar instanceof IntVar c) {
-      b.minimize(c).onSolution(ls -> printSolution());
-      if (worker != null) {
-        b.sharedBound(worker::sharedBound);
-      }
+      // after LCG gave way, this local search starts afresh: it must beat the solutions printed
+      // already (ta21 under -f ls=0.1 printed 2009, then 2018)
+      b.minimize(c)
+          .onSolution(
+              ls -> {
+                if (c.value() < bestPrintedCost.get()) {
+                  printSolution();
+                }
+              });
+      b.sharedBound(
+          () ->
+              worker == null
+                  ? bestPrintedCost.get()
+                  : Math.min(bestPrintedCost.get(), worker.sharedBound()));
     } else if (printSatisfied) {
       b.onSolution(ls -> printSolution());
     }
@@ -2867,6 +2882,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     return all.toArray(new IntVar[0]);
+  }
+
+  private boolean localSearchFound() {
+    return localSearch != null && localSearch.getSolutions() > 0;
   }
 
   private String localSearchStatistics() {
@@ -3045,14 +3064,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("probe", "0.05")),
           Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
-    if (costVar != null && slowLcg != null && numberSolutions > 0) {
-      // free search improves on the best solution of LCG
-      int lcgCost = lcgLastCost;
-      builder.sharedBound(() -> lcgCost);
-    } else if (costVar != null && localSearch != null && localSearch.getSolutions() > 0) {
-      // free search improves on the best solution of local search
-      int lsCost = localSearch.getCostValue();
-      builder.sharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    if (costVar != null && ((slowLcg != null && numberSolutions > 0) || localSearchFound())) {
+      // free search improves on the best solution printed, by LCG before it gave way or by local
+      // search, which may run after LCG gave way and do better than it
+      int best = bestPrintedCost.get();
+      builder.sharedBound(() -> worker == null ? best : Math.min(best, worker.sharedBound()));
     } else if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
       builder.sharedSolution(worker.sharedSolution(dictionary::getVariable));
@@ -4466,8 +4482,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
     solutionFound = true;
-    if (lcg != null && costVariable instanceof IntVar cost && cost.singleton()) {
-      lcgLastCost = cost.value();
+    if (costVariable instanceof IntVar cost && cost.singleton()) {
+      if (lcg != null) {
+        lcgLastCost = cost.value();
+      }
+      bestPrintedCost.accumulateAndGet(cost.value(), Math::min);
     }
 
     if (presolve != null) {
