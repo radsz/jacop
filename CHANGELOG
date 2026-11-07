@@ -2886,6 +2886,25 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
+176. Symmetry detection in fzn-jacop builds the graph of a constant array
+     once per content: an array whose elements are all constants (a table
+     of tuples, given by name or written out) becomes one key shared by
+     every constraint that uses the same contents, instead of one vertex
+     per position for each use, and named int arrays are read and their
+     constants interned once. Huge constant tables now fit in the 1 s
+     detection budget (org.jacop.fz.symmetryTime): on the 15 groupsplitter
+     instances graph building was cut off by the deadline on all 15, now
+     it completes on all in 0.12-0.33 s CPU and orbitopes are posted on 6.
+     Tables with equal contents get the same colour, so constraints over
+     the same table are interchangeable. Of the 165 Challenge instances
+     with the slowest detection, graph deadlines drop from 136 to 103 (the
+     rest are graphs of 100k-1.3M vertices, not tables); on the wide set
+     10 of 220 instances post different symmetry constraints and the rest
+     post the same. Benchmarks (600 s): groupsplitter 10 to 10 solved by
+     default (u15g5pref0 309 to 412) and 10 to 9 with -f (u12g2pref1
+     proved at 549 s before, not by 600 s now); the 10 changed wide
+     instances 8 to 8 in both modes.
+
 Version 4.11
 =============
 

@@ -139,6 +139,70 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void aHugeTableIsReadWithinTheTimeGiven() throws IOException {
+    // groupsplitter: tables of up to 300,000 integers, each the argument of about 30 constraints;
+    // one string per tuple element made building the graph take up to 38 s, far past the second
+    // given, so its symmetries were never searched
+    int tuples = 50_000;
+    int tables = 20;
+    StringBuilder fzn =
+        new StringBuilder("array [1..").append(3 * tuples).append("] of int: t = [");
+    for (int i = 0; i < tuples; i++) {
+      fzn.append(i > 0 ? "," : "")
+          .append(i % 7)
+          .append(',')
+          .append(i % 11)
+          .append(',')
+          .append(i / 77);
+    }
+    fzn.append("];\n");
+    for (int k = 0; k < tables; k++) {
+      fzn.append("var 0..6: a").append(k).append(";\nvar 0..10: b").append(k).append(";\n");
+      fzn.append("var 0..").append((tuples - 1) / 77).append(": c").append(k).append(";\n");
+    }
+    for (int k = 0; k < tables; k++) {
+      fzn.append("constraint jacop_table_int([a").append(k).append(",b").append(k);
+      fzn.append(",c").append(k).append("], t);\n");
+    }
+    fzn.append("solve satisfy;\n");
+    String out =
+        FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--symmetry", "on");
+    assertFalse(out.contains("time limit"), out);
+    assertTrue(out.contains("symmetrySearchComplete=true"), out);
+    // the tables are interchangeable: one orbitope of 20 columns
+    assertTrue(out.contains("symmetryOrbitopes=1"), out);
+    assertTrue(out.contains("----------"), out);
+  }
+
+  @Test
+  void tablesWithTheSameTuplesAreInterchangeable() throws IOException {
+    // an array of constants is one key in the graph, the same for arrays with the same elements,
+    // given by name or written out
+    String model =
+        """
+        array [1..6] of int: t1 = [1,2, 2,3, 3,1];
+        array [1..6] of int: t2 = [1,2, 2,3, 3,1];
+        var 1..3: x1;
+        var 1..3: x2;
+        var 1..3: y1;
+        var 1..3: y2;
+        var 1..3: z1;
+        var 1..3: z2;
+        constraint jacop_table_int([x1,x2], t1);
+        constraint jacop_table_int([y1,y2], t2);
+        constraint jacop_table_int([z1,z2], T);
+        solve satisfy;
+        """;
+    String same = model.replace("T)", "[1,2,2,3,3,1])");
+    String out = FlatzincTestRunner.run(tmp, same, "--search-statistics", "--symmetry", "on");
+    assertEquals(2, generators(out), out);
+    // a table with other tuples is not interchangeable with the others
+    String other = model.replace("T)", "[1,1,2,2,3,3])");
+    out = FlatzincTestRunner.run(tmp, other, "--search-statistics", "--symmetry", "on");
+    assertEquals(1, generators(out), out);
+  }
+
+  @Test
   void aVariableDeclaredAsAnotherIsTheSameVariable() throws IOException {
     // XCSP3 Cryptanalysis-4-12-128: c and d are declared as a and b, which the front end posts as
     // c = a and d = b; without these equalities in the graph, c and d looked interchangeable and
