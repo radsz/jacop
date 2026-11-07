@@ -1,0 +1,11 @@
+cents = 80;
+values = array1d(1..5, [1, 2, 3, 5, 10]);
+amount = array1d(1..5, [3, 4, 3, 4, 4]);
+X_INTRODUCED_26_ = array1d(1..2, [2, 3]);
+----------
+cents = 70;
+values = array1d(1..5, [1, 2, 3, 5, 10]);
+amount = array1d(1..5, [3, 4, 3, 4, 3]);
+X_INTRODUCED_26_ = array1d(1..2, [3, 2]);
+----------
+==========

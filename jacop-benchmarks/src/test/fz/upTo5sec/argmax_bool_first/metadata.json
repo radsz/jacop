@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_lin_eq", "int_lin_le", "jacop_alldiff", "jacop_maximum_arg_bool"],
+  "constraintFamilies": ["alldifferent", "boolean", "linear", "minmax"],
+  "domains": []
+}

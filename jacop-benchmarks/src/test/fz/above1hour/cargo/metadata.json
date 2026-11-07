@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_div", "int_lin_eq", "int_lin_le", "jacop_cumulative", "jacop_diff2_strict"],
+  "constraintFamilies": ["arithmetic", "cumulative", "diffn", "linear"],
+  "domains": []
+}

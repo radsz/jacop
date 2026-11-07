@@ -1,0 +1,1127 @@
+/*
+ * LinearInt.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+
+/**
+ * LinearInt constraint implements the weighted summation over several variables .
+ *
+ * <p>sum(i in 1..N)(ai*xi) = b
+ *
+ * <p>It provides the weighted sum from all variables on the list. The weights are integers.
+ *
+ * <p>This implementaiton is based on "Bounds Consistency Techniques for Long Linear Constraints" by
+ * Warwick Harvey and Joachim Schimpf
+ *
+ * @author Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt>, Explainable {
+
+  /*
+   * Defines relations
+   */
+  static final byte EQ = 0;
+  static final byte LE = 1;
+  static final byte LT = 2;
+  static final byte NE = 3;
+  static final byte GT = 4;
+  static final byte GE = 5;
+  /*
+   * Defines negated relations
+   */
+  static final byte[] NEG_REL = {
+    NE, // EQ=0,
+    GT, // LE=1,
+    GE, // LT=2,
+    EQ, // NE=3,
+    LE, // GT=4,
+    LT // GE=5;
+  };
+  static final AtomicInteger idNumber = new AtomicInteger(0);
+  protected byte relationType;
+  Store store;
+
+  /*
+   * It specifies what relations is used by this constraint
+   */
+  boolean reified = true;
+
+  /** It specifies a list of variables being summed. */
+  IntVar[] x;
+
+  /** It specifies a list of weights associated with the variables being summed. */
+  long[] a;
+
+  /** It specifies variable for the overall sum. */
+  long b;
+
+  /** It specifies the index of the last positive coefficient. */
+  int pos;
+
+  /** It specifies the number of variables/coefficients. */
+  int l;
+
+  // the arguments folded into b, for explanations (see addFolded)
+  private IntVar[] folded;
+
+  /*
+   * It specifies "variability" of each variable
+   */
+  long[] variability;
+
+  /*
+   * It specifies sum of lower bounds (min values) and sum of upper bounds (max values)
+   */
+  long sumMin;
+  long sumMax;
+
+  /** The variables with positive weights that propagation reads are x[0..freePos). */
+  int freePos;
+
+  /** The variables with negative weights that propagation reads are x[pos..freeNeg). */
+  int freeNeg;
+
+  /**
+   * The free and dropped variables when fixed variables are moved out of the free part of x, which
+   * only an imposed LinearInt does: it is then told when the store backtracks. Otherwise null.
+   */
+  private DroppedTerms dropped;
+
+  // the variables whose weight a failure of this constraint increases; null for its own variables
+  private Var[] weighted;
+
+  private static final String WEIGHTS = "weights";
+
+  /** Default constructor for subclasses. */
+  protected LinearInt() {}
+
+  // ======== constructors ===============
+
+  /**
+   * Constructs a LinearInt constraint with array parameters.
+   *
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the sum of weighted variables.
+   */
+  public LinearInt(IntVar[] list, int[] weights, String rel, int sum) {
+    checkInputForNullness("list", list);
+    checkInputForNullness(WEIGHTS, weights);
+    commonInitialization(storeOf(list), list, weights, rel, sum);
+    numberId = idNumber.incrementAndGet();
+  }
+
+  /**
+   * It constructs the constraint LinearInt.
+   *
+   * @param list list which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the sum of weighted list.
+   */
+  public LinearInt(List<? extends IntVar> list, List<Integer> weights, String rel, int sum) {
+    checkInputForNullness(new String[] {"list", WEIGHTS}, new Object[] {list, weights});
+    commonInitialization(
+        storeOf(list.toArray(new IntVar[0])),
+        list.toArray(new IntVar[0]),
+        weights.stream().mapToInt(i -> i).toArray(),
+        rel,
+        sum);
+    numberId = idNumber.incrementAndGet();
+  }
+
+  /**
+   * Constructs a LinearInt constraint where the sum is represented by a variable.
+   *
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation, one of "==", "{@literal <}", "{@literal >}", "{@literal <=}",
+   *     "{@literal >=}", "{@literal !=}"
+   * @param sum the variable representing the sum of weighted variables.
+   */
+  public LinearInt(IntVar[] list, int[] weights, String rel, IntVar sum) {
+    checkInputForNullness("list", list);
+    checkInputForNullness(WEIGHTS, weights);
+    checkInputForNullness("sum", new Object[] {sum});
+    commonInitialization(
+        sum.getStore(),
+        Stream.concat(Arrays.stream(list), Stream.of(sum)).toArray(IntVar[]::new),
+        IntStream.concat(Arrays.stream(weights), IntStream.of(-1)).toArray(),
+        rel,
+        0);
+    numberId = idNumber.incrementAndGet();
+  }
+
+  /**
+   * Returns the store of the variables of a linear constraint with a constant sum.
+   *
+   * @param list the variables of the constraint.
+   * @return the store of the first variable.
+   */
+  static Store storeOf(IntVar[] list) {
+    checkNotEmpty(list);
+    return list[0].getStore();
+  }
+
+  private static void checkNotEmpty(IntVar[] list) {
+    if (list.length == 0) {
+      throw new IllegalArgumentException(
+          "A linear constraint with a constant sum needs at least one variable.");
+    }
+    if (list[0] == null) {
+      throw new IllegalArgumentException("A linear constraint has a null variable.");
+    }
+  }
+
+  /**
+   * Common initialization for all constructors. Normalizes weights, merges duplicate variables, and
+   * separates positive and negative coefficients.
+   *
+   * @param store the constraint store.
+   * @param list variables which are being multiplied by weights.
+   * @param weights weight for each variable.
+   * @param rel the relation string.
+   * @param sum the sum of weighted variables.
+   */
+  protected void commonInitialization(
+      Store store, IntVar[] list, int[] weights, String rel, int sum) {
+
+    this.relationType = relation(rel);
+
+    if (list.length != weights.length) {
+      throw new IllegalArgumentException(
+          "LinearInt has list and weights arguments of different length.");
+    }
+
+    this.store = store;
+    this.b = sum;
+
+    LinkedHashMap<IntVar, Long> parameters = normalizeAndMergeParameters(list, weights);
+    fillCoefficientArrays(parameters);
+
+    this.l = x.length;
+    this.variability = new long[l];
+
+    checkForOverflow();
+
+    if (l <= 3) {
+      queueIndex = 0;
+    } else {
+      queueIndex = 1;
+    }
+
+    setScope(list);
+  }
+
+  /**
+   * Initializes this constraint as a copy of another one over the counterparts of its variables.
+   * The terms are already merged and split by sign; the order within each sign may differ from the
+   * original order, which does not change the meaning of the sum.
+   *
+   * @param original the constraint to copy.
+   * @param map the counterparts of the variables of the original.
+   */
+  protected void copyFrom(LinearInt original, VarMap map) {
+    this.relationType = original.relationType;
+    this.store = map.target();
+    this.b = original.b;
+    this.x = map.get(original.x);
+    this.a = original.a.clone();
+    this.pos = original.pos;
+    this.l = original.l;
+    this.variability = new long[l];
+    checkForOverflow();
+    queueIndex = l <= 3 ? 0 : 1;
+    setScope(x);
+  }
+
+  private LinkedHashMap<IntVar, Long> normalizeAndMergeParameters(IntVar[] list, int[] weights) {
+    LinkedHashMap<IntVar, Long> parameters = new LinkedHashMap<>();
+
+    for (int i = 0; i < list.length; i++) {
+      if (weights[i] != 0) {
+        if (list[i].singleton()) {
+          this.b -= (long) list[i].value() * weights[i];
+        } else if (parameters.get(list[i]) != null) {
+          // variable ordered in the scope of the Propagations constraint.
+          Long coeff = parameters.get(list[i]);
+          Long sumOfCoeff = coeff + weights[i];
+          parameters.put(list[i], sumOfCoeff);
+        } else {
+          parameters.put(list[i], (long) weights[i]);
+        }
+      }
+    }
+    return parameters;
+  }
+
+  private void fillCoefficientArrays(LinkedHashMap<IntVar, Long> parameters) {
+    int size = 0;
+    for (Long e : parameters.values()) {
+      if (e != 0) {
+        size++;
+      }
+    }
+
+    this.x = new IntVar[size];
+    this.a = new long[size];
+
+    int i = 0;
+    Set<Map.Entry<IntVar, Long>> entries = parameters.entrySet();
+
+    for (Map.Entry<IntVar, Long> e : entries) {
+      IntVar v = e.getKey();
+      long coeff = e.getValue();
+      if (coeff > 0) {
+        this.x[i] = v;
+        this.a[i] = coeff;
+        i++;
+      }
+    }
+    pos = i;
+    for (Map.Entry<IntVar, Long> e : entries) {
+      IntVar v = e.getKey();
+      long coeff = e.getValue();
+      if (coeff < 0) {
+        this.x[i] = v;
+        this.a[i] = coeff;
+        i++;
+      }
+    }
+  }
+
+  @Override
+  public void consistency(Store store) {
+
+    propagate(relationType);
+  }
+
+  @Override
+  public void notConsistency(Store store) {
+    propagate(NEG_REL[relationType]);
+  }
+
+  /**
+   * Propagates the constraint using the specified relation type.
+   *
+   * @param rel the relation type to use for propagation.
+   */
+  public void propagate(int rel) {
+    computeInit();
+    if (rel == EQ) {
+      propagateEq();
+    } else if (rel == NE) {
+      do {
+        store.propagationHasOccurred = false;
+        applyRelation(rel);
+      } while (store.propagationHasOccurred);
+    } else {
+      // an inequality prunes only the bounds that its own sum bound does not read, so one pass
+      // reaches the fixpoint
+      applyRelation(rel);
+    }
+  }
+
+  /**
+   * Prunes the maximal and the minimal values in turn until the minimum of the sum stops growing:
+   * pruning maximal values reads only that minimum, and the pruning of minimal values has just run.
+   */
+  private void propagateEq() {
+    long lastSumMin;
+    do {
+      pruneLtEq(b);
+      lastSumMin = sumMin;
+      pruneGtEq(b);
+    } while (sumMin != lastSumMin);
+  }
+
+  private void applyRelation(int rel) {
+    switch (rel) {
+      case EQ:
+        pruneLtEq(b);
+        pruneGtEq(b);
+        break;
+      case LE:
+        doRelationLe();
+        break;
+      case LT:
+        doRelationLt();
+        break;
+      case NE:
+        doRelationNe();
+        break;
+      case GT:
+        doRelationGt();
+        break;
+      case GE:
+        doRelationGe();
+        break;
+      default:
+        throw new IllegalStateException("Internal error in " + getClass().getName());
+    }
+  }
+
+  private void doRelationLe() {
+    pruneLtEq(b);
+    if (!reified && sumMax <= b) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationLt() {
+    pruneLtEq(b - 1L);
+    if (!reified && sumMax < b) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationNe() {
+    pruneNeq();
+    if (!reified && (sumMin > b || sumMax < b)) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationGt() {
+    pruneGtEq(b + 1L);
+    if (!reified && sumMin > b) {
+      removeConstraint();
+    }
+  }
+
+  private void doRelationGe() {
+    pruneGtEq(b);
+    if (!reified && sumMin >= b) {
+      removeConstraint();
+    }
+  }
+
+  @Override
+  protected int getDefaultNestedConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    // != prunes only when every variable but one is fixed, so only grounding can enable it.
+    return relationType == NE ? IntDomain.GROUND : IntDomain.BOUND;
+  }
+
+  @Override
+  public int getBoundPruningEvent(Var v) {
+    // <= and < read only the minimum of the weighted sum, >= and > only its maximum
+    boolean readsSumMin = relationType == LE || relationType == LT;
+    if (!readsSumMin && relationType != GE && relationType != GT) {
+      return IntDomain.BOUND;
+    }
+    int event = Domain.NONE;
+    for (int i = 0; i < l; i++) {
+      if (x[i] == v) {
+        boolean positive = i < pos;
+        int side = readsSumMin == positive ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
+        if (event != Domain.NONE && event != side) {
+          return IntDomain.BOUND;
+        }
+        event = side;
+      }
+    }
+    return event == Domain.NONE ? IntDomain.BOUND : event;
+  }
+
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.BOUND;
+  }
+
+  @Override
+  public void impose(Store store) {
+
+    reified = false;
+
+    if (satisfied()) {
+      return;
+    }
+
+    // a subclass may rely on the order of x, and short sums gain nothing from dropping
+    if (getClass() == LinearInt.class && l > 3) {
+      dropped = new DroppedTerms(store, pos, l);
+    }
+
+    super.impose(store);
+  }
+
+  void computeInit() {
+    if (dropped != null) {
+      computeInitDropping();
+      return;
+    }
+    long f = 0;
+    long e = 0;
+    long min;
+    long max;
+    int i = 0;
+    // positive weights
+    for (; i < pos; i++) {
+      IntDomain xd = x[i].dom();
+      min = xd.min() * a[i];
+      max = xd.max() * a[i];
+      f += min;
+      e += max;
+      variability[i] = max - min;
+    }
+    // negative weights
+    for (; i < l; i++) {
+      IntDomain xd = x[i].dom();
+      min = xd.max() * a[i];
+      max = xd.min() * a[i];
+      f += min;
+      e += max;
+      variability[i] = max - min;
+    }
+    freePos = pos;
+    freeNeg = l;
+    sumMin = f;
+    sumMax = e;
+  }
+
+  /** Computes the bounds of the sum like computeInit and moves the fixed variables out. */
+  private void computeInitDropping() {
+    long f = dropped.fixedSum;
+    long e = f;
+    long min;
+    long max;
+    int i = 0;
+    // positive weights
+    int end = dropped.freeFirst;
+    while (i < end) {
+      IntDomain xd = x[i].dom();
+      min = xd.min() * a[i];
+      max = xd.max() * a[i];
+      f += min;
+      e += max;
+      if (min == max) {
+        dropped.drop(min);
+        swap(i, --end);
+        dropped.freeFirst = end;
+      } else {
+        variability[i] = max - min;
+        i++;
+      }
+    }
+    freePos = end;
+    // negative weights
+    i = pos;
+    end = dropped.freeSecond;
+    while (i < end) {
+      IntDomain xd = x[i].dom();
+      min = xd.max() * a[i];
+      max = xd.min() * a[i];
+      f += min;
+      e += max;
+      if (min == max) {
+        dropped.drop(min);
+        swap(i, --end);
+        dropped.freeSecond = end;
+      } else {
+        variability[i] = max - min;
+        i++;
+      }
+    }
+    freeNeg = end;
+    sumMin = f;
+    sumMax = e;
+  }
+
+  private void swap(int i, int j) {
+    IntVar v = x[i];
+    x[i] = x[j];
+    x[j] = v;
+    long w = a[i];
+    a[i] = a[j];
+    a[j] = w;
+  }
+
+  void pruneLtEq(long b) {
+
+    if (sumMin > b) {
+      throw Store.failException;
+    }
+
+    long min;
+    long max;
+    int i = 0;
+    // positive weights
+    for (; i < freePos; i++) {
+      if (variability[i] > b - sumMin) {
+        min = x[i].min() * a[i];
+        max = min + variability[i];
+        if (pruneMax(x[i], IntDomain.divRoundDown(b - sumMin + min, a[i]))) {
+          long newMax = x[i].max() * a[i];
+          sumMax -= max - newMax;
+          variability[i] = newMax - min;
+        }
+      }
+    }
+    // negative weights
+    i = pos;
+    for (; i < freeNeg; i++) {
+      if (variability[i] > b - sumMin) {
+        min = x[i].max() * a[i];
+        max = min + variability[i];
+        if (pruneMin(x[i], IntDomain.divRoundUp(-(b - sumMin + min), -a[i]))) {
+          long newMax = x[i].min() * a[i];
+          sumMax -= max - newMax;
+          variability[i] = newMax - min;
+        }
+      }
+    }
+  }
+
+  void pruneGtEq(long b) {
+
+    if (sumMax < b) {
+      throw Store.failException;
+    }
+
+    long min;
+    long max;
+    int i = 0;
+    // positive weights
+    for (; i < freePos; i++) {
+      if (variability[i] > -(b - sumMax)) {
+        max = x[i].max() * a[i];
+        min = max - variability[i];
+        if (pruneMin(x[i], IntDomain.divRoundUp(b - sumMax + max, a[i]))) {
+          long nmin = x[i].min() * a[i];
+          sumMin += nmin - min;
+          variability[i] = max - nmin;
+        }
+      }
+    }
+    // negative weights
+    i = pos;
+    for (; i < freeNeg; i++) {
+      if (variability[i] > -(b - sumMax)) {
+        max = x[i].min() * a[i];
+        min = max - variability[i];
+        if (pruneMax(x[i], IntDomain.divRoundDown(-(b - sumMax + max), -a[i]))) {
+          long newMin = x[i].max() * a[i];
+          sumMin += newMin - min;
+          variability[i] = max - newMin;
+        }
+      }
+    }
+  }
+
+  void pruneNeq() {
+
+    if (sumMin == sumMax && b == sumMin) {
+      throw Store.failException;
+    }
+
+    long min;
+    long max;
+    int i = 0;
+    // positive weights
+    for (; i < freePos; i++) {
+      min = x[i].min() * a[i];
+      max = min + variability[i];
+
+      if (pruneNe(x[i], b - sumMax + max, b - sumMin + min, a[i])) {
+        long newMin = x[i].min() * a[i];
+        long newMax = x[i].max() * a[i];
+        sumMin += newMin - min;
+        sumMax += newMax - max;
+        variability[i] = newMax - newMin;
+      }
+    }
+    // negative weights
+    i = pos;
+    for (; i < freeNeg; i++) {
+      min = x[i].max() * a[i];
+      max = min + variability[i];
+
+      if (pruneNe(x[i], b - sumMin + min, b - sumMax + max, a[i])) {
+        long newMin = x[i].max() * a[i];
+        long newMax = x[i].min() * a[i];
+        sumMin += newMin - min;
+        sumMax += newMax - max;
+        variability[i] = newMax - newMin;
+      }
+    }
+  }
+
+  private boolean pruneMin(IntVar x, long min) {
+    if (min > x.min()) {
+      x.domain.inMin(store.level, x, long2int(min));
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private boolean pruneMax(IntVar x, long max) {
+    if (max < x.max()) {
+      x.domain.inMax(store.level, x, long2int(max));
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private boolean pruneNe(IntVar x, long min, long max, long a) {
+
+    if (min == max && min % a == 0L) {
+
+      long d = min / a;
+
+      boolean boundsChanged = d == x.min() || d == x.max();
+
+      x.domain.inComplement(store.level, x, long2int(d));
+
+      return boundsChanged;
+    }
+    return false;
+  }
+
+  /**
+   * Computes the minimum and maximum possible weighted sums.
+   *
+   * @return a record containing sumMin and sumMax.
+   */
+  private SumBounds computeSumBounds() {
+    long sMin = 0L;
+    long sMax = 0L;
+    int i = 0;
+    for (; i < pos; i++) {
+      sMin += x[i].min() * a[i];
+      sMax += x[i].max() * a[i];
+    }
+    for (; i < l; i++) {
+      sMin += x[i].max() * a[i];
+      sMax += x[i].min() * a[i];
+    }
+    return new SumBounds(sMin, sMax);
+  }
+
+  /**
+   * Computes the maximum possible weighted sum.
+   *
+   * @return the maximum possible weighted sum.
+   */
+  private long computeSumMax() {
+    long sMax = 0L;
+    int i = 0;
+    for (; i < pos; i++) {
+      sMax += x[i].max() * a[i];
+    }
+    for (; i < l; i++) {
+      sMax += x[i].min() * a[i];
+    }
+    return sMax;
+  }
+
+  /**
+   * Computes the minimum possible weighted sum.
+   *
+   * @return the minimum possible weighted sum.
+   */
+  private long computeSumMin() {
+    long sMin = 0L;
+    int i = 0;
+    for (; i < pos; i++) {
+      sMin += x[i].min() * a[i];
+    }
+    for (; i < l; i++) {
+      sMin += x[i].max() * a[i];
+    }
+    return sMin;
+  }
+
+  /** Holds the minimum and maximum possible weighted sums. */
+  private record SumBounds(long sumMin, long sumMax) {}
+
+  /**
+   * Checks if the equality relation is satisfied.
+   *
+   * @return true if the weighted sum is equal to the target value.
+   */
+  public boolean satisfiedEq() {
+    SumBounds bounds = computeSumBounds();
+    return bounds.sumMin == bounds.sumMax && bounds.sumMin == b;
+  }
+
+  /**
+   * Checks if the not-equal relation is satisfied.
+   *
+   * @return true if the weighted sum is provably not equal to the target value.
+   */
+  public boolean satisfiedNeq() {
+    SumBounds bounds = computeSumBounds();
+    return bounds.sumMin > b || bounds.sumMax < b;
+  }
+
+  /**
+   * Checks if the less-than-or-equal relation is satisfied.
+   *
+   * @param b the upper bound to check against.
+   * @return true if the maximum possible weighted sum is at most b.
+   */
+  public boolean satisfiedLtEq(long b) {
+    return computeSumMax() <= b;
+  }
+
+  /**
+   * Checks if the greater-than-or-equal relation is satisfied.
+   *
+   * @param b the lower bound to check against.
+   * @return true if the minimum possible weighted sum is at least b.
+   */
+  public boolean satisfiedGtEq(long b) {
+    return computeSumMin() >= b;
+  }
+
+  @Override
+  public boolean satisfied() {
+    return entailed(relationType);
+  }
+
+  @Override
+  public boolean notSatisfied() {
+    return entailed(NEG_REL[relationType]);
+  }
+
+  private boolean entailed(int rel) {
+
+    return switch (rel) {
+      case EQ -> satisfiedEq();
+      case LE -> satisfiedLtEq(b);
+      case LT -> satisfiedLtEq(b - 1);
+      case NE -> satisfiedNeq();
+      case GT -> satisfiedGtEq(b + 1);
+      case GE -> satisfiedGtEq(b);
+      default -> false;
+    };
+  }
+
+  /**
+   * Converts a relation string to its internal byte representation.
+   *
+   * @param r the relation string (e.g., "==", "{@literal <}", "{@literal <=}", "!=", "{@literal
+   *     >}", "{@literal >=}").
+   * @return the byte code representing the relation.
+   */
+  public byte relation(String r) {
+    switch (r) {
+      case "==", "=" -> {
+        return EQ;
+      }
+      case "<" -> {
+        return LT;
+      }
+      case "<=", "=<" -> {
+        return LE;
+      }
+      case "!=" -> {
+        return NE;
+      }
+      case ">" -> {
+        return GT;
+      }
+      case ">=", "=>" -> {
+        return GE;
+      }
+      case null, default ->
+          throw new IllegalArgumentException(
+              "Wrong relation symbol in LinearInt constraint " + r + ".");
+    }
+  }
+
+  /**
+   * Converts the internal relation type to its string representation.
+   *
+   * @return the string representation of the relation (e.g., "==", "{@literal <}", "{@literal
+   *     >=}").
+   */
+  public String rel2String() {
+    return switch (relationType) {
+      case EQ -> "==";
+      case LT -> "<";
+      case LE -> "<=";
+      case NE -> "!=";
+      case GT -> ">";
+      case GE -> ">=";
+      default -> "?";
+    };
+  }
+
+  void checkForOverflow() {
+
+    long sMin = 0;
+    long sMax = 0;
+    int i = 0;
+    for (; i < pos; i++) {
+      long n1 = Math.multiplyExact(x[i].min(), a[i]);
+      long n2 = Math.multiplyExact(x[i].max(), a[i]);
+
+      sMin = Math.addExact(sMin, n1);
+      sMax = Math.addExact(sMax, n2);
+    }
+    for (; i < l; i++) {
+      long n1 = Math.multiplyExact(x[i].max(), a[i]);
+      long n2 = Math.multiplyExact(x[i].min(), a[i]);
+
+      sMin = Math.addExact(sMin, n1);
+      sMax = Math.addExact(sMax, n2);
+    }
+  }
+
+  /**
+   * Sets the variables whose weight (dom/wdeg) a failure of this constraint increases instead of
+   * its own. A long linear constraint split into block sums passes the blocks' terms, so a failure
+   * of the sum of the blocks weighs the variables it is about, as the unsplit constraint did.
+   *
+   * @param vars the variables to weigh.
+   */
+  public void setWeightedVariables(Var[] vars) {
+    weighted = vars;
+  }
+
+  @Override
+  public void increaseWeight() {
+    if (weighted == null) {
+      super.increaseWeight();
+    } else if (IS_INCREASE_WEIGHT_ENABLED) {
+      for (Var v : weighted) {
+        v.weight++;
+      }
+    }
+  }
+
+  @Override
+  public String toString() {
+
+    StringBuilder result = new StringBuilder(id());
+    result.append(" : LinearInt( [ ");
+
+    for (int i = 0; i < x.length; i++) {
+      result.append(x[i]);
+      if (i < x.length - 1) {
+        result.append(", ");
+      }
+    }
+    result.append("], [");
+
+    for (int i = 0; i < a.length; i++) {
+      result.append(a[i]);
+      if (i < a.length - 1) {
+        result.append(", ");
+      }
+    }
+
+    result.append("], ").append(rel2String()).append(", ").append(b).append(" )");
+
+    return result.toString();
+  }
+
+  @Override
+  public LinearInt copy(VarMap map) {
+    LinearInt copy = new LinearInt();
+    copy.copyFrom(this, map);
+    copy.numberId = idNumber.incrementAndGet();
+    return copy;
+  }
+
+  /**
+   * Explains a bound this constraint propagated by the bounds of the other variables that bound the
+   * sum on the side the bound comes from, and the holes the new bound skipped; under {@code !=} by
+   * the other variables being fixed. Holes and the domain-consistent subclass use the generic
+   * reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() != LinearInt.class) {
+      return false;
+    }
+    if (!lcgForm().explain(trail, entry, out)) {
+      return false;
+    }
+    addFolded(trail, entry, out);
+    return true;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() != LinearInt.class) {
+      return false;
+    }
+    boolean explained = lcgForm().explainFailure(trail, out);
+    if (explained) {
+      addFolded(trail, trail.size(), out);
+    }
+    return explained;
+  }
+
+  /**
+   * Returns the linear relation this constraint states, for presolve.
+   *
+   * @return the linear form.
+   */
+  public LinearForm linearForm() {
+    return lcgForm();
+  }
+
+  // the relation over the variables left after folding, for entailment and negation
+  private LinearForm form() {
+    return getClass() == LinearInt.class ? lcgForm() : null;
+  }
+
+  /**
+   * Returns the relation over the variables left after folding the fixed ones into b.
+   *
+   * @return the linear form
+   */
+  LinearForm lcgForm() {
+    IntVar[] vars = Arrays.copyOf(x, l);
+    long[] weights = Arrays.copyOf(a, l);
+    return switch (relationType) {
+      case EQ -> new LinearForm(vars, weights, b, LinearForm.EQ);
+      case LE -> new LinearForm(vars, weights, b, LinearForm.LE);
+      case LT -> new LinearForm(vars, weights, b - 1, LinearForm.LE);
+      case GE -> new LinearForm(vars, weights, b, LinearForm.GE);
+      case GT -> new LinearForm(vars, weights, b + 1, LinearForm.GE);
+      default -> new LinearForm(vars, weights, b, LinearForm.NE);
+    };
+  }
+
+  /**
+   * Returns the relation this constraint enforces, over its variables with repeated ones merged,
+   * for presolve; unlike the explanations it holds for subclasses as well.
+   *
+   * @return the linear form
+   */
+  public LinearForm linearRelation() {
+    return lcgForm();
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    LinearForm f = form();
+    if (f != null && (entailed ? f : f.negated()).explainEntailed(trail, position, out)) {
+      addFolded(trail, position, out);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    LinearForm f = form();
+    if (f != null && f.negated().explain(trail, entry, out)) {
+      addFolded(trail, entry, out);
+      return true;
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    LinearForm f = form();
+    if (f != null && f.negated().explainFailure(trail, out)) {
+      addFolded(trail, trail.size(), out);
+      return true;
+    }
+    return false;
+  }
+
+  // the bounds of the variables fixed when the constraint was created and folded into b
+  void addFolded(AtomicTrail trail, int position, EntryList out) {
+    if (folded == null) {
+      folded = foldedVariables();
+    }
+    for (IntVar z : folded) {
+      trail.addLowerBound(z, position, out);
+      trail.addUpperBound(z, position, out);
+    }
+  }
+
+  // the arguments that are not among the terms, found once: explanations of long sums ask often
+  private IntVar[] foldedVariables() {
+    Set<IntVar> terms = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < l; i++) {
+      terms.add(x[i]);
+    }
+    List<IntVar> result = new ArrayList<>();
+    for (Var v : arguments()) {
+      if (!terms.contains(v)) {
+        result.add((IntVar) v);
+      }
+    }
+    return result.toArray(new IntVar[0]);
+  }
+}

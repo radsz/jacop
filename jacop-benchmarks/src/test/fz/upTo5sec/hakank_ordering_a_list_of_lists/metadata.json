@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element", "array_var_int_element", "jacop_alldiff", "jacop_alldifferent_except_0"],
+  "constraintFamilies": ["alldifferent", "element"],
+  "domains": []
+}

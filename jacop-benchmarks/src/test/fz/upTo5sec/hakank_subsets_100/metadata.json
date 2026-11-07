@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_lin_eq", "jacop_disjoint", "set_card", "set_in_reif", "set_union"],
+  "constraintFamilies": ["boolean", "linear", "set"],
+  "domains": []
+}

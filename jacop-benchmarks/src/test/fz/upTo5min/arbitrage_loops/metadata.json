@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_float_element", "float_le", "float_times", "int_lin_eq", "jacop_alldiff"],
+  "constraintFamilies": ["alldifferent", "element", "float", "linear"],
+  "domains": []
+}

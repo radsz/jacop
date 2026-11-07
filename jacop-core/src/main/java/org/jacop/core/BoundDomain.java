@@ -1,0 +1,1252 @@
+/*
+ * BoundDomain.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.core;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import org.jacop.constraints.Constraint;
+
+/**
+ * Defines interval of numbers which is part of FDV definition which consist of one or several
+ * intervals.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+class BoundDomain extends IntDomain {
+
+  /** The minimal value of the domain. */
+  public int minBound;
+
+  /** The maximal value of the domain. */
+  public int maxBound;
+
+  /**
+   * Copies metadata from this domain into the result domain and installs it on the variable. Sets
+   * previousDomain to this.
+   */
+  private void installResultDomain(BoundDomain result, int storeLevel, Var v) {
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((IntVar) v).domain = result;
+  }
+
+  private static void notifyDomainChange(Var v, boolean singleton, int boundEvent) {
+    if (singleton) {
+      v.domainHasChanged(GROUND);
+    } else {
+      v.domainHasChanged(boundEvent);
+    }
+  }
+
+  private void applyInPlace(int min, int max) {
+    if (this.minBound < min) {
+      this.minBound = min;
+    }
+    if (this.maxBound > max) {
+      this.maxBound = max;
+    }
+  }
+
+  private BoundDomain computeInResult(int min, int max) {
+    if (this.minBound < min) {
+      if (this.maxBound > max) {
+        return new BoundDomain(min, max);
+      }
+      return new BoundDomain(min, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, max);
+  }
+
+  /**
+   * It is a constructor which will create an empty Bound domain. An empty domain has minimum larger
+   * than maximum.
+   */
+  public BoundDomain() {
+    minBound = 1;
+    maxBound = 0;
+  }
+
+  /**
+   * Creates a new instance of BoundDomain. It requires min to be smaller or equal to max.
+   *
+   * @param min it specifies the left bound of the BoundDomain (inclusive).
+   * @param max it specifies the right bound of the BoundDomain (inclusive).
+   */
+  public BoundDomain(int min, int max) {
+
+    if (ASSERTS_ENABLED && min > max) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    this.minBound = min;
+    this.maxBound = max;
+
+    searchConstraints = null;
+    searchConstraintsToEvaluate = 0;
+    previousDomain = null;
+    searchConstraintsCloned = false;
+  }
+
+  @Override
+  public void unionAdapt(Interval i) {
+
+    if (!isEmpty()) {
+      if (i.min() < minBound) {
+        minBound = i.min();
+      }
+
+      if (i.max() > maxBound) {
+        maxBound = i.max();
+      }
+    } else {
+
+      minBound = i.min();
+      maxBound = i.max();
+    }
+  }
+
+  @Override
+  public void unionAdapt(int min, int max) {
+
+    if (!isEmpty()) {
+      if (min < this.minBound) {
+        this.minBound = min;
+      }
+
+      if (max > this.maxBound) {
+        this.maxBound = max;
+      }
+    } else {
+      this.minBound = min;
+      this.maxBound = max;
+    }
+  }
+
+  @Override
+  public void unionAdapt(int value) {
+    unionAdapt(value, value);
+  }
+
+  @Override
+  public void addDom(IntDomain domain) {
+
+    if (domain.isEmpty()) {
+      return;
+    }
+
+    if (!isEmpty()) {
+      if (domain.min() < minBound) {
+        minBound = domain.min();
+      }
+
+      if (domain.max() > maxBound) {
+        maxBound = domain.max();
+      }
+    } else {
+
+      minBound = domain.min();
+      maxBound = domain.max();
+    }
+  }
+
+  @Override
+  public void clear() {
+    minBound = 1;
+    maxBound = 0;
+  }
+
+  public IntDomain getPreviousDomain() {
+    return previousDomain;
+  }
+
+  @Override
+  public BoundDomain copy() {
+
+    BoundDomain cloned;
+
+    if (!isEmpty()) {
+      cloned = new BoundDomain(minBound, maxBound);
+    } else {
+      cloned = new BoundDomain();
+    }
+
+    cloned.stamp = stamp;
+    cloned.previousDomain = previousDomain;
+
+    cloned.searchConstraints = searchConstraints;
+    cloned.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+
+    cloned.modelConstraints = modelConstraints;
+    cloned.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+
+    cloned.searchConstraintsCloned = searchConstraintsCloned;
+
+    return cloned;
+  }
+
+  /**
+   * It clones this domain.
+   *
+   * @return clone of this domain.
+   */
+  public BoundDomain cloneLight() {
+    if (!isEmpty()) {
+      return new BoundDomain(minBound, maxBound);
+    } else {
+      return new BoundDomain();
+    }
+  }
+
+  @Override
+  public IntDomain complement() {
+
+    if (minBound == MIN_INT) {
+
+      if (maxBound == MAX_INT) {
+        return new BoundDomain();
+      }
+
+      return new BoundDomain(maxBound + 1, MAX_INT);
+    }
+
+    if (maxBound == MAX_INT) {
+      return new BoundDomain(MIN_INT, minBound - 1);
+    }
+
+    IntervalDomain complement = new IntervalDomain();
+    complement.unionAdapt(MIN_INT, minBound - 1);
+    complement.unionAdapt(maxBound + 1, MAX_INT);
+
+    return complement;
+  }
+
+  @Override
+  public boolean contains(IntDomain domain) {
+
+    if (isEmpty()) {
+      return domain.isEmpty();
+    }
+
+    return minBound <= domain.min() && maxBound >= domain.max();
+  }
+
+  @Override
+  public boolean contains(int value) {
+
+    return minBound <= value && maxBound >= value;
+  }
+
+  @Override
+  public boolean contains(int min, int max) {
+
+    return minBound <= min && max <= maxBound;
+  }
+
+  @Override
+  public int domainId() {
+    return BOUND_DOMAIN_ID;
+  }
+
+  public boolean eq(IntDomain domain) {
+
+    if (domain.isEmpty() && isEmpty()) {
+      return true;
+    }
+
+    return minBound == domain.min()
+        && maxBound == domain.max()
+        && (maxBound - minBound + 1) == domain.getSize();
+  }
+
+  @Override
+  public Interval getInterval(int position) {
+    if (position == 0) {
+      return new Interval(minBound, maxBound);
+    }
+
+    throw new IndexOutOfBoundsException(
+        "Bound domain has only one interval, requested " + position);
+  }
+
+  @Override
+  public int getSize() {
+    return maxBound - minBound + 1;
+  }
+
+  @Override
+  public void in(int storeLevel, Var v, int min, int max) {
+
+    if (ASSERTS_ENABLED && min > max) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    if (this.maxBound < min || this.minBound > max) {
+      throw failException;
+    }
+
+    if (min <= this.minBound && max >= this.maxBound) {
+      return;
+    }
+
+    int boundEvent = boundEvent(min > this.minBound, max < this.maxBound);
+    if (stamp == storeLevel) {
+      applyInPlace(min, max);
+      notifyDomainChange(v, this.minBound == this.maxBound, boundEvent);
+    } else {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      BoundDomain result = computeInResult(min, max);
+      installResultDomain(result, storeLevel, v);
+      notifyDomainChange(v, result.singleton(), boundEvent);
+    }
+  }
+
+  @Override
+  public void in(int storeLevel, Var v, IntDomain domain) {
+
+    if (domain.isEmpty()) {
+      throw failException;
+    }
+
+    if (domain.noIntervals() > 1) {
+      // The bounds of domain may lie in its holes, so the bounds of the values kept are used.
+      IntDomain kept = domain.intersect(this.minBound, this.maxBound);
+      if (kept.isEmpty()) {
+        throw failException;
+      }
+      in(storeLevel, v, kept.min(), kept.max());
+      return;
+    }
+
+    in(storeLevel, v, domain.min(), domain.max());
+  }
+
+  @Override
+  public void inValue(int storeLevel, IntVar v, int value) {
+
+    if (value < minBound || value > maxBound) {
+      throw failException;
+    }
+
+    if (minBound == value && maxBound == value) { // ground and equal value already
+      return;
+    }
+
+    if (stamp == storeLevel) {
+
+      this.minBound = value;
+      this.maxBound = value;
+    } else {
+
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
+        throw new IllegalStateException("Assertion failed");
+      }
+
+      BoundDomain result = new BoundDomain(value, value);
+
+      installResultDomain(result, storeLevel, v);
+    }
+
+    v.domainHasChanged(GROUND);
+  }
+
+  private BoundDomain computeInComplementResult(int complement) {
+    if (this.minBound == complement) {
+      return new BoundDomain(this.minBound + 1, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, this.maxBound - 1);
+  }
+
+  private BoundDomain computeInComplementResult(int min, int max) {
+    if (max < this.maxBound) {
+      return new BoundDomain(max + 1, this.maxBound);
+    }
+    return new BoundDomain(this.minBound, min - 1);
+  }
+
+  @Override
+  public void inComplement(int storeLevel, Var v, int complement) {
+
+    if (this.maxBound == this.minBound && this.maxBound == complement) {
+      throw failException;
+    }
+
+    // Can not be removed without changing the code below.
+    if (complement != this.minBound && complement != this.maxBound) {
+      return;
+    }
+
+    int boundEvent = complement == this.minBound ? MIN_EVENT : MAX_EVENT;
+    if (stamp == storeLevel) {
+      if (this.minBound == complement) {
+        this.minBound++;
+      } else {
+        // Assumes that check that complement must be equal to one of the bounds is done above.
+        this.maxBound--;
+      }
+      notifyDomainChange(v, this.minBound == this.maxBound, boundEvent);
+    } else {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      BoundDomain result = computeInComplementResult(complement);
+      installResultDomain(result, storeLevel, v);
+      notifyDomainChange(v, result.singleton(), boundEvent);
+    }
+  }
+
+  @Override
+  public void inComplement(int storeLevel, Var v, int min, int max) {
+
+    if (ASSERTS_ENABLED && min > max) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    // all elements are removed so fail.
+    if (this.minBound >= min && this.maxBound <= max) {
+      throw failException;
+    }
+
+    // Can not be removed without changing the code below.
+    // none of the elements are removed can ignore the call.
+    if (max < this.minBound || this.maxBound < min) {
+      return;
+    }
+
+    // For bound domain, creating holes in the domain not possible.
+    if (min > this.minBound && max < this.maxBound) {
+      return;
+    }
+
+    int boundEvent = max < this.maxBound ? MIN_EVENT : MAX_EVENT;
+    if (stamp == storeLevel) {
+      if (max < this.maxBound) {
+        this.minBound = max + 1;
+      } else {
+        this.maxBound = min - 1;
+      }
+      notifyDomainChange(v, this.minBound == this.maxBound, boundEvent);
+    } else {
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
+        throw new IllegalStateException("Assertion failed");
+      }
+      BoundDomain result = computeInComplementResult(min, max);
+      installResultDomain(result, storeLevel, v);
+      notifyDomainChange(v, result.singleton(), boundEvent);
+    }
+  }
+
+  @Override
+  public void inMax(int storeLevel, Var v, int max) {
+
+    if (this.minBound > max) {
+      throw failException;
+    }
+
+    // If removed the code below has to change.
+    if (max >= this.maxBound) {
+      return;
+    }
+
+    if (stamp == storeLevel) {
+
+      this.maxBound = max;
+
+      if (this.minBound == this.maxBound) {
+        v.domainHasChanged(GROUND);
+      } else {
+        v.domainHasChanged(MAX_EVENT);
+      }
+
+    } else {
+
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
+        throw new IllegalStateException("Assertion failed");
+      }
+
+      BoundDomain result = new BoundDomain(minBound, max);
+
+      installResultDomain(result, storeLevel, v);
+
+      if (result.singleton()) {
+        v.domainHasChanged(GROUND);
+      } else {
+        v.domainHasChanged(MAX_EVENT);
+      }
+    }
+  }
+
+  @Override
+  public void inMin(int storeLevel, Var v, int min) {
+
+    if (this.maxBound < min) {
+      throw failException;
+    }
+
+    if (min <= this.minBound) {
+      return;
+    }
+
+    if (stamp == storeLevel) {
+
+      this.minBound = min;
+
+      if (this.minBound == this.maxBound) {
+        v.domainHasChanged(GROUND);
+      } else {
+        v.domainHasChanged(MIN_EVENT);
+      }
+
+    } else {
+
+      if (ASSERTS_ENABLED && stamp >= storeLevel) {
+        throw new IllegalStateException("Assertion failed");
+      }
+
+      BoundDomain result = new BoundDomain(min, this.maxBound);
+
+      installResultDomain(result, storeLevel, v);
+
+      if (result.singleton()) {
+        v.domainHasChanged(GROUND);
+      } else {
+        v.domainHasChanged(MIN_EVENT);
+      }
+    }
+  }
+
+  @Override
+  public void inShift(int storeLevel, Var v, IntDomain domain, int shift) {
+
+    if (domain.isEmpty()) {
+      throw failException;
+    }
+
+    if (domain.noIntervals() > 1) {
+      IntDomain kept = domain.intersect(this.minBound - shift, this.maxBound - shift);
+      if (kept.isEmpty()) {
+        throw failException;
+      }
+      in(storeLevel, v, kept.min() + shift, kept.max() + shift);
+      return;
+    }
+
+    in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+  }
+
+  @Override
+  public IntDomain intersect(IntDomain dom) {
+
+    if (dom.isEmpty() || isEmpty()) {
+      return new BoundDomain();
+    }
+
+    int inputMin = dom.min();
+    int inputMax = dom.max();
+
+    if (dom.noIntervals() > 1) {
+      // Holes of dom within the bounds would be lost by an intersection of bounds.
+      int low = Math.max(inputMin, this.minBound);
+      int high = Math.min(inputMax, this.maxBound);
+      if (low > high) {
+        return new BoundDomain();
+      }
+      IntDomain result = dom.intersect(low, high);
+      return result.isEmpty() || result.getSize() != (long) result.max() - result.min() + 1
+          ? result
+          : new BoundDomain(result.min(), result.max());
+    }
+
+    if (inputMin > this.maxBound || inputMax < this.minBound) {
+      return new BoundDomain();
+    }
+
+    if (inputMin >= this.minBound) { // inputMin..
+      if (inputMax <= this.maxBound) { // inputMin..inputMax
+        return new BoundDomain(inputMin, inputMax);
+      } else { // inputMin..max
+        return new BoundDomain(inputMin, this.maxBound);
+      }
+    } else // min..
+    if (inputMax <= this.maxBound) { // min..inputMax
+      return new BoundDomain(this.minBound, inputMax);
+    } else { // min..max
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+  }
+
+  @Override
+  public IntDomain intersect(int min, int max) {
+
+    if (isEmpty() || min > this.maxBound || max < this.minBound) {
+      return new BoundDomain();
+    }
+
+    if (min >= this.minBound) { // inputMin..
+      if (max <= this.maxBound) { // inputMin..inputMax
+        return new BoundDomain(min, max);
+      } else { // inputMin..max
+        return new BoundDomain(min, this.maxBound);
+      }
+    } else // min..
+    if (max <= this.maxBound) { // min..inputMax
+      return new BoundDomain(this.minBound, max);
+    } else { // min..max
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+  }
+
+  @Override
+  public IntDomain subtract(int value) {
+
+    if (isEmpty() || this.maxBound == this.minBound && this.maxBound == value) {
+      return new BoundDomain();
+    }
+
+    // Can not be removed without changing the code below.
+    if (value != this.minBound && value != this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    if (this.minBound == value) {
+      return new BoundDomain(this.minBound + 1, this.maxBound);
+    } else {
+      return new BoundDomain(this.minBound, this.maxBound - 1);
+    }
+  }
+
+  @Override
+  public IntDomain subtract(IntDomain domain) {
+
+    if (isEmpty()) {
+      return new BoundDomain();
+    }
+
+    if (domain.isEmpty()) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    int intervals = domain.noIntervals();
+    if (intervals > 1) {
+      // Only the values of domain at the bounds can be removed, a hole of domain keeps a value.
+      long low = this.minBound;
+      long high = this.maxBound;
+      for (int k = 0; k < intervals; k++) {
+        if (domain.leftElement(k) <= low && low <= domain.rightElement(k)) {
+          low = domain.rightElement(k) + 1L;
+        }
+      }
+      for (int k = intervals - 1; k >= 0; k--) {
+        if (domain.leftElement(k) <= high && high <= domain.rightElement(k)) {
+          high = domain.leftElement(k) - 1L;
+        }
+      }
+      return low > high ? new BoundDomain() : new BoundDomain((int) low, (int) high);
+    }
+
+    int inputMin = domain.min();
+    int inputMax = domain.max();
+
+    if (inputMax < this.minBound || inputMin > this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    if (inputMin <= this.minBound && inputMax >= this.maxBound) {
+      return new BoundDomain();
+    }
+
+    if (this.minBound < inputMin && inputMax < this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    if (inputMin > this.minBound) {
+      return new BoundDomain(this.minBound, inputMin - 1);
+    }
+
+    return new BoundDomain(inputMax + 1, this.maxBound);
+  }
+
+  @Override
+  public BoundDomain subtract(int min, int max) {
+
+    if (isEmpty()) {
+      return new BoundDomain();
+    }
+
+    if (max < this.minBound || min > this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    if (min <= this.minBound && max >= this.maxBound) {
+      return new BoundDomain();
+    }
+
+    if (this.minBound < min && max < this.maxBound) {
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+
+    if (min > this.minBound) {
+      return new BoundDomain(this.minBound, min - 1);
+    }
+
+    return new BoundDomain(max + 1, this.maxBound);
+  }
+
+  @Override
+  public IntervalEnumeration intervalEnumeration() {
+    return new BoundDomainIntervalEnumeration(this.minBound, this.maxBound);
+  }
+
+  @Override
+  public boolean isEmpty() {
+    return minBound > maxBound;
+  }
+
+  @Override
+  public boolean isIntersecting(IntDomain domain) {
+
+    return !isEmpty() && domain.isIntersecting(this.minBound, this.maxBound);
+  }
+
+  @Override
+  public boolean isIntersecting(int min, int max) {
+
+    return !isEmpty() && min <= this.maxBound && max >= this.minBound;
+  }
+
+  @Override
+  public boolean isSparseRepresentation() {
+    return false;
+  }
+
+  @Override
+  public int leftElement(int intervalNo) {
+    if (ASSERTS_ENABLED && intervalNo != 0) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    return this.minBound;
+  }
+
+  @Override
+  public int max() {
+    return this.maxBound;
+  }
+
+  @Override
+  public int min() {
+    return this.minBound;
+  }
+
+  /**
+   * It multiplies the domain by a given constant.
+   *
+   * @param mul a factor by which the domain is being multiplied.
+   * @return Domain created by multiplication of this domain.
+   */
+  public IntDomain multiply(int mul) {
+    if (mul < 0) {
+      return new BoundDomain(this.maxBound * mul, this.minBound * mul);
+    }
+    return new BoundDomain(this.minBound * mul, this.maxBound * mul);
+  }
+
+  @Override
+  public int runEnd(int value) {
+    return maxBound;
+  }
+
+  @Override
+  public long bitsFrom(int lo) {
+    long hi = (long) lo + 63;
+    if (isEmpty() || maxBound < lo || minBound > hi) {
+      return 0;
+    }
+    return bitRange(Math.max(minBound, lo) - lo, (int) Math.min(maxBound, hi) - lo);
+  }
+
+  @Override
+  public int nextValue(int value) {
+    if (value < this.minBound) {
+      return minBound;
+    }
+    if (value < this.maxBound) {
+      return value + 1;
+    }
+
+    return value;
+  }
+
+  @Override
+  public int noIntervals() {
+
+    if (isEmpty()) {
+      return 0;
+    } else {
+      return 1;
+    }
+  }
+
+  @Override
+  public IntDomain recentDomainPruning(int storeLevel) {
+    if (previousDomain == null) {
+      return new BoundDomain();
+    }
+
+    if (stamp < storeLevel) {
+      return new BoundDomain();
+    }
+
+    return previousDomain.subtract(this);
+  }
+
+  @Override
+  public void removeLevel(int level, Var v) {
+
+    if (ASSERTS_ENABLED && this.stamp > level) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    if (this.stamp == level) {
+
+      ((IntVar) v).domain = this.previousDomain;
+    }
+
+    if (ASSERTS_ENABLED && v.level() >= level) {
+      throw new IllegalStateException("Assertion failed");
+    }
+  }
+
+  @Override
+  public int rightElement(int intervalNo) {
+    if (ASSERTS_ENABLED && intervalNo != 0) {
+      throw new IllegalStateException("Assertion failed");
+    }
+    return maxBound;
+  }
+
+  @Override
+  public void setDomain(IntDomain domain) {
+
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
+
+      BoundDomain boundDomain = (BoundDomain) domain;
+
+      this.minBound = boundDomain.min();
+      this.maxBound = boundDomain.max();
+
+      return;
+    }
+
+    setDomain(domain.min(), domain.max());
+  }
+
+  @Override
+  public void setDomain(int min, int max) {
+
+    if (ASSERTS_ENABLED && min > max) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    this.minBound = min;
+    this.maxBound = max;
+  }
+
+  @Override
+  public boolean singleton() {
+    return minBound == maxBound;
+  }
+
+  @Override
+  public boolean singleton(int c) {
+    return minBound == c && maxBound == c;
+  }
+
+  @Override
+  public int sizeConstraintsOriginal() {
+
+    IntDomain domain = this;
+
+    while (domain.domainId() == BOUND_DOMAIN_ID) {
+
+      BoundDomain dom = (BoundDomain) domain;
+
+      if (dom.previousDomain != null) {
+        domain = dom.previousDomain;
+      } else {
+        break;
+      }
+    }
+
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
+      return Arrays.stream(domain.modelConstraintsToEvaluate).sum();
+    } else {
+      return domain.sizeConstraintsOriginal();
+    }
+  }
+
+  @Override
+  public String toString() {
+
+    if (minBound < maxBound) {
+      return "{" + minBound + ".." + maxBound + "}";
+    } else if (minBound == maxBound) {
+      return String.valueOf(minBound);
+    } else {
+      return "{}";
+    }
+  }
+
+  @Override
+  public String toStringConstraints() {
+
+    StringBuilder s = new StringBuilder();
+
+    for (Iterator<Constraint> e = searchConstraints.iterator(); e.hasNext(); ) {
+      s.append(e.next().id());
+      if (e.hasNext()) {
+        s.append(", ");
+      }
+    }
+
+    return s.toString();
+  }
+
+  @Override
+  public String toStringFull() {
+
+    StringBuilder result = new StringBuilder();
+
+    IntDomain domain = this;
+
+    do {
+      if (!domain.singleton()) {
+        result.append(this).append("(").append(domain.stamp()).append(") ");
+      } else {
+        result.append(minBound).append("(").append(domain.stamp()).append(") ");
+      }
+
+      result.append("constraints: ");
+
+      for (Constraint searchConstraint : domain.searchConstraints) {
+        result.append(searchConstraint);
+      }
+
+      if (domain.domainId() == INTERVAL_DOMAIN_ID) {
+
+        IntervalDomain dom = (IntervalDomain) domain;
+        domain = dom.previousDomain;
+
+      } else if (domain.domainId() == BOUND_DOMAIN_ID) {
+
+        BoundDomain dom = (BoundDomain) domain;
+        domain = dom.previousDomain;
+      }
+
+    } while (domain != null);
+
+    return result.toString();
+  }
+
+  @Override
+  public IntDomain union(IntDomain domain) {
+
+    if (isEmpty() || domain.isEmpty() || domain.noIntervals() > 1) {
+      return exactUnion(domain);
+    }
+
+    int min = domain.min();
+    int max = domain.max();
+
+    if ((long) max < (long) this.minBound - 1 || (long) min > (long) this.maxBound + 1) {
+      return exactUnion(domain);
+    }
+
+    if (min < this.minBound) { // min..
+      if (this.maxBound < max) { // min..max
+        return new BoundDomain(min, max);
+      } else { // min..this.maxBound
+        return new BoundDomain(min, this.maxBound);
+      }
+    } else // this.minBound..
+    if (this.maxBound < max) { // this.minBound..max
+      return new BoundDomain(this.minBound, max);
+    } else { // this.minBound..this.maxBound
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+  }
+
+  @Override
+  public IntDomain union(int min, int max) {
+
+    if (isEmpty()
+        || (long) max < (long) this.minBound - 1
+        || (long) min > (long) this.maxBound + 1) {
+      return exactUnion(new IntervalDomain(min, max));
+    }
+
+    if (min < this.minBound) { // min..
+      if (this.maxBound < max) { // min..max
+        return new BoundDomain(min, max);
+      } else { // min..this.maxBound
+        return new BoundDomain(min, this.maxBound);
+      }
+    } else // this.minBound..
+    if (this.maxBound < max) { // this.minBound..max
+      return new BoundDomain(this.minBound, max);
+    } else { // this.minBound..this.maxBound
+      return new BoundDomain(this.minBound, this.maxBound);
+    }
+  }
+
+  @Override
+  public IntDomain union(int value) {
+
+    if (isEmpty()
+        || (long) value < (long) this.minBound - 1
+        || (long) value > (long) this.maxBound + 1) {
+      return exactUnion(new IntervalDomain(value, value));
+    }
+
+    if (value < this.minBound) {
+      return new BoundDomain(value, this.maxBound);
+    }
+
+    if (value > this.maxBound) {
+      return new BoundDomain(this.minBound, value);
+    }
+
+    return new BoundDomain(this.minBound, this.maxBound);
+  }
+
+  /**
+   * The union with a domain that may leave a gap, which a BoundDomain cannot hold, so the result is
+   * an IntervalDomain unless it is an interval.
+   */
+  private IntDomain exactUnion(IntDomain domain) {
+    IntervalDomain result =
+        isEmpty() ? new IntervalDomain() : new IntervalDomain(this.minBound, this.maxBound);
+    result.addDom(domain);
+    if (result.isEmpty()) {
+      return new BoundDomain();
+    }
+    if (result.noIntervals() == 1) {
+      return new BoundDomain(result.min(), result.max());
+    }
+    return result;
+  }
+
+  @Override
+  public ValueEnumeration valueEnumeration() {
+    return new BoundDomainValueEnumeration(this);
+  }
+
+  @Override
+  public int previousValue(int value) {
+
+    if (value > this.maxBound) {
+      return maxBound;
+    }
+
+    if (value > this.minBound) {
+      return value - 1;
+    }
+
+    return value;
+  }
+
+  /**
+   * Checks invariants.
+   *
+   * @return It returns the information about the first invariant which does not hold or null
+   *     otherwise.
+   */
+  public String checkInvariants() {
+
+    if (minBound > maxBound) {
+      return "Min value is larger than max value ";
+    }
+
+    // Fine, all invariants hold.
+    return null;
+  }
+
+  @Override
+  public void subtractAdapt(int complement) {
+
+    // Can not be removed without changing the code below.
+    if (isEmpty() || complement != this.minBound && complement != this.maxBound) {
+      return;
+    }
+
+    if (this.minBound == complement) {
+      this.minBound++;
+    } else {
+      // Assumes that check that complement must be equal to one of the bounds is
+      // done above.
+      this.maxBound--;
+    }
+  }
+
+  @Override
+  public void subtractAdapt(int min, int max) {
+
+    if (max < this.minBound || min > this.maxBound) {
+      return;
+    }
+
+    if (min <= this.minBound) {
+
+      if (max >= this.maxBound) {
+
+        this.clear();
+
+      } else {
+        // min <= this.minBound
+        // max < this.maxBound
+        this.minBound = max + 1;
+      }
+
+    } else {
+      // min > this.minBound
+
+      if (max >= this.maxBound) {
+
+        this.maxBound = min - 1;
+      }
+    }
+  }
+
+  @Override
+  public int intersectAdapt(IntDomain intersect) {
+
+    if (isEmpty()) {
+      return NONE;
+    }
+
+    if (intersect.isEmpty()) {
+      clear();
+      return GROUND;
+    }
+
+    if (intersect.noIntervals() > 1) {
+      // The bounds of intersect may lie in its holes, so the bounds of the values kept are used.
+      IntDomain kept = intersect.intersect(this.minBound, this.maxBound);
+      if (kept.isEmpty()) {
+        clear();
+        return GROUND;
+      }
+      return intersectAdapt(kept.min(), kept.max());
+    }
+
+    return intersectAdapt(intersect.min(), intersect.max());
+  }
+
+  @Override
+  public int intersectAdapt(int minIntersect, int maxIntersect) {
+
+    if (isEmpty() || minIntersect <= minBound && maxBound <= maxIntersect) {
+      return NONE;
+    }
+
+    if (minIntersect > maxBound || maxIntersect < minBound) {
+      // Intersection is empty.
+      minBound = 0;
+      maxBound = -1;
+      return GROUND;
+    }
+
+    if (maxBound > maxIntersect) {
+      maxBound = maxIntersect;
+    }
+
+    if (minBound < minIntersect) {
+      minBound = minIntersect;
+    }
+
+    return minBound == maxBound ? GROUND : BOUND;
+  }
+
+  @Override
+  public int getElementAt(int index) {
+
+    if (index < 0 || index > this.maxBound - this.minBound) {
+      throw new RuntimeException(
+          "The domain does not have as many elements as indicated by index " + index);
+    }
+
+    return this.minBound + index;
+  }
+
+  @Override
+  public int sizeOfIntersection(IntDomain domain) {
+
+    IntervalEnumeration enumer = domain.intervalEnumeration();
+
+    int result = 0;
+
+    while (enumer.hasMoreElements()) {
+
+      Interval next = enumer.nextElement();
+
+      if (next.max() < this.minBound || this.maxBound < next.min()) {
+        continue;
+      }
+
+      int min = Math.max(next.min(), this.minBound);
+      int max = Math.min(next.max(), this.maxBound);
+
+      result += max - min + 1;
+    }
+
+    if (ASSERTS_ENABLED && result > this.getSize()) {
+      throw new IllegalStateException(String.valueOf("Invariant violated. Check the code."));
+    }
+    return result;
+  }
+
+  @Override
+  public int getRandomValue() {
+
+    if (Store.getRandom().nextInt(2) == 0) {
+      return min();
+    } else {
+      return max();
+    }
+  }
+}

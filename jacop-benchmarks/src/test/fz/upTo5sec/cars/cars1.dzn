@@ -1,0 +1,25 @@
+% vim: ft=zinc ts=4 sw=4 et tw=0
+% Ralph Becket <rafe@csse.unimelb.edu.au>
+% Thu Oct 25 15:09:27 EST 2007
+%
+% Car sequencing problem taken from
+%
+% See http://www.dcs.st-and.ac.uk/~ianm/CSPLib/prob/prob001/spec.html
+
+n_cars = 10;
+n_options = 5;
+n_classes = 6;
+option_max_per_block = [1, 2, 1, 2, 1];
+option_block_size =    [2, 3, 3, 5, 5];
+cars_in_class =        [1, 1, 2, 2, 2, 2];
+
+% class_option_need =  array2d(classes, options, ...
+%
+class_option_need =  array2d(1..6, 1..5, [
+    1, 0, 1, 1, 0, 
+    0, 0, 0, 1, 0, 
+    0, 1, 0, 0, 1, 
+    0, 1, 0, 1, 0, 
+    1, 0, 1, 0, 0, 
+    1, 1, 0, 0, 0
+]);

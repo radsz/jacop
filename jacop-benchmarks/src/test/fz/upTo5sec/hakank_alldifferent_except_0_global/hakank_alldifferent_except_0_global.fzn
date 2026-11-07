@@ -1,0 +1,20 @@
+
+predicate jacop_alldifferent_except_0(array [int] of var int: vs);
+predicate jacop_increasing(array [int] of var int: x);
+predicate jacop_alldifferent_except(array [int] of var int: vs,set of int: S);
+array [1..2] of int: X_INTRODUCED_24_ = [1,-1];
+var 0..4: X_INTRODUCED_16_;
+var 0..4: X_INTRODUCED_17_;
+var 0..4: X_INTRODUCED_18_;
+var 0..4: X_INTRODUCED_19_;
+var 1..4: X_INTRODUCED_20_;
+var 1..4: X_INTRODUCED_21_;
+var 1..4: X_INTRODUCED_22_;
+var 1..4: X_INTRODUCED_23_;
+array [1..4] of var int: x:: output_array([1..4]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_];
+array [1..4] of var int: y:: output_array([1..4]) = [X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_];
+constraint jacop_alldifferent_except_0(x);
+constraint jacop_increasing(x);
+constraint jacop_alldifferent_except(y,1..2);
+constraint int_lin_le(X_INTRODUCED_24_,[X_INTRODUCED_20_,X_INTRODUCED_23_],-1);
+solve  satisfy;

@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["float_lin_eq_reif"],
+  "constraintFamilies": ["float"],
+  "domains": []
+}

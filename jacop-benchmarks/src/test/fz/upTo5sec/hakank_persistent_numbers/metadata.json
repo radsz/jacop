@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_le_reif", "int_lin_eq", "int_lin_ne", "int_times", "jacop_if_then_else_int"],
+  "constraintFamilies": ["arithmetic", "comparison", "linear"],
+  "domains": []
+}

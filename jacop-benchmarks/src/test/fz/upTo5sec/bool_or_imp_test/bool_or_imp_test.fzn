@@ -1,0 +1,9 @@
+predicate bool_or_imp(var bool: a,var bool: b,var bool: r);
+var bool: a:: output_var;
+var bool: b:: output_var;
+var bool: r:: output_var;
+var bool: c:: output_var;
+constraint bool_or_imp(a,b,r);
+constraint bool_or_imp(false,a,true);
+constraint bool_or_imp(c,false,true);
+solve  satisfy;

@@ -1,0 +1,64 @@
+/*
+ * PrintOutListener.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.search;
+
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Var;
+
+/**
+ * It is a simple example how it is possible to extend existing listeners to add your own
+ * functionality.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+@Slf4j
+public class PrintOutListener<T extends Var> extends SimpleSolutionListener<T>
+    implements SolutionListener<T> {
+
+  @Override
+  public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+    final boolean parent = super.executeAfterSolution(search, select);
+
+    StringBuilder buf = new StringBuilder();
+
+    if (search.getCostVariable() != null) {
+      buf.append("\nSolution cost ").append(search.getCostVariable());
+    }
+
+    buf.append(super.toString());
+
+    log.info("{}", buf);
+
+    return parent;
+  }
+}

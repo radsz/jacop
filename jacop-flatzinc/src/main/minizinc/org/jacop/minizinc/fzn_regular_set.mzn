@@ -1,0 +1,17 @@
+predicate jacop_regular_set(array[int] of var int: x, int: Q, set of int: S,
+                        array[int] of int: d, int: q0, set of int: F, int: min_index);
+
+predicate fzn_regular_set(array[int] of var int: x, int: Q, set of int: S,
+                  array[int,int] of int: d, int: q0, set of int: F) =
+  jacop_regular_set(x, Q, S, array1d(d), q0, F,  min(index_set_2of2(d)))
+;
+
+% Deprecated call
+predicate fzn_regular(
+  array [int] of var int: x,
+  int: Q,
+  set of int: S,
+  array [int, int] of int: d,
+  int: q0,
+  set of int: F,
+) = fzn_regular_set(x, Q, S, d, q0, F);

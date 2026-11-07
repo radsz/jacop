@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool_clause", "int_eq_imp", "jacop_count_values_bounds", "jacop_maximum"],
+  "constraintFamilies": ["boolean", "comparison", "counting", "minmax"],
+  "domains": []
+}

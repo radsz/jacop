@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_and", "array_bool_or", "array_var_int_element", "bool2int", "bool_clause", "int_eq_imp", "int_eq_reif", "int_le_reif", "int_lin_eq", "int_lin_ne", "int_lin_ne_reif", "jacop_alldiff", "jacop_assignment", "jacop_count_values", "jacop_global_cardinality_closed", "jacop_member_int", "jacop_regular"],
+  "constraintFamilies": ["alldifferent", "assignment", "boolean", "comparison", "counting", "element", "gcc", "linear", "member", "regular"],
+  "domains": []
+}

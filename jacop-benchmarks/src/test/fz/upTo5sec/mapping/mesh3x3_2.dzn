@@ -1,0 +1,170 @@
+%% ========= DATA =============
+% H263 encoder
+%
+% Actors
+% 1 = mc
+% 2 = me
+% 3 = vlc
+% 4 = mbe
+% 5 = mbd
+
+% 1. motion_compensation -> motion_estimation: mc2me 457
+% 2. motion_estimation -> mb_encoding: me2mbe 5
+% 3. mb_encoding -> vlc: mbe2vlc 457
+% 4. mb_encoding -> mb_decoding: mbe2mbd 457
+% 5. mb_decoding -> motion_compensation: mbd2mc 457
+% 6. vlc -> vlc: vlc2vlc 13
+% 7. motion_compensation -> motion_compensation: mc2mc 457
+
+% Load (limit 200)
+% motion_compensation 2 motion_estimation 58
+% motion_estimation 58 mb_encoding 125
+% mb_encoding 125 vlc 4
+% mb_encoding 125 mb_decoding 94
+% mb_decoding 94 motion_compensation 2
+% vlc 4 vlc 4
+% motion_compensation 2 motion_compensation 2
+
+% Architecture:
+%
+% ___   ___   ___
+% |1 |--|2 |--|3 |
+% ---   ---   ---
+%  |     |     |
+% ___   ___   ___
+% |4 |--|5 |--|6 |
+% ---   ---   ---
+%  |     |     |
+% ___   ___   ___
+% |7 |--|8 |--|9 |
+% ---   ---   ---
+
+row = 3;
+col = 3;
+
+no_links = 2*2*(row-1)*col;
+
+no_actors=5;
+
+no_flows = 7;
+link_bandwidth = 300;
+
+source_destination_actor = 
+			[| 1, 2 |
+			   2, 4 |
+			   4, 3 |
+			   4, 5 |
+			   5, 1 |
+			   3, 3 |
+			   1, 1
+			|];
+
+actor_processor = [flow_processor[1], flow_processor[8], flow_processor[6], flow_processor[13], flow_processor[5]];
+
+
+inStream = [457, 5, 457, 457, 457, 13, 457];
+
+b = [| 0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[1], -inStream[1] |
+       0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[2], -inStream[2] |
+       0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[3], -inStream[3] |
+       0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[4], -inStream[4] |
+       0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[5], -inStream[5] |
+       0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[6], -inStream[6] |
+       0, 0, 0, 0, 0, 0, 0, 0, 0, inStream[7], -inStream[7] |];
+
+flows = array2d(1..no_flows, 1..m, 
+        [inFlow[1,i] | i in 1..k] ++ [commFlow[1,i] | i in 1..no_links] ++ [outFlow[1,i] | i in 1..k] ++
+        [inFlow[2,i] | i in 1..k] ++ [commFlow[2,i] | i in 1..no_links] ++ [outFlow[2,i] | i in 1..k] ++
+	[inFlow[3,i] | i in 1..k] ++ [commFlow[3,i] | i in 1..no_links] ++ [outFlow[3,i] | i in 1..k] ++
+	[inFlow[4,i] | i in 1..k] ++ [commFlow[4,i] | i in 1..no_links] ++ [outFlow[4,i] | i in 1..k] ++
+	[inFlow[5,i] | i in 1..k] ++ [commFlow[5,i] | i in 1..no_links] ++ [outFlow[5,i] | i in 1..k] ++
+	[inFlow[6,i] | i in 1..k] ++ [commFlow[6,i] | i in 1..no_links] ++ [outFlow[6,i] | i in 1..k] ++
+	[inFlow[7,i] | i in 1..k] ++ [commFlow[7,i] | i in 1..no_links] ++ [outFlow[7,i] | i in 1..k] );
+
+balance = array2d(1..no_flows, 1..n, [b[i,j] | i in 1..no_flows, j in 1..n]);
+
+unit_cost = [ 0, 0, 0, 0, 0, 0, 0, 0, 0,
+	    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 
+	    0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+processor_load = 200;
+
+% mc, me, vlc, mbe, mbd
+actor_load = [2, 58, 4, 125, 94];
+
+load = array2d(1..2, 1..no_flows, 
+	[if (not exists (k in 1..i-1) (source_destination_actor[k,j+1] = source_destination_actor[i,j+1] \/ 
+	    	 	      	       source_destination_actor[k,((j+1) mod 2) + 1] = source_destination_actor[i,j+1])) 
+	    then actor_load[source_destination_actor[i,j+1]] else 0 endif | j in 0..1, i in 1..no_flows]);
+
+arc =[| 
+    	%% from action to processors
+    	10, 1 |
+    	10, 2 |
+	10, 3 |
+	10, 4 |
+	10, 5 |
+	10, 6 |
+	10, 7 |
+	10, 8 |
+	10, 9 |
+
+	1, 2 |
+	1, 4 |
+
+	2, 1 |
+	2, 3 |
+	2, 5 |
+
+	3, 2 |
+	3, 6 |
+
+	4, 1 |
+	4, 5 |
+	4, 7 |
+
+	5, 4 |
+	5, 2 |
+	5, 6 |
+	5, 8 |
+	
+	6, 3 |
+	6, 5 |
+	6, 9 |
+
+	7, 4 |
+	7, 8 |
+
+	8, 7 |
+	8, 5 |
+	8, 9 |
+
+	9, 6 |
+	9, 8 |
+	
+	%% from processors to action
+	1, 11 |
+    	2, 11 |
+	3, 11 |
+	4, 11 |
+	5, 11 |
+	6, 11 |
+	7, 11 |
+	8, 11 |
+	9, 11 
+	|];
+
+in_connections = [if ((i mod 2) mod 2) = 0 then (k+1)+(i div (2*k)) else ((i div 2) mod k + 1) endif | i in 0..2*no_flows*k-1];
+out_connections = [if ((i mod 2) mod 2) = 0 then ((i div 2) mod k + 1) else (k+no_flows+1)+(i div (2*k)) endif | i in 0..2*no_flows*k-1];
+
+all_connections = array2d(1..2*no_flows*k+no_links, 1..2, in_connections ++ [arc[i,j] | i in k+1..no_links+k, j in 1..2] ++ out_connections);
+
+total_flow = [flows[i,j] | i in 1..no_flows, j in 1..k] ++ 
+		      		     	      		    comm_full ++ 
+							    [flows[i,j] | i in 1..no_flows, j in k+no_links+1..2*k+no_links];
+
+total_unit_cost = [0 | i in 1..no_flows, j in 1..k] ++ [ 1 | i in 1..no_links] ++ [0 | i in 1..no_flows, j in 1..k];
+
+total_balance = [0 | i in 1..k] ++ [balance[i,j] | i in 1..no_flows, j in k+1..k+1] ++ [balance[i,j] | i in 1..no_flows, j in k+2..k+2];
+
+link_str = ["1 -> 2 = ", "1 -> 4 = ", "2 -> 1 = ", "2 -> 3 = ", "2 -> 5 = ", "3 -> 2 = ", "3 -> 6 = ", "4 -> 1 = ", "4 -> 5 = ", "4 -> 7 = ", "5 -> 4 = ", "5 -> 2 = ", "5 -> 6 = ", "5 -> 8 = ", "6 -> 3 = ", "6 -> 5 = ", "6 -> 9 = ", "7 -> 4 = ", "7 -> 8 = ", "8 -> 7 = ", "8 -> 5 = ", "8 -> 9 = ", "9 -> 6 = ", "9 -> 8 = "];

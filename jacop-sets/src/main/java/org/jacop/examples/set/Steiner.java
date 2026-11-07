@@ -1,0 +1,186 @@
+/*
+ * Steiner.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.examples.set;
+
+import java.util.ArrayList;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.SumInt;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.set.constraints.AintersectBeqC;
+import org.jacop.set.constraints.AltB;
+import org.jacop.set.constraints.CardA;
+import org.jacop.set.constraints.EinA;
+import org.jacop.set.core.BoundSetDomain;
+import org.jacop.set.core.SetVar;
+import org.jacop.set.search.IndomainSetMax;
+import org.jacop.set.search.MaxCardDiff;
+
+/**
+ * It models and solves Steiner problem.
+ *
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class Steiner extends ExampleSet {
+
+  /** It specifies the length of the problem. */
+  public int n = 3;
+
+  /**
+   * It executes the program which solves this Steiner problem.
+   *
+   * @param args parameters (none)
+   */
+  public static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+
+    Steiner example = new Steiner();
+    example.n = 7;
+    example.model();
+
+    example.search();
+  }
+
+  /** Creates the constraint model for the Steiner problem. */
+  @Override
+  public void model() {
+
+    int t = n * (n - 1) / 6;
+
+    log.info("Steiner problem with n = " + n + " and T = " + t);
+
+    int r = n % 6;
+
+    if (r == 1 || r == 3) {
+      createSteinerModel(t);
+    }
+  }
+
+  private void createSteinerModel(int t) {
+    store = new Store();
+
+    vars = new ArrayList<>();
+    SetVar[] s = new SetVar[t];
+
+    for (int i = 0; i < t; i++) {
+      s[i] = new SetVar(store, "s" + i, new BoundSetDomain(1, n));
+      vars.add(s[i]);
+      store.impose(new CardA(s[i], 3));
+    }
+
+    imposeIntersectionConstraints(t, s);
+
+    for (int i = 0; i < s.length - 1; i++) {
+      store.impose(new AltB(s[i], s[i + 1]));
+    }
+
+    imposeImpliedConstraints(t, s);
+  }
+
+  private void imposeIntersectionConstraints(int t, SetVar[] s) {
+    for (int i = 0; i < t; i++) {
+      for (int j = i + 1; j < t; j++) {
+        SetVar temp = new SetVar(store, "temp" + i + "," + j, new BoundSetDomain(1, n));
+        store.impose(new AintersectBeqC(s[i], s[j], temp));
+        store.impose(new CardA(temp, 0, 1));
+      }
+    }
+  }
+
+  private void imposeImpliedConstraints(int t, SetVar[] s) {
+    for (int i = 1; i <= n; i++) {
+      IntVar[] b = new IntVar[t];
+      for (int j = 0; j < t; j++) {
+        b[j] = new IntVar(store, "b" + i + "," + j, 0, 1);
+        store.impose(new Reified(new EinA(i, s[j]), b[j]));
+      }
+      IntVar sum = new IntVar(store, "sum_" + i, (n - 1) / 2, (n - 1) / 2);
+      store.impose(new SumInt(b, "==", sum));
+    }
+  }
+
+  /**
+   * Performs the search for a solution to the Steiner problem.
+   *
+   * @return true if a solution is found, false otherwise.
+   */
+  @Override
+  public boolean search() {
+
+    long t1;
+    long t2;
+    long t;
+    t1 = System.currentTimeMillis();
+
+    int r = n % 6;
+
+    if (r == 1 || r == 3) {
+
+      store.consistency();
+      boolean result;
+
+      Search<SetVar> label = new DepthFirstSearch<>();
+
+      SelectChoicePoint<SetVar> select =
+          new SimpleSelect<>(
+              vars.toArray(SetVar[]::new), new MaxCardDiff<>(), new IndomainSetMax<>());
+
+      label.getSolutionListener().searchAll(true);
+      label.getSolutionListener().recordSolutions(true);
+
+      result = label.labeling(store, select);
+
+      if (result) {
+        log.info("*** Yes");
+        label.getSolutionListener().printAllSolutions();
+      } else {
+        log.info("*** No");
+      }
+
+      t2 = System.currentTimeMillis();
+      t = t2 - t1;
+      log.info("\n\t*** Execution time = " + t + " ms");
+      return result;
+    } else {
+      log.info("Problem has no solution");
+      return false;
+    }
+  }
+}

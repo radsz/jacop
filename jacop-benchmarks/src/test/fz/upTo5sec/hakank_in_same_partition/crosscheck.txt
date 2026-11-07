@@ -1,0 +1,4 @@
+source: hakank/minizinc/in_same_partition.mzn
+mode: all (satisfaction)
+verified: JaCoP, Gecode 6.3.0 and Chuffed 0.13.2 find 4 distinct solutions
+feasibility: 4 JaCoP solution(s) accepted by gecode as data

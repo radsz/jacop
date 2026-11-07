@@ -1,0 +1,4 @@
+source: hakank/minizinc/alldifferent_pairs.mzn
+mode: all (satisfaction)
+verified: JaCoP, Gecode 6.3.0 and Chuffed 0.13.2 find 377 distinct solutions
+feasibility: 20 JaCoP solution(s) accepted by gecode as data

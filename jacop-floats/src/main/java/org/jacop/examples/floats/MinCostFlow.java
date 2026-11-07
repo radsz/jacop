@@ -1,0 +1,159 @@
+/*
+ * MinCostFlow.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.examples.floats;
+
+import java.util.ArrayList;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.constraints.PplusCeqR;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.SmallestDomainFloat;
+import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.search.DepthFirstSearch;
+
+/** Example for min-cost flow using float constraints. */
+@Slf4j
+public class MinCostFlow {
+
+  final double minFloat = -1e+150;
+  final double maxFloat = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    MinCostFlow example = new MinCostFlow();
+
+    example.minCostFlow();
+  }
+
+  void minCostFlow() {
+
+    log.info("========= minCostFlow =========");
+
+    Store store = new Store();
+
+    FloatDomain.setPrecision(1e-3);
+    FloatDomain.intervalPrint(true);
+
+    int n = 5;
+    int m = 10;
+
+    double[] demand = {-10.0, 0.0, 0.0, 0.0, 10.0};
+
+    double[] costs = {10.0, 6.0, 10.0, 20.0, 2.0, 4.0, 10.0, 2.0, 10.0, 2.0};
+    double[] capacity = {6.0, 4.0, 4.0, 4.0, 3.0, 3.0, 3.0, 3.0, 3.0, 4.0};
+    double[] capacityLb = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+    int[][] arcs = {{1, 2}, {1, 3}, {1, 4}, {1, 5}, {2, 3}, {2, 4}, {2, 5}, {3, 4}, {3, 5}, {4, 5}};
+
+    FloatVar cost = new FloatVar(store, "cost", 0.0, maxFloat);
+
+    FloatVar[] x = new FloatVar[m];
+
+    for (int i = 0; i < m; i++) {
+      x[i] = new FloatVar(store, "X[" + i + "]", capacityLb[i], capacity[i]);
+    }
+
+    for (int i = 0; i < n; i++) {
+
+      List<FloatVar> outFlow = new ArrayList<>();
+      List<Double> outFlowWeights = new ArrayList<>();
+      for (int j = 0; j < m; j++) {
+        if (arcs[j][1] == i + 1) {
+          outFlow.add(x[j]);
+          outFlowWeights.add(1.0);
+        }
+      }
+
+      List<FloatVar> inFlow = new ArrayList<>();
+      List<Double> inFlowWeights = new ArrayList<>();
+      for (int j = 0; j < m; j++) {
+        if (arcs[j][0] == i + 1) {
+          inFlow.add(x[j]);
+          inFlowWeights.add(1.0);
+        }
+      }
+
+      FloatVar outResult = new FloatVar(store, "outResult_" + i, minFloat, maxFloat);
+      outFlow.add(outResult);
+      outFlowWeights.add(-1.0);
+      store.impose(new LinearFloat(outFlow, outFlowWeights, "==", 0.0));
+
+      FloatVar inResult = new FloatVar(store, "inResult_" + i, minFloat, maxFloat);
+      inFlow.add(inResult);
+      inFlowWeights.add(-1.0);
+      store.impose(new LinearFloat(inFlow, inFlowWeights, "==", 0.0));
+
+      store.impose(new PplusCeqR(inResult, demand[i], outResult));
+    }
+
+    FloatVar[] vars = new FloatVar[x.length + 1];
+    double[] nCosts = new double[costs.length + 1];
+    for (int i = 0; i < vars.length - 1; i++) {
+      vars[i] = x[i];
+      nCosts[i] = costs[i];
+    }
+    vars[x.length] = cost;
+    nCosts[costs.length] = -1.0;
+
+    store.impose(new LinearFloat(vars, nCosts, "==", 0.0));
+
+    // solve minimize cost;
+    DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, x, new SmallestDomainFloat<>());
+    label.setAssignSolution(true);
+    // s.leftFirst = false;
+    label.setTimeOut(1);
+
+    label.labeling(store, s, cost);
+
+    log.info(cost.toString());
+
+    for (FloatVar xVar : x) {
+      System.out.printf("%.2f, ", xVar.value());
+    }
+    log.info("");
+    //     // System.out.printf ("%.0f, ", (double)(X[i].min() * costs[i]));
+    // result =" +
+    //       (double)(X[i].min() * costs[i]) + ".."+(double)(X[i].max() * costs[i]));
+
+    log.info("\nPrecision = " + FloatDomain.precision());
+  }
+}

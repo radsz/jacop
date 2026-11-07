@@ -1,0 +1,20 @@
+
+predicate jacop_connected(array [int] of int: from,array [int] of int: to,array [int] of var bool: ns,array [int] of var bool: es,int: base);
+array [1..6] of int: to = [2,3,4,1,3,5];
+array [1..6] of int: from = [1,2,3,4,1,4];
+var bool: X_INTRODUCED_16_;
+var bool: X_INTRODUCED_17_;
+var bool: X_INTRODUCED_18_;
+var bool: X_INTRODUCED_19_;
+var bool: X_INTRODUCED_20_;
+var bool: X_INTRODUCED_21_;
+var bool: X_INTRODUCED_22_;
+var bool: X_INTRODUCED_23_;
+var bool: X_INTRODUCED_24_;
+var bool: X_INTRODUCED_25_;
+var bool: X_INTRODUCED_26_;
+array [1..5] of var bool: ns:: output_array([1..5]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_];
+array [1..6] of var bool: es:: output_array([1..6]) = [X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_,X_INTRODUCED_24_,X_INTRODUCED_25_,X_INTRODUCED_26_];
+constraint jacop_connected(from,to,ns,es,1);
+constraint bool_clause([X_INTRODUCED_17_,X_INTRODUCED_20_],[]);
+solve  satisfy;

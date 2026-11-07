@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_eq", "int_le", "set_card", "set_intersect", "set_le"],
+  "constraintFamilies": ["comparison", "set"],
+  "domains": []
+}

@@ -1,0 +1,1813 @@
+/*
+ * IntDomain.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.core;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.ArrayList;
+import org.jacop.constraints.Constraint;
+
+/**
+ * Defines an integer domain and related operations on it.
+ *
+ * <p>IntDomain implementations can not assume that arguments to any function can not be empty
+ * domains.
+ *
+ * @author Radoslaw Szymanek and Krzysztof Kuchcinski
+ * @version 5.0
+ */
+public abstract class IntDomain extends Domain {
+
+  /** It specifies the minimum element in the domain. */
+  public static final int MIN_INT = -536_870_910; // Integer.MIN_VALUE/4 + 2
+
+  /** It specifies the maximum element in the domain. */
+  public static final int MAX_INT = 536_870_909; // Integer.MAX_VALUE/4 - 2
+
+  /**
+   * It specifies the constant for GROUND event. It has to be smaller than the constant for events
+   * BOUND and ANY.
+   */
+  public static final int GROUND = 0;
+
+  /**
+   * It specifies the constant for BOUND event. It has to be smaller than the constant for event
+   * ANY.
+   */
+  public static final int BOUND = 1;
+
+  /** It specifies the constant for ANY event. */
+  public static final int ANY = 2;
+
+  /**
+   * It specifies the constant for the event of a change of the minimum only: the minimum has
+   * increased and the maximum is unchanged. A constraint subscribed with MIN_EVENT is woken by
+   * MIN_EVENT, BOUND and GROUND events, so it may use it for a variable on which it reads only the
+   * minimum. A domain may report BOUND instead of MIN_EVENT.
+   */
+  public static final int MIN_EVENT = 3;
+
+  /**
+   * It specifies the constant for the event of a change of the maximum only: the maximum has
+   * decreased and the minimum is unchanged. A constraint subscribed with MAX_EVENT is woken by
+   * MAX_EVENT, BOUND and GROUND events, so it may use it for a variable on which it reads only the
+   * maximum. A domain may report BOUND instead of MAX_EVENT.
+   */
+  public static final int MAX_EVENT = 4;
+
+  /** Unique identifier for an interval domain type. */
+  public static final int INTERVAL_DOMAIN_ID = 0;
+
+  /** Unique identifier for a bound domain type. */
+  public static final int BOUND_DOMAIN_ID = 1;
+
+  /** Unique identifier for a small dense domain type. */
+  public static final int SMALL_DENSE_DOMAIN_ID = 2;
+
+  /** Unique identifier for a lazy bit set domain type. */
+  public static final int LAZY_BIT_SET_DOMAIN_ID = 4;
+
+  /** Unique identifier for the domain of an affine view, {@link AffineDomain}. */
+  public static final int AFFINE_VIEW_DOMAIN_ID = 5;
+
+  /** The length from which an owned constraint array has a hash table. */
+  private static final int TABLE_THRESHOLD = 16;
+
+  /**
+   * It specifies for each event what other events are subsumed by this event. Possibly implement
+   * this by bit flags in int.
+   */
+  static final int[][] eventsInclusion = {
+    {GROUND, BOUND, ANY, MIN_EVENT, MAX_EVENT}, // GROUND event
+    {BOUND, ANY, MIN_EVENT, MAX_EVENT}, // BOUND event
+    {ANY}, // ANY event
+    {BOUND, ANY, MIN_EVENT}, // MIN_EVENT
+    {BOUND, ANY, MAX_EVENT} // MAX_EVENT
+  };
+
+  /**
+   * It returns the event for a change of bounds that leaves more than one value in the domain.
+   *
+   * @param minChanged true if the minimum has changed.
+   * @param maxChanged true if the maximum has changed.
+   * @return MIN_EVENT or MAX_EVENT if only one bound has changed, BOUND otherwise.
+   */
+  protected static int boundEvent(boolean minChanged, boolean maxChanged) {
+    if (minChanged) {
+      return maxChanged ? BOUND : MIN_EVENT;
+    }
+    return maxChanged ? MAX_EVENT : BOUND;
+  }
+
+  /**
+   * It specifies the previous domain which was used by this domain. The old domain is stored here
+   * and can be easily restored if necessary.
+   */
+  public IntDomain previousDomain;
+
+  /**
+   * The constraint arrays, per pruning event, that this domain object allocated. No earlier domain
+   * reads them, so constraints can be appended to them in place; an array that is no longer the one
+   * in modelConstraints is not appended to.
+   */
+  Constraint[][] ownedModelConstraints;
+
+  /**
+   * For each owned array of at least TABLE_THRESHOLD entries, an identity hash table holding every
+   * constraint appended to it, also the ones removed since.
+   */
+  Constraint[][] ownedModelConstraintTables;
+
+  /** The number of constraints in each table of ownedModelConstraintTables. */
+  int[] ownedModelConstraintTableSizes;
+
+  /**
+   * The modelConstraintsToEvaluate array that this domain object allocated. No other domain reads
+   * it, so its counts are changed in place while it is the one in modelConstraintsToEvaluate.
+   */
+  int[] ownedModelConstraintsToEvaluate;
+
+  /**
+   * Finds the result interval for multiplication of {a..b} * {c..d}.
+   *
+   * @param a the minimum of the first interval.
+   * @param b the maximum of the first interval.
+   * @param c the minimum of the second interval.
+   * @param d the maximum of the second interval.
+   * @return the interval representing the bounds of the multiplication result.
+   */
+  public static Interval mulBounds(int a, int b, int c, int d) {
+
+    int ac = multiplyInt(a, c);
+    int ad = multiplyInt(a, d);
+    int bc = multiplyInt(b, c);
+    int bd = multiplyInt(b, d);
+    int min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+    int max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+
+    return new Interval(min, max);
+  }
+
+  /**
+   * Finds the result interval for multiplication of {a..b} by a constant c.
+   *
+   * @param a the minimum of the interval.
+   * @param b the maximum of the interval.
+   * @param c the constant multiplier.
+   * @return the interval representing the bounds of the multiplication result.
+   */
+  public static Interval mulBounds(int a, int b, int c) {
+
+    int min;
+    int max;
+    if (c >= 0) {
+      min = multiplyInt(a, c);
+      max = multiplyInt(b, c);
+    } else {
+      max = multiplyInt(a, c);
+      min = multiplyInt(b, c);
+    }
+
+    return new Interval(min, max);
+  }
+
+  /**
+   * Finds the result interval for squaring the interval {a..b}.
+   *
+   * @param a the minimum of the interval.
+   * @param b the maximum of the interval.
+   * @return the interval representing the bounds of the squaring result.
+   */
+  public static Interval squareBounds(int a, int b) {
+
+    int aa = multiplyInt(a, a);
+    int bb = multiplyInt(b, b);
+    int min = Math.min(aa, bb); // Math.min(aa, bb);
+    int max = Math.max(aa, bb); // Math.max(aa, bb);
+
+    if (a < 0 && b > 0) {
+      min = 0;
+    }
+
+    return new Interval(min, max);
+  }
+
+  /**
+   * Finds the result interval for division of {a..b} / {c..d} for div and mod constraints.
+   *
+   * @param a the minimum of the dividend interval.
+   * @param b the maximum of the dividend interval.
+   * @param c the minimum of the divisor interval.
+   * @param d the maximum of the divisor interval.
+   * @return the interval representing the bounds of the division result.
+   */
+  public static Interval divBounds(int a, int b, int c, int d) {
+
+    int min;
+    int max;
+
+    Interval result;
+
+    if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
+      min = MIN_INT;
+      max = MAX_INT;
+      result = new Interval(min, max);
+    } else if (c == 0 && d == 0) { // case 2
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+
+    } else if (c < 0 && d > 0) { // case 3
+      max = Math.max(Math.abs(a), Math.abs(b));
+      min = -max;
+      result = new Interval(min, max);
+    } else if (c == 0 && (a > 0 || b < 0)) { // case 4 a
+      result = divBounds(a, b, 1, d); // can happen if a..b or c..d are not proper intervals
+
+    } else if (c != 0 && d == 0 && (a > 0 || b < 0)) { // case 4 b
+      result = divBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
+
+    } else if (c <= d) { // case 5
+      int ac = a / c;
+      int ad = a / d;
+      int bc = b / c;
+      int bd = b / d;
+      min = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+      max = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+      result = new Interval(min, max);
+    } else {
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+    }
+    return result;
+  }
+
+  /**
+   * Finds the result interval for integer division of {a..b} / {c..d} for mul constraints.
+   *
+   * @param a the minimum of the dividend interval.
+   * @param b the maximum of the dividend interval.
+   * @param c the minimum of the divisor interval.
+   * @param d the maximum of the divisor interval.
+   * @return the interval representing the bounds of the integer division result.
+   */
+  public static Interval divIntBounds(int a, int b, int c, int d) {
+    int min;
+    int max;
+
+    Interval result;
+
+    if (a <= 0 && b >= 0 && c <= 0 && d >= 0) { // case 1
+      min = MIN_INT;
+      max = MAX_INT;
+      result = new Interval(min, max);
+    } else if (c == 0 && d == 0) { // case 2
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+
+    } else if (c < 0 && d > 0) { // case 3
+      max = Math.max(Math.abs(a), Math.abs(b));
+      min = -max;
+      result = new Interval(min, max);
+    } else if (c == 0 && (a > 0 || b < 0)) { // case 4 a
+      result = divIntBounds(a, b, 1, d); // can happen if a..b or c..d are not proper intervals
+
+    } else if (c != 0 && d == 0 && (a > 0 || b < 0)) { // case 4 b
+      result = divIntBounds(a, b, c, -1); // can happen if a..b or c..d are not proper intervals
+
+    } else if (c <= d) { // case 5
+      result = divIntBoundsCase5(a, b, c, d);
+    } else {
+      throw Store.failException; // can happen if a..b or c..d are not proper intervals
+    }
+    return result;
+  }
+
+  /**
+   * Finds the result interval for integer division of {a..b} by a constant c for div and mod
+   * constraints.
+   *
+   * @param a the minimum of the dividend interval.
+   * @param b the maximum of the dividend interval.
+   * @param c the constant divisor.
+   * @return the interval representing the bounds of the integer division result.
+   */
+  public static Interval divIntBounds(int a, int b, int c) {
+
+    int min;
+    int max;
+
+    if (c == 0) { // case 1
+      throw Store.failException;
+    } else if (c > 0) {
+      min = divRoundUp(a, c);
+      max = divRoundDown(b, c);
+      if (min > max) {
+        throw Store.failException;
+      }
+
+      return new Interval(min, max);
+    } else { // c < 0
+      min = divRoundUp(b, c);
+      max = divRoundDown(a, c);
+      if (min > max) {
+        throw Store.failException;
+      }
+
+      return new Interval(min, max);
+    }
+  }
+
+  private static Interval divIntBoundsCase5(int a, int b, int c, int d) {
+    double ac = (double) a / c;
+    double ad = (double) a / d;
+    double bc = (double) b / c;
+    double bd = (double) b / d;
+    double low = Math.min(Math.min(ac, ad), Math.min(bc, bd));
+    double high = Math.max(Math.max(ac, ad), Math.max(bc, bd));
+    int min = (int) Math.round(Math.ceil(low));
+    int max = (int) Math.round(Math.floor(high));
+    if (min > max) {
+      throw Store.failException;
+    }
+    return new Interval(min, max);
+  }
+
+  /**
+   * Computes the floor division of two long values, rounding towards negative infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the floor of the division a / b.
+   */
+  public static long divRoundDown(long a, long b) {
+    return Math.floorDiv(a, b);
+  }
+
+  /**
+   * Computes the floor division of two int values, rounding towards negative infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the floor of the division a / b.
+   */
+  public static int divRoundDown(int a, int b) {
+    return Math.floorDiv(a, b);
+  }
+
+  /**
+   * Computes the ceiling division of two long values, rounding towards positive infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the ceiling of the division a / b.
+   */
+  public static long divRoundUp(long a, long b) {
+    return -Math.floorDiv(-a, b);
+  }
+
+  /**
+   * Computes the ceiling division of two int values, rounding towards positive infinity.
+   *
+   * @param a the dividend.
+   * @param b the divisor.
+   * @return the ceiling of the division a / b.
+   */
+  public static int divRoundUp(int a, int b) {
+    return -Math.floorDiv(-a, b);
+  }
+
+  /**
+   * Returns the product of the arguments, if the result overflows MAX_INT or MIN_INT is returned.
+   *
+   * @param x the first value
+   * @param y the second value
+   * @return the result or MAX_INT/MIN_INT if result causes overflow
+   */
+  public static int multiplyInt(int x, int y) {
+    long r = (long) x * y;
+    if ((int) r != r) {
+      return r > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
+    }
+    return (int) r;
+  }
+
+  /**
+   * Returns the sum of its arguments, if the result overflows MAX_INT or MIN_INT is returned.
+   *
+   * @param x the first value
+   * @param y the second value
+   * @return the result or MAX_INT/MIN_INT if result causes overflow
+   */
+  public static int addInt(int x, int y) {
+    int r = x + y;
+    // HD 2-12 Overflow iff both arguments have the opposite sign of the result
+    if (((x ^ r) & (y ^ r)) < 0) {
+      return (long) x + y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
+    }
+    return r;
+  }
+
+  /**
+   * Returns the difference of the arguments, if the result overflows MAX_INT or MIN_INT is
+   * returned.
+   *
+   * @param x the first value
+   * @param y the second value to subtract from the first
+   * @return the result or MAX_INT/MIN_INT if result causes overflow
+   */
+  public static int subtractInt(int x, int y) {
+    int r = x - y;
+    // HD 2-12 Overflow iff the arguments have different signs and
+    // the sign of the result is different than the sign of x
+    if (((x ^ y) & (x ^ r)) < 0) {
+      return (long) x - y > 0 ? Integer.MAX_VALUE : Integer.MIN_VALUE; // MAX_INT : MIN_INT;
+    }
+    return r;
+  }
+
+  /**
+   * It helps to specify what events should be executed if a given event occurs.
+   *
+   * @param pruningEvent the pruning event for which we want to know what events it encompasses.
+   * @return an array specifying what events should be included given this event.
+   */
+  public int[] getEventsInclusion(int pruningEvent) {
+    return eventsInclusion[pruningEvent];
+  }
+
+  /**
+   * It adds interval of values to the domain.
+   *
+   * @param i Interval which needs to be added to the domain.
+   */
+  public void unionAdapt(Interval i) {
+    unionAdapt(i.min(), i.max());
+  }
+
+  /**
+   * It adds all values between min and max to the domain.
+   *
+   * @param min the left bound of the interval being added.
+   * @param max the right bound of the interval being added.
+   */
+  public abstract void unionAdapt(int min, int max);
+
+  /**
+   * It adds a values to the domain.
+   *
+   * @param value value being added to the domain.
+   */
+  public void unionAdapt(int value) {
+    unionAdapt(value, value);
+  }
+
+  /**
+   * It computes a union between this domain and the domain provided as a parameter. This domain is
+   * changed to reflect the result.
+   *
+   * @param union the domain with is used for the union operation with this domain.
+   * @return it returns information about the pruning event which has occurred due to this
+   *     operation.
+   */
+  public int unionAdapt(IntDomain union) {
+
+    IntDomain result = union(union);
+
+    if (result.getSize() == getSize()) {
+      return NONE;
+    } else {
+      setDomain(result);
+      return ANY;
+    }
+  }
+
+  /**
+   * It adds values as specified by the parameter to the domain.
+   *
+   * @param domain Domain which needs to be added to the domain.
+   */
+  public void addDom(IntDomain domain) {
+
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      while (enumer.hasMoreElements()) {
+        unionAdapt(enumer.nextElement());
+      }
+    } else {
+      ValueEnumeration enumer = domain.valueEnumeration();
+      while (enumer.hasMoreElements()) {
+        unionAdapt(enumer.nextElement());
+      }
+    }
+  }
+
+  /**
+   * Checks if two domains intersect.
+   *
+   * @param domain the domain for which intersection is checked.
+   * @return true if domains are intersecting.
+   */
+  public boolean isIntersecting(IntDomain domain) {
+
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      while (enumer.hasMoreElements()) {
+        Interval next = enumer.nextElement();
+        if (isIntersecting(next.min(), next.max())) {
+          return true;
+        }
+      }
+    } else {
+
+      ValueEnumeration enumer = domain.valueEnumeration();
+      while (enumer.hasMoreElements()) {
+        if (contains(enumer.nextElement())) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * It checks if interval min..max intersects with current domain.
+   *
+   * @param min the left bound of the interval.
+   * @param max the right bound of the interval.
+   * @return true if domain intersects with the specified interval.
+   */
+  public abstract boolean isIntersecting(int min, int max);
+
+  /**
+   * It specifies if the current domain contains the domain given as a parameter.
+   *
+   * @param domain for which we check if it is contained in the current domain.
+   * @return true if the supplied domain is cover by this domain.
+   */
+  public boolean contains(IntDomain domain) {
+
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      while (enumer.hasMoreElements()) {
+        Interval next = enumer.nextElement();
+        if (!contains(next.min(), next.max())) {
+          return false;
+        }
+      }
+    } else {
+      ValueEnumeration enumer = domain.valueEnumeration();
+      while (enumer.hasMoreElements()) {
+        if (!contains(enumer.nextElement())) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * It checks if an interval min..max belongs to the domain.
+   *
+   * @param min the minimum value of the interval being checked
+   * @param max the maximum value of the interval being checked
+   * @return true if value belongs to the domain.
+   */
+  public abstract boolean contains(int min, int max);
+
+  /**
+   * It checks if value belongs to the domain.
+   *
+   * @param value which is checked if it exists in the domain.
+   * @return true if value belongs to the domain.
+   */
+  public boolean contains(int value) {
+    return contains(value, value);
+  }
+
+  /**
+   * It creates a complement of a domain.
+   *
+   * @return it returns the complement of this domain.
+   */
+  public abstract IntDomain complement();
+
+  /**
+   * It gives next value in the domain from the given one (lexigraphical ordering). If no value can
+   * be found then returns the same value.
+   *
+   * @param value it specifies the value after which a next value has to be found.
+   * @return next value after the specified one which belong to this domain.
+   */
+  public abstract int nextValue(int value);
+
+  /**
+   * It gives previous value in the domain from the given one (lexigraphical ordering). If no value
+   * can be found then returns the same value.
+   *
+   * @param value before which a value is seeked for.
+   * @return it returns the value before the one specified as a parameter.
+   */
+  public abstract int previousValue(int value);
+
+  /**
+   * It returns the last value of the run of consecutive values of this domain that contains the
+   * given value. Together with {@link #nextValue(int)} it walks the domain run by run, which is how
+   * the domain classes work on an argument of another class without converting it to intervals.
+   *
+   * @param value a value of this domain.
+   * @return the largest value v such that all values from value to v are in this domain.
+   */
+  public int runEnd(int value) {
+    int end = value;
+    while (end < max() && contains(end + 1)) {
+      end++;
+    }
+    return end;
+  }
+
+  /**
+   * It returns the values lo..lo + 63 of this domain as bits: bit k is set when lo + k is in this
+   * domain. Bit set domains answer it with a few word operations, so an operation between two
+   * domains can work on 64 values at a time whatever the classes of the two domains are.
+   *
+   * @param lo the value of bit 0.
+   * @return the values lo..lo + 63 of this domain as bits.
+   */
+  public long bitsFrom(int lo) {
+    if (isEmpty()) {
+      return 0;
+    }
+    long hi = (long) lo + 63;
+    if (max() < lo || min() > hi) {
+      return 0;
+    }
+    long result = 0;
+    int value = contains(lo) ? lo : nextValue(lo);
+    while (value >= lo && value <= hi) {
+      int end = runEnd(value);
+      result |= bitRange(value - lo, (int) Math.min(end, hi) - lo);
+      if (end >= hi) {
+        break;
+      }
+      int next = nextValue(end);
+      if (next <= end) {
+        break;
+      }
+      value = next;
+    }
+    return result;
+  }
+
+  /**
+   * It returns a word with the bits from..to set.
+   *
+   * @param from the lowest bit, 0..63.
+   * @param to the highest bit, from..63.
+   * @return the word.
+   */
+  static long bitRange(int from, int to) {
+    return (-1L << from) & (-1L >>> (63 - to));
+  }
+
+  /**
+   * It returns the values x of a for which x - shift is in b, walking the runs of both domains.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @param shift the shift of the values of b.
+   * @return the intersection of a and b shifted by shift.
+   */
+  static IntervalDomain intersectRuns(IntDomain a, IntDomain b, int shift) {
+    IntervalDomain result = new IntervalDomain(4);
+    if (a.isEmpty() || b.isEmpty()) {
+      return result;
+    }
+    int aMax = a.max();
+    int bMax = b.max();
+    int x = a.min();
+    int y = b.min();
+    int xEnd = a.runEnd(x);
+    int yEnd = b.runEnd(y);
+    while (true) {
+      int lo = Math.max(x, y + shift);
+      int hi = Math.min(xEnd, yEnd + shift);
+      if (lo <= hi) {
+        result.unionAdapt(lo, hi);
+      }
+      if (xEnd <= yEnd + shift) {
+        if (xEnd >= aMax) {
+          break;
+        }
+        x = a.nextValue(xEnd);
+        xEnd = a.runEnd(x);
+      } else {
+        if (yEnd >= bMax) {
+          break;
+        }
+        y = b.nextValue(yEnd);
+        yEnd = b.runEnd(y);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * It tells if every value of b is in a, walking the runs of b.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return true if a contains b.
+   */
+  static boolean containsRuns(IntDomain a, IntDomain b) {
+    if (b.isEmpty()) {
+      return true;
+    }
+    int bMax = b.max();
+    for (int y = b.min(); ; y = b.nextValue(y)) {
+      int end = b.runEnd(y);
+      if (!a.contains(y, end)) {
+        return false;
+      }
+      if (end >= bMax) {
+        return true;
+      }
+      y = end;
+    }
+  }
+
+  /**
+   * It tells if a and b have a common value, walking the runs of b.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return true if a and b intersect.
+   */
+  static boolean isIntersectingRuns(IntDomain a, IntDomain b) {
+    if (a.isEmpty() || b.isEmpty()) {
+      return false;
+    }
+    int bMax = b.max();
+    for (int y = b.nextValue(a.min() - 1); y <= a.max(); y = b.nextValue(y)) {
+      if (!b.contains(y)) {
+        return false;
+      }
+      int end = b.runEnd(y);
+      if (a.isIntersecting(y, end)) {
+        return true;
+      }
+      if (end >= bMax) {
+        return false;
+      }
+      y = end;
+    }
+    return false;
+  }
+
+  /**
+   * It returns the values of a that are not in b, walking the runs of both domains.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return a without the values of b.
+   */
+  static IntervalDomain subtractRuns(IntDomain a, IntDomain b) {
+    IntervalDomain result = new IntervalDomain(4);
+    if (a.isEmpty()) {
+      return result;
+    }
+    int aMax = a.max();
+    for (int x = a.min(); ; x = a.nextValue(x)) {
+      int xEnd = a.runEnd(x);
+      addRunWithout(result, x, xEnd, b);
+      if (xEnd >= aMax) {
+        return result;
+      }
+      x = xEnd;
+    }
+  }
+
+  /** It adds to result the values from..to that are not in b. */
+  private static void addRunWithout(IntervalDomain result, int from, int to, IntDomain b) {
+    while (from <= to) {
+      int hole = b.contains(from) ? from : b.nextValue(from);
+      if (hole <= from && !b.contains(from)) {
+        // no value of b at or after from
+        hole = to + 1;
+      }
+      if (hole > from) {
+        result.unionAdapt(from, Math.min(to, hole - 1));
+      }
+      if (hole > to) {
+        return;
+      }
+      int holeEnd = b.runEnd(hole);
+      if (holeEnd >= to) {
+        return;
+      }
+      from = holeEnd + 1;
+    }
+  }
+
+  /**
+   * It returns the values of a or b, walking the runs of both domains.
+   *
+   * @param a a domain.
+   * @param b a domain.
+   * @return the union of a and b.
+   */
+  static IntervalDomain unionRuns(IntDomain a, IntDomain b) {
+    IntervalDomain result = new IntervalDomain(4);
+    addRuns(result, a);
+    addRuns(result, b);
+    return result;
+  }
+
+  /** It adds the runs of domain to result. */
+  private static void addRuns(IntervalDomain result, IntDomain domain) {
+    if (domain.isEmpty()) {
+      return;
+    }
+    int max = domain.max();
+    for (int x = domain.min(); ; x = domain.nextValue(x)) {
+      int end = domain.runEnd(x);
+      result.unionAdapt(x, end);
+      if (end >= max) {
+        return;
+      }
+      x = end;
+    }
+  }
+
+  /**
+   * It returns value enumeration of the domain values.
+   *
+   * @return valueEnumeration which can be used to enumerate one by one value from this domain.
+   */
+  public abstract ValueEnumeration valueEnumeration();
+
+  /**
+   * It returns interval enumeration of the domain values.
+   *
+   * @return intervalEnumeration which can be used to enumerate intervals in this domain.
+   */
+  public abstract IntervalEnumeration intervalEnumeration();
+
+  /**
+   * It returns the size of the domain.
+   *
+   * @return number of elements in this domain.
+   */
+  public abstract int getSize();
+
+  /**
+   * It intersects current domain with the one given as a parameter.
+   *
+   * @param dom domain with which the intersection needs to be computed.
+   * @return the intersection between supplied domain and this domain.
+   */
+  public abstract IntDomain intersect(IntDomain dom);
+
+  /**
+   * In intersects current domain with the interval min..max.
+   *
+   * @param min the left bound of the interval (inclusive)
+   * @param max the right bound of the interval (inclusive)
+   * @return the intersection between the specified interval and this domain.
+   */
+  public abstract IntDomain intersect(int min, int max);
+
+  /**
+   * It intersects with the domain which is a complement of value.
+   *
+   * @param value the value for which the complement is computed
+   * @return the domain which does not contain specified value.
+   */
+  public IntDomain subtract(int value) {
+    return subtract(value, value);
+  }
+
+  /**
+   * It subtracts domain from current domain and returns the result.
+   *
+   * @param domain the domain which is subtracted from this domain.
+   * @return the result of the subtraction.
+   */
+  public IntDomain subtract(IntDomain domain) {
+
+    if (domain.isEmpty()) {
+      return this.cloneLight();
+    }
+
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      Interval first = enumer.nextElement();
+      IntDomain result = this.subtract(first.min(), first.max());
+      while (enumer.hasMoreElements()) {
+        Interval next = enumer.nextElement();
+        result.subtractAdapt(next.min(), next.max());
+      }
+      return result;
+    } else {
+      ValueEnumeration enumer = domain.valueEnumeration();
+      int first = enumer.nextElement();
+      IntDomain result = this.subtract(first);
+      while (enumer.hasMoreElements()) {
+        int next = enumer.nextElement();
+        if (result.contains(next)) {
+          result.subtractAdapt(next);
+        }
+      }
+      return result;
+    }
+  }
+
+  /**
+   * It subtracts interval min..max.
+   *
+   * @param min the left bound of the interval (inclusive).
+   * @param max the right bound of the interval (inclusive).
+   * @return the result of the subtraction.
+   */
+  public abstract IntDomain subtract(int min, int max);
+
+  /**
+   * It removes value from the domain. It adapts current (this) domain.
+   *
+   * @param value the value for which the complement is computed
+   */
+  public abstract void subtractAdapt(int value);
+
+  /**
+   * It removes all values between min and max to the domain.
+   *
+   * @param min the left bound of the interval being removed.
+   * @param max the right bound of the interval being removed.
+   */
+  public abstract void subtractAdapt(int min, int max);
+
+  /**
+   * It returns the maximum value in a domain.
+   *
+   * @return the largest value present in the domain.
+   */
+  public abstract int max();
+
+  /**
+   * It returns the minimum value in a domain.
+   *
+   * @return the smallest value present in the domain.
+   */
+  public abstract int min();
+
+  /**
+   * It sets the domain to the specified domain.
+   *
+   * @param domain the domain from which this domain takes all elements.
+   */
+  public abstract void setDomain(IntDomain domain);
+
+  /**
+   * It sets this domain to contain exactly all values between min and max.
+   *
+   * @param min the left bound of the interval (inclusive).
+   * @param max the right bound of the interval (inclusive).
+   */
+  public abstract void setDomain(int min, int max);
+
+  /**
+   * It returns true if given domain has only one element equal c.
+   *
+   * @param c the value to which the only element should be equal to.
+   * @return true if the domain contains only one element c.
+   */
+  public boolean singleton(int c) {
+    return min() == c && getSize() == 1;
+  }
+
+  @Override
+  public boolean singleton(Domain value) {
+
+    if (getSize() > 1) {
+      return false;
+    }
+
+    if (isEmpty()) {
+      return false;
+    }
+
+    if (value.getSize() != 1) {
+      throw new IllegalArgumentException("An argument should be a singleton domain");
+    }
+
+    if (ASSERTS_ENABLED && !(value instanceof IntDomain)) {
+      throw new IllegalStateException(
+          String.valueOf("Can not compare int domains with other types of domains."));
+    }
+
+    IntDomain domain = (IntDomain) value;
+
+    return eq(domain);
+  }
+
+  /**
+   * It computes union of the supplied domain with this domain.
+   *
+   * @param domain the domain for which the union is computed.
+   * @return the union of this domain with the supplied one.
+   */
+  public IntDomain union(IntDomain domain) {
+
+    if (this.isEmpty()) {
+      return domain.cloneLight();
+    }
+
+    IntDomain result = this.cloneLight();
+
+    if (domain.isEmpty()) {
+      return result;
+    }
+
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      while (enumer.hasMoreElements()) {
+        Interval next = enumer.nextElement();
+        result.unionAdapt(next.min(), next.max());
+      }
+      return result;
+    } else {
+      ValueEnumeration enumer = domain.valueEnumeration();
+      while (enumer.hasMoreElements()) {
+        int next = enumer.nextElement();
+        result.unionAdapt(next);
+      }
+      return result;
+    }
+  }
+
+  /**
+   * It computes union of this domain and the interval.
+   *
+   * @param min the left bound of the interval (inclusive).
+   * @param max the right bound of the interval (inclusive).
+   * @return the union of this domain and the interval.
+   */
+  public IntDomain union(int min, int max) {
+
+    IntDomain result = this.cloneLight();
+    result.unionAdapt(min, max);
+    return result;
+  }
+
+  /**
+   * It computes union of this domain and value.
+   *
+   * @param value it specifies the value which is being added.
+   * @return domain which is a union of this one and the value.
+   */
+  public IntDomain union(int value) {
+    return union(value, value);
+  }
+
+  /**
+   * It updates the domain according to the minimum value and stamp value. It informs the variable
+   * of a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param min the minimum value to which the domain is updated.
+   */
+  public void inMin(int storeLevel, Var v, int min) {
+
+    in(storeLevel, v, min, max());
+  }
+
+  /**
+   * It updates the domain according to the maximum value and stamp value. It informs the variable
+   * of a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param max the maximum value to which the domain is updated.
+   */
+  public void inMax(int storeLevel, Var v, int max) {
+
+    in(storeLevel, v, min(), max);
+  }
+
+  /**
+   * It updates the domain to have values only within the interval min..max. The type of update is
+   * decided by the value of stamp. It informs the variable of a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param min the minimum value to which the domain is updated.
+   * @param max the maximum value to which the domain is updated.
+   */
+  public abstract void in(int storeLevel, Var v, int min, int max);
+
+  /**
+   * It updates the domain to have values only within the domain. The type of update is decided by
+   * the value of stamp. It informs the variable of a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param domain the domain according to which the domain is updated.
+   */
+  public void in(int storeLevel, Var v, IntDomain domain) {
+
+    inShift(storeLevel, v, domain, 0);
+  }
+
+  @Override
+  public void in(int level, Var v, Domain domain) {
+    in(level, v, (IntDomain) domain);
+  }
+
+  /*
+   * It returns the number of constraints
+   *
+   * @return the number of constraints attached to this domain.
+   */
+
+  /**
+   * It reduces domain to a single value.
+   *
+   * @param level level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param value the value according to which the domain is updated.
+   */
+  public void inValue(int level, IntVar v, int value) {
+    in(level, v, value, value);
+  }
+
+  /**
+   * It updates the domain to not contain the value complement. It informs the variable of a change
+   * if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param complement value which is removed from the domain if it belonged to the domain.
+   */
+  public void inComplement(int storeLevel, Var v, int complement) {
+
+    inComplement(storeLevel, v, complement, complement);
+  }
+
+  /**
+   * It updates the domain so it does not contain the supplied interval. It informs the variable of
+   * a change if it occurred.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param min the left bound of the interval (inclusive).
+   * @param max the right bound of the interval (inclusive).
+   */
+  public abstract void inComplement(int storeLevel, Var v, int min, int max);
+
+  /**
+   * It updates the domain so it does not contain the values of the supplied domain, with one change
+   * of the variable instead of one per interval.
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param complement the values which are removed from the domain.
+   */
+  public void inComplement(int storeLevel, Var v, IntDomain complement) {
+    if (complement.isEmpty() || !isIntersecting(complement)) {
+      return;
+    }
+    in(storeLevel, v, subtract(complement));
+  }
+
+  /**
+   * It returns number of intervals required to represent this domain.
+   *
+   * @return the number of intervals in the domain.
+   */
+  public abstract int noIntervals();
+
+  /**
+   * It returns required interval.
+   *
+   * @param position the position of the interval.
+   * @return the interval, or null if the required interval does not exist.
+   */
+  public abstract Interval getInterval(int position);
+
+  /**
+   * It updates the domain to contain the elements as specifed by the domain, which is shifted. E.g.
+   * {1..4} + 3 = 4..7
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param domain the domain according to which the domain is updated.
+   * @param shift the shift which is used to shift the domain supplied as argument.
+   */
+  public abstract void inShift(int storeLevel, Var v, IntDomain domain, int shift);
+
+  /**
+   * It does {@link #inShift(int, Var, IntDomain, int)}. A domain without holes shifts to one
+   * interval, which needs neither a walk over the domain nor a new domain when nothing changes (x +
+   * y = z with a fixed x shifts such domains on every call).
+   *
+   * @param storeLevel level of the store at which the update occurs.
+   * @param v variable for which this domain is used.
+   * @param domain the domain according to which the domain is updated.
+   * @param shift the shift which is used to shift the domain supplied as argument.
+   */
+  public final void inShiftFast(int storeLevel, Var v, IntDomain domain, int shift) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID
+        ? ((IntervalDomain) domain).size == 1
+        : !domain.isEmpty() && domain.getSize() == (long) domain.max() - domain.min() + 1) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+    } else {
+      inShift(storeLevel, v, domain, shift);
+    }
+  }
+
+  /**
+   * It returns the left most element of the given interval.
+   *
+   * @param intervalNo the interval number.
+   * @return the left bound of the specified interval.
+   */
+  public int leftElement(int intervalNo) {
+    return getInterval(intervalNo).min();
+  }
+
+  /**
+   * It returns the right most element of the given interval.
+   *
+   * @param intervalNo the interval number.
+   * @return the right bound of the specified interval.
+   */
+  public int rightElement(int intervalNo) {
+    return getInterval(intervalNo).max();
+  }
+
+  /**
+   * It returns the values which have been removed at current store level.
+   *
+   * @param currentStoreLevel the current store level.
+   * @return emptyDomain if domain did not change at current level, or the set of values which have
+   *     been removed at current level.
+   */
+  public abstract IntDomain recentDomainPruning(int currentStoreLevel);
+
+  /**
+   * It returns domain at earlier level at which the change has occurred.
+   *
+   * @return previous domain
+   */
+  public abstract IntDomain getPreviousDomain();
+
+  /**
+   * It specifies if the other int domain is equal to this one.
+   *
+   * @param domain the domain which is compared to this domain.
+   * @return true if both domains contain the same elements, false otherwise.
+   */
+  public boolean eq(IntDomain domain) {
+
+    if (this.getSize() != domain.getSize()) {
+      return false;
+    }
+
+    // the same size.
+    if (!domain.isSparseRepresentation()) {
+      IntervalEnumeration enumer = domain.intervalEnumeration();
+      while (enumer.hasMoreElements()) {
+        Interval next = enumer.nextElement();
+        if (!contains(next.min(), next.max())) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      ValueEnumeration enumer = domain.valueEnumeration();
+      while (enumer.hasMoreElements()) {
+        int next = enumer.nextElement();
+        if (!contains(next)) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
+  /**
+   * Creates a copy of the modelConstraints array with the specified pruning event array replaced.
+   *
+   * @param pruningEvent the pruning event index
+   * @param newPruningEventConstraints the new constraint array for this pruning event
+   * @return a new modelConstraints array
+   */
+  private Constraint[][] copyModelConstraintsArray(
+      int pruningEvent, Constraint[] newPruningEventConstraints) {
+    Constraint[][] newModelConstraints = modelConstraints.clone();
+    newModelConstraints[pruningEvent] = newPruningEventConstraints;
+    return newModelConstraints;
+  }
+
+  /**
+   * Changes the count of the specified pruning event. The array is copied once per domain object,
+   * as earlier domains share it, and changed in place afterwards.
+   *
+   * @param pruningEvent the pruning event index
+   * @param delta the change to apply to the count (positive for add, negative for remove)
+   */
+  private void changeModelConstraintsToEvaluate(int pruningEvent, int delta) {
+    if (modelConstraintsToEvaluate != ownedModelConstraintsToEvaluate) {
+      ownedModelConstraintsToEvaluate = modelConstraintsToEvaluate.clone();
+      modelConstraintsToEvaluate = ownedModelConstraintsToEvaluate;
+    }
+    modelConstraintsToEvaluate[pruningEvent] += delta;
+  }
+
+  /**
+   * Adds a constraint to the specified pruning event array. An array this domain object allocated
+   * is not shared with an earlier domain, so a constraint is appended in place while there is room.
+   * A long owned array also has a hash table of the constraints appended to it, which answers the
+   * check for a constraint imposed already. Imposing n constraints on a variable takes amortized
+   * linear time instead of quadratic.
+   *
+   * @param constraint the constraint to add
+   * @param pruningEvent the pruning event index
+   */
+  private void addConstraintToPruningEvent(Constraint constraint, int pruningEvent) {
+    Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+    int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
+    boolean owned =
+        pruningEventConstraints != null
+            && ownedModelConstraints != null
+            && pruningEventConstraints == ownedModelConstraints[pruningEvent];
+    Constraint[] table = owned ? ownedModelConstraintTables[pruningEvent] : null;
+
+    // the table holds every constraint of the array, so a constraint missing from it is not imposed
+    if (table == null || tableContains(table, constraint)) {
+      for (int i = pruningConstraintsToEvaluate - 1; i >= 0; i--) {
+        if (pruningEventConstraints[i] == constraint) {
+          return;
+        }
+      }
+    }
+
+    if (owned && pruningConstraintsToEvaluate < pruningEventConstraints.length) {
+      pruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
+      if (table != null && tableAdd(table, constraint)) {
+        int tableSize = ++ownedModelConstraintTableSizes[pruningEvent];
+        // constraints removed and replaced by others fill the table, so it is then rebuilt
+        if (tableSize > table.length >> 1) {
+          setTable(pruningEvent, pruningEventConstraints, pruningConstraintsToEvaluate + 1);
+        }
+      }
+    } else {
+      Constraint[] newPruningEventConstraints =
+          new Constraint[pruningConstraintsToEvaluate + (pruningConstraintsToEvaluate >> 1) + 1];
+      if (pruningConstraintsToEvaluate > 0) {
+        System.arraycopy(
+            pruningEventConstraints,
+            0,
+            newPruningEventConstraints,
+            0,
+            pruningConstraintsToEvaluate);
+      }
+      newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
+
+      modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
+      if (ownedModelConstraints == null) {
+        ownedModelConstraints = new Constraint[modelConstraints.length][];
+        ownedModelConstraintTables = new Constraint[modelConstraints.length][];
+        ownedModelConstraintTableSizes = new int[modelConstraints.length];
+      }
+      ownedModelConstraints[pruningEvent] = newPruningEventConstraints;
+      if (newPruningEventConstraints.length < TABLE_THRESHOLD) {
+        ownedModelConstraintTables[pruningEvent] = null;
+      } else {
+        setTable(pruningEvent, newPruningEventConstraints, pruningConstraintsToEvaluate + 1);
+      }
+    }
+    changeModelConstraintsToEvaluate(pruningEvent, 1);
+  }
+
+  /**
+   * Builds the identity hash table of the first size constraints of an owned array. The table has
+   * at least twice as many slots as the array.
+   */
+  private void setTable(int pruningEvent, Constraint[] constraints, int size) {
+    Constraint[] table = new Constraint[Integer.highestOneBit(constraints.length) << 2];
+    for (int i = 0; i < size; i++) {
+      tableAdd(table, constraints[i]);
+    }
+    ownedModelConstraintTables[pruningEvent] = table;
+    ownedModelConstraintTableSizes[pruningEvent] = size;
+  }
+
+  private static boolean tableAdd(Constraint[] table, Constraint constraint) {
+    int mask = table.length - 1;
+    int i = System.identityHashCode(constraint) & mask;
+    while (table[i] != null) {
+      if (table[i] == constraint) {
+        return false;
+      }
+      i = (i + 1) & mask;
+    }
+    table[i] = constraint;
+    return true;
+  }
+
+  private static boolean tableContains(Constraint[] table, Constraint constraint) {
+    int mask = table.length - 1;
+    int i = System.identityHashCode(constraint) & mask;
+    while (table[i] != null) {
+      if (table[i] == constraint) {
+        return true;
+      }
+      i = (i + 1) & mask;
+    }
+    return false;
+  }
+
+  /**
+   * Returns the domain object a variable gets when its constraint lists change at a new store
+   * level; the lists are set by the caller. Usually a copy of the values, {@link #cloneLight()}; a
+   * domain that does not hold its own values, such as an {@link AffineDomain}, returns a new object
+   * of its own class.
+   *
+   * @return the new domain object.
+   */
+  protected IntDomain cloneForLevel() {
+    return cloneLight();
+  }
+
+  /**
+   * Clones this domain and installs the clone on the given variable, preserving constraints and
+   * metadata.
+   *
+   * @param storeLevel the current store level
+   * @param v the variable to install the cloned domain on
+   * @return the cloned domain
+   */
+  private IntDomain cloneAndInstall(int storeLevel, Var v) {
+    IntDomain result = this.cloneForLevel();
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((IntVar) v).domain = result;
+    return result;
+  }
+
+  /**
+   * Clones this domain for search constraint changes. Copies search constraints list and sets the
+   * cloned flag.
+   *
+   * @param storeLevel the current store level
+   * @param v the variable to install the cloned domain on
+   * @return the cloned domain
+   */
+  private IntDomain cloneAndInstallForSearch(int storeLevel, Var v) {
+    IntDomain result = this.cloneForLevel();
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints =
+        new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+    result.searchConstraintsCloned = true;
+    result.stamp = storeLevel;
+    result.previousDomain = this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((IntVar) v).domain = result;
+    return result;
+  }
+
+  @Override
+  public void putModelConstraint(int storeLevel, Var v, Constraint c, int pruningEvent) {
+
+    if (stamp < storeLevel) {
+      IntDomain result = cloneAndInstall(storeLevel, v);
+      result.putModelConstraint(storeLevel, v, c, pruningEvent);
+      return;
+    }
+
+    addConstraintToPruningEvent(c, pruningEvent);
+  }
+
+  /**
+   * Removes a constraint from the specified pruning event array.
+   *
+   * @param constraint the constraint to remove
+   * @param pruningEvent the pruning event index
+   * @return true if the constraint was found and removed, false otherwise
+   */
+  private boolean removeConstraintFromPruningEvent(Constraint constraint, int pruningEvent) {
+    Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
+
+    if (pruningEventConstraints != null) {
+      boolean isImposed = false;
+      int i;
+
+      for (i = modelConstraintsToEvaluate[pruningEvent] - 1; i >= 0; i--) {
+        if (pruningEventConstraints[i] == constraint) {
+          isImposed = true;
+          break;
+        }
+      }
+
+      if (isImposed) {
+        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
+          modelConstraints[pruningEvent][i] =
+              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
+          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
+        }
+
+        changeModelConstraintsToEvaluate(pruningEvent, -1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public void removeModelConstraint(int storeLevel, Var v, Constraint c) {
+
+    if (stamp < storeLevel) {
+      IntDomain result = cloneAndInstall(storeLevel, v);
+      result.removeModelConstraint(storeLevel, v, c);
+      return;
+    }
+
+    if (removeConstraintFromPruningEvent(c, GROUND)) {
+      return;
+    }
+    if (removeConstraintFromPruningEvent(c, BOUND)) {
+      return;
+    }
+    if (removeConstraintFromPruningEvent(c, ANY)) {
+      return;
+    }
+    if (removeConstraintFromPruningEvent(c, MIN_EVENT)) {
+      return;
+    }
+    removeConstraintFromPruningEvent(c, MAX_EVENT);
+  }
+
+  @Override
+  public void putSearchConstraint(int storeLevel, Var v, Constraint c) {
+
+    if (!searchConstraints.contains(c)) {
+
+      if (stamp < storeLevel) {
+        IntDomain result = cloneAndInstallForSearch(storeLevel, v);
+        result.putSearchConstraint(storeLevel, v, c);
+        return;
+      }
+
+      if (searchConstraints.size() == searchConstraintsToEvaluate) {
+        searchConstraints.add(c);
+      } else {
+        // Exchange the first satisfied constraint with just added
+        // constraint
+        // Order of satisfied constraints is not preserved
+
+        if (searchConstraintsCloned) {
+          Constraint firstSatisfied = searchConstraints.get(searchConstraintsToEvaluate);
+          searchConstraints.set(searchConstraintsToEvaluate, c);
+          searchConstraints.add(firstSatisfied);
+        } else {
+          searchConstraints =
+              new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
+          searchConstraintsCloned = true;
+          searchConstraints.add(c);
+        }
+      }
+      searchConstraintsToEvaluate++;
+    }
+  }
+
+  /**
+   * Removes a search constraint from this domain. If the domain's stamp is older than the store
+   * level, a clone is created first.
+   *
+   * @param storeLevel the current level of the store.
+   * @param v the variable associated with this domain.
+   * @param c the search constraint to remove.
+   */
+  public void removeSearchConstraint(int storeLevel, Var v, Constraint c) {
+
+    if (stamp < storeLevel) {
+      IntDomain result = cloneAndInstall(storeLevel, v);
+      result.removeSearchConstraint(storeLevel, v, c);
+      return;
+    }
+
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    int i = 0;
+
+    while (i < searchConstraintsToEvaluate) {
+      if (searchConstraints.get(i) == c) {
+
+        searchConstraints.set(i, searchConstraints.get(searchConstraintsToEvaluate - 1));
+        searchConstraints.set(searchConstraintsToEvaluate - 1, c);
+        searchConstraintsToEvaluate--;
+
+        break;
+      }
+      i++;
+    }
+  }
+
+  @Override
+  public void removeSearchConstraint(int storeLevel, Var v, int position, Constraint c) {
+
+    if (stamp < storeLevel) {
+      IntDomain result = cloneAndInstall(storeLevel, v);
+      result.removeSearchConstraint(storeLevel, v, position, c);
+      return;
+    }
+
+    if (ASSERTS_ENABLED && stamp != storeLevel) {
+      throw new IllegalStateException("Assertion failed");
+    }
+
+    if (ASSERTS_ENABLED && searchConstraints.get(position) != c) {
+      throw new IllegalStateException(
+          String.valueOf("Position of the removed constraint not specified properly"));
+    }
+
+    if (position < searchConstraintsToEvaluate) {
+
+      searchConstraints.set(position, searchConstraints.get(searchConstraintsToEvaluate - 1));
+      searchConstraints.set(searchConstraintsToEvaluate - 1, c);
+      searchConstraintsToEvaluate--;
+    }
+  }
+
+  /**
+   * Creates a deep copy of this domain including all intervals and metadata.
+   *
+   * @return a copy of this domain.
+   */
+  public abstract IntDomain copy();
+
+  /**
+   * Creates a lightweight copy of this domain containing only the domain values without constraint
+   * metadata.
+   *
+   * @return a lightweight clone of this domain.
+   */
+  public abstract IntDomain cloneLight();
+
+  /**
+   * Returns the lexical ordering between this domain and the given domain.
+   *
+   * @param domain the domain that should be lexically compared to this domain.
+   * @return -1 if the given domain is greater, 0 if equal, and 1 if this domain is greater.
+   */
+  public int lex(IntDomain domain) {
+
+    ValueEnumeration thisEnumer = this.valueEnumeration();
+    ValueEnumeration paramEnumer = domain.valueEnumeration();
+
+    int i;
+    int j;
+
+    while (thisEnumer.hasMoreElements()) {
+
+      i = thisEnumer.nextElement();
+
+      if (paramEnumer.hasMoreElements()) {
+
+        j = paramEnumer.nextElement();
+
+        if (i < j) {
+          return -1;
+        } else if (j < i) {
+          return 1;
+        }
+      } else {
+        return 1;
+      }
+    }
+
+    if (paramEnumer.hasMoreElements()) {
+      return -1;
+    }
+
+    return 0;
+  }
+
+  /**
+   * It computes an intersection with a given domain and stores it in this domain.
+   *
+   * @param intersect domain with which the intersection is being computed.
+   * @return type of event which has occurred due to the operation.
+   */
+  public abstract int intersectAdapt(IntDomain intersect);
+
+  /**
+   * It computes an intersection of this domain with an interval [min..max]. It adapts this domain
+   * to the result of the intersection.
+   *
+   * @param min the minimum value of the interval used in the intersection computation.
+   * @param max the maximum value of the interval used in the intersection computation.
+   * @return it returns information about the pruning event which has occurred due to this
+   *     operation.
+   */
+  public abstract int intersectAdapt(int min, int max);
+
+  /**
+   * It computes the size of the intersection between this domain and the domain supplied as a
+   * parameter.
+   *
+   * @param domain the domain with which the intersection is computed.
+   * @return the size of the intersection.
+   */
+  public int sizeOfIntersection(IntDomain domain) {
+    return intersect(domain).getSize();
+  }
+
+  /**
+   * It access the element at the specified position.
+   *
+   * @param index the position of the element, indexing starts from 0.
+   * @return the value at a given position in the domain.
+   */
+  public abstract int getElementAt(int index);
+
+  /**
+   * It constructs and int array containing all elements in the domain. The array will have size
+   * equal to the number of elements in the domain.
+   *
+   * @return the int array containing all elements in a domain.
+   */
+  public int[] toIntArray() {
+
+    int[] result = new int[getSize()];
+
+    ValueEnumeration enumer = this.valueEnumeration();
+    int i = 0;
+
+    while (enumer.hasMoreElements()) {
+      result[i++] = enumer.nextElement();
+    }
+
+    return result;
+  }
+
+  /**
+   * It returns the value to which this domain is grounded. It assumes that a domain is a singleton
+   * domain.
+   *
+   * @return the only value remaining in the domain.
+   */
+  public int value() {
+
+    if (ASSERTS_ENABLED && !singleton()) {
+      throw new IllegalStateException(
+          String.valueOf("function value() called when domain is not a singleton domain."));
+    }
+
+    return min();
+  }
+
+  /**
+   * It returns a random value from the domain.
+   *
+   * @return random value.
+   */
+  public int getRandomValue() {
+    return getElementAt(Store.getRandom().nextInt(getSize()));
+  }
+}

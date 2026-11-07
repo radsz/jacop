@@ -1,0 +1,392 @@
+/*
+ * Arithmetic.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.constraints.netflow;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.netflow.simplex.Node;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+
+/**
+ * Decomposed constraint for arithmetic expressions in network flow problems.
+ *
+ * @author Robin Steiger and Radoslaw Szymanek
+ * @version 5.0
+ */
+public class Arithmetic extends DecomposedConstraint<Constraint> {
+
+  public static final IntVar NULL_VAR =
+      new IntVar() {
+        @Override
+        public String toString() {
+          return "NULL-var";
+        }
+      };
+
+  protected final List<int[]> eqns = new ArrayList<>();
+  protected final List<IntVar> vars = new ArrayList<>(List.of(NULL_VAR));
+  protected final Map<IntVar, Integer> map = initMap();
+
+  List<Constraint> decomposition;
+
+  private static Map<IntVar, Integer> initMap() {
+    Map<IntVar, Integer> m = Var.createEmptyPositioning();
+    m.put(NULL_VAR, 0);
+    return m;
+  }
+
+  private static int weight(int[] array) {
+    int weight = 0;
+    for (int i : array) {
+      weight += Math.abs(i);
+    }
+    return weight;
+  }
+
+  private static int[] transform(int[] sum, int[] eqn) {
+    int[] result = Arrays.copyOf(sum, sum.length);
+    for (int i = 0; i < eqn.length; i++) {
+      result[i] -= 2 * eqn[i];
+    }
+    return result;
+  }
+
+  private static void flip(int[] eqn) {
+    for (int i = 0; i < eqn.length; i++) {
+      eqn[i] = -eqn[i];
+    }
+  }
+
+  private int lookup(IntVar v) {
+    Integer id = map.get(v);
+    if (id == null) {
+      map.put(v, id = vars.size());
+      vars.add(v);
+    }
+    return id;
+  }
+
+  /**
+   * Adds a linear equation with zero constant to the arithmetic system.
+   *
+   * @param vars the variables in the equation.
+   * @param coeffs the coefficients corresponding to each variable.
+   */
+  public void addEquation(IntVar[] vars, int[] coeffs) {
+    addEquation(vars, coeffs, 0);
+  }
+
+  /**
+   * Adds a linear equation to the arithmetic system.
+   *
+   * @param vars the variables in the equation.
+   * @param coeffs the coefficients corresponding to each variable.
+   * @param constant the constant term of the equation.
+   */
+  public void addEquation(IntVar[] vars, int[] coeffs, int constant) {
+    if (vars.length == 0 || vars.length != coeffs.length) {
+      throw new IllegalArgumentException();
+    }
+
+    int max = 1;
+    for (IntVar v : vars) {
+      int id = lookup(v);
+      if (max <= id) {
+        max = id + 1;
+      }
+    }
+
+    int[] eqn = new int[max];
+    for (int i = 0; i < vars.length; i++) {
+      int id = lookup(vars[i]);
+      eqn[id] = coeffs[i];
+    }
+    eqn[0] = constant;
+    eqns.add(eqn);
+  }
+
+  /**
+   * Adds the equation x + y = z to the arithmetic system.
+   *
+   * @param x the first addend variable.
+   * @param y the second addend variable.
+   * @param z the sum variable.
+   */
+  public void addXplusYeqZ(IntVar x, IntVar y, IntVar z) {
+    IntVar[] vars = {x, y, z};
+    int[] coeffs = {1, 1, -1};
+    addEquation(vars, coeffs);
+  }
+
+  /**
+   * Adds the equation x - y = z to the arithmetic system.
+   *
+   * @param x the minuend variable.
+   * @param y the subtrahend variable.
+   * @param z the difference variable.
+   */
+  public void addXsubYeqZ(IntVar x, IntVar y, IntVar z) {
+    addXplusYeqZ(z, y, x);
+  }
+
+  /**
+   * Adds a summation equation: sum(vars) = sum.
+   *
+   * @param vars the variables to sum.
+   * @param sum the variable representing the total sum.
+   */
+  public void addSum(IntVar[] vars, IntVar sum) {
+    int n = vars.length;
+    IntVar[] _vars = Arrays.copyOf(vars, n + 1);
+    int[] coeffs = new int[n + 1];
+
+    Arrays.fill(coeffs, 1);
+    _vars[n] = sum;
+    coeffs[n] = -1;
+
+    addEquation(_vars, coeffs);
+  }
+
+  /**
+   * Builds a LinearInt constraint for one equation (nonzero coefficients only).
+   *
+   * @param eqn equation coefficients
+   * @return constraint for this equation
+   */
+  private Constraint equationToLinearInt(int[] eqn) {
+    List<IntVar> variables = new ArrayList<>();
+    List<Integer> weights = new ArrayList<>();
+
+    for (int i = 0; i < eqn.length; i++) {
+      if (eqn[i] != 0) {
+        variables.add(vars.get(i));
+        weights.add(eqn[i]);
+      }
+    }
+
+    return new LinearInt(variables, weights, "==", 0);
+  }
+
+  /**
+   * Decomposes equations into primitive LinearInt constraints without network flow optimization.
+   *
+   * @param store the constraint store.
+   * @return a list of LinearInt constraints representing the equations.
+   */
+  public List<Constraint> primitiveDecomposition(Store store) {
+
+    if (decomposition == null) {
+
+      decomposition = new ArrayList<>();
+
+      for (int[] eqn : eqns) {
+        decomposition.add(equationToLinearInt(eqn));
+      }
+
+      return decomposition;
+    } else {
+
+      List<Constraint> result = new ArrayList<>();
+
+      for (int[] eqn : eqns) {
+        result.add(equationToLinearInt(eqn));
+      }
+
+      return result;
+    }
+  }
+
+  /**
+   * Performs one optimization pass by flipping equations to reduce the total weight of the sum.
+   *
+   * @param sum the current sum array to optimize in place.
+   * @return true if any equation was flipped, false if no improvement was found.
+   */
+  protected boolean optimize(final int[] sum) {
+    boolean change = false;
+    int[] sum1 = sum;
+    int w1 = weight(sum1);
+
+    for (int[] eqn : eqns) {
+      int[] sum2 = transform(sum1, eqn);
+      int w2 = weight(sum2);
+
+      if (w1 > w2) {
+        w1 = w2;
+        sum1 = sum2;
+        flip(eqn);
+        change = true;
+      }
+    }
+    System.arraycopy(sum1, 0, sum, 0, sum.length);
+    return change;
+  }
+
+  @Override
+  public List<Constraint> decompose(Store store) {
+
+    if (decomposition == null || decomposition.size() > 1) {
+
+      decomposition = new ArrayList<>();
+      int[] sum = new int[vars.size()];
+      for (int[] eqn : eqns) {
+        for (int i = 0; i < eqn.length; i++) {
+          sum[i] += eqn[i];
+        }
+      }
+
+      for (int it = 0; optimize(sum); it++) {
+        if (it > 2 * eqns.size()) {
+          throw new AssertionError(it + " iterations");
+        }
+      }
+
+      decomposition.add(new ArithmeticBuilder(store, sum).build());
+    }
+
+    return decomposition;
+  }
+
+  @Override
+  public void imposeDecomposition(Store store) {
+
+    if (decomposition == null) {
+      decomposition = decompose(store);
+    }
+
+    for (Constraint c : decomposition) {
+      store.impose(c);
+    }
+  }
+
+  private class ArithmeticBuilder extends NetworkBuilder {
+
+    private ArithmeticBuilder(Store store, int[] sum) {
+
+      super(new IntVar(store, "Zero-cost", 0, 0));
+
+      int[][] eqns = copyEquations();
+      Node root = addNode("source/sink", -sum[0]);
+      flip(sum);
+      Node[] nodes = createEquationNodes(eqns);
+
+      for (int i = 0; i < nodes.length; i++) {
+        addArcsForEquation(eqns, sum, root, nodes, i);
+      }
+
+      assertEquationsBalanced(eqns, sum);
+    }
+
+    private int[][] copyEquations() {
+      int size = Arithmetic.this.eqns.size();
+      int[][] eqns = new int[size][];
+      for (int i = 0; i < size; i++) {
+        int[] eqn = Arithmetic.this.eqns.get(i);
+        eqns[i] = Arrays.copyOf(eqn, eqn.length);
+      }
+      return eqns;
+    }
+
+    private Node[] createEquationNodes(int[][] eqns) {
+      Node[] nodes = new Node[eqns.length];
+      for (int i = 0; i < nodes.length; i++) {
+        nodes[i] = addNode("Equation " + (i + 1), -eqns[i][0]);
+      }
+      return nodes;
+    }
+
+    private int findMatchingEquation(int[][] eqns, int eqnIdx, int varIdx, int coeff) {
+      for (int j = 1; j < eqns.length; j++) {
+        int k = (eqnIdx + j) % eqns.length;
+        int[] eqn2 = eqns[k];
+        if (varIdx >= eqn2.length) {
+          continue;
+        }
+        if (coeff > 0 && coeff <= -eqn2[varIdx]) {
+          return k;
+        }
+        if (coeff < 0 && -coeff <= eqn2[varIdx]) {
+          return k;
+        }
+      }
+      return -1;
+    }
+
+    private void addArcsForEquation(int[][] eqns, int[] sum, Node root, Node[] nodes, int i) {
+      int[] eqn = eqns[i];
+      for (int varIdx = 1; varIdx < eqn.length; varIdx++) {
+        if (eqn[varIdx] == 0) {
+          continue;
+        }
+        int coeff = eqn[varIdx];
+        int found = findMatchingEquation(eqns, i, varIdx, coeff);
+        int[] eqn2 = found == -1 ? sum : eqns[found];
+        Node n1 = nodes[i];
+        Node n2 = found == -1 ? root : nodes[found];
+
+        if (coeff > 0) {
+          for (int cnt = coeff; cnt-- > 0; ) {
+            addArc(n2, n1, 0, vars.get(varIdx));
+          }
+        } else {
+          for (int cnt = -coeff; cnt-- > 0; ) {
+            addArc(n1, n2, 0, vars.get(varIdx));
+          }
+        }
+
+        eqn2[varIdx] += coeff;
+        eqn[varIdx] = 0;
+      }
+    }
+
+    private void assertEquationsBalanced(int[][] eqns, int[] sum) {
+      for (int[] eqn : eqns) {
+        for (int i = 1; i < eqn.length; i++) {
+          if (eqn[i] != 0) {
+            throw new AssertionError();
+          }
+        }
+      }
+      for (int i = 1; i < sum.length; i++) {
+        if (sum[i] != 0) {
+          throw new AssertionError(Arrays.toString(sum));
+        }
+      }
+    }
+  }
+}

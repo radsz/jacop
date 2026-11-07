@@ -1,0 +1,247 @@
+/*
+ * Cryptogram.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.XneqC;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * Cryptogram. It solves any cryptogram puzzle of the form like SEND+MORE=MONEY.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class Cryptogram extends ExampleFd {
+
+  /** It specifies how many lines of expressions can be inputed in one execution. */
+  public final int maxInputLines = 100;
+
+  /** It specifies the base of the numerical system to be used in the calculations. */
+  public final int base = 10;
+
+  public final String[] lines = new String[maxInputLines];
+
+  /** It specifies the file which contains the puzzle to be solved. */
+  public String filename;
+
+  public int noLines;
+
+  private static int[] createWeights(int length, int base) {
+
+    int[] weights = new int[length];
+
+    weights[length - 1] = 1;
+
+    for (int i = length - 2; i >= 0; i--) {
+      weights[i] = weights[i + 1] * base;
+    }
+
+    return weights;
+  }
+
+  /**
+   * It executes the program to solve any cryptographic puzzle.
+   *
+   * @param args no arguments read.
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    Cryptogram example = new Cryptogram();
+
+    example.model();
+
+    if (example.searchMostConstrainedStatic()) {
+      log.info("\nSolution(s) found");
+    }
+  }
+
+  private void readLinesFromFile() {
+    try (BufferedReader in =
+        new BufferedReader(
+            new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
+      String str;
+      while ((str = in.readLine()) != null) {
+        if (str.trim().isEmpty()) {
+          continue;
+        }
+        int commentPosition = str.indexOf("//");
+        if (commentPosition == 0) {
+          continue;
+        }
+        if (commentPosition >= 0) {
+          str = str.substring(0, commentPosition);
+        }
+        lines[noLines++] = str;
+      }
+    } catch (FileNotFoundException _) {
+      System.err.println("File " + filename + " could not be found");
+    } catch (IOException _) {
+      System.err.println("Something is wrong with the file" + filename);
+    }
+  }
+
+  private void useDefaultLines() {
+    lines[0] = "HERE+SHE=COMES";
+    noLines = 1;
+    log.info("No input file was supplied, using lines : ");
+    for (int i = 0; i < noLines; i++) {
+      log.info(lines[0]);
+    }
+  }
+
+  private List<List<String>> parseWords() {
+    List<List<String>> words = new ArrayList<>();
+    for (int i = 0; i < noLines; i++) {
+      words.add(new ArrayList<>());
+    }
+    Pattern pat = Pattern.compile("[=+]");
+    for (int i = 0; i < noLines; i++) {
+      for (String s : pat.split(lines[i])) {
+        words.get(i).add(s);
+      }
+    }
+    return words;
+  }
+
+  private void createLetterVariables(List<List<String>> words, Map<String, IntVar> letters) {
+    vars = new ArrayList<>();
+    for (int i = 0; i < noLines; i++) {
+      for (int j = words.get(i).size() - 1; j >= 0; j--) {
+        String word = words.get(i).get(j);
+        for (int z = word.length() - 1; z >= 0; z--) {
+          String ch = String.valueOf(word.charAt(z));
+          IntVar currentLetter = letters.get(ch);
+          if (currentLetter == null) {
+            currentLetter = new IntVar(store, ch, 0, base - 1);
+            letters.put(ch, currentLetter);
+            vars.add(currentLetter);
+          }
+        }
+      }
+    }
+  }
+
+  @Override
+  public void model() {
+
+    loadLines();
+    store = new Store();
+    List<List<String>> words = parseWords();
+    Map<String, IntVar> letters = new HashMap<>();
+    createLetterVariables(words, letters);
+
+    warnIfTooManyLetters(letters);
+
+    store.impose(new Alldistinct(vars.toArray(new IntVar[0])));
+
+    imposeLineConstraints(words, letters);
+  }
+
+  private void loadLines() {
+    if (filename != null) {
+      readLinesFromFile();
+    } else {
+      useDefaultLines();
+    }
+  }
+
+  private void warnIfTooManyLetters(Map<String, IntVar> letters) {
+    if (letters.size() > base) {
+      log.info("Expressions contain more than letters than base of the number system used ");
+      log.info("Base " + base);
+      log.info("Letters " + letters);
+      log.info("There can not be any solution");
+    }
+  }
+
+  private void imposeLineConstraints(List<List<String>> words, Map<String, IntVar> letters) {
+    for (int currentLine = 0; currentLine < noLines; currentLine++) {
+      imposeConstraintsForLine(words.get(currentLine), letters);
+    }
+  }
+
+  private void imposeConstraintsForLine(List<String> lineWords, Map<String, IntVar> letters) {
+    int noWords = lineWords.size();
+    IntVar[] fdv4words = new IntVar[noWords];
+    IntVar[] terms = new IntVar[noWords - 1];
+
+    for (int j = 0; j < noWords; j++) {
+      String currentWord = lineWords.get(j);
+      fdv4words[j] = new IntVar(store, currentWord, 0, IntDomain.MAX_INT);
+
+      if (j < noWords - 1) {
+        terms[j] = fdv4words[j];
+      }
+
+      IntVar[] lettersWithinCurrentWord = getLettersForWord(currentWord, letters);
+
+      store.impose(
+          new LinearInt(
+              lettersWithinCurrentWord,
+              createWeights(currentWord.length(), base),
+              "==",
+              fdv4words[j]));
+
+      store.impose(new XneqC(lettersWithinCurrentWord[0], 0));
+    }
+
+    store.impose(new SumInt(terms, "==", fdv4words[noWords - 1]));
+  }
+
+  private IntVar[] getLettersForWord(String word, Map<String, IntVar> letters) {
+    IntVar[] lettersWithinCurrentWord = new IntVar[word.length()];
+    for (int i = 0; i < word.length(); i++) {
+      char[] currentChar = {word.charAt(i)};
+      lettersWithinCurrentWord[i] = letters.get(new String(currentChar));
+    }
+    return lettersWithinCurrentWord;
+  }
+}

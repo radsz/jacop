@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_or", "array_int_element", "bool2int", "bool_clause", "bool_not", "bool_xor", "int_eq_imp", "int_eq_reif", "int_lin_eq", "int_ne", "int_ne_reif", "jacop_circuit", "jacop_table_int", "set_in", "set_in_imp", "set_in_reif"],
+  "constraintFamilies": ["boolean", "circuit", "comparison", "element", "linear", "set", "table"],
+  "domains": []
+}

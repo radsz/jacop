@@ -1,0 +1,49 @@
+randtab rt2_d40_t500 n=30 d=40 m=120 a=2 t=500 seed=1
+randtab rt2_d40_t700 n=30 d=40 m=120 a=2 t=700 seed=2
+randtab rt2_d30_unsat n=30 d=30 m=150 a=2 t=300 planted=0 seed=3
+randtab rt3_s2 n=50 d=15 m=90 a=3 t=1000 seed=2
+randtab rt3_s3 n=50 d=15 m=90 a=3 t=1000 seed=3
+randtab rt3_s4 n=50 d=15 m=90 a=3 t=1000 seed=4
+randtab rt3_unsat n=40 d=12 m=80 a=3 t=500 planted=0 seed=5
+randtab rt4_s1 n=35 d=10 m=60 a=4 t=1500 seed=1
+randtab rt4_s2 n=35 d=10 m=60 a=4 t=2500 seed=2
+randtab rt5_s1 n=30 d=8 m=40 a=5 t=2000 seed=1
+randtab rt5_s4 n=30 d=8 m=40 a=5 t=2000 seed=4
+randtab rt8_s1 n=25 d=5 m=20 a=8 t=3000 seed=1
+randtab rt8_s2 n=25 d=5 m=20 a=8 t=3000 seed=2
+randtab rt10_s1 n=30 d=4 m=20 a=10 t=3000 seed=1
+randtab rt3_all n=10 d=5 m=10 a=3 t=40 seed=7
+randtab rt5_all n=12 d=4 m=8 a=5 t=150 seed=8
+randneg rn2_s1 n=30 d=20 m=150 a=2 t=150 seed=1
+randneg rn3_s1 n=30 d=10 m=120 a=3 t=350 seed=1
+randneg rn3_s2 n=30 d=10 m=130 a=3 t=380 seed=2
+randneg rn4_s1 n=30 d=8 m=30 a=4 t=300 seed=1
+randneg rn3_all n=10 d=4 m=14 a=3 t=24 seed=3
+dubois dubois_14 n=14 seed=1
+dubois dubois_16 n=16 seed=2
+dubois dubois_18 n=18 seed=1
+crossword cw_7x7 h=7 w=7 black=6 words=3000 seed=1
+crossword cw_8x8 h=8 w=8 black=8 words=1500 seed=2
+crossword cw_9x9 h=9 w=9 black=10 words=800 seed=1
+crossword cw_11x11 h=11 w=11 black=16 words=1500 seed=3
+crossword cw_13x13 h=13 w=13 black=24 words=1200 seed=4
+crossword cw_15x15 h=15 w=15 black=36 words=1000 seed=5
+kakuro kk_10 h=10 w=10 p=0.3 maxrun=6 seed=1
+kakuro kk_12 h=12 w=12 p=0.3 maxrun=5 seed=2
+kakuro kk_14 h=14 w=14 p=0.3 maxrun=6 seed=1
+kakuro kk_16 h=16 w=16 p=0.3 maxrun=7 seed=3
+tsp tsp_10 n=10 seed=1
+tsp tsp_12 n=12 seed=1
+tsp tsp_13 n=13 seed=2
+tsp tsp_14 n=14 seed=1
+shorttab st_a6 n=20 d=6 m=10 a=6 t=30 star=0.25 seed=1
+shorttab st_a8 n=25 d=5 m=15 a=8 t=8 star=0.3 seed=2
+shorttab st_a10 n=30 d=4 m=12 a=10 t=5 star=0.3 seed=3
+functab ft_10 n=20 d=10 m=15 seed=1
+functab ft_12 n=25 d=12 m=25 seed=2
+functab ft_15 n=30 d=15 m=30 seed=3
+booltab bt_8 n=30 m=20 a=8 t=40 seed=1
+booltab bt_10 n=40 m=40 a=10 t=60 seed=2
+booltab bt_12 n=50 m=60 a=12 t=100 seed=3
+mdd mdd_a8 n=20 d=4 m=6 a=8 width=5 keep=0.85 seed=1
+mdd mdd_a10 n=24 d=4 m=6 a=10 width=4 keep=0.9 seed=2

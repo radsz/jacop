@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "int_lin_eq", "int_lin_le", "jacop_alldiff", "jacop_partition_set", "set_in_reif"],
+  "constraintFamilies": ["alldifferent", "boolean", "linear", "set"],
+  "domains": []
+}

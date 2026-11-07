@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_and", "bool_clause", "int_eq_imp", "int_lin_eq", "int_mod", "jacop_alldiff", "jacop_increasing"],
+  "constraintFamilies": ["alldifferent", "arithmetic", "boolean", "comparison", "linear", "ordering"],
+  "domains": []
+}

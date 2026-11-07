@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_int_element", "int_eq_reif", "int_lin_eq_reif", "int_lin_ne", "int_times"],
+  "constraintFamilies": ["arithmetic", "comparison", "element", "linear"],
+  "domains": []
+}

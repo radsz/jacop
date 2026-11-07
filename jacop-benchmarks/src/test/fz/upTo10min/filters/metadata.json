@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "int_lin_le", "jacop_diff2_strict", "jacop_maximum"],
+  "constraintFamilies": ["diffn", "linear", "minmax"],
+  "domains": []
+}

@@ -1,0 +1,6 @@
+objective = 164;
+start = array1d(1..32, [0, 14, 61, 107, 0, 33, 53, 86, 14, 79, 107, 129, 87, 125, 139, 156, 37, 61, 122, 154, 26, 42, 118, 147, 0, 18, 45, 136, 82, 109, 141, 156]);
+dur = array1d(1..32, [14, 19, 26, 18, 26, 20, 26, 21, 23, 28, 22, 25, 31, 11, 17, 7, 24, 25, 27, 6, 16, 18, 21, 17, 18, 27, 37, 5, 27, 13, 6, 6]);
+b = array1d(1..50, [true, true, false, true, true, true, true, true, true, false, false, true, true, false, true, false, true, true, false, false, true, true, false, true, true, false, false, true, true, false, true, false, true, true, true, false, true, true, false, true, false, true, true, false, true, false, true, true, false, true]);
+----------
+==========

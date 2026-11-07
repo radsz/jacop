@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_alldiff", "jacop_table_int"],
+  "constraintFamilies": ["alldifferent", "table"],
+  "domains": []
+}

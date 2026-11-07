@@ -1,0 +1,132 @@
+/*
+ * TinyTsp.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.jacop.examples.floats;
+
+import java.util.Arrays;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Circuit;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.floats.constraints.ElementFloat;
+import org.jacop.floats.constraints.LinearFloat;
+import org.jacop.floats.core.FloatDomain;
+import org.jacop.floats.core.FloatVar;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SmallestDomain;
+
+/** Example for tiny Tsp using float constraints. */
+@Slf4j
+public class TinyTsp {
+
+  final double maxFloat = 1e+150;
+
+  /**
+   * It executes the program.
+   *
+   * @param args no arguments
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    TinyTsp example = new TinyTsp();
+
+    example.tinyTsp();
+  }
+
+  void tinyTsp() {
+
+    long t1;
+    t1 = System.currentTimeMillis();
+
+    log.info("========= tinyTsp =========");
+
+    Store store = new Store();
+
+    FloatDomain.setPrecision(1e-6);
+    FloatDomain.intervalPrint(false);
+
+    int n = 4;
+    double[][] d = {
+      {0.0, 2.23606797749979, 2.23606797749979, 3.605551275463989},
+      {2.23606797749979, 0.0, 1.4142135623730951, 1.4142135623730951},
+      {2.23606797749979, 1.4142135623730951, 0.0, 2.0},
+      {3.605551275463989, 1.4142135623730951, 2.0, 0.0}
+    };
+
+    IntVar[] visit = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      visit[i] = new IntVar(store, "visit[" + i + "]", 1, n);
+    }
+
+    store.impose(new Circuit(visit));
+
+    FloatVar[] dist = new FloatVar[n];
+    for (int i = 0; i < n; i++) {
+      dist[i] = new FloatVar(store, "dist[" + i + "]", 0.0, 10.0);
+      store.impose(new ElementFloat(visit[i], d[i], dist[i]));
+    }
+
+    FloatVar route = new FloatVar(store, "route", 0.0, maxFloat);
+    FloatVar[] var = new FloatVar[n + 1];
+    System.arraycopy(dist, 0, var, 0, n);
+    var[n] = route;
+
+    store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
+
+    log.info(
+        "\bVar store size: "
+            + store.size()
+            + "\nNumber of constraints: "
+            + store.numberConstraints());
+
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
+    SelectChoicePoint<IntVar> s =
+        new SimpleSelect<>(visit, new SmallestDomain<>(), new IndomainMin<>());
+    label.setAssignSolution(true);
+
+    label.labeling(store, s, route);
+
+    log.info(route.toString());
+    log.info(Arrays.asList(dist).toString());
+    log.info(Arrays.asList(visit).toString());
+
+    log.info("\nPrecision = " + FloatDomain.precision());
+
+    long t2 = System.currentTimeMillis();
+    long t = t2 - t1;
+
+    log.info("\n\t*** Execution time = " + t + " ms");
+  }
+}

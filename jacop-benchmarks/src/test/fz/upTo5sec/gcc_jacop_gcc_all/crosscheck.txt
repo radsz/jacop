@@ -1,0 +1,4 @@
+source: written for the global cardinality review (JaCoP's GCC predicate)
+mode: all (satisfaction)
+verified: JaCoP finds 128 distinct solutions; with GCC decomposed into a Count per value, gecode: 128 solutions, same set as JaCoP; chuffed: 128 solutions, same set as JaCoP
+feasibility: 20 of 20 JaCoP solution(s) accepted by gecode (decomposed GCC) as data

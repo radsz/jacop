@@ -1,0 +1,515 @@
+/*
+ * RestartSearch.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.search.restart;
+
+import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Constraint;
+import org.jacop.constraints.XltC;
+import org.jacop.core.FailException;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.search.ConsistencyListener;
+import org.jacop.search.CostVariableHandler;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.PrioritySearch;
+import org.jacop.search.Search;
+import org.jacop.search.SearchHandlerRegistry;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SolutionListener;
+
+/**
+ * Implements restart search. Only cost as IntVar is possible.
+ *
+ * @param <T> type of variables used in this search.
+ * @author Krzysztof Kuchcinski and Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class RestartSearch<T extends Var> {
+
+  final Store store;
+  final DepthFirstSearch<T> search;
+  final SelectChoicePoint<T> select;
+  final Calculator calculator;
+  final Var cost;
+  // relax and reconstruct
+  SolutionListener<T> lastSolutionListener;
+  CustomReport reportSolution;
+  Search<T> lastNotNullSearch;
+  int intCostValue = Integer.MAX_VALUE;
+  double floatCostValue = Double.MAX_VALUE;
+  // the cost bound imposed last, so that it is imposed only when it improves
+  int boundedIntCost = Integer.MAX_VALUE;
+  double boundedFloatCost = Double.MAX_VALUE;
+  int numberRestarts;
+  boolean atLeastOneSolution;
+  boolean timeOutCheck;
+  long timeOut;
+  IntVar[] rarVars;
+  int probability;
+  int[] values;
+  // the number of variables relax and reconstruct fixed in the current run
+  int fixedInRun;
+  int restartsLimit; // no limit
+  boolean restartsLimitReached;
+  // whether the search stopped because there is nothing more to search
+  boolean complete;
+  // code run at the root of every run (MiniZinc on_restart)
+  RestartHook hook;
+  // outcome of the last run, given to the hook
+  int status = RestartHook.START;
+  // solutions found in the current run
+  int solutionsInRun;
+
+  /**
+   * Constructs a restart search with the given parameters.
+   *
+   * @param store the constraint store.
+   * @param s the depth first search to use.
+   * @param sel the choice point selection heuristic.
+   * @param calculator the calculator for computing restart limits.
+   * @param cost the cost variable for optimization, or null for satisfaction search.
+   */
+  @SuppressWarnings("unchecked")
+  public RestartSearch(
+      Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator, T cost) {
+    this.search = s;
+    this.calculator = calculator;
+    this.cost = cost;
+    this.select = sel;
+    this.store = store;
+
+    DepthFirstSearch<T> ns = search;
+    lastNotNullSearch = ns;
+
+    do {
+      if (ns instanceof PrioritySearch<T> prioritySearch) {
+        prioritySearch.addRestartCalculator(prioritySearch, calculator);
+      }
+
+      // add calculator & do not assign solutions
+      ConsistencyListener cs = ns.getConsistencyListener();
+      ns.setConsistencyListener(calculator);
+      ns.consistencyListener.setChildrenListeners(cs);
+      ns.setAssignSolution(false);
+      ns.setPrintInfo(false);
+      lastNotNullSearch = ns;
+
+      // find next search
+      if (ns.childSearches == null) {
+        ns = null;
+      } else {
+        ns = (DepthFirstSearch<T>) ns.childSearches[0];
+      }
+    } while (ns != null);
+
+    if (cost != null) {
+      lastSolutionListener = lastNotNullSearch.getSolutionListener();
+      lastSolutionListener.setChildrenListeners(new CostListener<>());
+    }
+  }
+
+  /**
+   * Constructs a restart search without a cost variable (satisfaction search).
+   *
+   * @param store the constraint store.
+   * @param s the depth first search to use.
+   * @param sel the choice point selection heuristic.
+   * @param calculator the calculator for computing restart limits.
+   */
+  public RestartSearch(
+      Store store, DepthFirstSearch<T> s, SelectChoicePoint<T> sel, Calculator calculator) {
+    this(store, s, sel, calculator, null);
+  }
+
+  /**
+   * Performs the restart search, iteratively restarting until a solution is found or limits are
+   * reached.
+   *
+   * @return true if a solution was found, false otherwise.
+   */
+  public boolean labeling() {
+
+    store.setLevel(store.level + 1);
+    boolean restart = true;
+    while (restart) {
+
+      if (hook != null && hook.completeMarked()) {
+        complete = true;
+        break;
+      }
+
+      boolean result = runOneRestartIteration();
+
+      cleanupAfterIterationIfRar();
+
+      atLeastOneSolution |= result;
+
+      Optional<Boolean> exit = checkRestartExitConditions();
+      if (exit.isPresent()) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        return exit.get();
+      }
+
+      restart = computeNextResult(result);
+      complete = !restart;
+      if (restart && restartsLimit > 0 && numberRestarts >= restartsLimit) {
+        // the search is incomplete only when it would restart once more
+        restartsLimitReached = true;
+        break;
+      }
+      calculator.newLimit();
+
+      if (restart) {
+        numberRestarts++;
+      }
+    }
+
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    return atLeastOneSolution;
+  }
+
+  private void cleanupAfterIterationIfRar() {
+    if (rarVars != null || hook != null) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+  }
+
+  private boolean runOneRestartIteration() {
+    fixedInRun = 0;
+    solutionsInRun = 0;
+    if (rarVars != null || hook != null) {
+      store.setLevel(store.level + 1);
+      if (rarVars != null && values != null) {
+        fixedInRun = assignRelaxedVariables();
+      }
+      if (hook != null && !runHook()) {
+        status = nextStatus(false);
+        return false;
+      }
+    }
+
+    boolean result;
+    if (cost == null) {
+      result = search.labeling(store, select);
+    } else {
+      result = search.labeling(store, select, cost);
+    }
+    if (hook != null) {
+      status = nextStatus(solutionsInRun > 0 || cost == null && result);
+    }
+    return result;
+  }
+
+  /**
+   * The status of the run that just ended, as the hook sees it in the next run. Until the first
+   * solution it stays START, as in Chuffed, so the neighbourhoods of a model, which use the last
+   * solution, apply only once there is one.
+   *
+   * @param solutionFound whether the run found a solution.
+   * @return the status for the next run.
+   */
+  private int nextStatus(boolean solutionFound) {
+    if (solutionFound) {
+      return RestartHook.SAT;
+    }
+    if (!atLeastOneSolution) {
+      return RestartHook.START;
+    }
+    return calculator.pointsExhausted() ? RestartHook.UNKNOWN : RestartHook.UNSAT;
+  }
+
+  /**
+   * Runs the hook at the root of the run.
+   *
+   * @return false if the values of the hook fail.
+   */
+  private boolean runHook() {
+    try {
+      hook.restart(store, status);
+      return true;
+    } catch (FailException _) {
+      store.clearChanged();
+      return false;
+    }
+  }
+
+  /** Returns Optional.of(true) for success, Optional.of(false) for failure, empty to continue. */
+  private Optional<Boolean> checkRestartExitConditions() {
+    int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
+    if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) {
+      return Optional.of(Boolean.FALSE);
+    }
+    if (timeOutCheck && System.currentTimeMillis() > timeOut) {
+      search.timeOutOccured = true;
+      log.info("%% =====TIME-OUT=====");
+      return Optional.of(Boolean.FALSE);
+    }
+    return Optional.empty();
+  }
+
+  private boolean computeNextResult(boolean result) {
+    // the run explored the whole search space: it was not cut by its fail limit and relax and
+    // reconstruct fixed no variable
+    // the hook fixes variables in every run, so only the hook can end the search
+    boolean exhausted = !calculator.pointsExhausted() && fixedInRun == 0 && hook == null;
+    if (result) {
+      if (cost == null || exhausted) {
+        return false;
+      }
+      return boundCost();
+    }
+    // no result from search
+    if (exhausted) {
+      return false;
+    }
+    if (cost != null) {
+      return boundCost();
+    }
+    return !atLeastOneSolution;
+  }
+
+  /**
+   * Imposes that the next solution is better than the last one found, unless that bound is already
+   * imposed.
+   *
+   * @return false if no better solution exists.
+   */
+  boolean boundCost() {
+
+    Constraint bound = null;
+    // a restart that found no better solution must not impose the same bound again
+    if (cost instanceof IntVar v) {
+      if (intCostValue < boundedIntCost) {
+        bound = new XltC(v, intCostValue);
+        boundedIntCost = intCostValue;
+      }
+    } else if (floatCostValue < boundedFloatCost) {
+      CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
+      if (costHandler != null) {
+        bound = costHandler.createCostConstraint(cost, floatCostValue);
+        boundedFloatCost = floatCostValue;
+      }
+    }
+    if (bound == null) {
+      return true;
+    }
+    store.impose(bound);
+    // The bound prunes once, when it is imposed (it is not woken by later changes of the cost), so
+    // it must prune at this level, below the runs. Relax and reconstruct starts its runs one level
+    // higher, and the pruning would be undone with the level of the first run after the bound.
+    return store.consistency();
+  }
+
+  public int getIntCost() {
+    return intCostValue;
+  }
+
+  public double getFloatCost() {
+    return floatCostValue;
+  }
+
+  /**
+   * Adds a custom reporter to be called when a solution is found.
+   *
+   * @param r the custom report to add.
+   */
+  public void addReporter(CustomReport r) {
+    reportSolution = r;
+  }
+
+  /**
+   * Returns the number of restarts performed so far.
+   *
+   * @return the number of restarts.
+   */
+  public int restarts() {
+    return numberRestarts;
+  }
+
+  /**
+   * Sets the timeout in seconds after which the search will exit.
+   *
+   * @param timeout the number of seconds before the search exits.
+   */
+  public void setTimeOut(long timeout) {
+    timeOutCheck = true;
+    timeOut = System.currentTimeMillis() + timeout * 1000;
+  }
+
+  /**
+   * Sets the timeout in milliseconds after which the search will exit.
+   *
+   * @param timeout the number of milliseconds before the search exits.
+   */
+  public void setTimeOutMilliseconds(long timeout) {
+    timeOutCheck = true;
+    timeOut = System.currentTimeMillis() + timeout;
+  }
+
+  /**
+   * Configures relax-and-reconstruct with the given variables and probability.
+   *
+   * @param vs the variables to relax.
+   * @param p the probability (0-100) of fixing each variable to its previous solution value.
+   */
+  public void setRelaxAndReconstruct(IntVar[] vs, int p) {
+
+    rarVars = new IntVar[vs.length];
+    System.arraycopy(vs, 0, rarVars, 0, vs.length);
+    probability = p;
+  }
+
+  /**
+   * Assigns relaxed variables to their previous solution values based on the configured
+   * probability.
+   *
+   * @return the number of variables fixed to their previous solution values.
+   */
+  public int assignRelaxedVariables() {
+
+    int fixed = 0;
+    for (int i = 0; i < rarVars.length; i++) {
+      IntVar v = rarVars[i];
+      // fixed with a probability of probability percent; a value of the last solution may have
+      // been pruned by the bound on the cost
+      if (Store.getRandom().nextInt(100) < probability
+          && !v.singleton()
+          && v.domain.contains(values[i])) {
+        v.domain.inValue(store.level, v, values[i]);
+        fixed++;
+      }
+    }
+    return fixed;
+  }
+
+  public int[] getLastSolution() {
+    return values;
+  }
+
+  public IntVar[] getRelaxedVariables() {
+    return rarVars;
+  }
+
+  public int getProbability() {
+    return probability;
+  }
+
+  /**
+   * Sets the code run at the root of every run, for MiniZinc's on_restart. With a hook the search
+   * does not end when a run explores its whole tree, since the hook may restrict every run; it ends
+   * when the hook marks it complete, when no better solution exists, or at a limit.
+   *
+   * @param hook the code to run at the root of every run.
+   */
+  public void setRestartHook(RestartHook hook) {
+    this.hook = hook;
+  }
+
+  public void setRestartsLimit(int l) {
+    restartsLimit = l;
+  }
+
+  /**
+   * Returns whether the search stopped because it reached the limit on the number of restarts, in
+   * which case it is not complete.
+   *
+   * @return true if the restart limit stopped the search.
+   */
+  public boolean restartsLimitReached() {
+    return restartsLimitReached;
+  }
+
+  /**
+   * Returns whether the search stopped because there was nothing more to search: a solution of a
+   * satisfaction problem was found, or the whole search space was explored, so the last solution is
+   * optimal or there is none. With relax and reconstruct this needs a run that fixed no variable
+   * and explored its whole tree, or a bound on the cost that fails without any variable fixed.
+   *
+   * @return true if the search is complete.
+   */
+  public boolean complete() {
+    return complete;
+  }
+
+  /**
+   * Returns whether at least one solution has been found during the search.
+   *
+   * @return true if at least one solution was found, false otherwise.
+   */
+  public boolean atLeastOneSolution() {
+    return atLeastOneSolution;
+  }
+
+  /** Listener that tracks cost for optimization search. */
+  public class CostListener<T extends Var> extends SimpleSolutionListener<T> {
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean executeAfterSolution(Search<T> search, SelectChoicePoint<T> select) {
+
+      boolean returnCode = super.executeAfterSolution(search, select);
+
+      solutionsInRun++;
+      if (hook != null) {
+        hook.solution();
+      }
+
+      if (reportSolution != null) {
+        reportSolution.report();
+      }
+
+      if (cost instanceof IntVar v) {
+        intCostValue = v.value();
+      } else {
+        CostVariableHandler costHandler = SearchHandlerRegistry.getInstance().findCostHandler(cost);
+        if (costHandler != null) {
+          floatCostValue = costHandler.getCostValue(cost);
+        }
+      }
+
+      if (rarVars != null) {
+        values = new int[rarVars.length];
+        for (int i = 0; i < rarVars.length; i++) {
+          values[i] = rarVars[i].value();
+        }
+      }
+
+      return returnCode;
+    }
+  }
+}

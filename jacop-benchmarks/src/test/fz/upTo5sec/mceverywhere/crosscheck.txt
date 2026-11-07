@@ -1,0 +1,4 @@
+source: hakank/minizinc/mceverywhere.mzn @ 2823c48d3d2e (unchanged since 2017), kept in dznFolder/
+flattened: MiniZinc 2.10.1, minizinc --compile --solver org.jacop
+verified: optimum 3 restaurants, proved by OR-Tools CP-SAT 9.15, Gecode 6.4.0 and Chuffed 0.14.0 on the model, and by JaCoP on this .fzn
+replaces: the earlier .fzn (in upTo5min) allowed a restaurant to serve a home only in the same row or column, not within distance 4 as the model says; its golden optimum was 6

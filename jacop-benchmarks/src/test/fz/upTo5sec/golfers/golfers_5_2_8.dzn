@@ -1,0 +1,4 @@
+
+n_groups = 5;
+n_per_group = 2;
+n_rounds = 8;
