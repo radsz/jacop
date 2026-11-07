@@ -739,11 +739,9 @@ public class DifferenceCycles extends Constraint
       if (xi == null || yi == null) {
         continue;
       }
-      if (bs[i] != null && bi == null) {
-        // a literal without a counterpart holds always only when it is fixed to its value
-        if (!bs[i].singleton() || bs[i].value() != vs[i]) {
-          continue;
-        }
+      // a literal without a counterpart holds always only when it is fixed to its value
+      if (bs[i] != null && bi == null && (!bs[i].singleton() || bs[i].value() != vs[i])) {
+        continue;
       }
       x.add(xi);
       y.add(yi);

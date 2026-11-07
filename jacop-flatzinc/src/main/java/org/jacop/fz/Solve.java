@@ -53,6 +53,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
@@ -213,7 +214,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the cost of the best solution printed by any search, Integer.MAX_VALUE before the first one;
   // a later search that starts afresh (the local search and free search after LCG gave way) must
   // beat it
-  private volatile int bestPrintedCost = Integer.MAX_VALUE;
+  private final AtomicInteger bestPrintedCost = new AtomicInteger(Integer.MAX_VALUE);
   // the search annotation of the model, interleaved with free search
   SearchItem<T> annotatedSearch;
   // -------- for print-out of statistics
@@ -2826,12 +2827,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       b.minimize(c)
           .onSolution(
               ls -> {
-                if (c.value() < bestPrintedCost) {
+                if (c.value() < bestPrintedCost.get()) {
                   printSolution();
                 }
               });
       b.sharedBound(
-          () -> worker == null ? bestPrintedCost : Math.min(bestPrintedCost, worker.sharedBound()));
+          () ->
+              worker == null
+                  ? bestPrintedCost.get()
+                  : Math.min(bestPrintedCost.get(), worker.sharedBound()));
     } else if (printSatisfied) {
       b.onSolution(ls -> printSolution());
     }
@@ -2869,6 +2873,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     return all.toArray(new IntVar[0]);
+  }
+
+  private boolean localSearchFound() {
+    return localSearch != null && localSearch.getSolutions() > 0;
   }
 
   private String localSearchStatistics() {
@@ -3045,12 +3053,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("probe", "0.05")),
           Long.parseLong(options.freeConfig("probe-fails", "100")));
     }
-    if (costVar != null
-        && (slowLcg != null && numberSolutions > 0
-            || localSearch != null && localSearch.getSolutions() > 0)) {
+    if (costVar != null && ((slowLcg != null && numberSolutions > 0) || localSearchFound())) {
       // free search improves on the best solution printed, by LCG before it gave way or by local
       // search, which may run after LCG gave way and do better than it
-      int best = bestPrintedCost;
+      int best = bestPrintedCost.get();
       builder.sharedBound(() -> worker == null ? best : Math.min(best, worker.sharedBound()));
     } else if (worker != null && costVar != null) {
       builder.sharedBound(worker::sharedBound);
@@ -4469,7 +4475,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (lcg != null) {
         lcgLastCost = cost.value();
       }
-      bestPrintedCost = Math.min(bestPrintedCost, cost.value());
+      bestPrintedCost.accumulateAndGet(cost.value(), Math::min);
     }
 
     if (presolve != null) {
