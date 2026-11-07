@@ -63,13 +63,45 @@ public final class IntLattice {
   private IntLattice() {}
 
   /**
-   * The integer solutions of a system: x = x0 + Σ_k z_k basis[k] for integer z.
-   *
-   * @param x0 a particular solution.
-   * @param basis the basis of the lattice of solutions of the homogeneous system, one vector per
-   *     row; empty when the solution is unique.
+   * The integer solutions of a system: x = x0 + Σ_k z_k basis[k] for integer z, where x0 is a
+   * particular solution and basis the basis of the lattice of solutions of the homogeneous system,
+   * one vector per row, empty when the solution is unique.
    */
-  public record Solutions(BigInteger[] x0, BigInteger[][] basis) {}
+  public static final class Solutions {
+
+    private final BigInteger[] x0;
+
+    private final BigInteger[][] basis;
+
+    /**
+     * It creates the solutions x0 + lattice(basis).
+     *
+     * @param x0 a particular solution.
+     * @param basis the basis of the lattice, one vector per row.
+     */
+    public Solutions(BigInteger[] x0, BigInteger[][] basis) {
+      this.x0 = x0;
+      this.basis = basis;
+    }
+
+    /**
+     * It returns the particular solution.
+     *
+     * @return x0, not copied.
+     */
+    public BigInteger[] x0() {
+      return x0;
+    }
+
+    /**
+     * It returns the lattice basis.
+     *
+     * @return the basis, one vector per row, not copied.
+     */
+    public BigInteger[][] basis() {
+      return basis;
+    }
+  }
 
   /**
    * It computes the integer solutions of a x = b.
@@ -173,7 +205,7 @@ public final class IntLattice {
           BigInteger[] qr = h[i][j].divideAndRemainder(p);
           BigInteger q = qr[0];
           if (qr[1].abs().shiftLeft(1).compareTo(p.abs()) > 0) {
-            q = q.add(BigInteger.valueOf(qr[1].signum() * p.signum()));
+            q = q.add(BigInteger.valueOf((long) qr[1].signum() * p.signum()));
           }
           subtract(h, u, j, r, q);
           if (h[i][j].signum() != 0) {
@@ -264,7 +296,7 @@ public final class IntLattice {
           double q = Math.rint(mu[k][j]);
           if (q != 0) {
             changed = true;
-            BigInteger bq = new java.math.BigDecimal(q).toBigInteger();
+            BigInteger bq = java.math.BigDecimal.valueOf(q).toBigInteger();
             for (int c = 0; c < n; c++) {
               basis[k][c] = basis[k][c].subtract(bq.multiply(basis[j][c]));
             }
@@ -385,7 +417,7 @@ public final class IntLattice {
         double q = Math.rint(dot / norms[k]);
         if (q != 0 && Double.isFinite(q)) {
           moved = true;
-          BigInteger bq = new java.math.BigDecimal(q).toBigInteger();
+          BigInteger bq = java.math.BigDecimal.valueOf(q).toBigInteger();
           for (int c = 0; c < n; c++) {
             x0[c] = x0[c].subtract(bq.multiply(basis[k][c]));
             t[c] -= q * basis[k][c].doubleValue();

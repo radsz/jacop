@@ -77,14 +77,55 @@ import org.jacop.util.IntLattice;
  */
 public final class LinearEqualities {
 
-  /**
-   * One equality Σ a_i x_i = b.
-   *
-   * @param x the variables.
-   * @param a the coefficients.
-   * @param b the right-hand side.
-   */
-  public record Row(IntVar[] x, int[] a, int b) {}
+  /** One equality Σ a_i x_i = b. */
+  public static final class Row {
+
+    private final IntVar[] x;
+
+    private final int[] a;
+
+    private final int b;
+
+    /**
+     * It creates the equality Σ a_i x_i = b.
+     *
+     * @param x the variables.
+     * @param a the coefficients.
+     * @param b the right-hand side.
+     */
+    public Row(IntVar[] x, int[] a, int b) {
+      this.x = x;
+      this.a = a;
+      this.b = b;
+    }
+
+    /**
+     * It returns the variables.
+     *
+     * @return the variables, not copied.
+     */
+    public IntVar[] x() {
+      return x;
+    }
+
+    /**
+     * It returns the coefficients.
+     *
+     * @return the coefficients, not copied.
+     */
+    public int[] a() {
+      return a;
+    }
+
+    /**
+     * It returns the right-hand side.
+     *
+     * @return the right-hand side.
+     */
+    public int b() {
+      return b;
+    }
+  }
 
   /**
    * Domain size above which a congruence only tightens the bounds. Every hole is one more interval

@@ -69,7 +69,7 @@ class LinearIntDomSumsetTest {
           d.set(i);
         }
       }
-      long shift = r.nextInt(700) - 350;
+      long shift = r.nextInt(700) - 350L;
       boolean meets = false;
       for (int i = s.nextSetBit(0); i >= 0; i = s.nextSetBit(i + 1)) {
         long j = i + shift;
@@ -94,7 +94,35 @@ class LinearIntDomSumsetTest {
   }
 
   /** The two stores of one instance: sumsets always, and the enumeration only. */
-  private record Pair(Store s1, IntVar[] x1, Store s2, IntVar[] x2) {}
+  private static final class Pair {
+    private final Store s1;
+    private final IntVar[] x1;
+    private final Store s2;
+    private final IntVar[] x2;
+
+    Pair(Store s1, IntVar[] x1, Store s2, IntVar[] x2) {
+      this.s1 = s1;
+      this.x1 = x1;
+      this.s2 = s2;
+      this.x2 = x2;
+    }
+
+    Store s1() {
+      return s1;
+    }
+
+    IntVar[] x1() {
+      return x1;
+    }
+
+    Store s2() {
+      return s2;
+    }
+
+    IntVar[] x2() {
+      return x2;
+    }
+  }
 
   private static Pair instance(Random r) {
     int n = 2 + r.nextInt(6);

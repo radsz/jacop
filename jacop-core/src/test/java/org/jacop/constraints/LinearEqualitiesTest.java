@@ -182,7 +182,7 @@ class LinearEqualitiesTest {
         for (int j = 0; j < n; j++) {
           a[i][j] = r.nextInt(4) == 0 ? 0 : r.nextInt(13) - 6;
         }
-        b[i] = r.nextInt(21) - 10;
+        b[i] = r.nextInt(21) - 10L;
       }
       IntLattice.Solutions s = IntLattice.solve(a, b, n);
       boolean reduced = r.nextBoolean();
