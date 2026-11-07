@@ -2581,6 +2581,12 @@ Version 5.0 (unreleased)
      roster-shifts-bool, roster-sickness) unchanged; wide set 167 -> 168
      solved by default and 163 -> 163 under -f, with chains on 4 of its
      220 instances (the other changes are run-to-run noise).
+     The window rows a posted sequence covers are marked implied (see
+     165), unless a row defines a variable, so local search evaluates
+     the sequence alone; propagation, LCG and the linear relaxation keep
+     the rows. LS only, CSPLib cars at 20 s: 3 -> 5 of 82 solved; default
+     options unchanged (cars 31 -> 31 at 20 s, the 34 other instances
+     with window chains identical at 60 s).
 
 165. Local search (--free-config ls=...) no longer evaluates the
      constraints JaCoP adds itself. The redundant constraints of the
