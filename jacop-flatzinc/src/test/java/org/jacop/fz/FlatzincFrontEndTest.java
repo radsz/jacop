@@ -3340,6 +3340,85 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void localSearchAfterSlowLcgPrintsOnlyBetterSolutions() throws IOException {
+    // -f ls=0.1 printed 2009 and then 2018 on ta21: local search runs before LCG, and again when
+    // LCG gives way as too slow (forced here), and that second local search and the free search
+    // after it took no account of the best solution printed. A random 10 x 10 job shop.
+    Random r = new Random(7);
+    int n = 10;
+    StringBuilder m = new StringBuilder();
+    m.append("predicate jacop_cumulative(array [int] of var int: s,array [int] of var int: d,")
+        .append("array [int] of var int: r,var int: b);\n");
+    int[][] dur = new int[n][n];
+    int[][] machine = new int[n][n];
+    int horizon = 0;
+    for (int j = 0; j < n; j++) {
+      List<Integer> order = new ArrayList<>();
+      for (int k = 0; k < n; k++) {
+        dur[j][k] = 1 + r.nextInt(99);
+        horizon += dur[j][k];
+        order.add(k);
+      }
+      Collections.shuffle(order, r);
+      for (int k = 0; k < n; k++) {
+        machine[j][k] = order.get(k);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < n; k++) {
+        m.append("var 0..").append(horizon).append(": s").append(j).append('_').append(k);
+        m.append(";\n");
+      }
+    }
+    m.append("var 0..").append(horizon).append(": makespan:: output_var;\n");
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < n; k++) {
+        String next = k + 1 < n ? "s" + j + "_" + (k + 1) : "makespan";
+        m.append("constraint int_lin_le([1,-1],[s").append(j).append('_').append(k).append(',');
+        m.append(next).append("],").append(-dur[j][k]).append(");\n");
+      }
+    }
+    for (int q = 0; q < n; q++) {
+      StringJoiner s = new StringJoiner(",", "[", "]");
+      StringJoiner d = new StringJoiner(",", "[", "]");
+      StringJoiner h = new StringJoiner(",", "[", "]");
+      for (int j = 0; j < n; j++) {
+        for (int k = 0; k < n; k++) {
+          if (machine[j][k] == q) {
+            s.add("s" + j + "_" + k);
+            d.add(String.valueOf(dur[j][k]));
+            h.add("1");
+          }
+        }
+      }
+      m.append("constraint jacop_cumulative(").append(s).append(',').append(d).append(',');
+      m.append(h).append(",1);\n");
+    }
+    m.append("solve minimize makespan;\n");
+    // lcg-slow-at=0 makes LCG give way at once, after the first local search
+    String out =
+        run(
+            m.toString(),
+            "-a",
+            "-f",
+            "--lcg",
+            "--free-config",
+            "ls=0.3,lcg-slow-at=0",
+            "-t",
+            "4000")[0];
+    Matcher cost = Pattern.compile("makespan = (\\d+);").matcher(out);
+    int last = Integer.MAX_VALUE;
+    int solutions = 0;
+    while (cost.find()) {
+      int c = Integer.parseInt(cost.group(1));
+      assertTrue(c < last, "makespan " + c + " printed after " + last);
+      last = c;
+      solutions++;
+    }
+    assertTrue(solutions > 1, out);
+  }
+
+  @Test
   void differenceBoundsKeepEverySolution() throws IOException {
     Random r = new Random(20261031);
     for (int run = 0; run < 150; run++) {
