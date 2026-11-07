@@ -57,6 +57,7 @@ import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
@@ -324,6 +325,11 @@ public class Constraints implements ParserTreeConstants {
       // Gauss-Jordan elimination over the parity constraints, redundant; --proof does not encode it
       if (XorSystemDetector.enabled() && options.proof() == null) {
         new XorSystemDetector(support).detect(astTree);
+      }
+
+      // earliness and tardiness costs under precedences, redundant; --proof does not encode it
+      if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {
+        new PrecedenceCostDetector(support).detect(astTree);
       }
 
       support.detectBinPackingCliques();

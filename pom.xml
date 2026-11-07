@@ -275,6 +275,9 @@ setup to run configuration. -->
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/PrecedenceCostTest.java</include>
+                                <include>**/PrecedenceCostLcgTest.java</include>
+                                <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -447,6 +450,9 @@ setup to run configuration. -->
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/PrecedenceCostTest.java</include>
+                                <include>**/PrecedenceCostLcgTest.java</include>
+                                <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -620,6 +626,9 @@ setup to run configuration. -->
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/PrecedenceCostTest.java</include>
+                                <include>**/PrecedenceCostLcgTest.java</include>
+                                <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -793,6 +802,9 @@ setup to run configuration. -->
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/PrecedenceCostTest.java</include>
+                                <include>**/PrecedenceCostLcgTest.java</include>
+                                <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>

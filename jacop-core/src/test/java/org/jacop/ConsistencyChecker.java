@@ -81,6 +81,7 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
@@ -500,6 +501,41 @@ class ConsistencyChecker {
   }
 
   /** A variable over a random non-empty subset of lo..hi, with holes about a fifth of the time. */
+  // starts under a random acyclic graph of precedences, earliness and tardiness at most z
+  private static Model precedenceCost(Store s, Random r) {
+    int n = 2 + r.nextInt(3);
+    IntVar[] x = vars(s, "s", n, 0, 6, r);
+    IntVar z = var(s, "z", 0, 4 * n, r);
+    List<int[]> prec = new ArrayList<>();
+    for (int j = 1; j < n; j++) {
+      for (int i = 0; i < j; i++) {
+        if (r.nextInt(2) == 0) {
+          prec.add(new int[] {i, j, r.nextInt(4) - 1});
+        }
+      }
+    }
+    int[][] terms = new int[n][];
+    for (int i = 0; i < n; i++) {
+      terms[i] = new int[] {i, r.nextInt(7), r.nextInt(3), r.nextInt(3)};
+    }
+    int[][] p = prec.toArray(new int[0][]);
+    return new Model(
+        new PrecedenceCost(x, p, terms, z),
+        t -> {
+          for (int[] q : p) {
+            if (t[q[1]] < t[q[0]] + q[2]) {
+              return false;
+            }
+          }
+          int total = 0;
+          for (int[] q : terms) {
+            total += q[2] * Math.max(0, q[1] - t[q[0]]) + q[3] * Math.max(0, t[q[0]] - q[1]);
+          }
+          return total <= t[n];
+        },
+        concat(x, new IntVar[] {z}));
+  }
+
   private static IntVar var(Store store, String name, int lo, int hi, Random random) {
     IntVar v = new IntVar(store, name);
     for (int k = lo; k <= hi; k++) {
@@ -1436,7 +1472,10 @@ class ConsistencyChecker {
         new Case("GeostPoly2d", Level.NONE, (s, r) -> geost(s, r, Family.POLY2D, null)),
         new Case("GeostArea", Level.NONE, (s, r) -> geost(s, r, Family.AREA, null)),
         new Case("GeostTime", Level.NONE, (s, r) -> geost(s, r, Family.TIME, null)),
-        new Case("GeostSubdims", Level.NONE, (s, r) -> geost(s, r, Family.SUBDIMS, null)));
+        new Case("GeostSubdims", Level.NONE, (s, r) -> geost(s, r, Family.SUBDIMS, null)),
+        // the bound on the cost is exact over the intervals; the starts are filtered by the
+        // reduced cost of one path, which is weaker than bounds(Z)
+        new Case("PrecedenceCost", Level.NONE, ConsistencyChecker::precedenceCost));
   }
 
   /**
