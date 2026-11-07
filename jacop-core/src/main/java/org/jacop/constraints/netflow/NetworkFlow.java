@@ -257,7 +257,7 @@ public class NetworkFlow extends Constraint
     this.costVariable = cost;
     // may replace costVariable by a copy
     separateRoles(flowVariables);
-    IntVar costVariable = this.costVariable;
+    IntVar localCostVariable = this.costVariable;
 
     for (VarHandler ds : flowVariables) {
       for (IntVar v : ds.listVariables()) {
@@ -273,11 +273,11 @@ public class NetworkFlow extends Constraint
     }
 
     map.put(
-        costVariable,
+        localCostVariable,
         new VarHandler() {
           @Override
           public List<IntVar> listVariables() {
-            return Collections.singletonList(costVariable);
+            return Collections.singletonList(localCostVariable);
           }
 
           @Override
@@ -295,7 +295,7 @@ public class NetworkFlow extends Constraint
     this.queueIndex = QUEUE_INDEX;
     this.numberId = idNumber.incrementAndGet();
 
-    setScope(Stream.concat(map.keySet().stream(), Stream.of(costVariable)));
+    setScope(Stream.concat(map.keySet().stream(), Stream.of(localCostVariable)));
   }
 
   /**

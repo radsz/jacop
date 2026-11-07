@@ -743,9 +743,9 @@ public final class LcgSolver implements ExternalPropagator {
     IntDomain[] domains = root;
     List<Integer> derived = new ArrayList<>();
     int axioms = 0;
-    int late = 0;
+    int localLate = 0;
     if (rootTrail != null) {
-      late = rootTrail.lateVariables();
+      localLate = rootTrail.lateVariables();
       domains = new IntDomain[vars.length];
       for (int i = 0; i < vars.length; i++) {
         domains[i] = vars[i] == null ? null : rootTrail.rootDomain(vars[i]);
@@ -822,7 +822,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     proof.start(model.numConstraints());
     if (rootTrail != null) {
-      proofRoot(domains, derived, axioms, late);
+      proofRoot(domains, derived, axioms, localLate);
     } else if (tooLarge != null) {
       proof.comment("root propagation not derived: over the domains before it, " + tooLarge);
     }
@@ -1515,25 +1515,27 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
-    int best = -1;
+    int localBest = -1;
     boolean forward = true;
     for (int k = 0; k < count; k++) {
-      if (k != component[0] && (!leaves[k] || !entered[k]) && (best < 0 || size[k] < size[best])) {
-        best = k;
+      if (k != component[0]
+          && (!leaves[k] || !entered[k])
+          && (localBest < 0 || size[k] < size[localBest])) {
+        localBest = k;
         forward = !leaves[k];
       }
     }
     // the hypotheses used: on the arcs out of the set forwards, into it backwards
     StringBuilder clause = new StringBuilder();
     for (int i = 0; i < n; i++) {
-      if ((component[i] == best) == forward) {
+      if ((component[i] == localBest) == forward) {
         clause.append(literals[i]);
       }
     }
     String[][] p = forward ? lines.forward() : lines.reverse();
     for (int k = n - 1; k >= 1; k--) {
       for (int i = 1; i < n; i++) {
-        if (component[i] == best && !"0".equals(p[i][k])) {
+        if (component[i] == localBest && !"0".equals(p[i][k])) {
           proof.lemma("rup" + clause + " 1 " + PbModel.not(p[i][k]) + " >= 1 ;\n");
         }
       }
@@ -1723,17 +1725,17 @@ public final class LcgSolver implements ExternalPropagator {
     proof.pol((profit + 1) + " " + b + " * " + weight + " " + a + " * +");
     LinearForm[] rows = k.rows();
     int n = rows[0].vars().length;
-    IntVar[] vars = new IntVar[n + 1];
+    IntVar[] localVars = new IntVar[n + 1];
     long[] w = new long[n + 1];
     for (int i = 0; i < n - 1; i++) {
-      vars[i] = rows[0].vars()[i];
+      localVars[i] = rows[0].vars()[i];
       w[i] = b * rows[1].weights()[i] - a * rows[0].weights()[i];
     }
-    vars[n - 1] = rows[0].vars()[n - 1];
+    localVars[n - 1] = rows[0].vars()[n - 1];
     w[n - 1] = a;
-    vars[n] = rows[1].vars()[n - 1];
+    localVars[n] = rows[1].vars()[n - 1];
     w[n] = -b;
-    return new LinearForm(vars, w, 0, LinearForm.EQ);
+    return new LinearForm(localVars, w, 0, LinearForm.EQ);
   }
 
   private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry) {
@@ -2349,10 +2351,10 @@ public final class LcgSolver implements ExternalPropagator {
     if (proof != null && result == CdclSolver.UNSAT && assumed.length > 0 && sat.isOk()) {
       // the clause that one of the failed assumptions is false, which unit propagation derives
       // from the clauses the solver has, as conflict analysis did
-      int[] failed = sat.failedAssumptions();
-      int[] clause = new int[failed.length];
-      for (int k = 0; k < failed.length; k++) {
-        clause[k] = -failed[k];
+      int[] localFailed = sat.failedAssumptions();
+      int[] clause = new int[localFailed.length];
+      for (int k = 0; k < localFailed.length; k++) {
+        clause[k] = -localFailed[k];
       }
       if (clause.length > 0) {
         proof.lemma(proofClause(clause));
@@ -2961,9 +2963,9 @@ public final class LcgSolver implements ExternalPropagator {
   long boundObjective() {
     long bound = bestObjective();
     if (sharedBound != null) {
-      int shared = sharedBound.getAsInt();
-      if (shared != Integer.MAX_VALUE) {
-        bound = Math.min(bound, shared);
+      int localShared = sharedBound.getAsInt();
+      if (localShared != Integer.MAX_VALUE) {
+        bound = Math.min(bound, localShared);
       }
     }
     return bound;
@@ -3714,11 +3716,11 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
-    int root = sat.rootAssignments();
-    if (root - rootAtPresolve < restartPresolve * Math.max(1, restartPresolveVariables)) {
+    int localRoot = sat.rootAssignments();
+    if (localRoot - rootAtPresolve < restartPresolve * Math.max(1, restartPresolveVariables)) {
       return;
     }
-    rootAtPresolve = root;
+    rootAtPresolve = localRoot;
     represolves++;
     Set<Constraint> constraints = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < store.size(); i++) {
@@ -3792,12 +3794,12 @@ public final class LcgSolver implements ExternalPropagator {
     Arrays.sort(minimizeKeys, 0, size);
     int removed = 0;
     for (int from = 0, to; from < size; from = to) {
-      long var = minimizeKeys[from] >>> 32;
+      long aVar = minimizeKeys[from] >>> 32;
       to = from + 1;
-      while (to < size && minimizeKeys[to] >>> 32 == var) {
+      while (to < size && minimizeKeys[to] >>> 32 == aVar) {
         to++;
       }
-      if (to - from > 16 && var <= Integer.MAX_VALUE) {
+      if (to - from > 16 && aVar <= Integer.MAX_VALUE) {
         removed += minimizeGroup(clause, from, to);
         continue;
       }
@@ -3914,8 +3916,8 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   @Override
-  public int integerVariable(int var) {
-    return semanticUip && var < litVar.length ? litVar[var] : -1;
+  public int integerVariable(int aVar) {
+    return semanticUip && aVar < litVar.length ? litVar[aVar] : -1;
   }
 
   /**
@@ -4223,17 +4225,17 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Adds the clause that the objective is below a better bound found elsewhere. */
   private void importBound() {
-    int shared = sharedBound.getAsInt();
-    if (shared >= importedBound || (best != null && shared >= best[objective])) {
+    int localShared = sharedBound.getAsInt();
+    if (localShared >= importedBound || (best != null && localShared >= best[objective])) {
       return;
     }
-    importedBound = shared;
-    if (shared <= root[objective].min()) {
+    importedBound = localShared;
+    if (localShared <= root[objective].min()) {
       sharedBoundUnreachable = true;
       sat.cancel();
-    } else if (shared <= root[objective].max()) {
+    } else if (localShared <= root[objective].max()) {
       // the literal first, so that its linking clauses come before the bound
-      int lit = geLit(objective, shared);
+      int lit = geLit(objective, localShared);
       structural.add(new int[] {-lit}); // objective <= shared - 1
     }
   }
@@ -4690,19 +4692,19 @@ public final class LcgSolver implements ExternalPropagator {
     if (activityBranching || !structural.isEmpty()) {
       return 0;
     }
-    int best = -1;
+    int localBest = -1;
     int bestSize = Integer.MAX_VALUE;
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] != null && !unused[i] && !vars[i].singleton() && vars[i].getSize() < bestSize) {
-        best = i;
+        localBest = i;
         bestSize = vars[i].getSize();
       }
     }
-    if (best < 0) {
+    if (localBest < 0) {
       return 0;
     }
     searchDecisions++;
-    return -geLit(best, vars[best].min() + 1);
+    return -geLit(localBest, vars[localBest].min() + 1);
   }
 
   // the heap of a variable: lateHeap for a late variable, else wide for one that is not 0/1

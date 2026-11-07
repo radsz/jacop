@@ -311,7 +311,7 @@ public final class LinearEqualities {
           terms.merge(variable(x), a, Long::sum);
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return;
     }
     terms.values().removeIf(a -> a == 0);
@@ -399,7 +399,7 @@ public final class LinearEqualities {
     IntLattice.Solutions s;
     try {
       s = IntLattice.solve(a, b, n);
-    } catch (ArithmeticException e) {
+    } catch (ArithmeticException _) {
       // entries too large: no deduction from this component
       return;
     }
@@ -476,7 +476,7 @@ public final class LinearEqualities {
       long value = Math.multiplyExact(sign, rest);
       modulus[v[k]] = g;
       residue[v[k]] = g == 0 ? value : Math.floorMod(value, g);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       // no congruence
     }
   }

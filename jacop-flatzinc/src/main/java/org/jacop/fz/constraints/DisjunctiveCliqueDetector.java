@@ -148,11 +148,13 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       case "jacop_cumulative" -> cumulative(node);
       case "int_lin_le" -> linear(node, null, false);
       case "int_lin_eq" -> linear(node, null, true);
-      case "int_lin_le_imp", "int_lin_le_reif" -> linear(node, var(node, 3), false);
-      case "int_le" -> difference(var(node, 0), var(node, 1), 0, null);
-      case "int_lt" -> difference(var(node, 0), var(node, 1), 1, null);
-      case "int_le_imp", "int_le_reif" -> difference(var(node, 0), var(node, 1), 0, var(node, 2));
-      case "int_lt_imp", "int_lt_reif" -> difference(var(node, 0), var(node, 1), 1, var(node, 2));
+      case "int_lin_le_imp", "int_lin_le_reif" -> linear(node, aVar(node, 3), false);
+      case "int_le" -> difference(aVar(node, 0), aVar(node, 1), 0, null);
+      case "int_lt" -> difference(aVar(node, 0), aVar(node, 1), 1, null);
+      case "int_le_imp", "int_le_reif" ->
+          difference(aVar(node, 0), aVar(node, 1), 0, aVar(node, 2));
+      case "int_lt_imp", "int_lt_reif" ->
+          difference(aVar(node, 0), aVar(node, 1), 1, aVar(node, 2));
       case "bool_clause" -> {
         IntVar[] pos = support.getVarArray(child(node, 0));
         if (pos.length == 2 && support.getVarArray(child(node, 1)).length == 0) {
@@ -161,11 +163,11 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       }
       case "array_bool_or" -> {
         IntVar[] pos = support.getVarArray(child(node, 0));
-        if (pos.length == 2 && var(node, 1).singleton(1)) {
+        if (pos.length == 2 && aVar(node, 1).singleton(1)) {
           clauses.add(pos);
         }
       }
-      case "bool_not" -> clauses.add(new IntVar[] {var(node, 0), var(node, 1)});
+      case "bool_not" -> clauses.add(new IntVar[] {aVar(node, 0), aVar(node, 1)});
       default -> {
         // not a fact about disjoint tasks
       }
@@ -176,7 +178,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     return (SimpleNode) node.jjtGetChild(i);
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar aVar(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
@@ -184,7 +186,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     IntVar[] s = support.getVarArray(child(node, 0));
     IntVar[] d = support.getVarArray(child(node, 1));
     IntVar[] r = support.getVarArray(child(node, 2));
-    int capacity = var(node, 3).max();
+    int capacity = aVar(node, 3).max();
     int[] tasks = new int[s.length];
     int[] use = new int[s.length];
     int n = 0;

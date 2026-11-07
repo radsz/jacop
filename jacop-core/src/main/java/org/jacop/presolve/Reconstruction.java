@@ -139,7 +139,7 @@ final class Reconstruction implements VarMap {
         }
       }
       return true;
-    } catch (FailException f) {
+    } catch (FailException _) {
       return false;
     } finally {
       while (store.level > base) {
@@ -159,7 +159,7 @@ final class Reconstruction implements VarMap {
         if (store.consistency()) {
           return true;
         }
-      } catch (FailException f) {
+      } catch (FailException _) {
         // try the next value
       }
       store.removeLevel(store.level);

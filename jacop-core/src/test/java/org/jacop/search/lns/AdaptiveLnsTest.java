@@ -208,10 +208,10 @@ class AdaptiveLnsTest {
     IntVar[][] rects = new IntVar[n][];
     IntVar[] xy = new IntVar[2 * n];
     for (int i = 0; i < n; i++) {
-      IntVar x = new IntVar(s, "x" + i, 0, 2 * side);
+      IntVar localX = new IntVar(s, "x" + i, 0, 2 * side);
       IntVar y = new IntVar(s, "y" + i, 0, 2 * side);
-      rects[i] = new IntVar[] {x, y, new IntVar(s, 1, 1), new IntVar(s, 1, 1)};
-      xy[2 * i] = x;
+      rects[i] = new IntVar[] {localX, y, new IntVar(s, 1, 1), new IntVar(s, 1, 1)};
+      xy[2 * i] = localX;
       xy[2 * i + 1] = y;
     }
     s.impose(new Diffn(rects));

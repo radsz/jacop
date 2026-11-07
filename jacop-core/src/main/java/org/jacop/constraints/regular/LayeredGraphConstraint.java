@@ -913,11 +913,11 @@ public abstract class LayeredGraphConstraint extends Constraint
    */
   private void buildLayeredGraph() {
     int levels = list.length;
-    LayeredGraphDescription description = new LayeredGraphDescription(levels);
-    describeGraph(description);
-    this.description = description;
-    final int[] edge = description.edges;
-    final int described = description.size;
+    LayeredGraphDescription localDescription = new LayeredGraphDescription(levels);
+    describeGraph(localDescription);
+    this.description = localDescription;
+    final int[] edge = localDescription.edges;
+    final int described = localDescription.size;
 
     // Edges in level order, keeping the order of description within a level.
     int[] levelEdgeStart = new int[levels + 1];
@@ -939,7 +939,7 @@ public abstract class LayeredGraphConstraint extends Constraint
 
     int[] describedStart = new int[levels + 2];
     for (int level = 0; level <= levels; level++) {
-      describedStart[level + 1] = describedStart[level] + description.levelNodes[level];
+      describedStart[level + 1] = describedStart[level] + localDescription.levelNodes[level];
     }
     boolean[] reached = new boolean[describedStart[levels + 1]];
     boolean[] kept = new boolean[describedStart[levels + 1]];
@@ -1260,12 +1260,12 @@ public abstract class LayeredGraphConstraint extends Constraint
   }
 
   /** It saves a record on the trail unless it was saved in the current epoch already. */
-  private void save(int record) {
-    long s = state[record];
+  private void save(int rec) {
+    long s = state[rec];
     if ((int) (s >>> STAMP_SHIFT & STAMP_MASK) == epoch) {
       return;
     }
-    state[record] = s & ~((long) STAMP_MASK << STAMP_SHIFT) | (long) epoch << STAMP_SHIFT;
+    state[rec] = s & ~((long) STAMP_MASK << STAMP_SHIFT) | (long) epoch << STAMP_SHIFT;
     if (markTop == 0 || markLevel[markTop - 1] != currentLevel) {
       if (markTop == markLevel.length) {
         markLevel = Arrays.copyOf(markLevel, markTop * 2);
@@ -1277,7 +1277,7 @@ public abstract class LayeredGraphConstraint extends Constraint
     if (trailTop + 2 > trail.length) {
       trail = Arrays.copyOf(trail, trail.length * 2);
     }
-    trail[trailTop] = record;
+    trail[trailTop] = rec;
     trail[trailTop + 1] = s;
     trailTop += 2;
   }
@@ -1369,9 +1369,9 @@ public abstract class LayeredGraphConstraint extends Constraint
       levelTouched[level] = false;
       for (int slot = levelSlotStart[level]; slot < levelSlotStart[level + 1]; slot++) {
         if (slotAlive(slot) && !hasSupport(slot)) {
-          int record = slotBase + slot;
-          save(record);
-          state[record] &= ~VALUE;
+          int rec = slotBase + slot;
+          save(rec);
+          state[rec] &= ~VALUE;
           emptySlots[emptySlotsSize++] = slot;
           removedSlotOfLevel(level);
         }
@@ -1385,27 +1385,27 @@ public abstract class LayeredGraphConstraint extends Constraint
    * accepted, so the constraint fails at once instead of removing the rest of the graph.
    */
   private void removedSlotOfLevel(int level) {
-    int record = levelBase + level;
-    save(record);
-    if ((--state[record] & VALUE) == 0) {
+    int rec = levelBase + level;
+    save(rec);
+    if ((--state[rec] & VALUE) == 0) {
       throw Store.failException;
     }
   }
 
   /** It removes a value of a level, together with all alive edges labelled with it. */
   private void removeSlot(int slot) {
-    int record = slotBase + slot;
-    save(record);
-    state[record] &= ~VALUE;
+    int rec = slotBase + slot;
+    save(rec);
+    state[rec] &= ~VALUE;
     removedSlotOfLevel(slotLevel[slot]);
     removeSlotEdges(slot);
   }
 
   /** It removes a value of a level and leaves its edges to the forward pass. */
   private void deferSlot(int slot) {
-    int record = slotBase + slot;
-    save(record);
-    state[record] &= ~VALUE;
+    int rec = slotBase + slot;
+    save(rec);
+    state[rec] &= ~VALUE;
     int level = slotLevel[slot];
     removedSlotOfLevel(level);
     removedSlotNext[slot] = removedSlotHead[level];
@@ -1560,10 +1560,10 @@ public abstract class LayeredGraphConstraint extends Constraint
   /** It removes a node from the alive nodes of its level. */
   private void removeAlive(int node) {
     int level = nodeLevel[node];
-    int record = aliveBase + level;
-    save(record);
-    int last = levelNodeStart[level] + (int) (state[record] & VALUE) - 1;
-    state[record]--;
+    int rec = aliveBase + level;
+    save(rec);
+    int last = levelNodeStart[level] + (int) (state[rec] & VALUE) - 1;
+    state[rec]--;
     int position = orderPosition[node];
     int other = levelOrder[last];
     levelOrder[position] = other;

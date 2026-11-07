@@ -59,8 +59,6 @@ public class Dbox {
   /** It specifies for each dimension the length of dbox in that dimension. */
   final int[] length;
 
-  // private static final ArrayList<Dbox> workingList = new ArrayList<>();
-
   /**
    * Constructs a new Box. The parameter arrays are not copied.
    *

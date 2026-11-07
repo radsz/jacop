@@ -148,9 +148,9 @@ public class Subcircuit extends Alldiff {
     if (dominance != null) {
       useDominance = Boolean.parseBoolean(dominance);
     }
-    String dominanceSkip = System.getProperty("sub_circuit_dominance_skip");
-    if (dominanceSkip != null) {
-      maxDominanceSkip = Integer.parseInt(dominanceSkip);
+    String localDominanceSkip = System.getProperty("sub_circuit_dominance_skip");
+    if (localDominanceSkip != null) {
+      maxDominanceSkip = Integer.parseInt(localDominanceSkip);
     }
     if (!useScc && !useDominance) {
       throw new IllegalArgumentException("Wrong property configuration for Subcircuit");

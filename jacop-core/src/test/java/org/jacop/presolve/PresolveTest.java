@@ -1090,7 +1090,7 @@ class PresolveTest {
       store.setLevel(1);
       try {
         vars.x()[restricted].domain.in(store.level, vars.x()[restricted], kept, kept);
-      } catch (FailException e) {
+      } catch (FailException _) {
         return new Result(Derivation.Outcome.INFEASIBLE, found);
       }
     }

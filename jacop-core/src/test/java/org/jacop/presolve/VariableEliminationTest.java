@@ -373,7 +373,7 @@ class VariableEliminationTest {
       if (!store.consistency()) {
         return false;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     // a variable postsolve leaves open must have a value that completes the solution

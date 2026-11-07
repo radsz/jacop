@@ -86,7 +86,7 @@ final class AffineSubstitution {
 
   /** A node of the union-find structure: var = a*parent + b. */
   private static final class Node {
-    final IntVar var;
+    final IntVar aVar;
     final int order;
     Node parent;
     long a = 1;
@@ -99,12 +99,12 @@ final class AffineSubstitution {
     int pinned;
     List<Node> members;
 
-    Node(IntVar var, int order, boolean pinnedVar) {
-      this.var = var;
+    Node(IntVar aVar, int order, boolean pinnedVar) {
+      this.aVar = aVar;
       this.order = order;
       this.pinnedVar = pinnedVar;
       this.pinned = pinnedVar ? 1 : 0;
-      this.booleans = var instanceof BooleanVar ? 1 : 0;
+      this.booleans = aVar instanceof BooleanVar ? 1 : 0;
       this.members = new ArrayList<>(List.of(this));
     }
   }
@@ -173,7 +173,7 @@ final class AffineSubstitution {
     if (r == n) {
       return null;
     }
-    return new Relation(r.var, (int) n.a, (int) n.b);
+    return new Relation(r.aVar, (int) n.a, (int) n.b);
   }
 
   /**
@@ -195,7 +195,7 @@ final class AffineSubstitution {
    */
   Var root(Var v) {
     Node n = nodes.get(v);
-    return n == null ? v : find(n).var;
+    return n == null ? v : find(n).aVar;
   }
 
   /**
@@ -208,7 +208,7 @@ final class AffineSubstitution {
     Node n = nodes.get(root);
     List<IntVar> result = new ArrayList<>();
     for (Node m : n.members) {
-      result.add(m.var);
+      result.add(m.aVar);
     }
     return result;
   }
@@ -332,16 +332,16 @@ final class AffineSubstitution {
 
   /** Tells whether r should stay the representative rather than s. */
   private static boolean prefer(Node r, Node s) {
-    boolean rb = r.var instanceof BooleanVar;
-    boolean sb = s.var instanceof BooleanVar;
+    boolean rb = r.aVar instanceof BooleanVar;
+    boolean sb = s.aVar instanceof BooleanVar;
     if (rb != sb) {
       return rb;
     }
     if (r.pinned != s.pinned) {
       return r.pinned > s.pinned;
     }
-    int rd = r.var.sizeConstraints();
-    int sd = s.var.sizeConstraints();
+    int rd = r.aVar.sizeConstraints();
+    int sd = s.aVar.sizeConstraints();
     if (rd != sd) {
       return rd > sd;
     }
@@ -356,7 +356,7 @@ final class AffineSubstitution {
     boolean alias = a == 1 && b == 0;
     boolean aliasesOnly = root.aliasesOnly && child.aliasesOnly && alias;
     int booleans = root.booleans + child.booleans;
-    if (booleans > 0 && (!aliasesOnly || !(root.var instanceof BooleanVar))) {
+    if (booleans > 0 && (!aliasesOnly || !(root.aVar instanceof BooleanVar))) {
       return false;
     }
     int pinnedCount = root.pinned + child.pinned;

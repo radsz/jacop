@@ -385,22 +385,22 @@ public class IncreasingSum extends Constraint
         return true;
       }
     }
-    long lo = 0;
-    long hi = 0;
+    long localLo = 0;
+    long localHi = 0;
     for (int j = 0; j < n; j++) {
-      lo += trail.minBefore(x[j], now);
-      hi += trail.maxBefore(x[j], now);
+      localLo += trail.minBefore(x[j], now);
+      localHi += trail.maxBefore(x[j], now);
     }
-    if (lo > trail.maxBefore(sum, now)) {
-      long room = lo - trail.maxBefore(sum, now) - 1;
+    if (localLo > trail.maxBefore(sum, now)) {
+      long room = localLo - trail.maxBefore(sum, now) - 1;
       for (int j = 0; j < n; j++) {
         room -= trail.addBoundWithin(x[j], now, true, room, out);
       }
       trail.addBoundWithin(sum, now, false, room, out);
       return true;
     }
-    if (hi < trail.minBefore(sum, now)) {
-      long room = trail.minBefore(sum, now) - hi - 1;
+    if (localHi < trail.minBefore(sum, now)) {
+      long room = trail.minBefore(sum, now) - localHi - 1;
       for (int j = 0; j < n; j++) {
         room -= trail.addBoundWithin(x[j], now, false, room, out);
       }

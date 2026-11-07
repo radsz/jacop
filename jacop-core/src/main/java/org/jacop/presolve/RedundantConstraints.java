@@ -320,7 +320,7 @@ final class RedundantConstraints {
     }
     try {
       return canonicalExact(f);
-    } catch (ArithmeticException e) {
+    } catch (ArithmeticException _) {
       return null;
     }
   }

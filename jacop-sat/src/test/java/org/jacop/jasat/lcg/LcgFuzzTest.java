@@ -253,7 +253,7 @@ class LcgFuzzTest {
       for (int i = 0; i < m; i++) {
         try {
           post(randomConstraint());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
           // arguments the constraint rejects, such as a variable repeated; draw another one
           i--;
         }

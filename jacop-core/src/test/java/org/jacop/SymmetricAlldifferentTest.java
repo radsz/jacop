@@ -119,7 +119,7 @@ class SymmetricAlldifferentTest {
           } else {
             v.domain.inComplement(store.level, v, value);
           }
-        } catch (FailException e) {
+        } catch (FailException _) {
           break;
         }
         if (!propagateAndCheck(store, x, offset, where + " step " + step)) {

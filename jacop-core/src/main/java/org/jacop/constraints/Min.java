@@ -201,11 +201,11 @@ public class Min extends AbstractMinMax
 
   @Override
   public long violation(ToIntFunction<IntVar> value) {
-    long min = Long.MAX_VALUE;
+    long localMin = Long.MAX_VALUE;
     for (IntVar v : list) {
-      min = Math.min(min, value.applyAsInt(v));
+      localMin = Math.min(localMin, value.applyAsInt(v));
     }
-    return Math.abs(min - value.applyAsInt(target));
+    return Math.abs(localMin - value.applyAsInt(target));
   }
 
   @Override
@@ -215,11 +215,11 @@ public class Min extends AbstractMinMax
 
   @Override
   public int functionalValue(ToIntFunction<IntVar> value) {
-    int min = Integer.MAX_VALUE;
+    int localMin = Integer.MAX_VALUE;
     for (IntVar v : list) {
-      min = Math.min(min, value.applyAsInt(v));
+      localMin = Math.min(localMin, value.applyAsInt(v));
     }
-    return min;
+    return localMin;
   }
 
   // [x < v] -> [min < v] for each x, and [min < v] -> one [x < v], for every threshold v

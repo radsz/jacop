@@ -628,10 +628,10 @@ public class Diffn extends Nooverlap {
       log.debug("===========================");
     }
 
-    boolean[] inProfile = this.inProfile;
-    Arrays.fill(inProfile, false);
-    List<Interval> sweepLine = this.sweepLine;
-    sweepLine.clear();
+    boolean[] localInProfile = this.inProfile;
+    Arrays.fill(localInProfile, false);
+    List<Interval> localSweepLine = this.sweepLine;
+    localSweepLine.clear();
     int[] curProfile = new int[] {0};
     int[] startExcluded = new int[] {Integer.MAX_VALUE};
     int[] lastBarier = new int[] {Integer.MAX_VALUE};
@@ -651,19 +651,21 @@ public class Diffn extends Nooverlap {
               oDim,
               dim,
               limit,
-              inProfile,
-              sweepLine,
+              localInProfile,
+              localSweepLine,
               curProfile,
               startExcluded,
               lastBarier,
               considerR[0]);
           break;
         case PRUNE_START:
-          processPruneStart(e, oDim, dim, limit, inProfile, sweepLine, startExcluded, curProfile);
+          processPruneStart(
+              e, oDim, dim, limit, localInProfile, localSweepLine, startExcluded, curProfile);
           considerR[0] = true;
           break;
         case PRUNE_END:
-          processPruneEnd(e, oDim, dim, limit, inProfile, startExcluded, lastBarier, curProfile);
+          processPruneEnd(
+              e, oDim, dim, limit, localInProfile, startExcluded, lastBarier, curProfile);
           startExcluded[0] = Integer.MAX_VALUE;
           considerR[0] = false;
           break;

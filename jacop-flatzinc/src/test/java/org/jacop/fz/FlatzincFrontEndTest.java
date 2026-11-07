@@ -556,20 +556,20 @@ class FlatzincFrontEndTest {
     int c = rnd.nextInt(9) - 4;
     int[] lo = new int[k];
     int[] hi = new int[k];
-    int[] var = new int[k];
+    int[] aVar = new int[k];
     for (int i = 0; i < k; i++) {
       lo[i] = bools ? 0 : rnd.nextInt(7) - 3;
       hi[i] = bools ? 1 : lo[i] + rnd.nextInt(4);
-      var[i] = i > 0 && rnd.nextInt(5) == 0 ? var[rnd.nextInt(i)] : i;
+      aVar[i] = i > 0 && rnd.nextInt(5) == 0 ? aVar[rnd.nextInt(i)] : i;
     }
     StringBuilder fzn = new StringBuilder();
     StringJoiner args = new StringJoiner(",");
     for (int i = 0; i < k; i++) {
-      if (var[i] == i) {
+      if (aVar[i] == i) {
         fzn.append(bools ? "var bool" : "var " + lo[i] + ".." + hi[i]).append(": x").append(i);
         fzn.append(":: output_var;\n");
       }
-      args.add("x" + var[i]);
+      args.add("x" + aVar[i]);
     }
     boolean reif = !kind.isEmpty();
     if (reif) {
@@ -599,10 +599,10 @@ class FlatzincFrontEndTest {
         v,
         lo,
         hi,
-        var,
+        aVar,
         () -> {
           for (int i = 0; i < k; i++) {
-            value[i] = v[var[i]];
+            value[i] = v[aVar[i]];
           }
           Boolean holds;
           if (fName.startsWith("int_lin_") || w != null) {
@@ -634,7 +634,7 @@ class FlatzincFrontEndTest {
           }
           StringJoiner sol = new StringJoiner(" ");
           for (int i = 0; i < k; i++) {
-            if (var[i] == i) {
+            if (aVar[i] == i) {
               sol.add(
                   "x"
                       + i
@@ -659,17 +659,17 @@ class FlatzincFrontEndTest {
   }
 
   private static void enumerateBuiltin(
-      int i, int[] v, int[] lo, int[] hi, int[] var, Runnable check) {
+      int i, int[] v, int[] lo, int[] hi, int[] aVar, Runnable check) {
     if (i == v.length) {
       check.run();
       return;
     }
-    if (var[i] != i) {
-      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+    if (aVar[i] != i) {
+      enumerateBuiltin(i + 1, v, lo, hi, aVar, check);
       return;
     }
     for (v[i] = lo[i]; v[i] <= hi[i]; v[i]++) {
-      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+      enumerateBuiltin(i + 1, v, lo, hi, aVar, check);
     }
   }
 

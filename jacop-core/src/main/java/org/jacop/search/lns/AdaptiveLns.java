@@ -282,7 +282,7 @@ public final class AdaptiveLns {
     for (int t : terms) {
       objectiveTerms.add(t);
     }
-    long[][] cost = new long[n][];
+    long[][] localCost = new long[n][];
     boolean found = false;
     for (int v = 0; v < n && n <= MAX_COST_NODES; v++) {
       int[] list = null;
@@ -313,16 +313,17 @@ public final class AdaptiveLns {
         }
       }
       if (list != null) {
-        cost[v] = new long[n];
+        localCost[v] = new long[n];
         for (int w = 0; w < n; w++) {
           // node w is the value w + offset, read at w + offset - listOffset - 1
           int k = w + offset - listOffset - 1;
-          cost[v][w] = k >= 0 && k < list.length ? list[k] : Long.MAX_VALUE;
+          localCost[v][w] = k >= 0 && k < list.length ? list[k] : Long.MAX_VALUE;
         }
         found = true;
       }
     }
-    SuccessorRoutes r = new SuccessorRoutes(x, offset, varIndex, found ? cost : null, NEAR_COUNT);
+    SuccessorRoutes r =
+        new SuccessorRoutes(x, offset, varIndex, found ? localCost : null, NEAR_COUNT);
     if (r.customerCount() > 1) {
       routings.add(r);
       for (int i : varIndex) {

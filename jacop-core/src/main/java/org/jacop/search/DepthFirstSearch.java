@@ -957,9 +957,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   }
 
   /** Tells a last-conflict selection that the left branch of a decision on var failed. */
-  private void failedDecision(Var var) {
-    if (var != null && heuristic instanceof LastConflictSelect<?> lc) {
-      lc.failedDecision(var);
+  private void failedDecision(Var aVar) {
+    if (aVar != null && heuristic instanceof LastConflictSelect<?> lc) {
+      lc.failedDecision(aVar);
     }
   }
 
@@ -1172,8 +1172,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       CostVariableHandler costHandler =
           SearchHandlerRegistry.getInstance().findCostHandler(costVariable);
       if (costHandler != null) {
-        double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-        log.info(SOLUTION_COST_IS, cost);
+        double localCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+        log.info(SOLUTION_COST_IS, localCost);
       } else if (costVariable instanceof IntVar) {
         log.info(SOLUTION_COST_IS, costValue);
       }
@@ -1244,8 +1244,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       if (domainHandler != null) {
         log.info(SOLUTION_COST_IS, domainHandler.getDomainString(costVariable));
       } else {
-        double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-        log.info(SOLUTION_COST_IS, cost);
+        double localCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+        log.info(SOLUTION_COST_IS, localCost);
       }
     } else if (costVariable instanceof IntVar) {
       log.info(SOLUTION_COST_IS, costValue);
@@ -1371,8 +1371,8 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         if (domainHandler != null) {
           buf.append(COST_LABEL).append(domainHandler.getDomainString(costVariable)).append("\n");
         } else {
-          double cost = costVariable instanceof IntVar ? costValue : costValueFloat;
-          buf.append(COST_LABEL).append(cost).append("\n");
+          double localCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+          buf.append(COST_LABEL).append(localCost).append("\n");
         }
       } else if (costVariable instanceof IntVar) {
         buf.append(COST_LABEL).append(costValue).append("\n");

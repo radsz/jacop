@@ -81,10 +81,10 @@ public class OutdomainSetSelect<T extends SetVar> extends SimpleSelect<T> {
 
   @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
-    T var = super.getChoiceVariable(index);
-    if (var == null) {
+    T aVar = super.getChoiceVariable(index);
+    if (aVar == null) {
       return null;
     }
-    return new SetElementChoice(getChoiceValue(), var);
+    return new SetElementChoice(getChoiceValue(), aVar);
   }
 }
