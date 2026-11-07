@@ -2886,7 +2886,14 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
-176. Energy cuts of cumulative resources in the LP relaxation
+176. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+     above 1 left out the holes a pruned bound skipped. When the latest
+     start computed for a task (or the cost's minimum) fell on a removed
+     value, the domain moved past it, and the reason (start bounds and
+     cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
+     The reason now adds the != atoms of those holes.
+
+177. Energy cuts of cumulative resources in the LP relaxation
      (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
      objective model, LinearRelaxation separates at the root the
      mean-busy-time inequalities of a set S of tasks released at t or
