@@ -1057,9 +1057,18 @@ class FlatzincFrontEndTest {
         .append("x],25);\n")
         .append("solve :: int_search([x],input_order,indomain_min,complete) satisfy;\n");
 
-    String out = run(fzn.toString(), "-t", "300")[0];
+    // the GCD of the equality's coefficients (2) does not divide 25, which the linear system
+    // detector proves at the root: switch it off to keep the search that times out
+    String out;
+    System.setProperty("org.jacop.fz.lattice", "false");
+    try {
+      out = run(fzn.toString(), "-t", "300")[0];
+    } finally {
+      System.clearProperty("org.jacop.fz.lattice");
+    }
     assertTrue(!out.contains("=====UNSATISFIABLE====="), out);
     assertTrue(out.contains("=====UNKNOWN====="), out);
+    assertTrue(run(fzn.toString(), "-t", "300")[0].contains("=====UNSATISFIABLE====="));
   }
 
   @Test

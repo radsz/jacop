@@ -91,6 +91,9 @@ public class Tables {
   final ArrayList<Var> outputVariables = new ArrayList<>();
   final ArrayList<OutputArrayAnnotation> outputArray = new ArrayList<>();
   final ArrayList<Var> defaultSearchVariables = new ArrayList<>();
+
+  // variables the search labels before any other (the lattice variables of a reformulation)
+  final ArrayList<Var> searchFirst = new ArrayList<>();
   final ArrayList<Var> defaultSearchFloatVariables = new ArrayList<>();
   final ArrayList<Var[]> defaultSearchArrays = new ArrayList<>();
   final ArrayList<Var[]> defaultSearchFloatArrays = new ArrayList<>();
@@ -341,6 +344,7 @@ public class Tables {
       t.outputArray.add(mapped);
     }
     t.defaultSearchVariables.addAll(map.get(defaultSearchVariables));
+    t.searchFirst.addAll(map.get(searchFirst));
     t.defaultSearchFloatVariables.addAll(map.get(defaultSearchFloatVariables));
     t.defaultSearchSetVariables.addAll(map.get(defaultSearchSetVariables));
     defaultSearchArrays.forEach(a -> t.defaultSearchArrays.add(map.get(a)));
@@ -823,6 +827,24 @@ public class Tables {
    */
   public void addSearchVar(Var v) {
     defaultSearchVariables.add(v);
+  }
+
+  /**
+   * It adds variables that the search labels before any other, whatever the search annotation.
+   *
+   * @param vars the variables.
+   */
+  public void searchFirst(List<? extends Var> vars) {
+    searchFirst.addAll(vars);
+  }
+
+  /**
+   * The variables that the search labels before any other.
+   *
+   * @return the variables, in order.
+   */
+  public List<Var> searchFirst() {
+    return searchFirst;
   }
 
   /**

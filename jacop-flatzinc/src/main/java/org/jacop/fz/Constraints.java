@@ -54,6 +54,7 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
+import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
@@ -328,6 +329,14 @@ public class Constraints implements ParserTreeConstants {
         new XorSystemDetector(support).detect(astTree);
       }
       store.imposingImplied(false);
+
+      // the lattices of the equalities: congruences, and the reformulation of market split
+      // systems; --proof derives neither
+      if (LinearSystemDetector.enabled() && options.proof() == null) {
+        LinearSystemDetector lattice = new LinearSystemDetector(support);
+        lattice.detect(astTree, options.lp());
+        dictionary.searchFirst(lattice.lattice());
+      }
 
       // earliness and tardiness costs under precedences, redundant; --proof does not encode it
       if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {

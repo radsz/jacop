@@ -270,6 +270,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -445,6 +447,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -621,6 +625,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -797,6 +803,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>

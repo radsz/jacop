@@ -1239,6 +1239,15 @@ class ConsistencyChecker {
             "LinearIntDom",
             Level.DOMAIN,
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
+        // the sumsets alone, on equalities of up to five variables
+        new Case(
+            "LinearIntDom sumset",
+            Level.DOMAIN,
+            (s, r) -> {
+              Model m = linear(s, r, weights(r, 2 + r.nextInt(4), 4), "==", true);
+              ((LinearIntDom) m.constraint()).setSumsets("always");
+              return m;
+            }),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
         new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),

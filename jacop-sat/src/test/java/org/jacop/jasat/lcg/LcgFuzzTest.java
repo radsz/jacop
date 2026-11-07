@@ -921,12 +921,24 @@ class LcgFuzzTest {
               new int[] {2, 2, 2});
         }
         case 78, 79 -> recentGlobal();
-        case 63 ->
-            new LinearIntDom(
-                p,
-                new int[] {1 + rnd.nextInt(2), -1, 2},
-                new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
-                value() + 2);
+        case 63 -> {
+          if (rnd.nextInt(3) == 0) {
+            // a longer equality, propagated by sumsets
+            IntVar[] qs = pick(x, 5);
+            int[] w = new int[qs.length];
+            for (int i = 0; i < w.length; i++) {
+              w[i] = (1 + rnd.nextInt(3)) * (i % 2 == 0 ? 1 : -1);
+            }
+            LinearIntDom c = new LinearIntDom(qs, w, "==", value());
+            c.setSumsets("always");
+            yield c;
+          }
+          yield new LinearIntDom(
+              p,
+              new int[] {1 + rnd.nextInt(2), -1, 2},
+              new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
+              value() + 2);
+        }
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {
