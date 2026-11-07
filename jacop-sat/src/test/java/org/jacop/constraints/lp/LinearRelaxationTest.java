@@ -1387,6 +1387,48 @@ class LinearRelaxationTest {
     }
   }
 
+  /**
+   * The columns of the simplex, which decide the auto LP guide of the flatzinc front end, are the
+   * relaxation's columns before the first solve, and leave out the columns of the tried encodings
+   * the root trial dropped: on gbac UD8 the guide over such columns found 342 instead of 89.
+   */
+  @Test
+  void simplexValueColumnsLeaveOutDroppedEncodings() {
+    // the all-different encoding does not raise the bound 1 of min x0: dropped
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 3);
+    }
+    store.impose(new Alldiff(x));
+    IntVar cost = new IntVar(store, "cost", 0, 10);
+    store.impose(new LinearInt(new IntVar[] {x[0], cost}, new int[] {1, -1}, "==", 0));
+    LinearRelaxation plain = LinearRelaxation.of(store, cost, false);
+    assertThat(plain).isNotNull();
+    assertThat(plain.valueColumns).isPositive();
+    store.impose(plain);
+    assertThat(plain.simplexValueColumns()).isEqualTo(plain.valueColumns);
+    assertThat(store.consistency()).isTrue();
+    assertThat(plain.simplexValueColumns()).isZero();
+
+    int kept = 0;
+    for (int run = 0; run < RUNS / 5; run++) {
+      Assignment a = new Assignment(run);
+      LinearRelaxation r = LinearRelaxation.of(a.store, a.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      assertThat(r.valueColumns).as("seed %d", run).isPositive();
+      a.store.impose(r);
+      assertThat(r.simplexValueColumns()).as("seed %d", run).isEqualTo(r.valueColumns);
+      if (!a.store.consistency()) {
+        continue;
+      }
+      int inSimplex = r.simplexValueColumns();
+      assertThat(inSimplex).as("seed %d", run).isBetween(0, r.valueColumns);
+      kept += inSimplex > 0 ? 1 : 0;
+    }
+    assertThat(kept).isPositive();
+  }
+
   /** Without an objective the counting, all-different and element encodings are not made. */
   @Test
   void satisfactionModelsGetNoTriedValueEncodings() {
@@ -1517,6 +1559,7 @@ class LinearRelaxationTest {
   void capacityCutsKeepTheOptimumOfVehicleRouting() {
     int raised = 0;
     long checked = 0;
+    long searched = 0;
     for (int run = 0; run < 12; run++) {
       long expected = new Cvrp(run).optimum();
 
@@ -1536,7 +1579,9 @@ class LinearRelaxationTest {
       assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
       assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
       checked += solver.checker().checked;
+      searched += r.capacitySearchCuts + l.capacitySearchCuts;
     }
+    assertThat(searched).as("capacity cuts made in search").isPositive();
     assertThat(raised).isGreaterThan(3);
     assertThat(checked).isPositive();
   }

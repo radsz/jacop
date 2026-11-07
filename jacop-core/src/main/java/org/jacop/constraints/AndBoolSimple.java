@@ -199,4 +199,9 @@ public class AndBoolSimple extends AbstractBoolSimple
           return true;
         });
   }
+
+  @Override
+  protected int absorbing() {
+    return getClass() == AndBoolSimple.class ? 0 : -1;
+  }
 }
