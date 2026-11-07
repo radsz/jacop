@@ -51,6 +51,7 @@ import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
+import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
@@ -276,6 +277,10 @@ public class Constraints implements ParserTreeConstants {
       // a redundant Routes over 0/1 arcs, whose rules a proof does not derive
       if (RoutesDetector.enabled() && options.proof() == null) {
         new RoutesDetector(support).detect(astTree);
+        // and over the successors of a giant tour, with the rows that tie its arcs to the costs
+        if (GiantTourDetector.enabled()) {
+          new GiantTourDetector(support).detect(astTree);
+        }
       } else if (options.freeSearch()
           && !"0".equals(options.freeConfig("lns-routes", "1"))
           && !"0".equals(options.freeConfig("lns", "1"))) {
