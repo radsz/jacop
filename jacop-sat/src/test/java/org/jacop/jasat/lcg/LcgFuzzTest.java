@@ -87,6 +87,7 @@ import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.LateCount;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -450,7 +451,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(28)) {
+      return switch (rnd.nextInt(30)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -532,7 +533,21 @@ class LcgFuzzTest {
                 new IntVar[] {p[1 + rnd.nextInt(2)]},
                 new int[] {rnd.nextInt(3) - 1});
         case 25 -> precedenceCost();
-        case 26 -> {
+        case 26 ->
+            new WeightedCompletion(
+                p,
+                new int[] {1 + rnd.nextInt(2), 1 + rnd.nextInt(2), rnd.nextInt(3)},
+                new int[] {1 + rnd.nextInt(2), rnd.nextInt(3), 1 + rnd.nextInt(2)},
+                new int[] {1 + rnd.nextInt(3), 1 + rnd.nextInt(3), rnd.nextInt(3)},
+                2,
+                intVar("wp", 0, 30));
+        case 27 ->
+            new LateCount(
+                p,
+                new int[] {1 + rnd.nextInt(2), rnd.nextInt(3), 1 + rnd.nextInt(2)},
+                new int[] {rnd.nextInt(5), rnd.nextInt(5), rnd.nextInt(5)},
+                intVar("lc", 0, 1 + rnd.nextInt(2)));
+        case 28 -> {
           // the preemptive flow check alone, unit or larger uses, with or without compulsory parts
           int k = 3 + rnd.nextInt(2);
           HornFlow flow =
