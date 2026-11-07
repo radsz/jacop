@@ -3161,6 +3161,15 @@ Version 5.0 (unreleased)
      Energy cuts (item 180) stay at the root. Framed capacity cuts are
      not separated.
 
+188. fzn-jacop prints the statistics of JaCoP's own components (lcg*,
+     presolve*, lp*, components*, lns*, ls*, symmetry*, probe*,
+     portfolio*, ...) only in verbose mode: with -s -v. -s alone prints
+     the standard FlatZinc statistics (and objectiveBound with
+     objectiveBoundTime); components*, lcgSlowConflicts and
+     portfolioSharedClauses, which -s printed before, now need -v too.
+     --search-statistics stays, as -s -v without the -v lines after each
+     solution, and so does -s -debug.
+
 Version 4.11
 =============
 

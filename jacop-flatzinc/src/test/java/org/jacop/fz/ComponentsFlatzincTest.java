@@ -143,7 +143,7 @@ class ComponentsFlatzincTest {
     for (int trial = 0; trial < 200; trial++) {
       String model = randomModel(random, false);
       Set<String> all = solutions(run(model, "--components", "off", "-a"));
-      String out = run(model, "-s");
+      String out = run(model, "-s", "-v");
       solved += out.contains("componentsSolved=0") ? 0 : 1;
       Set<String> found = solutions(out);
       String context = "trial " + trial + "\n" + model + "\n" + out;
@@ -159,7 +159,7 @@ class ComponentsFlatzincTest {
     int solved = 0;
     for (int trial = 0; trial < 200; trial++) {
       String model = randomModel(random, true);
-      String out = run(model, "-s");
+      String out = run(model, "-s", "-v");
       solved += out.contains("componentsSolved=0") ? 0 : 1;
       assertEquals(
           optimum(run(model, "--components", "off")),
