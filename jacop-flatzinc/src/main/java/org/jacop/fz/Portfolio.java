@@ -346,11 +346,11 @@ final class Portfolio {
           if (imports > 0) {
             s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
           }
-        }
-        if (sharedClauses.size() > 0) {
-          s.append("%%%mzn-stat: portfolioSharedClauses=")
-              .append(sharedClauses.size())
-              .append('\n');
+          if (sharedClauses.size() > 0) {
+            s.append("%%%mzn-stat: portfolioSharedClauses=")
+                .append(sharedClauses.size())
+                .append('\n');
+          }
         }
         s.append("%%%mzn-stat: solutions=").append(solutions).append('\n');
         if (optimisation && bestSolution != null) {
