@@ -89,7 +89,7 @@ final class DualSimplex implements LpSolver {
   private boolean[] normValid;
 
   // the ratio test, with the columns it flips to their other bound
-  private RatioTest ratioTest;
+  private final RatioTest ratioTest;
 
   /** Statistics: pivots made. */
   long totalPivots;

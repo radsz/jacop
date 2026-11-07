@@ -1075,7 +1075,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = labelWithinTimeOut(store, select);
+    labelWithinTimeOut(store, select);
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {
@@ -1132,7 +1132,7 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     // after initialize listener.
     final int solutionNoBeforeSearch = solutionListener.solutionsNo();
 
-    boolean result = labelWithinTimeOut(store, select);
+    labelWithinTimeOut(store, select);
     teardownLabeling(store, solutionNoBeforeSearch);
 
     if (timeOutOccured && printInfo) {

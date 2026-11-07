@@ -6250,7 +6250,6 @@ class SingleConstraintTest extends TestHelper {
   void testVariableBasedSoftGccMatchesItsDefinition() {
 
     Random random = new Random(7);
-    int satisfiable = 0;
     for (int instance = 0; instance < 60; instance++) {
       int n = 1 + random.nextInt(3);
       int[] values = random.nextBoolean() ? new int[] {1, 0} : new int[] {0, 2};

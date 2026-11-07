@@ -694,10 +694,14 @@ class SingleConstraintTest {
             }
 
             @Override
-            public void setChildrenListeners(ConsistencyListener[] children) {}
+            public void setChildrenListeners(ConsistencyListener[] children) {
+              // the test listener has no children
+            }
 
             @Override
-            public void setChildrenListeners(ConsistencyListener child) {}
+            public void setChildrenListeners(ConsistencyListener child) {
+              // the test listener has no children
+            }
           });
 
       assertThat(search.labeling(store, select, x)).isTrue();

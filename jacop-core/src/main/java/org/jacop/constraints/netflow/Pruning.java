@@ -437,11 +437,10 @@ public class Pruning extends Network {
       for (Arc arc : arcs) {
         arc.decidedPass = pass;
         long distance = distances.distance(reverse ? arc.head : arc.tail());
-        if (distance == ResidualDistances.UNREACHED || arc.reducedCost() + distance > costLimit) {
+        if ((distance == ResidualDistances.UNREACHED || arc.reducedCost() + distance > costLimit)
+            && arc.capacity > 0) {
           // no unit of flow fits through the arc
-          if (arc.capacity > 0) {
-            pruneArc(arc.capacity, arc.sister.capacity, arc.forward, arc.getCompanion());
-          }
+          pruneArc(arc.capacity, arc.sister.capacity, arc.forward, arc.getCompanion());
         }
       }
       arcs.clear();

@@ -586,7 +586,7 @@ final class FznModel {
           if (domain instanceof SetLit s) {
             decl.type = BaseType.INT;
             decl.domain = s;
-          } else if (domain instanceof Call(String name, List<Expr> args) && "..f".equals(name)) {
+          } else if (domain instanceof Call(String name, _) && "..f".equals(name)) {
             decl.type = BaseType.FLOAT;
           } else {
             throw new IllegalStateException("unknown type in " + text);

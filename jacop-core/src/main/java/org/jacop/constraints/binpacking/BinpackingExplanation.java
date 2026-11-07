@@ -1045,9 +1045,9 @@ final class BinpackingExplanation {
     }
   }
 
-  private static final byte CARD = 0;
+  private static final byte CARD_KIND = 0;
   private static final byte PACKED = 1;
-  private static final byte LOAD = 2;
+  private static final byte LOAD_KIND = 2;
   private static final byte ALL = 3;
 
   // the bounds on the number of items of bin j from its card variable, its items and its load
@@ -1066,24 +1066,24 @@ final class BinpackingExplanation {
       long l = loadCountMin(j, j, s);
       if (l > lo) {
         lo = l;
-        loSource = LOAD;
+        loSource = LOAD_KIND;
       }
       long h = loadCountMax(j, j, s);
       if (h < hi) {
         hi = h;
-        hiSource = LOAD;
+        hiSource = LOAD_KIND;
       }
     }
     if (card != null) {
       long c = trail.minBefore(card[j], position);
       if (c >= lo) {
         lo = c;
-        loSource = CARD;
+        loSource = CARD_KIND;
       }
       c = trail.maxBefore(card[j], position);
       if (c <= hi) {
         hi = c;
-        hiSource = CARD;
+        hiSource = CARD_KIND;
       }
     }
     binLo[j] = lo;
@@ -1106,7 +1106,7 @@ final class BinpackingExplanation {
   private void addBinLo(int j, long need, EntryList out) {
     binBounds(j);
     switch (binLoSource[j]) {
-      case CARD -> trail.addBoundReaching(card[j], position, true, need, out);
+      case CARD_KIND -> trail.addBoundReaching(card[j], position, true, need, out);
       case PACKED -> {
         addPackedPositive(j, j, -1, out);
         addPackedZero(j, j, -1, out);
@@ -1121,7 +1121,7 @@ final class BinpackingExplanation {
   private void addBinHi(int j, long most, EntryList out) {
     binBounds(j);
     switch (binHiSource[j]) {
-      case CARD -> trail.addBoundReaching(card[j], position, false, most, out);
+      case CARD_KIND -> trail.addBoundReaching(card[j], position, false, most, out);
       case ALL -> {
         addExcludedPositive(j, j, -1, Long.MIN_VALUE, Long.MAX_VALUE, out);
         addExcludedZero(j, j, -1, out);

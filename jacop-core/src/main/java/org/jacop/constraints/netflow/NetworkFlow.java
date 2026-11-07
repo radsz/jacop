@@ -286,7 +286,9 @@ public class NetworkFlow extends Constraint
           }
 
           @Override
-          public void processEvent(IntVar variable, MutableNetwork network) {}
+          public void processEvent(IntVar variable, MutableNetwork network) {
+            // the cost variable needs no handling of its events here
+          }
         });
 
     // fields in superclass

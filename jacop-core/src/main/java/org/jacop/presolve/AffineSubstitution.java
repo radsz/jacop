@@ -278,10 +278,10 @@ final class AffineSubstitution {
       if (union(xs[0], -ws[1] / ws[0], xs[1], rhs / ws[0])) {
         defining.add(c);
       }
-    } else if (ws[0] % ws[1] == 0 && rhs % ws[1] == 0) {
-      if (union(xs[1], -ws[0] / ws[1], xs[0], rhs / ws[1])) {
-        defining.add(c);
-      }
+    } else if (ws[0] % ws[1] == 0
+        && rhs % ws[1] == 0
+        && union(xs[1], -ws[0] / ws[1], xs[0], rhs / ws[1])) {
+      defining.add(c);
     }
   }
 

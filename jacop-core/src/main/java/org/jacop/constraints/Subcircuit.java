@@ -81,9 +81,9 @@ public class Subcircuit extends Alldiff {
 
   // successor graph of the current domains: arcs v -> w (w != v) of node v are at positions
   // arcStart[v] .. arcStart[v + 1] - 1, and selfLoop[v] tells whether v may stay out of the circuit
-  private int[] arcStart;
+  private final int[] arcStart;
   private int[] arcTo;
-  private boolean[] selfLoop;
+  private final boolean[] selfLoop;
   private int arcCount;
 
   // strongly connected components: comp[v] is the component of v

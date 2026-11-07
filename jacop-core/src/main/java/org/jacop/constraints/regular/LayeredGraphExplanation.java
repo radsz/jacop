@@ -129,7 +129,7 @@ final class LayeredGraphExplanation {
   /** A variable's domain just before the position, from its atoms. */
   private static final class Before {
     // the widest range of a domain whose holes are looked up in an array, not by binary search
-    private static final int DENSE = 1 << 16;
+    private static final int DENSE_RANGE = 1 << 16;
 
     final IntDomain root;
     final int min;
@@ -139,8 +139,8 @@ final class LayeredGraphExplanation {
     // the holes in increasing order, and the entry that made each
     final int[] holeValue;
     final int[] holeEntry;
-    // for a domain of at most DENSE values: per value of [min, max], 1 + the entry of its hole, or
-    // 0
+    // for a domain of at most DENSE_RANGE values: per value of [min, max], 1 + the entry of its
+    // hole, or 0
     private final int[] dense;
     // per value of [min, max] (and the two bounds) the cut that last cited its removal, so that a
     // cut cites each removal once
@@ -183,7 +183,7 @@ final class LayeredGraphExplanation {
         holeValue[k] = (int) (sorted[k] >> 32);
         holeEntry[k] = (int) sorted[k];
       }
-      if (min <= max && (long) max - min < DENSE) {
+      if (min <= max && (long) max - min < DENSE_RANGE) {
         dense = new int[max - min + 1];
         cited = new int[max - min + 1];
         for (int k = 0; k < holes; k++) {

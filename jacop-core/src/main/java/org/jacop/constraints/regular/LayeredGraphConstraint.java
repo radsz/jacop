@@ -272,7 +272,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   private int[] levelUnsupported;
   private int deepestUnsupported;
 
-  static final String ENGINE = System.getProperty("layered_graph_engine", "");
+  static final String ENGINE_PROPERTY = System.getProperty("layered_graph_engine", "");
 
   /** The propagation algorithms of the layered graph. */
   public enum Engine {
@@ -335,8 +335,8 @@ public abstract class LayeredGraphConstraint extends Constraint
 
   private Engine resolveEngine() {
     Engine chosen = engine == Engine.AUTO ? defaultEngine() : engine;
-    if (chosen == Engine.AUTO && !ENGINE.isEmpty()) {
-      chosen = Engine.valueOf(ENGINE.toUpperCase(Locale.ROOT));
+    if (chosen == Engine.AUTO && !ENGINE_PROPERTY.isEmpty()) {
+      chosen = Engine.valueOf(ENGINE_PROPERTY.toUpperCase(Locale.ROOT));
     }
     return chosen;
   }

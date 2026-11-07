@@ -574,7 +574,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // the position of each variable in the lex-leader order
     Map<IntVar, Integer> rank = new IdentityHashMap<>();
     for (IntVar v : ranked) {
-      if (graph.varVertex.containsKey(v)) {
+      if (graph.varVertices.containsKey(v)) {
         rank.putIfAbsent(v, rank.size());
       }
     }
@@ -583,14 +583,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     // the variables are the base of the search, in the lex-leader order
     int[] base = new int[rank.size()];
-    rank.forEach((x, r) -> base[r] = graph.varVertex.getOrDefault(x, 0));
+    rank.forEach((x, r) -> base[r] = graph.varVertices.getOrDefault(x, 0));
     long left = Math.max(0, deadline - System.nanoTime());
     GraphAutomorphisms.Result result =
         new GraphAutomorphisms(graph.colors(), graph.adjacency(), base).generators(MAX_WORK, left);
 
     IntVar[] varAt = new IntVar[n];
     int[] rankAt = new int[n];
-    graph.varVertex.forEach(
+    graph.varVertices.forEach(
         (x, v) -> {
           varAt[v] = x;
           rankAt[v] = rank.getOrDefault(x, 0);
@@ -1643,7 +1643,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     private final List<String> colorKeys = new ArrayList<>();
     private int[][] adjacency = new int[64][];
     private int[] degree = new int[64];
-    final Map<IntVar, Integer> varVertex = new IdentityHashMap<>();
+    final Map<IntVar, Integer> varVertices = new IdentityHashMap<>();
     private final Map<Var, Integer> otherVertex = new IdentityHashMap<>();
     private final Map<Long, Integer> valueVertex = new HashMap<>();
     private final Set<String> distinct = new HashSet<>();
@@ -1946,7 +1946,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     int varVertex(IntVar x) {
-      Integer v = varVertex.get(x);
+      Integer v = varVertices.get(x);
       if (v == null) {
         Integer space = spaceOf == null ? null : spaceOf.get(x);
         String key;
@@ -1958,7 +1958,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
           key = "v|" + x.getClass().getName() + "|" + x.dom().getClass().getName() + "|" + x.dom();
         }
         v = vertex(key);
-        varVertex.put(x, v);
+        varVertices.put(x, v);
         vars.add(x);
         if (space != null && !spaces.get(space).sameDomain) {
           for (ValueEnumeration e = x.dom().valueEnumeration(); e.hasMoreElements(); ) {

@@ -355,7 +355,7 @@ public class SubcircuitCost extends Constraint
     for (int i = 0; i < n; i++) {
       IntVar x = list[i];
       if (!x.domain.contains(offset + i)) {
-        kind[i] = SteinerCycleBound.REQUIRED;
+        kind[i] = SteinerCycleBound.REQUIRED_NODE;
         required++;
       } else if (x.singleton()) {
         kind[i] = SteinerCycleBound.OUT;

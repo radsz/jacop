@@ -357,7 +357,7 @@ public final class LcgSolver implements ExternalPropagator {
   private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
   private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
-  private double[] activity;
+  private final double[] activity;
   // the variables by activity; with Booleans first only the 0/1 ones, the others in wide, which
   // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search
   private final VarHeap heap = new VarHeap();
@@ -368,9 +368,9 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean booleansFirstTurns;
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
-  private boolean[] late;
+  private final boolean[] late;
   // variables that no constraint uses: never branched on, at their least value in a solution
-  private boolean[] unused;
+  private final boolean[] unused;
   private double activityInc = 1;
   private long activityConflicts;
   // variables taken off the heap because they were fixed, with the decision level at the time

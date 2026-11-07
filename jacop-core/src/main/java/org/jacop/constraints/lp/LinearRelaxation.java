@@ -440,7 +440,7 @@ public class LinearRelaxation extends Constraint
 
   // the capacity cuts kept, as rows: they follow from the Routes, not from the rows, so a copy
   // takes them as rows of its own
-  private List<LinearForm> capacityForms = new ArrayList<>();
+  private final List<LinearForm> capacityForms = new ArrayList<>();
 
   /** Statistics: rounded capacity cuts added. */
   public long capacityCuts;
@@ -458,7 +458,7 @@ public class LinearRelaxation extends Constraint
   private int capacityWaited;
   // the column of each arc of each separation, -1 when the arc is not a column
   private int[][] capacityColumns;
-  private Set<List<Long>> capacitySeen = new HashSet<>();
+  private final Set<List<Long>> capacitySeen = new HashSet<>();
 
   /** Statistics: capacity and multistar cuts added in search. */
   public long capacitySearchCuts;
@@ -2657,7 +2657,6 @@ public class LinearRelaxation extends Constraint
       }
       LpSolver kept = lp.copy();
       int[] keptRows = lpRow;
-      long pivots = lp.pivots();
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());

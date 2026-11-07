@@ -140,7 +140,7 @@ public class Binpacking extends Constraint
   /** True if the bin-count bound also uses f_CCM1 and reduction RMax. */
   private boolean strongBinCountBound;
 
-  private int minBinNumber;
+  private final int minBinNumber;
   private long sizeAllItems;
 
   /** The sums alpha' and beta' of the last NoSum. */
@@ -514,7 +514,7 @@ public class Binpacking extends Constraint
   private final int[] binOtherWeights;
 
   /** Bins to be (re)processed in the current consistency call, indexed from 0. */
-  private BitSet todo = new BitSet();
+  private final BitSet todo = new BitSet();
 
   /** Removes bin binIdx from an item and schedules the bins whose item sets changed. */
   private void removeBin(Store store, IntVar b, int binIdx) {

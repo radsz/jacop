@@ -188,10 +188,11 @@ final class RedundantConstraints {
           && ((AbstractReifiedConstraint) c).c instanceof Constraint inner) {
         Canonical relation = canonical(linearForm(inner));
         IntVar b = ((AbstractReifiedConstraint) c).b;
-        if (relation != null && relation.lhs() != null && !b.singleton()) {
-          if (!reified.add(new ReifiedKey(c.getClass(), ordinal(b), inner.getClass(), relation))) {
-            duplicates.add(c);
-          }
+        if (relation != null
+            && relation.lhs() != null
+            && !b.singleton()
+            && !reified.add(new ReifiedKey(c.getClass(), ordinal(b), inner.getClass(), relation))) {
+          duplicates.add(c);
         }
         continue;
       }
@@ -233,7 +234,9 @@ final class RedundantConstraints {
           }
           value = m.c();
         }
-        default -> {}
+        default -> {
+          // other relations do not fix the value
+        }
       }
     }
     boolean equality = value != null;

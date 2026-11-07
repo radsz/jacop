@@ -2200,7 +2200,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         case "on" -> lcg.setBooleansFirst(true);
         case "off" -> lcg.setBooleansFirst(false);
         case "turns" -> lcg.setBooleansFirstTurns(true);
-        case "" -> {}
+        case "" -> {
+          // not set: the solver default
+        }
         default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
       }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
@@ -4292,17 +4294,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   DepthFirstSearch<T> sub_search(SearchItem<T> si, DepthFirstSearch<T> l, boolean master) {
-    DepthFirstSearch<T> label =
-        switch (si.type()) {
-          case INT_SEARCH, BOOL_SEARCH -> subSearchIntOrBool(si, master);
-          case SET_SEARCH -> subSearchSet(si, master);
-          case PRIORITY_SEARCH -> subSearchPriority(si);
-          case WARM_START -> subSearchWarmStart(si, master);
-          case SEQ_SEARCH -> subSearchSeq(si, l);
-          case FLOAT_SEARCH -> subSearchFloat(si, master);
-          default -> subSearchDefault();
-        };
-    return label;
+    return switch (si.type()) {
+      case INT_SEARCH, BOOL_SEARCH -> subSearchIntOrBool(si, master);
+      case SET_SEARCH -> subSearchSet(si, master);
+      case PRIORITY_SEARCH -> subSearchPriority(si);
+      case WARM_START -> subSearchWarmStart(si, master);
+      case SEQ_SEARCH -> subSearchSeq(si, l);
+      case FLOAT_SEARCH -> subSearchFloat(si, master);
+      default -> subSearchDefault();
+    };
   }
 
   private DepthFirstSearch<T> subSearchIntOrBool(SearchItem<T> si, boolean master) {

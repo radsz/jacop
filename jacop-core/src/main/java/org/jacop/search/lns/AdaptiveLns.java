@@ -151,7 +151,7 @@ public final class AdaptiveLns {
   static final int MAX_FAILURES = 32;
 
   /** The nearest customers each node of a circuit keeps for Shaw removal. */
-  static final int NEAR = 32;
+  static final int NEAR_COUNT = 32;
 
   /** The fewest nodes of a circuit worth routes. */
   static final int MIN_CIRCUIT = 4;
@@ -205,7 +205,7 @@ public final class AdaptiveLns {
   private final List<Routes> imposedRoutes = new ArrayList<>();
   private final List<Constraint> imposedCircuits = new ArrayList<>();
   // the variables that are successors of a circuit among the routings
-  private boolean[] successorVar;
+  private final boolean[] successorVar;
 
   private final double[] share;
   private final double[] score;
@@ -322,8 +322,8 @@ public final class AdaptiveLns {
         found = true;
       }
     }
-    SuccessorRoutes r = new SuccessorRoutes(x, offset, varIndex, found ? cost : null, NEAR);
-    if (r.customers() > 1) {
+    SuccessorRoutes r = new SuccessorRoutes(x, offset, varIndex, found ? cost : null, NEAR_COUNT);
+    if (r.customerCount() > 1) {
       routings.add(r);
       for (int i : varIndex) {
         if (i >= 0) {
@@ -365,7 +365,7 @@ public final class AdaptiveLns {
     }
     RouteNeighbourhoods r =
         new RouteNeighbourhoods(routes, literalNode, termCost, conVars, varCons, vars.length);
-    if (r.customers() > 1) {
+    if (r.customerCount() > 1) {
       routings.add(r);
     }
     return this;
@@ -802,7 +802,7 @@ public final class AdaptiveLns {
         count++;
       }
     }
-    if (count >= r.customers()) {
+    if (count >= r.customerCount()) {
       Arrays.fill(relax, true);
       return relax;
     }

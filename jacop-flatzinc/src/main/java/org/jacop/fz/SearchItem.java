@@ -276,7 +276,9 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
           System.err.println(WARNING_EXPLORATION_USE_COMPLETE);
         }
       }
-      case "restart_none" -> {}
+      case "restart_none" -> {
+        // no restarts: nothing to set
+      }
       case "restart_constant" -> handleRestartConstant(ann);
       case "restart_linear" -> handleRestartLinear(ann);
       case "restart_luby" -> handleRestartLuby(ann);

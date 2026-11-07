@@ -2324,7 +2324,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] d = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
-    int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6)); // the minimum index, unused
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all

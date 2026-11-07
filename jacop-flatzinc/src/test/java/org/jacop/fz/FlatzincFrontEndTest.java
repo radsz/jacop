@@ -147,7 +147,9 @@ class FlatzincFrontEndTest {
     // MiniZinc Challenge 2023: 4.7 million nodes against Choco's 22 thousand).
     String out = run(pigeonsAfterFreeVariables(3), "-s")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
-    int failures = Integer.parseInt(out.replaceAll("(?s).*%%%mzn-stat: failures=(\\d+).*", "$1"));
+    Matcher fm = Pattern.compile("%%%mzn-stat: failures=(\\d+)").matcher(out);
+    assertTrue(fm.find(), out);
+    int failures = Integer.parseInt(fm.group(1));
     assertTrue(failures < 200, out);
   }
 

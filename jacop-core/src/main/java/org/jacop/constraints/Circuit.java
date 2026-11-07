@@ -309,14 +309,12 @@ public class Circuit extends Alldiff {
         }
         continue;
       }
-      if (low[k] == val[k]) {
+      if (low[k] == val[k] && (k != 0 || idd != n)) {
         // k is the root of a strongly connected component. It is the first component completed
         // (the search stops at the first one), so all visited nodes are still in the Tarjan stack
         // and low is the exact lowlink. The graph is strongly connected only if this component
         // is rooted at node 0 and contains all nodes.
-        if (k != 0 || idd != n) {
-          throw Store.failException;
-        }
+        throw Store.failException;
       }
       sp--;
       if (sp > 0 && low[k] < low[dfsNode[sp - 1]]) {
