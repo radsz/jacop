@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Constraint;
@@ -50,7 +51,9 @@ import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -101,6 +104,7 @@ class LinearConflictTest {
       }
       assertThat(learnt).isGreaterThan(50);
       assertThat(outcomes.getOrDefault("row-reason", 0L)).isGreaterThan(0L);
+      assertThat(outcomes.getOrDefault("clause-reason", 0L)).isGreaterThan(0L);
     } finally {
       if (before == null) {
         System.clearProperty("jacop.lcg.linear");
@@ -132,7 +136,7 @@ class LinearConflictTest {
       int b2 = 4 + (b - 4 + 1 + rnd.nextInt(2)) % 3;
       int k = rnd.nextInt(4);
       relations.add(
-          switch (rnd.nextInt(8)) {
+          switch (rnd.nextInt(10)) {
             case 0 -> {
               int wi = rnd.nextInt(5) - 2;
               int wj = rnd.nextInt(5) - 2;
@@ -171,6 +175,26 @@ class LinearConflictTest {
               yield new Relation(
                   new LinearInt(new IntVar[] {v[i], v[j], v[7]}, new int[] {1, 1, -1}, ">=", -d),
                   t -> t[i] + t[j] - t[7] >= -d);
+            }
+            case 8 -> {
+              int r = 4 + (b2 - 4 + 1) % 3;
+              int bb = b;
+              int bb2 = b2;
+              yield new Relation(
+                  new XorBool(new IntVar[] {v[bb], v[bb2]}, v[r]),
+                  t -> t[r] == ((t[bb] + t[bb2]) % 2));
+            }
+            case 9 -> {
+              int[][] tuples =
+                  IntStream.range(0, 8)
+                      .filter(m -> rnd.nextInt(3) > 0)
+                      .mapToObj(m -> new int[] {m & 1, (m >> 1) & 1, (m >> 2) & 1})
+                      .toArray(int[][]::new);
+              yield new Relation(
+                  new Table(new IntVar[] {v[4], v[5], v[6]}, tuples),
+                  t ->
+                      Arrays.stream(tuples)
+                          .anyMatch(u -> u[0] == t[4] && u[1] == t[5] && u[2] == t[6]));
             }
             default -> {
               int d = 2 + rnd.nextInt(5);

@@ -60,6 +60,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -1498,6 +1499,89 @@ class LinearRelaxationTest {
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
       assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
+    }
+  }
+
+  /**
+   * The energy cuts of a cumulative resource raise the root bound of random total completion time
+   * models with release dates (the rows alone give the sum of the release dates and durations), and
+   * keep the optimum under depth-first search and under lazy clause generation with the explanation
+   * checker on.
+   */
+  @Test
+  void energyCutsKeepTheOptimumOfScheduling() {
+    int raised = 0;
+    long checked = 0;
+    for (int run = 0; run < 12; run++) {
+      long expected = new Completion(run).optimum();
+
+      Completion dfs = new Completion(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.capacityBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      raised += r.energyCuts > 0 && r.capacityBound > r.rootBound + 0.5 ? 1 : 0;
+
+      Completion lcg = new Completion(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(raised).isGreaterThan(3);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * A random scheduling model: tasks with release dates, durations and usages on one cumulative
+   * resource, and the sum of their completion times, a linear row, minimized.
+   */
+  private static final class Completion {
+    final Store store = new Store();
+    final IntVar[] s;
+    final IntVar cost;
+
+    Completion(long seed) {
+      Random rnd = new Random(seed);
+      int n = 5 + rnd.nextInt(2);
+      int cap = 1 + rnd.nextInt(2);
+      s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] u = new IntVar[n];
+      int[] w = new int[n + 1];
+      for (int j = 0; j < n; j++) {
+        int p = 1 + rnd.nextInt(4);
+        s[j] = new IntVar(store, "s" + j, rnd.nextInt(4), 30);
+        d[j] = new IntVar(store, "d" + j, p, p);
+        int use = 1 + rnd.nextInt(cap);
+        u[j] = new IntVar(store, "u" + j, use, use);
+        w[j] = 1;
+      }
+      store.impose(new Cumulative(s, d, u, new IntVar(store, "cap", cap, cap)));
+      // the completion times, rows of their own, and their sum
+      IntVar[] vars = new IntVar[n + 1];
+      for (int j = 0; j < n; j++) {
+        vars[j] = new IntVar(store, "c" + j, 0, 40);
+        store.impose(
+            new LinearInt(new IntVar[] {vars[j], s[j]}, new int[] {1, -1}, "==", d[j].value()));
+      }
+      cost = new IntVar(store, "cost", 0, 1000);
+      vars[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(vars, w, "==", 0));
+    }
+
+    // the least cost by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()), cost))
           .isTrue();
       return search.getCostValue();
     }
