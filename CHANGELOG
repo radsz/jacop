@@ -2659,7 +2659,63 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
-169. Scheduling objective bounds. WeightedCompletion takes resource
+169. Lattice methods for linear equalities.
+     - LinearIntDom finds the supports of an equality by bitset sumsets
+       when that is estimated cheaper than enumerating them: a forward
+       pass of shifts gives the reachable partial sums after each
+       variable, a backward pass keeps those that still reach the
+       right-hand side, in O(sum |D_i| * W / 64) for a window of W
+       partial sums. It stays domain consistent on long equalities with
+       small coefficients, where the enumeration (product of the domain
+       sizes up to 10^7) fell back to bounds. This is the knapsack dynamic
+       program of Trick (Annals of OR 118, 2003) and the sumset view of
+       subset sum of Koiliaris and Xu (SODA 2017; ACM TALG 15(3), 2019)
+       and Bringmann (SODA 2017), on bitsets rather than FFT.
+       -Dorg.jacop.constraints.LinearIntDom.sumset=off|auto|always.
+     - New class LinearEqualities and org.jacop.util.IntLattice: the
+       integer solutions of a system A x = b as x0 plus a lattice basis,
+       by a column Hermite normal form (Hermite 1851; Kannan and Bachem,
+       SIAM J. Computing 8(4), 1979), and LLL reduction (Lenstra, Lenstra
+       and Lovasz, Math. Annalen 261, 1982) with floating-point
+       Gram-Schmidt as in Schnorr and Euchner (Math. Programming 66,
+       1994). The FlatZinc front end (LinearSystemDetector) gives it the
+       int_lin_eq constraints: each is divided by the GCD of its
+       coefficients (infeasible when it does not divide the constant),
+       equalities that only define a variable are set aside, and each
+       remaining component is solved over the integers, which proves it
+       infeasible or gives every variable a congruence x = x0 (mod g)
+       whose other values are removed from domains of at most 256 values
+       (larger domains only get their bounds rounded); the variables the set-aside
+       equalities define get the congruence of their sum.
+     - Market split systems (at least two equalities of five or more
+       variables, a coefficient of at least 10, domains of at most 100
+       values) are reformulated as Aardal, Hurkens and Lenstra do (Math.
+       of OR 25(3), 2000): x = x0 + sum_k lambda_k q_k over the reduced
+       basis, with x0 moved near the centre of the box (Babai,
+       Combinatorica 6, 1986). The linear relaxation takes these rows in
+       and lambda is searched first, last basis vector first, middle
+       value first. Without the relaxation the lambda search is
+       slower than the x search, so it is only done with the relaxation
+       on (the default). On 20
+       market split instances (Cornuejols and Dawande, IPCO 1998;
+       m = 3..6 equalities, n = 10(m-1) binaries, 60 s) solved 8 -> 18
+       by default and 6 -> 18 with -f; m = 5 takes 2-5 s against
+       time-outs, and 2 of the 5 m = 6 instances stay open. The column
+       Hermite normal form reduces each row by its smallest entry
+       (nearest-multiple subtraction rather than pairwise extended
+       Euclid, whose multipliers grew U to millions of bits on
+       lights_out) and gives up on a component beyond 256 bits.
+       -Dorg.jacop.fz.lattice=false turns the detector off;
+       -Dorg.jacop.fz.latticeReformulate=auto|on|off. Wide set (220,
+       60 s, paired): congruences prune on 16 instances and no wide
+       instance is reformulated; solved 168 -> 167 by default (one evm
+       proof at 59.4 s lost) and 160 -> 161 with -f, instances 6 better
+       / 6 worse and 13 / 13, the rest of the differences being on
+       instances whose model does not change. ptv pax_period_20_3b is
+       proved in 28 s instead of 58 s (4.4 s instead of 7.4 s with -f),
+       harmony canon in 18 s instead of 23 s (36 s instead of 48 s).
+
+170. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
@@ -2706,7 +2762,7 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
-170. Local search searches the machine sequences of disjunctive scheduling
+171. Local search searches the machine sequences of disjunctive scheduling
      models with critical-path neighbourhoods, the scheduling abstraction
      of Comet's constraint-based local search (Van Hentenryck and Michel,
      "Scheduling abstractions for local search", CPAIOR 2004). Machines are
