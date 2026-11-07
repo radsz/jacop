@@ -601,7 +601,17 @@ public final class CdclSolver {
       newDecisionLevel();
       int start = trailSize;
       assign(l, NO_REASON);
-      if (propagateAll() != NO_CONFLICT || !ok) {
+      int conflict = propagateAll();
+      if (decisionLevel == 0) {
+        // a clause of the external propagator asserted a literal at the root and undid the
+        // probe's level: the literal implies nothing more than the root, and a conflict now is
+        // one of the root, which refutes the formula
+        if (conflict != NO_CONFLICT) {
+          ok = false;
+        }
+        return ok ? new int[0] : null;
+      }
+      if (conflict != NO_CONFLICT || !ok) {
         backtrack(0);
         return null;
       }
