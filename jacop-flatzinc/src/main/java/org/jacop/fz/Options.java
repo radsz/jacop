@@ -276,6 +276,11 @@ public class Options {
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many
                 values as variables is kept by moving its variables only by swaps),
+                ls-sched=<kind>+<kind>... (the critical-path neighbourhoods of the tabu search over
+                the machine sequences of a disjunctive scheduling model whose cost is the makespan,
+                of ns: swap the first two and last two operations of each critical block, n1: swap
+                any two adjacent ones, n4: move one to the front or back of its block; default
+                ns+n4; 0 = off)
                 ls-implied=1|0 (1, the default: the redundant constraints JaCoP adds are not
                 evaluated), ls-sym=1|0 (1, the default: the symmetry breaking constraints JaCoP
                 adds are not evaluated; a solution is moved onto a symmetric one that holds them)
