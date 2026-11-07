@@ -36,10 +36,12 @@ import org.jacop.core.IntervalDomain;
 
 /**
  * A column of the linear relaxation that is not a variable of the store: the auxiliary 0/1 column
- * {@code [x = v]} of a value encoding that the model has no Boolean for. It is never pruned and
- * never searched on; its bounds stay those it was made with. The relaxation removes it from every
- * inequality it deduces, at the bound that keeps the inequality valid, so that pruning and its
- * explanations only use variables of the store.
+ * {@code [x = v]} of a value encoding that the model has no Boolean for, or an arc column of the
+ * flow model of a layered graph (an edge of level i labelled v), which is at most {@code [x_i =
+ * v]}. It is never pruned and never searched on. In the simplex its bounds come from the domain of
+ * its variable ({@link #lower}, {@link #upper}). The relaxation removes it from every inequality it
+ * deduces, at the bound that keeps the inequality valid, so that pruning and its explanations only
+ * use variables of the store.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -50,6 +52,7 @@ public final class LpColumn extends IntVar {
 
   private final IntVar variable;
   private final int value;
+  private final boolean arc;
 
   /**
    * Creates the 0/1 column {@code [variable = value]}.
@@ -58,12 +61,60 @@ public final class LpColumn extends IntVar {
    * @param value the value
    */
   public LpColumn(IntVar variable, int value) {
+    this(variable, value, false);
+  }
+
+  private LpColumn(IntVar variable, int value, boolean arc) {
     super();
     this.variable = variable;
     this.value = value;
-    id = "lp_" + variable.id() + "=" + value + "#" + NUMBER.incrementAndGet();
+    this.arc = arc;
+    id = (arc ? "lp_arc_" : "lp_") + variable.id() + "=" + value + "#" + NUMBER.incrementAndGet();
     domain = new IntervalDomain(0, 1);
     refreshBounds();
+  }
+
+  /**
+   * Creates the 0/1 arc column of an edge labelled {@code value} of the level of {@code variable}
+   * in the flow model of a layered graph: it is at most {@code [variable = value]}, so it is 0 once
+   * the value is gone, but it is not 1 when the variable takes the value, since several edges of a
+   * level may carry it.
+   *
+   * @param variable the variable of the level of the edge
+   * @param value the label of the edge
+   * @return the column
+   */
+  public static LpColumn arc(IntVar variable, int value) {
+    return new LpColumn(variable, value, true);
+  }
+
+  /**
+   * Tells whether this is an arc column ({@link #arc}) and not the indicator {@code [x = v]}.
+   *
+   * @return true for an arc column
+   */
+  public boolean isArc() {
+    return arc;
+  }
+
+  /**
+   * Returns the lower bound the domain of the variable gives the column: 1 for an indicator whose
+   * variable is the value, 0 otherwise.
+   *
+   * @return 0 or 1
+   */
+  public int lower() {
+    return !arc && variable.singleton(value) ? 1 : 0;
+  }
+
+  /**
+   * Returns the upper bound the domain of the variable gives the column: 0 once the value is gone,
+   * 1 otherwise.
+   *
+   * @return 0 or 1
+   */
+  public int upper() {
+    return variable.domain.contains(value) ? 1 : 0;
   }
 
   /**
@@ -85,7 +136,8 @@ public final class LpColumn extends IntVar {
   }
 
   /**
-   * Returns the 0 or 1 the column has in a solution, given the value of its variable there.
+   * Returns the 0 or 1 the column has in a solution, given the value of its variable there; for an
+   * arc column it is the bound {@code [x = v]} of the arc.
    *
    * @param of the value of the variable
    * @return 1 when it is the value of the column, 0 otherwise
@@ -102,6 +154,6 @@ public final class LpColumn extends IntVar {
    * @return the new column
    */
   public LpColumn copy(IntVar copied) {
-    return new LpColumn(copied, value);
+    return new LpColumn(copied, value, arc);
   }
 }

@@ -2524,7 +2524,30 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
-163. Sequence (sliding among) as a global for local search and lazy
+163. Flow model of Regular and ExtensionalSupportMdd in the linear
+     relaxation (Cote, Gendron and Rousseau, "Modeling the regular
+     constraint with integer programming", CPAIOR 2007): one LP-only arc
+     column per group of edges with the same level and value on a path of
+     the layered graph (the value column itself when the group is a single
+     edge), a row sum arcs = [x = v] per group, one unit of flow out of the
+     source and conservation at every inner node. The flow polytope of a
+     layered graph is integral. The arc columns are bounded by the domain
+     of their variable (LpColumn.arc) and are not used to guide the
+     search. The rows come after the value encodings and are kept only when
+     they raise the integer bound of the objective above that of the rows
+     before them. -Dorg.jacop.lp.flowEncodings=false turns them off. The
+     value encodings of item 161 are no longer tried on models without an
+     objective, where they cannot raise a bound. Wide set (220, 60 s,
+     paired): default 161 to 161 solved (5 families better, 5 worse), -f
+     162 to 162 (6 / 3); the LP differs only on the 8 satisfaction models
+     that lose their value columns and on 2 peaceable-queens instances
+     where the flow rows are built but not kept, and none of the outcomes
+     that changed is on those. On the 55 Challenge instances with Regular
+     or MDD and an objective, the flow rows rarely fit in the sparse
+     simplex (handball: none of 1664) and, without that cap, raise the
+     integer root bound only on peaceable queens (pq_n12 72 to 71).
+
+164. Sequence (sliding among) as a global for local search and lazy
      clause generation, and found where a model states it window by
      window. AmongSeq, the domain consistent propagator of Sequence on the
      cumulative-sums network of Brand, Narodytska, Quimper, Stuckey and
@@ -2559,7 +2582,7 @@ Version 5.0 (unreleased)
      solved by default and 163 -> 163 under -f, with chains on 4 of its
      220 instances (the other changes are run-to-run noise).
 
-164. Local search (--free-config ls=...) no longer evaluates the
+165. Local search (--free-config ls=...) no longer evaluates the
      constraints JaCoP adds itself. The redundant constraints of the
      detectors are marked implied when they are imposed
      (Store.imposingImplied, Store.isImplied) and left out, since they
@@ -2580,7 +2603,7 @@ Version 5.0 (unreleased)
      and 23x on cars 65_09. Wide set at 60 s, -f ls=0.1: 162 to 161
      solved, with solutions 192 to 192, within the noise of free search.
 
-165. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
+166. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
      f[i](s[i]) <= cost under precedences s[j] >= s[i] + d over an
      acyclic graph, where each f[i] is convex piecewise linear, given as
      earliness and tardiness terms e * max(0, b - s) + t * max(0, s - b).
@@ -2610,7 +2633,7 @@ Version 5.0 (unreleased)
      J.-N. Monette, Y. Deville and P. Van Hentenryck, Just-In-Time
      Scheduling with Constraint Programming, ICAPS 2009.
 
-166. The XorSystem detector also reads tables (jacop_table_int,
+167. The XorSystem detector also reads tables (jacop_table_int,
      jacop_table_bool and short tables): the parity constraints a table
      implies on its 0/1 variables, the equations of the affine hull over
      GF(2) of its tuples allowed by the domains, become rows of the
@@ -2622,7 +2645,7 @@ Version 5.0 (unreleased)
      isolated 2-variable rows. XCSP3 2025 Cryptanalysis gets systems from
      its bool_xor (8 per instance) with no change in time or answers.
 
-167. Under --lcg, EinA (set_in_reif with a set variable)
+168. Under --lcg, EinA (set_in_reif with a set variable)
      explains what the set's cardinality derives inside the constraint:
      when the cardinality bound leaves no room for the element, or when
      the other members already fill it, the reason cites the
@@ -2636,7 +2659,7 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
-168. Scheduling objective bounds. WeightedCompletion takes resource
+169. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
