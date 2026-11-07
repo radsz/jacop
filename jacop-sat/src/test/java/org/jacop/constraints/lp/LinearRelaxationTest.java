@@ -1559,6 +1559,7 @@ class LinearRelaxationTest {
   void capacityCutsKeepTheOptimumOfVehicleRouting() {
     int raised = 0;
     long checked = 0;
+    long searched = 0;
     for (int run = 0; run < 12; run++) {
       long expected = new Cvrp(run).optimum();
 
@@ -1578,7 +1579,9 @@ class LinearRelaxationTest {
       assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
       assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
       checked += solver.checker().checked;
+      searched += r.capacitySearchCuts + l.capacitySearchCuts;
     }
+    assertThat(searched).as("capacity cuts made in search").isPositive();
     assertThat(raised).isGreaterThan(3);
     assertThat(checked).isPositive();
   }

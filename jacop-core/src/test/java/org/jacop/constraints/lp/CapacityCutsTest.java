@@ -41,9 +41,10 @@ import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
 /**
- * Checks the rounded capacity cuts of {@link CapacityCuts} against every set of routes of small
- * random graphs, found by enumeration: no cut may cut off a set of routes, whatever the LP values
- * the cuts were separated from, and a solution that is a set of routes violates no cut.
+ * Checks the rounded capacity and multistar cuts of {@link CapacityCuts} against every set of
+ * routes of small random graphs, found by enumeration: no cut may cut off a set of routes, whatever
+ * the LP values the cuts were separated from, and a solution that is a set of routes violates no
+ * cut.
  */
 class CapacityCutsTest {
 
@@ -145,16 +146,20 @@ class CapacityCutsTest {
 
   private static boolean holds(CapacityCuts.Cut cut, int[] bits) {
     long sum = 0;
-    for (int a : cut.arcs()) {
-      sum += bits[a];
+    int[] arcs = cut.arcs();
+    long[] w = cut.weights();
+    for (int k = 0; k < arcs.length; k++) {
+      sum += w[k] * bits[arcs[k]];
     }
     return cut.entering() ? sum >= cut.bound() : sum <= cut.bound();
   }
 
   private static double activity(CapacityCuts.Cut cut, double[] value) {
     double sum = 0;
-    for (int a : cut.arcs()) {
-      sum += value[a];
+    int[] arcs = cut.arcs();
+    long[] w = cut.weights();
+    for (int k = 0; k < arcs.length; k++) {
+      sum += w[k] * value[arcs[k]];
     }
     return sum;
   }
@@ -163,6 +168,7 @@ class CapacityCutsTest {
   @Test
   void cutsKeepEverySetOfRoutes() {
     int separated = 0;
+    int multistar = 0;
     for (int run = 0; run < INSTANCES; run++) {
       Random rnd = new Random(run);
       Graph g = graph(rnd);
@@ -185,6 +191,9 @@ class CapacityCutsTest {
         }
         for (CapacityCuts.Cut cut : cuts.separate(value, 100)) {
           separated++;
+          if (Arrays.stream(cut.weights()).anyMatch(w -> w != 1)) {
+            multistar++;
+          }
           double act = activity(cut, value);
           assertThat(cut.entering() ? act < cut.bound() : act > cut.bound())
               .as("seed %d: the values violate %s", run, cut)
@@ -196,6 +205,7 @@ class CapacityCutsTest {
       }
     }
     assertThat(separated).isPositive();
+    assertThat(multistar).isPositive();
   }
 
   /** Two customers whose demands fill more than a vehicle need two routes into them. */

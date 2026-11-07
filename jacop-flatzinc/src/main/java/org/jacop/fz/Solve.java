@@ -684,6 +684,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
+            + "\n%%%mzn-stat: lpCapacitySearchCuts="
+            + r.capacitySearchCuts
+            + "\n%%%mzn-stat: lpCapacitySeparations="
+            + r.capacitySeparations
             + "\n%%%mzn-stat: lpBaseBound="
             + r.baseBound
             + "\n%%%mzn-stat: lpExtraRows="
@@ -2176,6 +2180,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         late.add(costVar);
       }
       lcg.setLateVariables(late);
+    }
+    if (!"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
+      // the Booleans of redundant constraints, such as the arcs of a giant tour's Routes, follow
+      // from the model's variables: branching on them first, as on the model's Booleans, took 53 s
+      // instead of 0.9 s to the first solution of vrplc13_11_15_s3 with -f
+      lcg.setLateVariables(dictionary.auxiliaryVariables);
     }
     if (free) {
       // turns: activity branching changes between the two orders at each restart. Each order wins

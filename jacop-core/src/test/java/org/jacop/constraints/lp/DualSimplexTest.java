@@ -174,6 +174,67 @@ class DualSimplexTest {
     assertThat(infeasible).isGreaterThan(200);
   }
 
+  @Test
+  void aRestoredBasisSolvesTheBoundsItWasSavedForAgain() {
+    Random rnd = new Random(7);
+    int restored = 0;
+    for (int run = 0; run < 500; run++) {
+      int m = 2 + rnd.nextInt(6);
+      int n = 3 + rnd.nextInt(7);
+      double[][] a = new double[m][n];
+      double[] rowLo = new double[m];
+      double[] rowHi = new double[m];
+      for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+          a[i][j] = rnd.nextInt(3) == 0 ? 0 : rnd.nextInt(11) - 5;
+        }
+        rowLo[i] = rnd.nextInt(11) - 10.0;
+        rowHi[i] = rowLo[i] + rnd.nextInt(20);
+      }
+      double[] cost = new double[n];
+      for (int j = 0; j < n; j++) {
+        cost[j] = rnd.nextInt(5) - 2.0;
+      }
+      double[] lo = new double[n];
+      double[] hi = new double[n];
+      java.util.Arrays.fill(lo, -5);
+      java.util.Arrays.fill(hi, 5);
+      DualSimplex lp = new DualSimplex(a, rowLo, rowHi, cost);
+      for (int j = 0; j < n; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      if (lp.solve(1000) != DualSimplex.OPTIMAL) {
+        continue;
+      }
+      double root = lp.objective();
+      Object saved = lp.saveBasis();
+      // a dive: bounds narrowed around the solution until infeasible or five steps
+      for (int step = 0; step < 5; step++) {
+        int j = rnd.nextInt(n);
+        double v = Math.rint(lp.value(j));
+        lp.setBounds(j, Math.max(lo[j], v - 1), Math.min(hi[j], v));
+        if (lp.solve(1000) != DualSimplex.OPTIMAL) {
+          break;
+        }
+      }
+      for (int j = 0; j < n; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      assertThat(lp.restoreBasis(saved)).isTrue();
+      restored++;
+      long before = lp.pivots();
+      assertThat(lp.solve(1000)).isEqualTo(DualSimplex.OPTIMAL);
+      assertThat(lp.pivots() - before).as("run %d", run).isZero();
+      assertThat(lp.objective()).isCloseTo(root, org.assertj.core.data.Offset.offset(1e-9));
+      checkOptimal(lp, a, rowLo, rowHi, cost, lo, hi, run);
+      // in a copy, and after the rows changed, the basis is not restored
+      assertThat(lp.copy().restoreBasis(saved)).isFalse();
+      lp.addRows(new double[][] {new double[n]}, new double[] {-1}, new double[] {1});
+      assertThat(lp.restoreBasis(saved)).isFalse();
+    }
+    assertThat(restored).isGreaterThan(100);
+  }
+
   static void checkOptimal(
       LpSolver lp,
       double[][] a,

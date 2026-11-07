@@ -360,6 +360,12 @@ public class LinearRelaxation extends Constraint
       !"false".equals(System.getProperty("org.jacop.lp.keepBases"));
   private static final int BASIS_JUMP = Integer.getInteger("org.jacop.lp.basisJump", 2);
   private static final int MAX_BASES = Integer.getInteger("org.jacop.lp.maxBases", 32);
+  // the dense simplex saves a basis with a copy of its tableau, about one pivot, so it keeps the
+  // bases of the levels at most this far below the first solve only (restarts, long backjumps);
+  // -1 keeps none
+  private static final int DENSE_BASIS_DEPTH =
+      Integer.getInteger("org.jacop.lp.denseBasisDepth", 3);
+  private int firstSolveLevel = -1;
   // while the rows of the other constraints are judged by the solves that stop at the limit, the
   // first solves after a jump start from the basis the deeper node left, as before bases were
   // kept: a restored basis spares them the limit and keeps rows that slow every later solve
@@ -438,6 +444,27 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: rounded capacity cuts added. */
   public long capacityCuts;
+
+  // capacity and multistar cuts in search: separated from the solution of an optimal solve every
+  // capacityPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation that
+  // finds no violated cut and halving after one that does. The cuts hold globally (root demands,
+  // capacity and self loops), go into the row pool and leave the simplex when they age.
+  private static final boolean CAPACITY_SEARCH =
+      !"false".equals(System.getProperty("org.jacop.lp.capacitySearch"));
+  private static final int CAPACITY_SEARCH_CUTS =
+      Integer.getInteger("org.jacop.lp.capacitySearchCuts", 10);
+  private static final int CAPACITY_MAX_PERIOD = 1024;
+  private int capacityPeriod = 4;
+  private int capacityWaited;
+  // the column of each arc of each separation, -1 when the arc is not a column
+  private int[][] capacityColumns;
+  private Set<List<Long>> capacitySeen = new HashSet<>();
+
+  /** Statistics: capacity and multistar cuts added in search. */
+  public long capacitySearchCuts;
+
+  /** Statistics: separations of capacity cuts in search. */
+  public long capacitySeparations;
 
   /** Statistics: the objective bound after the capacity cuts, before the MIR cuts, or NaN. */
   public double capacityBound = Double.NaN;
@@ -1871,6 +1898,16 @@ public class LinearRelaxation extends Constraint
       cutsTried = true;
       status = cutRounds();
     }
+    if (status == LpSolver.OPTIMAL
+        && CAPACITY_SEARCH
+        && capacityColumns != null
+        && capacityColumns.length > 0
+        && calls > 1
+        && !restarting
+        && ++capacityWaited >= capacityPeriod) {
+      capacityWaited = 0;
+      status = searchCapacityCuts(limit);
+    }
     lastSolveLevel = store.level;
     if (jump) {
       jumpSolves++;
@@ -2001,6 +2038,12 @@ public class LinearRelaxation extends Constraint
     if (basesOf != lp) {
       bases.clear();
       basesOf = lp;
+    }
+    if (firstSolveLevel < 0) {
+      firstSolveLevel = level;
+    }
+    if (lp instanceof DualSimplex && level - firstSolveLevel > DENSE_BASIS_DEPTH) {
+      return;
     }
     int k = bases.size();
     if (k > 0 && basisLevel[k - 1] == level) {
@@ -2793,6 +2836,15 @@ public class LinearRelaxation extends Constraint
     for (int j = 0; j < lp.columns(); j++) {
       columnOf.put(x[j], j);
     }
+    capacityColumns = new int[capacity.size()][];
+    for (int c = 0; c < capacity.size(); c++) {
+      IntVar[] literals = capacity.get(c).literals();
+      capacityColumns[c] = new int[literals.length];
+      for (int a = 0; a < literals.length; a++) {
+        Integer j = columnOf.get(literals[a]);
+        capacityColumns[c][a] = j == null ? -1 : j;
+      }
+    }
     double start = lp.value(0);
     int firstCount = rows();
     LpSolver first = lp.copy();
@@ -2818,29 +2870,9 @@ public class LinearRelaxation extends Constraint
       }
     }
     for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
-      List<MirCut> chosen = new ArrayList<>();
+      // energy cuts stay at the root; in search only capacity cuts are separated
+      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen);
       int n = lp.columns();
-      for (CapacityCuts cc : capacity) {
-        IntVar[] literals = cc.literals();
-        int[] column = new int[literals.length];
-        double[] value = new double[literals.length];
-        for (int a = 0; a < literals.length; a++) {
-          Integer j = columnOf.get(literals[a]);
-          column[a] = j == null ? -1 : j;
-          value[a] = j == null ? literals[a].min() : lp.value(j);
-        }
-        for (CapacityCuts.Cut cut : cc.separate(value, CUTS_PER_ROUND)) {
-          MirCut row = row(cut, column);
-          long m = (long) lp.rows() + chosen.size() + 1;
-          if (chosen.size() >= CUTS_PER_ROUND
-              || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
-            break;
-          }
-          if (row != null && seen.add(key(row))) {
-            chosen.add(row);
-          }
-        }
-      }
       int routing = chosen.size();
       if (!energy.isEmpty()) {
         double[] value = new double[n];
@@ -2899,12 +2931,10 @@ public class LinearRelaxation extends Constraint
     }
     capacityCuts += added - addedEnergy;
     energyCuts += addedEnergy;
+    keepCapacityForms(firstCount, added);
+    // the cuts kept stay in the pool; the others may come back in search
     for (int i = firstCount; i < firstCount + added; i++) {
-      IntVar[] vars = new IntVar[rowColumns[i].length];
-      for (int k = 0; k < vars.length; k++) {
-        vars[k] = x[rowColumns[i][k]];
-      }
-      capacityForms.add(new LinearForm(vars, rowWeights[i].clone(), rowHi[i], LinearForm.LE));
+      capacitySeen.add(key(MirCut.row(rowColumns[i], rowWeights[i], rowHi[i], 0)));
     }
     if (status == DualSimplex.OPTIMAL) {
       capacityBound = lp.value(0);
@@ -2912,15 +2942,72 @@ public class LinearRelaxation extends Constraint
     return status;
   }
 
+  // the cuts violated by the solution of the simplex, at most limit and within the dense cap, as
+  // rows; the keys of the cuts chosen are added to seen, and cuts already seen are left out
+  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen) {
+    List<MirCut> chosen = new ArrayList<>();
+    int n = lp.columns();
+    for (int c = 0; c < capacity.size(); c++) {
+      CapacityCuts cc = capacity.get(c);
+      IntVar[] literals = cc.literals();
+      int[] column = capacityColumns[c];
+      double[] value = new double[literals.length];
+      for (int a = 0; a < literals.length; a++) {
+        value[a] = column[a] < 0 ? literals[a].min() : lp.value(column[a]);
+      }
+      for (CapacityCuts.Cut cut : cc.separate(value, limit)) {
+        MirCut row = row(cut, column);
+        long m = (long) lp.rows() + chosen.size() + 1;
+        if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+          break;
+        }
+        if (row != null && seen.add(key(row))) {
+          chosen.add(row);
+        }
+      }
+    }
+    return chosen;
+  }
+
+  // the rows [first, first + count) as forms of capacity cuts, for the copies
+  private void keepCapacityForms(int first, int count) {
+    for (int i = first; i < first + count; i++) {
+      IntVar[] vars = new IntVar[rowColumns[i].length];
+      for (int k = 0; k < vars.length; k++) {
+        vars[k] = x[rowColumns[i][k]];
+      }
+      capacityForms.add(new LinearForm(vars, rowWeights[i].clone(), rowHi[i], LinearForm.LE));
+    }
+  }
+
+  // capacity and multistar cuts from the solution of an optimal solve in search: the violated
+  // ones go into the simplex and the pool, and the relaxation is solved again with them
+  private int searchCapacityCuts(int limit) {
+    capacitySeparations++;
+    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen);
+    if (chosen.isEmpty()) {
+      capacityPeriod = Math.min(2 * capacityPeriod, CAPACITY_MAX_PERIOD);
+      return LpSolver.OPTIMAL;
+    }
+    capacityPeriod = Math.max(1, capacityPeriod / 2);
+    int first = rows();
+    addCuts(chosen);
+    capacitySearchCuts += chosen.size();
+    keepCapacityForms(first, chosen.size());
+    return solvePool(limit);
+  }
+
   // the cut as a row sum w x <= rhs over the columns, or null when an arc is not a column
   private static MirCut row(CapacityCuts.Cut cut, int[] column) {
     Map<Integer, Long> weights = new java.util.TreeMap<>();
     long sign = cut.entering() ? -1 : 1;
-    for (int a : cut.arcs()) {
-      if (column[a] < 0) {
+    int[] arcs = cut.arcs();
+    long[] given = cut.weights();
+    for (int k = 0; k < arcs.length; k++) {
+      if (column[arcs[k]] < 0) {
         return null;
       }
-      weights.merge(column[a], sign, Long::sum);
+      weights.merge(column[arcs[k]], sign * given[k], Long::sum);
     }
     weights.values().removeIf(w -> w == 0);
     if (weights.isEmpty()) {

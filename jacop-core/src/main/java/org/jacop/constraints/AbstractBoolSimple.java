@@ -33,6 +33,9 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Abstract base for two-input boolean constraints (OrBoolSimple, AndBoolSimple). Provides shared
@@ -41,7 +44,7 @@ import org.jacop.core.IntVar;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractBoolSimple extends PrimitiveConstraint {
+public abstract class AbstractBoolSimple extends PrimitiveConstraint implements Explainable {
 
   /** First boolean operand. */
   protected final IntVar a;
@@ -129,5 +132,168 @@ public abstract class AbstractBoolSimple extends PrimitiveConstraint {
    */
   public IntVar result() {
     return result;
+  }
+
+  /**
+   * Returns the operand value that fixes the operation's value whatever the other operand is: 0 for
+   * AND, 1 for OR; the result is then that value too.
+   *
+   * @return the absorbing value of the operation, or -1 when the subclass explains nothing
+   */
+  protected int absorbing() {
+    return -1;
+  }
+
+  // the absorbing value, or -1 when the variables are not distinct or the class is not explained
+  private int explained() {
+    return a == b || a == result || b == result ? -1 : absorbing();
+  }
+
+  // under LCG, result = a op b (or its negation when flip is 1) is explained by atoms "x != v":
+  // an operand with the absorbing value z fixes the result to z, two operands without it fix the
+  // result to 1 - z, and a result other than z (1 - z) forces both operands to 1 - z (one operand
+  // to z when the other is 1 - z)
+  private boolean explain(AtomicTrail trail, int entry, int flip, EntryList out) {
+    int z = explained();
+    if (z < 0) {
+      return false;
+    }
+    int absorbed = z ^ flip;
+    int mark = out.size();
+    IntVar v = trail.variable(entry);
+    if (v == result) {
+      if (impliedBy(trail, entry, absorbed)
+          && (trail.excludedBefore(a, 1 - z, entry, out)
+              || trail.excludedBefore(b, 1 - z, entry, out))) {
+        return true;
+      }
+      out.truncate(mark);
+      if (impliedBy(trail, entry, 1 - absorbed)
+          && trail.excludedBefore(a, z, entry, out)
+          && trail.excludedBefore(b, z, entry, out)) {
+        return true;
+      }
+      out.truncate(mark);
+      return false;
+    }
+    IntVar other = v == a ? b : a;
+    if (impliedBy(trail, entry, 1 - z) && trail.excludedBefore(result, absorbed, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (impliedBy(trail, entry, z)
+        && trail.excludedBefore(result, 1 - absorbed, entry, out)
+        && trail.excludedBefore(other, z, entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  // the entry's atom holds when its variable has value w
+  private static boolean impliedBy(AtomicTrail trail, int entry, int w) {
+    int value = trail.value(entry);
+    return switch (trail.kind(entry)) {
+      case AtomicTrail.GE -> w >= value;
+      case AtomicTrail.LE -> w <= value;
+      default -> w != value;
+    };
+  }
+
+  // the atoms before the position that leave no assignment satisfying result = a op b (negated
+  // when flip is 1)
+  private boolean violated(AtomicTrail trail, int position, int flip, EntryList out) {
+    int z = explained();
+    if (z < 0) {
+      return false;
+    }
+    int absorbed = z ^ flip;
+    int mark = out.size();
+    if (trail.excludedBefore(result, absorbed, position, out)
+        && (trail.excludedBefore(a, 1 - z, position, out)
+            || trail.excludedBefore(b, 1 - z, position, out))) {
+      return true;
+    }
+    out.truncate(mark);
+    if (trail.excludedBefore(result, 1 - absorbed, position, out)
+        && trail.excludedBefore(a, z, position, out)
+        && trail.excludedBefore(b, z, position, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (trail.excludedBefore(result, 0, position, out)
+        && trail.excludedBefore(result, 1, position, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  // the bounds before the position that fix the result to w
+  private boolean fixedTo(AtomicTrail trail, int position, IntVar x, int w, EntryList out) {
+    if (trail.minBefore(x, position) < w || trail.maxBefore(x, position) > w) {
+      return false;
+    }
+    trail.addLowerBound(x, position, out);
+    trail.addUpperBound(x, position, out);
+    return true;
+  }
+
+  // the atoms before the position under which every assignment satisfies result = a op b
+  // (negated when flip is 1)
+  private boolean holds(AtomicTrail trail, int position, int flip, EntryList out) {
+    int z = explained();
+    if (z < 0) {
+      return false;
+    }
+    int absorbed = z ^ flip;
+    int mark = out.size();
+    if (fixedTo(trail, position, result, absorbed, out)
+        && (trail.excludedBefore(a, 1 - z, position, out)
+            || trail.excludedBefore(b, 1 - z, position, out))) {
+      return true;
+    }
+    out.truncate(mark);
+    if (fixedTo(trail, position, result, 1 - absorbed, out)
+        && trail.excludedBefore(a, z, position, out)
+        && trail.excludedBefore(b, z, position, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explain(trail, entry, 0, out);
+  }
+
+  // every reason is checked against the atoms before it
+  @Override
+  public boolean checksReasons() {
+    return explained() >= 0;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return violated(trail, trail.size(), 0, out);
+  }
+
+  @Override
+  public boolean explainNegated(AtomicTrail trail, int entry, EntryList out) {
+    return explain(trail, entry, 1, out);
+  }
+
+  @Override
+  public boolean explainNegatedFailure(AtomicTrail trail, EntryList out) {
+    return violated(trail, trail.size(), 1, out);
+  }
+
+  @Override
+  public boolean explainEntailment(
+      AtomicTrail trail, int position, boolean entailed, EntryList out) {
+    return entailed
+        ? holds(trail, position, 0, out)
+        : violated(trail, position, 0, out) || holds(trail, position, 1, out);
   }
 }
