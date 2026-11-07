@@ -31,6 +31,7 @@
 
 package org.jacop.search.ls;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +43,7 @@ import java.util.List;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
@@ -50,6 +52,7 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -446,6 +449,173 @@ class LocalSearchTest {
     assertEquals(0, ls.getSolution(new IntVar[] {s[0]})[0]);
   }
 
+  // Fisher and Thompson's 6 x 6 job shop (ft06, optimum 55): machine and duration of each task
+  private static final int[][] FT06_MACHINE = {
+    {2, 0, 1, 3, 5, 4},
+    {1, 2, 4, 5, 0, 3},
+    {2, 3, 5, 0, 1, 4},
+    {1, 0, 2, 3, 4, 5},
+    {2, 1, 4, 5, 0, 3},
+    {1, 3, 5, 0, 4, 2}
+  };
+  private static final int[][] FT06_DURATION = {
+    {1, 3, 6, 7, 3, 6},
+    {8, 5, 10, 10, 10, 4},
+    {5, 4, 8, 9, 1, 7},
+    {5, 5, 5, 3, 8, 9},
+    {9, 3, 5, 4, 3, 1},
+    {3, 3, 9, 10, 4, 1}
+  };
+
+  /** The starts of ft06, with job precedences and one unit cumulative per machine. */
+  private static IntVar[][] jobShop(Store store) {
+    int n = FT06_MACHINE.length;
+    IntVar[][] s = new IntVar[n][n];
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < n; k++) {
+        s[j][k] = new IntVar(store, "s" + j + "_" + k, 0, 300);
+        if (k > 0) {
+          store.impose(
+              new LinearInt(
+                  new IntVar[] {s[j][k - 1], s[j][k]},
+                  new int[] {1, -1},
+                  "<=",
+                  -FT06_DURATION[j][k - 1]));
+        }
+      }
+    }
+    for (int m = 0; m < n; m++) {
+      List<IntVar> starts = new ArrayList<>();
+      List<IntVar> durations = new ArrayList<>();
+      for (int j = 0; j < n; j++) {
+        for (int k = 0; k < n; k++) {
+          if (FT06_MACHINE[j][k] == m) {
+            starts.add(s[j][k]);
+            durations.add(new IntVar(store, FT06_DURATION[j][k], FT06_DURATION[j][k]));
+          }
+        }
+      }
+      IntVar[] one = new IntVar[starts.size()];
+      java.util.Arrays.fill(one, new IntVar(store, 1, 1));
+      store.impose(
+          new Cumulative(
+              starts.toArray(new IntVar[0]),
+              durations.toArray(new IntVar[0]),
+              one,
+              new IntVar(store, 1, 1)));
+    }
+    return s;
+  }
+
+  // the makespan of starts that keep the job order and use each machine for one task at a time
+  private static int checkedMakespan(int[][] start) {
+    int n = start.length;
+    int end = 0;
+    for (int j = 0; j < n; j++) {
+      for (int k = 0; k < n; k++) {
+        end = Math.max(end, start[j][k] + FT06_DURATION[j][k]);
+        if (k > 0) {
+          assertTrue(start[j][k - 1] + FT06_DURATION[j][k - 1] <= start[j][k]);
+        }
+        for (int i = 0; i < n; i++) {
+          for (int l = 0; l < n; l++) {
+            if ((i != j || l != k) && FT06_MACHINE[i][l] == FT06_MACHINE[j][k]) {
+              assertTrue(
+                  start[i][l] + FT06_DURATION[i][l] <= start[j][k]
+                      || start[j][k] + FT06_DURATION[j][k] <= start[i][l]);
+            }
+          }
+        }
+      }
+    }
+    return end;
+  }
+
+  private static int[][] starts(LocalSearch ls, IntVar[][] s) {
+    int[][] start = new int[s.length][];
+    for (int j = 0; j < s.length; j++) {
+      start[j] = ls.getSolution(s[j]);
+    }
+    return start;
+  }
+
+  /** Each neighbourhood of the critical-path tabu search finds the optimum of ft06. */
+  @Test
+  void schedulesJobShopByCriticalPathMoves() {
+    int[] kinds = {
+      LocalSearch.SCHEDULE_NS | LocalSearch.SCHEDULE_N4,
+      LocalSearch.SCHEDULE_NS,
+      LocalSearch.SCHEDULE_N1,
+      LocalSearch.SCHEDULE_N4
+    };
+    for (int kind : kinds) {
+      Store store = new Store();
+      IntVar[][] s = jobShop(store);
+      IntVar makespan = new IntVar(store, "makespan", 0, 300);
+      for (int j = 0; j < s.length; j++) {
+        store.impose(
+            new LinearInt(
+                new IntVar[] {s[j][5], makespan}, new int[] {1, -1}, "<=", -FT06_DURATION[j][5]));
+      }
+      assertTrue(store.consistency());
+      LocalSearch ls =
+          LocalSearch.builder(store)
+              .minimize(makespan)
+              .scheduling(kind)
+              .timeLimit(Duration.ofSeconds(5))
+              .patience(Duration.ofMillis(300))
+              .seed(3)
+              .build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+      assertEquals(55, ls.getCostValue(), "neighbourhoods " + kind);
+      assertEquals(55, checkedMakespan(starts(ls, s)));
+      assertTrue(ls.getSteps() > 0);
+    }
+  }
+
+  /**
+   * When the cost is not the makespan (here the sum of the job ends), the scheduling search gives
+   * way to the general one after its first schedule, and the solutions stay correct.
+   */
+  @Test
+  void leavesOtherObjectivesToTheGeneralSearch() {
+    Store store = new Store();
+    IntVar[][] s = jobShop(store);
+    IntVar[] ends = new IntVar[s.length];
+    for (int j = 0; j < s.length; j++) {
+      ends[j] = new IntVar(store, "e" + j, 0, 400);
+      store.impose(new XplusCeqZ(s[j][5], FT06_DURATION[j][5], ends[j]));
+    }
+    IntVar total = new IntVar(store, "total", 0, 3000);
+    int[] ones = new int[s.length];
+    java.util.Arrays.fill(ones, 1);
+    IntVar[] terms = java.util.Arrays.copyOf(ends, s.length + 1);
+    terms[s.length] = total;
+    int[] weights = java.util.Arrays.copyOf(ones, s.length + 1);
+    weights[s.length] = -1;
+    store.impose(new LinearInt(terms, weights, "==", 0));
+    assertTrue(store.consistency());
+    List<Integer> costs = new ArrayList<>();
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .minimize(total)
+            .timeLimit(Duration.ofSeconds(2))
+            .seed(3)
+            .onSolution(x -> costs.add(total.value()))
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    int[][] start = starts(ls, s);
+    checkedMakespan(start);
+    int sum = 0;
+    for (int j = 0; j < s.length; j++) {
+      sum += start[j][5] + FT06_DURATION[j][5];
+    }
+    assertEquals(sum, ls.getCostValue());
+    for (int k = 1; k < costs.size(); k++) {
+      assertTrue(costs.get(k) < costs.get(k - 1), costs.toString());
+    }
+  }
+
   /**
    * The time limit holds when one step evaluates thousands of costly constraints: two Regular
    * constraints on the sum modulo 40 of 150 variables that no assignment satisfies together.
@@ -483,5 +653,134 @@ class LocalSearchTest {
       }
     }
     return fsm;
+  }
+
+  /**
+   * A table violation is the Hamming distance to the nearest tuple, and a key column, all of whose
+   * values differ, determines the other columns.
+   */
+  @Test
+  void tableDistanceAndKey() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+    }
+    int[][] tuples = {{1, 5, 5}, {2, 5, 6}, {3, 7, 7}};
+    HybridTable t = new HybridTable(x, tuples);
+    int[][] cases = {{1, 5, 5}, {1, 5, 6}, {1, 6, 6}, {9, 9, 9}, {3, 5, 7}};
+    for (int[] v : cases) {
+      long expected = Long.MAX_VALUE;
+      for (int[] tuple : tuples) {
+        long d = 0;
+        for (int i = 0; i < v.length; i++) {
+          d += v[i] == tuple[i] ? 0 : 1;
+        }
+        expected = Math.min(expected, d);
+      }
+      List<IntVar> vars = Arrays.asList(x);
+      assertEquals(expected, t.violation(y -> v[vars.indexOf(y)]), Arrays.toString(v));
+    }
+    assertEquals(0, t.keyColumn());
+    assertEquals(6, t.keyedValue(2, 2, -1));
+    assertEquals(-1, t.keyedValue(2, 4, -1));
+    // no column of distinct values
+    assertEquals(-1, new HybridTable(x, new int[][] {{1, 5, 5}, {1, 6, 6}, {2, 5, 6}}).keyColumn());
+  }
+
+  /**
+   * The columns of a table with a key follow the key, and the table is not evaluated; local search
+   * moves only the keys (a car sequencing model in miniature: the options of a car follow its
+   * class).
+   */
+  @Test
+  void tableColumnsFollowTheKey() {
+    for (boolean keys : new boolean[] {true, false}) {
+      Store store = new Store();
+      int[][] options = {{1, 1, 0}, {2, 0, 1}, {3, 1, 1}, {4, 0, 0}};
+      IntVar[] cls = new IntVar[8];
+      IntVar[] a = new IntVar[cls.length];
+      IntVar[] b = new IntVar[cls.length];
+      List<IntVar> defined = new ArrayList<>();
+      for (int i = 0; i < cls.length; i++) {
+        cls[i] = new IntVar(store, "c" + i, 1, 4);
+        a[i] = new IntVar(store, "a" + i, 0, 1);
+        b[i] = new IntVar(store, "b" + i, 0, 1);
+        store.impose(new HybridTable(new IntVar[] {cls[i], a[i], b[i]}, options));
+      }
+      // two cars of each class
+      store.impose(
+          new CountValuesBounds(
+              cls, new int[] {2, 2, 2, 2}, new int[] {2, 2, 2, 2}, new int[] {1, 2, 3, 4}));
+      // at most one car with option a and one with option b in any two consecutive
+      for (int i = 0; i + 1 < cls.length; i++) {
+        store.impose(new LinearInt(new IntVar[] {a[i], a[i + 1]}, new int[] {1, 1}, "<=", 1));
+        store.impose(new LinearInt(new IntVar[] {b[i], b[i + 1]}, new int[] {1, 1}, "<=", 1));
+      }
+      assertTrue(store.consistency());
+      LocalSearch ls =
+          LocalSearch.builder(store)
+              .order(cls)
+              .defined(defined)
+              .tableKeys(keys)
+              .timeLimit(LIMIT)
+              .seed(1)
+              .build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve(), ls.toString());
+      assertEquals(keys, ls.toString().contains("K:HybridTable=8"), ls.toString());
+      int[] c = ls.getSolution(cls);
+      int[] count = new int[5];
+      for (int i = 0; i < c.length; i++) {
+        count[c[i]]++;
+        if (i > 0) {
+          assertTrue(options[c[i] - 1][1] + options[c[i - 1] - 1][1] <= 1, Arrays.toString(c));
+          assertTrue(options[c[i] - 1][2] + options[c[i - 1] - 1][2] <= 1, Arrays.toString(c));
+        }
+      }
+      assertArrayEquals(new int[] {0, 2, 2, 2, 2}, count);
+    }
+  }
+
+  /**
+   * The value counter of a global cardinality keeps the sum of the counts out of their bounds, and
+   * the change by a move, equal to counting again.
+   */
+  @Test
+  void cardinalityCounter() {
+    java.util.Random random = new java.util.Random(7);
+    for (int trial = 0; trial < 200; trial++) {
+      int n = 1 + random.nextInt(8);
+      int[][] bounds = new int[3][];
+      for (int k = 0; k < bounds.length; k++) {
+        int low = random.nextInt(3);
+        bounds[k] = new int[] {k, low, low + random.nextInt(3)};
+      }
+      LocalSearch.Counter counter = new LocalSearch.Counter(bounds);
+      int[] v = new int[n];
+      counter.clear();
+      for (int i = 0; i < n; i++) {
+        v[i] = random.nextInt(5);
+        counter.add(v[i]);
+      }
+      for (int move = 0; move < 20; move++) {
+        assertEquals(cardinalityViolation(v, bounds), counter.duplicates);
+        int i = random.nextInt(n);
+        int w = random.nextInt(5);
+        long after = counter.after(v[i], w);
+        counter.remove(v[i]);
+        counter.add(w);
+        v[i] = w;
+        assertEquals(cardinalityViolation(v, bounds), after);
+      }
+    }
+  }
+
+  private static long cardinalityViolation(int[] v, int[][] bounds) {
+    long violation = 0;
+    for (int[] b : bounds) {
+      int c = (int) Arrays.stream(v).filter(x -> x == b[0]).count();
+      violation += Math.max(0, b[1] - c) + Math.max(0, c - b[2]);
+    }
+    return violation;
   }
 }
