@@ -370,6 +370,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
   // the constraints posted with their symmetries, for local search
   private final SymmetryCanonicalizer canonicalizer = new SymmetryCanonicalizer();
+  // the atoms of each named array, read once: a table of a hundred thousand tuples is often an
+  // argument of many constraints
+  private final Map<String, Atom[]> namedArrays = new HashMap<>();
+  // one atom for each integer constant
+  private final Map<Integer, Atom> intAtoms = new HashMap<>();
+  // the key of each array of constants, the same for arrays with the same elements
+  private final Map<Atom[], String> constantArrays = new IdentityHashMap<>();
+  private final Map<Contents, String> contentKeys = new HashMap<>();
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
@@ -1775,7 +1783,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         if (grouped[a]) {
           continue;
         }
-        if (array[a]) {
+        String key = array[a] ? constantArray(args[a]) : null;
+        if (key != null) {
+          constants.add(a + "=" + key);
+        } else if (array[a]) {
           constants.add(a + "#" + args[a].length);
           for (int j = 0; j < args[a].length; j++) {
             position(constraint, "o|" + prefix + a + "[" + j + "]", args[a][j], constants);
@@ -1823,6 +1834,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       for (int a = 0; a < arity; a++) {
         if (!grouped[a]) {
+          String constants = array[a] ? constantArray(args[a]) : null;
+          if (constants != null) {
+            key.append("[=").append(constants).append(',');
+            continue;
+          }
           key.append(array[a] ? "[" : "(");
           for (Atom atom : args[a]) {
             key.append(id(atom)).append(',');
@@ -1977,12 +1993,65 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
   }
 
+  /** The elements of an array of constants, compared by their values. */
+  private static final class Contents {
+    private final Atom[] atoms;
+    private final int hash;
+
+    Contents(Atom[] atoms) {
+      this.atoms = atoms;
+      int h = atoms.length;
+      for (Atom a : atoms) {
+        h = 31 * h + a.constant().hashCode();
+      }
+      this.hash = h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof Contents c) || c.hash != hash || c.atoms.length != atoms.length) {
+        return false;
+      }
+      for (int i = 0; i < atoms.length; i++) {
+        if (atoms[i] != c.atoms[i] && !atoms[i].constant().equals(c.atoms[i].constant())) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+  }
+
+  /**
+   * A short key for an array argument of constants only, the same for two arrays exactly when they
+   * have the same elements, or null when the array holds a variable or a value of a value space.
+   * The graph uses it in place of one entry per element, so that a table of a hundred thousand
+   * tuples costs one string, not a hundred thousand.
+   */
+  private String constantArray(Atom[] arg) {
+    if (constantArrays.containsKey(arg)) {
+      return constantArrays.get(arg);
+    }
+    String key = null;
+    if (Arrays.stream(arg).allMatch(Atom::isConstant)) {
+      key = contentKeys.computeIfAbsent(new Contents(arg), c -> "k" + contentKeys.size());
+    }
+    constantArrays.put(arg, key);
+    return key;
+  }
+
   private boolean isArrayName(SimpleNode arg) {
     if (arg.getId() != JJTSCALARFLATEXPR || ((ASTScalarFlatExpr) arg).getType() != 2) {
       return false;
     }
     String ident = ((ASTScalarFlatExpr) arg).getIdent();
-    return dictionary.getVariableArray(ident) != null
+    return namedArrays.containsKey(ident)
+        || dictionary.getIntArray(ident) != null
+        || dictionary.getVariableArray(ident) != null
         || dictionary.getSetArray(ident) != null
         || dictionary.getFloatArray(ident) != null
         || dictionary.variableFloatArrayTable.containsKey(ident)
@@ -2052,6 +2121,23 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * variables are not supported.
    */
   private Atom[] namedArray(String ident) {
+    Atom[] atoms = namedArrays.get(ident);
+    if (atoms == null) {
+      atoms = readArray(ident);
+      namedArrays.put(ident, atoms);
+    }
+    return atoms;
+  }
+
+  private Atom[] readArray(String ident) {
+    int[] ints = dictionary.getIntArray(ident);
+    if (ints != null) {
+      Atom[] atoms = new Atom[ints.length];
+      for (int i = 0; i < ints.length; i++) {
+        atoms[i] = intConstant(ints[i]);
+      }
+      return atoms;
+    }
     IntVar[] a = dictionary.getVariableArray(ident);
     if (a != null) {
       Atom[] atoms = new Atom[a.length];
@@ -2080,12 +2166,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     throw new Unsupported("array " + ident);
   }
 
-  private static Atom variable(IntVar v) {
+  private Atom variable(IntVar v) {
     return v.singleton() ? intConstant(v.value()) : new Atom(v, null, null, -1, 0);
   }
 
-  private static Atom intConstant(int c) {
-    return new Atom(null, null, "i" + c, -1, c);
+  private Atom intConstant(int c) {
+    return intAtoms.computeIfAbsent(c, k -> new Atom(null, null, "i" + k, -1, k));
   }
 
   private static Atom constant(String c) {
