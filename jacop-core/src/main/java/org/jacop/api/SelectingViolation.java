@@ -72,4 +72,15 @@ public interface SelectingViolation extends Violation {
    * @return the other variables read always, such as the value of an element constraint.
    */
   IntVar[] alwaysRead();
+
+  /**
+   * Returns the variable the selected one must equal, when the violation is 0 exactly when the
+   * selected variable equals it. Local search then gives a variable of the list that only such
+   * constraints read the value most of the constraints selecting it ask for.
+   *
+   * @return that variable, or null when the violation is not of this form.
+   */
+  default IntVar selectedEquals() {
+    return null;
+  }
 }

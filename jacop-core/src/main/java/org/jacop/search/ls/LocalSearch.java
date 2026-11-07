@@ -156,6 +156,7 @@ public final class LocalSearch {
   private final int scheduling;
   private final boolean skipImplied;
   private final boolean tableKeys;
+  private final boolean follow;
   // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
   private final Set<Constraint> symmetry;
   private final Canonicalizer canonicalizer;
@@ -192,6 +193,14 @@ public final class LocalSearch {
   private int[] selFirst;
   private int[][] selList;
   private int[][] selAlways;
+  // per element constraint: the variable the selected one must equal (selectedEquals), or -1
+  private int[] selEq;
+  // the variables that follow the element constraints selecting them (see buildFollowers), none
+  // when null; the followers to choose a value for again at the end of the current move
+  private boolean[] follower;
+  private int[] followQueue;
+  private int followCount;
+  private boolean[] followQueued;
   // the index of each variable of the store among the variables of the local search, or -1
   private int[] slot;
   private final Values values = new Values();
@@ -316,6 +325,7 @@ public final class LocalSearch {
     scheduling = b.scheduling;
     skipImplied = b.skipImplied;
     tableKeys = b.tableKeys;
+    follow = b.follow;
     symmetry = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     if (b.canonicalizer != null) {
       symmetry.addAll(b.symmetry);
@@ -637,6 +647,8 @@ public final class LocalSearch {
     selFirst = new int[m];
     selList = new int[m][];
     selAlways = new int[m][];
+    selEq = new int[m];
+    Arrays.fill(selEq, -1);
     int c = 0;
     for (Object[] row : rows) {
       scope[c] = (int[]) row[0];
@@ -668,6 +680,9 @@ public final class LocalSearch {
         selFirst[c] = e.firstSelector();
         selList[c] = Arrays.stream(e.selectable()).mapToInt(this::indexOf).toArray();
         selAlways[c] = Arrays.stream(e.alwaysRead()).mapToInt(this::indexOf).toArray();
+        if (e.selectedEquals() != null) {
+          selEq[c] = indexOf(e.selectedEquals());
+        }
       }
       c++;
     }
@@ -707,6 +722,9 @@ public final class LocalSearch {
     buildCounters();
     buildOccurrences();
     buildDefinitions(measured.size());
+    if (follow) {
+      buildFollowers();
+    }
     violated = new int[m];
     violatedPos = new int[m];
     Arrays.fill(violatedPos, -1);
@@ -1863,17 +1881,24 @@ public final class LocalSearch {
    */
   private void moveDefined(int i, int v) {
     setValue(i, v);
-    if (dependents[i].length == 0) {
-      return;
+    if (dependents[i].length > 0) {
+      push(dependents[i]);
+      while (heapSize > 0) {
+        int d = pop();
+        int y = defOut[d];
+        int w = defined(d);
+        if (w != val[y]) {
+          setValue(y, w);
+          push(dependents[y]);
+        }
+      }
     }
-    push(dependents[i]);
-    while (heapSize > 0) {
-      int d = pop();
-      int y = defOut[d];
-      int w = defined(d);
-      if (w != val[y]) {
-        setValue(y, w);
-        push(dependents[y]);
+    while (followCount > 0) {
+      int f = followQueue[--followCount];
+      followQueued[f] = false;
+      int w = followed(f);
+      if (w != val[f]) {
+        setValue(f, w);
       }
     }
   }
@@ -1920,7 +1945,7 @@ public final class LocalSearch {
 
   /** The change of the weighted violation if variable i takes value v, with what it defines. */
   private double tryMove(int i, int v) {
-    if (dependents[i].length == 0) {
+    if (dependents[i].length == 0 && (follower == null || !leads[i])) {
       return delta(i, v);
     }
     beginTrial();
@@ -2216,6 +2241,124 @@ public final class LocalSearch {
   }
 
   /**
+   * Finds the followers: variables of the lists of element constraints that only element
+   * constraints of the form list[index] = y read, and only while their index selects them (and the
+   * domain row of the variable). Each of them is not moved by the search but, after every move,
+   * takes the value of y most of the element constraints selecting it ask for, by weight. A model
+   * whose element constraints look up a matrix this way, such as the social golfers' pair matrix,
+   * then needs one move where it needed two, Comet's functional invariants in local search (Van
+   * Hentenryck and Michel, Constraint-Based Local Search, MIT Press 2005, chapter 5).
+   */
+  private void buildFollowers() {
+    int n = vars.length;
+    boolean[] f = new boolean[n];
+    boolean any = false;
+    for (int i = 0; i < n; i++) {
+      if (selOcc[i].length == 0
+          || defOf[i] >= 0
+          || dependents[i].length > 0
+          || i == costIndex
+          || grouped(i)
+          || domains[i].singleton()) {
+        continue;
+      }
+      boolean ok = true;
+      for (int c : occ[i]) {
+        ok &= domainVar[c] == i;
+      }
+      for (int c : selOcc[i]) {
+        ok &= selEq[c] >= 0 && selEq[c] != i;
+      }
+      f[i] = ok;
+      any |= ok;
+    }
+    if (!any) {
+      return;
+    }
+    follower = f;
+    followQueue = new int[n];
+    followQueued = new boolean[n];
+    leads = new boolean[n];
+    int count = 0;
+    for (int c = 0; c < m; c++) {
+      if (selIndex[c] < 0) {
+        continue;
+      }
+      boolean hasFollower = false;
+      for (int x : selList[c]) {
+        hasFollower |= f[x];
+      }
+      if (hasFollower) {
+        // a move of the index or of y chooses the value of a follower again
+        leads[selIndex[c]] = true;
+        for (int x : selAlways[c]) {
+          leads[x] = true;
+        }
+      }
+    }
+    for (boolean b : f) {
+      count += b ? 1 : 0;
+    }
+    classes.merge("followers", count, Integer::sum);
+  }
+
+  // the variables whose move may choose the value of a follower again
+  private boolean[] leads;
+
+  private void queueFollower(int f) {
+    if (f >= 0 && follower[f] && !followQueued[f]) {
+      followQueued[f] = true;
+      followQueue[followCount++] = f;
+    }
+  }
+
+  /**
+   * The value of follower f: the value of y that the element constraints selecting f ask for with
+   * the most weight, among the values of its domain; its current value on a tie or when none
+   * selects it.
+   */
+  private int followed(int f) {
+    int count = selByCount[f];
+    if (count == 0) {
+      return val[f];
+    }
+    int[] by = selBy[f];
+    int bestVal = val[f];
+    double best = 0;
+    for (int k = 0; k < count; k++) {
+      int v = val[selEq[by[k]]];
+      if (k > 0 && alreadyCounted(by, k, v)) {
+        continue;
+      }
+      double w = 0;
+      for (int t = k; t < count; t++) {
+        if (val[selEq[by[t]]] == v) {
+          w += weight[by[t]];
+        }
+      }
+      if (domains[f].contains(v) && (w > best || w == best && v == val[f])) {
+        best = w;
+        bestVal = v;
+      }
+    }
+    return bestVal;
+  }
+
+  private boolean alreadyCounted(int[] by, int k, int v) {
+    for (int t = 0; t < k; t++) {
+      if (val[selEq[by[t]]] == v) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // a variable a move does not change: fixed, or a follower
+  private boolean fixedForMoves(int i) {
+    return domains[i].singleton() || follower != null && follower[i];
+  }
+
+  /**
    * The position of variable i in the list of element constraint c when c reads i only while its
    * index selects that position, otherwise -1 (i is the index, is read always, or is in the list
    * more than once).
@@ -2335,6 +2478,18 @@ public final class LocalSearch {
         lhs[c] = s;
       }
       setViolation(c, currentViolation(c));
+    }
+    if (follower != null) {
+      followCount = 0;
+      Arrays.fill(followQueued, false);
+      for (int f = 0; f < follower.length; f++) {
+        if (follower[f]) {
+          int w = followed(f);
+          if (w != val[f]) {
+            setValue(f, w);
+          }
+        }
+      }
     }
   }
 
@@ -2550,10 +2705,18 @@ public final class LocalSearch {
             windows[c].move(i, old, v);
           }
         }
-        case OCC_SELECTOR -> reselect(c);
+        case OCC_SELECTOR -> {
+          if (follower != null) {
+            queueFollower(selCur[c]);
+          }
+          reselect(c);
+        }
         default -> {
           // measured again below
         }
+      }
+      if (follower != null && selIndex[c] >= 0) {
+        queueFollower(selCur[c]);
       }
       if (!deferred) {
         setViolation(c, currentViolation(c));
@@ -2822,7 +2985,7 @@ public final class LocalSearch {
           continue;
         }
       }
-      if (domains[i].singleton()) {
+      if (fixedForMoves(i)) {
         continue;
       }
       if (grouped(i)) {
@@ -2992,7 +3155,7 @@ public final class LocalSearch {
     jumpValue[i] = bestVal;
     jumpScore[i] = best;
     jumpAt[i] = clock;
-    setGood(i, best < 0);
+    setGood(i, best < 0 && (follower == null || !follower[i]));
     return best;
   }
 
@@ -3070,7 +3233,7 @@ public final class LocalSearch {
     if (defOf[i] >= 0) {
       i = upstream(i);
     }
-    return i < 0 || domains[i].singleton() ? -1 : i;
+    return i < 0 || fixedForMoves(i) ? -1 : i;
   }
 
   /**
@@ -3209,6 +3372,7 @@ public final class LocalSearch {
       if (vi == vj
           || defOf[i] >= 0
           || defOf[j] >= 0
+          || follower != null && (follower[i] || follower[j])
           || !domains[i].contains(vj)
           || !domains[j].contains(vi)) {
         continue;
@@ -3355,7 +3519,7 @@ public final class LocalSearch {
       } else {
         i = random.nextInt(vars.length);
       }
-      if (defOf[i] >= 0 && (i = upstream(i)) < 0) {
+      if (defOf[i] >= 0 && (i = upstream(i)) < 0 || follower != null && follower[i]) {
         continue;
       }
       IntDomain d = domains[i];
@@ -3645,6 +3809,7 @@ public final class LocalSearch {
     private int scheduling = SCHEDULE_NS | SCHEDULE_N4;
     private boolean skipImplied = true;
     private boolean tableKeys = true;
+    private boolean follow = true;
     private Collection<? extends Constraint> symmetry = List.of();
     private Canonicalizer canonicalizer;
 
@@ -3788,6 +3953,19 @@ public final class LocalSearch {
      */
     public Builder tableKeys(boolean on) {
       tableKeys = on;
+      return this;
+    }
+
+    /**
+     * Whether a variable of the lists of element constraints that nothing else reads follows them
+     * (default true): it is not moved itself, but takes the value most of the element constraints
+     * selecting it ask for, see {@link SelectingViolation#selectedEquals()}.
+     *
+     * @param on whether to.
+     * @return this builder.
+     */
+    public Builder follow(boolean on) {
+      follow = on;
       return this;
     }
 

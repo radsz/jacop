@@ -380,6 +380,11 @@ public class ElementVariableFast extends AbstractElement
   }
 
   @Override
+  public IntVar selectedEquals() {
+    return value;
+  }
+
+  @Override
   public IntVar functionalResult() {
     return value;
   }
