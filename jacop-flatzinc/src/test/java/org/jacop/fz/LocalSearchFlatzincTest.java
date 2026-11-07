@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -45,6 +46,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -121,6 +124,81 @@ class LocalSearchFlatzincTest {
     for (int i = 1; i <= 6; i++) {
       assertTrue(x[i] || x[i % 6 + 1], "edge " + i + " uncovered: " + out);
     }
+  }
+
+  /**
+   * Local search leaves out the symmetry breaking constraints JaCoP adds to a colouring of a cycle
+   * (value precedence, lex-leader of the rotations) and the solution it prints is a colouring.
+   */
+  @Test
+  void symmetryBreakingIsNotEvaluated() throws IOException {
+    int n = 12;
+    StringBuilder model = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      model.append("var 1..4: x").append(i).append(":: output_var;\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      model.append("constraint int_ne(x").append(i).append(",x").append(i % n + 1).append(");\n");
+      model.append("constraint int_ne(x").append(i).append(",x");
+      model.append((i + 1) % n + 1).append(");\n");
+    }
+    model.append("solve satisfy;\n");
+    String out =
+        run(
+            model.toString(),
+            "--symmetry",
+            "on",
+            "--lcg",
+            "off",
+            "-f",
+            "-debug",
+            "--search-statistics",
+            "-t",
+            "5000");
+    assertTrue(out.contains("S:SeqPrecedeChain=1"), out);
+    assertTrue(out.contains("lsSolutions=1"), out);
+    int[] x = new int[n + 1];
+    Matcher m = Pattern.compile("x(\\d+) = (\\d+);").matcher(out);
+    while (m.find()) {
+      x[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
+    }
+    for (int i = 1; i <= n; i++) {
+      assertTrue(x[i] != x[i % n + 1] && x[i] != x[(i + 1) % n + 1], out);
+    }
+  }
+
+  /** Columns are sorted, interchangeable values renamed by first use, and lex-leaders descended. */
+  @Test
+  void canonicalizerMovesToTheLexLeader() {
+    Store store = new Store();
+    IntVar[] v = new IntVar[6];
+    for (int i = 0; i < v.length; i++) {
+      v[i] = new IntVar(store, "v" + i, 0, 9);
+    }
+    SymmetryCanonicalizer columns = new SymmetryCanonicalizer();
+    columns.chain(null, new IntVar[][] {{v[0], v[1]}, {v[2], v[3]}, {v[4], v[5]}});
+    int[] values = {5, 1, 2, 7, 2, 3};
+    assertTrue(columns.canonicalize(v, values));
+    assertArrayEquals(new int[] {2, 3, 2, 7, 5, 1}, values);
+
+    SymmetryCanonicalizer precede = new SymmetryCanonicalizer();
+    precede.precedence(null, new IntVar[] {v[0], v[1], v[2], v[3]}, new int[] {1, 2, 3});
+    values = new int[] {3, 3, 1, 2, 0, 0};
+    assertTrue(precede.canonicalize(v, values));
+    assertArrayEquals(new int[] {1, 1, 2, 3, 0, 0}, values);
+
+    // v0 <=lex v1 for the symmetry that swaps v0 with v1 and v2 with v3
+    SymmetryCanonicalizer lex = new SymmetryCanonicalizer();
+    lex.lex(
+        null,
+        new IntVar[] {v[0]},
+        new IntVar[] {v[1]},
+        false,
+        new IntVar[] {v[0], v[1], v[2], v[3]},
+        new IntVar[] {v[1], v[0], v[3], v[2]});
+    values = new int[] {4, 2, 8, 9, 0, 0};
+    assertTrue(lex.canonicalize(v, values));
+    assertArrayEquals(new int[] {2, 4, 9, 8, 0, 0}, values);
   }
 
   private static void checkOptimum(String out) {

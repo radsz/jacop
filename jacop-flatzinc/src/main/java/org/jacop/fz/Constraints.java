@@ -60,6 +60,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
+import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
@@ -232,6 +233,11 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a redundant Sequence over sliding-window sums, which --proof does not encode
+      if (SequenceDetector.enabled() && options.proof() == null) {
+        new SequenceDetector(support).detect(astTree);
+      }
+
       // before any constraint propagates: bounds propagation creeps round a negative cycle
       if (DifferenceBoundsDetector.enabled() && support.options.proof() == null) {
         new DifferenceBoundsDetector(support).detect(astTree);
@@ -260,6 +266,8 @@ public class Constraints implements ParserTreeConstants {
       cf.poseCounts();
       cf.poseDiffnProjections();
 
+      // the constraints the detectors below add are redundant: local search does not evaluate them
+      store.imposingImplied(true);
       // its cost constraints are redundant, with bounds a proof does not derive
       if (CircuitCostDetector.enabled() && options.proof() == null) {
         new CircuitCostDetector(support).detect(astTree);
@@ -286,8 +294,10 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceCyclesDetector(support).detect(astTree);
       }
 
-      // energy precedence when enabled, and the reservoirs
+      // energy precedence when enabled, and the reservoirs, which are not redundant
+      store.imposingImplied(false);
       new PrecedenceDetector(support).detect(astTree);
+      store.imposingImplied(true);
       // the weighted completion bound it adds is redundant, and --proof does not encode it
       if (WeightedCompletionDetector.enabled() && options.proof() == null) {
         new WeightedCompletionDetector(support).detect(astTree);
@@ -318,6 +328,7 @@ public class Constraints implements ParserTreeConstants {
       if (XorSystemDetector.enabled() && options.proof() == null) {
         new XorSystemDetector(support).detect(astTree);
       }
+      store.imposingImplied(false);
 
       // the lattices of the equalities: congruences, and the reformulation of market split
       // systems; --proof derives neither
