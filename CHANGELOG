@@ -3027,7 +3027,23 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
-182. Symmetry detection in fzn-jacop builds the graph of a constant array
+182. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
+     two Booleans) and XplusYeqC (x + y = c) explain their own atoms and
+     failures instead of a replayed or generic reason. A result of AND
+     fixed to 0 cites the operand at 0, a result fixed to 1 both
+     operands, an operand cites the result and, when needed, the other
+     operand (OR by duality), including the negated and the entailed
+     constraint under Reified. x + y = c walks the values of the atom
+     against their mirrors c - v in the other variable, like the shift
+     explanations of equalities (ShiftExplanation.explainMirror). On opd
+     flener_et_al_15_350_100 the AND reasons stop being replayed (388k)
+     or generic (54k) at the same length (1.9 atoms); on cgt
+     cgt_5_h27_r0.05_s0.8_0 the x + y = c reasons go from 39 atoms, a
+     third generic, to 1 atom. On the 46 wide instances that post these
+     constraints (240 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +14, -f S = +1 over two repetitions.
+
+183. Symmetry detection in fzn-jacop builds the graph of a constant array
      once per content: an array whose elements are all constants (a table
      of tuples, given by name or written out) becomes one key shared by
      every constraint that uses the same contents, instead of one vertex
@@ -3046,7 +3062,7 @@ Version 5.0 (unreleased)
      proved at 549 s before, not by 600 s now); the 10 changed wide
      instances 8 to 8 in both modes.
 
-183. The dense simplex (below 100 rows) keeps and restores bases too,
+184. The dense simplex (below 100 rows) keeps and restores bases too,
      like JaLP in 132: DualSimplex gets saveBasis/restoreBasis, which
      copy the tableau, the basis and the edge norms, and refuse a basis
      saved before rows were added or removed or in another copy. Since a
@@ -3067,7 +3083,7 @@ Version 5.0 (unreleased)
      families better and none worse; city-position is slower with -f
      (city-5-06 222 s to 307 s).
 
-184. Capacity cuts of a Routes (item 144) are also separated in search:
+185. Capacity cuts of a Routes (item 144) are also separated in search:
      every few optimal LP solves after the root (from 4, doubled up to
      1024 while nothing is violated, halved when cuts are found), up to
      10 cuts go into the row pool, where they age out like other cuts.
