@@ -270,6 +270,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -301,6 +303,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
@@ -325,6 +328,7 @@ setup to run configuration. -->
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
+                                <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
@@ -443,6 +447,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -486,6 +492,7 @@ setup to run configuration. -->
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
@@ -503,6 +510,7 @@ setup to run configuration. -->
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
+                                <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
@@ -617,6 +625,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -660,6 +670,7 @@ setup to run configuration. -->
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
@@ -677,6 +688,7 @@ setup to run configuration. -->
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
+                                <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
@@ -791,6 +803,8 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/LinearIntDomSumsetTest.java</include>
+                                <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -832,6 +846,7 @@ setup to run configuration. -->
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
@@ -849,6 +864,7 @@ setup to run configuration. -->
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
+                                <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
                                 <include>**/ComponentsFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>

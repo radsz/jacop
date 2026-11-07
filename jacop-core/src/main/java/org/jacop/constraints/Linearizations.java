@@ -43,6 +43,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jacop.constraints.lp.LpColumn;
+import org.jacop.constraints.regular.LayeredGraphConstraint;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -179,6 +181,11 @@ public final class Linearizations {
   private static final int VALUE_ENCODINGS_MAX =
       Integer.getInteger("org.jacop.lp.valueEncodingsMax", 20_000);
 
+  // whether valueRows gives the layered graphs of Regular and ExtensionalSupportMdd their flow
+  // model
+  private static final boolean FLOW_ENCODINGS =
+      !"false".equals(System.getProperty("org.jacop.lp.flowEncodings"));
+
   /**
    * Returns the value encodings of the variables of all-different-except constraints over auxiliary
    * columns of the relaxation ({@link LpColumn}), the rows that make the constraints per value, and
@@ -213,8 +220,22 @@ public final class Linearizations {
    *     which the relaxation keeps
    * @param tried the value encodings of the counting, all-different and element constraints ({@link
    *     #valueRows}), which the relaxation keeps when they help at its first solve
+   * @param flow the flow models of the layered graphs of {@link Regular} and {@link
+   *     ExtensionalSupportMdd} (with the value encodings of the variables only they encode), tried
+   *     after the others and kept when they help beyond them
    */
-  public record ValueRows(List<LinearForm> kept, List<LinearForm> tried) {}
+  public record ValueRows(List<LinearForm> kept, List<LinearForm> tried, List<LinearForm> flow) {
+
+    /**
+     * The rows without flow models.
+     *
+     * @param kept the encodings of the all-different-except constraints
+     * @param tried the value encodings of the counting, all-different and element constraints
+     */
+    public ValueRows(List<LinearForm> kept, List<LinearForm> tried) {
+      this(kept, tried, List.of());
+    }
+  }
 
   /**
    * Returns the rows of {@link #valueColumns}, and the value encodings of the variables of {@link
@@ -242,6 +263,20 @@ public final class Linearizations {
    */
   public static ValueRows valueRows(
       Collection<Constraint> constraints, Collection<LinearForm> extra) {
+    return valueRows(constraints, extra, true);
+  }
+
+  /**
+   * Returns the rows of {@link #valueRows(Collection, Collection)}, without the further encodings
+   * when they are not wanted (only the rows of {@link #valueColumns} then).
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, whose LP-only columns are reused
+   * @param tried whether the further encodings are made
+   * @return the rows
+   */
+  public static ValueRows valueRows(
+      Collection<Constraint> constraints, Collection<LinearForm> extra, boolean tried) {
     Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
     Set<IntVar> byModel = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : given.entrySet()) {
@@ -261,7 +296,7 @@ public final class Linearizations {
     }
     Map<IntVar, Map<Integer, IntVar>> encoded = new LinkedHashMap<>();
     List<LinearForm> kept = VALUE_COLUMNS ? exceptRows(constraints, given, encoded) : List.of();
-    if (!VALUE_ENCODINGS) {
+    if (!VALUE_ENCODINGS || !tried) {
       return new ValueRows(kept, List.of());
     }
     Encoder e = new Encoder(given, encoded, byModel);
@@ -269,7 +304,22 @@ public final class Linearizations {
       e.rows(c);
     }
     e.links(constraints);
-    return new ValueRows(kept, e.out);
+    List<LinearForm> tiered = e.out;
+    if (!FLOW_ENCODINGS) {
+      return new ValueRows(kept, tiered);
+    }
+    // the flow models after the other encodings, with the encodings of the variables they add
+    e.out = new ArrayList<>();
+    for (Constraint c : constraints) {
+      if (c instanceof LayeredGraphConstraint g) {
+        int[] edges = g.pathEdges();
+        if (edges != null) {
+          e.flow(g.list, edges);
+        }
+      }
+    }
+    e.links(constraints);
+    return new ValueRows(kept, tiered, e.out);
   }
 
   // the rows of valueColumns, with the columns of each encoded variable put in encoded
@@ -365,8 +415,10 @@ public final class Linearizations {
     private final Map<IntVar, Map<Integer, IntVar>> full = new IdentityHashMap<>();
     // the variables in full, in the order they were encoded
     private final List<IntVar> order = new ArrayList<>();
-    private final List<LinearForm> out = new ArrayList<>();
+    private List<LinearForm> out = new ArrayList<>();
     private int made;
+    // the reified comparisons linked so far
+    private final Set<Constraint> linked = Collections.newSetFromMap(new IdentityHashMap<>());
 
     Encoder(
         Map<IntVar, Map<Integer, IntVar>> given,
@@ -447,6 +499,91 @@ public final class Linearizations {
       } else if (k == ElementIntegerFast.class) {
         ElementIntegerFast el = (ElementIntegerFast) c;
         element(el.index, el.elementList(), el.indexOffset, el.valueVariable());
+      }
+    }
+
+    /**
+     * Adds the flow model of a layered graph (Regular, ExtensionalSupportMdd), as in M.-C. Cote, B.
+     * Gendron and L.-M. Rousseau, "Modeling the regular constraint with integer programming",
+     * CPAIOR 2007, LNCS 4510: an arc column per edge, one unit of flow out of level 0, flow
+     * conservation at every inner node, and [x_i = v] equal to the flow over the edges of level i
+     * labelled v. An edge that is the only one of its value at its level is the value column
+     * itself.
+     *
+     * @param list the variables of the levels
+     * @param edges the edges on a path, four ints each (level, source, value, target)
+     */
+    void flow(IntVar[] list, int[] edges) {
+      int size = edges.length / 4;
+      if (size == 0) {
+        return;
+      }
+      // the edges of each (level, value)
+      Map<Long, List<Integer>> byValue = new LinkedHashMap<>();
+      for (int e = 0; e < size; e++) {
+        long key = ((long) edges[4 * e] << 32) | (edges[4 * e + 2] & 0xffffffffL);
+        byValue.computeIfAbsent(key, q -> new ArrayList<>()).add(e);
+      }
+      int arcs = 0;
+      for (List<Integer> es : byValue.values()) {
+        IntVar x = list[edges[4 * es.get(0)]];
+        arcs += es.size() == 1 && !x.singleton() ? 0 : es.size();
+      }
+      if (made + arcs > VALUE_ENCODINGS_MAX) {
+        return;
+      }
+      Map<IntVar, Map<Integer, IntVar>> m = of(list);
+      if (m == null || made + arcs > VALUE_ENCODINGS_MAX) {
+        return;
+      }
+      made += arcs;
+      IntVar[] column = new IntVar[size];
+      for (List<Integer> es : byValue.values()) {
+        int level = edges[4 * es.get(0)];
+        int value = edges[4 * es.get(0) + 2];
+        IntVar x = list[level];
+        if (es.size() == 1 && !x.singleton()) {
+          column[es.get(0)] = m.get(x).get(value);
+          continue;
+        }
+        List<IntVar> vars = new ArrayList<>();
+        for (int e : es) {
+          column[e] = LpColumn.arc(x, value);
+          vars.add(column[e]);
+        }
+        if (!x.singleton()) {
+          vars.add(m.get(x).get(value));
+          List<Long> w = new ArrayList<>(Collections.nCopies(es.size(), 1L));
+          w.add(-1L);
+          out.add(row(vars, w, 0, LinearForm.EQ));
+        }
+      }
+      // one unit of flow leaves level 0, and what enters an inner node leaves it
+      List<IntVar> sources = new ArrayList<>();
+      Map<Long, List<IntVar>> in = new LinkedHashMap<>();
+      Map<Long, List<IntVar>> outOf = new LinkedHashMap<>();
+      for (int e = 0; e < size; e++) {
+        int level = edges[4 * e];
+        if (level == 0) {
+          sources.add(column[e]);
+        } else {
+          outOf
+              .computeIfAbsent(((long) level << 32) | edges[4 * e + 1], q -> new ArrayList<>())
+              .add(column[e]);
+        }
+        if (level + 1 < list.length) {
+          in.computeIfAbsent(((long) (level + 1) << 32) | edges[4 * e + 3], q -> new ArrayList<>())
+              .add(column[e]);
+        }
+      }
+      out.add(row(sources, Collections.nCopies(sources.size(), 1L), 1, LinearForm.EQ));
+      for (Map.Entry<Long, List<IntVar>> e : in.entrySet()) {
+        List<IntVar> leaving = outOf.getOrDefault(e.getKey(), List.of());
+        List<IntVar> vars = new ArrayList<>(e.getValue());
+        vars.addAll(leaving);
+        List<Long> w = new ArrayList<>(Collections.nCopies(e.getValue().size(), 1L));
+        w.addAll(Collections.nCopies(leaving.size(), -1L));
+        out.add(row(vars, w, 0, LinearForm.EQ));
       }
     }
 
@@ -535,10 +672,12 @@ public final class Linearizations {
             && r.c instanceof AbstractXcompC cmp
             && comparison(cmp)
             && boolean01(r.b)
-            && !encoded.containsKey(cmp.x)) {
+            && !encoded.containsKey(cmp.x)
+            && !linked.contains(c)) {
           Map<Integer, IntVar> m = full.get(cmp.x);
           if (m != null && m.get(cmp.c) != r.b && !m.containsValue(r.b)) {
             link(cmp, r.b, c.getClass() == Reified.class, m, out);
+            linked.add(c);
           }
         }
       }

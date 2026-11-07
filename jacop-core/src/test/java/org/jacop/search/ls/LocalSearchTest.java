@@ -41,6 +41,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AmongSeq;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
@@ -258,6 +260,59 @@ class LocalSearchTest {
         LocalSearch.builder(store).order(q).permutations(false).timeLimit(LIMIT).seed(3).build();
     assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
     assertTrue(!ls.toString().contains("P:"), ls.toString());
+  }
+
+  /**
+   * Car sequencing (CSPLib prob001, the example of Dincbas et al. 1988): the classes of 10 cars
+   * with at most max[o] cars needing option o in each block of size[o]. The options are sequence
+   * constraints over the classes, whose window counts local search keeps up to date (M:AmongSeq),
+   * and the class counts are kept by swaps.
+   */
+  @Test
+  void sequencesCarsByWindowCounts() {
+    int[] max = {1, 2, 1, 2, 1};
+    int[] size = {2, 3, 3, 5, 5};
+    int[] cars = {1, 1, 2, 2, 2, 2};
+    int[][] need = {
+      {1, 0, 1, 1, 0},
+      {0, 0, 0, 1, 0},
+      {0, 1, 0, 0, 1},
+      {0, 1, 0, 1, 0},
+      {1, 0, 1, 0, 0},
+      {1, 1, 0, 0, 0}
+    };
+    Store store = new Store();
+    IntVar[] x = new IntVar[10];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, cars.length);
+    }
+    for (int c = 0; c < cars.length; c++) {
+      store.impose(new Count(x, new IntVar(store, cars[c], cars[c]), c + 1));
+    }
+    IntervalDomain[] sets = new IntervalDomain[max.length];
+    for (int o = 0; o < max.length; o++) {
+      sets[o] = new IntervalDomain();
+      for (int c = 0; c < cars.length; c++) {
+        if (need[c][o] == 1) {
+          sets[o].unionAdapt(c + 1, c + 1);
+        }
+      }
+      store.impose(new AmongSeq(x, sets[o], size[o], 0, max[o]));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(LIMIT).seed(5).build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(ls.toString().contains("M:AmongSeq=5"), ls.toString());
+    int[] v = ls.getSolution(x);
+    for (int o = 0; o < max.length; o++) {
+      for (int i = 0; i + size[o] <= v.length; i++) {
+        int count = 0;
+        for (int j = i; j < i + size[o]; j++) {
+          count += sets[o].contains(v[j]) ? 1 : 0;
+        }
+        assertTrue(count <= max[o], "option " + o + " window " + i);
+      }
+    }
   }
 
   /**

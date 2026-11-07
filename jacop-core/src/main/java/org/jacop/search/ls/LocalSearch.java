@@ -49,6 +49,7 @@ import org.jacop.api.Violation;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
@@ -754,9 +755,14 @@ public final class LocalSearch {
 
   private void buildCounters() {
     counters = new Counter[m];
+    windows = new Windows[m];
     for (int k = 0; k < measuredConstraints.size(); k++) {
       Constraint con = measuredConstraints.get(k);
       int c = linearCount + k;
+      if (con instanceof AmongSeq seq && seq.windows() > 0) {
+        windows[c] = new Windows(seq);
+        continue;
+      }
       Class<?> type = con.getClass();
       if (scope[c].length < 2
           || (type != Alldifferent.class
@@ -801,12 +807,115 @@ public final class LocalSearch {
 
   private void recount() {
     for (int c = 0; c < m; c++) {
+      if (windows[c] != null) {
+        windows[c].recount();
+      }
       if (counters[c] != null) {
         counters[c].clear();
         for (int i : scope[c]) {
           counters[c].add(val[i]);
         }
       }
+    }
+  }
+
+  // per sequence constraint, the count of each window: its violation and the change of it by a
+  // move in O(q), as Comet's differentiable sequence constraint
+  private Windows[] windows;
+
+  /**
+   * The counts of the windows of an {@link AmongSeq} over the current values, and its violation,
+   * the sum over the windows of the distance of their counts to min..max.
+   */
+  final class Windows {
+    private final AmongSeq seq;
+    private final int q;
+    private final int[] list;
+    private final int[] count;
+    // the variables of the list, sorted, and the positions of each of them in the list
+    private final int[] keys;
+    private final int[][] positions;
+    long violation;
+
+    Windows(AmongSeq seq) {
+      this.seq = seq;
+      this.q = seq.windowSize();
+      IntVar[] xs = seq.list();
+      list = new int[xs.length];
+      Map<Integer, List<Integer>> at = new java.util.TreeMap<>();
+      for (int p = 0; p < xs.length; p++) {
+        list[p] = indexOf(xs[p]);
+        at.computeIfAbsent(list[p], key -> new ArrayList<>()).add(p);
+      }
+      keys = new int[at.size()];
+      positions = new int[at.size()][];
+      int k = 0;
+      for (Map.Entry<Integer, List<Integer>> e : at.entrySet()) {
+        keys[k] = e.getKey();
+        positions[k++] = e.getValue().stream().mapToInt(Integer::intValue).toArray();
+      }
+      count = new int[seq.windows()];
+    }
+
+    void recount() {
+      Arrays.fill(count, 0);
+      violation = 0;
+      for (int p = 0; p < list.length; p++) {
+        if (seq.inSet(val[list[p]])) {
+          for (int w = Math.max(0, p - q + 1); w <= Math.min(p, count.length - 1); w++) {
+            count[w]++;
+          }
+        }
+      }
+      for (int w = 0; w < count.length; w++) {
+        violation += seq.windowViolation(count[w]);
+      }
+    }
+
+    // variable i moves from value old to value v
+    void move(int i, int old, int v) {
+      int d = (seq.inSet(v) ? 1 : 0) - (seq.inSet(old) ? 1 : 0);
+      if (d == 0) {
+        return;
+      }
+      int k = Arrays.binarySearch(keys, i);
+      if (k < 0) {
+        return;
+      }
+      for (int p : positions[k]) {
+        for (int w = Math.max(0, p - q + 1); w <= Math.min(p, count.length - 1); w++) {
+          violation += seq.windowViolation(count[w] + d) - seq.windowViolation(count[w]);
+          count[w] += d;
+        }
+      }
+    }
+
+    // the violation after variable i moves from value old to value v
+    long after(int i, int old, int v) {
+      if (seq.inSet(v) == seq.inSet(old)) {
+        return violation;
+      }
+      long before = violation;
+      move(i, old, v);
+      long result = violation;
+      move(i, v, old);
+      violation = before;
+      return result;
+    }
+
+    /**
+     * The variables of a window that is violated, chosen at random, or null when none is: moving
+     * one of them is what can repair it (their violation, in Comet's terms).
+     */
+    int[] violatedWindow() {
+      int start = random.nextInt(count.length);
+      for (int t = 0; t < count.length; t++) {
+        int w = (start + t) % count.length;
+        if (seq.windowViolation(count[w]) > 0) {
+          return Arrays.copyOfRange(list, w, w + q);
+        }
+      }
+      return null;
     }
   }
 
@@ -1068,7 +1177,8 @@ public final class LocalSearch {
   }
 
   private static boolean swapsValues(Constraint c) {
-    return c instanceof Alldistinct
+    return c instanceof AmongSeq
+        || c instanceof Alldistinct
         || c instanceof Alldifferent
         || c instanceof CountValues
         || c instanceof CountValuesBounds;
@@ -1786,6 +1896,9 @@ public final class LocalSearch {
   }
 
   private long currentViolation(int c) {
+    if (windows[c] != null) {
+      return windows[c].violation;
+    }
     if (counters[c] != null) {
       return counters[c].duplicates;
     }
@@ -1879,6 +1992,9 @@ public final class LocalSearch {
   // ---------------------------------------------------------------- moves
 
   private long violationAfter(int c, int i, int v, long a) {
+    if (windows[c] != null) {
+      return windows[c].after(i, val[i], v);
+    }
     if (counters[c] != null) {
       return counters[c].after(val[i], v);
     }
@@ -1956,6 +2072,8 @@ public final class LocalSearch {
       } else if (counters[c] != null && v != old) {
         counters[c].remove(old);
         counters[c].add(v);
+      } else if (windows[c] != null && v != old) {
+        windows[c].move(i, old, v);
       }
       setViolation(c, currentViolation(c));
     }
@@ -2035,11 +2153,17 @@ public final class LocalSearch {
       return;
     }
     int[] s = scope[c];
+    if (windows[c] != null) {
+      int[] w = windows[c].violatedWindow();
+      if (w != null) {
+        s = w;
+      }
+    }
     int bestVar = -1;
     int bestVal = 0;
     double best = Double.MAX_VALUE;
     int ties = 0;
-    int size = s.length + (enforcer[c] >= 0 ? 1 : 0);
+    int size = s.length + (enforcer[c] >= 0 && s == scope[c] ? 1 : 0);
     // all of a counted constraint; on one step in four only the variables sharing a value
     // (their violation, in Comet's terms): always would stall on quasigroups, where a conflict is
     // often repaired by moving a variable that has none in this constraint
@@ -2434,11 +2558,16 @@ public final class LocalSearch {
     if (s.length < 2) {
       return false;
     }
+    // a sequence swaps a variable of a violated window with any other one
+    int[] from = windows[c] != null ? windows[c].violatedWindow() : null;
+    if (from == null) {
+      from = s;
+    }
     double best = 0;
     int bi = -1;
     int bj = -1;
     for (int t = 0; t < SCAN_LIMIT; t++) {
-      int i = s[random.nextInt(s.length)];
+      int i = from[random.nextInt(from.length)];
       int j = s[random.nextInt(s.length)];
       int vi = val[i];
       int vj = val[j];
@@ -2529,6 +2658,20 @@ public final class LocalSearch {
       r = d.getElementAt(random.nextInt(d.getSize()));
       if (r != old) {
         out[n++] = r;
+      }
+    }
+    if (windows[c] != null) {
+      // a value on the other side of the set changes the counts of the windows
+      AmongSeq seq = windows[c].seq;
+      boolean in = seq.inSet(old);
+      for (int t = 0; t < 8; t++) {
+        r = d.getElementAt(random.nextInt(d.getSize()));
+        if (seq.inSet(r) != in) {
+          if (!has(out, n, r)) {
+            out[n++] = r;
+          }
+          break;
+        }
       }
     }
     return n;

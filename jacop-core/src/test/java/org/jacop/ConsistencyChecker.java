@@ -67,6 +67,7 @@ import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.LateCount;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -84,6 +85,7 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
@@ -1237,6 +1239,15 @@ class ConsistencyChecker {
             "LinearIntDom",
             Level.DOMAIN,
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
+        // the sumsets alone, on equalities of up to five variables
+        new Case(
+            "LinearIntDom sumset",
+            Level.DOMAIN,
+            (s, r) -> {
+              Model m = linear(s, r, weights(r, 2 + r.nextInt(4), 4), "==", true);
+              ((LinearIntDom) m.constraint()).setSumsets("always");
+              return m;
+            }),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
         new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),
@@ -1424,6 +1435,64 @@ class ConsistencyChecker {
         // bounds(Z) is NP-hard; the limit is not raised to the largest resource use either
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
         new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),
+        // relaxations (Eastman, Even and Isaacs; Moore and Hodgson), so no consistency level, but
+        // never wrong pruning
+        new Case(
+            "WeightedCompletionParallel",
+            Level.NONE,
+            (s, r) -> {
+              int n = 2 + r.nextInt(3);
+              int capacity = 2 + r.nextInt(2);
+              IntVar[] x = vars(s, "x", n, 0, 4, r);
+              int[] d = r.ints(n, 0, 4).toArray();
+              int[] use = r.ints(n, 0, capacity + 1).toArray();
+              int[] w = r.ints(n, 0, 4).toArray();
+              IntVar c = var(s, "c", 0, 40, r);
+              return new Model(
+                  new WeightedCompletion(x, d, use, w, capacity, c),
+                  t -> {
+                    int total = 0;
+                    for (int i = 0; i < n; i++) {
+                      total += w[i] * (t[i] + d[i]);
+                      int load = 0;
+                      for (int j = 0; j < n; j++) {
+                        if (d[i] > 0 && d[j] > 0 && t[j] <= t[i] && t[i] < t[j] + d[j]) {
+                          load += use[j];
+                        }
+                      }
+                      if (load > capacity) {
+                        return false;
+                      }
+                    }
+                    return total <= t[n];
+                  },
+                  concat(x, new IntVar[] {c}));
+            }),
+        new Case(
+            "LateCount",
+            Level.NONE,
+            (s, r) -> {
+              int n = 2 + r.nextInt(3);
+              IntVar[] x = vars(s, "x", n, 0, 5, r);
+              int[] d = r.ints(n, 0, 4).toArray();
+              int[] due = r.ints(n, 0, 8).toArray();
+              IntVar c = var(s, "c", 0, n, r);
+              return new Model(
+                  new LateCount(x, d, due, c),
+                  t -> {
+                    int late = 0;
+                    for (int i = 0; i < n; i++) {
+                      late += t[i] + d[i] > due[i] ? 1 : 0;
+                      for (int j = i + 1; j < n; j++) {
+                        if (d[i] > 0 && d[j] > 0 && t[i] < t[j] + d[j] && t[j] < t[i] + d[i]) {
+                          return false;
+                        }
+                      }
+                    }
+                    return late <= t[n];
+                  },
+                  concat(x, new IntVar[] {c}));
+            }),
         // Geost sweeps for the first and last feasible origin, so it reaches no level on all
         // nodes; the counts of nodes at each level compare its strength with Diffn and Diff2
         new Case("GeostRect2d", Level.NONE, (s, r) -> geost(s, r, Family.RECT2D, null)),
