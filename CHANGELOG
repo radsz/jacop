@@ -2558,10 +2558,11 @@ Version 5.0 (unreleased)
      statistic lsSchedule=tasks/machines/iterations. Local search itself
      stays off by default (ls=0). 46 JSPLIB job shops and 5 Challenge open
      shops, 60 s: local search alone cuts the mean gap to the best known
-     makespan from 30.45 % to 0.89 % (51 better, 0 worse); -f with
-     ls=0.1 from 2.46 % to 1.01 % (27 / 6). Wide set (220), -f ls=0.1:
-     163 to 162 solved, 6 families better, 1 worse; only two instances
-     have such a graph and neither changes.
+     makespan from 30.81 % to 0.91 % (51 better, 0 worse); -f with
+     ls=0.1 from 2.62 % to 1.04 % (28 / 0). Wide set (220), -f ls=0.1:
+     161 to 162 solved, 2 families better, 4 worse; only openshop tai20-4
+     (optimal in both) and mspsp hard_01 (gives way at once) have such a
+     graph, so the rest is run-to-run noise.
 
 Version 4.11
 =============
