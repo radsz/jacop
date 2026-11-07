@@ -2762,6 +2762,39 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
+171. DiffnK explains its pruning and failures under --lcg by the boxes
+     of the rule that fired, instead of by the bounds of all boxes:
+     a pairwise separation by the origin and length bounds of the two
+     boxes (with the holes skipped by the pruned bound), a volume or fit
+     failure by the boxes it counted, and the exclusion of a
+     non-strict box by the atoms that make it zero-sized or absent. The
+     average reason drops from about 149 to about 15 atoms on
+     products-and-shelves (-Dorg.jacop.diffnk.reasons=false restores
+     the generic reason).
+     Diffn has a new energetic check on strips (setEnergetic,
+     -Dorg.jacop.diffn.energetic=0|1|2, off by default): for each
+     dimension and each strip [t1, t2) with t1 an earliest or latest
+     start and t2 an earliest or latest end, the minimal parts of the
+     rectangles inside the strip must pack into the strip, tested with
+     the dual feasible functions of item 155 (mode 1) or by area only
+     (mode 2) (F. Clautiaux, A. Jouglet, J. Carlier and A. Moukrim, A new
+     constraint programming approach for the orthogonal packing problem,
+     Comput. Oper. Res. 35(3):944-959, 2008; S. P. Fekete and
+     J. Schepers, Math. Methods Oper. Res. 60(2):311-329, 2004). Its
+     failures are explained by the strip rectangles' bounds that place
+     them in the strip and the extent.
+     At 600 s (three rounds each, default and -f search, same jar with
+     the generic reason as base) the five 2025 products-and-shelves
+     instances all reach the optimum in every round: ps-50-09 is proved
+     in 109-125 s by default and 240-326 s with -f, where the base finds
+     the optimum but proves nothing in 600 s; ps-25-01 goes from 154-180
+     s to 28-35 s (default) and from 374-394 s to 24-27 s (-f); ps-25-03
+     from 60-72 s to 5-7 s; ps-50-06 from 34-39 s to 14-18 s. The
+     energetic check stays off: on the 70 hardest Challenge Diffn
+     instances at 240 s it solves 28 -> 18 (mode 1) and 28 -> 25
+     (mode 2), and on the 25 carpet-cutting instances at 600 s mode 2
+     solves 12 -> 11 with 8 better and 8 worse.
+
 Version 4.11
 =============
 
