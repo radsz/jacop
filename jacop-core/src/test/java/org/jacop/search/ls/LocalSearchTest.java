@@ -31,6 +31,7 @@
 
 package org.jacop.search.ls;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,6 +43,7 @@ import java.util.List;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
@@ -50,6 +52,7 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -650,5 +653,134 @@ class LocalSearchTest {
       }
     }
     return fsm;
+  }
+
+  /**
+   * A table violation is the Hamming distance to the nearest tuple, and a key column, all of whose
+   * values differ, determines the other columns.
+   */
+  @Test
+  void tableDistanceAndKey() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+    }
+    int[][] tuples = {{1, 5, 5}, {2, 5, 6}, {3, 7, 7}};
+    HybridTable t = new HybridTable(x, tuples);
+    int[][] cases = {{1, 5, 5}, {1, 5, 6}, {1, 6, 6}, {9, 9, 9}, {3, 5, 7}};
+    for (int[] v : cases) {
+      long expected = Long.MAX_VALUE;
+      for (int[] tuple : tuples) {
+        long d = 0;
+        for (int i = 0; i < v.length; i++) {
+          d += v[i] == tuple[i] ? 0 : 1;
+        }
+        expected = Math.min(expected, d);
+      }
+      List<IntVar> vars = Arrays.asList(x);
+      assertEquals(expected, t.violation(y -> v[vars.indexOf(y)]), Arrays.toString(v));
+    }
+    assertEquals(0, t.keyColumn());
+    assertEquals(6, t.keyedValue(2, 2, -1));
+    assertEquals(-1, t.keyedValue(2, 4, -1));
+    // no column of distinct values
+    assertEquals(-1, new HybridTable(x, new int[][] {{1, 5, 5}, {1, 6, 6}, {2, 5, 6}}).keyColumn());
+  }
+
+  /**
+   * The columns of a table with a key follow the key, and the table is not evaluated; local search
+   * moves only the keys (a car sequencing model in miniature: the options of a car follow its
+   * class).
+   */
+  @Test
+  void tableColumnsFollowTheKey() {
+    for (boolean keys : new boolean[] {true, false}) {
+      Store store = new Store();
+      int[][] options = {{1, 1, 0}, {2, 0, 1}, {3, 1, 1}, {4, 0, 0}};
+      IntVar[] cls = new IntVar[8];
+      IntVar[] a = new IntVar[cls.length];
+      IntVar[] b = new IntVar[cls.length];
+      List<IntVar> defined = new ArrayList<>();
+      for (int i = 0; i < cls.length; i++) {
+        cls[i] = new IntVar(store, "c" + i, 1, 4);
+        a[i] = new IntVar(store, "a" + i, 0, 1);
+        b[i] = new IntVar(store, "b" + i, 0, 1);
+        store.impose(new HybridTable(new IntVar[] {cls[i], a[i], b[i]}, options));
+      }
+      // two cars of each class
+      store.impose(
+          new CountValuesBounds(
+              cls, new int[] {2, 2, 2, 2}, new int[] {2, 2, 2, 2}, new int[] {1, 2, 3, 4}));
+      // at most one car with option a and one with option b in any two consecutive
+      for (int i = 0; i + 1 < cls.length; i++) {
+        store.impose(new LinearInt(new IntVar[] {a[i], a[i + 1]}, new int[] {1, 1}, "<=", 1));
+        store.impose(new LinearInt(new IntVar[] {b[i], b[i + 1]}, new int[] {1, 1}, "<=", 1));
+      }
+      assertTrue(store.consistency());
+      LocalSearch ls =
+          LocalSearch.builder(store)
+              .order(cls)
+              .defined(defined)
+              .tableKeys(keys)
+              .timeLimit(LIMIT)
+              .seed(1)
+              .build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve(), ls.toString());
+      assertEquals(keys, ls.toString().contains("K:HybridTable=8"), ls.toString());
+      int[] c = ls.getSolution(cls);
+      int[] count = new int[5];
+      for (int i = 0; i < c.length; i++) {
+        count[c[i]]++;
+        if (i > 0) {
+          assertTrue(options[c[i] - 1][1] + options[c[i - 1] - 1][1] <= 1, Arrays.toString(c));
+          assertTrue(options[c[i] - 1][2] + options[c[i - 1] - 1][2] <= 1, Arrays.toString(c));
+        }
+      }
+      assertArrayEquals(new int[] {0, 2, 2, 2, 2}, count);
+    }
+  }
+
+  /**
+   * The value counter of a global cardinality keeps the sum of the counts out of their bounds, and
+   * the change by a move, equal to counting again.
+   */
+  @Test
+  void cardinalityCounter() {
+    java.util.Random random = new java.util.Random(7);
+    for (int trial = 0; trial < 200; trial++) {
+      int n = 1 + random.nextInt(8);
+      int[][] bounds = new int[3][];
+      for (int k = 0; k < bounds.length; k++) {
+        int low = random.nextInt(3);
+        bounds[k] = new int[] {k, low, low + random.nextInt(3)};
+      }
+      LocalSearch.Counter counter = new LocalSearch.Counter(bounds);
+      int[] v = new int[n];
+      counter.clear();
+      for (int i = 0; i < n; i++) {
+        v[i] = random.nextInt(5);
+        counter.add(v[i]);
+      }
+      for (int move = 0; move < 20; move++) {
+        assertEquals(cardinalityViolation(v, bounds), counter.duplicates);
+        int i = random.nextInt(n);
+        int w = random.nextInt(5);
+        long after = counter.after(v[i], w);
+        counter.remove(v[i]);
+        counter.add(w);
+        v[i] = w;
+        assertEquals(cardinalityViolation(v, bounds), after);
+      }
+    }
+  }
+
+  private static long cardinalityViolation(int[] v, int[][] bounds) {
+    long violation = 0;
+    for (int[] b : bounds) {
+      int c = (int) Arrays.stream(v).filter(x -> x == b[0]).count();
+      violation += Math.max(0, b[1] - c) + Math.max(0, c - b[2]);
+    }
+    return violation;
   }
 }

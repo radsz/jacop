@@ -2822,6 +2822,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
             // the redundant constraints of the detectors only add propagation
             .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
+            // the columns of a table with a key column (a row lookup) follow the key
+            .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {

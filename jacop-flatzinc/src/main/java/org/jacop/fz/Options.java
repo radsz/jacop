@@ -283,7 +283,9 @@ public class Options {
                 ns+n4; 0 = off)
                 ls-implied=1|0 (1, the default: the redundant constraints JaCoP adds are not
                 evaluated), ls-sym=1|0 (1, the default: the symmetry breaking constraints JaCoP
-                adds are not evaluated; a solution is moved onto a symmetric one that holds them)
+                adds are not evaluated; a solution is moved onto a symmetric one that holds them),
+                ls-keys=1|0 (1, the default: the other columns of a table with a key column follow
+                the key as definitions)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

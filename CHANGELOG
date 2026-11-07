@@ -2777,7 +2777,22 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
-172. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
+172. Local search measures a table (HybridTable) by its distance to the
+     nearest tuple, the number of columns that must change, instead of
+     0/1 (violation degrees, Van Hentenryck and Michel, Constraint-Based
+     Local Search, MIT Press 2005); tables over 50,000 cells stay copy
+     checks. When one column of a table holds a distinct value in every
+     tuple and all cells are equalities, the other columns are defined
+     from it as invariants (as in Comet), so the table always holds; it
+     is listed as K:HybridTable and --free-config ls-keys=0 turns it off.
+     An exact-class CountValuesBounds gets the O(1) value counters of the
+     all different, with a penalty outside its bounds. Local search only,
+     60 s, 54 local-search instances: 24 to 25 with a solution (cars
+     65_09, solved on 4 of 4 seeds against 0 of 3, 2.2x more steps).
+     Wide set at 60 s, -f ls=0.1: 163 to 164 solved, with solutions 192
+     to 192.
+
+173. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
      sum x_i = total and convex costs f_i (ConvexCost: weighted maxima
      of affine pieces, their squares, or tables). The minimum of the
      separable convex allocation is found by the greedy on marginal
@@ -2807,7 +2822,7 @@ Version 5.0 (unreleased)
      57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
      the other changes being run-to-run noise.
 
-173. Local search searches the machine sequences of disjunctive scheduling
+174. Local search searches the machine sequences of disjunctive scheduling
      models with critical-path neighbourhoods, the scheduling abstraction
      of Comet's constraint-based local search (Van Hentenryck and Michel,
      "Scheduling abstractions for local search", CPAIOR 2004). Machines are
@@ -2835,7 +2850,7 @@ Version 5.0 (unreleased)
      (optimal in both) and mspsp hard_01 (gives way at once) have such a
      graph, so the rest is run-to-run noise.
 
-174. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
+175. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
      for cumulative scheduling: the preemptive relaxation checked by a
      maximum flow from tasks to elementary intervals, after W. A. Horn,
      Some simple scheduling algorithms, Naval Research Logistics
