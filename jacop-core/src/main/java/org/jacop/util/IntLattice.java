@@ -57,6 +57,9 @@ import java.math.BigInteger;
  */
 public final class IntLattice {
 
+  /** Bit length of an entry of the Hermite normal form or of U beyond which solve gives up. */
+  static final int MAX_BITS = 256;
+
   private IntLattice() {}
 
   /**
@@ -75,6 +78,7 @@ public final class IntLattice {
    * @param b the right-hand sides.
    * @param n the number of variables.
    * @return the solutions, or null when the system has no integer solution.
+   * @throws ArithmeticException when an entry of the computation grows beyond MAX_BITS bits.
    */
   public static Solutions solve(long[][] a, long[] b, int n) {
     int m = a.length;
@@ -94,11 +98,7 @@ public final class IntLattice {
     int rank = 0;
     int[] pivot = new int[m];
     for (int i = 0; i < m; i++) {
-      for (int j = rank + 1; j < n && rank < n; j++) {
-        if (h[i][j].signum() != 0) {
-          combine(h, u, i, rank, j);
-        }
-      }
+      eliminate(h, u, i, rank);
       if (rank < n && h[i][rank].signum() != 0) {
         if (h[i][rank].signum() < 0) {
           negate(h, u, rank);
@@ -143,35 +143,85 @@ public final class IntLattice {
     return new Solutions(x0, basis);
   }
 
-  // columns r and j of h (and of u) become s col_r + t col_j and (-q/g) col_r + (p/g) col_j with
-  // s p + t q = g = gcd(p, q), p and q in row i: a unimodular step that zeroes h[i][j]
-  private static void combine(BigInteger[][] h, BigInteger[][] u, int i, int r, int j) {
-    BigInteger p = h[i][r];
-    BigInteger q = h[i][j];
-    BigInteger[] e = extendedGcd(p, q);
-    BigInteger g = e[0];
-    BigInteger s = e[1];
-    BigInteger t = e[2];
-    BigInteger pg = p.divide(g);
-    BigInteger qg = q.divide(g).negate();
+  /**
+   * Zeroes row i of h right of column r by unimodular column steps: the column with the smallest
+   * nonzero entry goes to r and the nearest multiple of it is subtracted from the others, until
+   * column r is the only nonzero one (Euclid on the whole row at once). Unlike pairwise extended
+   * Euclid, a unit entry needs no multiplication of whole columns, which keeps the entries of U
+   * small.
+   *
+   * @throws ArithmeticException when an entry grows beyond MAX_BITS.
+   */
+  private static void eliminate(BigInteger[][] h, BigInteger[][] u, int i, int r) {
+    int n = u.length;
+    while (r < n) {
+      int best = -1;
+      for (int j = r; j < n; j++) {
+        if (h[i][j].signum() != 0 && (best < 0 || h[i][j].abs().compareTo(h[i][best].abs()) < 0)) {
+          best = j;
+        }
+      }
+      if (best < 0) {
+        return;
+      }
+      swap(h, u, r, best);
+      boolean done = true;
+      BigInteger p = h[i][r];
+      for (int j = r + 1; j < n; j++) {
+        if (h[i][j].signum() != 0) {
+          // nearest integer to h[i][j] / p
+          BigInteger[] qr = h[i][j].divideAndRemainder(p);
+          BigInteger q = qr[0];
+          if (qr[1].abs().shiftLeft(1).compareTo(p.abs()) > 0) {
+            q = q.add(BigInteger.valueOf(qr[1].signum() * p.signum()));
+          }
+          subtract(h, u, j, r, q);
+          if (h[i][j].signum() != 0) {
+            done = false;
+          }
+        }
+      }
+      if (done) {
+        return;
+      }
+    }
+  }
+
+  // column j -= q column r, in h and u
+  private static void subtract(BigInteger[][] h, BigInteger[][] u, int j, int r, BigInteger q) {
     for (BigInteger[] row : h) {
-      BigInteger cr = row[r];
-      BigInteger cj = row[j];
-      if (cr.signum() != 0 || cj.signum() != 0) {
-        row[r] = s.multiply(cr).add(t.multiply(cj));
-        row[j] = qg.multiply(cr).add(pg.multiply(cj));
+      if (row[r].signum() != 0) {
+        row[j] = checked(row[j].subtract(q.multiply(row[r])));
       }
     }
-    BigInteger[] ur = u[r];
     BigInteger[] uj = u[j];
-    for (int k = 0; k < ur.length; k++) {
-      BigInteger cr = ur[k];
-      BigInteger cj = uj[k];
-      if (cr.signum() != 0 || cj.signum() != 0) {
-        ur[k] = s.multiply(cr).add(t.multiply(cj));
-        uj[k] = qg.multiply(cr).add(pg.multiply(cj));
+    BigInteger[] ur = u[r];
+    for (int k = 0; k < uj.length; k++) {
+      if (ur[k].signum() != 0) {
+        uj[k] = checked(uj[k].subtract(q.multiply(ur[k])));
       }
     }
+  }
+
+  private static BigInteger checked(BigInteger v) {
+    if (v.bitLength() > MAX_BITS) {
+      throw new ArithmeticException("lattice entries beyond " + MAX_BITS + " bits");
+    }
+    return v;
+  }
+
+  private static void swap(BigInteger[][] h, BigInteger[][] u, int r, int j) {
+    if (r == j) {
+      return;
+    }
+    for (BigInteger[] row : h) {
+      BigInteger t = row[r];
+      row[r] = row[j];
+      row[j] = t;
+    }
+    BigInteger[] t = u[r];
+    u[r] = u[j];
+    u[j] = t;
   }
 
   private static void negate(BigInteger[][] h, BigInteger[][] u, int r) {
@@ -181,32 +231,6 @@ public final class IntLattice {
     for (int k = 0; k < u[r].length; k++) {
       u[r][k] = u[r][k].negate();
     }
-  }
-
-  /** {g, s, t} with g = gcd(p, q) &gt; 0 and s p + t q = g; p and q not both 0. */
-  static BigInteger[] extendedGcd(BigInteger p, BigInteger q) {
-    BigInteger r0 = p;
-    BigInteger r1 = q;
-    BigInteger s0 = BigInteger.ONE;
-    BigInteger s1 = BigInteger.ZERO;
-    BigInteger t0 = BigInteger.ZERO;
-    BigInteger t1 = BigInteger.ONE;
-    while (r1.signum() != 0) {
-      BigInteger[] qr = r0.divideAndRemainder(r1);
-      BigInteger r2 = qr[1];
-      BigInteger s2 = s0.subtract(qr[0].multiply(s1));
-      BigInteger t2 = t0.subtract(qr[0].multiply(t1));
-      r0 = r1;
-      r1 = r2;
-      s0 = s1;
-      s1 = s2;
-      t0 = t1;
-      t1 = t2;
-    }
-    if (r0.signum() < 0) {
-      return new BigInteger[] {r0.negate(), s0.negate(), t0.negate()};
-    }
-    return new BigInteger[] {r0, s0, t0};
   }
 
   /**

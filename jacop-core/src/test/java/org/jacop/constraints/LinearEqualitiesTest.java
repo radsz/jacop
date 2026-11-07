@@ -35,6 +35,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -43,6 +44,7 @@ import org.jacop.search.IndomainMin;
 import org.jacop.search.SimpleSelect;
 import org.jacop.util.IntLattice;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Checks {@link LinearEqualities} and {@link IntLattice}: the congruences of small examples, and on
@@ -87,6 +89,47 @@ class LinearEqualitiesTest {
     le.apply(
         List.of(new LinearEqualities.Row(new IntVar[] {x[0], x[1], z}, new int[] {30, 60, -1}, 0)));
     assertThat(z.dom().toString()).isEqualTo("{30..99990}");
+  }
+
+  // lights out on a 9 x 9 board: each cell and its neighbours sum to 1 + 2 k. Pairwise extended
+  // Euclid made the entries of U grow to millions of bits (the upTo5sec lights_out instance hung);
+  // the row-wise Euclid keeps them small, and solving shows every cell has the parity of x0
+  @Test
+  @Timeout(value = 10, unit = TimeUnit.SECONDS)
+  void lightsOutStaysSmall() {
+    int n = 9;
+    Store store = new Store();
+    IntVar[][] x = new IntVar[n][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 1);
+      }
+    }
+    List<LinearEqualities.Row> rows = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        List<IntVar> v = new ArrayList<>();
+        List<Integer> c = new ArrayList<>();
+        int[][] near = {{0, 0}, {1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+        for (int[] d : near) {
+          int a = i + d[0];
+          int b = j + d[1];
+          if (a >= 0 && a < n && b >= 0 && b < n) {
+            v.add(x[a][b]);
+            c.add(1);
+          }
+        }
+        v.add(new IntVar(store, "k" + i + "_" + j, 0, 2));
+        c.add(-2);
+        rows.add(
+            new LinearEqualities.Row(
+                v.toArray(new IntVar[0]), c.stream().mapToInt(Integer::intValue).toArray(), 1));
+      }
+    }
+    LinearEqualities le = new LinearEqualities(store);
+    le.apply(rows);
+    assertThat(store.consistency()).isTrue();
+    assertThat(le.components).isEqualTo(1);
   }
 
   // x + y = 1 and x - y = 0 have a rational solution only

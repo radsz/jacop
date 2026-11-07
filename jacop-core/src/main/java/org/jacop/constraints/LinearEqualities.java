@@ -355,7 +355,13 @@ public final class LinearEqualities {
       }
       b[i] = rhs.get(r);
     }
-    IntLattice.Solutions s = IntLattice.solve(a, b, n);
+    IntLattice.Solutions s;
+    try {
+      s = IntLattice.solve(a, b, n);
+    } catch (ArithmeticException e) {
+      // entries too large: no deduction from this component
+      return;
+    }
     if (s == null) {
       throw Store.failException;
     }
