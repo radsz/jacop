@@ -2524,7 +2524,42 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
-163. Local search (--free-config ls=...) no longer evaluates the
+163. Sequence (sliding among) as a global for local search and lazy
+     clause generation, and found where a model states it window by
+     window. AmongSeq, the domain consistent propagator of Sequence on the
+     cumulative-sums network of Brand, Narodytska, Quimper, Stuckey and
+     Walsh (CP 2007; the constraint is due to Beldiceanu and Contejean
+     1994, Regin and Puget CP 1997, and van Hoeve, Pesant, Rousseau and
+     Sabharwal CP 2006), now
+     - explains its pruning under LCG by a path of the network that would
+       close a negative cycle with the removed value, citing only the
+       memberships on that path (fewest first), and a failure by a
+       negative cycle; before, it had replayed or generic reasons, and
+       adding it to car sequencing cut nodes per second tenfold;
+     - implements Violation (the sum over the windows of the distance of
+       their counts to min..max), and local search keeps the count of
+       every window, so a move is evaluated in O(q), steps repair a
+       violated window, and swaps keep the class counts, as Comet's
+       differentiable sequence constraint (Van Hentenryck and Michel,
+       Constraint-Based Local Search, 2005).
+     The FlatZinc front end posts a redundant Sequence over a chain of at
+     least three window constraints sum(y[i..i+q-1]) <= c (>= c, = c)
+     with unit coefficients over 0/1 variables shifted by one position,
+     as MiniZinc gives for forall-window sums (car sequencing, CSPLib
+     prob001). The windows are still posted. With
+     -Djacop.fz.sequenceLift=true a sequence whose y[i] are elements
+     A[x[i]] of one constant 0/1 array is posted over the x[i] instead
+     (the classes of car sequencing); it helps local search (LS only,
+     CSPLib cars at 20 s: 0 -> 4 of 82) but costs default search (30
+     against 36 solved over the 0/1 variables), so it is off.
+     -Dorg.jacop.fz.sequence=false turns the detection off. Default
+     options, 60 s: CSPLib cars (79 instances) 39 -> 44 solved; the 29
+     Challenge instances with window chains (trucking, still_life,
+     roster-shifts-bool, roster-sickness) unchanged; wide set 167 -> 168
+     solved by default and 163 -> 163 under -f, with chains on 4 of its
+     220 instances (the other changes are run-to-run noise).
+
+164. Local search (--free-config ls=...) no longer evaluates the
      constraints JaCoP adds itself. The redundant constraints of the
      detectors are marked implied when they are imposed
      (Store.imposingImplied, Store.isImplied) and left out, since they
@@ -2545,7 +2580,7 @@ Version 5.0 (unreleased)
      and 23x on cars 65_09. Wide set at 60 s, -f ls=0.1: 162 to 161
      solved, with solutions 192 to 192, within the noise of free search.
 
-164. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
+165. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
      f[i](s[i]) <= cost under precedences s[j] >= s[i] + d over an
      acyclic graph, where each f[i] is convex piecewise linear, given as
      earliness and tardiness terms e * max(0, b - s) + t * max(0, s - b).
@@ -2575,7 +2610,7 @@ Version 5.0 (unreleased)
      J.-N. Monette, Y. Deville and P. Van Hentenryck, Just-In-Time
      Scheduling with Constraint Programming, ICAPS 2009.
 
-165. The XorSystem detector also reads tables (jacop_table_int,
+166. The XorSystem detector also reads tables (jacop_table_int,
      jacop_table_bool and short tables): the parity constraints a table
      implies on its 0/1 variables, the equations of the affine hull over
      GF(2) of its tuples allowed by the domains, become rows of the
@@ -2587,7 +2622,7 @@ Version 5.0 (unreleased)
      isolated 2-variable rows. XCSP3 2025 Cryptanalysis gets systems from
      its bool_xor (8 per instance) with no change in time or answers.
 
-166. Under --lcg, EinA (set_in_reif with a set variable)
+167. Under --lcg, EinA (set_in_reif with a set variable)
      explains what the set's cardinality derives inside the constraint:
      when the cardinality bound leaves no room for the element, or when
      the other members already fill it, the reason cites the
@@ -2601,7 +2636,7 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
-165. Scheduling objective bounds. WeightedCompletion takes resource
+168. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
