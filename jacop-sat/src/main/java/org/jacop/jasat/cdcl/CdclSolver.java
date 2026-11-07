@@ -228,6 +228,13 @@ public final class CdclSolver {
   private boolean vivifyDue;
   private long propagationsAtVivify;
   private int[] vivifyLits = new int[16];
+  // eager subsumption (Kissat's eagersubsume): a new learnt clause deletes the clauses among the
+  // last eagerWindow learnt ones that it subsumes; 0 off, 1 count only, 2 on
+  private int eagerSubsume = Integer.getInteger("jacop.jasat.eagerSubsume", 2);
+  private int eagerWindow = Integer.getInteger("jacop.jasat.eagerWindow", 20);
+  // literal marks of the new clause, by stamp
+  private int[] subsumeMark = new int[0];
+  private int subsumeStamp;
   private static final long REPHASE_INTERVAL = 1000;
   private int simplifyAssigns = -1;
   // propagations before the next simplification, as MiniSat's simpDB_props: a pass costs about the
@@ -337,6 +344,15 @@ public final class CdclSolver {
 
   /** Statistics: conflicts whose analysis stopped at a semantic UIP before the first UIP. */
   public long semanticUips;
+
+  /**
+   * Statistics: recent learnt clauses that a new learnt clause subsumed (deleted, or only counted
+   * when eager subsumption counts only).
+   */
+  public long eagerSubsumed;
+
+  /** Statistics: recent learnt clauses checked for subsumption by a new learnt clause. */
+  public long eagerChecked;
 
   /** Creates an empty solver. */
   public CdclSolver() {
@@ -2146,11 +2162,13 @@ public final class CdclSolver {
       orderForWatches(c);
       if (c.length == 2) {
         if (!pendingAttached) {
+          eagerSubsume(c, 2);
           addLearntBinary(c[0], c[1]);
         }
         ref = BINARY;
       } else if (!pendingAttached) {
-        ref = allocate(c, c.length, true, pendingLbd);
+        int lbd = Math.min(pendingLbd, eagerSubsume(c, c.length));
+        ref = allocate(c, c.length, true, lbd);
         learnts = push(learnts, numLearnts++, ref);
         attach(ref);
         bumpClause(ref);
@@ -2991,6 +3009,18 @@ public final class CdclSolver {
     walking = on;
   }
 
+  /**
+   * Sets eager subsumption of recent learnt clauses: each new learnt clause deletes the clauses
+   * among the last {@code window} learnt ones that it subsumes (on by default, window 20).
+   *
+   * @param on whether to delete the subsumed clauses; when off they are not looked for
+   * @param window how many of the most recent learnt clauses are checked
+   */
+  public void setEagerSubsumption(boolean on, int window) {
+    eagerSubsume = on ? 2 : 0;
+    eagerWindow = window;
+  }
+
   private void learnClause() {
     int lbd;
     if (learntSize == 1) {
@@ -3004,6 +3034,7 @@ public final class CdclSolver {
       if (proof != null) {
         proof.add(learnt, 0, 2);
       }
+      eagerSubsume(learnt, 2);
       addLearntBinary(learnt[0], learnt[1]);
       assignAt(learnt[0], -2 - learnt[1], level[learnt[1] >> 1]);
     } else {
@@ -3011,6 +3042,7 @@ public final class CdclSolver {
       if (proof != null) {
         proof.add(learnt, 0, learntSize);
       }
+      lbd = Math.min(lbd, eagerSubsume(learnt, learntSize));
       int ref = allocate(learnt, learntSize, true, lbd);
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
@@ -3124,6 +3156,77 @@ public final class CdclSolver {
   }
 
   // ------------------------------------------------------------------------- clause database
+
+  /**
+   * Eager subsumption of recent learnt clauses: deletes each of the last {@code eagerWindow} learnt
+   * clauses that the new learnt clause subsumes and that is no reason. Consecutive conflicts often
+   * learn a clause and then a subset of it, so the check is limited to the most recent ones and
+   * costs little; Kissat does the same ({@code eagersubsume}). The idea goes back to the on-the-fly
+   * subsumption of learnt clauses by Han and Somenzi, "On-the-Fly Clause Improvement", SAT 2009,
+   * LNCS 5584, pp. 209-222.
+   *
+   * @param c the new clause, not yet in the arena
+   * @param size its size, at least 2
+   * @return the smallest LBD of the deleted clauses, which the new clause may take, or {@code
+   *     Integer.MAX_VALUE}
+   */
+  private int eagerSubsume(int[] c, int size) {
+    int best = Integer.MAX_VALUE;
+    if (eagerSubsume == 0 || numLearnts == 0) {
+      return best;
+    }
+    if (subsumeMark.length < vals.length) {
+      subsumeMark = Arrays.copyOf(subsumeMark, vals.length);
+    }
+    if (++subsumeStamp == 0) {
+      Arrays.fill(subsumeMark, 0);
+      subsumeStamp = 1;
+    }
+    int s = subsumeStamp;
+    for (int i = 0; i < size; i++) {
+      subsumeMark[c[i]] = s;
+    }
+    int stop = Math.max(0, numLearnts - eagerWindow);
+    for (int i = numLearnts - 1; i >= stop; i--) {
+      int ref = learnts[i];
+      int other = mem[ref + SIZE];
+      if (other < size || (mem[ref + META] & DELETED) != 0) {
+        continue;
+      }
+      eagerChecked++;
+      int hits = 0;
+      for (int j = ref + HEADER, end = j + other; j < end && hits < size; j++) {
+        if (subsumeMark[mem[j]] == s) {
+          hits++;
+        }
+      }
+      if (hits < size || isReason(ref)) {
+        continue;
+      }
+      eagerSubsumed++;
+      if (eagerSubsume < 2) {
+        continue;
+      }
+      best = Math.min(best, lbdOf(mem[ref + META]));
+      removeWatch(mem[ref + HEADER], ref);
+      removeWatch(mem[ref + HEADER + 1], ref);
+      deleteClause(ref);
+      System.arraycopy(learnts, i + 1, learnts, i, numLearnts - i - 1);
+      numLearnts--;
+    }
+    return best;
+  }
+
+  /** Whether an arena clause is the reason of one of its literals. */
+  private boolean isReason(int ref) {
+    for (int j = ref + HEADER, end = j + mem[ref + SIZE]; j < end; j++) {
+      int l = mem[j];
+      if (vals[l] > 0 && reason[l >> 1] == ref) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   private void reduceDb() {
     long[] keys = new long[numLearnts];

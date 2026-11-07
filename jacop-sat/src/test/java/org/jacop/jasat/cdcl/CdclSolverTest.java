@@ -231,6 +231,79 @@ class CdclSolverTest {
   }
 
   @Test
+  void eagerSubsumptionKeepsAnswersAndProofs() throws IOException {
+    // each new learnt clause deletes the recent learnt clauses it subsumes; answers must not
+    // change, refutations must stay RUP, and on these formulas some clauses are subsumed
+    Random rnd = new Random(3);
+    long subsumed = 0;
+    for (int run = 0; run < 20; run++) {
+      int vars = 60 + rnd.nextInt(30);
+      List<int[]> f = new ArrayList<>();
+      while (f.size() < 4.3 * vars) {
+        int a = 1 + rnd.nextInt(vars);
+        int b = 1 + rnd.nextInt(vars);
+        int c = 1 + rnd.nextInt(vars);
+        if (a != b && b != c && a != c) {
+          f.add(
+              new int[] {
+                rnd.nextBoolean() ? a : -a, rnd.nextBoolean() ? b : -b, rnd.nextBoolean() ? c : -c
+              });
+        }
+      }
+      int[] results = new int[2];
+      for (int on = 0; on < 2; on++) {
+        CdclSolver s = new CdclSolver();
+        s.setChecking(true);
+        s.setEagerSubsumption(on == 1, 20);
+        ByteArrayOutputStream proof = new ByteArrayOutputStream();
+        DratWriter drat = new DratWriter(proof);
+        s.setProof(drat);
+        s.ensureVars(vars);
+        for (int[] c : f) {
+          s.addClause(c);
+        }
+        results[on] = s.solve();
+        drat.close();
+        if (results[on] == CdclSolver.SAT) {
+          assertTrue(satisfies(f, model(s, vars)), "model of run " + run);
+        } else {
+          assertEquals(CdclSolver.UNSAT, results[on], "run " + run);
+          assertNull(RupChecker.check(vars, f, proof.toString(StandardCharsets.US_ASCII)));
+        }
+        System.err.println(
+            "DBG "
+                + run
+                + " "
+                + on
+                + " r="
+                + results[on]
+                + " c="
+                + s.conflicts
+                + " es="
+                + s.eagerSubsumed);
+        System.err.println(
+            "DBG "
+                + run
+                + " "
+                + on
+                + " r="
+                + results[on]
+                + " c="
+                + s.conflicts
+                + " es="
+                + s.eagerSubsumed);
+        if (on == 1) {
+          subsumed += s.eagerSubsumed;
+        } else {
+          assertEquals(0, s.eagerSubsumed);
+        }
+      }
+      assertEquals(results[0], results[1], "run " + run);
+    }
+    assertTrue(subsumed > 0, "no learnt clause was subsumed");
+  }
+
+  @Test
   void pigeonholeIsUnsatisfiable() {
     CdclSolver s = new CdclSolver();
     pigeonhole(s, 7);
