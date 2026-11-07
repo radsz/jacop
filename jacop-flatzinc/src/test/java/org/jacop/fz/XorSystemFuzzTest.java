@@ -29,6 +29,7 @@
  */
 package org.jacop.fz;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -251,6 +252,70 @@ class XorSystemFuzzTest {
             + "constraint jacop_table_int([b, c, d], [0,0,1, 1,1,1, 0,1,0, 1,0,0]);\n"
             + "solve satisfy;\n";
     assertTrue(!run(truncated, "-debug").contains("% XorSystem:"));
+  }
+
+  @Test
+  void rootConflictOfAProbeIsKeptWithoutXorSystem() throws IOException {
+    // trial 123 of seed rotation 6: a probe of the core-guided search had its level undone by a
+    // clause of the LCG propagator, the root conflict that followed was taken for a failure of the
+    // probed literal, and variable elimination then met an empty clause (internal error)
+    String model =
+        String.join(
+                "\n",
+                "var bool: x0 :: output_var;",
+                "var 0..1: y0;",
+                "var bool: x1 :: output_var;",
+                "var 0..1: y1;",
+                "var bool: x2 :: output_var;",
+                "var 0..1: y2;",
+                "var bool: x3 :: output_var;",
+                "var 0..1: y3;",
+                "var bool: x4 :: output_var;",
+                "var 0..1: y4;",
+                "var bool: x5 :: output_var;",
+                "var 0..1: y5;",
+                "var bool: x6 :: output_var;",
+                "var 0..1: y6;",
+                "var bool: x7 :: output_var;",
+                "var 0..1: y7;",
+                "var bool: x8 :: output_var;",
+                "var 0..1: y8;",
+                "var bool: x9 :: output_var;",
+                "var 0..1: y9;",
+                "var 0..10: obj :: output_var;",
+                "constraint array_bool_xor([x2, x5, x2, x2]);",
+                "constraint array_bool_xor([x3, x4]);",
+                "constraint array_bool_xor([x1, x5, x5, x2, x1]);",
+                "constraint bool_not(x7, x9);",
+                "constraint jacop_table_int([y2, y3], [0, 0, 1, 1]);",
+                "constraint array_bool_xor([x6, x1, x9, x6, x1, x2]);",
+                "constraint array_bool_xor([x3, x1, x1, x5, true]);",
+                "constraint array_bool_xor([x3, x0, x3, x6, x0, true]);",
+                "constraint array_bool_xor([x8, x0, x7, x2, x6, true]);",
+                "constraint jacop_short_table_int([y0, y7, y7, y3], [0, 0, 0, 9, 1, 1, 0, 9, 1, 0, 1, 9, 0, 1, 1, 9], 9);",
+                "constraint bool_clause([x8, x4], []);",
+                "constraint bool_clause([x5, x9], []);",
+                "constraint bool2int(x0, y0);",
+                "constraint bool2int(x1, y1);",
+                "constraint bool2int(x2, y2);",
+                "constraint bool2int(x3, y3);",
+                "constraint bool2int(x4, y4);",
+                "constraint bool2int(x5, y5);",
+                "constraint bool2int(x6, y6);",
+                "constraint bool2int(x7, y7);",
+                "constraint bool2int(x8, y8);",
+                "constraint bool2int(x9, y9);",
+                "constraint int_lin_eq([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, -1], [y0, y1, y2, y3, y4, y5, y6, y7, y8, y9, obj], 0);",
+                "solve minimize obj;")
+            + "\n";
+    // the model has no solution: plain depth-first search, without LCG, agrees with enumeration
+    assertEquals(Integer.valueOf(-1), solve(model, "--lcg", "off"));
+    System.setProperty("org.jacop.fz.xorSystem", "false");
+    try {
+      assertEquals(Integer.valueOf(-1), solve(model, "--lcg"));
+    } finally {
+      System.clearProperty("org.jacop.fz.xorSystem");
+    }
   }
 
   @Test
