@@ -655,6 +655,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpSparseCuts="
+            + r.sparseCuts
             + "\n%%%mzn-stat: lpCapacityCuts="
             + r.capacityCuts
             + "\n%%%mzn-stat: lpCapacityBound="
