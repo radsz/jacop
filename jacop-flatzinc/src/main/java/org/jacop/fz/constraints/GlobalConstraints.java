@@ -118,6 +118,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.cumulative.Cumulatives;
+import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
@@ -479,6 +480,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void applyCumulativeImpliedOptions(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    poseHornFlow(s, d, r, b);
     String p = System.getProperty("fz_cumulative_use_disjunctions");
     if (p != null) {
       useDisjunctions = Boolean.parseBoolean(p);
@@ -492,6 +494,20 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     if (useDisjunctions) {
       impliedDisjunctionConstraints(s, d, r, b);
+    }
+  }
+
+  /**
+   * Adds the preemptive flow check {@link HornFlow} to a cumulative, as set by the system property
+   * fz_cumulative_flow: {@code unit} for cumulatives whose tasks all use one unit (Horn's
+   * P|r_j,d_j,pmtn| relaxation), {@code true} for every cumulative, {@code false} (the default) for
+   * none.
+   */
+  private void poseHornFlow(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    String mode = System.getProperty("fz_cumulative_flow", FALSE);
+    boolean unit = Arrays.stream(r).allMatch(v -> v.singleton(1));
+    if ("true".equals(mode) || "unit".equals(mode) && unit) {
+      support.delayedConstraints.add(new HornFlow(s, d, r, b));
     }
   }
 

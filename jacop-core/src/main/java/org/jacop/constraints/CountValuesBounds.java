@@ -291,6 +291,28 @@ public class CountValuesBounds extends AbstractCountValues
     return new CountValuesBounds(map.get(list), lb, ub, values);
   }
 
+  /**
+   * Returns the bounds of the counts, value by value, for local search's value counters.
+   *
+   * @return for each counted value v, {v, lower bound, upper bound}.
+   */
+  public int[][] countBounds() {
+    int[][] b = new int[values.length][];
+    for (int i = 0; i < values.length; i++) {
+      b[i] = new int[] {values[i], lb[i], ub[i]};
+    }
+    return b;
+  }
+
+  /**
+   * Returns the number of counted variables, with repetitions.
+   *
+   * @return the length of the list.
+   */
+  public int listLength() {
+    return list.length;
+  }
+
   @Override
   public long violation(ToIntFunction<IntVar> value) {
     long violated = 0;
