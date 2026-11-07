@@ -57,6 +57,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.table.HybridTable;
@@ -103,6 +104,17 @@ public final class LocalSearch {
     NOT_APPLICABLE
   }
 
+  /**
+   * Scheduling neighbourhood: swap the first two and last two operations of each critical block.
+   */
+  public static final int SCHEDULE_NS = DisjunctiveSchedule.NS;
+
+  /** Scheduling neighbourhood: swap any two adjacent operations of a critical block. */
+  public static final int SCHEDULE_N1 = DisjunctiveSchedule.N1;
+
+  /** Scheduling neighbourhood: move an operation of a critical block to its front or back. */
+  public static final int SCHEDULE_N4 = DisjunctiveSchedule.N4;
+
   private static final int LE = LinearForm.LE;
   private static final int GE = LinearForm.GE;
   private static final int EQ = LinearForm.EQ;
@@ -130,6 +142,7 @@ public final class LocalSearch {
   private final Collection<? extends Constraint> extra;
   private final boolean jump;
   private final boolean permutations;
+  private final int scheduling;
   private final boolean skipImplied;
   private final boolean tableKeys;
   // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
@@ -254,6 +267,7 @@ public final class LocalSearch {
     extra = b.extra;
     jump = b.jump;
     permutations = b.permutations;
+    scheduling = b.scheduling;
     skipImplied = b.skipImplied;
     tableKeys = b.tableKeys;
     symmetry = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
@@ -425,6 +439,15 @@ public final class LocalSearch {
    */
   public int[] getConstraintCounts() {
     return new int[] {linearCount, checkedCount, unsupportedCount};
+  }
+
+  /**
+   * Returns the size of the disjunctive graph that the scheduling search used, and its iterations.
+   *
+   * @return tasks, machines and tabu search iterations; zeros when the model has no such graph.
+   */
+  public long[] getScheduleCounts() {
+    return new long[] {scheduleTasks, scheduleMachines, scheduleIterations};
   }
 
   /**
@@ -627,6 +650,9 @@ public final class LocalSearch {
     violated = new int[m];
     violatedPos = new int[m];
     Arrays.fill(violatedPos, -1);
+    if (scheduling != 0 && cost != null) {
+      buildSchedule();
+    }
   }
 
   // ------------------------------------------------------------ value counts
@@ -1109,6 +1135,263 @@ public final class LocalSearch {
 
   private boolean grouped(int i) {
     return groupOf != null && groupOf[i] >= 0;
+  }
+
+  // ------------------------------------------------------------ scheduling
+
+  // the disjunctive graph of a scheduling model, searched by critical-path moves, or null
+  private DisjunctiveSchedule schedule;
+  // tabu search iterations of the scheduling search, and the tasks and machines it found
+  private long scheduleIterations;
+  private int scheduleTasks;
+  private int scheduleMachines;
+
+  /**
+   * Finds the disjunctive graph of a scheduling model: the tasks of every cumulative resource on
+   * which no two tasks fit together (fixed durations and demands, the two smallest demands above
+   * the capacity), and the precedences between their starts, rows {@code s[a] + lag <= s[b]}. The
+   * other constraints are not part of it; the store checks them on each schedule found.
+   */
+  private void buildSchedule() {
+    Map<Integer, Integer> taskOf = new java.util.HashMap<>();
+    List<Integer> taskVar = new ArrayList<>();
+    List<Integer> taskDur = new ArrayList<>();
+    List<int[]> machines = new ArrayList<>();
+    for (Constraint con : measuredConstraints) {
+      if (!(con instanceof CumulativeBasic cb) || className(con).contains("Optional")) {
+        continue;
+      }
+      int[] machine = machineOf(cb, taskOf, taskVar, taskDur);
+      if (machine == null) {
+        return;
+      }
+      if (machine.length >= 2) {
+        machines.add(machine);
+      }
+    }
+    int n = taskVar.size();
+    if (machines.isEmpty() || n < 4) {
+      return;
+    }
+    List<int[]> arcs = new ArrayList<>();
+    boolean bounded = false;
+    for (int c = 0; c < linearCount; c++) {
+      int[] arc = precedence(c, taskOf);
+      if (arc != null) {
+        arcs.add(arc);
+      }
+      bounded |= boundsCost(c, taskOf);
+    }
+    if (!bounded) {
+      // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
+      return;
+    }
+    int[] var = new int[n];
+    int[] dur = new int[n];
+    int[] release = new int[n];
+    int[] deadline = new int[n];
+    for (int t = 0; t < n; t++) {
+      var[t] = taskVar.get(t);
+      dur[t] = taskDur.get(t);
+      release[t] = domains[var[t]].min();
+      deadline[t] = domains[var[t]].max();
+    }
+    schedule =
+        new DisjunctiveSchedule(var, dur, release, deadline, arcs, machines, scheduling, random);
+    scheduleTasks = n;
+    scheduleMachines = machines.size();
+  }
+
+  /**
+   * The tasks of a cumulative constraint that is a machine, as task numbers, adding new tasks; an
+   * empty array when it is not a machine, and null when its tasks cannot be part of a schedule.
+   */
+  private int[] machineOf(
+      CumulativeBasic cb,
+      Map<Integer, Integer> taskOf,
+      List<Integer> taskVar,
+      List<Integer> taskDur) {
+    IntVar[][] t = cb.tasks();
+    IntVar limit = cb.limit();
+    if (!limit.singleton()) {
+      return new int[0];
+    }
+    List<Integer> starts = new ArrayList<>();
+    List<Integer> durations = new ArrayList<>();
+    int smallest = Integer.MAX_VALUE;
+    int second = Integer.MAX_VALUE;
+    for (int k = 0; k < t[0].length; k++) {
+      if (!t[1][k].singleton() || !t[2][k].singleton()) {
+        return new int[0];
+      }
+      int d = t[1][k].value();
+      int r = t[2][k].value();
+      if (d <= 0 || r <= 0) {
+        continue;
+      }
+      if (r > limit.value()) {
+        return new int[0];
+      }
+      if (r < smallest) {
+        second = smallest;
+        smallest = r;
+      } else if (r < second) {
+        second = r;
+      }
+      Integer i = index.get(t[0][k]);
+      if (i == null || defOf[i] >= 0 || i == costIndex || starts.contains(i)) {
+        return new int[0];
+      }
+      starts.add(i);
+      durations.add(d);
+    }
+    if (starts.size() < 2 || (long) smallest + second <= limit.value()) {
+      return new int[0];
+    }
+    int[] machine = new int[starts.size()];
+    for (int k = 0; k < machine.length; k++) {
+      int i = starts.get(k);
+      Integer task = taskOf.get(i);
+      if (task == null) {
+        task = taskVar.size();
+        taskOf.put(i, task);
+        taskVar.add(i);
+        taskDur.add(durations.get(k));
+      } else if (taskDur.get(task).intValue() != durations.get(k).intValue()) {
+        // one start with two durations is not a task of a disjunctive graph
+        return null;
+      }
+      machine[k] = task;
+    }
+    return machine;
+  }
+
+  // the arc {a, b, lag} of a row s[a] + lag <= s[b] between two tasks, or null
+  private int[] precedence(int c, Map<Integer, Integer> taskOf) {
+    if (enforcer[c] >= 0
+        || coef[c] == null
+        || scope[c].length != 2
+        || (rel[c] != LE && rel[c] != GE)) {
+      return null;
+    }
+    long a0 = coef[c][0];
+    long a1 = coef[c][1];
+    long r = rhs[c];
+    if (rel[c] == GE) {
+      a0 = -a0;
+      a1 = -a1;
+      r = -r;
+    }
+    Integer t0 = taskOf.get(scope[c][0]);
+    Integer t1 = taskOf.get(scope[c][1]);
+    if (a0 != -a1 || t0 == null || t1 == null) {
+      return null;
+    }
+    // a x - a y <= r, so y >= x - floor(r / a) for a > 0
+    long a = Math.abs(a0);
+    long lag = -Math.floorDiv(r, a);
+    if (lag < Integer.MIN_VALUE / 4 || lag > Integer.MAX_VALUE / 4) {
+      return null;
+    }
+    return a0 > 0 ? new int[] {t0, t1, (int) lag} : new int[] {t1, t0, (int) lag};
+  }
+
+  // whether row c is cost >= s[t] + lag for a task t
+  private boolean boundsCost(int c, Map<Integer, Integer> taskOf) {
+    if (enforcer[c] >= 0
+        || coef[c] == null
+        || scope[c].length != 2
+        || (rel[c] != LE && rel[c] != GE)) {
+      return false;
+    }
+    int k = scope[c][0] == costIndex ? 0 : 1;
+    if (scope[c][k] != costIndex || !taskOf.containsKey(scope[c][1 - k])) {
+      return false;
+    }
+    long a = coef[c][k];
+    long b = coef[c][1 - k];
+    // a cost + b s <= r with a < 0 < b (LE), or >= with a > 0 > b (GE)
+    return a == -b && (rel[c] == LE ? a < 0 : a > 0);
+  }
+
+  /**
+   * Runs the tabu search over the machine sequences, checking each better schedule in the store.
+   *
+   * @return true when the local search is over; false when the store rejects the schedules or their
+   *     makespan is not the cost, and the general search takes over.
+   */
+  private boolean scheduleSearch() {
+    DisjunctiveSchedule ds = schedule;
+    int[] tasks = ds.var;
+    int[] priority = new int[ds.n];
+    for (int k = 0; k < ds.n; k++) {
+      priority[k] = val[tasks[k]];
+    }
+    if (!ds.initialise(priority)) {
+      schedule = null;
+      return false;
+    }
+    long started = solutions;
+    int[] before = val.clone();
+    boolean[] over = {false};
+    int[] failed = {0};
+    DisjunctiveSchedule.Listener listener =
+        new DisjunctiveSchedule.Listener() {
+          private long calls;
+          private long lastProgress = System.currentTimeMillis();
+
+          @Override
+          public boolean report(int[] start, int makespan) {
+            lastProgress = System.currentTimeMillis();
+            for (int k = 0; k < start.length; k++) {
+              val[tasks[k]] = start[k];
+            }
+            if (!feasible(tasks)) {
+              // the other constraints of the model do not hold on these schedules: the graph is
+              // only part of the model
+              return solutions > started && ++failed[0] < 3;
+            }
+            if (solutionCost != makespan) {
+              // the cost is not the makespan: the moves would minimise the wrong function
+              return false;
+            }
+            if (firstSolution) {
+              over[0] = true;
+            }
+            return true;
+          }
+
+          @Override
+          public long bound() {
+            return rhs[boundRow];
+          }
+
+          @Override
+          public boolean stop() {
+            if (over[0] || stopRequested) {
+              return true;
+            }
+            if ((++calls & 31) != 0) {
+              return false;
+            }
+            return timeUp()
+                || (patienceMillis > 0
+                    && System.currentTimeMillis() - lastProgress > patienceMillis);
+          }
+        };
+    boolean done = ds.run(listener);
+    scheduleIterations += ds.iterations();
+    steps += ds.iterations();
+    moves += ds.moves();
+    if (done) {
+      return true;
+    }
+    // back to the general search, from the best solution if the schedules gave one
+    schedule = null;
+    System.arraycopy(solutions > started ? solution : before, 0, val, 0, val.length);
+    evaluateAll();
+    defineAll();
+    return timeUp();
   }
 
   // the constraints read through their own violation, in the order of measures
@@ -2082,6 +2365,9 @@ public final class LocalSearch {
   // ---------------------------------------------------------------- search
 
   private void search() {
+    if (schedule != null && scheduleSearch()) {
+      return;
+    }
     double bestScore = Double.MAX_VALUE;
     long lastImprovement = 0;
     int[] candidates = new int[64];
@@ -2755,10 +3041,18 @@ public final class LocalSearch {
       rejected++;
       return false;
     }
+    return feasible(null);
+  }
+
+  /**
+   * Checks the assignment in the store and reports it, as {@link #feasible()}; when first is given,
+   * fixes only those variables, then gives the others their smallest values with propagation.
+   */
+  private boolean feasible(int[] first) {
     int base = store.level;
     boolean ok;
     try {
-      ok = fixInStore() && extraHold();
+      ok = (first == null ? fixInStore() : fixFirst(first)) && extraHold();
       if (ok) {
         solutions++;
         solution = val.clone();
@@ -2865,6 +3159,28 @@ public final class LocalSearch {
         store.removeLevel(store.level);
         store.setLevel(store.level - 1);
       }
+    }
+    return completeOthers();
+  }
+
+  // fixes the given variables to their values, propagates, then completes the others
+  private boolean fixFirst(int[] first) {
+    store.setLevel(store.level + 1);
+    try {
+      for (int i : first) {
+        IntVar x = vars[i];
+        if (!x.domain.contains(val[i])) {
+          return false;
+        }
+        if (!x.singleton()) {
+          x.domain.in(store.level, x, val[i], val[i]);
+        }
+      }
+      if (!store.consistency()) {
+        return false;
+      }
+    } catch (FailException e) {
+      return false;
     }
     return completeOthers();
   }
@@ -2983,6 +3299,7 @@ public final class LocalSearch {
     private Collection<? extends Constraint> extra;
     private boolean jump;
     private boolean permutations = true;
+    private int scheduling = SCHEDULE_NS | SCHEDULE_N4;
     private boolean skipImplied = true;
     private boolean tableKeys = true;
     private Collection<? extends Constraint> symmetry = List.of();
@@ -3088,6 +3405,21 @@ public final class LocalSearch {
      */
     public Builder jump(boolean jump) {
       this.jump = jump;
+      return this;
+    }
+
+    /**
+     * Searches the machine sequences of a disjunctive scheduling model with critical-path moves
+     * when the model has one (cumulative resources on which no two tasks fit together, precedences
+     * between their starts) and the cost is the makespan. Default {@link #SCHEDULE_NS} | {@link
+     * #SCHEDULE_N4}.
+     *
+     * @param kinds the neighbourhoods, of {@link #SCHEDULE_NS}, {@link #SCHEDULE_N1} and {@link
+     *     #SCHEDULE_N4}; 0 turns the scheduling search off.
+     * @return this builder.
+     */
+    public Builder scheduling(int kinds) {
+      this.scheduling = kinds;
       return this;
     }
 
