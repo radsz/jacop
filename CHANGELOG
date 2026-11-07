@@ -3027,7 +3027,28 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
-181. Capacity cuts of a Routes (item 144) are also separated in search:
+182. The dense simplex (below 100 rows) keeps and restores bases too,
+     like JaLP in 132: DualSimplex gets saveBasis/restoreBasis, which
+     copy the tableau, the basis and the edge norms, and refuse a basis
+     saved before rows were added or removed or in another copy. Since a
+     save copies the whole tableau, the linear relaxation saves dense
+     bases only at the first denseBasisDepth (3) levels below the level
+     of the first LP solve (org.jacop.lp.denseBasisDepth, -1 turns dense
+     saves off). Keeping the LU factors with a JaLP basis was measured
+     and not done: refactorizations after restores take 1 to 14 % of the
+     LP time (JFR, train_3, still_life2, rcpsp-wet j90), and saves
+     outnumber restores about 20 to 1, so copying the factors at each
+     save would cost more than it saves. Tuning at 240 s on 26 LP-heavy
+     -f instances: denseBasisDepth 3 solves 20 (sparse only 19) with 226
+     s of LP time instead of 319 s; basisJump 4 and maxBases 8 or 128 are
+     no better, so they stay 2 and 32. On the 73 wide-set instances that
+     restore dense bases (600 s, base and candidate in the same round):
+     by default 66 to 66 solved, 2 families better and 1 worse; with -f
+     63 to 64 solved (blocks-world 16-4-83 proved optimal in 414 s), 5
+     families better and none worse; city-position is slower with -f
+     (city-5-06 222 s to 307 s).
+
+183. Capacity cuts of a Routes (item 144) are also separated in search:
      every few optimal LP solves after the root (from 4, doubled up to
      1024 while nothing is violated, halved when cuts are found), up to
      10 cuts go into the row pool, where they age out like other cuts.

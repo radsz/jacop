@@ -360,6 +360,12 @@ public class LinearRelaxation extends Constraint
       !"false".equals(System.getProperty("org.jacop.lp.keepBases"));
   private static final int BASIS_JUMP = Integer.getInteger("org.jacop.lp.basisJump", 2);
   private static final int MAX_BASES = Integer.getInteger("org.jacop.lp.maxBases", 32);
+  // the dense simplex saves a basis with a copy of its tableau, about one pivot, so it keeps the
+  // bases of the levels at most this far below the first solve only (restarts, long backjumps);
+  // -1 keeps none
+  private static final int DENSE_BASIS_DEPTH =
+      Integer.getInteger("org.jacop.lp.denseBasisDepth", 3);
+  private int firstSolveLevel = -1;
   // while the rows of the other constraints are judged by the solves that stop at the limit, the
   // first solves after a jump start from the basis the deeper node left, as before bases were
   // kept: a restored basis spares them the limit and keeps rows that slow every later solve
@@ -2013,6 +2019,12 @@ public class LinearRelaxation extends Constraint
     if (basesOf != lp) {
       bases.clear();
       basesOf = lp;
+    }
+    if (firstSolveLevel < 0) {
+      firstSolveLevel = level;
+    }
+    if (lp instanceof DualSimplex && level - firstSolveLevel > DENSE_BASIS_DEPTH) {
+      return;
     }
     int k = bases.size();
     if (k > 0 && basisLevel[k - 1] == level) {
