@@ -113,8 +113,13 @@ public class LinearRelaxation extends Constraint
   // the scales tried for the multipliers, the largest first
   private static final long[] SCALES = {1L << 40, 1L << 32, 1L << 24, 1L << 16, 1L << 8, 1};
 
-  // the scale of the rows of the basis inverse the Gomory cuts come from
-  private static final long GOMORY_SCALE = 1L << 20;
+  // the scale of the rows of the basis inverse the Gomory cuts come from, and the one tried when
+  // that overflows. The rounding error of a multiplier times the weights of its row must stay well
+  // below the weight of the basic column in the combination: with the cuts of a first round as
+  // rows, whose weights reach 2^24, the multipliers of 2^20 were too coarse and the later rounds
+  // found no violated Gomory cut (hoist, racp, radiation)
+  private static final long GOMORY_SCALE = Long.getLong("org.jacop.lp.gomoryScale", 1L << 36);
+  private static final long GOMORY_FALLBACK = 1L << 20;
 
   private final IntVar[] x;
   // whether each column is an auxiliary column of the relaxation ({@link LpColumn}), not a
@@ -428,6 +433,35 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: whether the rows moved from the full dense tableau to JaLP for the cuts. */
   public boolean sparseCuts;
+
+  // the size cap of the dense tableau for the cuts of this relaxation
+  private long tableauCap = MAX_TABLEAU;
+
+  // the scale of the multipliers of the Gomory rows of this relaxation
+  private long gomoryScale = GOMORY_SCALE;
+
+  /**
+   * Sets the scale of the rows of the basis inverse the Gomory cuts come from: their largest entry
+   * becomes about the scale before they are rounded to integers. The default is {@code
+   * org.jacop.lp.gomoryScale} (2^36); a row that overflows at that scale is taken again at 2^20.
+   *
+   * @param scale the scale, at least 1
+   */
+  public void setGomoryScale(long scale) {
+    gomoryScale = scale;
+  }
+
+  /**
+   * Sets the size cap of the dense tableau, rows times columns, for the cuts of this relaxation:
+   * the cut rounds stop adding cuts to the dense tableau at the cap, and the rows move to the
+   * sparse simplex when a round of cuts would pass it. The default is {@code
+   * org.jacop.lp.maxTableau} (4,000,000); tests set a small cap to reach the move on small models.
+   *
+   * @param cap the most entries of the dense tableau with the cuts
+   */
+  public void setTableauCap(long cap) {
+    tableauCap = cap;
+  }
 
   private static final double MAX_PARALLELISM = 0.9;
 
@@ -2586,7 +2620,7 @@ public class LinearRelaxation extends Constraint
     int m = lp.rows();
     int n = lp.columns();
     long room = (long) (m + CUTS_PER_ROUND) * (m + CUTS_PER_ROUND + n + 1);
-    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= MAX_TABLEAU) {
+    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
       return false;
     }
     int[][] cs = new int[m][];
@@ -2668,9 +2702,18 @@ public class LinearRelaxation extends Constraint
    * lambda a x <= sum lambda b}, which puts every slack at a side, a slack keeps its own rounding,
    * which is what the Gomory cut of the textbook, with its real weights, does; its weights are the
    * exact rationals of that cut over a common denominator, scaled down safely when large ({@link
-   * MirCut#reduce}).
+   * MirCut#reduce}). The MIR also tries the weight of the basic column as its divisor, the divisor
+   * of the textbook cut.
+   *
+   * @param lambda the row of the basis inverse, scaled to integers, by row of the relaxation
+   * @param basic the basic column of that row
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @param found the cuts found, to which the cuts of this row are added
+   * @return false when the arithmetic overflowed, so that a smaller scale may be tried
    */
-  private void slackGomory(
+  private boolean slackGomory(
       long[] lambda, int basic, double[] value, long[] lo, long[] hi, List<MirCut> found) {
     int n = lp.columns();
     int m = lambda.length;
@@ -2724,7 +2767,7 @@ public class LinearRelaxation extends Constraint
         xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
         xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
         if (xlo[n + i] > xhi[n + i]) {
-          return;
+          return true;
         }
         xv[n + i] = v;
         columns[q] = n + i;
@@ -2774,8 +2817,10 @@ public class LinearRelaxation extends Constraint
         }
       }
     } catch (ArithmeticException overflow) {
-      // no cut from this row
+      // no cut from this row at this scale
+      return false;
     }
+    return true;
   }
 
   /**
@@ -2930,12 +2975,19 @@ public class LinearRelaxation extends Constraint
     }
     sources.sort(Comparator.comparingDouble(j -> Math.abs(value[j] - Math.floor(value[j]) - 0.5)));
     for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
-      long[] lambda = scaled(byRow(lp.inverseRow(lp.basicRow(j))), GOMORY_SCALE);
+      double[] y = byRow(lp.inverseRow(lp.basicRow(j)));
+      long[] lambda = scaled(y, gomoryScale);
       if (lambda != null) {
-        if (slackGomory) {
-          slackGomory(lambda, j, value, lo, hi, found);
+        long[] coarse = null;
+        if (slackGomory && !slackGomory(lambda, j, value, lo, hi, found)) {
+          coarse = scaled(y, GOMORY_FALLBACK);
+          slackGomory(coarse, j, value, lo, hi, found);
         }
-        mir(aggregate(lambda), value, lo, hi, found);
+        Aggregate g = aggregate(lambda);
+        if (g == null && gomoryScale != GOMORY_FALLBACK) {
+          g = aggregate(coarse != null ? coarse : scaled(y, GOMORY_FALLBACK));
+        }
+        mir(g, value, lo, hi, found);
       }
     }
     for (Aggregate row : unitRows) {
@@ -2945,8 +2997,7 @@ public class LinearRelaxation extends Constraint
     List<MirCut> chosen = new ArrayList<>();
     for (MirCut c : found) {
       long m = (long) lp.rows() + chosen.size() + 1;
-      if (chosen.size() >= CUTS_PER_ROUND
-          || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+      if (chosen.size() >= CUTS_PER_ROUND || simplex == Simplex.DENSE && m * (m + n) > tableauCap) {
         break;
       }
       List<Long> key = new ArrayList<>();
