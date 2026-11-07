@@ -74,10 +74,11 @@ import org.jacop.lcg.Explainable;
  * <p>The constraint only adds pruning to a model with the cumulative and the precedences. It bounds
  * the starts of its tasks and the points that end or begin the precedences (such as a makespan),
  * and only these are in its scope. It holds when the tasks never use more than the limit and the
- * precedences it uses between these points hold, which it checks once they are fixed, so it is a
- * correct constraint on its own. To keep its cost low it runs at the lowest priority, makes one
- * pass per call rather than a fixpoint, and after 64 calls in a row without pruning skips the
- * following calls, 1, 2, 4, ... up to 64 of them, until it prunes again.
+ * precedences it uses between these points hold, so it is a correct constraint on its own: it fails
+ * once the bounds of two points violate one of these precedences, and checks the capacity once
+ * everything is fixed. To keep its cost low it runs at the lowest priority, makes one pass per call
+ * rather than a fixpoint, and after 64 calls in a row without pruning skips the following calls, 1,
+ * 2, 4, ... up to 64 of them, until it prunes again.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -358,7 +359,7 @@ public class EnergyPrecedence extends Constraint
   @Override
   public void consistency(Store store) {
 
-    if (!feasible) {
+    if (!feasible || precedenceViolated()) {
       throw Store.failException;
     }
     long capacity = limit.max();
@@ -683,6 +684,18 @@ public class EnergyPrecedence extends Constraint
       out.add(e);
     }
     return true;
+  }
+
+  // A precedence the bounds already violate, checked on every call (skipped passes included): the
+  // constraint does not prune with its precedences, but it fails as soon as one of them cannot
+  // hold, rather than when the heights are fixed too. explainPrecedence gives the reason.
+  private boolean precedenceViolated() {
+    for (int[] p : pairs) {
+      if ((long) points[p[1]].max() < (long) points[p[0]].min() + p[2]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void check() {
