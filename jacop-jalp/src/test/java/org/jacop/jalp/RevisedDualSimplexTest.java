@@ -390,12 +390,14 @@ class RevisedDualSimplexTest {
       int n = 1 + rnd.nextInt(14);
       Lp p = new Lp(rnd, m, n, 0.4, rnd.nextInt(3));
       RevisedDualSimplex slack = p.simplex(scale);
+      slack.setPresolve(false);
       slack.setCrash(-1);
       int status = solveAndCheck(p, slack, scale, "run " + run + " slack basis");
       assertThat(slack.crashed()).isZero();
       for (int rows = 0; rows <= 2; rows++) {
         String what = "run " + run + " crash " + rows;
         RevisedDualSimplex lp = p.simplex(scale);
+        lp.setPresolve(false);
         lp.setCrash(rows);
         assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
         crashed += lp.crashed() > 0 ? 1 : 0;
@@ -410,6 +412,120 @@ class RevisedDualSimplexTest {
       }
     }
     assertThat(crashed).isGreaterThan(runs);
+  }
+
+  @Test
+  void presolvedSolvesAgreeWithPlainOnes() {
+    Random rnd = new Random(23);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
+    int reduced = 0;
+    int optimal = 0;
+    for (int run = 0; run < runs; run++) {
+      boolean scale = rnd.nextBoolean();
+      int m = 1 + rnd.nextInt(14);
+      int n = 1 + rnd.nextInt(16);
+      // sparse rows, so that singleton and doubleton rows, free column singletons and empty
+      // columns are common
+      Lp p = new Lp(rnd, m, n, 0.1 + 0.3 * rnd.nextDouble(), rnd.nextInt(3));
+      if (rnd.nextBoolean()) {
+        for (int j = 0; j < n; j++) {
+          if (rnd.nextInt(6) == 0) {
+            p.hi[j] = p.lo[j] == Double.NEGATIVE_INFINITY ? 0 : p.lo[j];
+            p.lo[j] = p.hi[j];
+          } else if (rnd.nextInt(4) == 0) {
+            p.cost[j] = 0;
+          }
+        }
+      }
+      if (rnd.nextInt(4) > 0) {
+        feasibleAround(p);
+      }
+      RevisedDualSimplex plain = p.simplex(scale);
+      plain.setPresolve(false);
+      int status = solveAndCheck(p, plain, scale, "run " + run + " without presolve");
+      assertThat(plain.presolvedRows()).isEqualTo(-1);
+      String what = "run " + run + " presolved";
+      RevisedDualSimplex lp = p.simplex(scale);
+      lp.setPresolve(true);
+      assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
+      if (status == RevisedDualSimplex.OPTIMAL) {
+        optimal++;
+        if (lp.presolvedRows() >= 0) {
+          reduced++;
+        }
+        assertThat(lp.objective())
+            .as(what)
+            .isCloseTo(
+                plain.objective(),
+                org.assertj.core.data.Offset.offset(
+                    objectiveTolerance(scale) * (1 + Math.abs(plain.objective()))));
+        // warm starts after the presolved first solve hold their certificates too
+        for (int j = 0; j < n; j++) {
+          if (rnd.nextInt(3) == 0 && p.hi[j] != INF && p.lo[j] != p.hi[j]) {
+            Lp q = copy(p);
+            q.hi[j] = q.lo[j] == Double.NEGATIVE_INFINITY ? q.hi[j] - 1 : q.lo[j];
+            q.bounds(lp);
+            solveAndCheck(q, lp, scale, what + " then column " + j + " tightened");
+            break;
+          }
+        }
+      }
+    }
+    assertThat(reduced).isGreaterThan(optimal / 2);
+  }
+
+  // moves the bounds of the rows so that a point within the column bounds satisfies them all
+  private static void feasibleAround(Lp p) {
+    int n = p.cost.length;
+    double[] x = new double[n];
+    for (int j = 0; j < n; j++) {
+      x[j] = p.lo[j] != Double.NEGATIVE_INFINITY ? p.lo[j] : p.hi[j] != INF ? p.hi[j] : 0;
+      if (p.hi[j] != INF && p.lo[j] != Double.NEGATIVE_INFINITY) {
+        x[j] = (p.lo[j] + p.hi[j]) / 2;
+      }
+    }
+    for (int i = 0; i < p.rowLo.length; i++) {
+      double s = p.activity(i, x);
+      double width = p.rowHi[i] - p.rowLo[i];
+      if (p.rowLo[i] == p.rowHi[i]) {
+        p.rowLo[i] = s;
+        p.rowHi[i] = s;
+      } else if (p.rowLo[i] == Double.NEGATIVE_INFINITY) {
+        p.rowHi[i] = Math.max(p.rowHi[i], s);
+      } else if (p.rowHi[i] == INF) {
+        p.rowLo[i] = Math.min(p.rowLo[i], s);
+      } else {
+        p.rowLo[i] = s - width / 2;
+        p.rowHi[i] = s + width / 2;
+      }
+    }
+  }
+
+  @Test
+  void aPresolvedSolveEndsWithFewPivotsAfterTheReducedOne() {
+    // x0 = 2 x1 (doubleton), x2 only in row 1 (free column singleton), 1 <= x3 <= 3 (singleton
+    // row), x4 fixed, x5 with no row (empty column): min x0 + x1 - x2 + x3 + x5
+    int[][] cols = {{0, 1}, {2, 0, 3}, {3}, {4, 1}};
+    double[][] vals = {{1, -2}, {1, 1, 1}, {1}, {1, 1}};
+    double[] rowLo = {0, 4, 1, 1};
+    double[] rowHi = {0, 4, 3, 10};
+    double[] cost = {1, 1, -1, 1, 0, 1};
+    RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+    lp.setExact(true);
+    lp.setPresolve(true);
+    lp.setBounds(0, 0, 10);
+    lp.setBounds(1, 0, 10);
+    lp.setBounds(2, -INF, INF);
+    lp.setBounds(3, 0, 10);
+    lp.setBounds(4, 2, 2);
+    lp.setBounds(5, 0, 5);
+    assertThat(lp.solve(1000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolvedRows()).isLessThan(4);
+    // x2 = 4 - x0 - x3, so the objective is 2 x0 + x1 + 2 x3 - 4 = 5 x1 + 2 x3 - 4: x1 = 0, x3 = 1
+    assertThat(lp.objective()).isCloseTo(-2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.value(3)).isCloseTo(1, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.value(4)).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.value(5)).isCloseTo(0, org.assertj.core.data.Offset.offset(1e-9));
   }
 
   @Test
