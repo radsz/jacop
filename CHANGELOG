@@ -3161,6 +3161,14 @@ Version 5.0 (unreleased)
      Energy cuts (item 180) stay at the root. Framed capacity cuts are
      not separated.
 
+188. The LCG explanation checker (-Djacop.lcg.check=true) and the
+     explanation minimality sampler (-Djacop.lcg.minimality) skip a
+     constraint whose copy needs variables outside its scope, such as
+     DifferenceCycles, whose scope holds only its literals. Before, the
+     sampler stopped the solver with "... is not a variable of the
+     constraint" (whirlpool with -Djacop.lcg.minimality); the checker
+     counts such reasons as skipped. Solving is unchanged.
+
 Version 4.11
 =============
 
