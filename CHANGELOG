@@ -2886,14 +2886,30 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
-176. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+176. The experimental cut-based conflict analysis of --lcg
+     (-Djacop.lcg.linear=learn, off by default) also uses the
+     explanation of a constraint that has no linear relation when all its
+     atoms are on 0/1 variables: the clause is then an exact linear row
+     (antecedent literals sum to at most their number minus one, or the
+     conclusion holds), used as the start of a failure or as a reason.
+     -Djacop.lcg.linearClauses=false turns it off. On the 249 mznbench
+     instances, 10 s, failures ending in a learnt sum went from 6.7% to
+     7.0% (--lcg -f) and 5.9% to 6.6% (--lcg); most element, table and
+     scheduling explanations cite several integer bounds and stay out of
+     reach. With learning on, clause rows on against off, 30 s, 18 pairs:
+     cryptanalysis kb128_n5_obj17 finds a solution in 5.6 s instead of
+     none, steiner-triples_13 none instead of one at 21 s, the rest
+     within noise. %% lcg-linear also reports rowConstraints and
+     rowsMillis (root rows made and the time taken).
+
+177. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
      above 1 left out the holes a pruned bound skipped. When the latest
      start computed for a task (or the cost's minimum) fell on a removed
      value, the domain moved past it, and the reason (start bounds and
      cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
      The reason now adds the != atoms of those holes.
 
-177. Energy cuts of cumulative resources in the LP relaxation
+178. Energy cuts of cumulative resources in the LP relaxation
      (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
      objective model, LinearRelaxation separates at the root the
      mean-busy-time inequalities of a set S of tasks released at t or

@@ -30,10 +30,13 @@
 
 package org.jacop.jasat.lcg;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.IntFunction;
 import java.util.function.IntUnaryOperator;
@@ -47,6 +50,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.ConflictRows;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.LinearReasons;
@@ -90,6 +94,93 @@ final class LinearConflict {
   /** Outcomes of the analyses, by name. */
   final Map<String, Long> outcomes = new TreeMap<>();
 
+  // explanations over 0/1 variables only, as exact linear rows of the clause they give
+  private final boolean clauseRows = !"false".equals(System.getProperty("jacop.lcg.linearClauses"));
+
+  // the variables with 0/1 root bounds, for clause rows
+  private final Set<IntVar> booleans = Collections.newSetFromMap(new IdentityHashMap<>());
+
+  /**
+   * The clause of an explanation as a linear row, when every atom is on a variable with 0/1 root
+   * bounds: the antecedent literals cannot all hold without the conclusion, so their sum minus the
+   * conclusion's is at most their number minus one. Explanations are valid for the whole search, so
+   * the row is implied by the model.
+   *
+   * @param atoms the antecedent entries, with their lifting slacks
+   * @param conclusion the entry concluded, or -1 for a failure
+   * @return the row, as {@code sum <= c}, or null when an atom is not on a 0/1 variable
+   */
+  private LinearForm clauseRow(EntryList atoms, int conclusion) {
+    List<IntVar> vars = new ArrayList<>();
+    List<Long> weights = new ArrayList<>();
+    long rhs = -1;
+    for (int k = 0; k <= atoms.size(); k++) {
+      int e = k < atoms.size() ? atoms.get(k) : conclusion;
+      if (e < 0) {
+        break;
+      }
+      IntVar b = trail.variable(e);
+      if (!booleans.contains(b)) {
+        return null;
+      }
+      int slack = k < atoms.size() ? atoms.slack(k) : 0;
+      // the literal of the atom: true when b takes the value one (b) or zero (1 - b)
+      Boolean one = literal(trail.kind(e), trail.value(e), slack);
+      if (one == null) {
+        if (k < atoms.size()) {
+          continue; // an antecedent that always holds
+        }
+        return null;
+      }
+      // antecedents add their literal, the conclusion subtracts it
+      long sign = k < atoms.size() ? 1 : -1;
+      long w = sign * (one ? 1 : -1);
+      if (k < atoms.size()) {
+        rhs += 1;
+      }
+      if (!one) {
+        rhs -= sign; // the literal 1 - b
+      }
+      int i = vars.indexOf(b);
+      if (i < 0) {
+        vars.add(b);
+        weights.add(w);
+      } else {
+        weights.set(i, weights.get(i) + w);
+      }
+    }
+    long[] ws = new long[weights.size()];
+    for (int i = 0; i < ws.length; i++) {
+      ws[i] = weights.get(i);
+    }
+    return new LinearForm(vars.toArray(new IntVar[0]), ws, rhs, LinearForm.LE);
+  }
+
+  // whether an atom on a 0/1 variable says b = 1 (true), b = 0 (false), or holds always (null)
+  private static Boolean literal(int kind, int value, int slack) {
+    return switch (kind) {
+      case AtomicTrail.GE -> value - slack > 0 ? Boolean.TRUE : null;
+      case AtomicTrail.LE -> value + slack < 1 ? Boolean.FALSE : null;
+      default -> value == 0 ? Boolean.TRUE : value == 1 ? Boolean.FALSE : null;
+    };
+  }
+
+  private final EntryList clauseAtoms = new EntryList();
+
+  // the clause row of a failure (entry -1) or of an entry's reason, or null
+  private LinearForm clauseRow(Constraint c, int entry) {
+    if (!clauseRows) {
+      return null;
+    }
+    clauseAtoms.clear();
+    if (entry < 0) {
+      trail.explainFailure(c, clauseAtoms);
+    } else {
+      trail.explain(entry, clauseAtoms);
+    }
+    return clauseRow(clauseAtoms, entry);
+  }
+
   /** Sizes of the learnt sums and steps taken, summed over asserting analyses. */
   long learntTerms;
 
@@ -123,6 +214,7 @@ final class LinearConflict {
     this.source = source;
     this.origin = origin;
     if (store != null && !"false".equals(System.getProperty("jacop.lcg.linearRows"))) {
+      long start = System.nanoTime();
       for (Constraint c : store.getConstraints()) {
         if (formOf(c) == null && !(c instanceof LinearReasons)) {
           LinearForm f = LinearForms.of(c);
@@ -139,6 +231,15 @@ final class LinearConflict {
           }
         }
       }
+      outcomes.put("rowsMillis", (System.nanoTime() - start) / 1_000_000);
+      if (clauseRows) {
+        for (int i = 0; i < store.size(); i++) {
+          if (store.vars[i] instanceof IntVar x && x.min() == 0 && x.max() == 1) {
+            booleans.add(x);
+          }
+        }
+      }
+      outcomes.put("rowConstraints", (long) relaxations.size());
     }
   }
 
@@ -257,6 +358,15 @@ final class LinearConflict {
 
   private LinearForm analyseFailure(Constraint failed, int level) {
     List<LinearForm> starts = failed == null ? List.of() : candidates(failed, null);
+    boolean clauseStart = false;
+    if (starts.isEmpty() && failed != null) {
+      LinearForm row = clauseRow(failed, -1);
+      if (row != null) {
+        starts = List.of(row);
+        clauseStart = true;
+        count("start-clause");
+      }
+    }
     if (starts.isEmpty()) {
       count("start-nonlinear:" + (failed == null ? "none" : failed.getClass().getSimpleName()));
       return null;
@@ -281,7 +391,8 @@ final class LinearConflict {
       count("start-not-failing");
       return null;
     }
-    boolean modelStart = formOf(failed) != null;
+    // a start that is a model constraint, or the failure's clause, already holds as it is
+    boolean modelStart = formOf(failed) != null || clauseStart;
     if (!modelStart && !(failed instanceof LinearReasons)) {
       count("start-row");
     }
@@ -337,6 +448,14 @@ final class LinearConflict {
         return null;
       }
       List<LinearForm> reasons = candidates(r, trail.variable(latest));
+      boolean clauseReason = false;
+      if (reasons.isEmpty() && !guessed) {
+        LinearForm row = clauseRow(r, latest);
+        if (row != null) {
+          reasons = List.of(row);
+          clauseReason = true;
+        }
+      }
       if (reasons.isEmpty()) {
         count("stop-nonlinear:" + r.getClass().getSimpleName());
         return null;
@@ -375,7 +494,9 @@ final class LinearConflict {
       if (guessed) {
         count("kept-origin");
       }
-      if (formOf(r) == null && !(r instanceof LinearReasons)) {
+      if (clauseReason) {
+        count("clause-reason");
+      } else if (formOf(r) == null && !(r instanceof LinearReasons)) {
         count("row-reason");
       } else if (r instanceof LinearReasons) {
         count("lp-reason");
