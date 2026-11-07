@@ -671,6 +671,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pooledCuts
             + "\n%%%mzn-stat: lpValueColumns="
             + r.valueColumns
+            + "\n%%%mzn-stat: lpSimplexValueColumns="
+            + r.simplexValueColumns()
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -2115,7 +2117,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     // decisions from the solution of the linear relaxation: on, off, or auto, on when the
-    // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
+    // simplex has value columns (LP-only 0/1 columns x = v), whose solution names the values: not
+    // the columns of tried encodings that the root trial dropped (gbac UD8 342 instead of 89). On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
     // it in 60 s
@@ -2123,7 +2126,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching) && linearRelaxation.valueColumns > 0);
+                || "auto".equals(lpBranching) && linearRelaxation.simplexValueColumns() > 0);
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
