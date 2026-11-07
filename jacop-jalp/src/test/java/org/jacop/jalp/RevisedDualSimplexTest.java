@@ -417,6 +417,8 @@ class RevisedDualSimplexTest {
   @Test
   void presolvedSolvesAgreeWithPlainOnes() {
     Random rnd = new Random(23);
+    // the chunks of the chunked solves, apart so that they leave the problems as they were
+    Random chunks = new Random(29);
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;
@@ -448,6 +450,19 @@ class RevisedDualSimplexTest {
       RevisedDualSimplex lp = p.simplex(scale);
       lp.setPresolve(true);
       assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
+      // a solve in short chunks, as the root solve of LinearRelaxation makes, goes on with the
+      // reduced problem; a query in between takes the basis postsolved from it
+      RevisedDualSimplex chunked = p.simplex(scale);
+      chunked.setPresolve(true);
+      for (int k = 0;
+          k < 100_000 && chunked.solve(1 + chunks.nextInt(3)) == RevisedDualSimplex.LIMIT;
+          k++) {
+        if (chunks.nextInt(8) == 0) {
+          chunked.objective();
+        }
+      }
+      String inChunks = what + " in chunks";
+      assertThat(solveAndCheck(p, chunked, scale, inChunks)).as(inChunks).isEqualTo(status);
       if (status == RevisedDualSimplex.OPTIMAL) {
         optimal++;
         if (lp.presolvedRows() >= 0) {
