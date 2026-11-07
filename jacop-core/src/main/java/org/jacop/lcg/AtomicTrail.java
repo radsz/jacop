@@ -618,25 +618,36 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       if (b >= numBounds.length) {
         return -1;
       }
-      // the last of the variable's k entries before the position
-      int[] list = bounds[b];
-      int lo = 0;
-      int hi = numBounds[b] - 1;
-      while (lo <= hi) {
-        int mid = (lo + hi) >>> 1;
-        if (list[mid] < position) {
-          lo = mid + 1;
-        } else {
-          hi = mid - 1;
-        }
-      }
-      return hi >= 0 ? list[hi] : -1;
+      return latestBound(b, position);
     }
     int e = lastBefore(x, position);
     while (e >= 0 && kind[e] != k) {
       e = previous[e];
     }
     return e;
+  }
+
+  // the last entry of bound list b (2 * id + GE or LE) before the position, or -1
+  private int latestBound(int b, int position) {
+    // the last of the variable's k entries before the position
+    int[] list = bounds[b];
+    int hi = numBounds[b] - 1;
+    if (hi < 0 || list[hi] < position) {
+      // no entry, or none at or after the position: the common case of a reason built at the
+      // end of the trail, or of a variable that changed little since
+      return hi >= 0 ? list[hi] : -1;
+    }
+    int lo = 0;
+    hi--;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      if (list[mid] < position) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return hi >= 0 ? list[hi] : -1;
   }
 
   /**
@@ -738,15 +749,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (lower ? rootBound >= limit : rootBound <= limit) {
       return rootBound;
     }
-    int k = kind[e];
-    for (int f = previous[e]; f >= 0; f = previous[f]) {
-      if (kind[f] == k) {
-        if (lower ? value[f] < limit : value[f] > limit) {
-          break;
-        }
-        e = f;
-      }
-    }
+    e = earliestReaching(2 * id(x) + kind[e], e, lower, limit);
     if (weakerBounds == null) {
       out.add(e);
       return value[e];
@@ -754,6 +757,36 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     int w = weakerBounds.weakest(x, lower, value[e], limit);
     out.addLifted(e, Math.abs(value[e] - w));
     return w;
+  }
+
+  // the earliest entry of bound list b up to entry e (which is in it) whose bound still reaches
+  // limit: the bounds of a list only tighten, so two binary searches replace a walk along the
+  // variable's chain (a third of nmseq's run time under LCG went to that walk)
+  private int earliestReaching(int b, int e, boolean lower, long limit) {
+    int[] list = bounds[b];
+    int lo = 0;
+    int hi = numBounds[b] - 1;
+    while (lo < hi) {
+      int mid = (lo + hi + 1) >>> 1;
+      if (list[mid] <= e) {
+        lo = mid;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    // list[lo] == e; find the first k in [0, lo] with value[list[k]] reaching limit
+    hi = lo;
+    lo = 0;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      int v = value[list[mid]];
+      if (lower ? v >= limit : v <= limit) {
+        hi = mid;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return list[lo];
   }
 
   /** Bounds weaker than a trail atom that the solver can cite (see {@link #setWeakerBounds}). */
@@ -807,8 +840,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return its minimum then
    */
   public int minBefore(IntVar x, int position) {
-    int e = latest(x, position, GE);
-    return e >= 0 ? value[e] : rootOf(x).min();
+    int i = slot(x);
+    int e = latestBound(2 * i + GE, position);
+    return e >= 0 ? value[e] : root[i].min();
   }
 
   /**
@@ -819,8 +853,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return its maximum then
    */
   public int maxBefore(IntVar x, int position) {
-    int e = latest(x, position, LE);
-    return e >= 0 ? value[e] : rootOf(x).max();
+    int i = slot(x);
+    int e = latestBound(2 * i + LE, position);
+    return e >= 0 ? value[e] : root[i].max();
   }
 
   /**
@@ -858,17 +893,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (k == GE ? d.min() >= v : d.max() <= v) {
       return -1;
     }
-    int found = Integer.MAX_VALUE;
-    for (int e = latest(x, position, k); e >= 0; e = previous[e]) {
-      if (kind[e] != k) {
-        continue;
-      }
-      if (k == GE ? value[e] < v : value[e] > v) {
-        break;
-      }
-      found = e;
+    int e = latest(x, position, k);
+    if (e < 0 || (k == GE ? value[e] < v : value[e] > v)) {
+      return Integer.MAX_VALUE;
     }
-    return found;
+    return earliestReaching(2 * id(x) + k, e, k == GE, v);
   }
 
   /**
