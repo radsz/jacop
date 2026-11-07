@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
@@ -367,6 +368,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
   // the constraints posted, as their kind and variables, for added()
   private final List<String> postedKinds = new ArrayList<>();
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
+  // the constraints posted with their symmetries, for local search
+  private final SymmetryCanonicalizer canonicalizer = new SymmetryCanonicalizer();
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
@@ -597,6 +600,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
       store.impose(chain);
+      canonicalizer.chain(chain, columns);
       note("chain", columns);
       orbitopes++;
       posted++;
@@ -643,6 +647,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
       store.impose(lex);
+      canonicalizer.lex(
+          lex,
+          x,
+          y,
+          descending,
+          moves(g, varAt, true).orElse(null),
+          moves(g, varAt, false).orElse(null));
       note(descending ? "lex>" : "lex<", x, y);
       posted++;
     }
@@ -654,6 +665,37 @@ final class SymmetryBreaking implements ParserTreeConstants {
         null,
         values.posted(),
         orbitopes);
+  }
+
+  /**
+   * The variables a generator moves (from) or their images (to); the other vertices it moves stand
+   * for constraints and constants. Empty when it maps a variable onto a vertex that is not one.
+   */
+  private static Optional<IntVar[]> moves(
+      GraphAutomorphisms.Permutation g, IntVar[] varAt, boolean from) {
+    int[] points = g.points();
+    List<IntVar> out = new ArrayList<>();
+    for (int i = 0; i < points.length; i++) {
+      IntVar x = varAt[points[i]];
+      if (x == null) {
+        continue;
+      }
+      IntVar y = varAt[g.images()[i]];
+      if (y == null) {
+        return Optional.empty();
+      }
+      out.add(from ? x : y);
+    }
+    return Optional.of(out.toArray(new IntVar[0]));
+  }
+
+  /**
+   * Returns the canonicalizer of the symmetry breaking constraints posted, for local search.
+   *
+   * @return the canonicalizer.
+   */
+  SymmetryCanonicalizer canonicalizer() {
+    return canonicalizer;
   }
 
   private static IntVar find(Map<IntVar, IntVar> parent, IntVar v) {
@@ -1137,6 +1179,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         SeqPrecedeChain precede = new SeqPrecedeChain(xs, chain);
         precede.setDegreeWeight(0);
         store.impose(precede);
+        canonicalizer.precedence(precede, xs, chain);
         note("precede" + Arrays.toString(chain), xs);
         posted++;
       }

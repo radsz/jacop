@@ -56,6 +56,15 @@ import org.jacop.util.fsm.FsmTransition;
  * into the period decomposition {@link #decomposeByPeriod(Sequence, Store)}. Both accept repeated
  * variables in the list. {@link #decomposeByRegular(Sequence)} is kept for reference.
  *
+ * <p>The constraint was introduced in CHIP as among over sliding windows (N. Beldiceanu and E.
+ * Contejean, "Introducing global constraints in CHIP", Mathematical and Computer Modelling 20(12),
+ * 1994), and first filtered as a whole by J.-C. R&eacute;gin and J.-F. Puget ("A filtering
+ * algorithm for global sequencing constraints", CP 1997). Domain consistency is due to W.-J. van
+ * Hoeve, G. Pesant, L.-M. Rousseau and A. Sabharwal ("Revisiting the sequence constraint", CP
+ * 2006), and {@link AmongSeq} follows the cumulative-sums network of S. Brand, N. Narodytska, C.-G.
+ * Quimper, P. Stuckey and T. Walsh ("Encodings of the sequence constraint", CP 2007), with its own
+ * explanations for lazy clause generation and a violation measure for local search.
+ *
  * @author Radoslaw Szymanek and Polina Makeeva
  * @version 5.0
  */

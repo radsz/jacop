@@ -47,6 +47,7 @@ import org.jacop.api.Violation;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.AtLeast;
@@ -167,6 +168,22 @@ class ViolationTest {
             (s, x) ->
                 new CountValuesBounds(x, new int[] {1, 0}, new int[] {2, 1}, new int[] {1, 2})));
     cs.add(new Case("Regular", 5, 0, 2, (s, x) -> new Regular(noTwoOnes(), x)));
+    cs.add(
+        new Case(
+            "AmongSeq", 6, 0, 3, (s, x) -> new AmongSeq(x, new IntervalDomain(1, 2), 3, 1, 2)));
+    cs.add(
+        new Case(
+            "AmongSeqRepeated",
+            5,
+            0,
+            2,
+            (s, x) ->
+                new AmongSeq(
+                    new IntVar[] {x[0], x[1], x[2], x[0], x[3], x[4]},
+                    new IntervalDomain(2, 2),
+                    2,
+                    0,
+                    1)));
     cs.add(
         new Case(
             "Cumulative",

@@ -53,6 +53,8 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ConvexAllocation;
+import org.jacop.constraints.ConvexCost;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountVar;
@@ -67,6 +69,7 @@ import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.LateCount;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -79,10 +82,12 @@ import org.jacop.constraints.Min;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Sort;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
+import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
@@ -498,6 +503,41 @@ class ConsistencyChecker {
   }
 
   /** A variable over a random non-empty subset of lo..hi, with holes about a fifth of the time. */
+  // starts under a random acyclic graph of precedences, earliness and tardiness at most z
+  private static Model precedenceCost(Store s, Random r) {
+    int n = 2 + r.nextInt(3);
+    IntVar[] x = vars(s, "s", n, 0, 6, r);
+    IntVar z = var(s, "z", 0, 4 * n, r);
+    List<int[]> prec = new ArrayList<>();
+    for (int j = 1; j < n; j++) {
+      for (int i = 0; i < j; i++) {
+        if (r.nextInt(2) == 0) {
+          prec.add(new int[] {i, j, r.nextInt(4) - 1});
+        }
+      }
+    }
+    int[][] terms = new int[n][];
+    for (int i = 0; i < n; i++) {
+      terms[i] = new int[] {i, r.nextInt(7), r.nextInt(3), r.nextInt(3)};
+    }
+    int[][] p = prec.toArray(new int[0][]);
+    return new Model(
+        new PrecedenceCost(x, p, terms, z),
+        t -> {
+          for (int[] q : p) {
+            if (t[q[1]] < t[q[0]] + q[2]) {
+              return false;
+            }
+          }
+          int total = 0;
+          for (int[] q : terms) {
+            total += q[2] * Math.max(0, q[1] - t[q[0]]) + q[3] * Math.max(0, t[q[0]] - q[1]);
+          }
+          return total <= t[n];
+        },
+        concat(x, new IntVar[] {z}));
+  }
+
   private static IntVar var(Store store, String name, int lo, int hi, Random random) {
     IntVar v = new IntVar(store, name);
     for (int k = lo; k <= hi; k++) {
@@ -509,6 +549,39 @@ class ConsistencyChecker {
       v.addDom(lo, lo);
     }
     return v;
+  }
+
+  /** Sum of x = total and cost &gt;= sum of random convex costs of x, 2 to 4 variables. */
+  private static Model convexAllocation(Store store, Random random, boolean lagrangian) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, -2, 4, random);
+    ConvexCost[] f = new ConvexCost[n];
+    RandomConvexCosts.Cost[] costs = new RandomConvexCosts.Cost[n];
+    for (int i = 0; i < n; i++) {
+      costs[i] = RandomConvexCosts.random(random, -2, 4);
+      f[i] = costs[i].cost();
+    }
+    int t = random.nextInt(2 * n + 2);
+    IntVar total =
+        random.nextBoolean()
+            ? var(store, "t", t, t, random)
+            : var(store, "t", t - 2, t + 3, random);
+    int start = -5 + random.nextInt(30);
+    IntVar cost = var(store, "c", start, start + 25, random);
+    ConvexAllocation c = new ConvexAllocation(x, f, total, cost);
+    c.lagrangianOnly(lagrangian);
+    return new Model(
+        c,
+        a -> {
+          long sum = 0;
+          long value = 0;
+          for (int i = 0; i < n; i++) {
+            sum += a[i];
+            value += costs[i].value().applyAsLong(a[i]);
+          }
+          return sum == a[n] && value <= a[n + 1];
+        },
+        concat(x, new IntVar[] {total, cost}));
   }
 
   /** A chain of 3 or 4 vectors as one LexChain (native) or as pairwise Lex constraints. */
@@ -1049,6 +1122,10 @@ class ConsistencyChecker {
               IntVar z = var(s, "z", -12, 12, r);
               return new Model(new XmulCeqZ(x, c, z), t -> t[0] * c == t[1], new IntVar[] {x, z});
             }),
+        // exact least costs F_i(v) with the others in their intervals (Hochbaum's greedy)
+        new Case("ConvexAllocation", Level.BOUNDS_Z, (s, r) -> convexAllocation(s, r, false)),
+        // reduced costs only: sound, weaker
+        new Case("ConvexAllocationLagrangian", Level.NONE, (s, r) -> convexAllocation(s, r, true)),
         // bounds(D) would need the holes of y, e.g. y = 2 is a hole between the supported 1 and 3
         new Case(
             "XdivYeqZ",
@@ -1201,6 +1278,15 @@ class ConsistencyChecker {
             "LinearIntDom",
             Level.DOMAIN,
             (s, r) -> linear(s, r, weights(r, 2 + r.nextInt(3), 3), "==", true)),
+        // the sumsets alone, on equalities of up to five variables
+        new Case(
+            "LinearIntDom sumset",
+            Level.DOMAIN,
+            (s, r) -> {
+              Model m = linear(s, r, weights(r, 2 + r.nextInt(4), 4), "==", true);
+              ((LinearIntDom) m.constraint()).setSumsets("always");
+              return m;
+            }),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
         new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),
@@ -1388,6 +1474,64 @@ class ConsistencyChecker {
         // bounds(Z) is NP-hard; the limit is not raised to the largest resource use either
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
         new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),
+        // relaxations (Eastman, Even and Isaacs; Moore and Hodgson), so no consistency level, but
+        // never wrong pruning
+        new Case(
+            "WeightedCompletionParallel",
+            Level.NONE,
+            (s, r) -> {
+              int n = 2 + r.nextInt(3);
+              int capacity = 2 + r.nextInt(2);
+              IntVar[] x = vars(s, "x", n, 0, 4, r);
+              int[] d = r.ints(n, 0, 4).toArray();
+              int[] use = r.ints(n, 0, capacity + 1).toArray();
+              int[] w = r.ints(n, 0, 4).toArray();
+              IntVar c = var(s, "c", 0, 40, r);
+              return new Model(
+                  new WeightedCompletion(x, d, use, w, capacity, c),
+                  t -> {
+                    int total = 0;
+                    for (int i = 0; i < n; i++) {
+                      total += w[i] * (t[i] + d[i]);
+                      int load = 0;
+                      for (int j = 0; j < n; j++) {
+                        if (d[i] > 0 && d[j] > 0 && t[j] <= t[i] && t[i] < t[j] + d[j]) {
+                          load += use[j];
+                        }
+                      }
+                      if (load > capacity) {
+                        return false;
+                      }
+                    }
+                    return total <= t[n];
+                  },
+                  concat(x, new IntVar[] {c}));
+            }),
+        new Case(
+            "LateCount",
+            Level.NONE,
+            (s, r) -> {
+              int n = 2 + r.nextInt(3);
+              IntVar[] x = vars(s, "x", n, 0, 5, r);
+              int[] d = r.ints(n, 0, 4).toArray();
+              int[] due = r.ints(n, 0, 8).toArray();
+              IntVar c = var(s, "c", 0, n, r);
+              return new Model(
+                  new LateCount(x, d, due, c),
+                  t -> {
+                    int late = 0;
+                    for (int i = 0; i < n; i++) {
+                      late += t[i] + d[i] > due[i] ? 1 : 0;
+                      for (int j = i + 1; j < n; j++) {
+                        if (d[i] > 0 && d[j] > 0 && t[i] < t[j] + d[j] && t[j] < t[i] + d[i]) {
+                          return false;
+                        }
+                      }
+                    }
+                    return late <= t[n];
+                  },
+                  concat(x, new IntVar[] {c}));
+            }),
         // Geost sweeps for the first and last feasible origin, so it reaches no level on all
         // nodes; the counts of nodes at each level compare its strength with Diffn and Diff2
         new Case("GeostRect2d", Level.NONE, (s, r) -> geost(s, r, Family.RECT2D, null)),
@@ -1397,7 +1541,10 @@ class ConsistencyChecker {
         new Case("GeostPoly2d", Level.NONE, (s, r) -> geost(s, r, Family.POLY2D, null)),
         new Case("GeostArea", Level.NONE, (s, r) -> geost(s, r, Family.AREA, null)),
         new Case("GeostTime", Level.NONE, (s, r) -> geost(s, r, Family.TIME, null)),
-        new Case("GeostSubdims", Level.NONE, (s, r) -> geost(s, r, Family.SUBDIMS, null)));
+        new Case("GeostSubdims", Level.NONE, (s, r) -> geost(s, r, Family.SUBDIMS, null)),
+        // the bound on the cost is exact over the intervals; the starts are filtered by the
+        // reduced cost of one path, which is weaker than bounds(Z)
+        new Case("PrecedenceCost", Level.NONE, ConsistencyChecker::precedenceCost));
   }
 
   /**

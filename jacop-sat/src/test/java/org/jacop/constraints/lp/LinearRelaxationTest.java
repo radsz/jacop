@@ -31,6 +31,7 @@
 package org.jacop.constraints.lp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -51,6 +52,7 @@ import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
@@ -58,7 +60,9 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -71,6 +75,9 @@ import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
+import org.jacop.util.fsm.Fsm;
+import org.jacop.util.fsm.FsmState;
+import org.jacop.util.fsm.FsmTransition;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -1224,6 +1231,131 @@ class LinearRelaxationTest {
       solver.setActivityGuide(new LpGuidedSelect(l, null, true));
       assertThat(solver.minimize(h.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
       assertThat((long) solver.value(h.objective)).as("seed %d", run).isEqualTo(expected);
+    }
+  }
+
+  /**
+   * The flow model of a layered graph (Regular over random, possibly non-deterministic automata, or
+   * ExtensionalSupportMdd over random tables) makes the root bound of a linear cost over its
+   * variables the optimum, since the flow polytope of a layered graph is integral; the optimum is
+   * kept under depth-first search and under lazy clause generation with the explanation checker on,
+   * which also checks the facts behind the bounds of the arc columns.
+   */
+  @Test
+  void flowEncodingsBoundLayeredGraphsByTheirOptimum() {
+    int raised = 0;
+    int models = 0;
+    long checked = 0;
+    for (int run = 0; run < RUNS / 10; run++) {
+      Long expected = new Paths(run).optimum();
+      if (expected == null) {
+        continue;
+      }
+      models++;
+      Paths dfs = new Paths(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.rootBound).as("seed %d", run).isCloseTo(expected, offset(1e-6));
+      raised += r.extraRows > 0 && r.rootBound > r.baseBound + 0.5 ? 1 : 0;
+
+      Paths lcg = new Paths(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(models).isGreaterThan(RUNS / 40);
+    assertThat(raised).isGreaterThan(RUNS / 100);
+    assertThat(checked).isPositive();
+  }
+
+  /** Without an objective the counting, all-different and element encodings are not made. */
+  @Test
+  void satisfactionModelsGetNoTriedValueEncodings() {
+    Assignment a = new Assignment(3);
+    LinearRelaxation withCost = LinearRelaxation.of(a.store, a.cost, false);
+    assertThat(withCost.valueColumns).isPositive();
+    LinearRelaxation without = LinearRelaxation.of(new Assignment(3).store, null, false);
+    assertThat(without == null || without.valueColumns == 0).isTrue();
+  }
+
+  // a linear cost over the variables of a Regular or an ExtensionalSupportMdd
+  private static final class Paths {
+    final Store store = new Store();
+    final IntVar[] x;
+    final IntVar cost;
+
+    Paths(long seed) {
+      Random rnd = new Random(seed);
+      int n = 3 + rnd.nextInt(4);
+      x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      if (rnd.nextBoolean()) {
+        int states = 2 + rnd.nextInt(4);
+        FsmState[] s = new FsmState[states];
+        Fsm fsm = new Fsm();
+        for (int q = 0; q < states; q++) {
+          s[q] = new FsmState();
+          fsm.allStates.add(s[q]);
+        }
+        fsm.initState = s[0];
+        for (int q = 0; q < states; q++) {
+          if (rnd.nextInt(3) > 0) {
+            fsm.finalStates.add(s[q]);
+          }
+          boolean[][] has = new boolean[4][states];
+          for (int t = rnd.nextInt(2 * states + 3); t > 0; t--) {
+            int c = rnd.nextInt(4);
+            int next = rnd.nextInt(states);
+            if (!has[c][next]) {
+              has[c][next] = true;
+              s[q].addTransition(new FsmTransition(new IntervalDomain(c, c), s[next]));
+            }
+          }
+        }
+        store.impose(new Regular(fsm, x));
+      } else {
+        int[][] table = new int[1 + rnd.nextInt(12)][n];
+        for (int[] t : table) {
+          for (int i = 0; i < n; i++) {
+            t[i] = rnd.nextInt(4);
+          }
+        }
+        store.impose(new ExtensionalSupportMdd(x, table));
+      }
+      int[] w = new int[n + 1];
+      int lo = 0;
+      int hi = 0;
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 5;
+        lo += Math.min(0, 3 * w[i]);
+        hi += Math.max(0, 3 * w[i]);
+      }
+      w[n] = -1;
+      cost = new IntVar(store, "cost", lo, hi);
+      IntVar[] vars = Arrays.copyOf(x, n + 1);
+      vars[n] = cost;
+      store.impose(new LinearInt(vars, w, "==", 0));
+    }
+
+    // the least cost by depth-first search, null when there is no solution
+    Long optimum() {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      if (!search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost)) {
+        return null;
+      }
+      return (long) search.getCostValue();
     }
   }
 

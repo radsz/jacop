@@ -543,38 +543,74 @@ public abstract class LayeredGraphConstraint extends Constraint
     return true;
   }
 
-  /** The clauses of {@link #encodeClauses}. */
-  private final class GraphClauses {
-
-    // the constant literals; a clause holding TRUE is dropped and FALSE is left out of a clause
-    static final int TRUE = Integer.MAX_VALUE;
-    static final int FALSE = -TRUE;
-
-    final ClauseModel model;
-    final int levels = list.length;
-    final int[] edge = description.edges;
-    int[] clause = new int[16];
-
-    GraphClauses(ClauseModel model) {
-      this.model = model;
+  /**
+   * Returns the edges of the graph over the current domains that lie on a path from level 0 to the
+   * last level, four ints per edge: its level, its source node, its value and its target node, the
+   * nodes numbered within their level as described. The linear relaxation states the flow model of
+   * the graph over them (one unit of flow from level 0 to the last level, an arc column per edge,
+   * and {@code [x_i = v]} as the flow over the edges of level i labelled v), whose solutions are
+   * the paths (M.-C. Cote, B. Gendron and L.-M. Rousseau, "Modeling the regular constraint with
+   * integer programming", CPAIOR 2007).
+   *
+   * @return the edges, or null when the paths of the graph are not exactly the solutions of the
+   *     constraint or the graph is not built yet
+   */
+  public int[] pathEdges() {
+    if (description == null || !explainedByPaths()) {
+      return null;
     }
+    int levels = list.length;
+    int[] edge = description.edges;
+    PathNodes paths = new PathNodes();
+    int[] first = paths.first;
+    int[] levelEdges = paths.levelEdges;
+    int[] order = paths.order;
+    int[] fill = paths.fill;
+    boolean[] kept = paths.kept;
+    int[] out = new int[4 * description.size];
+    int size = 0;
+    for (int level = 0; level < levels; level++) {
+      for (int k = levelEdges[level]; k < fill[level]; k++) {
+        int e = order[k];
+        if (kept[first[level] + edge[4 * e + 1]] && kept[first[level + 1] + edge[4 * e + 3]]) {
+          System.arraycopy(edge, 4 * e, out, 4 * size++, 4);
+        }
+      }
+    }
+    return Arrays.copyOf(out, 4 * size);
+  }
 
-    void encode() {
+  /**
+   * The usable edges of the graph over the current domains in level order, and the nodes on a path
+   * from level 0 to the last level.
+   */
+  private final class PathNodes {
+    // the index of the first node of each level among all nodes
+    final int[] first;
+    // the usable edges of level l are order[levelEdges[l]] to order[fill[l] - 1]
+    final int[] levelEdges;
+    final int[] order;
+    final int[] fill;
+    // the nodes on a path from level 0 to the last level
+    final boolean[] kept;
+
+    PathNodes() {
+      int levels = list.length;
       int[] levelNodes = description.levelNodes;
-      int[] first = new int[levels + 2];
+      int[] edge = description.edges;
+      first = new int[levels + 2];
       for (int level = 0; level <= levels; level++) {
         first[level + 1] = first[level] + levelNodes[level];
       }
-      // the usable edges in level order, and the nodes on a path from level 0 to the last level
-      int[] levelEdges = new int[levels + 1];
+      levelEdges = new int[levels + 1];
       for (int e = 0; e < description.size; e++) {
         levelEdges[edge[4 * e] + 1]++;
       }
       for (int level = 0; level < levels; level++) {
         levelEdges[level + 1] += levelEdges[level];
       }
-      int[] order = new int[description.size];
-      int[] fill = Arrays.copyOf(levelEdges, levels);
+      order = new int[description.size];
+      fill = Arrays.copyOf(levelEdges, levels);
       for (int e = 0; e < description.size; e++) {
         int level = edge[4 * e];
         if (list[level].domain.contains(edge[4 * e + 2])) {
@@ -582,7 +618,7 @@ public abstract class LayeredGraphConstraint extends Constraint
         }
       }
       boolean[] reached = new boolean[first[levels + 1]];
-      boolean[] kept = new boolean[first[levels + 1]];
+      kept = new boolean[first[levels + 1]];
       Arrays.fill(reached, 0, first[1], true);
       for (int level = 0; level < levels; level++) {
         for (int k = levelEdges[level]; k < fill[level]; k++) {
@@ -602,6 +638,32 @@ public abstract class LayeredGraphConstraint extends Constraint
           }
         }
       }
+    }
+  }
+
+  /** The clauses of {@link #encodeClauses}. */
+  private final class GraphClauses {
+
+    // the constant literals; a clause holding TRUE is dropped and FALSE is left out of a clause
+    static final int TRUE = Integer.MAX_VALUE;
+    static final int FALSE = -TRUE;
+
+    final ClauseModel model;
+    final int levels = list.length;
+    final int[] edge = description.edges;
+    int[] clause = new int[16];
+
+    GraphClauses(ClauseModel model) {
+      this.model = model;
+    }
+
+    void encode() {
+      PathNodes paths = new PathNodes();
+      int[] first = paths.first;
+      int[] levelEdges = paths.levelEdges;
+      int[] order = paths.order;
+      int[] fill = paths.fill;
+      boolean[] kept = paths.kept;
 
       // the arcs: the kept edges grouped by level, source and target
       int[] arcOf = new int[description.size];
