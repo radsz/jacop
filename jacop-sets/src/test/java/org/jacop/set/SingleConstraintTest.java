@@ -63,6 +63,7 @@ import org.jacop.set.constraints.CardA;
 import org.jacop.set.constraints.CardAeqX;
 import org.jacop.set.constraints.ChannelBoolSet;
 import org.jacop.set.constraints.ChannelIntSet;
+import org.jacop.set.constraints.EinA;
 import org.jacop.set.constraints.ElementSet;
 import org.jacop.set.constraints.ElementSetVariable;
 import org.jacop.set.constraints.Match;
@@ -1093,6 +1094,44 @@ class SingleConstraintTest {
       }
     }
     assertThat(explained).isGreaterThanOrEqualTo(3);
+    trail.detach();
+  }
+
+  /**
+   * Under LCG, a reified set_in whose element fills a set of cardinality at most 1: the other
+   * elements leave the set and its cardinality rises to 1 inside the reification's propagation.
+   * Those atoms are explained by the set's cardinality and memberships. They were the generic
+   * reason (vaccine, 29 % of the Reified reasons).
+   */
+  @Test
+  void reifiedMembershipExplainsWhatTheCardinalityDerives() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", 1, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Reified in = new Reified(new EinA(2, a), b);
+    store.impose(in);
+    store.impose(new SetMirror(a));
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    a.domain.inCardinality(store.level, a, 0, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    b.domain.in(store.level, b, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(a.singleton()).isTrue();
+    IntVar[] mirror = a.lcgMirror().mirrorVariables();
+    EntryList reason = new EntryList();
+    List<IntVar> explained = new ArrayList<>();
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) == in) {
+        reason.clear();
+        assertThat(in.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+        explained.add(trail.variable(e));
+      }
+    }
+    assertThat(explained)
+        .contains(a.lcgMirror().member(1), a.lcgMirror().member(3), mirror[mirror.length - 1]);
     trail.detach();
   }
 

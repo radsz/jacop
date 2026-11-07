@@ -2524,7 +2524,64 @@ Version 5.0 (unreleased)
      157 and 158 for two base runs, and ATSP instance10 lost its proof
      by default (LP time 0.4 s to 3.8 s).
 
-163. Lattice methods for linear equalities.
+
+163. New constraint PrecedenceCost (org.jacop.constraints): sum(i)
+     f[i](s[i]) <= cost under precedences s[j] >= s[i] + d over an
+     acyclic graph, where each f[i] is convex piecewise linear, given as
+     earliness and tardiness terms e * max(0, b - s) + t * max(0, s - b).
+     The minimum of the sum over the bounds of the starts and the
+     precedences is computed exactly as the dual of a convex-cost network
+     flow (successive shortest paths with potentials; the potentials are
+     an optimal schedule) and becomes the minimum of the cost; start
+     times are filtered by the reduced cost of a shortest residual path
+     to or from the root, and the precedences are propagated on bounds.
+     Under LCG the reason is the flow certificate: only the bounds whose
+     dual multiplier is positive, weakened as far as the slack allows.
+     The FlatZinc layer posts it, as a redundant constraint, for sums of
+     int_max(0, s - due) and int_max(0, due - s) terms over start times
+     linked by difference constraints (rcpsp-wet, rcpsp-wet-diverse). It
+     is on with the model's search and off under -f;
+     -Dorg.jacop.fz.precedenceCost=true or false sets it in both modes.
+     rcpsp-wet and rcpsp-wet-diverse (15 instances, 60 s, default
+     search): 9 of 10 rcpsp-wet solved as before, 7 of them faster
+     (j60_36_8 11.6 to 6.8 s), j90_10_10 unsolved either way; the
+     rcpsp-wet-diverse j60_19_6-3 objective (maximised) 7,400 to 30,600
+     in three runs. Under -f it lost on j90_48_4 (3.4 to 7.2 s) and the
+     diverse j30_44_8-4, hence off there. References: R. K. Ahuja,
+     D. S. Hochbaum and J. B. Orlin, Solving the Convex Cost Integer
+     Dual Network Flow Problem, Management Science 49(7), 950-964, 2003;
+     P. Chretienne and F. Sourd, PERT scheduling with convex cost
+     functions, Theoretical Computer Science 292(1), 145-164, 2003;
+     J.-N. Monette, Y. Deville and P. Van Hentenryck, Just-In-Time
+     Scheduling with Constraint Programming, ICAPS 2009.
+
+164. The XorSystem detector also reads tables (jacop_table_int,
+     jacop_table_bool and short tables): the parity constraints a table
+     implies on its 0/1 variables, the equations of the affine hull over
+     GF(2) of its tuples allowed by the domains, become rows of the
+     system. A table that is an XOR gives its row, a table whose tuples
+     span every 0/1 point gives nothing. On the MiniZinc Challenge and
+     XCSP3 benchmarks no table builds a system: the cryptanalysis models
+     (PRESENT difference table, a + b + c != 1 truncated XORs of AES)
+     span the whole space, and code-generator, is and Nonogram imply only
+     isolated 2-variable rows. XCSP3 2025 Cryptanalysis gets systems from
+     its bool_xor (8 per instance) with no change in time or answers.
+
+164. Under --lcg, EinA (set_in_reif with a set variable)
+     explains what the set's cardinality derives inside the constraint:
+     when the cardinality bound leaves no room for the element, or when
+     the other members already fill it, the reason cites the
+     cardinality and the other memberships of the set's mirror
+     (SetExplanation.explainCardinality, as ElementwiseExplainable
+     does), instead of falling back to a generic reason. On vaccine v857
+     every generic reason came from these (28,010 of 97,168); now none,
+     and -f 22.7 s to 17.7 s. Of the 37 wide-set instances with
+     set_in_reif, vaccine is the only one with generic Reified reasons.
+     Wide set (220, 60 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +7, -f S = -2 over two repetitions, with every
+     decided instance outside the instances whose reasons changed.
+
+165. Lattice methods for linear equalities.
      - LinearIntDom finds the supports of an equality by bitset sumsets
        when that is estimated cheaper than enumerating them: a forward
        pass of shifts gives the reachable partial sums after each

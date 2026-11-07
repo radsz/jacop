@@ -675,6 +675,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     List<Item> items = new ArrayList<>();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() == JJTVARDECLITEMS) {
+        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+          checkTime();
+          Item alias = alias((SimpleNode) node.jjtGetChild(j));
+          if (alias != null) {
+            items.add(alias);
+          }
+        }
+      }
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
@@ -686,6 +695,29 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return items;
+  }
+
+  /**
+   * The equality that a variable declared as another variable ({@code var bool: x = y}) stands for:
+   * the front end makes x a variable of its own and posts x = y, so the graph needs the equality as
+   * well, or it would take x and y for unrelated variables. Null for any other declaration.
+   */
+  private Item alias(SimpleNode node) {
+    if (!(node instanceof ASTVarDeclItem decl) || node.jjtGetNumChildren() < 2) {
+      return null;
+    }
+    IntVar x = dictionary.getVariable(decl.getIdent());
+    SimpleNode init = (SimpleNode) node.jjtGetChild(node.jjtGetNumChildren() - 1);
+    if (x == null
+        || init.getId() != JJTSCALARFLATEXPR
+        || ((ASTScalarFlatExpr) init).getType() != 2 && ((ASTScalarFlatExpr) init).getType() != 3) {
+      return null;
+    }
+    Atom y = scalarAtom(init);
+    if (y.var() == null || y.var() == x) {
+      return null;
+    }
+    return new Item("int_eq", new Atom[][] {{variable(x)}, {y}}, new boolean[2]);
   }
 
   private Item parse(ASTConstElem item) {

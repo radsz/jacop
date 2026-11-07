@@ -139,6 +139,33 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void aVariableDeclaredAsAnotherIsTheSameVariable() throws IOException {
+    // XCSP3 Cryptanalysis-4-12-128: c and d are declared as a and b, which the front end posts as
+    // c = a and d = b; without these equalities in the graph, c and d looked interchangeable and
+    // c <= d removed every solution (a = c = true in all of them): wrong UNSAT
+    String model =
+        """
+        var bool: a;
+        var bool: b;
+        var bool: e;
+        var bool: c :: output_var = a;
+        var bool: d :: output_var = b;
+        var 0..1: x1;
+        var 0..1: x2;
+        constraint bool2int(c, x1);
+        constraint bool2int(d, x2);
+        constraint int_lin_eq([1, 1], [x1, x2], 1);
+        constraint bool_clause([a, e], []);
+        constraint bool_clause([a], [e]);
+        solve satisfy;
+        """;
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg", lcg);
+      assertTrue(out.contains("c = true;"), lcg + "\n" + out);
+    }
+  }
+
+  @Test
   void aSearchForTheLargestValuesMeetsTheLargestSolutionFirst() throws IOException {
     // any two of the four may be 1; the search tries 1 first, so it meets x = [1, 1, 0, 0] first,
     // which the lex-leader constraints must keep

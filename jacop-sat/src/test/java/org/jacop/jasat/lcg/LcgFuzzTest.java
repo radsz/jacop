@@ -104,6 +104,7 @@ import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBool;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
@@ -448,7 +449,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(26)) {
+      return switch (rnd.nextInt(27)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -529,8 +530,27 @@ class LcgFuzzTest {
                 new IntVar[] {p[0]},
                 new IntVar[] {p[1 + rnd.nextInt(2)]},
                 new int[] {rnd.nextInt(3) - 1});
+        case 25 -> precedenceCost();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // three starts under precedences with lags, earliness and tardiness at most a cost variable
+    private PrecedenceCost precedenceCost() {
+      IntVar[] p = pick(x, 3);
+      List<int[]> prec = new ArrayList<>();
+      for (int j = 1; j < p.length; j++) {
+        for (int i = 0; i < j; i++) {
+          if (rnd.nextBoolean()) {
+            prec.add(new int[] {i, j, rnd.nextInt(3) - 1});
+          }
+        }
+      }
+      int[][] terms = new int[p.length][];
+      for (int i = 0; i < p.length; i++) {
+        terms[i] = new int[] {i, rnd.nextInt(5), rnd.nextInt(3), rnd.nextInt(3)};
+      }
+      return new PrecedenceCost(p, prec.toArray(new int[0][]), terms, intVar("pc", 0, 12));
     }
 
     // routes from depot 0 over two or three other nodes, two arcs on the shared Booleans (few
