@@ -2992,6 +2992,17 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
+181. The automatic LP guide of the FlatZinc front end
+     (--free-config lcg-lp-branching=auto) turns on only when the simplex
+     has value columns. Before, it also turned on for the columns of
+     tried value encodings that the root trial dropped. New
+     LinearRelaxation.simplexValueColumns() and stat
+     lpSimplexValueColumns. This turns the guide off on 43 wide-set
+     instances. At 600 s the same number are solved in both modes;
+     with -f tower 2025 goes from 111 to 24 s and spot5 28 from 25 to
+     12 s, but vrplc9_5_10_s2 goes from 17 to 150 s
+     (lcg-lp-branching=on restores the guide there).
+
 Version 4.11
 =============
 
