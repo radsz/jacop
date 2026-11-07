@@ -3306,6 +3306,40 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void differenceCyclesSurvivePresolveFixingAVariableOfAnArc() throws IOException {
+    // fuzz seed 1300110: x <= y or y < x is a conditional cycle, so DifferenceCycles is posted with
+    // the arc f1 <= x too. Presolve fixes f1, which only the literals of the constraint name, and
+    // the copy in the presolved store got null for it and stopped with an error.
+    String model =
+        """
+        predicate jacop_assignment(array [int] of var int: f,array [int] of var int: invf,\
+        int: index_f,int: index_invf);
+        var 1..2: f1:: output_var;
+        var 1..2: f2:: output_var;
+        var 1..2: g1:: output_var;
+        var 1..2: g2:: output_var;
+        var 4..7: x;
+        var 4..7: y;
+        var 4..7: z;
+        var bool: b;
+        var bool: p;
+        var bool: q;
+        constraint jacop_assignment([f1,f2],[g1,g2],1,1);
+        constraint int_lin_le([-1,1],[x,f1],0);
+        constraint int_lin_le_reif([1,-1],[x,y],0,b);
+        constraint int_lin_ne_reif([1,-1],[x,z],0,p);
+        constraint int_lin_ne_reif([1,-1],[y,z],0,q);
+        solve satisfy;
+        """;
+    for (String lcg : new String[] {"on", "off"}) {
+      // presolve fixes nothing when all solutions are asked for, so one solution is enough
+      String[] out = run(model, "--presolve", "on", "--lcg", lcg);
+      assertFalse(out[0].contains("Error") || out[1].contains("Error"), out[0] + out[1]);
+      assertTrue(out[0].contains("----------"), out[0]);
+    }
+  }
+
+  @Test
   void differenceBoundsKeepEverySolution() throws IOException {
     Random r = new Random(20261031);
     for (int run = 0; run < 150; run++) {

@@ -724,15 +724,39 @@ public class DifferenceCycles extends Constraint
 
   @Override
   public DifferenceCycles copy(VarMap map) {
-    IntVar[] x = new IntVar[xs.length];
-    IntVar[] y = new IntVar[ys.length];
-    IntVar[] b = new IntVar[bs.length];
+    // only the literals are in the scope, so presolve may fix or eliminate a variable of a
+    // difference constraint and give it no counterpart: such an arc is left out, which only loses
+    // cycles, as for an arc of a fixed variable
+    List<IntVar> x = new ArrayList<>();
+    List<IntVar> y = new ArrayList<>();
+    List<Integer> c = new ArrayList<>();
+    List<IntVar> b = new ArrayList<>();
+    List<Integer> v = new ArrayList<>();
     for (int i = 0; i < xs.length; i++) {
-      x[i] = map.get(xs[i]);
-      y[i] = map.get(ys[i]);
-      b[i] = bs[i] == null ? null : map.get(bs[i]);
+      IntVar xi = map.get(xs[i]);
+      IntVar yi = map.get(ys[i]);
+      IntVar bi = bs[i] == null ? null : map.get(bs[i]);
+      if (xi == null || yi == null) {
+        continue;
+      }
+      if (bs[i] != null && bi == null) {
+        // a literal without a counterpart holds always only when it is fixed to its value
+        if (!bs[i].singleton() || bs[i].value() != vs[i]) {
+          continue;
+        }
+      }
+      x.add(xi);
+      y.add(yi);
+      c.add(cs[i]);
+      b.add(bi);
+      v.add(vs[i]);
     }
-    return new DifferenceCycles(x, y, cs, b, vs);
+    return new DifferenceCycles(
+        x.toArray(new IntVar[0]),
+        y.toArray(new IntVar[0]),
+        c.stream().mapToInt(Integer::intValue).toArray(),
+        b.toArray(new IntVar[0]),
+        v.stream().mapToInt(Integer::intValue).toArray());
   }
 
   @Override
