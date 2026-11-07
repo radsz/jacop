@@ -118,6 +118,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.cumulative.Cumulatives;
+import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
@@ -479,6 +480,7 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void applyCumulativeImpliedOptions(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    poseHornFlow(s, d, r, b);
     String p = System.getProperty("fz_cumulative_use_disjunctions");
     if (p != null) {
       useDisjunctions = Boolean.parseBoolean(p);
@@ -487,11 +489,27 @@ class GlobalConstraints implements ParserTreeConstants {
     if (p != null) {
       useCumulativeUnary = Boolean.parseBoolean(p);
     }
+    // both are redundant: local search does not evaluate them
     if (useCumulativeUnary) {
-      impliedCumulativeUnaryConstraints(s, d, r, b);
+      support.implied(() -> impliedCumulativeUnaryConstraints(s, d, r, b));
     }
     if (useDisjunctions) {
-      impliedDisjunctionConstraints(s, d, r, b);
+      support.implied(() -> impliedDisjunctionConstraints(s, d, r, b));
+    }
+  }
+
+  /**
+   * Adds the preemptive flow check {@link HornFlow} to a cumulative, as set by the system property
+   * fz_cumulative_flow: {@code unit} for cumulatives whose tasks all use one unit (Horn's
+   * P|r_j,d_j,pmtn| relaxation), {@code true} for every cumulative, {@code false} (the default) for
+   * none.
+   */
+  private void poseHornFlow(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    String mode = System.getProperty("fz_cumulative_flow", FALSE);
+    boolean unit = Arrays.stream(r).allMatch(v -> v.singleton(1));
+    if ("true".equals(mode) || "unit".equals(mode) && unit) {
+      // redundant: local search does not evaluate it
+      support.implied(() -> support.delayedConstraints.add(new HornFlow(s, d, r, b)));
     }
   }
 
@@ -644,7 +662,7 @@ class GlobalConstraints implements ParserTreeConstants {
   private void addImpliedAlldistinct(IntVar[] v) {
     if (!support.options.getBoundConsistency()
         && (support.domainConsistency || v.length >= CIRCUIT_ALLDISTINCT_MIN_SIZE)) {
-      support.parameterListForAlldistincts.add(v);
+      support.addImpliedAlldistinct(v);
     }
   }
 
@@ -1156,11 +1174,12 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
       // projection then only adds cost (accap), unless all of them cross one line (filters)
+      // the projections are redundant: local search does not evaluate them
       if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
-        poseCumulative(x, lx, ly, span(y, ly));
+        support.implied(() -> poseCumulative(x, lx, ly, span(y, ly)));
       }
       if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
-        poseCumulative(y, ly, lx, span(x, lx));
+        support.implied(() -> poseCumulative(y, ly, lx, span(x, lx)));
       }
     }
     diffnProjections.clear();
@@ -2051,7 +2070,7 @@ class GlobalConstraints implements ParserTreeConstants {
             .getBoundConsistency()) { // we add additional implied constraint if domain consistency
       // is
       // required
-      support.parameterListForAlldistincts.add(f);
+      support.addImpliedAlldistinct(f);
     }
 
     support.delayedConstraints.add(new Assignment(f, invf, indexF, indexInvf));

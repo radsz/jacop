@@ -66,6 +66,8 @@ import org.jacop.constraints.AtMost;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ConvexAllocation;
+import org.jacop.constraints.ConvexCost;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -307,6 +309,8 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingSum),
         Arguments.of("Deviation", balance(false)),
         Arguments.of("Spread", balance(true)),
+        Arguments.of("ConvexAllocation", convexAllocation(false)),
+        Arguments.of("ConvexAllocationLagrangian", convexAllocation(true)),
         Arguments.of(
             "EnergyPrecedence",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::energyPrecedence),
@@ -2523,6 +2527,61 @@ class GlobalConstraintBruteForceTest {
             return total <= t[n];
           },
           "due=" + Arrays.toString(due) + " h=" + Arrays.toString(h) + " c=" + capacity);
+    };
+  }
+
+  /**
+   * ConvexAllocation: sum of x = total and cost &gt;= sum of f[i](x[i]) for random convex costs
+   * (absolute values, squares, dead zones, squared dead zones, affine functions and tables), a
+   * total that is a variable or fixed, and sometimes a repeated variable. With lagrangian the
+   * bounds of x come from the reduced costs only, as for more than EXACT_LIMIT variables.
+   */
+  private static Function<Random, Instance> convexAllocation(boolean lagrangian) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      boolean repeated = n > 1 && random.nextInt(6) == 0;
+      int[][] domains = new int[n + 2][];
+      int lo = -2;
+      int hi = 4;
+      RandomConvexCosts.Cost[] costs = new RandomConvexCosts.Cost[n];
+      for (int i = 0; i < n; i++) {
+        domains[i] = domain(random, lo, hi);
+        costs[i] = RandomConvexCosts.random(random, lo, hi);
+      }
+      int t = -2 + random.nextInt(3 * n + 3);
+      domains[n] = random.nextBoolean() ? new int[] {t} : domain(random, t - 2, t + 3);
+      int start = -10 + random.nextInt(40);
+      domains[n + 1] = domain(random, start, start + 30);
+      StringBuilder text = new StringBuilder("repeated=" + repeated + " lagrangian=" + lagrangian);
+      for (RandomConvexCosts.Cost c : costs) {
+        text.append(" | ").append(c.text());
+      }
+      return new Instance(
+          domains,
+          (store, v) -> {
+            IntVar[] x = Arrays.copyOf(v, n);
+            if (repeated) {
+              x[n - 1] = x[0];
+            }
+            ConvexCost[] f = new ConvexCost[n];
+            for (int i = 0; i < n; i++) {
+              f[i] = costs[i].cost();
+            }
+            ConvexAllocation c = new ConvexAllocation(x, f, v[n], v[n + 1]);
+            c.lagrangianOnly(lagrangian);
+            store.impose(c);
+          },
+          a -> {
+            long total = 0;
+            long cost = 0;
+            for (int i = 0; i < n; i++) {
+              int xi = repeated && i == n - 1 ? a[0] : a[i];
+              total += xi;
+              cost += costs[i].value().applyAsLong(xi);
+            }
+            return total == a[n] && cost <= a[n + 1];
+          },
+          text.toString());
     };
   }
 

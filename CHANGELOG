@@ -2581,6 +2581,12 @@ Version 5.0 (unreleased)
      roster-shifts-bool, roster-sickness) unchanged; wide set 167 -> 168
      solved by default and 163 -> 163 under -f, with chains on 4 of its
      220 instances (the other changes are run-to-run noise).
+     The window rows a posted sequence covers are marked implied (see
+     165), unless a row defines a variable, so local search evaluates
+     the sequence alone; propagation, LCG and the linear relaxation keep
+     the rows. LS only, CSPLib cars at 20 s: 3 -> 5 of 82 solved; default
+     options unchanged (cars 31 -> 31 at 20 s, the 34 other instances
+     with window chains identical at 60 s).
 
 165. Local search (--free-config ls=...) no longer evaluates the
      constraints JaCoP adds itself. The redundant constraints of the
@@ -2659,7 +2665,22 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
-169. Lattice methods for linear equalities.
+169. ChannelBoolSet (jacop_link_set_to_booleans and the set unions found
+     by SetUnionDetector)
+     sets the Boolean of an element to 0 when the element leaves the
+     set's least upper bound; before, the Boolean kept 1 in its domain.
+     Under --lcg it explains its own atoms and failures: a Boolean
+     and its membership literal explain each other, and the cardinality
+     bounds and memberships derived from them are explained by counting
+     the elements in and out of the set (the members fixed at the root
+     counted as constants), instead of a generic reason. On gt-sort
+     n9_ub10_75.0 the generic reasons go from 73,899 of 74,913 to none
+     and the average reason from 41 to 13 atoms (--lcg) and from 22 to
+     6 atoms (-f). Wide set (220, 60 s, paired, scored by section 7 of
+     the scoring rules): --lcg S = +1, -f S = -7 over two repetitions,
+     from one instance (cgt) that posts no set constraint.
+
+170. Lattice methods for linear equalities.
      - LinearIntDom finds the supports of an equality by bitset sumsets
        when that is estimated cheaper than enumerating them: a forward
        pass of shifts gives the reachable partial sums after each
@@ -2715,7 +2736,7 @@ Version 5.0 (unreleased)
        proved in 28 s instead of 58 s (4.4 s instead of 7.4 s with -f),
        harmony canon in 18 s instead of 23 s (36 s instead of 48 s).
 
-170. Scheduling objective bounds. WeightedCompletion takes resource
+171. Scheduling objective bounds. WeightedCompletion takes resource
      uses and a capacity (new WeightedCompletion(s, d, r, w, m, cost));
      with m > 1 it bounds sum w * (s + d) by the bound of Eastman, Even
      and Isaacs for identical machines (W. L. Eastman, S. Even and
@@ -2762,7 +2783,216 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
-171. DiffnK explains its pruning and failures under --lcg by the boxes
+172. Tables in the linear relaxation. The rows TableCliques makes from a
+     table (clique rows of its pair conflicts) now come with the convex
+     hull of the table (Balas, "Disjunctive programming", Annals of
+     Discrete Mathematics 5, 1979; the extended formulation of Bergman,
+     Cire, van Hoeve and Hooker, "Decision Diagrams for Optimization",
+     2016, section 2.2): one LP-only tuple column per live tuple, or the
+     value columns of a position that tells the tuples apart (the index
+     of a 2-D element), sum = 1, [x = v] = sum of the tuples with v for
+     small domains and x = sum t_x lambda for the others. A Boolean that
+     implies values on two or more positions (AndBool in the store, binary
+     clauses under LCG) is tied to the tuples that agree with them. The
+     table rows are tried at the first solve like the value encodings,
+     with their own share of the sparse size cap, and kept only when they
+     raise the bound or make the relaxation infeasible. The tables that
+     ElementTableDetector merges from elements sharing an index are now
+     registered too, so table-layout's width/height pairs reach the LP.
+     -Dorg.jacop.lp.tableEncodings=false turns the hulls off;
+     org.jacop.lp.tableTuples (2000) and org.jacop.lp.tableTupleColumns
+     (20000) limit them. Root bounds: table-layout 2011 rises on all five
+     instances (en-760 1344 to 1427, optimum 1604; en-1000-1615 1855 to
+     2201), depot_placement u159_4 126 to 252, vrplc9_5_10_s2 26 to 28.6,
+     is A3PZaPjnUz 47104 to 50805; physician-scheduling only 1140 to 1145.
+     A 5 s probe of the wide set shows the LP differs on 30 of 220
+     instances; those 30 at 600 s, paired: solved 23 = 23 by default (3
+     better, 0 worse; vrplc9_5_10_s2 proved in 35 s instead of 77 s), 24
+     = 24 with -f (1 better, 3 worse, all three within the spread of runs
+     at other time limits; evm-super-compilation 121 s to 58 s).
+
+173. Local search measures a table (HybridTable) by its distance to the
+     nearest tuple, the number of columns that must change, instead of
+     0/1 (violation degrees, Van Hentenryck and Michel, Constraint-Based
+     Local Search, MIT Press 2005); tables over 50,000 cells stay copy
+     checks. When one column of a table holds a distinct value in every
+     tuple and all cells are equalities, the other columns are defined
+     from it as invariants (as in Comet), so the table always holds; it
+     is listed as K:HybridTable and --free-config ls-keys=0 turns it off.
+     An exact-class CountValuesBounds gets the O(1) value counters of the
+     all different, with a penalty outside its bounds. Local search only,
+     60 s, 54 local-search instances: 24 to 25 with a solution (cars
+     65_09, solved on 4 of 4 seeds against 0 of 3, 2.2x more steps).
+     Wide set at 60 s, -f ls=0.1: 163 to 164 solved, with solutions 192
+     to 192.
+
+174. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
+     sum x_i = total and convex costs f_i (ConvexCost: weighted maxima
+     of affine pieces, their squares, or tables). The minimum of the
+     separable convex allocation is found by the greedy on marginal
+     costs (Hochbaum, "Lower and upper bounds for the allocation problem
+     and other nonlinear optimization problems", Mathematics of
+     Operations Research 19(2), 390-409, 1994); it generalises the
+     bounds of Spread (Pesant and Regin, "SPREAD: a balancing constraint
+     based on statistics", CP 2005, LNCS 3709) and Deviation (Schaus,
+     Deville, Dupont and Regin, "The deviation constraint", CPAIOR 2007,
+     LNCS 4510). The minimum bounds cost, the marginal cost lambda gives
+     reduced costs that bound every x_i, and for up to 64 variables
+     (-Djacop.convexAllocation.exact) each bound of x_i is exact over
+     the integer intervals (bounds(Z)), found by walking x_i away from its
+     minimiser while the others follow greedily. Under LCG it explains
+     its prunings with the Lagrangian bound at lambda.
+     ConvexAllocationDetector posts it in FlatZinc next to the model's
+     own constraints for objectives that sum abs, squares or maxima of
+     affine terms of variables whose sum is fixed or a variable (unit
+     int_lin_eq of 3 or more variables, or bin_packing loads). It is on
+     by default without LCG and off under LCG
+     (-Dorg.jacop.fz.convexAllocation=true/false overrides): with LCG a
+     stronger cost bound cost gbac most of what the alternating restarts
+     find (2020 UD10 417 to 8052). Of the MiniZinc Challenge instances
+     2008-2025 it fires on gbac only. Random balance and gbac instances
+     (50, 30 s, --lcg off): solved 13 to 35, square_b12 14760 to optimum
+     43 in 0.9 s, every squared dead zone solved within 3.4 s; wide set (220, 30 s, --lcg off): 89 to 89 solved, gbac UD3
+     57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
+     the other changes being run-to-run noise.
+
+175. Local search searches the machine sequences of disjunctive scheduling
+     models with critical-path neighbourhoods, the scheduling abstraction
+     of Comet's constraint-based local search (Van Hentenryck and Michel,
+     "Scheduling abstractions for local search", CPAIOR 2004). Machines are
+     cumulative constraints with fixed durations and demands on which no
+     two tasks fit together; precedences are rows s[a] + lag <= s[b]
+     between their starts. A tabu search moves operations of the blocks of
+     one critical path: NS swaps the first two and last two operations of
+     each block (Nowicki and Smutnicki, "A fast taboo search algorithm for
+     the job shop problem", Management Science 42(6), 1996), N1 any two
+     adjacent ones (van Laarhoven, Aarts and Lenstra, Operations Research
+     40(1), 1992), N4 moves one to the front or back of its block
+     (Dell'Amico and Trubian, Annals of Operations Research 41, 1993).
+     Moves are ranked by the estimates of Taillard (ORSA Journal on
+     Computing 6(2), 1994) and Dell'Amico and Trubian from heads and tails,
+     with arc tabu and aspiration. Every better schedule is checked in the
+     store; when the cost is not the makespan or the store rejects the
+     schedules, the general local search takes over. LocalSearch.Builder
+     .scheduling(kinds), --free-config ls-sched=ns+n4 (default), n1, 0;
+     statistic lsSchedule=tasks/machines/iterations. Local search itself
+     stays off by default (ls=0). 46 JSPLIB job shops and 5 Challenge open
+     shops, 60 s: local search alone cuts the mean gap to the best known
+     makespan from 30.81 % to 0.91 % (51 better, 0 worse); -f with
+     ls=0.1 from 2.62 % to 1.04 % (28 / 0). Wide set (220), -f ls=0.1:
+     161 to 162 solved, 2 families better, 4 worse; only openshop tai20-4
+     (optimal in both) and mspsp hard_01 (gives way at once) have such a
+     graph, so the rest is run-to-run noise.
+
+176. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
+     for cumulative scheduling: the preemptive relaxation checked by a
+     maximum flow from tasks to elementary intervals, after W. A. Horn,
+     Some simple scheduling algorithms, Naval Research Logistics
+     Quarterly 21(1) (1974) 177-185, and A. Federgruen and H.
+     Groenevelt, Preemptive scheduling of uniform machines by ordinary
+     network flow techniques, Management Science 32(3) (1986) 341-349;
+     the conditions are those of A. Shioura, V. A. Strusevich and N. V.
+     Shakhlevich, Generalizing Horn's conditions for preemptive
+     scheduling on identical parallel machines via network flow
+     techniques, Networks 83(3) (2024) 527-546. Each task arc carries
+     r_j|I| and each interval arc C|I|, so it covers any resource use;
+     compulsory parts are taken out of the intervals first
+     (useCompulsoryParts, on by default). A failure is explained under
+     LCG by the min cut, as energy over a union of intervals U:
+     sum_j r_j max(|cp_j & U|, p_j - |W_j \ U|) > C|U|, with tasks left
+     out and bounds lifted while the slack allows. FlatZinc option
+     -Dfz_cumulative_flow=false|unit|true (default false) adds it to
+     unit-use cumulatives or to every cumulative. Checks: the flow equals
+     the cut condition enumerated over every U and is sound against brute
+     force (HornFlowTest); 30,000 LCG solves with every explanation
+     checked, 30,382 own explanations, none generic (HornFlowLcgTest);
+     a case in LcgFuzzTest and in ConsistencyChecker. Cumulative's own
+     rules already refute almost every root the flow refutes (0 of 20,000
+     random instances with edge finding on); in search 8 of 500 unit-use
+     instances get smaller trees. Benchmarks (60 s) show no gain: 52
+     unit-use Challenge instances, 25 to 23 solved by default and 25 to
+     24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
+     159 to 160, changes within noise. Hence off by default.
+
+177. The redundant constraints the FlatZinc layer adds next to the
+     model's own are marked implied in the store (Support.implied), so
+     local search does not evaluate them: the CumulativeUnary and the
+     pairwise disjunctions of a cumulative, the cumulative projections
+     of a diffn (with the variables of their spans), the all different
+     of a circuit, subcircuit or assignment (unless the model states the
+     same all different), the OverlappingAlldiff of overlapping
+     all_different pairs, the bin packing conflict cliques, HornFlow
+     and PrecedenceCost. Before, only the constraints of the detectors were
+     marked (item 165). Store.isImposingImplied is new.
+
+178. The experimental cut-based conflict analysis of --lcg
+     (-Djacop.lcg.linear=learn, off by default) also uses the
+     explanation of a constraint that has no linear relation when all its
+     atoms are on 0/1 variables: the clause is then an exact linear row
+     (antecedent literals sum to at most their number minus one, or the
+     conclusion holds), used as the start of a failure or as a reason.
+     -Djacop.lcg.linearClauses=false turns it off. On the 249 mznbench
+     instances, 10 s, failures ending in a learnt sum went from 6.7% to
+     7.0% (--lcg -f) and 5.9% to 6.6% (--lcg); most element, table and
+     scheduling explanations cite several integer bounds and stay out of
+     reach. With learning on, clause rows on against off, 30 s, 18 pairs:
+     cryptanalysis kb128_n5_obj17 finds a solution in 5.6 s instead of
+     none, steiner-triples_13 none instead of one at 21 s, the rest
+     within noise. %% lcg-linear also reports rowConstraints and
+     rowsMillis (root rows made and the time taken).
+
+179. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+     above 1 left out the holes a pruned bound skipped. When the latest
+     start computed for a task (or the cost's minimum) fell on a removed
+     value, the domain moved past it, and the reason (start bounds and
+     cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
+     The reason now adds the != atoms of those holes.
+
+180. Energy cuts of cumulative resources in the LP relaxation
+     (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
+     objective model, LinearRelaxation separates at the root the
+     mean-busy-time inequalities of a set S of tasks released at t or
+     later, sum e_j (S_j + p_j/2) >= tE + E^2/(2C') with e_j = r_j p_j,
+     E = sum e_j and C' = min(C, sum r_j), in the integer form
+     sum e_j S_j >= tE + ceil((E^2 - C' sum e_j p_j)/(2C')), their
+     mirror for deadlines, and for tasks with 2r_j > C the one-machine
+     inequality sum p_j S_j >= tP + (P^2 - sum p_j^2)/2. Durations and
+     uses are their root minimums and the time bounds the root bounds,
+     so every cut is global. For each release date the tasks are sorted
+     by their LP mid points and the most efficacious prefix is taken.
+     References: M. Queyranne, Structure of a simple scheduling
+     polyhedron, Mathematical Programming 58 (1993) 263-285; L. A. Hall,
+     A. S. Schulz, D. B. Shmoys and J. Wein, Scheduling to minimize
+     average completion time: off-line and on-line approximation
+     algorithms, Mathematics of Operations Research 22(3) (1997)
+     513-544; M. X. Goemans, M. Queyranne, A. S. Schulz, M. Skutella and
+     Y. Wang, Single machine scheduling with release dates, SIAM Journal
+     on Discrete Mathematics 15(2) (2002) 165-192. The cuts run in the
+     root rounds of the capacity cuts and are kept only if they raise the
+     bound; stat lpEnergyCuts, switch -Dorg.jacop.lp.energyCuts=false.
+     Bin packing adds the assignment rows load_b = sum_i w_i [bin_i = b]
+     (L. V. Kantorovich, Mathematical methods of organizing and planning
+     production, 1939, Management Science 6(4) (1960) 366-422) as tried
+     LP rows over value columns, off by default
+     (-Dorg.jacop.lp.binpackingRows=true): on gbac the LP bound stays 0
+     with them, as fractional assignments balance the loads, and their
+     value columns turn the auto LP guide on although the rows are dropped
+     (2017 gbac UD8 at 60 s: 89 without, 342 with them).
+     Root bounds go from 0 to 52-1619 on six cargo instances (2013
+     challenge04 0 to 379, optimum 714) and from 66 to 90 on trains12;
+     gbac stays at 0 since fractional assignments balance the loads, and
+     cargo 2017 gains nothing (its pad durations have root minimum 0).
+     Checks: every cut holds for every schedule of 300 random resources,
+     enumerated (EnergyCutsTest); optimum kept by DFS and by LCG with
+     the explanation checker on random scheduling models
+     (LinearRelaxationTest). Benchmarks at 60 s: 34 cargo, gbac and
+     train-scheduling instances, 9 to 10 solved by default and 10 to 10
+     with -f (gap 0.200 to 0.177, cargo 2013 challenge08 29361 to 25751,
+     challenge10 16883 to 14087); wide set (220), 167 to 168 and 161 to
+     161, 7 families better and 3 worse in both modes, all changed
+     instances but one without kept cuts (noise).
+
+181. DiffnK explains its pruning and failures under --lcg by the boxes
      of the rule that fired, instead of by the bounds of all boxes:
      a pairwise separation by the origin and length bounds of the two
      boxes (with the holes skipped by the pruned bound), a volume or fit

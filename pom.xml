@@ -194,6 +194,8 @@ setup to run configuration. -->
                                 <globals.bruteforce.trials>40</globals.bruteforce.trials>
                                 <balance.trials>300</balance.trials>
                                 <cumulative.bruteforce.trials>100</cumulative.bruteforce.trials>
+                                <hornflow.trials>500</hornflow.trials>
+                                <hornflow.lcg.trials>300</hornflow.lcg.trials>
                                 <intervals.trials>20</intervals.trials>
                                 <multicumulative.trials>100</multicumulative.trials>
                                 <weightedsubcircuits.instances>150</weightedsubcircuits.instances>
@@ -208,6 +210,8 @@ setup to run configuration. -->
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
+                                <convex.lcg.runs>300</convex.lcg.runs>
+                                <convex.fz.trials>100</convex.fz.trials>
                                 <prob.trials>300</prob.trials>
                                 <lcg.scheduling.instances>100</lcg.scheduling.instances>
                                 <lp.test.runs>300</lp.test.runs>
@@ -238,10 +242,13 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/ConvexAllocationLcgTest.java</include>
+                                <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
                                 <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
@@ -280,6 +287,8 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/HornFlowTest.java</include>
+                                <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
@@ -415,10 +424,13 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/ConvexAllocationLcgTest.java</include>
+                                <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
                                 <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
@@ -457,6 +469,8 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/HornFlowTest.java</include>
+                                <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
@@ -593,10 +607,13 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/ConvexAllocationLcgTest.java</include>
+                                <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
                                 <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
@@ -635,6 +652,8 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/HornFlowTest.java</include>
+                                <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
@@ -771,10 +790,13 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/ConvexAllocationLcgTest.java</include>
+                                <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
                                 <include>**/VeriPbProofTest.java</include>
                                 <include>**/LinearConflictTest.java</include>
@@ -813,6 +835,8 @@ setup to run configuration. -->
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
                                 <include>**/CumulativeBruteForceTest.java</include>
+                                <include>**/HornFlowTest.java</include>
+                                <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>

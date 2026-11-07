@@ -556,15 +556,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
-      // the cliques of the tables, over columns of their values that the relaxation alone has;
-      // only for an objective, whose bound they raise
+      // the cliques and the convex hulls of the tables, over columns of their values that the
+      // relaxation alone has; only for an objective, whose bound they raise. They are tried at the
+      // first solve with a share of the size cap of their own: table-layout has 172 rows of its
+      // own and 2,702 table rows, which raise its root bound from 1,344 to 1,427
       if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
-        cliques = TableCliques.rows(dictionary.tables());
-        clauses.addAll(cliques.rows());
+        cliques =
+            TableCliques.rows(
+                dictionary.tables(),
+                options.lcg() ? implications(sat.collectedClauses()) : Map.of());
       }
       linearRelaxation =
           LinearRelaxation.of(
-              store, objective, maximize, clauses, splitSums(), options.lpSimplex());
+              store,
+              objective,
+              maximize,
+              clauses,
+              cliques == null ? List.of() : cliques.all(),
+              splitSums(),
+              options.lpSimplex());
     }
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
@@ -579,10 +589,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
                       + cliques.rows().size()
+                      + "\n%%%mzn-stat: lpTableHulls="
+                      + cliques.hulls().size()
                       + "\n%%%mzn-stat: lpTableColumns="
-                      + cliques.columns())
+                      + (cliques.columns() + cliques.hullColumns()))
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  // the implications z -> a of the binary clauses (not z or a) given to the SAT solver
+  private static Map<IntVar, List<IntVar>> implications(List<IntVar[][]> clauses) {
+    Map<IntVar, List<IntVar>> implied = new IdentityHashMap<>();
+    for (IntVar[][] clause : clauses) {
+      if (clause[0].length == 1 && clause[1].length == 1) {
+        implied.computeIfAbsent(clause[1][0], k -> new ArrayList<>()).add(clause[0][0]);
+      }
+    }
+    return implied;
   }
 
   // the block sums of the split linear constraints that are still variables
@@ -657,6 +680,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cutBound
             + "\n%%%mzn-stat: lpCapacityCuts="
             + r.capacityCuts
+            + "\n%%%mzn-stat: lpEnergyCuts="
+            + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
             + "\n%%%mzn-stat: lpBaseBound="
@@ -2819,8 +2844,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
+            .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
             // the redundant constraints of the detectors only add propagation
             .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
+            // the columns of a table with a key column (a row lookup) follow the key
+            .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
@@ -2865,6 +2893,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("% " + localSearch + " " + status);
     }
     return status == LocalSearch.Status.SATISFIED ? localSearch : null;
+  }
+
+  // the scheduling neighbourhoods of local search named by ls-sched (ns, n1, n4 joined by +; 0 off)
+  private static int scheduleKinds(String spec) {
+    int kinds = 0;
+    for (String k : spec.split("\\+")) {
+      kinds |=
+          switch (k.trim()) {
+            case "ns" -> LocalSearch.SCHEDULE_NS;
+            case "n1" -> LocalSearch.SCHEDULE_N1;
+            case "n4" -> LocalSearch.SCHEDULE_N4;
+            case "0", "" -> 0;
+            default -> throw new IllegalArgumentException("ls-sched: unknown neighbourhood " + k);
+          };
+    }
+    return kinds;
   }
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
@@ -2912,7 +2956,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "/"
         + counts[2]
         + "\n%%%mzn-stat: lsEvaluations="
-        + localSearch.getEvaluations();
+        + localSearch.getEvaluations()
+        + scheduleStatistics();
+  }
+
+  // the disjunctive graph of the scheduling search of local search: tasks/machines/iterations
+  private String scheduleStatistics() {
+    long[] counts = localSearch.getScheduleCounts();
+    if (counts[0] == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lsSchedule=" + counts[0] + "/" + counts[1] + "/" + counts[2];
   }
 
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
