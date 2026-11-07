@@ -2814,8 +2814,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
+            // the redundant constraints of the detectors only add propagation
+            .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
+    if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
+      // solutions are moved onto symmetric ones that the symmetry breaking constraints accept
+      SymmetryCanonicalizer canonical = symmetry.canonicalizer();
+      if (!canonical.constraints().isEmpty()) {
+        b.symmetry(canonical.constraints(), canonical);
+      }
+    }
     if (costVar instanceof IntVar c) {
       b.minimize(c).onSolution(ls -> printSolution());
       if (worker != null) {
@@ -2875,6 +2884,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + localSearch.getRestarts()
         + "\n%%%mzn-stat: lsRejected="
         + localSearch.getRejected()
+        + "\n%%%mzn-stat: lsCanonicalized="
+        + localSearch.getCanonicalized()
         + "\n%%%mzn-stat: lsConstraints="
         + counts[0]
         + "/"
