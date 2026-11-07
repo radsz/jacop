@@ -127,6 +127,43 @@ class LocalSearchFlatzincTest {
   }
 
   /**
+   * The redundant constraints the FlatZinc layer adds next to the model's own are marked implied
+   * and local search leaves them out: the cumulative projections of a diffn, and the all different
+   * of a circuit, unless the model itself states that all different.
+   */
+  @Test
+  void redundantConstraintsAreNotEvaluated() throws IOException {
+    StringBuilder squares = new StringBuilder("array [1..4] of int: s = [2,2,2,2];\n");
+    for (int i = 1; i <= 4; i++) {
+      squares.append("var 0..2: x").append(i).append(":: output_var;\n");
+      squares.append("var 0..2: y").append(i).append(":: output_var;\n");
+    }
+    squares.append("constraint jacop_diff2_strict([x1,x2,x3,x4],[y1,y2,y3,y4],s,s);\n");
+    squares.append("solve satisfy;\n");
+    String out = run(squares.toString(), "--lcg", "off", "-f", "-debug", "--search-statistics");
+    assertTrue(out.contains("I:Cumulative=2"), out);
+    assertTrue(out.contains("lsSolutions=1"), out);
+
+    int n = 30;
+    StringBuilder tour = new StringBuilder();
+    StringBuilder next = new StringBuilder("[");
+    for (int i = 1; i <= n; i++) {
+      tour.append("var 1..").append(n).append(": v").append(i).append(":: output_var;\n");
+      next.append(i > 1 ? "," : "").append('v').append(i);
+    }
+    next.append(']');
+    tour.append("constraint jacop_circuit(").append(next).append(");\n");
+    out = run(tour + "solve satisfy;\n", "--lcg", "off", "-f", "-debug", "--search-statistics");
+    assertTrue(out.contains("I:Alldistinct=1"), out);
+    assertTrue(out.contains("lsSolutions=1"), out);
+    // stated by the model too, the all different is the model's
+    String both = tour + "constraint jacop_alldistinct(" + next + ");\nsolve satisfy;\n";
+    out = run(both, "--lcg", "off", "-f", "-debug", "--search-statistics");
+    assertFalse(out.contains("I:Alldistinct"), out);
+    assertTrue(out.contains("lsSolutions=1"), out);
+  }
+
+  /**
    * Local search leaves out the symmetry breaking constraints JaCoP adds to a colouring of a cycle
    * (value precedence, lex-leader of the rotations) and the solution it prints is a colouring.
    */

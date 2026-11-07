@@ -2880,6 +2880,17 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
+176. The redundant constraints the FlatZinc layer adds next to the
+     model's own are marked implied in the store (Support.implied), so
+     local search does not evaluate them: the CumulativeUnary and the
+     pairwise disjunctions of a cumulative, the cumulative projections
+     of a diffn (with the variables of their spans), the all different
+     of a circuit, subcircuit or assignment (unless the model states the
+     same all different), the OverlappingAlldiff of overlapping
+     all_different pairs, the bin packing conflict cliques, HornFlow
+     and PrecedenceCost. Before, only the constraints of the detectors were
+     marked (item 165). Store.isImposingImplied is new.
+
 Version 4.11
 =============
 

@@ -349,7 +349,7 @@ public class Constraints implements ParserTreeConstants {
 
       // earliness and tardiness costs under precedences, redundant; --proof does not encode it
       if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {
-        new PrecedenceCostDetector(support).detect(astTree);
+        support.implied(() -> new PrecedenceCostDetector(support).detect(astTree));
       }
 
       support.detectBinPackingCliques();
