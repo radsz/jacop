@@ -52,6 +52,7 @@ import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
+import org.jacop.fz.constraints.FlowSumsDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
@@ -340,6 +341,12 @@ public class Constraints implements ParserTreeConstants {
       // Gauss-Jordan elimination over the parity constraints, redundant; --proof does not encode it
       if (XorSystemDetector.enabled() && options.proof() == null) {
         new XorSystemDetector(support).detect(astTree);
+      }
+
+      // the flow over sums that form a bipartite graph (games and teams, rows and columns),
+      // redundant; --proof does not encode it
+      if (FlowSumsDetector.enabled() && options.proof() == null) {
+        new FlowSumsDetector(support).detect(astTree);
       }
       store.imposingImplied(false);
 
