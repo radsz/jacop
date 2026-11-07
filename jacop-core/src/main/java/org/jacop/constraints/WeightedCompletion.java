@@ -1051,7 +1051,8 @@ public class WeightedCompletion extends Constraint
    * On a parallel resource the bound reads only the minima of the free starts, the values of the
    * fixed ones and, to prune starts, the maximum of the cost: every schedule within those bounds
    * costs at least the bound, so those atoms explain the minimum of the cost, the latest starts and
-   * a failure. The unary case uses the replayed or generic reason.
+   * a failure, with the holes a pruned bound skipped. The unary case uses the replayed or generic
+   * reason.
    */
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
@@ -1059,6 +1060,13 @@ public class WeightedCompletion extends Constraint
       return false;
     }
     reason(trail, entry, out);
+    // the bound computed by inMax (a start) or inMin (the cost) may lie in a hole: the domain moved
+    // past the holes next to it, which the bounds alone do not imply
+    int kind = trail.kind(entry);
+    if (kind == AtomicTrail.GE || kind == AtomicTrail.LE) {
+      trail.addSkippedHoles(
+          entry, kind == AtomicTrail.GE ? Integer.MIN_VALUE : Integer.MAX_VALUE, out);
+    }
     return true;
   }
 

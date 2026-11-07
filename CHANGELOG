@@ -2902,6 +2902,57 @@ Version 5.0 (unreleased)
      within noise. %% lcg-linear also reports rowConstraints and
      rowsMillis (root rows made and the time taken).
 
+177. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+     above 1 left out the holes a pruned bound skipped. When the latest
+     start computed for a task (or the cost's minimum) fell on a removed
+     value, the domain moved past it, and the reason (start bounds and
+     cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
+     The reason now adds the != atoms of those holes.
+
+178. Energy cuts of cumulative resources in the LP relaxation
+     (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
+     objective model, LinearRelaxation separates at the root the
+     mean-busy-time inequalities of a set S of tasks released at t or
+     later, sum e_j (S_j + p_j/2) >= tE + E^2/(2C') with e_j = r_j p_j,
+     E = sum e_j and C' = min(C, sum r_j), in the integer form
+     sum e_j S_j >= tE + ceil((E^2 - C' sum e_j p_j)/(2C')), their
+     mirror for deadlines, and for tasks with 2r_j > C the one-machine
+     inequality sum p_j S_j >= tP + (P^2 - sum p_j^2)/2. Durations and
+     uses are their root minimums and the time bounds the root bounds,
+     so every cut is global. For each release date the tasks are sorted
+     by their LP mid points and the most efficacious prefix is taken.
+     References: M. Queyranne, Structure of a simple scheduling
+     polyhedron, Mathematical Programming 58 (1993) 263-285; L. A. Hall,
+     A. S. Schulz, D. B. Shmoys and J. Wein, Scheduling to minimize
+     average completion time: off-line and on-line approximation
+     algorithms, Mathematics of Operations Research 22(3) (1997)
+     513-544; M. X. Goemans, M. Queyranne, A. S. Schulz, M. Skutella and
+     Y. Wang, Single machine scheduling with release dates, SIAM Journal
+     on Discrete Mathematics 15(2) (2002) 165-192. The cuts run in the
+     root rounds of the capacity cuts and are kept only if they raise the
+     bound; stat lpEnergyCuts, switch -Dorg.jacop.lp.energyCuts=false.
+     Bin packing adds the assignment rows load_b = sum_i w_i [bin_i = b]
+     (L. V. Kantorovich, Mathematical methods of organizing and planning
+     production, 1939, Management Science 6(4) (1960) 366-422) as tried
+     LP rows over value columns, off by default
+     (-Dorg.jacop.lp.binpackingRows=true): on gbac the LP bound stays 0
+     with them, as fractional assignments balance the loads, and their
+     value columns turn the auto LP guide on although the rows are dropped
+     (2017 gbac UD8 at 60 s: 89 without, 342 with them).
+     Root bounds go from 0 to 52-1619 on six cargo instances (2013
+     challenge04 0 to 379, optimum 714) and from 66 to 90 on trains12;
+     gbac stays at 0 since fractional assignments balance the loads, and
+     cargo 2017 gains nothing (its pad durations have root minimum 0).
+     Checks: every cut holds for every schedule of 300 random resources,
+     enumerated (EnergyCutsTest); optimum kept by DFS and by LCG with
+     the explanation checker on random scheduling models
+     (LinearRelaxationTest). Benchmarks at 60 s: 34 cargo, gbac and
+     train-scheduling instances, 9 to 10 solved by default and 10 to 10
+     with -f (gap 0.200 to 0.177, cargo 2013 challenge08 29361 to 25751,
+     challenge10 16883 to 14087); wide set (220), 167 to 168 and 161 to
+     161, 7 families better and 3 worse in both modes, all changed
+     instances but one without kept cuts (noise).
+
 Version 4.11
 =============
 
