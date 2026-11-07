@@ -31,6 +31,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -85,6 +86,9 @@ public class BalanceDetector implements ParserTreeConstants {
 
   private final List<ASTConstElem> linears = new ArrayList<>();
 
+  // the linear constraints a Deviation or Spread was posted for
+  private final Set<ASTConstElem> handled = Collections.newSetFromMap(new IdentityHashMap<>());
+
   /**
    * It creates a detector reading variables through the given support.
    *
@@ -117,6 +121,15 @@ public class BalanceDetector implements ParserTreeConstants {
     for (ASTConstElem node : linears) {
       total(node);
     }
+  }
+
+  /**
+   * The linear constraints a Deviation or Spread was posted for.
+   *
+   * @return the set of their nodes
+   */
+  public Set<ASTConstElem> handled() {
+    return handled;
   }
 
   private void collect(ASTConstElem node) {
@@ -240,8 +253,9 @@ public class BalanceDetector implements ParserTreeConstants {
       }
     }
     // the terms over their defining variables, or over the arguments themselves
-    if (!balance(t, true, squares, node, equation, e, c, other)) {
-      balance(t, false, squares, node, equation, e, c, other);
+    if (balance(t, true, squares, node, equation, e, c, other)
+        || balance(t, false, squares, node, equation, e, c, other)) {
+      handled.add(node);
     }
   }
 

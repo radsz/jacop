@@ -53,6 +53,8 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ConvexAllocation;
+import org.jacop.constraints.ConvexCost;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountVar;
@@ -547,6 +549,39 @@ class ConsistencyChecker {
       v.addDom(lo, lo);
     }
     return v;
+  }
+
+  /** Sum of x = total and cost &gt;= sum of random convex costs of x, 2 to 4 variables. */
+  private static Model convexAllocation(Store store, Random random, boolean lagrangian) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, -2, 4, random);
+    ConvexCost[] f = new ConvexCost[n];
+    RandomConvexCosts.Cost[] costs = new RandomConvexCosts.Cost[n];
+    for (int i = 0; i < n; i++) {
+      costs[i] = RandomConvexCosts.random(random, -2, 4);
+      f[i] = costs[i].cost();
+    }
+    int t = random.nextInt(2 * n + 2);
+    IntVar total =
+        random.nextBoolean()
+            ? var(store, "t", t, t, random)
+            : var(store, "t", t - 2, t + 3, random);
+    int start = -5 + random.nextInt(30);
+    IntVar cost = var(store, "c", start, start + 25, random);
+    ConvexAllocation c = new ConvexAllocation(x, f, total, cost);
+    c.lagrangianOnly(lagrangian);
+    return new Model(
+        c,
+        a -> {
+          long sum = 0;
+          long value = 0;
+          for (int i = 0; i < n; i++) {
+            sum += a[i];
+            value += costs[i].value().applyAsLong(a[i]);
+          }
+          return sum == a[n] && value <= a[n + 1];
+        },
+        concat(x, new IntVar[] {total, cost}));
   }
 
   /** A chain of 3 or 4 vectors as one LexChain (native) or as pairwise Lex constraints. */
@@ -1087,6 +1122,10 @@ class ConsistencyChecker {
               IntVar z = var(s, "z", -12, 12, r);
               return new Model(new XmulCeqZ(x, c, z), t -> t[0] * c == t[1], new IntVar[] {x, z});
             }),
+        // exact least costs F_i(v) with the others in their intervals (Hochbaum's greedy)
+        new Case("ConvexAllocation", Level.BOUNDS_Z, (s, r) -> convexAllocation(s, r, false)),
+        // reduced costs only: sound, weaker
+        new Case("ConvexAllocationLagrangian", Level.NONE, (s, r) -> convexAllocation(s, r, true)),
         // bounds(D) would need the holes of y, e.g. y = 2 is a hole between the supported 1 and 3
         new Case(
             "XdivYeqZ",
