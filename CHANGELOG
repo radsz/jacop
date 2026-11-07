@@ -2807,6 +2807,36 @@ Version 5.0 (unreleased)
      57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
      the other changes being run-to-run noise.
 
+171. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
+     for cumulative scheduling: the preemptive relaxation checked by a
+     maximum flow from tasks to elementary intervals, after W. A. Horn,
+     Some simple scheduling algorithms, Naval Research Logistics
+     Quarterly 21(1) (1974) 177-185, and A. Federgruen and H.
+     Groenevelt, Preemptive scheduling of uniform machines by ordinary
+     network flow techniques, Management Science 32(3) (1986) 341-349;
+     the conditions are those of A. Shioura, V. A. Strusevich and N. V.
+     Shakhlevich, Generalizing Horn's conditions for preemptive
+     scheduling on identical parallel machines via network flow
+     techniques, Networks 83(3) (2024) 527-546. Each task arc carries
+     r_j|I| and each interval arc C|I|, so it covers any resource use;
+     compulsory parts are taken out of the intervals first
+     (useCompulsoryParts, on by default). A failure is explained under
+     LCG by the min cut, as energy over a union of intervals U:
+     sum_j r_j max(|cp_j & U|, p_j - |W_j \ U|) > C|U|, with tasks left
+     out and bounds lifted while the slack allows. FlatZinc option
+     -Dfz_cumulative_flow=false|unit|true (default false) adds it to
+     unit-use cumulatives or to every cumulative. Checks: the flow equals
+     the cut condition enumerated over every U and is sound against brute
+     force (HornFlowTest); 30,000 LCG solves with every explanation
+     checked, 30,382 own explanations, none generic (HornFlowLcgTest);
+     a case in LcgFuzzTest and in ConsistencyChecker. Cumulative's own
+     rules already refute almost every root the flow refutes (0 of 20,000
+     random instances with edge finding on); in search 8 of 500 unit-use
+     instances get smaller trees. Benchmarks (60 s) show no gain: 52
+     unit-use Challenge instances, 25 to 23 solved by default and 25 to
+     24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
+     159 to 160, changes within noise. Hence off by default.
+
 Version 4.11
 =============
 
