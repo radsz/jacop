@@ -2953,6 +2953,45 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
+179. LexChain gives its own LCG reasons on more chains. The FlatZinc front
+     end shares one variable per constant, so the vectors of
+     SocialGolfers (lex_chain over rows that hold the same constants)
+     counted as having repeated variables, and LexChain refused every
+     reason (the generic reason of all its arguments: 373 atoms on
+     SocialGolfers-08-04-10, 94 % of its reasons). Variables fixed at
+     the root no longer count as repeated. A value of x[i] that lies
+     between the lower chain from x[0] and the upper chain from x[m-1]
+     on neither side alone, but is ruled out by both together, now gets
+     a two-sided reason, and a failure where the two chains cross is
+     explained by the window of vectors around the crossing. Reasons on
+     SocialGolfers-08-04-10 go from 373 to about 7 atoms, generic 94 %
+     to 0 %. Reference: M. Carlsson and N. Beldiceanu, Arc-consistency
+     for a chain of lexicographic ordering constraints, SICS Technical
+     Report T2002-18 (2002). Checks: AtomicTrailTest (repeated constant,
+     both sides), LcgFuzzTest.lexChainReasonsAgreeWithPairwiseSearch
+     (LexChain against pairwise LexOrder with the explanation checker on).
+
+180. The FlatZinc front end restricts the result of int_times to the
+     products of its factors' values when there are at most 4096 value
+     pairs (-Dorg.jacop.fz.productDomains=false turns it off). Molnar
+     (XCSP3 2022) multiplies squares into triple products in 64..262144;
+     with interval domains every product variable had 1,000-3,000 bound
+     literals under --lcg and each conflict ran about 2,300 SAT
+     propagations along those chains. The same search needs 2,198
+     instead of 20,380 literals; Molnar-3-8 is proved in 28 s instead
+     of 70 s and Molnar-4-4 in 26 s instead of 52 s. CP-SAT needs as
+     many conflicts there; the gap is the cost per conflict.
+
+181. The default search under --lcg branches first, with dom/wdeg and
+     the smallest value, on the index variables of variable element
+     constraints when every search variable is an index or a list
+     variable of one (stat lcgElementPositions). LangfordBin (XCSP3
+     2025) places numbers with element constraints from positions p to
+     cells v; dom/wdeg on the cells bumped every list variable on each
+     element failure and never found a solution, while on the positions
+     LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
+     240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
+
 Version 4.11
 =============
 
