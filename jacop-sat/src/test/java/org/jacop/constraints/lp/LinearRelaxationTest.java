@@ -48,6 +48,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.ElementInteger;
@@ -57,10 +58,14 @@ import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.Table;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -1274,6 +1279,114 @@ class LinearRelaxationTest {
     assertThat(checked).isPositive();
   }
 
+  /**
+   * The convex hulls of tables over tuple columns, with the rows that tie a conjunction of their
+   * values to the tuples, bound a linear cost of the table variables and a reward for the
+   * conjunction by its optimum: a table over three variables without a key, an element table with
+   * its index as the key, and z = [x0 = a] and [x1 = b]. The LCG search finds the same optimum with
+   * every explanation checked.
+   */
+  @Test
+  void tableHullsBoundTablesByTheirOptimum() {
+    int raised = 0;
+    int models = 0;
+    long checked = 0;
+    for (int run = 0; run < RUNS / 10; run++) {
+      Long expected = new Hulls(run).optimum();
+      if (expected == null) {
+        continue;
+      }
+      models++;
+      Hulls dfs = new Hulls(run);
+      LinearRelaxation r = dfs.relaxation();
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.rootBound).as("seed %d", run).isCloseTo(expected, offset(1e-6));
+      raised += r.extraRows > 0 && r.rootBound > r.baseBound + 0.5 ? 1 : 0;
+
+      Hulls lcg = new Hulls(run);
+      lcg.store.impose(lcg.relaxation());
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(models).isGreaterThan(RUNS / 40);
+    assertThat(raised).isGreaterThan(RUNS / 100);
+    assertThat(checked).isPositive();
+  }
+
+  // two tables, a conjunction of two values of the first and a linear cost
+  private static final class Hulls {
+    final Store store = new Store();
+    final IntVar[] x = new IntVar[3];
+    final IntVar y;
+    final IntVar index;
+    final IntVar z;
+    final IntVar cost;
+    final List<TableCliques.Table> tables = new ArrayList<>();
+
+    Hulls(long seed) {
+      Random rnd = new Random(seed);
+      for (int i = 0; i < 2; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      // a result with a large domain, so that only its value is tied to the tuples
+      x[2] = new IntVar(store, "x2", 0, 100);
+      int[][] t = new int[2 + rnd.nextInt(8)][3];
+      for (int[] tuple : t) {
+        tuple[0] = rnd.nextInt(4);
+        tuple[1] = rnd.nextInt(4);
+        tuple[2] = 5 * rnd.nextInt(21);
+      }
+      store.impose(new Table(x, t));
+      tables.add(new TableCliques.Table(x, t));
+      // y = a[index], merged with index into a table as the element table detector does
+      index = new IntVar(store, "index", 0, 3);
+      y = new IntVar(store, "y", 0, 100);
+      int[][] e = new int[4][];
+      for (int v = 0; v < 4; v++) {
+        e[v] = new int[] {v, 5 * rnd.nextInt(21)};
+      }
+      IntVar[] ey = {index, y};
+      store.impose(new Table(ey, e));
+      tables.add(new TableCliques.Table(ey, e));
+      IntVar b0 = new IntVar(store, "b0", 0, 1);
+      IntVar b1 = new IntVar(store, "b1", 0, 1);
+      store.impose(new Reified(new XeqC(x[0], rnd.nextInt(4)), b0));
+      store.impose(new Reified(new XeqC(x[1], rnd.nextInt(4)), b1));
+      z = new IntVar(store, "z", 0, 1);
+      store.impose(new AndBoolSimple(b0, b1, z));
+      // cost = w0 x0 + w1 x1 + x2 + y - reward z, the reward making z as large as the LP allows
+      int[] w = {rnd.nextInt(11) - 5, rnd.nextInt(11) - 5, 1, 1, -(1 + rnd.nextInt(60)), -1};
+      cost = new IntVar(store, "cost", -100, 300);
+
+      store.impose(new LinearInt(new IntVar[] {x[0], x[1], x[2], y, z, cost}, w, "==", 0));
+    }
+
+    LinearRelaxation relaxation() {
+      TableCliques.Result rows = TableCliques.rows(tables);
+      return LinearRelaxation.of(
+          store, cost, false, List.of(), rows.all(), Set.of(), LinearRelaxation.Simplex.DENSE);
+    }
+
+    // the least cost by depth-first search, null when there is no solution
+    Long optimum() {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] vars = {x[0], x[1], x[2], index, y, z};
+      if (!search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()), cost)) {
+        return null;
+      }
+      return (long) search.getCostValue();
+    }
+  }
+
   /** Without an objective the counting, all-different and element encodings are not made. */
   @Test
   void satisfactionModelsGetNoTriedValueEncodings() {
@@ -1501,6 +1614,89 @@ class LinearRelaxationTest {
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
       assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
+    }
+  }
+
+  /**
+   * The energy cuts of a cumulative resource raise the root bound of random total completion time
+   * models with release dates (the rows alone give the sum of the release dates and durations), and
+   * keep the optimum under depth-first search and under lazy clause generation with the explanation
+   * checker on.
+   */
+  @Test
+  void energyCutsKeepTheOptimumOfScheduling() {
+    int raised = 0;
+    long checked = 0;
+    for (int run = 0; run < 12; run++) {
+      long expected = new Completion(run).optimum();
+
+      Completion dfs = new Completion(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.capacityBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      raised += r.energyCuts > 0 && r.capacityBound > r.rootBound + 0.5 ? 1 : 0;
+
+      Completion lcg = new Completion(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(raised).isGreaterThan(3);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * A random scheduling model: tasks with release dates, durations and usages on one cumulative
+   * resource, and the sum of their completion times, a linear row, minimized.
+   */
+  private static final class Completion {
+    final Store store = new Store();
+    final IntVar[] s;
+    final IntVar cost;
+
+    Completion(long seed) {
+      Random rnd = new Random(seed);
+      int n = 5 + rnd.nextInt(2);
+      int cap = 1 + rnd.nextInt(2);
+      s = new IntVar[n];
+      IntVar[] d = new IntVar[n];
+      IntVar[] u = new IntVar[n];
+      int[] w = new int[n + 1];
+      for (int j = 0; j < n; j++) {
+        int p = 1 + rnd.nextInt(4);
+        s[j] = new IntVar(store, "s" + j, rnd.nextInt(4), 30);
+        d[j] = new IntVar(store, "d" + j, p, p);
+        int use = 1 + rnd.nextInt(cap);
+        u[j] = new IntVar(store, "u" + j, use, use);
+        w[j] = 1;
+      }
+      store.impose(new Cumulative(s, d, u, new IntVar(store, "cap", cap, cap)));
+      // the completion times, rows of their own, and their sum
+      IntVar[] vars = new IntVar[n + 1];
+      for (int j = 0; j < n; j++) {
+        vars[j] = new IntVar(store, "c" + j, 0, 40);
+        store.impose(
+            new LinearInt(new IntVar[] {vars[j], s[j]}, new int[] {1, -1}, "==", d[j].value()));
+      }
+      cost = new IntVar(store, "cost", 0, 1000);
+      vars[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(vars, w, "==", 0));
+    }
+
+    // the least cost by depth-first search
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(search.labeling(store, new SimpleSelect<>(s, null, new IndomainMin<>()), cost))
           .isTrue();
       return search.getCostValue();
     }
