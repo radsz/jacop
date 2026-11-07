@@ -2762,6 +2762,34 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
+171. Tables in the linear relaxation. The rows TableCliques makes from a
+     table (clique rows of its pair conflicts) now come with the convex
+     hull of the table (Balas, "Disjunctive programming", Annals of
+     Discrete Mathematics 5, 1979; the extended formulation of Bergman,
+     Cire, van Hoeve and Hooker, "Decision Diagrams for Optimization",
+     2016, section 2.2): one LP-only tuple column per live tuple, or the
+     value columns of a position that tells the tuples apart (the index
+     of a 2-D element), sum = 1, [x = v] = sum of the tuples with v for
+     small domains and x = sum t_x lambda for the others. A Boolean that
+     implies values on two or more positions (AndBool in the store, binary
+     clauses under LCG) is tied to the tuples that agree with them. The
+     table rows are tried at the first solve like the value encodings,
+     with their own share of the sparse size cap, and kept only when they
+     raise the bound or make the relaxation infeasible. The tables that
+     ElementTableDetector merges from elements sharing an index are now
+     registered too, so table-layout's width/height pairs reach the LP.
+     -Dorg.jacop.lp.tableEncodings=false turns the hulls off;
+     org.jacop.lp.tableTuples (2000) and org.jacop.lp.tableTupleColumns
+     (20000) limit them. Root bounds: table-layout 2011 rises on all five
+     instances (en-760 1344 to 1427, optimum 1604; en-1000-1615 1855 to
+     2201), depot_placement u159_4 126 to 252, vrplc9_5_10_s2 26 to 28.6,
+     is A3PZaPjnUz 47104 to 50805; physician-scheduling only 1140 to 1145.
+     A 5 s probe of the wide set shows the LP differs on 30 of 220
+     instances; those 30 at 600 s, paired: solved 23 = 23 by default (3
+     better, 0 worse; vrplc9_5_10_s2 proved in 35 s instead of 77 s), 24
+     = 24 with -f (1 better, 3 worse, all three within the spread of runs
+     at other time limits; evm-super-compilation 121 s to 58 s).
+
 Version 4.11
 =============
 
