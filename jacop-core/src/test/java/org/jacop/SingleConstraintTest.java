@@ -8874,6 +8874,51 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /**
+   * Under LCG, all different explains a bound that removes more than 256 values by its Hall sets
+   * (whirlpool d30 under -f gave 14 % of its Alldiff reasons the generic one, 328 atoms on average,
+   * because such atoms were refused).
+   */
+  @Test
+  void alldiffExplainsAWideBoundByHallSets() {
+    Store store = new Store();
+    int k = 300;
+    IntVar[] x = new IntVar[k + 1];
+    for (int i = 0; i < k; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 1000);
+    }
+    IntVar y = new IntVar(store, "y", 1, 1000);
+    x[k] = y;
+    Alldiff alldiff = new Alldiff(x);
+    store.impose(alldiff);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < k; i++) {
+      x[i].domain.inMax(store.level, x[i], k);
+    }
+    assertThat(store.consistency()).isTrue();
+    // the 300 variables in 1..300 take all of these values, so y >= 301 removes 300 values
+    assertThat(y.min()).isEqualTo(k + 1);
+    int found = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) != y || trail.kind(e) != AtomicTrail.GE) {
+        continue;
+      }
+      found++;
+      EntryList reason = new EntryList();
+      assertThat(alldiff.explain(trail, e, reason)).as(trail.atomString(e)).isTrue();
+      List<IntVar> vars = new ArrayList<>();
+      for (int f = 0; f < reason.size(); f++) {
+        assertThat(trail.kind(reason.get(f))).isEqualTo(AtomicTrail.LE);
+        vars.add(trail.variable(reason.get(f)));
+      }
+      assertThat(vars).containsExactlyInAnyOrder(Arrays.copyOf(x, k));
+    }
+    assertThat(found).isEqualTo(1);
+    trail.detach();
+  }
+
+  /**
    * Under LCG, x + y = c explains a hole or a bound of one variable by the mirrored atom of the
    * other (cgt_5_h27 gave 35 % of its XplusYeqC reasons the generic one, with 39 atoms on average).
    */
