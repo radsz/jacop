@@ -32,6 +32,7 @@ package org.jacop.fz;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -104,6 +105,10 @@ public class Tables {
 
   // variables that no constraint uses any more, such as the sums merged into a minimum
   final ArrayList<Var> unusedVariables = new ArrayList<>();
+
+  // variables the detectors add for redundant constraints, which follow from the model's own: the
+  // search of lazy clause generation branches on them last
+  final ArrayList<Var> auxiliaryVariables = new ArrayList<>();
 
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
@@ -352,6 +357,7 @@ public class Tables {
     defaultSearchSetArrays.forEach(a -> t.defaultSearchSetArrays.add(map.get(a)));
     t.definedVariables.addAll(map.get(definedVariables));
     t.unusedVariables.addAll(map.get(unusedVariables));
+    t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.numberBoolVariables = numberBoolVariables;
@@ -809,6 +815,16 @@ public class Tables {
    */
   public List<Routes> lnsRoutes() {
     return lnsRoutes;
+  }
+
+  /**
+   * Adds variables that a detector created for redundant constraints and that follow from the
+   * variables of the model, so that the search of lazy clause generation branches on them last.
+   *
+   * @param vs the variables.
+   */
+  public void addAuxiliaryVariables(Collection<? extends Var> vs) {
+    auxiliaryVariables.addAll(vs);
   }
 
   /**

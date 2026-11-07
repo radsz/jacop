@@ -348,9 +348,16 @@ public final class AdaptiveLns {
       }
     }
     int[] literalNode = new int[routes.literals.length];
+    boolean searched = false;
     for (int k = 0; k < literalNode.length; k++) {
       Integer node = nodeOf.get(routes.literals[k]);
       literalNode[k] = node == null ? -1 : node;
+      searched |= node != null && node < vars.length;
+    }
+    if (!searched) {
+      // arcs that are none of the variables, such as the Booleans the FlatZinc front end adds over
+      // the successors of a giant tour: the circuit itself gives the routes
+      return this;
     }
     long[] termCost = new long[nodes.length];
     for (int k = 0; k < terms.length; k++) {

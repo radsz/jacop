@@ -67,6 +67,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
+import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
@@ -120,6 +121,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
+import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -195,6 +197,8 @@ import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
@@ -8783,5 +8787,116 @@ class SingleConstraintTest extends TestHelper {
         assertThat(Math.abs(x[i].value() - x[j].value())).isGreaterThanOrEqualTo(22);
       }
     }
+  }
+
+  // the own reason of every entry of the constraint (none replayed) and the variables it cites
+  private static Map<IntVar, List<IntVar>> ownReasons(AtomicTrail trail, Constraint c) {
+    Map<IntVar, List<IntVar>> reasons = new LinkedHashMap<>();
+    EntryList reason = new EntryList();
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) != c) {
+        continue;
+      }
+      reason.clear();
+      assertThat(trail.explain(e, reason)).as(trail.atomString(e)).isTrue();
+      assertThat(trail.replayed()).as(trail.atomString(e)).isFalse();
+      List<IntVar> vars = new ArrayList<>();
+      for (int k = 0; k < reason.size(); k++) {
+        vars.add(trail.variable(reason.get(k)));
+      }
+      reasons.put(trail.variable(e), vars);
+    }
+    return reasons;
+  }
+
+  /**
+   * Under LCG, AndBoolSimple and OrBoolSimple explain their atoms themselves (opd flener_et_al
+   * 15_350_100 replayed 91 % of 367,000 AndBoolSimple reasons and gave 31,000 the generic one).
+   */
+  @Test
+  void boolSimpleExplainsItsAtoms() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    AndBoolSimple and = new AndBoolSimple(a, b, r);
+    store.impose(and);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    a.domain.in(store.level, a, 1, 1);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+    // b = 0 because r = 0 and a = 1
+    assertThat(ownReasons(trail, and)).containsExactly(Map.entry(b, List.of(r, a)));
+    trail.detach();
+
+    // a failure: a = 1, b = 1 and r = 0 cite all three
+    Store store1 = new Store();
+    IntVar a1 = new IntVar(store1, "a", 0, 1);
+    IntVar b1 = new IntVar(store1, "b", 0, 1);
+    IntVar r1 = new IntVar(store1, "r", 0, 1);
+    AndBoolSimple and1 = new AndBoolSimple(a1, b1, r1);
+    store1.impose(and1);
+    assertThat(store1.consistency()).isTrue();
+    AtomicTrail trail1 = new AtomicTrail(store1);
+    store1.setLevel(store1.level + 1);
+    a1.domain.in(store1.level, a1, 1, 1);
+    b1.domain.in(store1.level, b1, 1, 1);
+    r1.domain.in(store1.level, r1, 0, 0);
+    EntryList reason = new EntryList();
+    assertThat(trail1.explainFailure(and1, reason)).isTrue();
+    List<IntVar> failure = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      failure.add(trail1.variable(reason.get(k)));
+    }
+    assertThat(failure).containsExactlyInAnyOrder(a1, b1, r1);
+    trail1.detach();
+
+    Store store2 = new Store();
+    IntVar c = new IntVar(store2, "c", 0, 1);
+    IntVar d = new IntVar(store2, "d", 0, 1);
+    IntVar s = new IntVar(store2, "s", 0, 1);
+    OrBoolSimple or = new OrBoolSimple(c, d, s);
+    store2.impose(or);
+    assertThat(store2.consistency()).isTrue();
+    AtomicTrail trail2 = new AtomicTrail(store2);
+    store2.setLevel(store2.level + 1);
+    s.domain.in(store2.level, s, 0, 0);
+    assertThat(store2.consistency()).isTrue();
+    // c = 0 and d = 0, each because s = 0
+    assertThat(ownReasons(trail2, or))
+        .containsExactly(Map.entry(c, List.of(s)), Map.entry(d, List.of(s)));
+    trail2.detach();
+  }
+
+  /**
+   * Under LCG, x + y = c explains a hole or a bound of one variable by the mirrored atom of the
+   * other (cgt_5_h27 gave 35 % of its XplusYeqC reasons the generic one, with 39 atoms on average).
+   */
+  @Test
+  void xPlusYeqCExplainsByTheMirror() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    XplusYeqC sum = new XplusYeqC(x, y, 10);
+    store.impose(sum);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    y.domain.inComplement(store.level, y, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.domain.contains(7)).isFalse();
+    store.setLevel(store.level + 1);
+    y.domain.in(store.level, y, 0, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isEqualTo(5);
+    Map<IntVar, List<IntVar>> reasons = ownReasons(trail, sum);
+    assertThat(reasons).containsOnlyKeys(x);
+    assertThat(reasons.get(x)).containsOnly(y).hasSize(1);
+    trail.detach();
   }
 }

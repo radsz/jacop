@@ -684,6 +684,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
+            + "\n%%%mzn-stat: lpCapacitySearchCuts="
+            + r.capacitySearchCuts
+            + "\n%%%mzn-stat: lpCapacitySeparations="
+            + r.capacitySeparations
             + "\n%%%mzn-stat: lpBaseBound="
             + r.baseBound
             + "\n%%%mzn-stat: lpExtraRows="
@@ -696,6 +700,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pooledCuts
             + "\n%%%mzn-stat: lpValueColumns="
             + r.valueColumns
+            + "\n%%%mzn-stat: lpSimplexValueColumns="
+            + r.simplexValueColumns()
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -2140,7 +2146,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     // decisions from the solution of the linear relaxation: on, off, or auto, on when the
-    // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
+    // simplex has value columns (LP-only 0/1 columns x = v), whose solution names the values: not
+    // the columns of tried encodings that the root trial dropped (gbac UD8 342 instead of 89). On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
     // it in 60 s
@@ -2148,7 +2155,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching) && linearRelaxation.valueColumns > 0);
+                || "auto".equals(lpBranching) && linearRelaxation.simplexValueColumns() > 0);
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2173,6 +2180,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         late.add(costVar);
       }
       lcg.setLateVariables(late);
+    }
+    if (!"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
+      // the Booleans of redundant constraints, such as the arcs of a giant tour's Routes, follow
+      // from the model's variables: branching on them first, as on the model's Booleans, took 53 s
+      // instead of 0.9 s to the first solution of vrplc13_11_15_s3 with -f
+      lcg.setLateVariables(dictionary.auxiliaryVariables);
     }
     if (free) {
       // turns: activity branching changes between the two orders at each restart. Each order wins
