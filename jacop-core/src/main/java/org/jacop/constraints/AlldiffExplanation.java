@@ -63,15 +63,8 @@ final class AlldiffExplanation {
   /** The most edges of the value graph considered. */
   private static final int EDGE_LIMIT = 1 << 20;
 
-  /**
-   * The most removed values of one atom explained one by one. A bound atom of a large domain may
-   * remove hundreds of values; they are checked against the Hall sets, and the values of a Hall set
-   * already found cost one lookup each.
-   */
-  private static final int REMOVED_LIMIT = SPAN_LIMIT;
-
-  /** The most removed values explained by a scan for fixed variables (each value scans all). */
-  private static final int FIXED_SCAN_LIMIT = 256;
+  /** The most removed values of one atom explained one by one. */
+  private static final int REMOVED_LIMIT = 256;
 
   private final AtomicTrail trail;
   private final int position;
@@ -133,8 +126,7 @@ final class AlldiffExplanation {
       return false;
     }
     int bounded = out.size();
-    if (hi - lo < FIXED_SCAN_LIMIT
-        && byFixedVariables(trail, entry, list, y, lo, hi, root, except, out)) {
+    if (byFixedVariables(trail, entry, list, y, lo, hi, root, except, out)) {
       out.sortUnique(mark);
       return true;
     }
