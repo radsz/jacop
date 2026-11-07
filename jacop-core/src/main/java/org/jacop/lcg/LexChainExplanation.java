@@ -42,8 +42,11 @@ import org.jacop.core.IntVar;
  * the vectors up to it. A value of x[i] that no tuple of x[i] reaches above the bound of x[i - 1]
  * is pruned by the domains of x[0..i] alone; symmetrically with the largest tuples from the last
  * vector down. Such a pruning gets the atoms of those vectors as its reason, instead of the atoms
- * of every vector; a value that needs both sides is left to the generic reason. A failure is
- * explained by the vectors up to (or from) the first one with no tuple above (below) its bound.
+ * of every vector. A value that needs both sides, no tuple of x[i] with it lying between the bound
+ * of the vectors below x[i] and that of the vectors above it, gets the atoms of the nearest vectors
+ * on both sides that rule it out. A failure is explained by the vectors up to (or from) the first
+ * one with no tuple above (below) its bound, or by those around a vector whose smallest tuple is
+ * above its largest one.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -161,7 +164,39 @@ public final class LexChainExplanation {
         return true;
       }
     }
+    // both chains have tuples, so some vector has its smallest tuple above its largest one
+    for (int i = 0; i < m; i++) {
+      if (e.crosses(0, m - 1, i)) {
+        int[] window = e.nearestCrossing(i);
+        int from = window[0];
+        int to = window[1];
+        int at = i;
+        e.addRows(from, to, -1, -1, e.shortestPrefix(p -> e.crosses(from, to, at)), out);
+        return true;
+      }
+    }
     return false;
+  }
+
+  /**
+   * Whether the smallest tuple of x[i] above the chain of x[from..i-1] is above the largest one of
+   * x[i] below the chain of x[i+1..to], or one of the chains has no tuples.
+   */
+  private boolean crosses(int from, int to, int i) {
+    int[] low = chainUp(from, i);
+    int[] high = low == null ? null : chainDown(i, to);
+    return low == null || high == null || java.util.Arrays.compare(low, high) > 0;
+  }
+
+  /** The smallest window, growing by 1, 2, 4, ... vectors on each side of x[i], that crosses. */
+  private int[] nearestCrossing(int i) {
+    for (long span = 1; ; span *= 2) {
+      int from = (int) Math.max(0, i - span);
+      int to = (int) Math.min(m - 1, i + span);
+      if (crosses(from, to, i) || (from == 0 && to == m - 1)) {
+        return new int[] {from, to};
+      }
+    }
   }
 
   /**
@@ -311,9 +346,123 @@ public final class LexChainExplanation {
         }
         upper = to < m - 1;
       }
+      if (from < i && to > i) {
+        int start = from;
+        int end = to;
+        if (noneBetween(start, end, i, j, values)) {
+          addRows(
+              start, end, i, j, shortestPrefix(p -> noneBetween(start, end, i, j, values)), out);
+          return true;
+        }
+      }
     }
     out.truncate(mark);
     return false;
+  }
+
+  // the bound of the chain of smallest tuples of x[from..to], or null when it has none
+  private int[] chainUp(int from, int to) {
+    int[] bound = null;
+    for (int k = from; k <= to; k++) {
+      bound = smallestAbove(k, bound);
+      if (bound == null) {
+        return null;
+      }
+    }
+    return bound;
+  }
+
+  // the bound of the chain of largest tuples of x[to] down to x[from], or null when it has none
+  private int[] chainDown(int from, int to) {
+    int[] bound = null;
+    for (int k = to; k >= from; k--) {
+      bound = largestBelow(k, bound);
+      if (bound == null) {
+        return null;
+      }
+    }
+    return bound;
+  }
+
+  // whether, in the current view, no tuple of x[i] with one of the values at j lies between the
+  // bounds of the chains of x[from..i-1] from below and of x[i+1..to] from above (or one of those
+  // chains has no tuples at all)
+  private boolean noneBetween(int from, int to, int i, int j, int[] values) {
+    int[] a = chainUp(from, i - 1);
+    int[] b = a == null ? null : chainDown(i + 1, to);
+    if (a == null || b == null) {
+      return true;
+    }
+    for (int u : values) {
+      if (reachesBetween(i, j, u, a, b)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Whether some tuple t of x[i] with u at j has a {@literal <=} t {@literal <=} b ({@literal <}
+   * for the strict chain). The positions are read in order, keeping whether the prefix of t so far
+   * equals that of a and that of b: four states at most.
+   */
+  private boolean reachesBetween(int i, int j, int u, int[] a, int[] b) {
+    // states: bit 1 = prefix equals a's, bit 2 = prefix equals b's
+    boolean[] state = new boolean[4];
+    state[3] = true;
+    for (int k = 0; k < n; k++) {
+      boolean[] next = new boolean[4];
+      IntDomain d = dom(i, k);
+      for (int s = 0; s < 4; s++) {
+        if (!state[s]) {
+          continue;
+        }
+        boolean eqA = (s & 1) != 0;
+        boolean eqB = (s & 2) != 0;
+        if (!eqA && !eqB) {
+          next[0] = true;
+          continue;
+        }
+        long lo = eqA ? a[k] : Long.MIN_VALUE;
+        long hi = eqB ? b[k] : Long.MAX_VALUE;
+        // t[k] = a[k] keeps the prefix of a, and that of b too when they agree; above b it fails
+        if (eqA && (!eqB || a[k] <= b[k]) && has(d, k == j, u, a[k])) {
+          next[1 | (eqB && a[k] == b[k] ? 2 : 0)] = true;
+        }
+        if (eqB && (!eqA || a[k] <= b[k]) && has(d, k == j, u, b[k])) {
+          next[2 | (eqA && a[k] == b[k] ? 1 : 0)] = true;
+        }
+        if (hasInside(d, k == j, u, lo, hi)) {
+          // strictly between both prefixes: any suffix will do
+          return true;
+        }
+      }
+      state = next;
+    }
+    if (state[0]) {
+      return true;
+    }
+    if (strict) {
+      return false;
+    }
+    return state[1] || state[2] || state[3];
+  }
+
+  // whether position k (fixed to u when it is j) can take value v
+  private static boolean has(IntDomain d, boolean fixed, int u, int v) {
+    return fixed ? u == v : d.contains(v);
+  }
+
+  // whether position k (fixed to u when it is j) has a value strictly between lo and hi
+  private static boolean hasInside(IntDomain d, boolean fixed, int u, long lo, long hi) {
+    if (fixed) {
+      return u > lo && u < hi;
+    }
+    if (lo >= d.max() || hi <= d.min()) {
+      return false;
+    }
+    long first = lo < d.min() ? d.min() : d.nextValue((int) lo);
+    return first < hi && first <= d.max() && first > lo;
   }
 
   // whether, in the current view, no tuple of x[i] with one of the values at j is above the bound

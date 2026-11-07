@@ -882,6 +882,84 @@ class AtomicTrailTest {
   }
 
   /**
+   * lex_chain over [one, a] and [one, b], where one is the same fixed variable in both vectors (the
+   * flattener shares one variable per constant; SocialGolfers fixes the first week this way): a >=
+   * 2 gives b >= 2, explained by LexChain. Before, the repeated constant counted as a repeated
+   * variable and every reason was generic (373 atoms on SocialGolfers-08-04-10).
+   */
+  @Test
+  void lexChainWithARepeatedConstantHasItsOwnReason() {
+    Store store = new Store();
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar a = new IntVar(store, "a", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 3);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(new IntVar[][] {{one, a}, {one, b}}, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a.domain.inMin(store.level, a, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.min()).isEqualTo(2);
+    int bound = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == b && trail.kind(e) == AtomicTrail.GE) {
+        bound = e;
+      }
+    }
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(bound, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+    assertThat(reason.size()).isEqualTo(1);
+    assertThat(trail.variable(reason.get(0))).isEqualTo(a);
+    trail.detach();
+  }
+
+  /**
+   * lex_chain over x0 = [1, 3], x1, x2 = [2, 0] (SocialGolfers): x1 is between them, so x1[1] loses
+   * 1 and 2, which neither side rules out alone ([2, 1] is above x0, [1, 1] below x2). The removals
+   * get their own reason from both neighbours instead of the generic one.
+   */
+  @Test
+  void lexChainPruningByBothSidesHasItsOwnReason() {
+    Store store = new Store();
+    IntVar[][] x = new IntVar[3][2];
+    for (int i = 0; i < 3; i++) {
+      for (int k = 0; k < 2; k++) {
+        x[i][k] = new IntVar(store, "x" + i + "_" + k, 0, 3);
+      }
+    }
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new LexChain(x, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0][0].domain.in(store.level, x[0][0], 1, 1);
+    x[0][1].domain.in(store.level, x[0][1], 3, 3);
+    x[2][0].domain.in(store.level, x[2][0], 2, 2);
+    x[2][1].domain.in(store.level, x[2][1], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1][1].domain.contains(1)).isFalse();
+    assertThat(x[1][1].domain.contains(2)).isFalse();
+    int removal = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == x[1][1]
+          && trail.removedMin(e) <= 1
+          && trail.removedMax(e) >= 1
+          && trail.kind(e) == AtomicTrail.NE) {
+        removal = e;
+      }
+    }
+    assertThat(removal).isNotNegative();
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(removal, reason)).isTrue();
+    assertThat(trail.replayed()).as("explained by LexChain, not by its replay").isFalse();
+    reason.sortUnique(0);
+    for (int r = 0; r < reason.size(); r++) {
+      assertThat(trail.variable(reason.get(r))).isNotEqualTo(x[1][1]);
+    }
+    trail.detach();
+  }
+
+  /**
    * lex_chain over six 0..1 vectors (Cutstock): x5[0] <= 0 moves every x[k][0] down to 0. LexChain
    * prunes them from x4 down to x0, so the reason of each x[k][0] <= 0 is the same atom of x[k + 1]
    * and no reason reads the whole chain.

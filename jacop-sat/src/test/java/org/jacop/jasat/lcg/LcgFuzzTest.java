@@ -1101,6 +1101,102 @@ class LcgFuzzTest {
   }
 
   /**
+   * LexChain explains a pruning that needs both sides of the chain (no tuple of a vector with the
+   * value lies between the bounds of the vectors below and above it) by the vectors around it. On
+   * random chains of three to five short vectors, with column sums and disequalities, LCG with
+   * checked explanations must agree with search over the chain posted as pairwise LexOrder.
+   */
+  @Test
+  void lexChainReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = lexChains(seed, false) != null;
+      Object[] lcg = lexChains(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over
+  // LexChain ({status, own reasons and failures of LexChain})
+  private static Object[] lexChains(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(3);
+    int n = 2 + rnd.nextInt(2);
+    int top = 2 + rnd.nextInt(3);
+    boolean strict = rnd.nextInt(3) == 0;
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    if (lcg) {
+      store.impose(new LexChain(x, strict));
+    } else {
+      for (int i = 0; i + 1 < m; i++) {
+        store.impose(new LexOrder(x[i], x[i + 1], strict));
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i + 1 < m; i++) {
+        int c = 0;
+        for (int j = 0; j < n && c == 0; j++) {
+          c = Integer.compare(solver.value(x[i][j]), solver.value(x[i + 1][j]));
+        }
+        assertThat(strict ? c < 0 : c <= 0)
+            .as("seed %d: vectors %d and %d", seed, i, i + 1)
+            .isTrue();
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("LexChain");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
+  }
+
+  /**
    * AmongSeq explains its pruning and failures by paths and negative cycles of its network. On
    * random small car-sequencing models (sequences over class variables, with repeated variables and
    * exact class counts) LCG with checked explanations must agree with search over the windows

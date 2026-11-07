@@ -58,8 +58,11 @@ import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
@@ -2394,12 +2397,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
+    IntVar[] positions = elementPositions(vars);
+    if (positions.length > 0) {
+      // a model of elements over variable lists only, such as x[p[i]] = i (LangfordBin): dom/wdeg
+      // on the positions p; the list cells follow from them. On the cells, each in every element's
+      // list, dom/wdeg found no Langford sequence of 39 to 120 numbers in 120 s, on the positions
+      // all of them in under 6 s
+      SimpleSelect<IntVar> select =
+          new SimpleSelect<>(positions, new WeightedDegree<>(store), new IndomainMin<>());
+      select.inputOrderTieBreaking = false;
+      return select;
+    }
     SimpleSelect<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[0]), new WeightedDegree<>(store), new IndomainMin<>());
     // ties go to the first variable met, without the input-order lookups per tie
     select.inputOrderTieBreaking = false;
     return select;
+  }
+
+  /**
+   * Returns the index variables, not yet fixed, of the element constraints over variable lists, in
+   * the order the store meets them, when every one of the given variables that is not fixed is in
+   * the scope of such an element; otherwise none.
+   */
+  private IntVar[] elementPositions(List<IntVar> vars) {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<Var> covered = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> indices = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> ordered = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if ((c instanceof ElementVariable || c instanceof ElementVariableFast) && seen.add(c)) {
+          covered.addAll(c.arguments());
+          IntVar index = ((AbstractElement) c).index();
+          if (!index.singleton() && indices.add(index)) {
+            ordered.add(index);
+          }
+        }
+      }
+    }
+    if (ordered.isEmpty()) {
+      return new IntVar[0];
+    }
+    for (IntVar x : vars) {
+      if (!x.singleton() && !covered.contains(x)) {
+        return new IntVar[0];
+      }
+    }
+    return ordered.toArray(new IntVar[0]);
   }
 
   /**
