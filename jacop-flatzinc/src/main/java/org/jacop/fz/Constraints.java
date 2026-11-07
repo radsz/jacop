@@ -260,15 +260,8 @@ public class Constraints implements ParserTreeConstants {
               throw new ModelTimeOut();
             }
             SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
-            if (replaced.contains(snode.jjtGetChild(0))) {
-              continue;
-            }
-            boolean implied = impliedRows.contains(snode.jjtGetChild(0));
-            store.imposingImplied(implied);
-            try {
-              generateConstraint(snode);
-            } finally {
-              store.imposingImplied(false);
+            if (!replaced.contains(snode.jjtGetChild(0))) {
+              generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
             }
           }
         }
@@ -378,6 +371,17 @@ public class Constraints implements ParserTreeConstants {
 
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
+    }
+  }
+
+  // a constraint item, imposed as implied by the others when implied is true
+  private void generateConstraint(SimpleNode constraintWithAnnotations, boolean implied)
+      throws Throwable {
+    store.imposingImplied(implied);
+    try {
+      generateConstraint(constraintWithAnnotations);
+    } finally {
+      store.imposingImplied(false);
     }
   }
 

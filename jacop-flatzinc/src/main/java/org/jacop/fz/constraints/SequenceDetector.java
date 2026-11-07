@@ -198,12 +198,7 @@ public class SequenceDetector implements ParserTreeConstants {
       if (b[2] != q) {
         continue;
       }
-      List<SimpleNode> chainRows = rows.computeIfAbsent(key, k -> new ArrayList<>());
-      for (Window w : chain) {
-        if (w.row != null) {
-          chainRows.add(w.row);
-        }
-      }
+      addRows(rows.computeIfAbsent(key, k -> new ArrayList<>()), chain);
       if (first.kind() != AT_LEAST) {
         b[1] = Math.min(b[1], first.bound());
       }
@@ -242,6 +237,14 @@ public class SequenceDetector implements ParserTreeConstants {
    */
   public Set<SimpleNode> impliedRows() {
     return impliedRows;
+  }
+
+  private static void addRows(List<SimpleNode> rows, List<Window> chain) {
+    for (Window w : chain) {
+      if (w.row != null) {
+        rows.add(w.row);
+      }
+    }
   }
 
   private void post(IntVar[] y, int q, int min, int max) {
