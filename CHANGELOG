@@ -3027,6 +3027,40 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
+181. Capacity cuts of a Routes (item 144) are also separated in search:
+     every few optimal LP solves after the root (from 4, doubled up to
+     1024 while nothing is violated, halved when cuts are found), up to
+     10 cuts go into the row pool, where they age out like other cuts.
+     The mandatory customers are fixed at the root, so these cuts hold
+     for the whole search. New directed multistar cuts over the same
+     sets: Q x(in(S)) >= d(S) + sum over outside customers j of
+     d_j (x(j->S) + x(S->j)), after N. R. Araque, L. Hall and T. L.
+     Magnanti, Capacitated trees, capacitated routing and associated
+     polyhedra, CORE discussion paper 9061 (1990), and A. N. Letchford,
+     R. W. Eglese and J. Lysgaard, Multistars, partial multistars and the
+     capacitated vehicle routing problem, Mathematical Programming 94
+     (2002) 21-40; the separation follows J. Lysgaard, A. N. Letchford
+     and R. W. Eglese, A new branch-and-cut algorithm for the capacitated
+     vehicle routing problem, Mathematical Programming 100 (2004)
+     423-445. A multistar cut is added only for a set whose rounded
+     capacity cut holds: when both competed, the multistar cuts took the
+     slots of the capacity cuts and the root bound fell.
+     -Dorg.jacop.lp.capacitySearch=false and
+     -Dorg.jacop.lp.multistarCuts=false turn them off; statistics
+     lpCapacitySearchCuts and lpCapacitySeparations. Checks: every cut
+     keeps every set of routes of 3,000 random graphs found by
+     enumeration (CapacityCutsTest), and a CVRP keeps its optimum with
+     the LCG explanation checker on. 25 vrp instances of the Challenge,
+     240 s, the default (both on) against both off: -f 13 better / 6
+     worse (objective geomean 0.996), proofs faster (A-n32-k5 171 to
+     58 s); default 9 / 7 (0.999), A-n32-k5 proved. Search cuts alone
+     against both off: -f 13 / 6 (0.997), 2 more proved near the limit;
+     default 9 / 6 (1.000). The multistar cuts are level (against search
+     cuts alone, -f 8 / 10, default 2 / 2). At 60 s the search cuts gave
+     default 16-18 / 2-4 (geomean 0.95); the gain shrinks at 240 s.
+     Energy cuts (item 180) stay at the root. Framed capacity cuts are
+     not separated.
+
 Version 4.11
 =============
 
