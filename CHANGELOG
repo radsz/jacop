@@ -2914,7 +2914,42 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
-177. The redundant constraints the FlatZinc layer adds next to the
+177. The FlatZinc front end finds vehicle routes written as a giant tour
+     (circuit(x) over the customers and a start and an end node per
+     vehicle, with each end node's successor fixed to the next start
+     node: cvrp, vrplc, stochastic-vrp and vrp-submission of the
+     Challenge; P. Kilby and P. Shaw, Vehicle Routing, Handbook of
+     Constraint Programming, 2006) and posts a redundant Routes (item
+     122) over new arc Booleans b[i,j] <-> x[i] = j between customers,
+     with one depot arc out of and into each customer and their degree
+     rows. A quantity accumulated along the tour (T[x[n]] >= T[n] + q[n]
+     with q >= 0, such as the load) gives the demands and the capacity,
+     so the linear relaxation gets the rounded capacity cuts of item 144
+     (J. Lysgaard, A. N. Letchford and R. W. Eglese, Mathematical
+     Programming 100(2), 2004). Each element d = c[x[i]] over a constant
+     array gets the row d = sum c[j] b[i,j], and every accumulated
+     quantity the row sum T[x[n]] = sum T[m] over the nodes, which holds
+     because x is a permutation: it ties an objective written as the
+     arrival times at the end nodes (cvrp) to the arc costs. Root LP
+     bounds go from 0 to 34 on cvrp simple2 (optimal, proved in 224
+     nodes), 0 to 446 on P-n16-k8 (optimum 450), 0 to 661 on A-n37-k5
+     and 0 to 461 on vrp-submission A_4v_22l (best known 481); vrplc
+     9_5_10_s1 61 to 146 (optimum 351, time windows). The new Booleans
+     are branched on last under lazy clause generation, and the route
+     neighbourhoods of LNS keep using the circuit itself.
+     -Dorg.jacop.fz.giantTour=false turns the detection off. 34
+     giant-tour instances of the Challenge, 60 s: optima proved 14 to 19
+     by default and 14 to 20 with -f (A_4v_22l 820 to 481 optimal), 13
+     better / 9 worse by default (objective geomean 0.976) and 13 / 5
+     with -f (0.987); vrplc13_11_20_s4 finds no solution in 60 s in
+     either mode (its first solution comes after 46 s without the
+     detection). Wide set (220, 60 s): the detection fires on the 4
+     giant-tour instances only; solved 166 to 164 by default and 156 to
+     157 with -f, all changes outside them are run-to-run noise
+     (vrplc9_5_10_s2 finds its optimum 329 at 9.7 s instead of 17 s
+     but no longer proves it in 60 s by default).
+
+178. The redundant constraints the FlatZinc layer adds next to the
      model's own are marked implied in the store (Support.implied), so
      local search does not evaluate them: the CumulativeUnary and the
      pairwise disjunctions of a cumulative, the cumulative projections
@@ -2925,7 +2960,7 @@ Version 5.0 (unreleased)
      and PrecedenceCost. Before, only the constraints of the detectors were
      marked (item 165). Store.isImposingImplied is new.
 
-178. The experimental cut-based conflict analysis of --lcg
+179. The experimental cut-based conflict analysis of --lcg
      (-Djacop.lcg.linear=learn, off by default) also uses the
      explanation of a constraint that has no linear relation when all its
      atoms are on 0/1 variables: the clause is then an exact linear row
@@ -2941,14 +2976,14 @@ Version 5.0 (unreleased)
      within noise. %% lcg-linear also reports rowConstraints and
      rowsMillis (root rows made and the time taken).
 
-179. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+180. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
      above 1 left out the holes a pruned bound skipped. When the latest
      start computed for a task (or the cost's minimum) fell on a removed
      value, the domain moved past it, and the reason (start bounds and
      cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
      The reason now adds the != atoms of those holes.
 
-180. Energy cuts of cumulative resources in the LP relaxation
+181. Energy cuts of cumulative resources in the LP relaxation
      (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
      objective model, LinearRelaxation separates at the root the
      mean-busy-time inequalities of a set S of tasks released at t or
