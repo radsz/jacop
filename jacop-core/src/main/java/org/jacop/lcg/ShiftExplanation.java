@@ -36,6 +36,8 @@ import org.jacop.core.IntVar;
  * Explanations of {@code target = source + k} propagated on domains: an atom of the target holds
  * because each value it removes is out of the target's domain, or its counterpart out of the
  * source's domain, before the atom's entry. Equalities, shifts and sums with a fixed term share it.
+ * Mirrors {@code target = k - source} (x + y = c) walk the same way with the counterpart {@code k -
+ * u} of a target value {@code u}.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -61,11 +63,33 @@ public final class ShiftExplanation {
    */
   public static boolean explain(
       AtomicTrail trail, int entry, IntVar target, IntVar source, long k, EntryList out) {
+    return explain(trail, entry, target, source, k, 1, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason of an entry of {@code target}, given {@code target = k -
+   * source}.
+   *
+   * @param trail the trail
+   * @param entry an entry of the target
+   * @param target the variable of the entry
+   * @param source the other variable
+   * @param k the sum of the two variables
+   * @param out where the reason entries are added
+   * @return false when a removed value is out of neither domain before the entry
+   */
+  public static boolean explainMirror(
+      AtomicTrail trail, int entry, IntVar target, IntVar source, long k, EntryList out) {
+    return explain(trail, entry, target, source, k, -1, out);
+  }
+
+  private static boolean explain(
+      AtomicTrail trail, int entry, IntVar target, IntVar source, long k, int sign, EntryList out) {
     int a = trail.value(entry);
     return switch (trail.kind(entry)) {
-      case AtomicTrail.NE -> excluded(trail, entry, target, source, k, a, out);
-      case AtomicTrail.GE -> below(trail, entry, target, source, k, a - 1L, out);
-      default -> above(trail, entry, target, source, k, a + 1L, out);
+      case AtomicTrail.NE -> excluded(trail, entry, target, source, k, sign, a, out);
+      case AtomicTrail.GE -> below(trail, entry, target, source, k, sign, a - 1L, out);
+      default -> above(trail, entry, target, source, k, sign, a + 1L, out);
     };
   }
 
@@ -99,13 +123,42 @@ public final class ShiftExplanation {
    */
   public static boolean disjointBefore(
       AtomicTrail trail, int position, IntVar target, IntVar source, long k, EntryList out) {
-    long lo = Math.max(trail.minBefore(target, position), trail.minBefore(source, position) + k);
-    long hi = Math.min(trail.maxBefore(target, position), trail.maxBefore(source, position) + k);
+    return disjointBefore(trail, position, target, source, k, 1, out);
+  }
+
+  /**
+   * Adds to {@code out} the reason why {@code target = k - source} has no solution now: the bounds
+   * of both variables, and the exclusion of each value in their common range.
+   *
+   * @param trail the trail
+   * @param target one variable
+   * @param source the other variable
+   * @param k the sum of the two variables
+   * @param out where the reason entries are added
+   * @return false when some value of the target has its counterpart in the source
+   */
+  public static boolean explainMirrorFailure(
+      AtomicTrail trail, IntVar target, IntVar source, long k, EntryList out) {
+    return disjointBefore(trail, trail.size(), target, source, k, -1, out);
+  }
+
+  private static boolean disjointBefore(
+      AtomicTrail trail,
+      int position,
+      IntVar target,
+      IntVar source,
+      long k,
+      int sign,
+      EntryList out) {
+    long sourceMin = trail.minBefore(source, position);
+    long sourceMax = trail.maxBefore(source, position);
+    long lo = Math.max(trail.minBefore(target, position), sign > 0 ? sourceMin + k : k - sourceMax);
+    long hi = Math.min(trail.maxBefore(target, position), sign > 0 ? sourceMax + k : k - sourceMin);
     if (hi - lo >= MAX_VALUES) {
       return false;
     }
     for (long u = lo; u <= hi; u++) {
-      if (!excluded(trail, position, target, source, k, u, out)) {
+      if (!excluded(trail, position, target, source, k, sign, u, out)) {
         return false;
       }
     }
@@ -187,20 +240,27 @@ public final class ShiftExplanation {
       IntVar target,
       IntVar source,
       long k,
+      int sign,
       long top,
       EntryList out) {
     long targetMin = trail.minBefore(target, position);
-    long sourceMin = trail.minBefore(source, position) + k;
+    // the least target value with a counterpart in the source's bounds
+    long sourceMin =
+        sign > 0 ? trail.minBefore(source, position) + k : k - trail.maxBefore(source, position);
     for (long u = top; ; u--) {
       if (u < targetMin) {
         trail.addLowerBound(target, position, out);
         return true;
       }
       if (u < sourceMin) {
-        trail.addLowerBound(source, position, out);
+        if (sign > 0) {
+          trail.addLowerBound(source, position, out);
+        } else {
+          trail.addUpperBound(source, position, out);
+        }
         return true;
       }
-      if (top - u >= MAX_VALUES || !excluded(trail, position, target, source, k, u, out)) {
+      if (top - u >= MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
         return false;
       }
     }
@@ -213,32 +273,41 @@ public final class ShiftExplanation {
       IntVar target,
       IntVar source,
       long k,
+      int sign,
       long bottom,
       EntryList out) {
     long targetMax = trail.maxBefore(target, position);
-    long sourceMax = trail.maxBefore(source, position) + k;
+    // the greatest target value with a counterpart in the source's bounds
+    long sourceMax =
+        sign > 0 ? trail.maxBefore(source, position) + k : k - trail.minBefore(source, position);
     for (long u = bottom; ; u++) {
       if (u > targetMax) {
         trail.addUpperBound(target, position, out);
         return true;
       }
       if (u > sourceMax) {
-        trail.addUpperBound(source, position, out);
+        if (sign > 0) {
+          trail.addUpperBound(source, position, out);
+        } else {
+          trail.addLowerBound(source, position, out);
+        }
         return true;
       }
-      if (u - bottom >= MAX_VALUES || !excluded(trail, position, target, source, k, u, out)) {
+      if (u - bottom >= MAX_VALUES || !excluded(trail, position, target, source, k, sign, u, out)) {
         return false;
       }
     }
   }
 
-  // target value u, or its source counterpart u - k, is out before the position
+  // target value u, or its source counterpart (u - k, or k - u for a mirror), is out before the
+  // position
   private static boolean excluded(
       AtomicTrail trail,
       int position,
       IntVar target,
       IntVar source,
       long k,
+      int sign,
       long u,
       EntryList out) {
     if (u < Integer.MIN_VALUE || u > Integer.MAX_VALUE) {
@@ -247,7 +316,7 @@ public final class ShiftExplanation {
     if (trail.excludedBefore(target, (int) u, position, out)) {
       return true;
     }
-    long s = u - k;
+    long s = sign > 0 ? u - k : k - u;
     return s < Integer.MIN_VALUE
         || s > Integer.MAX_VALUE
         || trail.excludedBefore(source, (int) s, position, out);
