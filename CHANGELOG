@@ -2886,6 +2886,13 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
+176. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+     above 1 left out the holes a pruned bound skipped. When the latest
+     start computed for a task (or the cost's minimum) fell on a removed
+     value, the domain moved past it, and the reason (start bounds and
+     cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
+     The reason now adds the != atoms of those holes.
+
 Version 4.11
 =============
 
