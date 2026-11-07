@@ -65,6 +65,7 @@ import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.LinearRelaxation;
+import org.jacop.constraints.lp.LpColumn;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -583,6 +584,57 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                       + cliques.columns())
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  /**
+   * The initial order of activity branching under free search: from the structure of the model
+   * (lcg-init=none|degree|neighbours, lcg-init-scale), then how fractional the relaxation's
+   * solution at the root is on each variable (lcg-init-lp, its scale; 0 for none). The conflicts
+   * then change the order.
+   */
+  private void initialOrder(LcgSolver lcg) {
+    LcgSolver.InitialOrder order =
+        LcgSolver.InitialOrder.valueOf(
+            options.freeConfig("lcg-init", "none").toUpperCase(Locale.ROOT));
+    lcg.setInitialOrder(
+        order,
+        Double.parseDouble(options.freeConfig("lcg-init-scale", "1")),
+        "1".equals(options.freeConfig("lcg-init-literals", "0")),
+        Double.parseDouble(options.freeConfig("lcg-init-restart", "0")));
+    double lpScale = Double.parseDouble(options.freeConfig("lcg-init-lp", "0"));
+    LinearRelaxation lp = linearRelaxation;
+    if (lpScale <= 0 || lp == null) {
+      return;
+    }
+    // the search solves the relaxation at its root: its solution is there at the first restart
+    lp.keepSolutions();
+    lcg.setAtFirstRestart(() -> lpScores(lcg, lp, lpScale));
+  }
+
+  private static void lpScores(LcgSolver lcg, LinearRelaxation lp, double lpScale) {
+    if (lp.rootSolutionColumns() == 0) {
+      return;
+    }
+    int n = lp.rootSolutionColumns();
+    IntVar[] xs = new IntVar[n];
+    double[] score = new double[n];
+    for (int j = 0; j < n; j++) {
+      IntVar x = lp.column(j);
+      if (x instanceof LpColumn c) {
+        if (c.isArc()) {
+          continue;
+        }
+        x = c.variable();
+      }
+      double v = lp.rootSolutionValue(j);
+      double frac = v - Math.floor(v);
+      xs[j] = x;
+      score[j] = 2 * Math.min(frac, 1 - frac);
+      if (score[j] < 1e-6) {
+        score[j] = 0;
+      }
+    }
+    lcg.setInitialScores(xs, score, lpScale);
   }
 
   // the block sums of the split linear constraints that are still variables
@@ -2231,6 +2283,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         options.getTimeOut() > 0
             ? options.getTimeOut()
             : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
+    if (free) {
+      initialOrder(lcg);
+    }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (slowCheck != null) {
@@ -2570,6 +2625,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + setTimesStarts
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
+            + "\n%%%mzn-stat: lcgInitialOrdered="
+            + lcg.initialOrdered
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="

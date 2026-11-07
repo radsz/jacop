@@ -120,6 +120,10 @@ public final class CdclSolver {
   private int chronoLimit = 100;
   private int targetAssigned;
   private double[] activity = new double[0];
+  // per variable: the clauses of two or more literals added by addClause that have it, and the
+  // other literals of those clauses, its degree in the formula's variable graph
+  private int[] occurrences = new int[0];
+  private long[] neighbours = new long[0];
   private byte[] seen = new byte[0];
   private final VarHeap order = new VarHeap();
 
@@ -364,6 +368,8 @@ public final class CdclSolver {
       targetSign = Arrays.copyOf(targetSign, c);
       bestSign = Arrays.copyOf(bestSign, c);
       activity = Arrays.copyOf(activity, c);
+      occurrences = Arrays.copyOf(occurrences, c);
+      neighbours = Arrays.copyOf(neighbours, c);
       seen = Arrays.copyOf(seen, c);
       trail = Arrays.copyOf(trail, c);
       trailPos = Arrays.copyOf(trailPos, c);
@@ -487,6 +493,10 @@ public final class CdclSolver {
         }
       }
       return ok;
+    }
+    for (int i = 0; i < size; i++) {
+      occurrences[c[i] >> 1]++;
+      neighbours[c[i] >> 1] += size - 1;
     }
     if (size == 2) {
       addOriginalBinary(c[0], c[1]);
@@ -2949,6 +2959,43 @@ public final class CdclSolver {
     propagationsAtWalk = propagations;
     System.arraycopy(walker.best(), 0, savedSign, 0, numVars);
     walkNanos += System.nanoTime() - begin;
+  }
+
+  /**
+   * Returns the number of clauses of two or more literals given to {@link #addClause(int[], int)}
+   * that have a variable, satisfied or not at the time.
+   *
+   * @param variable the DIMACS variable
+   * @return its occurrences
+   */
+  public int occurrences(int variable) {
+    return variable <= numVars ? occurrences[variable - 1] : 0;
+  }
+
+  /**
+   * Returns the number of other literals in the clauses counted by {@link #occurrences}: the
+   * variable's degree in the formula's variable incidence graph, with repeats.
+   *
+   * @param variable the DIMACS variable
+   * @return the literals sharing a clause with it
+   */
+  public long neighbours(int variable) {
+    return variable <= numVars ? neighbours[variable - 1] : 0;
+  }
+
+  /**
+   * Adds to the activity of a variable in the solver's decision order, for an initial order that
+   * the conflicts then change, as with the centrality scores of Jamali and Mitchell (SAT 2018).
+   *
+   * @param variable the DIMACS variable
+   * @param a the activity to add, at least 0; the first conflict bumps by 1
+   */
+  public void addActivity(int variable, double a) {
+    int v = variable - 1;
+    activity[v] += a * varInc;
+    if (order.contains(v)) {
+      order.increased(v);
+    }
   }
 
   /**

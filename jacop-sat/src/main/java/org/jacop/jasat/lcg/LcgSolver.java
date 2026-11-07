@@ -373,6 +373,17 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean[] unused;
   private double activityInc = 1;
   private long activityConflicts;
+  // the initial order of activity branching (see setInitialOrder), applied at the first solve
+  private InitialOrder initialOrder = InitialOrder.NONE;
+  private double initialScale = 1;
+  private boolean initialLiterals;
+  private boolean initialApplied;
+  // the initial scores, and the share of them added again at each restart (0 for none)
+  private double[] initialScore;
+  private double initialAtRestart;
+  // scores from outside the constraint graph, such as the relaxation's, by trail id
+  private double[] initialExtra;
+  private double initialExtraScale;
   // variables taken off the heap because they were fixed, with the decision level at the time
   private int[] popped = new int[16];
   private int[] poppedLevel = new int[16];
@@ -2332,6 +2343,10 @@ public final class LcgSolver implements ExternalPropagator {
 
   private int solve(int... assumed) {
     encodeGraphs();
+    if (!initialApplied) {
+      initialApplied = true;
+      applyInitialOrder();
+    }
     startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
@@ -3195,6 +3210,188 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  /** The score of a variable in the constraint graph that starts activity branching. */
+  public enum InitialOrder {
+    /** No score: the variables in the order of their creation until conflicts bump them. */
+    NONE,
+    /** The constraints of the store and the clauses of the solver that have the variable. */
+    DEGREE,
+    /** The variables sharing a constraint of the store or a clause with it, with repeats. */
+    NEIGHBOURS
+  }
+
+  /**
+   * Sets the initial order of activity branching from the structure of the model: each variable
+   * starts with an activity in proportion to its score in the graph of constraints and clauses, the
+   * largest score getting {@code scale}, against 1 for each conflict that bumps a variable at the
+   * start. The conflicts then change the order, as VSIDS decays the initial activity. Jamali and
+   * Mitchell, "Centrality-Based Improvements to CDCL Heuristics" (SAT 2018) start VSIDS from the
+   * betweenness centrality of the variables; the degree is the cheap approximation used here, as
+   * the static degree that dom/wdeg starts from (Boussemart et al., ECAI 2004).
+   *
+   * @param order the score
+   * @param scale the activity of the variable with the largest score
+   * @param literals true to start the solver's own decisions on literals (see {@link
+   *     Branching#LITERALS}) from the score of each atom's variable too
+   */
+  public void setInitialOrder(InitialOrder order, double scale, boolean literals) {
+    setInitialOrder(order, scale, literals, 0);
+  }
+
+  /**
+   * As {@link #setInitialOrder(InitialOrder, double, boolean)}, with the scores added again at each
+   * restart, times {@code atRestart} and the current bump: a prior that keeps its weight against
+   * the recent conflicts instead of decaying.
+   *
+   * @param order the score
+   * @param scale the activity of the variable with the largest score
+   * @param literals true to start the solver's decisions on literals from the scores too
+   * @param atRestart the share of the scores added at each restart, 0 for none
+   */
+  public void setInitialOrder(
+      InitialOrder order, double scale, boolean literals, double atRestart) {
+    initialAtRestart = atRestart;
+    initialOrder = order;
+    initialScale = scale;
+    initialLiterals = literals;
+  }
+
+  /**
+   * Adds scores from outside the constraint graph to the initial order of activity branching (see
+   * {@link #setInitialOrder}), such as how fractional the root solution of a linear relaxation is
+   * on each variable. Set them before solving.
+   *
+   * @param x the variables
+   * @param score their scores, at least 0
+   * @param scale the activity of the variable with the largest score
+   */
+  public void setInitialScores(IntVar[] x, double[] score, double scale) {
+    if (initialExtra == null) {
+      initialExtra = new double[activity.length];
+    }
+    double max = 0;
+    for (double d : score) {
+      max = Math.max(max, d);
+    }
+    if (max <= 0) {
+      return;
+    }
+    for (int k = 0; k < x.length; k++) {
+      int i = idOf(x[k]);
+      if (i >= 0 && score[k] > 0) {
+        initialExtra[i] = Math.max(initialExtra[i], score[k] / max);
+      }
+    }
+    initialExtraScale = scale;
+    if (initialApplied) {
+      // after the start: the scores go on top of the activity the conflicts gave so far
+      if (initialScore == null) {
+        initialScore = new double[activity.length];
+      }
+      for (int i = 0; i < activity.length && i < initialExtra.length; i++) {
+        if (initialExtra[i] > 0) {
+          double a = scale * initialExtra[i];
+          activity[i] += a * activityInc;
+          initialScore[i] += a;
+          initialOrdered++;
+        }
+      }
+      initialExtra = null;
+      rebuildHeap(heap);
+      rebuildHeap(wide);
+      rebuildHeap(lateHeap);
+    }
+  }
+
+  /**
+   * Sets an action run once, at the first restart, such as one that gives scores from the solution
+   * of a linear relaxation that the search solved at the root (see {@link #setInitialScores}).
+   *
+   * @param action the action, or null for none
+   */
+  public void setAtFirstRestart(Runnable action) {
+    atFirstRestart = action;
+  }
+
+  private Runnable atFirstRestart;
+
+  /** Statistics: variables that the initial order gave an activity. */
+  public long initialOrdered;
+
+  private void applyInitialOrder() {
+    int n = activity.length;
+    double[] score = new double[n];
+    if (initialOrder != InitialOrder.NONE) {
+      boolean neighbours = initialOrder == InitialOrder.NEIGHBOURS;
+      Map<Constraint, Integer> arity = new IdentityHashMap<>();
+      Set<Constraint> seenHere = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (int i = 0; i < n; i++) {
+        IntVar x = vars[i];
+        if (x == null || x.singleton() || unused[i]) {
+          continue;
+        }
+        seenHere.clear();
+        var d = x.dom();
+        for (int k = 0; k < d.modelConstraintsToEvaluate.length; k++) {
+          for (int j = d.modelConstraintsToEvaluate[k] - 1; j >= 0; j--) {
+            Constraint c = d.modelConstraints[k][j];
+            if (seenHere.add(c)) {
+              score[i] +=
+                  neighbours
+                      ? Math.max(1, arity.computeIfAbsent(c, cc -> cc.arguments().size()) - 1)
+                      : 1;
+            }
+          }
+        }
+      }
+      for (int dv = 1; dv < litVar.length && dv <= sat.numVars(); dv++) {
+        int i = litVar[dv];
+        if (i >= 0 && i < n) {
+          score[i] += neighbours ? sat.neighbours(dv) : sat.occurrences(dv);
+        }
+      }
+      normalise(score, initialScale);
+    }
+    if (initialExtra != null) {
+      for (int i = 0; i < n && i < initialExtra.length; i++) {
+        score[i] += initialExtraScale * initialExtra[i];
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      if (score[i] > 0) {
+        activity[i] += score[i] * activityInc;
+        initialOrdered++;
+      }
+    }
+    if (initialOrdered == 0) {
+      return;
+    }
+    initialScore = score;
+    rebuildHeap(heap);
+    rebuildHeap(wide);
+    rebuildHeap(lateHeap);
+    if (initialLiterals) {
+      for (int dv = 1; dv < litVar.length && dv <= sat.numVars(); dv++) {
+        int i = litVar[dv];
+        if (i >= 0 && i < n && score[i] > 0) {
+          sat.addActivity(dv, score[i]);
+        }
+      }
+    }
+  }
+
+  private static void normalise(double[] score, double scale) {
+    double max = 0;
+    for (double d : score) {
+      max = Math.max(max, d);
+    }
+    if (max > 0) {
+      for (int i = 0; i < score.length; i++) {
+        score[i] *= scale / max;
+      }
+    }
+  }
+
   /**
    * Makes a run of {@link Branching#ALTERNATE} that improved the best solution keep its turn at the
    * next restart, instead of passing it to the next way of branching.
@@ -3736,6 +3933,11 @@ public final class LcgSolver implements ExternalPropagator {
   @Override
   public void notifyRestart() {
     deleteLpSteps();
+    if (atFirstRestart != null && store.level == baseLevel) {
+      Runnable a = atFirstRestart;
+      atFirstRestart = null;
+      a.run();
+    }
     if (onBound != null && objective >= 0 && store.level == baseLevel) {
       rootBound();
     }
@@ -3767,6 +3969,14 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
+    }
+    if (initialScore != null && initialAtRestart > 0 && store.level == baseLevel) {
+      for (int i = 0; i < initialScore.length; i++) {
+        activity[i] += initialAtRestart * initialScore[i] * activityInc;
+      }
+      rebuildHeap(heap);
+      rebuildHeap(wide);
+      rebuildHeap(lateHeap);
     }
   }
 
