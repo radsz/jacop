@@ -79,9 +79,9 @@ class BinPackingCliqueFlatzincTest {
       }
     }
     // a repeated bin variable merges two items
-    int[] var = new int[n];
+    int[] aVar = new int[n];
     for (int i = 0; i < n; i++) {
-      var[i] = random.nextInt(8) == 0 && i > 0 ? random.nextInt(i) : i;
+      aVar[i] = random.nextInt(8) == 0 && i > 0 ? random.nextInt(i) : i;
     }
 
     StringBuilder fzn = new StringBuilder();
@@ -94,7 +94,7 @@ class BinPackingCliqueFlatzincTest {
     }
     StringBuilder items = new StringBuilder();
     for (int i = 0; i < n; i++) {
-      items.append(i == 0 ? "" : ",").append('x').append(var[i]);
+      items.append(i == 0 ? "" : ",").append('x').append(aVar[i]);
     }
     fzn.append("array [1..")
         .append(n)
@@ -142,18 +142,18 @@ class BinPackingCliqueFlatzincTest {
         x[i] = 1 + c % bins;
         c /= bins;
       }
-      if (fits(x, var, w, cap, bins)) {
+      if (fits(x, aVar, w, cap, bins)) {
         expected.add("x = array1d(1.." + n + ", " + Arrays.toString(x) + ");");
       }
     }
     return new Model(fzn.toString(), expected);
   }
 
-  private static boolean fits(int[] x, int[] var, int[][] w, int[][] cap, int bins) {
+  private static boolean fits(int[] x, int[] aVar, int[][] w, int[][] cap, int bins) {
     for (int d = 0; d < w.length; d++) {
       int[] load = new int[bins];
       for (int i = 0; i < x.length; i++) {
-        load[x[var[i]] - 1] += w[d][i];
+        load[x[aVar[i]] - 1] += w[d][i];
       }
       for (int b = 0; b < bins; b++) {
         if (load[b] > cap[d][b]) {

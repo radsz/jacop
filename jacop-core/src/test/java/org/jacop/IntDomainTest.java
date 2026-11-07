@@ -990,12 +990,12 @@ class IntDomainTest {
         int min = random.nextInt(200) - 100;
         int max = min + random.nextInt(random.nextBoolean() ? 3 : 30);
         domain.unionAdapt(min, max);
-        for (int v = min; v <= max; v++) {
-          values.add(v);
+        for (int localV = min; localV <= max; localV++) {
+          values.add(localV);
         }
         IntervalDomain expected = new IntervalDomain();
-        for (int v : values) {
-          expected.unionAdapt(v, v);
+        for (int localV : values) {
+          expected.unionAdapt(localV, localV);
         }
         assertThat(domain.checkInvariants()).isNull();
         assertThat(domain.getSize()).isEqualTo(values.size());

@@ -151,7 +151,7 @@ public class QueueForward<T extends Constraint> {
         // in Constraint.
         Method m = constraint.getClass().getMethod("queueVariable", int.class, Var.class);
         return m.getDeclaringClass() != Constraint.class;
-      } catch (NoSuchMethodException e) {
+      } catch (NoSuchMethodException _) {
         // Cannot happen: Constraint always declares queueVariable.
         return false;
       }

@@ -552,7 +552,6 @@ class LinearRelaxationTest {
     }
     LinearRelaxation r = LinearRelaxation.of(store, cost, true);
     assertThat(r).isNotNull();
-    // PC assertThat(r.pairCliques).isPositive();
     store.impose(r);
     assertThat(store.consistency()).isTrue();
     assertThat(cost.max()).isEqualTo(best);

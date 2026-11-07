@@ -154,8 +154,8 @@ public class PrecedenceDetector implements ParserTreeConstants {
       case "jacop_reservoir" -> reservoirs.add(node);
       case "int_lin_le" -> linear(node, false);
       case "int_lin_eq" -> linear(node, true);
-      case "int_le" -> difference(var(node, 0), var(node, 1), 0);
-      case "int_lt" -> difference(var(node, 0), var(node, 1), 1);
+      case "int_le" -> difference(aVar(node, 0), aVar(node, 1), 0);
+      case "int_lt" -> difference(aVar(node, 0), aVar(node, 1), 1);
       default -> {
         // not a precedence
       }
@@ -166,7 +166,7 @@ public class PrecedenceDetector implements ParserTreeConstants {
     return (SimpleNode) node.jjtGetChild(i);
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar aVar(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
@@ -174,7 +174,7 @@ public class PrecedenceDetector implements ParserTreeConstants {
     IntVar[] s = support.getVarArray(child(node, 0));
     IntVar[] d = support.getVarArray(child(node, 1));
     IntVar[] r = support.getVarArray(child(node, 2));
-    IntVar b = var(node, 3);
+    IntVar b = aVar(node, 3);
     if (s.length >= 2) {
       cumulatives.add(new IntVar[][] {s, d, r, {b}});
     }

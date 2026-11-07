@@ -107,13 +107,10 @@ class SatPresolveTest {
     store.impose(new XlteqY(x2, x0));
     store.impose(new XlteqY(x1, x0));
     store.impose(new XneqY(x1, x2));
-    //    store.impose(new XlteqY(x3, x1));
     // x1 != x2 and both <= x0 give x0 = 1, then x2 (third clause) and x1 (second clause)
     List<IntVar[][]> clauses = new ArrayList<>();
-    //    clauses.add(new IntVar[][] {{x2, x1}, {x0, x1}});
     clauses.add(new IntVar[][] {{x1}, {x0, x2}});
     clauses.add(new IntVar[][] {{x2, x2, x2}, {x0}});
-    //    clauses.add(new IntVar[][] {{x0, x1, x2}, {x0}});
     IntVar[] vars = {x0, x1, x2, x3};
 
     Derivation d =
@@ -128,15 +125,15 @@ class SatPresolveTest {
     List<List<Integer>> found = new ArrayList<>();
     if (child.consistency()) {
       IntVar[] counterparts = d.counterparts(vars);
-      Runnable record =
+      Runnable rec =
           () -> {
             assertThat(d.returnSolution()).isTrue();
             found.add(values(vars));
           };
       if (counterparts.length == 0) {
-        record.run();
+        rec.run();
       } else {
-        solve(child, counterparts, record);
+        solve(child, counterparts, rec);
       }
     }
     assertThat(found).isEmpty();
@@ -280,15 +277,15 @@ class SatPresolveTest {
     List<List<Integer>> found = new ArrayList<>();
     if (child.consistency()) {
       IntVar[] counterparts = d.counterparts(m.vars());
-      Runnable record =
+      Runnable rec =
           () -> {
             assertThat(d.returnSolution()).as(what).isTrue();
             found.add(values(m.vars()));
           };
       if (counterparts.length == 0) {
-        record.run();
+        rec.run();
       } else {
-        solve(child, counterparts, record);
+        solve(child, counterparts, rec);
       }
     }
     d.discard();

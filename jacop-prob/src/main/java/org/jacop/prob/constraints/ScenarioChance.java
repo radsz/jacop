@@ -706,10 +706,10 @@ public class ScenarioChance extends Constraint
     final boolean hypothesisLower;
     final long hypothesis;
 
-    State(AtomicTrail trail, int position, IntVar var, boolean lower, long hypothesis) {
+    State(AtomicTrail trail, int position, IntVar aVar, boolean lower, long hypothesis) {
       this.trail = trail;
       this.position = position;
-      this.hypothesisVar = var;
+      this.hypothesisVar = aVar;
       this.hypothesisLower = lower;
       this.hypothesis = hypothesis;
       // each bound is looked up on the trail once, not once per scenario

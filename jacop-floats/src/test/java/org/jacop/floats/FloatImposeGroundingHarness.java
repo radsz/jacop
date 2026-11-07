@@ -235,7 +235,7 @@ public final class FloatImposeGroundingHarness {
     try {
       Store store = new Store();
       aliased.build().apply(create(store, vars, new double[n - 1], When.BEFORE_IMPOSE));
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       // the constraint rejects a variable in two roles
       return null;
     }
@@ -468,7 +468,7 @@ public final class FloatImposeGroundingHarness {
           ground(store, x, plan, i -> true);
           phase = "search at level " + (root + 1);
           found = solveAll(store, c.vars(), x);
-        } catch (FailException e) {
+        } catch (FailException _) {
           // the grounding itself is inconsistent; no solutions
         }
         String diff = compare(found, expected);
@@ -523,7 +523,7 @@ public final class FloatImposeGroundingHarness {
       } else if (constraint instanceof SatisfiedPresent s && s.satisfied() != holds) {
         failures.add(where + ": satisfied() is " + s.satisfied() + " but the relation is " + holds);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       if (holds) {
         failures.add(where + ": FailException on impose although the relation holds");
       }
@@ -681,7 +681,7 @@ public final class FloatImposeGroundingHarness {
           values[index] = v;
           enumerate(store, vars, x, index + 1, values, found);
         }
-      } catch (FailException e) {
+      } catch (FailException _) {
         // v is not in the domain
       }
       store.removeLevel(level + 1);

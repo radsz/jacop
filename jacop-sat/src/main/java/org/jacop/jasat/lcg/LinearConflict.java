@@ -77,7 +77,7 @@ final class LinearConflict {
 
   // the current sum: sum coef[id] * x[id] <= rhs over the ids in terms[0..size)
   private long[] coef = new long[0];
-  private IntVar[] var = new IntVar[0];
+  private IntVar[] aVar = new IntVar[0];
   private int[] terms = new int[16];
   private int size;
   private long rhs;
@@ -113,7 +113,7 @@ final class LinearConflict {
   private LinearForm clauseRow(EntryList atoms, int conclusion) {
     List<IntVar> vars = new ArrayList<>();
     List<Long> weights = new ArrayList<>();
-    long rhs = -1;
+    long localRhs = -1;
     for (int k = 0; k <= atoms.size(); k++) {
       int e = k < atoms.size() ? atoms.get(k) : conclusion;
       if (e < 0) {
@@ -136,10 +136,10 @@ final class LinearConflict {
       long sign = k < atoms.size() ? 1 : -1;
       long w = sign * (one ? 1 : -1);
       if (k < atoms.size()) {
-        rhs += 1;
+        localRhs += 1;
       }
       if (!one) {
-        rhs -= sign; // the literal 1 - b
+        localRhs -= sign; // the literal 1 - b
       }
       int i = vars.indexOf(b);
       if (i < 0) {
@@ -153,7 +153,7 @@ final class LinearConflict {
     for (int i = 0; i < ws.length; i++) {
       ws[i] = weights.get(i);
     }
-    return new LinearForm(vars.toArray(new IntVar[0]), ws, rhs, LinearForm.LE);
+    return new LinearForm(vars.toArray(new IntVar[0]), ws, localRhs, LinearForm.LE);
   }
 
   // whether an atom on a 0/1 variable says b = 1 (true), b = 0 (false), or holds always (null)
@@ -507,7 +507,7 @@ final class LinearConflict {
   // the entry giving the bound of the variable the sum uses (its lower bound for a positive
   // coefficient), the earliest one that gives that bound; -1 when the root domain gives it
   private int boundEntry(int id, int position) {
-    IntVar x = var[id];
+    IntVar x = aVar[id];
     if (coef[id] > 0) {
       return trail.earliestLowerBound(x, trail.minBefore(x, position), position);
     }
@@ -519,7 +519,7 @@ final class LinearConflict {
     long s = rhs;
     for (int k = 0; k < size; k++) {
       int id = terms[k];
-      IntVar x = var[id];
+      IntVar x = aVar[id];
       long a = coef[id];
       s =
           Math.subtractExact(
@@ -542,7 +542,7 @@ final class LinearConflict {
     if (id >= coef.length) {
       int n = Math.max(id + 1, 2 * coef.length);
       coef = Arrays.copyOf(coef, n);
-      var = Arrays.copyOf(var, n);
+      aVar = Arrays.copyOf(aVar, n);
       rCoef = Arrays.copyOf(rCoef, n);
     }
   }
@@ -566,7 +566,7 @@ final class LinearConflict {
       }
       int id = trail.id(xs[i]);
       grow(id);
-      var[id] = xs[i];
+      aVar[id] = xs[i];
       if (coef[id] == 0) {
         if (size == terms.length) {
           terms = Arrays.copyOf(terms, 2 * size);
@@ -634,7 +634,7 @@ final class LinearConflict {
       }
       int id = trail.id(xs[i]);
       grow(id);
-      var[id] = xs[i];
+      aVar[id] = xs[i];
       if (rCoef[id] == 0) {
         if (rSize == rTerms.length) {
           rTerms = Arrays.copyOf(rTerms, 2 * rSize);
@@ -671,7 +671,7 @@ final class LinearConflict {
         }
         coef[id] = Math.addExact(coef[id], Math.multiplyExact(rCoef[id], n));
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       clear();
       return false;
     }
@@ -713,7 +713,7 @@ final class LinearConflict {
     IntVar[] xs = new IntVar[size];
     long[] ws = new long[size];
     for (int k = 0; k < size; k++) {
-      xs[k] = var[terms[k]];
+      xs[k] = aVar[terms[k]];
       ws[k] = coef[terms[k]];
     }
     return new LinearForm(xs, ws, rhs, LinearForm.LE);

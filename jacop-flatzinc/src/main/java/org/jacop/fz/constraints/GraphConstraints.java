@@ -222,7 +222,7 @@ class GraphConstraints implements ParserTreeConstants {
     return support.getVarArray((SimpleNode) node.jjtGetChild(i));
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar variable(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
@@ -236,7 +236,7 @@ class GraphConstraints implements ParserTreeConstants {
         new Reachable(
             ints(node, 0),
             ints(node, 1),
-            var(node, 2),
+            variable(node, 2),
             vars(node, 3),
             vars(node, 4),
             integer(node, 5),
@@ -262,7 +262,7 @@ class GraphConstraints implements ParserTreeConstants {
         new Tree(
             ints(node, 0),
             ints(node, 1),
-            var(node, 2),
+            variable(node, 2),
             vars(node, 3),
             vars(node, 4),
             integer(node, 5),
@@ -275,8 +275,8 @@ class GraphConstraints implements ParserTreeConstants {
         new Path(
             ints(node, 0),
             ints(node, 1),
-            var(node, 2),
-            var(node, 3),
+            variable(node, 2),
+            variable(node, 3),
             vars(node, 4),
             vars(node, 5),
             integer(node, 6),
@@ -290,11 +290,11 @@ class GraphConstraints implements ParserTreeConstants {
             ints(node, 0),
             ints(node, 1),
             ints(node, 2),
-            var(node, 3),
-            var(node, 4),
+            variable(node, 3),
+            variable(node, 4),
             vars(node, 5),
             vars(node, 6),
-            var(node, 7),
+            variable(node, 7),
             integer(node, 8),
             directed));
   }
@@ -309,7 +309,7 @@ class GraphConstraints implements ParserTreeConstants {
             null,
             vars(node, 3),
             vars(node, 4),
-            var(node, 5),
+            variable(node, 5),
             integer(node, 6),
             false));
   }
@@ -321,10 +321,10 @@ class GraphConstraints implements ParserTreeConstants {
             ints(node, 0),
             ints(node, 1),
             ints(node, 2),
-            var(node, 3),
+            variable(node, 3),
             vars(node, 4),
             vars(node, 5),
-            var(node, 6),
+            variable(node, 6),
             integer(node, 7),
             true));
   }
@@ -339,7 +339,7 @@ class GraphConstraints implements ParserTreeConstants {
             ints(node, 3),
             null,
             vars(node, 4),
-            var(node, 5),
+            variable(node, 5),
             1,
             false));
   }
@@ -352,9 +352,9 @@ class GraphConstraints implements ParserTreeConstants {
             ints(node, 1),
             ints(node, 2),
             ints(node, 3),
-            var(node, 4),
+            variable(node, 4),
             vars(node, 5),
-            var(node, 6),
+            variable(node, 6),
             1,
             true));
   }

@@ -308,13 +308,13 @@ public class GlobalCardinality extends Constraint
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
-    Integer event = getConsistencyPruningEventFromMap(var);
+  public int getConsistencyPruningEvent(Var aVar) {
+    Integer event = getConsistencyPruningEventFromMap(aVar);
     if (event != null) {
       return event;
     }
     for (IntVar v : list) {
-      if (v == var) {
+      if (v == aVar) {
         return IntDomain.ANY;
       }
     }

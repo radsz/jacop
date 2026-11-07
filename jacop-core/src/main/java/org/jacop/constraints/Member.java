@@ -393,9 +393,9 @@ public class Member extends PrimitiveConstraint implements Copyable<Member>, Exp
     if (aliased()) {
       return false;
     }
-    int position = trail.size();
+    int localPosition = trail.size();
     for (IntVar y : x) {
-      if (!disjoint(trail, y, position, out)) {
+      if (!disjoint(trail, y, localPosition, out)) {
         return false;
       }
     }

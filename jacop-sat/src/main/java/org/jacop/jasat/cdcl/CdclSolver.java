@@ -1004,15 +1004,15 @@ public final class CdclSolver {
       }
     }
     int conflict = NO_CONFLICT;
-    final byte[] vals = this.vals;
-    final int[] mem = this.mem;
+    final byte[] localVals = this.vals;
+    final int[] localMem = this.mem;
     while (qhead < trailSize) {
       int falseLit = trail[qhead++] ^ 1;
       propagations++;
       int[] bs = binWatches[falseLit];
       for (int b = binSize[falseLit] - 1; b >= 0; b--) {
         int other = bs[b];
-        int ov = vals[other];
+        int ov = localVals[other];
         if (ov > 0) {
           continue;
         }
@@ -1037,47 +1037,47 @@ public final class CdclSolver {
         int blocker = ws[i];
         int ref = ws[i + 1];
         i += 2;
-        int bv = vals[blocker];
+        int bv = localVals[blocker];
         if (bv > 0) {
           ws[j++] = blocker;
           ws[j++] = ref;
           continue;
         }
         int lits = ref + HEADER;
-        if (mem[lits] == falseLit) {
-          mem[lits] = mem[lits + 1];
-          mem[lits + 1] = falseLit;
+        if (localMem[lits] == falseLit) {
+          localMem[lits] = localMem[lits + 1];
+          localMem[lits + 1] = falseLit;
         }
-        int first = mem[lits];
-        int fv = vals[first];
+        int first = localMem[lits];
+        int fv = localVals[first];
         if (first != blocker && fv > 0) {
           ws[j++] = first;
           ws[j++] = ref;
           continue;
         }
-        int size = mem[ref + SIZE];
-        int pos = mem[ref + POS];
+        int size = localMem[ref + SIZE];
+        int pos = localMem[ref + POS];
         int k = pos;
         int found = -1;
         for (; k < size; k++) {
-          if (vals[mem[lits + k]] >= 0) {
+          if (localVals[localMem[lits + k]] >= 0) {
             found = k;
             break;
           }
         }
         if (found < 0) {
           for (k = 2; k < pos; k++) {
-            if (vals[mem[lits + k]] >= 0) {
+            if (localVals[localMem[lits + k]] >= 0) {
               found = k;
               break;
             }
           }
         }
         if (found >= 0) {
-          mem[ref + POS] = found;
-          int w = mem[lits + found];
-          mem[lits + 1] = w;
-          mem[lits + found] = falseLit;
+          localMem[ref + POS] = found;
+          int w = localMem[lits + found];
+          localMem[lits + 1] = w;
+          localMem[lits + found] = falseLit;
           addWatch(w, first, ref);
           continue;
         }
@@ -1090,7 +1090,7 @@ public final class CdclSolver {
         if (chrono) {
           int lvl = 0;
           for (k = 1; k < size; k++) {
-            lvl = Math.max(lvl, level[mem[lits + k] >> 1]);
+            lvl = Math.max(lvl, level[localMem[lits + k] >> 1]);
           }
           assignAt(first, ref, lvl);
         } else {

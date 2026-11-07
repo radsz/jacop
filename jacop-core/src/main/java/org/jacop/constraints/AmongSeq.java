@@ -859,7 +859,7 @@ public class AmongSeq extends Constraint
     allComponents = false;
     rootCount = 0;
 
-    boolean changed = false;
+    boolean localChanged = false;
     for (int i = firstFree; i <= lastFree; i++) {
       if (lb[i] == ub[i]
           || visit[i] != visitStamp
@@ -876,13 +876,13 @@ public class AmongSeq extends Constraint
       }
       // the value agrees with the solution, so no window is violated
       trailAndSet(store.level, i, value, value);
-      changed = true;
+      localChanged = true;
       if (hasDuplicates) {
         // the other positions of x are read again by the next round
         queueVariable(store.level, x);
       }
     }
-    return changed;
+    return localChanged;
   }
 
   @Override

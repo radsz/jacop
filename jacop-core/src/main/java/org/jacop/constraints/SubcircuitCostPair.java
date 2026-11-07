@@ -185,12 +185,12 @@ public class SubcircuitCostPair extends Constraint {
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
-    Integer event = getConsistencyPruningEventFromMap(var);
+  public int getConsistencyPruningEvent(Var variable) {
+    Integer event = getConsistencyPruningEventFromMap(variable);
     if (event != null) {
       return event;
     }
-    return var == cost[0] || var == cost[1] ? IntDomain.BOUND : IntDomain.ANY;
+    return variable == cost[0] || variable == cost[1] ? IntDomain.BOUND : IntDomain.ANY;
   }
 
   @Override

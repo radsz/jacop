@@ -56,9 +56,9 @@ class DomainTrailTest {
             entry,
             trail.getInt(entry, 0),
             trail.getInt(entry, 1),
-            trail.getInt(entry, DomainTrail.INTS - 1),
+            trail.getInt(entry, DomainTrail.INTS_PER_ENTRY - 1),
             trail.getLong(entry),
-            trail.getObject(entry, DomainTrail.OBJECTS - 1) instanceof Integer i ? i : -1
+            trail.getObject(entry, DomainTrail.OBJECTS_PER_ENTRY - 1) instanceof Integer i ? i : -1
           });
     }
   }
@@ -74,9 +74,9 @@ class DomainTrailTest {
       for (int k = 0; k < perLevel; k++) {
         int entry = trail.push(r, k, level);
         assertThat(entry).isEqualTo((level - 1) * perLevel + k);
-        trail.setInt(entry, DomainTrail.INTS - 1, -entry);
+        trail.setInt(entry, DomainTrail.INTS_PER_ENTRY - 1, -entry);
         trail.setLong(entry, 1L << 40 | entry);
-        trail.setObject(entry, DomainTrail.OBJECTS - 1, entry * 3);
+        trail.setObject(entry, DomainTrail.OBJECTS_PER_ENTRY - 1, entry * 3);
       }
     }
     assertThat(trail.size()).isEqualTo(levels * perLevel);
@@ -95,8 +95,8 @@ class DomainTrailTest {
     // the space of popped entries is used again, with no stale objects
     int entry = trail.push(r, 7, levels);
     assertThat(entry).isEqualTo((levels - 2) * perLevel);
-    assertThat(trail.getObject(entry, DomainTrail.OBJECTS - 1)).isNull();
-    assertThat(trail.getInt(entry - 1, DomainTrail.INTS - 1)).isEqualTo(-(entry - 1));
+    assertThat(trail.getObject(entry, DomainTrail.OBJECTS_PER_ENTRY - 1)).isNull();
+    assertThat(trail.getInt(entry - 1, DomainTrail.INTS_PER_ENTRY - 1)).isEqualTo(-(entry - 1));
 
     r.undone.clear();
     trail.removeLevel(1);

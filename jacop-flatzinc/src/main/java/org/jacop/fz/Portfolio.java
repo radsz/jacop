@@ -104,7 +104,7 @@ final class Portfolio {
   /** The most threads the portfolio uses: the options given and each setting above. */
   static final int MAX_THREADS = CONFIGS.length + 1;
 
-  private static final String COMPLETE = "==========";
+  private static final String SEARCH_COMPLETE = "==========";
 
   /** The value shared for a variable that is not fixed in a solution. */
   static final int UNKNOWN = Integer.MIN_VALUE;
@@ -325,7 +325,7 @@ final class Portfolio {
           if (gap != null) {
             gap.optimal(); // a thread proved the best solution optimal
           }
-          s.append(COMPLETE).append('\n');
+          s.append(SEARCH_COMPLETE).append('\n');
         } else if (timedOut) {
           s.append("%% =====TIME-OUT=====\n");
         }
@@ -778,7 +778,7 @@ final class Portfolio {
     public void write(int b) {
       if (b == '\n') {
         String l = line.toString().strip();
-        if (COMPLETE.equals(l) || UNSATISFIABLE.equals(l)) {
+        if (SEARCH_COMPLETE.equals(l) || UNSATISFIABLE.equals(l)) {
           complete = true;
         }
         line.setLength(0);

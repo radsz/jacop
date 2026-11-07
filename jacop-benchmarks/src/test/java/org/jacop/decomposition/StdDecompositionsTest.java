@@ -211,7 +211,7 @@ class StdDecompositionsTest {
 
     d = new StringBuilder();
     String s = vars(d, "s", 4, "0..4");
-    String dur = vars(d, "d", 2, "0..2");
+    vars(d, "d", 2, "0..2");
     String o = vars(d, "o", 4, "bool");
     String r = "[2,1,1,2]";
     models.add(

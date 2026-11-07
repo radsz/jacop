@@ -178,9 +178,9 @@ class RouteNeighbourhoodsTest {
     assertEquals(1, lns.routings().size());
     withSolution(lns);
     RouteStructure r = lns.routings().get(0);
-    assertEquals(6, r.customers());
+    assertEquals(6, r.customerCount());
     Set<String> found = new HashSet<>();
-    for (int[] route : r.routes()) {
+    for (int[] route : r.bestRoutes()) {
       found.add(java.util.Arrays.toString(route));
     }
     assertEquals(Set.of("[1, 2]", "[3, 4]", "[5, 6]"), found);

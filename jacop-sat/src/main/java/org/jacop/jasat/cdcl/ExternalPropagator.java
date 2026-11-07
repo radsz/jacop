@@ -117,10 +117,10 @@ public interface ExternalPropagator {
   /**
    * The integer variable whose atom a solver variable is, for semantic UIPs.
    *
-   * @param var the solver variable, from 1
+   * @param aVar the solver variable, from 1
    * @return a non-negative index shared by the atoms of one integer variable, or -1 for none
    */
-  default int integerVariable(int var) {
+  default int integerVariable(int aVar) {
     return -1;
   }
 

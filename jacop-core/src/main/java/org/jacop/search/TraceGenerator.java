@@ -836,14 +836,14 @@ public class TraceGenerator<T extends Var>
     }
   }
 
-  private int writeVariableVisualization(int visualizerState, int index, Var var)
+  private int writeVariableVisualization(int visualizerState, int index, Var aVar)
       throws SAXException {
     AttributesImpl vAtts = new AttributesImpl();
     vAtts.addAttribute("", "", "index", ATTR_TYPE_CDATA, "" + (index + 1));
-    if (var instanceof IntVar v) {
+    if (aVar instanceof IntVar v) {
       writeIntVarVisualization(vAtts, v);
     } else {
-      writeNonIntVarVisualization(vAtts, var);
+      writeNonIntVarVisualization(vAtts, aVar);
     }
     return visualizerState + 1;
   }

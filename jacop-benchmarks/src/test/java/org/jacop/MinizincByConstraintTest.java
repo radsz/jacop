@@ -140,6 +140,7 @@ class MinizincByConstraintTest {
               try {
                 Files.deleteIfExists(Path.of(outputFile));
               } catch (IOException _) {
+                // best effort clean-up of a temporary file
               }
             }
             System.gc();
