@@ -2601,6 +2601,21 @@ Version 5.0 (unreleased)
      rules): --lcg S = +7, -f S = -2 over two repetitions, with every
      decided instance outside the instances whose reasons changed.
 
+167. Local search measures a table (HybridTable) by its distance to the
+     nearest tuple, the number of columns that must change, instead of
+     0/1 (violation degrees, Van Hentenryck and Michel, Constraint-Based
+     Local Search, MIT Press 2005); tables over 50,000 cells stay copy
+     checks. When one column of a table holds a distinct value in every
+     tuple and all cells are equalities, the other columns are defined
+     from it as invariants (as in Comet), so the table always holds; it
+     is listed as K:HybridTable and --free-config ls-keys=0 turns it off.
+     An exact-class CountValuesBounds gets the O(1) value counters of the
+     all different, with a penalty outside its bounds. Local search only,
+     60 s, 54 local-search instances: 24 to 25 with a solution (cars
+     65_09, solved on 4 of 4 seeds against 0 of 3, 2.2x more steps).
+     Wide set at 60 s, -f ls=0.1: 163 to 164 solved, with solutions 192
+     to 192.
+
 Version 4.11
 =============
 
