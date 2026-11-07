@@ -393,6 +393,43 @@ public class Binpacking extends Constraint
   }
 
   /**
+   * Returns the bin variables of the items with a positive weight; items that share a variable are
+   * one item whose weight is their sum.
+   *
+   * @return the bin variables, a copy
+   */
+  public IntVar[] binVariables() {
+    return Arrays.stream(item).map(BinItem::bin).toArray(IntVar[]::new);
+  }
+
+  /**
+   * Returns the weights of the items of {@link #binVariables()}, in the same order.
+   *
+   * @return the weights, a copy
+   */
+  public int[] itemWeights() {
+    return Arrays.stream(item).mapToInt(BinItem::weight).toArray();
+  }
+
+  /**
+   * Returns the loads of the bins, the first for bin {@link #minBin()}.
+   *
+   * @return the loads, a copy
+   */
+  public IntVar[] loads() {
+    return load.clone();
+  }
+
+  /**
+   * Returns the number of the first bin.
+   *
+   * @return the number of the bin of the first load
+   */
+  public int minBin() {
+    return minBinNumber;
+  }
+
+  /**
    * Writes, for each bin, the sum of the weights of its items equal to its load, each item in one
    * of the bins, and the sum of the loads equal to the weight of all items. Only a constraint with
    * {@link #linearRulesOnly} and without card variables is written.

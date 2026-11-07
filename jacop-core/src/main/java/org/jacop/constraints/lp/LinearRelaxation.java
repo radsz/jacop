@@ -52,6 +52,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -419,6 +422,16 @@ public class LinearRelaxation extends Constraint
   // the separations of the capacity cuts, one for each Routes with its arcs among the columns
   private List<CapacityCuts> capacity = new ArrayList<>();
 
+  // energy cuts of the cumulative resources at the root, in the rounds of the capacity cuts
+  private static final boolean ENERGY_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
+
+  // the separations of the energy cuts, one for each cumulative resource
+  private List<EnergyCuts> energy = new ArrayList<>();
+
+  /** Statistics: energy cuts of cumulative resources added. */
+  public long energyCuts;
+
   // the capacity cuts kept, as rows: they follow from the Routes, not from the rows, so a copy
   // takes them as rows of its own
   private List<LinearForm> capacityForms = new ArrayList<>();
@@ -754,13 +767,48 @@ public class LinearRelaxation extends Constraint
       Collection<LinearForm> extra,
       Set<? extends IntVar> substituted,
       Simplex simplex) {
+    return of(store, objective, maximize, extra, List.of(), substituted, simplex);
+  }
+
+  /**
+   * Creates the relaxation of {@link #of(Store, IntVar, boolean, Collection, Set, Simplex)} with
+   * further rows that are tried at the first solve like the value encodings of the constraints, and
+   * kept only when they raise the bound of the objective or make the relaxation infeasible, such as
+   * the convex hulls of tables ({@link org.jacop.constraints.TableCliques}). They have a share of
+   * the size cap of the sparse simplex of their own, so that the other rows do not leave them out.
+   *
+   * @param store the store
+   * @param objective the variable to minimize, or null for satisfaction
+   * @param maximize whether the objective is maximized instead
+   * @param extra rows to add to those of the store's constraints
+   * @param tried rows tried at the first solve after the others
+   * @param substituted variables to replace by their definitions
+   * @param simplex the simplex
+   * @return the relaxation, or null as for {@link #of(Store, IntVar, boolean, Collection, Set,
+   *     Simplex)}
+   */
+  public static LinearRelaxation of(
+      Store store,
+      IntVar objective,
+      boolean maximize,
+      Collection<LinearForm> extra,
+      Collection<LinearForm> tried,
+      Set<? extends IntVar> substituted,
+      Simplex simplex) {
     Set<Constraint> constraints = constraintsOf(store);
     List<LinearForm> forms = new ArrayList<>();
     List<LinearForm> relaxed = new ArrayList<>();
     List<CapacityCuts> separations = new ArrayList<>();
+    List<EnergyCuts> resources = new ArrayList<>();
     for (Constraint c : constraints) {
       if (CAPACITY_CUTS && c instanceof Routes routes) {
         separations.add(new CapacityCuts(routes));
+      }
+      if (ENERGY_CUTS && objective != null) {
+        EnergyCuts e = energyCuts(c);
+        if (e != null) {
+          resources.add(e);
+        }
       }
       LinearForm f = LinearForms.of(c);
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
@@ -815,7 +863,10 @@ public class LinearRelaxation extends Constraint
     // out
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
-    for (List<LinearForm> rows : List.of(relaxed, valueRows.tried(), valueRows.flow())) {
+    List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
+    List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
+    triedRows.addAll(ownTried);
+    for (List<LinearForm> rows : List.of(relaxed, triedRows, valueRows.flow())) {
       for (LinearForm f : rows) {
         if (f.relation() != LinearForm.NE
             && f.vars().length >= 2
@@ -824,9 +875,11 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
-    Set<LinearForm> tried = Collections.newSetFromMap(new IdentityHashMap<>());
-    tried.addAll(valueRows.tried());
-    tried.addAll(valueRows.flow());
+    Set<LinearForm> triedSet = Collections.newSetFromMap(new IdentityHashMap<>());
+    triedSet.addAll(triedRows);
+    triedSet.addAll(valueRows.flow());
+    Set<LinearForm> own = Collections.newSetFromMap(new IdentityHashMap<>());
+    own.addAll(ownTried);
     Set<LinearForm> flow = Collections.newSetFromMap(new IdentityHashMap<>());
     flow.addAll(valueRows.flow());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
@@ -857,24 +910,58 @@ public class LinearRelaxation extends Constraint
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
     // can take a minute and then drop them all)
-    if (!fitsSimplex(forms, candidates, simplex, auto, exempt, further) && objective != null) {
+    if (!fitsSimplex(forms, candidates, simplex, auto, exempt, own, further) && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
       // of the rows of the objective, give the whole bound, and in model order they came too late
       // to fit); the tried value encodings stay after the other rows, since the retry without them
       // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, tried, flow, objective);
-      fitsSimplex(forms, sorted, simplex, auto, exempt, further);
+      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, triedSet, flow, objective);
+      fitsSimplex(forms, sorted, simplex, auto, exempt, own, further);
     }
     LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
-    r.plainExtra = (int) r.extraForms.stream().filter(f -> !tried.contains(f)).count();
+    r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
     r.capacity = separations;
+    r.energy = resources;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  /**
+   * Returns the energy cuts of a cumulative resource, over its tasks of positive least duration and
+   * usage, or null for another constraint, a resource with optional tasks, or fewer than two such
+   * tasks. The least durations, usages and the capacity are those of now, the root.
+   */
+  private static EnergyCuts energyCuts(Constraint c) {
+    if (!(c instanceof CumulativeBasic cb)
+        || c instanceof CumulativeOptional
+        || c instanceof CumulativeUnaryOptional
+        || cb.limit().max() <= 0) {
+      return null;
+    }
+    IntVar[][] t = cb.tasks();
+    List<IntVar> starts = new ArrayList<>();
+    List<long[]> sizes = new ArrayList<>();
+    for (int i = 0; i < t[0].length; i++) {
+      if (t[1][i].min() > 0 && t[2][i].min() > 0) {
+        starts.add(t[0][i]);
+        sizes.add(new long[] {t[1][i].min(), t[2][i].min()});
+      }
+    }
+    if (starts.size() < 2) {
+      return null;
+    }
+    long[] dur = new long[starts.size()];
+    long[] use = new long[starts.size()];
+    for (int k = 0; k < dur.length; k++) {
+      dur[k] = sizes.get(k)[0];
+      use[k] = Math.min(sizes.get(k)[1], cb.limit().max());
+    }
+    return new EnergyCuts(starts.toArray(new IntVar[0]), dur, use, cb.limit().max());
   }
 
   /**
@@ -1151,6 +1238,7 @@ public class LinearRelaxation extends Constraint
       Simplex simplex,
       boolean denseCap,
       int exempt,
+      Set<LinearForm> own,
       List<LinearForm> further) {
     if (tooLarge(forms, simplex)) {
       return false;
@@ -1163,25 +1251,39 @@ public class LinearRelaxation extends Constraint
       rows++;
       nonzeros += f.vars().length;
     }
+    // the rows with a share of their own are not counted in the share of the others
+    int counted = 0;
+    boolean fitted = true;
     for (LinearForm f : candidates) {
       int added = 0;
       for (IntVar v : f.vars()) {
         added += vars.contains(v) ? 0 : 1;
       }
+      boolean ownShare = own.contains(f);
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS
-              || denseCap
-                  && (further.size() >= 2L * forms.size() + SPARSE_ROWS + exempt
-                      || vars.size() + added > SPARSE_MAX_COLUMNS)) {
+              || denseCap && vars.size() + added > SPARSE_MAX_COLUMNS) {
         return false;
       }
+      if (denseCap
+          && simplex != Simplex.DENSE
+          && !ownShare
+          && counted >= 2L * forms.size() + SPARSE_ROWS + exempt) {
+        if (own.isEmpty()) {
+          return false;
+        }
+        // the share of the others is full: the rows with a share of their own may still come
+        fitted = false;
+        continue;
+      }
+      counted += ownShare ? 0 : 1;
       further.add(f);
       vars.addAll(Arrays.asList(f.vars()));
       rows++;
       nonzeros += f.vars().length;
     }
-    return true;
+    return fitted;
   }
 
   /**
@@ -2467,8 +2569,8 @@ public class LinearRelaxation extends Constraint
         rootLo[j] = x[j].min();
         rootHi[j] = x[j].max();
       }
-      // the capacity cuts are made once, at the first solve
-      if (!capacity.isEmpty()) {
+      // the capacity and energy cuts are made once, at the first solve
+      if (!capacity.isEmpty() || !energy.isEmpty()) {
         int status = capacityRounds();
         if (status != DualSimplex.OPTIMAL) {
           return status;
@@ -2677,9 +2779,25 @@ public class LinearRelaxation extends Constraint
     LpSolver first = lp.copy();
     int[] firstRows = lpRow;
     int added = 0;
+    int addedEnergy = 0;
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
+    long[] lo = new long[lp.columns()];
+    long[] hi = new long[lp.columns()];
+    for (int j = 0; j < lo.length; j++) {
+      lo[j] = x[j].min();
+      hi[j] = x[j].max();
+    }
+    int[][] energyColumns = new int[energy.size()][];
+    for (int k = 0; k < energy.size(); k++) {
+      IntVar[] starts = energy.get(k).starts();
+      energyColumns[k] = new int[starts.length];
+      for (int a = 0; a < starts.length; a++) {
+        Integer j = columnOf.get(starts[a]);
+        energyColumns[k][a] = j == null ? -1 : j;
+      }
+    }
     for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
       List<MirCut> chosen = new ArrayList<>();
       int n = lp.columns();
@@ -2704,6 +2822,28 @@ public class LinearRelaxation extends Constraint
           }
         }
       }
+      int routing = chosen.size();
+      if (!energy.isEmpty()) {
+        double[] value = new double[n];
+        for (int j = 0; j < n; j++) {
+          value[j] = lp.value(j);
+        }
+        List<MirCut> found = new ArrayList<>();
+        for (int k = 0; k < energy.size(); k++) {
+          found.addAll(energy.get(k).separate(energyColumns[k], value, lo, hi, CUTS_PER_ROUND));
+        }
+        found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+        for (MirCut row : found) {
+          long m = (long) lp.rows() + chosen.size() + 1;
+          if (chosen.size() - routing >= CUTS_PER_ROUND
+              || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+            break;
+          }
+          if (seen.add(key(row))) {
+            chosen.add(row);
+          }
+        }
+      }
       if (chosen.isEmpty()) {
         break;
       }
@@ -2723,6 +2863,7 @@ public class LinearRelaxation extends Constraint
         break;
       }
       added += chosen.size();
+      addedEnergy += chosen.size() - routing;
       if (status != DualSimplex.OPTIMAL) {
         break;
       }
@@ -2735,8 +2876,10 @@ public class LinearRelaxation extends Constraint
       // cuts that do not move the bound only make each solve dearer
       dropCuts(added, first, firstRows);
       added = 0;
+      addedEnergy = 0;
     }
-    capacityCuts += added;
+    capacityCuts += added - addedEnergy;
+    energyCuts += addedEnergy;
     for (int i = firstCount; i < firstCount + added; i++) {
       IntVar[] vars = new IntVar[rowColumns[i].length];
       for (int k = 0; k < vars.length; k++) {
@@ -3395,6 +3538,9 @@ public class LinearRelaxation extends Constraint
     c.keepEncodings = keepEncodings;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));
+    }
+    for (EnergyCuts e : energy) {
+      c.energy.add(e.copy(map));
     }
     return c;
   }

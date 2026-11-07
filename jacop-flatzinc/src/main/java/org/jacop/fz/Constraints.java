@@ -235,8 +235,12 @@ public class Constraints implements ParserTreeConstants {
       }
 
       // a redundant Sequence over sliding-window sums, which --proof does not encode
+      // its window rows are still posted, but marked implied: local search evaluates the sequence
+      Set<SimpleNode> impliedRows = Set.of();
       if (SequenceDetector.enabled() && options.proof() == null) {
-        new SequenceDetector(support).detect(astTree);
+        SequenceDetector sequences = new SequenceDetector(support);
+        sequences.detect(astTree);
+        impliedRows = sequences.impliedRows();
       }
 
       // before any constraint propagates: bounds propagation creeps round a negative cycle
@@ -258,7 +262,7 @@ public class Constraints implements ParserTreeConstants {
             }
             SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
             if (!replaced.contains(snode.jjtGetChild(0))) {
-              generateConstraint(snode);
+              generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
             }
           }
         }
@@ -376,6 +380,17 @@ public class Constraints implements ParserTreeConstants {
 
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
+    }
+  }
+
+  // a constraint item, imposed as implied by the others when implied is true
+  private void generateConstraint(SimpleNode constraintWithAnnotations, boolean implied)
+      throws Throwable {
+    store.imposingImplied(implied);
+    try {
+      generateConstraint(constraintWithAnnotations);
+    } finally {
+      store.imposingImplied(false);
     }
   }
 
