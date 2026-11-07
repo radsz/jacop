@@ -2914,7 +2914,18 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
-177. The experimental cut-based conflict analysis of --lcg
+177. The redundant constraints the FlatZinc layer adds next to the
+     model's own are marked implied in the store (Support.implied), so
+     local search does not evaluate them: the CumulativeUnary and the
+     pairwise disjunctions of a cumulative, the cumulative projections
+     of a diffn (with the variables of their spans), the all different
+     of a circuit, subcircuit or assignment (unless the model states the
+     same all different), the OverlappingAlldiff of overlapping
+     all_different pairs, the bin packing conflict cliques, HornFlow
+     and PrecedenceCost. Before, only the constraints of the detectors were
+     marked (item 165). Store.isImposingImplied is new.
+
+178. The experimental cut-based conflict analysis of --lcg
      (-Djacop.lcg.linear=learn, off by default) also uses the
      explanation of a constraint that has no linear relation when all its
      atoms are on 0/1 variables: the clause is then an exact linear row
@@ -2930,14 +2941,14 @@ Version 5.0 (unreleased)
      within noise. %% lcg-linear also reports rowConstraints and
      rowsMillis (root rows made and the time taken).
 
-178. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+179. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
      above 1 left out the holes a pruned bound skipped. When the latest
      start computed for a task (or the cost's minimum) fell on a removed
      value, the domain moved past it, and the reason (start bounds and
      cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
      The reason now adds the != atoms of those holes.
 
-179. Energy cuts of cumulative resources in the LP relaxation
+180. Energy cuts of cumulative resources in the LP relaxation
      (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
      objective model, LinearRelaxation separates at the root the
      mean-busy-time inequalities of a set S of tasks released at t or

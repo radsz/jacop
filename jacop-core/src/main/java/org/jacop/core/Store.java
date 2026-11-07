@@ -1643,6 +1643,16 @@ public class Store {
   }
 
   /**
+   * Tells whether the constraints imposed now are marked as implied, see {@link
+   * #imposingImplied(boolean)}.
+   *
+   * @return true inside a stretch of implied constraints.
+   */
+  public boolean isImposingImplied() {
+    return imposingImplied;
+  }
+
+  /**
    * Marks a constraint as implied by the other constraints of the store.
    *
    * @param c the constraint, implied by the others.
