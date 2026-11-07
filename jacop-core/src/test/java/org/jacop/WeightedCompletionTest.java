@@ -33,6 +33,7 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -42,10 +43,14 @@ import java.util.Random;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.Search;
@@ -64,6 +69,92 @@ class WeightedCompletionTest {
 
   // -Dweightedcompletion.instances=20000 for a longer run
   private static final int INSTANCES = Integer.getInteger("weightedcompletion.instances", 1000);
+
+  @Test
+  void parallelReasonCitesTheHoleALatestStartSkipped() {
+    // x1 at 0 fills the capacity 2 in [0, 1), so x2 completes at 2 at the earliest and the others
+    // cost 6: wp <= 10 gives x3 <= 3, and the hole x3 != 3 moves the maximum to 2 (LcgFuzzTest)
+    Store store = new Store();
+    IntVar x3 = new IntVar(store, "x3", -1, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 4);
+    IntVar x1 = new IntVar(store, "x1", -1, 4);
+    IntVar wp = new IntVar(store, "wp", 0, 30);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(
+        new WeightedCompletion(
+            new IntVar[] {x3, x2, x1},
+            new int[] {1, 1, 1},
+            new int[] {1, 2, 2},
+            new int[] {1, 2, 2},
+            2,
+            wp));
+    store.setLevel(store.level + 1);
+    x1.domain.in(store.level, x1, 0, 0);
+    x2.domain.inMin(store.level, x2, 0);
+    x3.domain.inComplement(store.level, x3, 3);
+    wp.domain.inMax(store.level, wp, 10);
+    assertTrue(store.consistency());
+    assertEquals(2, x3.max());
+    assertEquals(3, checkOwnReasons(trail));
+    trail.detach();
+  }
+
+  @Test
+  void parallelReasonsImplyTheirAtomsOnDomainsWithHoles() {
+    Random rnd = new Random(11);
+    int checked = 0;
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 2 + rnd.nextInt(3);
+      IntVar[] s = new IntVar[n];
+      int[] d = new int[n];
+      int[] r = new int[n];
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, -1, 5);
+        d[i] = rnd.nextInt(3);
+        r[i] = rnd.nextInt(3);
+        w[i] = rnd.nextInt(3);
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 40);
+      AtomicTrail trail = new AtomicTrail(store);
+      store.impose(new WeightedCompletion(s, d, r, w, 2 + rnd.nextInt(2), cost));
+      boolean consistent = store.consistency();
+      for (int step = 0; consistent && step < 8; step++) {
+        store.setLevel(store.level + 1);
+        IntVar x = rnd.nextInt(4) == 0 ? cost : s[rnd.nextInt(n)];
+        int v = x.min() + rnd.nextInt(x.max() - x.min() + 1);
+        try {
+          switch (rnd.nextInt(4)) {
+            case 0, 1 -> x.domain.inComplement(store.level, x, v);
+            case 2 -> x.domain.inMin(store.level, x, v);
+            default -> x.domain.inMax(store.level, x, v);
+          }
+          consistent = store.consistency();
+        } catch (FailException e) {
+          consistent = false;
+        }
+      }
+      checked += checkOwnReasons(trail);
+      trail.detach();
+    }
+    assertTrue(checked > 100, "reasons checked: " + checked);
+  }
+
+  // checks the own reason of every atom WeightedCompletion propagated, by search in a copy
+  private static int checkOwnReasons(AtomicTrail trail) {
+    ExplanationChecker checker = new ExplanationChecker(trail);
+    int checked = 0;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) instanceof WeightedCompletion) {
+        EntryList reason = new EntryList();
+        assertTrue(trail.explain(e, reason));
+        assertNull(checker.checkReason(e, reason));
+        checked++;
+      }
+    }
+    return checked;
+  }
 
   @Test
   void boundOfTwoTasks() {
