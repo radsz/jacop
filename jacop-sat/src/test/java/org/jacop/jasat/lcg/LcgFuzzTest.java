@@ -51,6 +51,7 @@ import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
+import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
@@ -107,6 +108,7 @@ import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OrBool;
+import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -727,9 +729,12 @@ class LcgFuzzTest {
         case 11 -> new XplusYeqC(p[0], p[1], c + 2);
         case 12 -> new Member(pick(x, 3), p[0]);
         case 13 ->
-            rnd.nextBoolean()
-                ? new XeqC(bool(), rnd.nextInt(2))
-                : new CountVar(pick(x, 3), p[0], p[1]);
+            switch (rnd.nextInt(4)) {
+              case 0 -> new XeqC(bool(), rnd.nextInt(2));
+              case 1 -> new CountVar(pick(x, 3), p[0], p[1]);
+              case 2 -> new AndBoolSimple(bool(), bool(), bool());
+              default -> new OrBoolSimple(bool(), bool(), bool());
+            };
         case 14 -> new Not(primitive(depth - 1));
         case 15 -> new Or(primitive(depth - 1), primitive(depth - 1));
         case 16 -> new And(primitive(depth - 1), primitive(depth - 1));

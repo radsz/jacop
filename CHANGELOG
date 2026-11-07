@@ -2953,6 +2953,22 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
+179. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
+     two Booleans) and XplusYeqC (x + y = c) explain their own atoms and
+     failures instead of a replayed or generic reason. A result of AND
+     fixed to 0 cites the operand at 0, a result fixed to 1 both
+     operands, an operand cites the result and, when needed, the other
+     operand (OR by duality), including the negated and the entailed
+     constraint under Reified. x + y = c walks the values of the atom
+     against their mirrors c - v in the other variable, like the shift
+     explanations of equalities (ShiftExplanation.explainMirror). On opd
+     flener_et_al_15_350_100 the AND reasons stop being replayed (388k)
+     or generic (54k) at the same length (1.9 atoms); on cgt
+     cgt_5_h27_r0.05_s0.8_0 the x + y = c reasons go from 39 atoms, a
+     third generic, to 1 atom. On the 46 wide instances that post these
+     constraints (240 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +14, -f S = +1 over two repetitions.
+
 Version 4.11
 =============
 

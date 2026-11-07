@@ -197,4 +197,9 @@ public class OrBoolSimple extends AbstractBoolSimple
           return true;
         });
   }
+
+  @Override
+  protected int absorbing() {
+    return getClass() == OrBoolSimple.class ? 1 : -1;
+  }
 }
