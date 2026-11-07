@@ -276,7 +276,7 @@ final class MulExplanation {
       try {
         Interval q = IntDomain.divIntBounds(zl, zh, ol, oh);
         return new long[] {q.min(), q.max()};
-      } catch (FailException e) {
+      } catch (FailException _) {
         return null;
       }
     }
@@ -295,7 +295,7 @@ final class MulExplanation {
       long min = Math.max(q.min(), vl);
       long max = Math.min(q.max(), vh);
       return min <= max ? new long[] {min, max} : null;
-    } catch (FailException e) {
+    } catch (FailException _) {
       return null;
     }
   }

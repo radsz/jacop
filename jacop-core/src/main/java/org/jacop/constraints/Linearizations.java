@@ -79,7 +79,7 @@ public final class Linearizations {
     List<LinearForm> out = new ArrayList<>();
     try {
       rows(c, out);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.clear();
     }
     return out;
@@ -997,7 +997,7 @@ public final class Linearizations {
     }
     try {
       reified(form, b, both, out);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.clear();
     }
     return out;
@@ -1037,7 +1037,7 @@ public final class Linearizations {
     List<LinearForm> out = new ArrayList<>();
     try {
       reified(f, b, both, out);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.clear();
     }
     return out;

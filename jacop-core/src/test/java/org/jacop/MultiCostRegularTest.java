@@ -293,7 +293,7 @@ class MultiCostRegularTest {
       boolean rootConsistent;
       try {
         rootConsistent = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         rootConsistent = false;
       }
       if (!rootConsistent) {
@@ -314,7 +314,7 @@ class MultiCostRegularTest {
           RandomAutomata.randomDecision(store, v, random);
           decided = current(x);
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           decided = null;
           consistent = false;
         }
@@ -381,7 +381,7 @@ class MultiCostRegularTest {
       boolean consistent;
       try {
         consistent = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         consistent = false;
       }
       assertThat(consistent).as("lagrangian %s", lagrangian).isEqualTo(!lagrangian);

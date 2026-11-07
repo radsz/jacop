@@ -174,7 +174,7 @@ final class BinPackingCardinality {
                 .lbPruning(true)
                 .card(card)
                 .build();
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         continue; // a counter is also a bin or load variable
       }
       for (int i = 0; i < support.delayedConstraints.size(); i++) {

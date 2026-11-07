@@ -1186,18 +1186,19 @@ public final class LocalSearch {
       // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
       return;
     }
-    int[] var = new int[n];
+    int[] aVar = new int[n];
     int[] dur = new int[n];
     int[] release = new int[n];
-    int[] deadline = new int[n];
+    int[] localDeadline = new int[n];
     for (int t = 0; t < n; t++) {
-      var[t] = taskVar.get(t);
+      aVar[t] = taskVar.get(t);
       dur[t] = taskDur.get(t);
-      release[t] = domains[var[t]].min();
-      deadline[t] = domains[var[t]].max();
+      release[t] = domains[aVar[t]].min();
+      localDeadline[t] = domains[aVar[t]].max();
     }
     schedule =
-        new DisjunctiveSchedule(var, dur, release, deadline, arcs, machines, scheduling, random);
+        new DisjunctiveSchedule(
+            aVar, dur, release, localDeadline, arcs, machines, scheduling, random);
     scheduleTasks = n;
     scheduleMachines = machines.size();
   }
@@ -1322,7 +1323,7 @@ public final class LocalSearch {
    */
   private boolean scheduleSearch() {
     DisjunctiveSchedule ds = schedule;
-    int[] tasks = ds.var;
+    int[] tasks = ds.aVar;
     int[] priority = new int[ds.n];
     for (int k = 0; k < ds.n; k++) {
       priority[k] = val[tasks[k]];
@@ -1954,7 +1955,7 @@ public final class LocalSearch {
           distinct.add(x);
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     int[] s = new int[distinct.size()];
@@ -2032,7 +2033,7 @@ public final class LocalSearch {
     }
     try {
       target.impose(((Copyable<?>) c).copy(varMap));
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       return false;
     }
     scope[row] = s.stream().mapToInt(Integer::intValue).toArray();
@@ -2120,7 +2121,7 @@ public final class LocalSearch {
         try {
           x.domain.in(store.level, x, v, v);
           ok = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           ok = false;
         }
         if (!ok) {
@@ -2252,7 +2253,7 @@ public final class LocalSearch {
         }
       }
       ok = ok && scratch.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       ok = false;
     } finally {
       scratch.removeLevel(level);
@@ -3136,7 +3137,7 @@ public final class LocalSearch {
         }
         return false;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       if (DEBUG_REJECT) {
         System.out.println("% rejected (fail) by " + store.recentlyFailedConstraint);
       }
@@ -3152,7 +3153,7 @@ public final class LocalSearch {
       try {
         x.domain.in(store.level, x, val[i], val[i]);
         ok = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         ok = false;
       }
       if (!ok) {
@@ -3179,7 +3180,7 @@ public final class LocalSearch {
       if (!store.consistency()) {
         return false;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return completeOthers();
@@ -3223,7 +3224,7 @@ public final class LocalSearch {
           }
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return true;

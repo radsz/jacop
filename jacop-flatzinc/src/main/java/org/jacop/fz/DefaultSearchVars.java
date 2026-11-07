@@ -216,29 +216,29 @@ public class DefaultSearchVars {
   }
 
   private LinkedHashSet<SetVar> collectSetVars() {
-    LinkedHashSet<SetVar> setVars = new LinkedHashSet<>();
+    LinkedHashSet<SetVar> localSetVars = new LinkedHashSet<>();
     for (int i = 0; i < dictionary.defaultSearchSetArrays.size(); i++) {
       for (Var v : dictionary.defaultSearchSetArrays.get(i)) {
-        setVars.add((SetVar) v);
+        localSetVars.add((SetVar) v);
       }
     }
     for (Var v : dictionary.defaultSearchSetVariables) {
-      setVars.add((SetVar) v);
+      localSetVars.add((SetVar) v);
     }
-    return setVars;
+    return localSetVars;
   }
 
   private LinkedHashSet<FloatVar> collectFloatVars() {
-    LinkedHashSet<FloatVar> floatVars = new LinkedHashSet<>();
+    LinkedHashSet<FloatVar> localFloatVars = new LinkedHashSet<>();
     for (int i = 0; i < dictionary.defaultSearchFloatArrays.size(); i++) {
       for (Var v : dictionary.defaultSearchFloatArrays.get(i)) {
-        floatVars.add((FloatVar) v);
+        localFloatVars.add((FloatVar) v);
       }
     }
     for (Var v : dictionary.defaultSearchFloatVariables) {
-      floatVars.add((FloatVar) v);
+      localFloatVars.add((FloatVar) v);
     }
-    return floatVars;
+    return localFloatVars;
   }
 
   /**

@@ -116,19 +116,20 @@ public class CostGCC extends Constraint implements SatisfiedPresent, Copyable<Co
         counters,
         new Object[] {cost});
     checkInputForDuplication("list", list);
-    int m = counters.length;
+    int localM = counters.length;
     if (costs.length != list.length) {
       throw new IllegalArgumentException(
           "CostGCC needs a cost row for each of the " + list.length + " variables");
     }
     for (int[] row : costs) {
-      if (row == null || row.length != m) {
-        throw new IllegalArgumentException("CostGCC needs " + m + " costs in each row of costs");
+      if (row == null || row.length != localM) {
+        throw new IllegalArgumentException(
+            "CostGCC needs " + localM + " costs in each row of costs");
       }
     }
-    if ((long) offset < IntDomain.MIN_INT || (long) offset + m - 1 > IntDomain.MAX_INT) {
+    if ((long) offset < IntDomain.MIN_INT || (long) offset + localM - 1 > IntDomain.MAX_INT) {
       throw new IllegalArgumentException(
-          "CostGCC has values " + offset + ".." + ((long) offset + m - 1) + " out of range");
+          "CostGCC has values " + offset + ".." + ((long) offset + localM - 1) + " out of range");
     }
     for (IntVar v : list) {
       for (IntVar c : counters) {
@@ -148,23 +149,23 @@ public class CostGCC extends Constraint implements SatisfiedPresent, Copyable<Co
 
     this.numberId = idNumber.incrementAndGet();
     this.list = Arrays.copyOf(list, list.length);
-    this.counters = Arrays.copyOf(counters, m);
+    this.counters = Arrays.copyOf(counters, localM);
     this.n = list.length;
-    this.m = m;
+    this.m = localM;
     this.costs = new int[n][];
     for (int i = 0; i < n; i++) {
-      this.costs[i] = Arrays.copyOf(costs[i], m);
+      this.costs[i] = Arrays.copyOf(costs[i], localM);
     }
     this.cost = cost;
     this.offset = offset;
     this.queueIndex = 2;
 
-    copies = new int[m];
-    for (int j = 0; j < m; j++) {
+    copies = new int[localM];
+    for (int j = 0; j < localM; j++) {
       copies[j] = Math.max(0, Math.min(counters[j].max(), n));
     }
-    minAssignment = new CircuitCost.Assignment(n, m, this.costs, false, copies);
-    maxAssignment = new CircuitCost.Assignment(n, m, this.costs, true, copies);
+    minAssignment = new CircuitCost.Assignment(n, localM, this.costs, false, copies);
+    maxAssignment = new CircuitCost.Assignment(n, localM, this.costs, true, copies);
 
     setScope(list, counters, new IntVar[] {cost});
   }

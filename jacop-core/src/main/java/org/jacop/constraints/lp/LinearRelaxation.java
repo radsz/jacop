@@ -440,7 +440,7 @@ public class LinearRelaxation extends Constraint
 
   // the capacity cuts kept, as rows: they follow from the Routes, not from the rows, so a copy
   // takes them as rows of its own
-  private List<LinearForm> capacityForms = new ArrayList<>();
+  private final List<LinearForm> capacityForms = new ArrayList<>();
 
   /** Statistics: rounded capacity cuts added. */
   public long capacityCuts;
@@ -458,7 +458,7 @@ public class LinearRelaxation extends Constraint
   private int capacityWaited;
   // the column of each arc of each separation, -1 when the arc is not a column
   private int[][] capacityColumns;
-  private Set<List<Long>> capacitySeen = new HashSet<>();
+  private final Set<List<Long>> capacitySeen = new HashSet<>();
 
   /** Statistics: capacity and multistar cuts added in search. */
   public long capacitySearchCuts;
@@ -604,7 +604,7 @@ public class LinearRelaxation extends Constraint
         long w = merged.getOrDefault(j, 0L);
         try {
           merged.put(j, Math.addExact(w, f.weights()[k]));
-        } catch (ArithmeticException e) {
+        } catch (ArithmeticException _) {
           overflow = true;
         }
       }
@@ -823,7 +823,7 @@ public class LinearRelaxation extends Constraint
       Set<? extends IntVar> substituted,
       Simplex simplex) {
     Set<Constraint> constraints = constraintsOf(store);
-    List<LinearForm> forms = new ArrayList<>();
+    List<LinearForm> localForms = new ArrayList<>();
     List<LinearForm> relaxed = new ArrayList<>();
     List<CapacityCuts> separations = new ArrayList<>();
     List<EnergyCuts> resources = new ArrayList<>();
@@ -839,7 +839,7 @@ public class LinearRelaxation extends Constraint
       }
       LinearForm f = LinearForms.of(c);
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
-        forms.add(f);
+        localForms.add(f);
       } else if (f == null && LINEARIZE) {
         relaxed.addAll(Linearizations.of(c));
       }
@@ -856,13 +856,13 @@ public class LinearRelaxation extends Constraint
     // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
     // rows only make each call dearer
     if (PAIR_CLIQUES && objective != null) {
-      PairCliques merged = PairCliques.merge(forms, relaxed);
-      forms = merged.rows;
+      PairCliques merged = PairCliques.merge(localForms, relaxed);
+      localForms = merged.rows;
       relaxed = merged.further;
       pairCliques = merged.cliques;
     }
     if (!substituted.isEmpty()) {
-      forms = substitute(forms, substituted, objective);
+      localForms = substitute(localForms, substituted, objective);
     }
     if (LINEARIZE) {
       relaxed.addAll(Linearizations.encodings(constraints));
@@ -910,26 +910,26 @@ public class LinearRelaxation extends Constraint
     Set<LinearForm> flow = Collections.newSetFromMap(new IdentityHashMap<>());
     flow.addAll(valueRows.flow());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
-    if (auto && !sparseTakes(forms)) {
+    if (auto && !sparseTakes(localForms)) {
       // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
       auto = false;
     }
-    if (auto && (forms.size() >= SPARSE_ROWS || tooLarge(forms, Simplex.DENSE))) {
+    if (auto && (localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
       simplex = Simplex.SPARSE;
     }
     if (auto && simplex == Simplex.DENSE && exempt > 0) {
-      List<LinearForm> withColumns = new ArrayList<>(forms);
+      List<LinearForm> withColumns = new ArrayList<>(localForms);
       withColumns.addAll(candidates.subList(0, exempt));
-      if (forms.size() + exempt >= SPARSE_ROWS || tooLarge(withColumns, Simplex.DENSE)) {
+      if (localForms.size() + exempt >= SPARSE_ROWS || tooLarge(withColumns, Simplex.DENSE)) {
         // the encodings are rows of the model as a MIP states it: the simplex is chosen by their
         // count too, and the sparse one takes them all when the dense tableau cannot
         simplex = Simplex.SPARSE;
       }
     }
-    if (tooLarge(forms, simplex)) {
+    if (tooLarge(localForms, simplex)) {
       return null;
     }
     List<LinearForm> further = new ArrayList<>();
@@ -937,17 +937,18 @@ public class LinearRelaxation extends Constraint
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
     // can take a minute and then drop them all)
-    if (!fitsSimplex(forms, candidates, simplex, auto, exempt, own, further) && objective != null) {
+    if (!fitsSimplex(localForms, candidates, simplex, auto, exempt, own, further)
+        && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
       // of the rows of the objective, give the whole bound, and in model order they came too late
       // to fit); the tried value encodings stay after the other rows, since the retry without them
       // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = fitOrder(forms, candidates, exempt, triedSet, flow, objective);
-      fitsSimplex(forms, sorted, simplex, auto, exempt, own, further);
+      List<LinearForm> sorted = fitOrder(localForms, candidates, exempt, triedSet, flow, objective);
+      fitsSimplex(localForms, sorted, simplex, auto, exempt, own, further);
     }
-    LinearRelaxation r = new LinearRelaxation(forms, further, objective, maximize, simplex);
+    LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
@@ -1049,25 +1050,25 @@ public class LinearRelaxation extends Constraint
    */
   public static LinearRelaxation ofModel(
       Store store, IntVar objective, boolean maximize, Simplex simplex) {
-    List<LinearForm> forms = new ArrayList<>();
+    List<LinearForm> localForms = new ArrayList<>();
     Map<LinearForm, Constraint> source = new IdentityHashMap<>();
     for (Constraint c : constraintsOf(store)) {
       LinearForm f = LinearForms.ofModelLine(c);
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
-        forms.add(f);
+        localForms.add(f);
         source.put(f, c);
       }
     }
     if (simplex == Simplex.DENSE
         && SPARSE_ROWS >= 0
-        && sparseTakes(forms)
-        && (forms.size() >= SPARSE_ROWS || tooLarge(forms, Simplex.DENSE))) {
+        && sparseTakes(localForms)
+        && (localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
       simplex = Simplex.SPARSE;
     }
-    if (tooLarge(forms, simplex)) {
+    if (tooLarge(localForms, simplex)) {
       return null;
     }
-    LinearRelaxation r = new LinearRelaxation(forms, List.of(), objective, maximize, simplex);
+    LinearRelaxation r = new LinearRelaxation(localForms, List.of(), objective, maximize, simplex);
     r.rowSource = new Constraint[r.forms.size()];
     for (int i = 0; i < r.rowSource.length; i++) {
       r.rowSource[i] = source.get(r.forms.get(i));
@@ -1355,7 +1356,7 @@ public class LinearRelaxation extends Constraint
           result.add(expand(f, definition, weight, 0));
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return forms;
     }
     return result;
@@ -1775,7 +1776,7 @@ public class LinearRelaxation extends Constraint
         for (int k = 0; k < cs.length; k++) {
           sum = Math.addExact(sum, Math.multiplyExact(ws[k], x[cs[k]].value()));
         }
-      } catch (ArithmeticException overflow) {
+      } catch (ArithmeticException _) {
         continue;
       }
       boolean above = hasHi[i] && sum > rowHi[i];
@@ -1967,18 +1968,18 @@ public class LinearRelaxation extends Constraint
       }
       int[][] facts = new int[2][];
       long[][] used = new long[2][];
-      LinearForm[] forms = certificate(lambda, facts, used);
-      if (forms == null) {
+      LinearForm[] localForms = certificate(lambda, facts, used);
+      if (localForms == null) {
         continue; // the combination overflows: try a smaller scale
       }
       if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
         List<LinearForm> kept = new ArrayList<>();
         List<Certificate> keptCertificates = new ArrayList<>();
         List<int[]> keptFacts = new ArrayList<>();
-        for (int k = 0; k < forms.length; k++) {
-          if (forms[k] != null) {
-            kept.add(forms[k]);
-            keptCertificates.add(certified(forms[k], used[k], k == 0));
+        for (int k = 0; k < localForms.length; k++) {
+          if (localForms[k] != null) {
+            kept.add(localForms[k]);
+            keptCertificates.add(certified(localForms[k], used[k], k == 0));
             keptFacts.add(facts[k]);
           }
         }
@@ -1992,13 +1993,13 @@ public class LinearRelaxation extends Constraint
         }
       }
       boolean fits = true;
-      for (LinearForm f : forms) {
+      for (LinearForm f : localForms) {
         fits &= f == null || fits(f);
       }
       if (fits || s == SCALES.length - 1) {
-        for (int k = 0; k < forms.length; k++) {
-          if (forms[k] != null) {
-            propagate(store, forms[k], facts[k], certified(forms[k], used[k], k == 0));
+        for (int k = 0; k < localForms.length; k++) {
+          if (localForms[k] != null) {
+            propagate(store, localForms[k], facts[k], certified(localForms[k], used[k], k == 0));
           }
         }
         if (status != LpSolver.INFEASIBLE) {
@@ -2079,11 +2080,11 @@ public class LinearRelaxation extends Constraint
     }
     used[0] = lambda;
     used[1] = lambda;
-    LinearForm[] forms = combine(g);
+    LinearForm[] localForms = combine(g);
     facts[0] = combineFacts[0];
     facts[1] = combineFacts[1];
-    if (!CLEAN || forms.length == 0) {
-      return forms;
+    if (!CLEAN || localForms.length == 0) {
+      return localForms;
     }
     if (!g.hasUpper()) {
       used[0] = sided(lambda, true);
@@ -2092,7 +2093,7 @@ public class LinearRelaxation extends Constraint
         return null;
       }
       LinearForm[] c = combine(u);
-      forms[0] = c.length > 0 ? c[0] : null;
+      localForms[0] = c.length > 0 ? c[0] : null;
       facts[0] = combineFacts[0];
     }
     if (!g.hasLower()) {
@@ -2102,13 +2103,13 @@ public class LinearRelaxation extends Constraint
         return null;
       }
       LinearForm[] c = combine(l);
-      forms[1] = c.length > 1 ? c[1] : null;
+      localForms[1] = c.length > 1 ? c[1] : null;
       facts[1] = combineFacts[1];
     }
-    for (int k = 0; k < forms.length && rowSource == null; k++) {
-      forms[k] = forms[k] == null ? null : divided(forms[k]);
+    for (int k = 0; k < localForms.length && rowSource == null; k++) {
+      localForms[k] = localForms[k] == null ? null : divided(localForms[k]);
     }
-    return forms;
+    return localForms;
   }
 
   // lambda without the multipliers whose row lacks the side the upper (or lower) inequality needs
@@ -2510,7 +2511,7 @@ public class LinearRelaxation extends Constraint
           hasLower = false;
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return null;
     }
     int size = 0;
@@ -2589,7 +2590,7 @@ public class LinearRelaxation extends Constraint
           size++;
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return new LinearForm[0];
     }
     combineFacts[0] = upperFacts.length == 0 ? null : upperFacts;
@@ -2657,7 +2658,6 @@ public class LinearRelaxation extends Constraint
       }
       LpSolver kept = lp.copy();
       int[] keptRows = lpRow;
-      long pivots = lp.pivots();
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
@@ -2818,7 +2818,7 @@ public class LinearRelaxation extends Constraint
           found.add(c);
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       // no cut from this row
     }
   }
@@ -3483,7 +3483,7 @@ public class LinearRelaxation extends Constraint
         least[k] = Math.multiplyExact(w[k], w[k] > 0 ? vars[k].min() : vars[k].max());
         smallest = Math.addExact(smallest, least[k]);
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return;
     }
     failureForm = f;
@@ -3496,7 +3496,7 @@ public class LinearRelaxation extends Constraint
     long room;
     try {
       room = Math.subtractExact(c, smallest);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return; // the slack is larger than any bound it could tighten
     }
     for (int k = 0; k < vars.length; k++) {
@@ -3505,27 +3505,27 @@ public class LinearRelaxation extends Constraint
       long limit;
       try {
         limit = Math.addExact(least[k], room);
-      } catch (ArithmeticException overflow) {
+      } catch (ArithmeticException _) {
         continue;
       }
       IntVar v = vars[k];
       if (wk > 0) {
         long bound = Math.floorDiv(limit, wk);
         if (bound < v.max()) {
-          record(store, v, f, facts, certificate);
+          rec(store, v, f, facts, certificate);
           v.domain.inMax(store.level, v, (int) Math.max(bound, v.min() - 1L));
         }
       } else {
         long bound = Math.ceilDiv(limit, wk);
         if (bound > v.min()) {
-          record(store, v, f, facts, certificate);
+          rec(store, v, f, facts, certificate);
           v.domain.inMin(store.level, v, (int) Math.min(bound, v.max() + 1L));
         }
       }
     }
   }
 
-  private void record(Store store, IntVar v, LinearForm f, int[] facts, Certificate certificate) {
+  private void rec(Store store, IntVar v, LinearForm f, int[] facts, Certificate certificate) {
     prunings++;
     deducedVar.add(v);
     deducedForm.add(f);
@@ -3605,13 +3605,13 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public List<LinearForm> reasonForms(IntVar x) {
-    List<LinearForm> forms = new ArrayList<>();
+    List<LinearForm> localForms = new ArrayList<>();
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
       if (deducedVar.get(k) == x && deducedFacts.get(k) == null) {
-        forms.add(deducedForm.get(k));
+        localForms.add(deducedForm.get(k));
       }
     }
-    return forms;
+    return localForms;
   }
 
   @Override

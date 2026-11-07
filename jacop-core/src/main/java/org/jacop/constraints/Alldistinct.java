@@ -622,10 +622,10 @@ public class Alldistinct extends Constraint
         if (node != sink) {
           int[] adj = adjacency[node];
           int d = degree[node];
-          int matched = varMatch[node];
+          int localMatched = varMatch[node];
           while (cursor < d) {
             int a = adj[cursor++];
-            if (a != matched) {
+            if (a != localMatched) {
               int holder = valMatch[a];
               next = holder >= 0 ? holder : sink;
               break;
@@ -1016,13 +1016,13 @@ public class Alldistinct extends Constraint
     for (int j = 0; j < notGroundedNo; j++) {
       int i = position[j];
       int xComponent = component[i];
-      int matched = varMatch[i];
+      int localMatched = varMatch[i];
       int[] adj = adjacency[i];
       int d = degree[i];
       int first = -1;
       for (int k = 0; k < d; k++) {
         int a = adj[k];
-        if (a != matched) {
+        if (a != localMatched) {
           int holder = valMatch[a];
           if (holder >= 0 && component[holder] != xComponent) {
             first = k;
@@ -1041,7 +1041,7 @@ public class Alldistinct extends Constraint
         long removed = 0;
         for (int k = first; k < d; k++) {
           int a = adj[k];
-          if (a != matched) {
+          if (a != localMatched) {
             int holder = valMatch[a];
             if (holder >= 0 && component[holder] != xComponent) {
               removed |= Long.MIN_VALUE >>> (values[a] - base);
@@ -1052,7 +1052,7 @@ public class Alldistinct extends Constraint
       } else {
         for (int k = first; k < d; k++) {
           int a = adj[k];
-          if (a != matched) {
+          if (a != localMatched) {
             int holder = valMatch[a];
             if (holder >= 0 && component[holder] != xComponent) {
               x.domain.inComplement(store.level, x, values[a]);

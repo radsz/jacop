@@ -335,7 +335,7 @@ class ViolationTest {
     try {
       store.impose(c.make().apply(store, x));
       return store.consistency();
-    } catch (org.jacop.core.FailException e) {
+    } catch (org.jacop.core.FailException _) {
       return false;
     }
   }

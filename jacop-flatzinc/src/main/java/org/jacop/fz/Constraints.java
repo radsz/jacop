@@ -86,7 +86,7 @@ public class Constraints implements ParserTreeConstants {
   static final int GT = 3;
   static final int LE = 4;
   static final int GE = 5;
-  final ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
+  final ConstraintFncs cf;
   final Tables dictionary;
   final Store store;
   // ============ SAT solver interface ==============

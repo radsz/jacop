@@ -778,15 +778,13 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
         }
       }
       if (demands != null && sum > capacity) {
-        if (w == s) {
+        if (w == s && selfLoop[s] >= 0) {
           // a node on its own is in a route only when its self loop is 0
-          if (selfLoop[s] >= 0) {
-            if (!isZero(trail, selfLoop[s], p)) {
-              out.truncate(mark);
-              continue;
-            }
-            trail.addUpperBound(literals[selfLoop[s]], p, out);
+          if (!isZero(trail, selfLoop[s], p)) {
+            out.truncate(mark);
+            continue;
           }
+          trail.addUpperBound(literals[selfLoop[s]], p, out);
         }
         // the nodes of the path are in one route
         return true;

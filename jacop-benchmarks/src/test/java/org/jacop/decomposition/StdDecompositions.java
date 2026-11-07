@@ -238,9 +238,9 @@ final class StdDecompositions {
         values.add(t.value());
       } else {
         SetLit d =
-            b.model.domain(new FznModel.Ident(t.var())) == null
+            b.model.domain(new FznModel.Ident(t.aVar())) == null
                 ? SetLit.range(b.lb(t), b.ub(t))
-                : b.model.domain(new FznModel.Ident(t.var()));
+                : b.model.domain(new FznModel.Ident(t.aVar()));
         for (long v : d.values()) {
           values.add(v);
         }

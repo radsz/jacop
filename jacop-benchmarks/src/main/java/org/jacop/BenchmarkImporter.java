@@ -94,11 +94,13 @@ public class BenchmarkImporter {
   private int totalSkippedNoOutput = 0;
   private int totalSkippedTooLarge = 0;
 
-  private Map<String, Map<String, Integer>> problemCategoryCounts = new HashMap<>();
-  private Set<String> existingInstancePaths = new HashSet<>();
+  private final Map<String, Map<String, Integer>> problemCategoryCounts = new HashMap<>();
+  private final Set<String> existingInstancePaths = new HashSet<>();
 
   /** Creates an uninitialized importer. Call {@link #init(Path)} before use. */
-  public BenchmarkImporter() {}
+  public BenchmarkImporter() {
+    // the state is set by init(Path)
+  }
 
   /**
    * Initializes the importer for benchmarks in the given source directory.
@@ -340,7 +342,7 @@ public class BenchmarkImporter {
         return null;
       }
       return outputFzn;
-    } catch (InterruptedException e) {
+    } catch (InterruptedException _) {
       Thread.currentThread().interrupt();
       System.out.println("    " + candidate.instanceName() + ": compilation interrupted");
       return null;

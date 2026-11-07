@@ -249,7 +249,7 @@ class CostRegularTest {
         try {
           RandomAutomata.randomDecision(store, v, random);
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           consistent = false;
         }
         String where = "trial " + trial + " step " + step + " " + instance;

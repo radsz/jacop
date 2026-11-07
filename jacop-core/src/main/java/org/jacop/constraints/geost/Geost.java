@@ -1407,9 +1407,9 @@ public class Geost extends Constraint
     Dbox domainBox = buildDomainBoxForObject(o, bb);
 
     lastConstraintToCheck = 0;
-    for (InternalConstraint c : objectConstraints[o.no]) {
-      if (c.cardInfeasible() > 0 && mayBeInfeasibleWithin(c, domainBox)) {
-        stillUsefulInternalConstraints[lastConstraintToCheck] = c;
+    for (InternalConstraint localC : objectConstraints[o.no]) {
+      if (localC.cardInfeasible() > 0 && mayBeInfeasibleWithin(localC, domainBox)) {
+        stillUsefulInternalConstraints[lastConstraintToCheck] = localC;
         lastConstraintToCheck++;
       }
     }
@@ -1459,9 +1459,9 @@ public class Geost extends Constraint
 
   private void collectAllConstraintsWithCardInfeasible(GeostObject o) {
     lastConstraintToCheck = 0;
-    for (InternalConstraint c : objectConstraints[o.no]) {
-      if (c.cardInfeasible() > 0) {
-        stillUsefulInternalConstraints[lastConstraintToCheck] = c;
+    for (InternalConstraint localC : objectConstraints[o.no]) {
+      if (localC.cardInfeasible() > 0) {
+        stillUsefulInternalConstraints[lastConstraintToCheck] = localC;
         lastConstraintToCheck++;
       }
     }

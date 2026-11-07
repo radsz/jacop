@@ -45,8 +45,14 @@ public final class VarHeap {
 
   private int[] heap = new int[16];
   private int size;
-  private int[] index = new int[0];
+  private int[] index = initialIndex();
   private double[] activity;
+
+  private static int[] initialIndex() {
+    int[] index = new int[16];
+    Arrays.fill(index, -1);
+    return index;
+  }
 
   /**
    * Makes room for variables 0..n-1 and points the heap at the (possibly reallocated) activities.
