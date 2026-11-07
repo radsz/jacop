@@ -103,6 +103,7 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -834,6 +835,14 @@ class ConsistencyChecker {
 
   /** Cumulative over three tasks; durations and resource uses are positive. */
   private static Model cumulative(Store store, Random random, boolean basic) {
+    return cumulative(store, random, basic ? 1 : 0);
+  }
+
+  /**
+   * Cumulative over three tasks (kind 0), CumulativeBasic (1), or the HornFlow check alone (2),
+   * which prunes nothing but must never fail while a solution exists.
+   */
+  private static Model cumulative(Store store, Random random, int kind) {
     int n = 3;
     IntVar[] s = vars(store, "s", n, 0, 3, random);
     IntVar[] d =
@@ -845,7 +854,12 @@ class ConsistencyChecker {
             .mapToObj(i -> interval(store, "r" + i, 1, 2, random))
             .toArray(IntVar[]::new);
     IntVar limit = var(store, "b", 1, 3, random);
-    Constraint c = basic ? new CumulativeBasic(s, d, r, limit) : new Cumulative(s, d, r, limit);
+    Constraint c =
+        switch (kind) {
+          case 1 -> new CumulativeBasic(s, d, r, limit);
+          case 2 -> new HornFlow(s, d, r, limit);
+          default -> new Cumulative(s, d, r, limit);
+        };
     return new Model(
         c,
         t -> {
@@ -1474,6 +1488,7 @@ class ConsistencyChecker {
         // bounds(Z) is NP-hard; the limit is not raised to the largest resource use either
         new Case("CumulativeBasic", Level.NONE, (s, r) -> cumulative(s, r, true)),
         new Case("Cumulative", Level.NONE, (s, r) -> cumulative(s, r, false)),
+        new Case("HornFlow", Level.NONE, (s, r) -> cumulative(s, r, 2)),
         // relaxations (Eastman, Even and Isaacs; Moore and Hodgson), so no consistency level, but
         // never wrong pruning
         new Case(
