@@ -90,6 +90,7 @@ import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.LateCount;
 import org.jacop.constraints.Lex;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
@@ -103,6 +104,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -318,6 +320,14 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "WeightedCompletion",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::weightedCompletion),
+        Arguments.of("PrecedenceCost", precedenceCost(false)),
+        Arguments.of("PrecedenceCostChain", precedenceCost(true)),
+        Arguments.of(
+            "WeightedCompletionParallel",
+            (Function<Random, Instance>)
+                GlobalConstraintBruteForceTest::weightedCompletionParallel),
+        Arguments.of(
+            "LateCount", (Function<Random, Instance>) GlobalConstraintBruteForceTest::lateCount),
         Arguments.of(
             "IncreasingNValue",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::increasingNValue),
@@ -2343,6 +2353,47 @@ class GlobalConstraintBruteForceTest {
     };
   }
 
+  // starts s[0..n-1] under random acyclic precedences (a chain when chain), with sums of
+  // earliness and tardiness terms at most the last variable
+  private static Function<Random, Instance> precedenceCost(boolean chain) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      List<int[]> prec = new ArrayList<>();
+      for (int j = 1; j < n; j++) {
+        for (int i = 0; i < j; i++) {
+          if (chain ? i == j - 1 : random.nextInt(3) == 0) {
+            prec.add(new int[] {i, j, random.nextInt(5) - 1});
+          }
+        }
+      }
+      List<int[]> terms = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        for (int k = random.nextInt(3); k > 0; k--) {
+          terms.add(new int[] {i, random.nextInt(10) - 1, random.nextInt(4), random.nextInt(4)});
+        }
+      }
+      int[][] p = prec.toArray(new int[0][]);
+      int[][] t = terms.toArray(new int[0][]);
+      int[][] domains = append(domains(random, n, 0, 7), domain(random, 0, 6 * n));
+      return new Instance(
+          domains,
+          (store, v) -> store.impose(new PrecedenceCost(Arrays.copyOf(v, n), p, t, v[n])),
+          x -> {
+            for (int[] r : p) {
+              if (x[r[1]] < x[r[0]] + r[2]) {
+                return false;
+              }
+            }
+            int total = 0;
+            for (int[] r : t) {
+              total += r[2] * Math.max(0, r[1] - x[r[0]]) + r[3] * Math.max(0, x[r[0]] - r[1]);
+            }
+            return total <= x[n];
+          },
+          "prec=" + Arrays.deepToString(p) + " terms=" + Arrays.deepToString(t));
+    };
+  }
+
   // starts s[0..n-1] of tasks that do not overlap, sum of w * (s + d) at most the last
   private static Instance weightedCompletion(Random random) {
     int n = 1 + random.nextInt(4);
@@ -2365,6 +2416,73 @@ class GlobalConstraintBruteForceTest {
           return total <= t[n];
         },
         "d=" + Arrays.toString(d) + " w=" + Arrays.toString(w));
+  }
+
+  // starts s[0..n-1] of tasks using r of a resource of capacity c, sum of w * (s + d) at most the
+  // last
+  private static Instance weightedCompletionParallel(Random random) {
+    int n = 1 + random.nextInt(5);
+    int capacity = 1 + random.nextInt(3);
+    int[] d = randomInts(random, n, 0, 3);
+    int[] r = randomInts(random, n, 0, capacity + (random.nextInt(8) == 0 ? 1 : 0));
+    int[] w = randomInts(random, n, 0, 3);
+    int[][] domains = append(domains(random, n, 0, 6), domain(random, 0, 7 * n));
+    return new Instance(
+        domains,
+        (store, v) ->
+            store.impose(new WeightedCompletion(Arrays.copyOf(v, n), d, r, w, capacity, v[n])),
+        t -> {
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            total += w[i] * (t[i] + d[i]);
+            if (d[i] > 0 && r[i] > capacity) {
+              return false;
+            }
+            int load = 0;
+            for (int j = 0; j < n; j++) {
+              if (d[i] > 0 && d[j] > 0 && t[j] <= t[i] && t[i] < t[j] + d[j]) {
+                load += r[j];
+              }
+            }
+            if (load > capacity) {
+              return false;
+            }
+          }
+          return total <= t[n];
+        },
+        "d="
+            + Arrays.toString(d)
+            + " r="
+            + Arrays.toString(r)
+            + " w="
+            + Arrays.toString(w)
+            + " c="
+            + capacity);
+  }
+
+  // starts s[0..n-1] of tasks that do not overlap, at most the last of them end after their due
+  // date
+  private static Instance lateCount(Random random) {
+    int n = 1 + random.nextInt(5);
+    int[] d = randomInts(random, n, 0, 3);
+    int[] due = randomInts(random, n, 0, 9);
+    int[][] domains = append(domains(random, n, 0, 7), domain(random, 0, n));
+    return new Instance(
+        domains,
+        (store, v) -> store.impose(new LateCount(Arrays.copyOf(v, n), d, due, v[n])),
+        t -> {
+          int count = 0;
+          for (int i = 0; i < n; i++) {
+            count += t[i] + d[i] > due[i] ? 1 : 0;
+            for (int j = i + 1; j < n; j++) {
+              if (d[i] > 0 && d[j] > 0 && t[i] < t[j] + d[j] && t[j] < t[i] + d[i]) {
+                return false;
+              }
+            }
+          }
+          return count <= t[n];
+        },
+        "d=" + Arrays.toString(d) + " due=" + Arrays.toString(due));
   }
 
   // production periods x[0..n-1] before their due dates, at most c per period, cost at most the

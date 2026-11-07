@@ -129,6 +129,10 @@ public final class LocalSearch {
   private final Collection<? extends Constraint> extra;
   private final boolean jump;
   private final boolean permutations;
+  private final boolean skipImplied;
+  // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
+  private final Set<Constraint> symmetry;
+  private final Canonicalizer canonicalizer;
 
   // the variables, their root domains and current values
   private IntVar[] vars;
@@ -248,6 +252,33 @@ public final class LocalSearch {
     extra = b.extra;
     jump = b.jump;
     permutations = b.permutations;
+    skipImplied = b.skipImplied;
+    symmetry = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    if (b.canonicalizer != null) {
+      symmetry.addAll(b.symmetry);
+    }
+    canonicalizer = b.canonicalizer;
+  }
+
+  /**
+   * Maps an assignment that satisfies the model without its symmetry breaking constraints onto a
+   * symmetric one, also a solution of the model, that satisfies them as well. Local search does not
+   * evaluate symmetry breaking constraints given with a canonicalizer: they make the landscape
+   * rugged and are costly to check, and a search for one solution of each class of symmetric ones
+   * finds any of the class as easily.
+   */
+  @FunctionalInterface
+  public interface Canonicalizer {
+
+    /**
+     * Changes the values in place to those of a symmetric solution meant to satisfy the symmetry
+     * breaking constraints. The store checks the result, so a canonicalizer may also give up.
+     *
+     * @param vars the variables of the local search.
+     * @param values their values, changed in place.
+     * @return false to give up, keeping the assignment rejected.
+     */
+    boolean canonicalize(IntVar[] vars, int[] values);
   }
 
   /**
@@ -376,6 +407,15 @@ public final class LocalSearch {
   }
 
   /**
+   * Returns how many times a solution was moved to a symmetric one by the canonicalizer.
+   *
+   * @return the number of canonicalized solutions.
+   */
+  public long getCanonicalized() {
+    return canonicalized;
+  }
+
+  /**
    * Returns how many constraints were evaluated as linear rows, by a copy, and not at all.
    *
    * @return linear, copied and unsupported constraints.
@@ -453,13 +493,7 @@ public final class LocalSearch {
     List<Constraint> checked = new ArrayList<>();
     List<Violation> measured = new ArrayList<>();
     for (Constraint c : constraints) {
-      if (c instanceof LinearRelaxation r) {
-        // only adds pruning to the other constraints; its budget is the search's
-        relaxations.add(r);
-        continue;
-      }
-      if (c instanceof EnergyPrecedence) {
-        // only adds pruning to the other constraints
+      if (leftOut(c)) {
         continue;
       }
       int before = rows.size();
@@ -1052,6 +1086,32 @@ public final class LocalSearch {
       };
     }
     return null;
+  }
+
+  /**
+   * Whether a constraint is not evaluated: a linear relaxation or an energy precedence, which only
+   * add pruning to the others, a redundant constraint (every solution of the others satisfies it),
+   * or a symmetry breaking constraint, which the canonicalizer satisfies once the others hold.
+   */
+  private boolean leftOut(Constraint c) {
+    if (c instanceof LinearRelaxation r) {
+      // its budget is the search's
+      relaxations.add(r);
+      return true;
+    }
+    if (c instanceof EnergyPrecedence) {
+      return true;
+    }
+    String kind = null;
+    if (skipImplied && store.isImplied(c)) {
+      kind = "I:";
+    } else if (symmetry.contains(c)) {
+      kind = "S:";
+    }
+    if (kind != null) {
+      classes.merge(kind + className(c), 1, Integer::sum);
+    }
+    return kind != null;
   }
 
   private static String className(Constraint c) {
@@ -2559,6 +2619,10 @@ public final class LocalSearch {
    * @return false when the store rejected it.
    */
   private boolean feasible() {
+    if (canonicalizer != null && !canonicalize()) {
+      rejected++;
+      return false;
+    }
     int base = store.level;
     boolean ok;
     try {
@@ -2594,6 +2658,32 @@ public final class LocalSearch {
     }
     return true;
   }
+
+  /**
+   * Moves the assignment, which satisfies every evaluated constraint, to the symmetric one the
+   * canonicalizer gives. An assignment the canonicalizer gives up on, or one that breaks an
+   * evaluated constraint, is kept as it was.
+   */
+  private boolean canonicalize() {
+    int[] before = val.clone();
+    if (!canonicalizer.canonicalize(vars, val)) {
+      System.arraycopy(before, 0, val, 0, val.length);
+      return false;
+    }
+    if (Arrays.equals(before, val)) {
+      return true;
+    }
+    canonicalized++;
+    evaluateAll();
+    if (violatedCount == 0) {
+      return true;
+    }
+    System.arraycopy(before, 0, val, 0, val.length);
+    evaluateAll();
+    return false;
+  }
+
+  private long canonicalized;
 
   /**
    * Fixes the variables of the given order to their values and propagates; then the other
@@ -2761,6 +2851,9 @@ public final class LocalSearch {
     private Collection<? extends Constraint> extra;
     private boolean jump;
     private boolean permutations = true;
+    private boolean skipImplied = true;
+    private Collection<? extends Constraint> symmetry = List.of();
+    private Canonicalizer canonicalizer;
 
     private Builder(Store store) {
       this.store = store;
@@ -2874,6 +2967,34 @@ public final class LocalSearch {
      */
     public Builder permutations(boolean on) {
       permutations = on;
+      return this;
+    }
+
+    /**
+     * Whether the constraints the store marks as implied by the others ({@link
+     * Store#isImplied(Constraint)}) are left out of the evaluation (default true). The store still
+     * checks every solution against them.
+     *
+     * @param skip true to leave them out.
+     * @return this builder.
+     */
+    public Builder skipImplied(boolean skip) {
+      skipImplied = skip;
+      return this;
+    }
+
+    /**
+     * Leaves symmetry breaking constraints out of the evaluation: an assignment that satisfies the
+     * others is mapped by the canonicalizer onto a symmetric one before the store checks it.
+     *
+     * @param constraints the symmetry breaking constraints.
+     * @param canonicalizer the mapping onto solutions that satisfy them.
+     * @return this builder.
+     */
+    public Builder symmetry(
+        Collection<? extends Constraint> constraints, Canonicalizer canonicalizer) {
+      this.symmetry = constraints;
+      this.canonicalizer = canonicalizer;
       return this;
     }
 

@@ -56,6 +56,7 @@ import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
@@ -264,6 +265,8 @@ public class Constraints implements ParserTreeConstants {
       cf.poseCounts();
       cf.poseDiffnProjections();
 
+      // the constraints the detectors below add are redundant: local search does not evaluate them
+      store.imposingImplied(true);
       // its cost constraints are redundant, with bounds a proof does not derive
       if (CircuitCostDetector.enabled() && options.proof() == null) {
         new CircuitCostDetector(support).detect(astTree);
@@ -290,8 +293,10 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceCyclesDetector(support).detect(astTree);
       }
 
-      // energy precedence when enabled, and the reservoirs
+      // energy precedence when enabled, and the reservoirs, which are not redundant
+      store.imposingImplied(false);
       new PrecedenceDetector(support).detect(astTree);
+      store.imposingImplied(true);
       // the weighted completion bound it adds is redundant, and --proof does not encode it
       if (WeightedCompletionDetector.enabled() && options.proof() == null) {
         new WeightedCompletionDetector(support).detect(astTree);
@@ -321,6 +326,12 @@ public class Constraints implements ParserTreeConstants {
       // Gauss-Jordan elimination over the parity constraints, redundant; --proof does not encode it
       if (XorSystemDetector.enabled() && options.proof() == null) {
         new XorSystemDetector(support).detect(astTree);
+      }
+      store.imposingImplied(false);
+
+      // earliness and tardiness costs under precedences, redundant; --proof does not encode it
+      if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {
+        new PrecedenceCostDetector(support).detect(astTree);
       }
 
       support.detectBinPackingCliques();

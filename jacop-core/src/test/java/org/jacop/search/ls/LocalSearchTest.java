@@ -37,6 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AmongSeq;
@@ -328,6 +329,76 @@ class LocalSearchTest {
     LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(LIMIT).seed(1).build();
     assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
     assertTrue(!ls.toString().contains("P:"), ls.toString());
+  }
+
+  /**
+   * A constraint imposed as implied by the others is not evaluated, but the store still checks
+   * every solution against it.
+   */
+  @Test
+  void skipsImpliedConstraints() {
+    for (boolean skip : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 4);
+      }
+      store.impose(new Alldistinct(x));
+      store.imposingImplied(true);
+      store.impose(new LinearInt(x, new int[] {1, 1, 1, 1, 1}, "==", 10));
+      store.imposingImplied(false);
+      assertTrue(store.consistency());
+      LocalSearch ls =
+          LocalSearch.builder(store).order(x).skipImplied(skip).timeLimit(LIMIT).seed(1).build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+      assertEquals(skip, ls.toString().contains("I:LinearInt=1"), ls.toString());
+    }
+  }
+
+  /**
+   * A symmetry breaking constraint given with a canonicalizer is not evaluated: a solution that
+   * breaks it is moved to the symmetric one, which the store accepts.
+   */
+  @Test
+  void canonicalizesSymmetricSolutions() {
+    long canonicalized = 0;
+    for (int seed = 1; seed <= 20; seed++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[6];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      store.impose(new Alldistinct(x));
+      // the weights of x4 and x5 are equal, so the two are interchangeable; x4 < x5 breaks that
+      store.impose(new LinearInt(x, new int[] {1, 2, 3, 4, 5, 5}, "==", 52));
+      XltY lex = new XltY(x[4], x[5]);
+      store.impose(lex);
+      assertTrue(store.consistency());
+      LocalSearch.Canonicalizer swap =
+          (vars, values) -> {
+            int i = Arrays.asList(vars).indexOf(x[4]);
+            int j = Arrays.asList(vars).indexOf(x[5]);
+            if (values[i] > values[j]) {
+              int v = values[i];
+              values[i] = values[j];
+              values[j] = v;
+            }
+            return true;
+          };
+      LocalSearch ls =
+          LocalSearch.builder(store)
+              .order(x)
+              .symmetry(List.of(lex), swap)
+              .timeLimit(LIMIT)
+              .seed(seed)
+              .build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+      assertTrue(ls.toString().contains("S:XltY=1"), ls.toString());
+      int[] s = ls.getSolution(x);
+      assertTrue(s[4] < s[5], Arrays.toString(s));
+      canonicalized += ls.getCanonicalized();
+    }
+    assertTrue(canonicalized > 0);
   }
 
   /**

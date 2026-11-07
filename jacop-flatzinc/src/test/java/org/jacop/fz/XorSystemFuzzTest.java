@@ -123,7 +123,9 @@ class XorSystemFuzzTest {
       int[] row = m.rows[i];
       String[] names = Arrays.stream(row).mapToObj(XorSystemFuzzTest::name).toArray(String[]::new);
       int p = m.parities[i];
-      if (row.length == 2 && i % 3 == 0) {
+      if (i % 5 == 4) {
+        sb.append(table(row, p, i % 2 == 0 ? -1 : (i * 7) % m.n));
+      } else if (row.length == 2 && i % 3 == 0) {
         // a xor b = p
         sb.append(p == 1 ? "constraint bool_not(" : "constraint bool_eq(")
             .append(names[0])
@@ -167,21 +169,37 @@ class XorSystemFuzzTest {
     return sb.toString();
   }
 
+  // xor(row) = p as a table over the 0/1 integers y, all tuples of that parity; with a star
+  // column over y[extra] when extra >= 0 (a short table)
+  private static String table(int[] row, int p, int extra) {
+    StringBuilder vars = new StringBuilder();
+    for (int j = 0; j < row.length; j++) {
+      vars.append(j > 0 ? ", " : "").append("y").append(row[j]);
+    }
+    if (extra >= 0) {
+      vars.append(", y").append(extra);
+    }
+    StringBuilder tuples = new StringBuilder();
+    for (int s = 0; s < 1 << row.length; s++) {
+      if ((Integer.bitCount(s) & 1) != p) {
+        continue;
+      }
+      for (int j = 0; j < row.length; j++) {
+        tuples.append(tuples.length() > 0 ? ", " : "").append((s >> j) & 1);
+      }
+      if (extra >= 0) {
+        tuples.append(", 9");
+      }
+    }
+    if (extra >= 0) {
+      return "constraint jacop_short_table_int([" + vars + "], [" + tuples + "], 9);\n";
+    }
+    return "constraint jacop_table_int([" + vars + "], [" + tuples + "]);\n";
+  }
+
   // the objective of the last solution, -1 for UNSAT, null when the run did not finish
   private Integer solve(String model, String... options) throws IOException {
-    Path file = tmp.resolve("case.fzn");
-    Files.writeString(file, model, StandardCharsets.UTF_8);
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    PrintStream originalOut = System.out;
-    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
-      System.setOut(capture);
-      List<String> args = new ArrayList<>(Arrays.asList(options));
-      args.add(file.toString());
-      new Fz2jacop().callMain(args.toArray(new String[0]));
-    } finally {
-      System.setOut(originalOut);
-    }
-    String out = buffer.toString(StandardCharsets.UTF_8);
+    String out = run(model, options);
     if (out.contains("=====UNSATISFIABLE=====")) {
       return -1;
     }
@@ -195,6 +213,44 @@ class XorSystemFuzzTest {
       }
     }
     return last;
+  }
+
+  // the output of the solver on the model
+  private String run(String model, String... options) throws IOException {
+    Path file = tmp.resolve("case.fzn");
+    Files.writeString(file, model, StandardCharsets.UTF_8);
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      List<String> args = new ArrayList<>(Arrays.asList(options));
+      args.add(file.toString());
+      new Fz2jacop().callMain(args.toArray(new String[0]));
+    } finally {
+      System.setOut(originalOut);
+    }
+    return buffer.toString(StandardCharsets.UTF_8);
+  }
+
+  // a table that is an XOR, also with an integer column and as a short table, gives its row; a
+  // table whose tuples span every 0/1 point (a + b + c != 1, the truncated XOR of the AES models)
+  // gives none
+  @Test
+  void tablesGiveTheParitiesTheyImply() throws IOException {
+    String vars =
+        "var 0..1: a :: output_var;\nvar 0..1: b;\nvar 0..1: c;\nvar 0..1: d;\nvar 0..5: e;\n";
+    String xors =
+        vars
+            + "constraint jacop_table_int([a, b, c, e], [0,0,0,3, 0,1,1,4, 1,0,1,5, 1,1,0,3]);\n"
+            + "constraint jacop_short_table_int([b, c, d, e], [0,0,1,9, 1,1,1,9, 0,1,0,9, 1,0,0,9], 9);\n"
+            + "solve satisfy;\n";
+    assertTrue(run(xors, "-debug").contains("% XorSystem: 1 systems, 2 rows, 2 rows from tables"));
+    String truncated =
+        vars
+            + "constraint jacop_table_int([a, b, c], [0,0,0, 0,1,1, 1,0,1, 1,1,0, 1,1,1]);\n"
+            + "constraint jacop_table_int([b, c, d], [0,0,1, 1,1,1, 0,1,0, 1,0,0]);\n"
+            + "solve satisfy;\n";
+    assertTrue(!run(truncated, "-debug").contains("% XorSystem:"));
   }
 
   @Test
