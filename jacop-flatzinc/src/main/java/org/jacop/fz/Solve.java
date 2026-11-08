@@ -2632,6 +2632,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgPureClauses="
+            + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
             + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="
@@ -2928,6 +2930,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
             // the columns of a table with a key column (a row lookup) follow the key
             .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
+            // the cells of a matrix only element constraints look up follow them
+            .follow(!"0".equals(options.freeConfig("ls-follow", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {

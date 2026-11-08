@@ -3426,16 +3426,59 @@ public final class LcgSolver implements ExternalPropagator {
             }
           }
         };
+    boolean propagatorLeft = false;
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
         encodedGraphs.add(g);
         graphConstraintsEncoded++;
-      } else if (c instanceof ImpliedClauses i && !rootFailed) {
-        impliedClauses += i.impliedClauses(model);
+      } else {
+        propagatorLeft = true;
+        if (c instanceof ImpliedClauses i && !rootFailed) {
+          impliedClauses += i.impliedClauses(model);
+        }
       }
     }
+    if (PURE_CLAUSE_LITERALS
+        && freeSearch
+        && branching == Branching.ALTERNATE
+        && annotation != null
+        && !propagatorLeft
+        && allBinary()) {
+      // every constraint became clauses and every variable is 0/1: the model is a CNF, and the
+      // turns of the annotation (or dom/wdeg) and of activity branching only make slower SAT
+      // decisions. Nonograms at 600 s, two seeds: 2026 hard_03 53-56 s instead of 388 s and
+      // unsolved, 2013 dom_14 4-22 s instead of 79-129 s; 19 of 58 runs faster, 1 slower. Not with
+      // wider domains: pentominoes, whose regular constraints become clauses too, lost up to 4x
+      branching = Branching.LITERALS;
+      annotation = null;
+      annotationRun = false;
+      activityBranching = false;
+      pureClauses = true;
+    }
   }
+
+  /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
+  private boolean allBinary() {
+    for (IntVar x : vars) {
+      if (x != null && x.getSize() > 2) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Whether a free search whose model is clauses only, with no constraint left in the store once
+   * {@link #encodeGraphs} has run, leaves all decisions to the SAT solver (as {@link
+   * Branching#LITERALS}). On by default; the system property {@code jacop.lcg.pureClauseLiterals}
+   * set to false turns it off.
+   */
+  static final boolean PURE_CLAUSE_LITERALS =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pureClauseLiterals", "true"));
+
+  /** Whether the model became clauses only and its search was left to the SAT solver. */
+  public boolean pureClauses;
 
   /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
