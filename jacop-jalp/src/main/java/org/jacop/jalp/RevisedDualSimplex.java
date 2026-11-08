@@ -836,6 +836,11 @@ public final class RevisedDualSimplex {
     return presolveReductions;
   }
 
+  // the pivots of the reduced problem of the presolve, 0 without one
+  long reducedPivots() {
+    return reducedPivots;
+  }
+
   /**
    * Returns the structural columns the crash basis of the first solve made basic.
    *

@@ -82,7 +82,7 @@ final class Presolve {
   private static final byte FIX_COLUMN = 2;
   private static final byte FREE_COLUMN = 3;
   private static final byte DOUBLETON = 4;
-  private static final byte PARALLEL_ROW = 5;
+  static final byte PARALLEL_ROW = 5;
   private static final byte PARALLEL_COLUMN = 6;
 
   // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
@@ -857,6 +857,8 @@ final class Presolve {
     recNum[4][t] = hi[k];
     recNum[5][t] = newLo;
     recNum[6][t] = newHi;
+    recNum[7][t] = wcost[j];
+    recLenA[t] = logLen[j];
     lo[j] = newLo;
     hi[j] = newHi;
     colAlive[k] = false;
@@ -1168,7 +1170,7 @@ final class Presolve {
           parallelRowBasis(t, i, recOther[t], y, basic, upper);
           break;
         case PARALLEL_COLUMN:
-          parallelColumnBasis(t, j, recOther[t], value, basic, upper);
+          parallelColumnBasis(t, j, recOther[t], y, value, basic, upper);
           break;
         default:
           doubletonBasis(t, i, j, recOther[t], y, value, basic, upper);
@@ -1279,7 +1281,9 @@ final class Presolve {
     if (basic[n + k]) {
       return;
     }
-    boolean atUpper = upper[n + k];
+    // the dual tells the bound the slack is held to: an equality row k (its bounds may have met
+    // in mergeRows) is at both, and the reduced solve leaves its flag at either
+    boolean atUpper = y[k] < 0 || y[k] == 0 && upper[n + k];
     if ((recFlag[t] & (atUpper ? 2 : 1)) == 0) {
       return;
     }
@@ -1296,7 +1300,7 @@ final class Presolve {
   // x_j is basic, x_k is at a finite bound; when x_j is at a bound of the sum, both are at the
   // bounds that make it
   private void parallelColumnBasis(
-      int t, int k, int j, double[] value, boolean[] basic, boolean[] upper) {
+      int t, int k, int j, double[] y, double[] value, boolean[] basic, boolean[] upper) {
     double lambda = recNum[0][t];
     double loJ = recNum[1][t];
     double hiJ = recNum[2][t];
@@ -1311,6 +1315,11 @@ final class Presolve {
     double v = value[j];
     boolean atHi = recNum[6][t] != Double.POSITIVE_INFINITY && same(v, recNum[6][t]);
     boolean atLo = recNum[5][t] != Double.NEGATIVE_INFINITY && same(v, recNum[5][t]);
+    if (atLo && atHi) {
+      // the sum fixed: its reduced cost tells the bound that holds it, as for parallel rows
+      atLo = reducedCost(recNum[7][t], j, recLenA[t], y) >= 0;
+      atHi = !atLo;
+    }
     if (atLo) {
       upper[j] = false;
       value[j] = loJ;

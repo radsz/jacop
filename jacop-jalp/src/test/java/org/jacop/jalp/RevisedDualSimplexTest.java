@@ -374,6 +374,33 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void parallelRowsMergedIntoAnEquationKeepTheReducedOptimum() {
+    // rows 1 and 4 are rows 0 and 3 negated, all <= : merged, rows 0 and 3 are equations, whose
+    // slacks the reduced solve leaves at their lower bound (from rows 1 and 4) with negative
+    // duals, so held at their upper bound. The flag alone put the slacks of rows 1 and 4 at their
+    // bounds, and the whole problem started away from the reduced optimum (on
+    // neos-3555904-turama, 61809 rows outside their bounds and 120 s instead of 5 s)
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{1, 2, 3}, {1, 2, 3}, {0, 1, 2, 3}, {0, 3}, {0, 3}, {0, 1, 3}},
+            new double[][] {{-1, -1, 4}, {1, 1, -4}, {-3, 4, 2, -3}, {3, 3}, {-3, -3}, {-3, 3, -1}},
+            new double[] {-inf, -inf, -inf, -inf, -inf, -inf},
+            new double[] {3, -3, 2, 6, -6, 0},
+            new double[] {-5, 1, -2, 0},
+            true);
+    lp.setExact(true);
+    double[] hi = {2, 6, 2, 7};
+    for (int j = 0; j < hi.length; j++) {
+      lp.setBounds(j, 0, hi[j]);
+    }
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolveReductions()[Presolve.PARALLEL_ROW]).isEqualTo(2);
+    assertThat(lp.objective()).isCloseTo(-7.75, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
+  }
+
+  @Test
   void givenDualsHaveNoPerturbation() {
     // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
     double inf = Double.POSITIVE_INFINITY;
