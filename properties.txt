@@ -28,6 +28,12 @@ Java specific:
 - sub_circuit_dominance_pruning: use pruning method based on node
   domination in graphs; default false (one of sub_circuit_* must be true).
 
+- jacop.values.cliques: Values (MiniZinc nvalue) reads at the root the
+  pairs of its variables that other constraints force to differ (x != y,
+  alldifferent, x = y + t or |x - y| = t with t never 0, x = y + c with
+  c != 0) and bounds the number of values from below by a clique of
+  them; default true.
+
 - sub_circuit_dominance_skip: the largest number of calls the
   dominance pruning of Subcircuit is skipped after a call that pruned
   nothing (the skip doubles each time); default 32.

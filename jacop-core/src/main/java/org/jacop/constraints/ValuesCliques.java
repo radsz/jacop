@@ -161,9 +161,7 @@ final class ValuesCliques {
     if (previous != null && previous.edges == edges[0]) {
       return previous;
     }
-    ValuesCliques g = new ValuesCliques(n, adjacent, edges[0]);
-    System.err.println("DEBUGCLQ n=" + n + " edges=" + g.edges + " clique=" + g.size());
-    return g;
+    return new ValuesCliques(n, adjacent, edges[0]);
   }
 
   // adds the pairs of list variables that constraint c forces to differ
