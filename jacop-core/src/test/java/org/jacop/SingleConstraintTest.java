@@ -5281,6 +5281,45 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(88);
   }
 
+  // x0, x1 and x2 differ pairwise (a clique of the difference graph), so there are at least 3
+  // values although all the intervals overlap
+  @Test
+  void testValuesCountsCliqueOfDifferences() {
+    Store store = new Store();
+    IntVar[] x = getIntVars(store, "x", 4, 5);
+    IntVar count = new IntVar(store, "count", 0, 5);
+    store.impose(new XneqY(x[0], x[1]));
+    store.impose(new XneqY(x[1], x[2]));
+    store.impose(new XneqY(x[0], x[2]));
+    store.impose(new Values(x, count));
+
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(count.min()).isEqualTo(3);
+  }
+
+  // with at most 3 values the clique x0, x1, x2 takes all of them; x3 differs from x0 and x1, so it
+  // takes the value of x2 (Fages and Lapegue)
+  @Test
+  void testValuesRestrictsVariableOutsideCliqueToItsNonNeighbours() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 2);
+    IntVar x1 = new IntVar(store, "x1", 3, 4);
+    IntVar x2 = new IntVar(store, "x2", 5, 6);
+    IntVar x3 = new IntVar(store, "x3", 1, 6);
+    IntVar count = new IntVar(store, "count", 0, 3);
+    store.impose(new XneqY(x0, x1));
+    store.impose(new XneqY(x1, x2));
+    store.impose(new XneqY(x0, x2));
+    store.impose(new XneqY(x3, x0));
+    store.impose(new XneqY(x3, x1));
+    store.impose(new Values(new IntVar[] {x0, x1, x2, x3}, count));
+
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(x3.dom().toString()).isEqualTo("{5..6}");
+  }
+
   // with at most 2 values, x2 must share a value with x0 (1..2) or with x1 (4..5)
   @Test
   void testValuesPrunesValuesNeedingTooManyValues() {

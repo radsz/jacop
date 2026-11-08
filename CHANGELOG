@@ -3221,7 +3221,29 @@ Version 5.0 (unreleased)
      --search-statistics stays, as -s -v without the -v lines after each
      solution, and so does -s -debug.
 
-191. JaLP presolves the first solve of a problem and starts the whole
+191. Values (MiniZinc nvalue) bounds the number of values from below by a
+     clique of pairwise different variables. At the root it reads the
+     pairs of its variables that the other constraints force to differ
+     (x != y, alldifferent, x = y + t or |x - y| = t with 0 not in t,
+     x = y + c with c != 0, and linear constraints of those forms) and
+     finds a large clique K of that graph (greedy, then Tomita and Seki's
+     branch and bound with a node limit), so count >= |K|. This is the
+     independent-set lower bound of AtMostNValue (Bessiere, Hebrard,
+     Hnich, Kiziltan and Walsh, Constraints 11(4), 2006) with the
+     difference constraints added, as in Fages and Lapegue (CP 2013;
+     Artificial Intelligence 212, 2014), whose filtering is applied too:
+     when count <= |K|, a variable outside K takes a value of a clique
+     variable it is not linked to. Under --lcg both have explanations.
+     On the XCSP Rlfap instances that minimise the number of frequencies
+     the clique equals the optimum on graph-01, graph-02, graph-09 and
+     graph-14; at 600 s, with the models' search and with -f, JaCoP now
+     proves graph-01, graph-02, graph-09 and scen-02 optimal in 6-430 s
+     (base: none of them), and the lower bound on the other five rises
+     from 5-8 to 8-20. Instances where the variables of nvalue have no
+     difference constraints between them are unchanged.
+     -Djacop.values.cliques=false turns it off.
+
+192. JaLP presolves the first solve of a problem and starts the whole
      problem from the postsolved basis, the reductions and basis
      postsolve of E. D. Andersen and K. D. Andersen, Presolving in linear
      programming, Mathematical Programming 71 (1995) 221-245: empty,
@@ -3248,7 +3270,7 @@ Version 5.0 (unreleased)
      to a poor first solution (with the cost perturbation at 2e-6 or
      5e-7 it does as well as without presolve).
 
-192. New constraints ExactCover and TableCover for exact cover problems,
+193. New constraints ExactCover and TableCover for exact cover problems,
      with the DL+ rule of Chabert and Solnon: when every option left for
      an element a that must be covered also covers an element b, the
      options that cover b but not a are removed. ExactCover(x, sets, n)
@@ -3281,7 +3303,7 @@ Version 5.0 (unreleased)
      187-214; D. E. Knuth, The Art of Computer Programming, Volume 4B,
      Section 7.2.2.1, Addison-Wesley, 2022.
 
-193. LP cut rounds above the dense tableau cap and finer Gomory
+194. LP cut rounds above the dense tableau cap and finer Gomory
      multipliers. When the dense simplex has no room for a round of
      cuts (m+50 rows by m+50+n columns would pass maxTableau, 4M
      entries), LinearRelaxation moves the root LP to a JaLP simplex
@@ -3316,7 +3338,7 @@ Version 5.0 (unreleased)
      worse, and none of the 16 instances that changed makes a cut or
      moves to JaLP (timing noise).
 
-194. LexChain gives its own LCG reasons on more chains. The FlatZinc front
+195. LexChain gives its own LCG reasons on more chains. The FlatZinc front
      end shares one variable per constant, so the vectors of
      SocialGolfers (lex_chain over rows that hold the same constants)
      counted as having repeated variables, and LexChain refused every
@@ -3334,7 +3356,7 @@ Version 5.0 (unreleased)
      both sides), LcgFuzzTest.lexChainReasonsAgreeWithPairwiseSearch
      (LexChain against pairwise LexOrder with the explanation checker on).
 
-195. The FlatZinc front end restricts the result of int_times to the
+196. The FlatZinc front end restricts the result of int_times to the
      products of its factors' values when there are at most 4096 value
      pairs (-Dorg.jacop.fz.productDomains=false turns it off). Molnar
      (XCSP3 2022) multiplies squares into triple products in 64..262144;
@@ -3345,7 +3367,7 @@ Version 5.0 (unreleased)
      of 70 s and Molnar-4-4 in 26 s instead of 52 s. CP-SAT needs as
      many conflicts there; the gap is the cost per conflict.
 
-196. The default search under --lcg branches first, with dom/wdeg and
+197. The default search under --lcg branches first, with dom/wdeg and
      the smallest value, on the index variables of variable element
      constraints when every search variable is an index or a list
      variable of one (stat lcgElementPositions). LangfordBin (XCSP3
