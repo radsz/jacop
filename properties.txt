@@ -615,6 +615,10 @@ JaLP sparse simplex:
   infeasibilities than the slack basis; default true.
 - org.jacop.jalp.crashExactWeights: exact steepest-edge weights of the
   crash basis; default false.
+- org.jacop.jalp.presolve: presolve the first solve of a JaLP problem
+  and start the whole problem from the postsolved basis; default true.
+- org.jacop.jalp.presolveTrace: print the sizes and the reductions of
+  each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
   comma separated list of primal and reobjective; default empty.
 
