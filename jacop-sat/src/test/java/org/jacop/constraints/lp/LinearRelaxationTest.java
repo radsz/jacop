@@ -1696,6 +1696,7 @@ class LinearRelaxationTest {
               Set.of(),
               LinearRelaxation.Simplex.DENSE);
       assertThat(l).as("seed %d", run).isNotNull();
+      l.setAlldiffSearch(true);
       lcg.store.impose(l);
       LcgSolver solver = new LcgSolver(lcg.store);
       solver.setChecking(true);

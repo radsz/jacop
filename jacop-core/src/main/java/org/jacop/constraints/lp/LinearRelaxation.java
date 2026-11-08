@@ -530,11 +530,13 @@ public class LinearRelaxation extends Constraint
   // Hall cuts in search, as the capacity cuts: separated from the solution of an optimal solve
   // every hallPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation
   // that finds no violated cut and halving after one that does; the cuts use the root domains, so
-  // they hold globally, and go into the row pool
+  // they hold globally, and go into the row pool; off by default, as on the Challenge instances
+  // that have them they cost more solves than the bound gains (osolpro alldiff-hall-search)
   private static final boolean ALLDIFF_SEARCH =
-      !"false".equals(System.getProperty("org.jacop.lp.alldiffSearch"));
+      "true".equals(System.getProperty("org.jacop.lp.alldiffSearch"));
   private static final int ALLDIFF_SEARCH_CUTS =
       Integer.getInteger("org.jacop.lp.alldiffSearchCuts", 10);
+  private boolean alldiffSearch = ALLDIFF_SEARCH;
   private int hallPeriod = 4;
   private int hallWaited;
   // the column of each variable of each separation, -1 when the variable is not a column
@@ -2054,7 +2056,7 @@ public class LinearRelaxation extends Constraint
       status = searchCapacityCuts(limit);
     }
     if (status == LpSolver.OPTIMAL
-        && ALLDIFF_SEARCH
+        && alldiffSearch
         && hallColumns != null
         && hallColumns.length > 0
         && calls > 1
@@ -3324,6 +3326,16 @@ public class LinearRelaxation extends Constraint
       }
     }
     return chosen;
+  }
+
+  /**
+   * Sets whether Hall cuts are also separated in search ({@code org.jacop.lp.alldiffSearch}, off by
+   * default), for tests.
+   *
+   * @param on whether they are
+   */
+  void setAlldiffSearch(boolean on) {
+    alldiffSearch = on;
   }
 
   // Hall cuts from the solution of an optimal solve in search: the violated ones go into the

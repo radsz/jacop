@@ -402,6 +402,7 @@ class AlldifferentRowsTest {
               java.util.Set.of(),
               LinearRelaxation.Simplex.DENSE);
       assertThat(r).as("run %d", run).isNotNull();
+      r.setAlldiffSearch(true);
       m.store.impose(r);
       long got = m.optimum();
       assertThat(got).as("run %d", run).isEqualTo(expected);
@@ -440,6 +441,7 @@ class AlldifferentRowsTest {
               java.util.Set.of(),
               LinearRelaxation.Simplex.DENSE);
       assertThat(r).as("run %d", run).isNotNull();
+      r.setAlldiffSearch(true);
       m.store.impose(r);
       if (!m.store.consistency()) {
         continue;
