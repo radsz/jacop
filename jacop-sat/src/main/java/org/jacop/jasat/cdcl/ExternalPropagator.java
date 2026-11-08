@@ -148,9 +148,11 @@ public interface ExternalPropagator {
    * @param lits the true literals, in DIMACS form, all of one {@link #integerVariable}; the ones to
    *     keep in the learnt clause are moved to the front, the others imply nothing they do not
    * @param size the number of literals
+   * @param backjump the highest level of the clause's literals below the conflict level so far: the
+   *     backjump goes there or lower, so a value the domain still has at its end is removed
    * @return the number of literals to keep, at least 2 to stop the analysis there, or 0
    */
-  default int extendedUip(int[] lits, int size) {
+  default int extendedUip(int[] lits, int size, int backjump) {
     return 0;
   }
 

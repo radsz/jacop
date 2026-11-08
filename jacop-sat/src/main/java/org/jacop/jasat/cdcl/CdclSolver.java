@@ -1715,7 +1715,11 @@ public final class CdclSolver {
   private boolean stopExtended(int n) {
     int[] before = null;
     assert (before = Arrays.copyOf(frontier, n)) != null;
-    int kept = external.extendedUip(frontier, n);
+    int backjump = 0;
+    for (int i = 1; i < learntSize; i++) {
+      backjump = Math.max(backjump, level[learnt[i] >> 1]);
+    }
+    int kept = external.extendedUip(frontier, n, backjump);
     assert samePermutation(before, frontier, n)
         : "extendedUip must reorder the frontier, not change it";
     if (kept < 2) {

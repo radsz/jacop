@@ -598,10 +598,31 @@ class LcgSolverTest {
    */
   @Test
   void extendedNogoodsKeepTheOptimum() {
-    Random rnd = new Random(71);
-    long extendedUips = 0;
-    long propagations = 0;
-    long repropagations = 0;
+    long[] counts = extendedNogoodRuns(71, false);
+    assertThat(counts[0]).isPositive();
+    assertThat(counts[1]).isPositive();
+    assertThat(counts[2]).isPositive();
+  }
+
+  /**
+   * Extended nogoods are kept for later propagation when their reasons hold literals that are not
+   * atoms: the values sum to a multiple of 3 by a Regular constraint, given to the solver as
+   * clauses over auxiliary state literals, which then occur in reasons. Such nogoods were not kept,
+   * so they never propagated again and the same nogood was learnt over and over.
+   */
+  @Test
+  void extendedNogoodsWithAuxiliaryLiteralsPropagateAgain() {
+    long[] counts = extendedNogoodRuns(72, true);
+    assertThat(counts[0]).isPositive();
+    assertThat(counts[3]).isPositive();
+    assertThat(counts[2]).isPositive();
+  }
+
+  // extended UIPs, first propagations, later propagations and kept nogoods with an auxiliary
+  // literal, summed over 30 random instances, each solved with and without extended nogoods
+  private static long[] extendedNogoodRuns(long seed0, boolean regular) {
+    Random rnd = new Random(seed0);
+    long[] counts = new long[4];
     for (int instance = 0; instance < 30; instance++) {
       long seed = rnd.nextLong();
       int[] optimum = new int[2];
@@ -615,6 +636,9 @@ class LcgSolverTest {
           x[i] = new IntVar(store, "x" + i, 0, n + 1);
         }
         store.impose(new Alldistinct(x));
+        if (regular) {
+          store.impose(new Regular(sumModThreeAutomaton(n + 1), x));
+        }
         for (int c = 0; c < 5; c++) {
           int[] a = new int[n];
           for (int i = 0; i < n; i++) {
@@ -651,17 +675,33 @@ class LcgSolverTest {
         if (run == 0) {
           assertThat(solver.sat().extendedUips).isZero();
         } else {
-          extendedUips += solver.sat().extendedUips;
-          propagations += solver.extendedPropagations;
-          repropagations += solver.extendedRepropagations;
+          counts[0] += solver.sat().extendedUips;
+          counts[1] += solver.extendedPropagations;
+          counts[2] += solver.extendedRepropagations;
+          counts[3] += solver.extendedKeptAuxiliary;
         }
       }
       assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
       assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
     }
-    assertThat(extendedUips).isPositive();
-    assertThat(propagations).isPositive();
-    assertThat(repropagations).isPositive();
+    return counts;
+  }
+
+  // sequences of values 0..max whose sum is a multiple of 3, over states for the sum modulo 3
+  private static Fsm sumModThreeAutomaton(int max) {
+    FsmState[] state = {new FsmState(), new FsmState(), new FsmState()};
+    Fsm fsm = new Fsm();
+    fsm.initState = state[0];
+    for (FsmState q : state) {
+      fsm.allStates.add(q);
+    }
+    fsm.finalStates.add(state[0]);
+    for (int q = 0; q < 3; q++) {
+      for (int v = 0; v <= max; v++) {
+        state[q].addTransition(new FsmTransition(new IntervalDomain(v, v), state[(q + v) % 3]));
+      }
+    }
+    return fsm;
   }
 
   /**

@@ -3545,6 +3545,12 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyAssignment(int lit, boolean fixed) {
+    int d = Math.abs(lit);
+    if (d >= litVar.length || litVar[d] < 0) {
+      // an auxiliary literal, observed for the kept extended nogoods only
+      visitNogoods(lit);
+      return;
+    }
     if (numPending == pending.length) {
       pending = Arrays.copyOf(pending, 2 * numPending);
     }
@@ -3610,7 +3616,7 @@ public final class LcgSolver implements ExternalPropagator {
     failed = false;
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
-    numExtended = 0;
+    keepExtended(level);
     release(level);
     if (linear != null) {
       imposeLearntLinear(level);
@@ -4008,7 +4014,7 @@ public final class LcgSolver implements ExternalPropagator {
    * the holes inside them.
    */
   @Override
-  public int extendedUip(int[] lits, int size) {
+  public int extendedUip(int[] lits, int size, int backjump) {
     if (!extended) {
       return 0;
     }
@@ -4060,7 +4066,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (kept < 2
         || extendedCost(lo, hi, rmin, rmax, holeScratch, holes) > extendedLimit
-        || !forbidsBefore(i, lo, hi, holes)) {
+        || !forbidsBefore(i, lo, hi, holes, Math.min(store.level, baseLevel + backjump + 1))) {
       return 0;
     }
     // the dropped literals go after the kept ones, through the scratch array: writing them back
@@ -4103,14 +4109,15 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Whether the domain before the conflict level still has a value of {@code [lo, hi]} without the
-   * holes (sorted in {@link #holeScratch}). Without one the nogood is implied by the domains below
-   * the conflict level, for example when the conflict empties the variable's domain, so it would
-   * remove nothing after the backjump and the same conflict would come back.
+   * Whether the domain before store level {@code level}, the one after the backjump level at most,
+   * still has a value of {@code [lo, hi]} without the holes (sorted in {@link #holeScratch}).
+   * Without one the nogood is implied by the domains there, for example when the conflict empties
+   * the variable's domain, so it would remove nothing after the backjump and the same conflict
+   * would come back.
    */
-  private boolean forbidsBefore(int i, long lo, long hi, int holes) {
+  private boolean forbidsBefore(int i, long lo, long hi, int holes, int level) {
     IntVar x = vars[i];
-    int pos = levelStart(store.level);
+    int pos = levelStart(level);
     long s = lo;
     int tries = 0;
     for (int k = 0; k <= holes; k++) {
@@ -4155,7 +4162,6 @@ public final class LcgSolver implements ExternalPropagator {
    */
   @Override
   public void extendedNogood(int[] clause) {
-    numExtended = 0;
     int i = litVar[Math.abs(clause[0])];
     int numFalse = 0;
     for (int l : clause) {
@@ -4261,6 +4267,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: kept extended nogoods that removed values again later. */
   public long extendedRepropagations;
 
+  /** Statistics: extended nogoods kept with a literal that is not an atom, now observed. */
+  public long extendedKeptAuxiliary;
+
   private static int watchIndex(int lit) {
     return 2 * Math.abs(lit) + (lit < 0 ? 1 : 0);
   }
@@ -4269,11 +4278,16 @@ public final class LcgSolver implements ExternalPropagator {
     if (rest.length == 0) {
       return; // propagated at the root for good
     }
+    boolean auxiliary = false;
     for (int l : rest) {
-      if (litVar[Math.abs(l)] < 0) {
-        return; // the solver tells this propagator only about atoms
+      int d = Math.abs(l);
+      if (d >= litVar.length || litVar[d] < 0) {
+        // not an atom: the solver tells this propagator about it once it is observed
+        sat.observe(d);
+        auxiliary = true;
       }
     }
+    extendedKeptAuxiliary += auxiliary ? 1 : 0;
     if (numNogoods >= extendedKeep) {
       dropOldNogoods();
     }
@@ -4380,6 +4394,28 @@ public final class LcgSolver implements ExternalPropagator {
     System.arraycopy(rest, 0, r, 1, rest.length);
     extendedLits[numExtended] = lit;
     extendedReasons[numExtended++] = r;
+  }
+
+  /**
+   * Keeps, at a backtrack to {@code level}, the queued extended literals whose reasons are still
+   * false there: a kept nogood that queued them watches a literal that may stay false, so it would
+   * not queue them again.
+   */
+  private void keepExtended(int level) {
+    int kept = 0;
+    for (int k = 0; k < numExtended; k++) {
+      int[] r = extendedReasons[k];
+      boolean holds = true;
+      for (int m = 1; m < r.length && holds; m++) {
+        holds = sat.value(r[m]) < 0 && sat.levelOf(r[m]) <= level;
+      }
+      if (holds) {
+        extendedLits[kept] = extendedLits[k];
+        extendedReasons[kept++] = r;
+      }
+    }
+    Arrays.fill(extendedReasons, kept, numExtended, null);
+    numExtended = kept;
   }
 
   private static int orZero(int d, int sign) {
