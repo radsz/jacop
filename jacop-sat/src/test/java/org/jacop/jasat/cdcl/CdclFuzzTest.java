@@ -201,7 +201,7 @@ class CdclFuzzTest {
         s.addClause(f.get(next));
         added.add(f.get(next));
       }
-      int[] assumed = new int[rnd.nextInt(seed % 4 == 1 ? 24 : 4)];
+      int[] assumed = new int[rnd.nextInt(Math.floorMod(seed, 4L) == 1 ? 24 : 4)];
       for (int i = 0; i < assumed.length; i++) {
         int v = 1 + rnd.nextInt(vars);
         assumed[i] = rnd.nextBoolean() ? v : -v;
