@@ -49,6 +49,7 @@ import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
+import org.jacop.prob.constraints.ChanceSum;
 import org.jacop.prob.constraints.ExpectedSum;
 import org.jacop.prob.constraints.ScenarioChance;
 import org.jacop.prob.dist.Dist;
@@ -643,5 +644,419 @@ class ProbTest {
     assertThatThrownBy(
             () -> ExpectedSum.of(x, new Dist[] {Dist.uniform(1, 3), Dist.uniform(1, 2, 3)}, z))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  // ---- ChanceSum
+
+  /** A random chance-sum instance: small domains with holes, small supports, exact brute force. */
+  private static final class SumInstance {
+    final int n;
+    final int[][] domains;
+    final int[] capDomain;
+    final Dist[] w;
+    final int[] repeat;
+    final long alphaNum;
+    final long alphaDen;
+    final int[] value;
+    final long seed;
+
+    SumInstance(long seed) {
+      this.seed = seed;
+      Random random = new Random(seed);
+      n = 1 + random.nextInt(5);
+      domains = new int[n][];
+      w = new Dist[n];
+      repeat = new int[n];
+      value = new int[n];
+      boolean binary = random.nextBoolean();
+      for (int i = 0; i < n; i++) {
+        domains[i] = binary ? new int[] {0, 1} : values(random, 0, 3);
+        int size = 1 + random.nextInt(3);
+        int[] v = new int[size];
+        long[] p = new long[size];
+        long den = 1L + random.nextInt(12);
+        long left = den;
+        for (int k = 0; k < size; k++) {
+          v[k] = random.nextInt(7);
+          p[k] = k == size - 1 ? left : random.nextInt((int) left + 1);
+          left -= p[k];
+        }
+        w[i] = new Dist(v, p, den);
+        // a few items share the variable of an earlier one
+        repeat[i] = i > 0 && random.nextInt(6) == 0 ? random.nextInt(i) : -1;
+        value[i] = 1 + random.nextInt(9);
+      }
+      capDomain = values(random, random.nextInt(3) == 0 ? -2 : 0, 14);
+      alphaDen = 1L + random.nextInt(20);
+      alphaNum = random.nextInt((int) alphaDen + 2);
+    }
+
+    private static int[] values(Random random, int lo, int hi) {
+      List<Integer> v = new ArrayList<>();
+      for (int a = lo; a <= hi; a++) {
+        if (a == lo || random.nextInt(4) != 0) {
+          v.add(a);
+        }
+      }
+      return v.stream().mapToInt(Integer::intValue).toArray();
+    }
+
+    IntVar[] vars(Store store) {
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        if (repeat[i] >= 0) {
+          x[i] = x[repeat[i]];
+          continue;
+        }
+        x[i] = new IntVar(store, "x" + i);
+        for (int a : domains[i]) {
+          x[i].addDom(a, a);
+        }
+      }
+      return x;
+    }
+
+    IntVar cap(Store store) {
+      IntVar c = new IntVar(store, "c");
+      for (int a : capDomain) {
+        c.addDom(a, a);
+      }
+      return c;
+    }
+
+    ChanceSum constraint(IntVar[] x, IntVar c) {
+      return new ChanceSum(x, w, c, alphaNum, alphaDen);
+    }
+
+    // exact Pr(sum w[i] * x[i] <= cap) >= alpha by enumerating the joint supports
+    boolean holds(int[] xv, int cap) {
+      long num = 0;
+      long den = 1;
+      for (Dist d : w) {
+        den *= d.den();
+      }
+      int[] k = new int[n];
+      while (true) {
+        long load = 0;
+        long p = 1;
+        for (int i = 0; i < n; i++) {
+          load += (long) w[i].value(k[i]) * xv[i];
+          p *= w[i].weight(k[i]);
+        }
+        if (load <= cap) {
+          num += p;
+        }
+        int i = 0;
+        while (i < n && ++k[i] == w[i].size()) {
+          k[i++] = 0;
+        }
+        if (i == n) {
+          break;
+        }
+      }
+      // num / den >= alphaNum / alphaDen
+      return java.math.BigInteger.valueOf(num)
+              .multiply(java.math.BigInteger.valueOf(alphaDen))
+              .compareTo(
+                  java.math.BigInteger.valueOf(alphaNum)
+                      .multiply(java.math.BigInteger.valueOf(den)))
+          >= 0;
+    }
+
+    // the values of the distinct variables spread over the items
+    int[] itemValues(IntVar[] x, int[] distinctValues, IntVar[] distinct) {
+      int[] result = new int[n];
+      for (int i = 0; i < n; i++) {
+        result[i] = distinctValues[Arrays.asList(distinct).indexOf(x[i])];
+      }
+      return result;
+    }
+
+    String describe() {
+      return "seed "
+          + seed
+          + ": w "
+          + Arrays.toString(w)
+          + " x "
+          + Arrays.deepToString(domains)
+          + " repeat "
+          + Arrays.toString(repeat)
+          + " c "
+          + Arrays.toString(capDomain)
+          + " alpha "
+          + alphaNum
+          + "/"
+          + alphaDen;
+    }
+  }
+
+  private static IntVar[] distinct(IntVar[] x) {
+    return Arrays.stream(x).distinct().toArray(IntVar[]::new);
+  }
+
+  @Test
+  void testChanceSumAgainstBruteForce() {
+    int sat = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      SumInstance in = new SumInstance(4_000_000L + t);
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar c = in.cap(store);
+      IntVar[] all = Arrays.copyOf(distinct(x), distinct(x).length + 1);
+      all[all.length - 1] = c;
+      int expected = 0;
+      for (int[] tuple : tuples(all)) {
+        int[] xv = in.itemValues(x, tuple, distinct(x));
+        if (in.holds(xv, tuple[tuple.length - 1])) {
+          expected++;
+        }
+      }
+      store.impose(in.constraint(x, c));
+      int count = store.consistency() ? countSolutions(store, all) : 0;
+      assertThat(count).as(in.describe()).isEqualTo(expected);
+      sat += expected > 0 ? 1 : 0;
+
+      // the copy into a fresh store gives the same count
+      Store fresh = new Store();
+      IntVar[] fx = in.vars(fresh);
+      IntVar fc = in.cap(fresh);
+      Map<Var, Var> freshMap = new IdentityHashMap<>();
+      IntVar[] dx = distinct(x);
+      IntVar[] dfx = distinct(fx);
+      for (int i = 0; i < dx.length; i++) {
+        freshMap.put(dx[i], dfx[i]);
+      }
+      freshMap.put(c, fc);
+      ChanceSum copy = in.constraint(x, c).copy(identityMap(freshMap, fresh));
+      fresh.impose(copy);
+      IntVar[] freshAll = Arrays.copyOf(dfx, dfx.length + 1);
+      freshAll[freshAll.length - 1] = fc;
+      int copied = fresh.consistency() ? countSolutions(fresh, freshAll) : 0;
+      assertThat(copied).as(in.describe()).isEqualTo(expected);
+    }
+    assertThat(sat).isPositive();
+    assertThat(sat).isLessThan(TRIALS);
+  }
+
+  private static VarMap identityMap(Map<Var, Var> map, Store target) {
+    return new VarMap() {
+      @Override
+      public Store target() {
+        return target;
+      }
+
+      @Override
+      @SuppressWarnings("unchecked")
+      public <V extends Var> V get(V v) {
+        Var u = map.get(v);
+        if (u == null) {
+          throw new IllegalArgumentException("no mapping for " + v);
+        }
+        return (V) u;
+      }
+    };
+  }
+
+  @Test
+  void testChanceSumIsTight() {
+    // after propagation every bound it moves has a support: x[j] at its max with the others at
+    // their min and c at its max, c at its min with every x at its min
+    for (int t = 0; t < TRIALS; t++) {
+      SumInstance in = new SumInstance(5_000_000L + t);
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar c = in.cap(store);
+      store.impose(in.constraint(x, c));
+      if (!store.consistency()) {
+        continue;
+      }
+      IntVar[] dx = distinct(x);
+      int[] low = Arrays.stream(dx).mapToInt(IntVar::min).toArray();
+      assertThat(in.holds(in.itemValues(x, low, dx), c.min())).as(in.describe()).isTrue();
+      for (int j = 0; j < dx.length; j++) {
+        int[] v = low.clone();
+        v[j] = dx[j].max();
+        assertThat(in.holds(in.itemValues(x, v, dx), c.max())).as(in.describe()).isTrue();
+        if (x.length == dx.length && dx[j].domain.getSize() == 2 && dx[j].max() == 1) {
+          // 0/1 variables: both values have a support (domain consistency)
+          v[j] = 0;
+          assertThat(in.holds(in.itemValues(x, v, dx), c.max())).as(in.describe()).isTrue();
+        }
+      }
+    }
+  }
+
+  @Test
+  void testChanceSumRowsHoldForEverySolution() {
+    int checked = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      SumInstance in = new SumInstance(7_000_000L + t);
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar c = in.cap(store);
+      ChanceSum constraint = in.constraint(x, c);
+      List<LinearForm> rows = constraint.relaxation();
+      IntVar[] dx = distinct(x);
+      IntVar[] all = Arrays.copyOf(dx, dx.length + 1);
+      all[dx.length] = c;
+      for (int[] tuple : tuples(all)) {
+        if (!in.holds(in.itemValues(x, tuple, dx), tuple[dx.length])) {
+          continue;
+        }
+        Map<Var, Long> value = new IdentityHashMap<>();
+        for (int i = 0; i < all.length; i++) {
+          value.put(all[i], (long) tuple[i]);
+        }
+        for (LinearForm f : rows) {
+          long lhs = 0;
+          for (int k = 0; k < f.vars().length; k++) {
+            lhs += f.weights()[k] * value.get(f.vars()[k]);
+          }
+          assertThat(lhs).as(in.describe() + " row " + f).isLessThanOrEqualTo(f.c());
+          checked++;
+        }
+      }
+    }
+    assertThat(checked).isPositive();
+  }
+
+  @Test
+  void testChanceSumExactTies() {
+    // Pr(W <= 1) = 1/3 exactly: alpha 1/3 holds, alpha 1/3 + epsilon does not
+    Dist third = new Dist(new int[] {1, 2, 3}, new long[] {1, 1, 1}, 3);
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar c = new IntVar(store, "c", 1, 1);
+    store.impose(new ChanceSum(new IntVar[] {x}, new Dist[] {third}, c, 1, 3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.max()).isEqualTo(1);
+    store = new Store();
+    x = new IntVar(store, "x", 0, 1);
+    c = new IntVar(store, "c", 1, 1);
+    store.impose(
+        new ChanceSum(
+            new IntVar[] {x}, new Dist[] {third}, c, 1_000_000_000_001L, 3_000_000_000_000L));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.max()).isZero();
+
+    // 60 independent items of weight 0 or 1 with probability 1/2 each: Pr(load <= 30) is just
+    // above 1/2; a threshold equal to it, and one a hair above, go through the exact comparison
+    Dist coin = new Dist(new int[] {0, 1}, new long[] {1, 1}, 2);
+    int n = 60;
+    java.math.BigInteger num = java.math.BigInteger.ZERO;
+    java.math.BigInteger binom = java.math.BigInteger.ONE;
+    for (int k = 0; k <= 30; k++) {
+      num = num.add(binom);
+      binom =
+          binom
+              .multiply(java.math.BigInteger.valueOf(n - k))
+              .divide(java.math.BigInteger.valueOf(k + 1L));
+    }
+    // num / 2^60 fits a long
+    long den = 1L << 60;
+    for (long delta : new long[] {0, 1}) {
+      store = new Store();
+      IntVar[] xs = new IntVar[n];
+      Dist[] ws = new Dist[n];
+      for (int i = 0; i < n; i++) {
+        xs[i] = new IntVar(store, "x" + i, i == 0 ? 0 : 1, 1);
+        ws[i] = coin;
+      }
+      c = new IntVar(store, "c", 0, 30);
+      // with x0 = 0 the load of 59 coins: Pr(<= 30) is larger, so x0 = 1 decides
+      store.impose(new ChanceSum(xs, ws, c, num.longValueExact() + delta, den));
+      boolean ok = store.consistency();
+      assertThat(ok).isTrue();
+      assertThat(xs[0].max()).isEqualTo(delta == 0 ? 1 : 0);
+      assertThat(c.min()).isEqualTo(30);
+    }
+  }
+
+  @Test
+  void testChanceSumRejectsBadInput() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar c = new IntVar(store, "c", 0, 5);
+    Dist d = Dist.uniform(1, 2);
+    assertThatThrownBy(() -> new ChanceSum(new IntVar[] {x}, new Dist[] {d}, c, 1, 2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new ChanceSum(new IntVar[] {y}, new Dist[] {Dist.uniform(-1, 2)}, c, 1, 2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ChanceSum(new IntVar[] {y, c}, new Dist[] {d, d}, c, 1, 2))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new ChanceSum(new IntVar[] {y}, new Dist[] {d}, c, 1, 0))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testChanceSumWithLcg() {
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      SumInstance in = new SumInstance(6_000_000L + t);
+      Integer expected = null;
+      {
+        Store store = new Store();
+        IntVar[] x = in.vars(store);
+        IntVar c = in.cap(store);
+        IntVar[] dx = distinct(x);
+        IntVar[] all = Arrays.copyOf(dx, dx.length + 1);
+        all[dx.length] = c;
+        for (int[] tuple : tuples(all)) {
+          int[] xv = in.itemValues(x, tuple, dx);
+          if (in.holds(xv, tuple[dx.length])) {
+            int obj = -tuple[dx.length];
+            for (int i = 0; i < dx.length; i++) {
+              obj -= in.value[i] * tuple[i];
+            }
+            expected = expected == null ? obj : Math.min(expected, obj);
+          }
+        }
+      }
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar c = in.cap(store);
+      store.impose(in.constraint(x, c));
+      IntVar[] dx = distinct(x);
+      IntVar[] all = Arrays.copyOf(dx, dx.length + 1);
+      all[dx.length] = c;
+      int[] coef = new int[all.length];
+      for (int i = 0; i < dx.length; i++) {
+        coef[i] = -in.value[i];
+      }
+      coef[dx.length] = -1;
+      IntVar objective = new IntVar(store, "obj", -1000, 1000);
+      store.impose(new LinearInt(all, coef, "==", objective));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status = solver.minimize(objective);
+      assertThat(status).as(in.describe()).isNotEqualTo(CdclSolver.UNKNOWN);
+      assertThat(status == CdclSolver.SAT).as(in.describe()).isEqualTo(expected != null);
+      if (status == CdclSolver.SAT) {
+        int[] values = new int[dx.length];
+        for (int i = 0; i < dx.length; i++) {
+          values[i] = solver.value(dx[i]);
+        }
+        assertThat(in.holds(in.itemValues(x, values, dx), solver.value(c)))
+            .as(in.describe())
+            .isTrue();
+        assertThat(solver.value(objective)).as(in.describe()).isEqualTo(expected);
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("ChanceSum");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    assertThat(sat).isPositive();
+    assertThat(unsat).isPositive();
+    assertThat(own).isGreaterThan(generic);
   }
 }
