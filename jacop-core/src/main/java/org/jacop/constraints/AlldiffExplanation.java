@@ -76,7 +76,14 @@ final class AlldiffExplanation {
   // per variable its strongest bound entries (or -1) and its != entries inside the bounds
   private int[] lowerEntry;
   private int[] upperEntry;
-  private int[][] holeEntries;
+  // the != entries of variable k are holes[holeStart[k]] to holes[holeStart[k + 1] - 1]
+  private int[] holes;
+  private int[] holeStart;
+
+  // the value graph's edges, kept per thread between explanations: an explanation of a large all
+  // different rebuilt this array by doubling from a small one each time (a fifth of whirlpool's run
+  // time under LCG was the copying)
+  private static final ThreadLocal<int[]> EDGES = ThreadLocal.withInitial(() -> new int[64]);
   private int[] owner;
   private int[] mate;
   private boolean[] inValues;
@@ -229,7 +236,9 @@ final class AlldiffExplanation {
     vars = new IntVar[count];
     lowerEntry = new int[count];
     upperEntry = new int[count];
-    holeEntries = new int[count][];
+    holeStart = new int[count + 1];
+    holes = new int[16];
+    int numHoles = 0;
     int[] min = new int[count];
     int[] max = new int[count];
     int lowest = Integer.MAX_VALUE;
@@ -251,26 +260,28 @@ final class AlldiffExplanation {
       trail.atomsBefore(z, position, atoms);
       int ge = -1;
       int le = -1;
-      int holes = 0;
-      int[] hole = new int[atoms.size()];
+      holeStart[n] = numHoles;
+      if (numHoles + atoms.size() > holes.length) {
+        holes = Arrays.copyOf(holes, Math.max(2 * holes.length, numHoles + atoms.size()));
+      }
       for (int k = 0; k < atoms.size(); k++) {
         int f = atoms.get(k);
         switch (trail.kind(f)) {
           case AtomicTrail.GE -> ge = f;
           case AtomicTrail.LE -> le = f;
-          default -> hole[holes++] = f;
+          default -> holes[numHoles++] = f;
         }
       }
       vars[n] = z;
       lowerEntry[n] = ge;
       upperEntry[n] = le;
-      holeEntries[n] = Arrays.copyOf(hole, holes);
       min[n] = lo;
       max[n] = hi;
       lowest = Math.min(lowest, lo);
       highest = Math.max(highest, hi);
       n++;
     }
+    holeStart[n] = numHoles;
     if (n == 0) {
       base = 0;
       owner = new int[0];
@@ -286,12 +297,12 @@ final class AlldiffExplanation {
     int span = highest - lowest + 1;
     boolean[] isHole = new boolean[span];
     adjStart = new int[n + 1];
-    int[] edges = new int[64];
+    int[] edges = EDGES.get();
     int e = 0;
     for (int k = 0; k < n; k++) {
       adjStart[k] = e;
-      for (int f : holeEntries[k]) {
-        isHole[trail.value(f) - base] = true;
+      for (int h = holeStart[k]; h < holeStart[k + 1]; h++) {
+        isHole[trail.value(holes[h]) - base] = true;
       }
       // the root domain's intervals, so that a sparse domain costs its size and not its span
       for (IntervalEnumeration en = trail.rootDomain(vars[k]).intervalEnumeration();
@@ -305,13 +316,14 @@ final class AlldiffExplanation {
                 return false;
               }
               edges = Arrays.copyOf(edges, 2 * e);
+              EDGES.set(edges);
             }
             edges[e++] = v - base;
           }
         }
       }
-      for (int f : holeEntries[k]) {
-        isHole[trail.value(f) - base] = false;
+      for (int h = holeStart[k]; h < holeStart[k + 1]; h++) {
+        isHole[trail.value(holes[h]) - base] = false;
       }
     }
     adjStart[n] = e;
@@ -469,9 +481,9 @@ final class AlldiffExplanation {
       if (upperEntry[k] >= 0 && outsideAbove(root, trail.value(upperEntry[k]))) {
         out.add(upperEntry[k]);
       }
-      for (int f : holeEntries[k]) {
-        if (!inValues[trail.value(f) - base]) {
-          out.add(f);
+      for (int h = holeStart[k]; h < holeStart[k + 1]; h++) {
+        if (!inValues[trail.value(holes[h]) - base]) {
+          out.add(holes[h]);
         }
       }
     }
