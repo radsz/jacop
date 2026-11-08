@@ -1776,6 +1776,172 @@ class LinearRelaxationTest {
   }
 
   /**
+   * The subtour elimination cuts of a tree keep the optimum of random prize-collecting and spanning
+   * tree models under depth-first search and under lazy clause generation with the explanation
+   * checker on; on spanning trees, whose polytope these cuts describe, the root bound after them is
+   * the weight of a minimum spanning tree.
+   */
+  @Test
+  void treeCutsKeepTheOptimumOfTrees() {
+    int cut = 0;
+    long checked = 0;
+    for (int run = 0; run < 16; run++) {
+      boolean spanning = run % 2 == 0;
+      long expected = new Forest(run, spanning).optimum();
+
+      Forest dfs = new Forest(run, spanning);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      dfs.store.impose(r);
+      assertThat(dfs.search()).as("seed %d", run).isEqualTo(expected);
+      assertThat(r.treeBound).as("seed %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      if (spanning) {
+        assertThat(r.treeBound).as("seed %d", run).isCloseTo(expected, offset(1e-6));
+      }
+      cut += r.treeCuts > 0 && r.treeBound > r.rootBound + 0.5 ? 1 : 0;
+
+      Forest lcg = new Forest(run, spanning);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+    }
+    assertThat(cut).isPositive();
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * A tree rooted at node 0 of a random graph over 5 to 7 nodes, minimizing the weight of its edges
+   * less the prizes of its nodes, or spanning all the nodes.
+   */
+  private static final class Forest {
+    final Store store = new Store();
+    final IntVar[] nodes;
+    final IntVar[] edges;
+    final IntVar cost;
+    final int[] from;
+    final int[] to;
+    final int[] weight;
+    final int[] prize;
+
+    Forest(int seed, boolean spanning) {
+      Random rnd = new Random(seed * 7_919L + 3);
+      int n = 5 + rnd.nextInt(3);
+      List<int[]> pairs = new ArrayList<>();
+      for (int i = 1; i < n; i++) {
+        // a path keeps the graph connected
+        pairs.add(new int[] {i - 1, i});
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) > 0) {
+            pairs.add(new int[] {i - 1, j});
+          }
+        }
+      }
+      int m = pairs.size();
+      from = new int[m];
+      to = new int[m];
+      weight = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = pairs.get(e)[0];
+        to[e] = pairs.get(e)[1];
+        weight[e] = 1 + rnd.nextInt(20);
+      }
+      prize = new int[n];
+      nodes = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        prize[i] = spanning ? 0 : rnd.nextInt(25);
+        nodes[i] = new IntVar(store, "n" + i, i == 0 || spanning ? 1 : 0, 1);
+      }
+      edges = new IntVar[m];
+      for (int e = 0; e < m; e++) {
+        edges[e] = new IntVar(store, "e" + e, 0, 1);
+      }
+      store.imposeDecomposition(
+          new org.jacop.constraints.graph.Tree(
+              from, to, new IntVar(store, "root", 0, 0), nodes, edges, false));
+      cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] vars = new IntVar[n + m + 1];
+      int[] w = new int[n + m + 1];
+      for (int i = 0; i < n; i++) {
+        vars[i] = nodes[i];
+        w[i] = -prize[i];
+      }
+      for (int e = 0; e < m; e++) {
+        vars[n + e] = edges[e];
+        w[n + e] = weight[e];
+      }
+      vars[n + m] = cost;
+      w[n + m] = -1;
+      store.impose(new LinearInt(vars, w, "==", 0));
+    }
+
+    // the least cost over all edge sets that form a tree with the root, by enumeration
+    long optimum() {
+      int n = nodes.length;
+      int m = edges.length;
+      long best = Long.MAX_VALUE;
+      for (int mask = 0; mask < 1 << m; mask++) {
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) {
+          parent[i] = i;
+        }
+        boolean[] used = new boolean[n];
+        used[0] = true;
+        boolean forest = true;
+        long c = 0;
+        for (int e = 0; e < m && forest; e++) {
+          if ((mask >> e & 1) != 0) {
+            int a = find(parent, from[e]);
+            int b = find(parent, to[e]);
+            forest = a != b;
+            parent[a] = b;
+            used[from[e]] = true;
+            used[to[e]] = true;
+            c += weight[e];
+          }
+        }
+        if (!forest) {
+          continue;
+        }
+        boolean ok = true;
+        for (int i = 0; i < n; i++) {
+          if (used[i]) {
+            ok &= find(parent, i) == find(parent, 0);
+            c -= prize[i];
+          } else {
+            ok &= nodes[i].min() == 0;
+          }
+        }
+        if (ok) {
+          best = Math.min(best, c);
+        }
+      }
+      return best;
+    }
+
+    private static int find(int[] parent, int i) {
+      while (parent[i] != i) {
+        i = parent[i];
+      }
+      return i;
+    }
+
+    // the least cost by depth-first search
+    long search() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] all = Arrays.copyOf(edges, edges.length + nodes.length);
+      System.arraycopy(nodes, 0, all, edges.length, nodes.length);
+      assertThat(search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
+    }
+  }
+
+  /**
    * A random all-different over 5 to 7 variables, a permutation of spread values or domains from a
    * larger pool, with a linear cost {@code cost = sum c_i x_i}.
    */

@@ -40,9 +40,9 @@ import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.Functional;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.SelectingViolation;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
-import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -71,7 +71,7 @@ import org.jacop.lcg.PbModel;
  */
 public class ElementVariableFast extends AbstractElement
     implements Functional,
-        Violation,
+        SelectingViolation,
         Simplifiable,
         SatisfiedPresent,
         Copyable<ElementVariableFast>,
@@ -369,6 +369,31 @@ public class ElementVariableFast extends AbstractElement
       return 1;
     }
     return value.applyAsInt(list[i]) == value.applyAsInt(this.value) ? 0 : 1;
+  }
+
+  @Override
+  public IntVar selector() {
+    return index;
+  }
+
+  @Override
+  public IntVar[] selectable() {
+    return list.clone();
+  }
+
+  @Override
+  public int firstSelector() {
+    return indexOffset + 1;
+  }
+
+  @Override
+  public IntVar[] alwaysRead() {
+    return new IntVar[] {value};
+  }
+
+  @Override
+  public IntVar selectedEquals() {
+    return value;
   }
 
   @Override

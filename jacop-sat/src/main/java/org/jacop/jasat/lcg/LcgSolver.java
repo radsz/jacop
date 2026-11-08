@@ -2981,6 +2981,11 @@ public final class LcgSolver implements ExternalPropagator {
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
     double share = lowerBoundShare;
+    // before the first solution a run that neither raises the bound nor finds a solution halves the
+    // share of the next one, and a raise restores it: the runs take time from the search for a
+    // first
+    // solution (XCSP3 IHTC-i30 found none in 600 s with the full share, base finds one after 240 s)
+    double early = 1;
     while (true) {
       long before = best == null ? Long.MAX_VALUE : best[objective];
       long limit = sat.conflicts + budget;
@@ -2996,14 +3001,19 @@ public final class LcgSolver implements ExternalPropagator {
           return result;
         }
       }
-      if (lowerBoundShare > 0 && best != null) {
-        if (shaveGrowth > 1) {
+      if (lowerBoundShare > 0) {
+        if (shaveGrowth > 1 && best != null) {
           // a round that did not improve the best solution gives the bound more of the next one
           share = best[objective] < before ? lowerBoundShare : Math.min(share * shaveGrowth, 4);
         }
-        result = lowerBoundRun((long) (budget * share));
+        boolean noSolution = best == null;
+        long raisedBefore = lowerBoundRaised;
+        result = lowerBoundRun((long) (budget * share * (noSolution ? early : 1)));
         if (result != CdclSolver.UNKNOWN) {
           return result;
+        }
+        if (noSolution) {
+          early = lowerBoundRaised > raisedBefore ? 1 : early / 2;
         }
       }
       budget += budget / 2;
@@ -3025,11 +3035,16 @@ public final class LcgSolver implements ExternalPropagator {
     while (true) {
       // after solve the domains are those of level 0
       int lb = Math.max(vars[objective].min(), raised);
-      if (best == null || lb >= best[objective]) {
+      // before the first solution the run assumes the objective at its lower bound, without
+      // shaving: puzzles such as ButtonsScissors have their first solutions only near the optimum
+      // and are much easier with the tightest bound (XCSP3 ButtonsScissors-00: 0.2 s with the
+      // objective at most 9, the optimum, no solution in 15 s with at most 13)
+      if (best == null ? lb >= vars[objective].max() : lb >= best[objective]) {
         return CdclSolver.UNKNOWN;
       }
       // objective <= target: the lower bound itself, or a step above it when shaving
-      int target = shaving ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
+      int target =
+          shaving && best != null ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
       int lit = -geLit(objective, target + 1);
       sat.setConflictLimit(limit);
       lowerBoundRuns++;
@@ -3041,10 +3056,12 @@ public final class LcgSolver implements ExternalPropagator {
         if (sat.conflicts < limit) {
           return result; // stopped by the deadline
         }
-        shaveStep = Math.max(1, shaveStep / 2);
+        if (best != null) {
+          shaveStep = Math.max(1, shaveStep / 2);
+        }
         return CdclSolver.UNKNOWN;
       }
-      if (sat.failedAssumptions().length == 0 || best[objective] <= target) {
+      if (sat.failedAssumptions().length == 0 || best != null && best[objective] <= target) {
         // no better solution at all; or the run found one within the target and then none
         // better, and every better one would be within the target too
         return result;
@@ -3053,7 +3070,9 @@ public final class LcgSolver implements ExternalPropagator {
       lowerBoundRaised++;
       raised = target + 1;
       reportBound(target + 1L);
-      if (!shaving) {
+      if (!shaving || best == null) {
+        // before the first solution one step per round: a sum objective (XCSP3 Cargo) raised its
+        // bound one by one for the whole round and found no solution
         return CdclSolver.UNKNOWN;
       }
       shaveStep = Math.min(2 * shaveStep, 1L << 30);
@@ -3371,6 +3390,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Whether {@link #encodeGraphs} ran. */
   private boolean graphsEncoded;
 
+  /** The layered-graph constraints {@link #encodeGraphs} removed from the store. */
+  private final List<LayeredGraphConstraint> encodedGraphs = new ArrayList<>();
+
   /**
    * Sets whether layered-graph constraints (regular, mdd) become clauses of the solver, before it
    * starts; on by default.
@@ -3423,15 +3445,59 @@ public final class LcgSolver implements ExternalPropagator {
             }
           }
         };
+    boolean propagatorLeft = false;
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
+        encodedGraphs.add(g);
         graphConstraintsEncoded++;
-      } else if (c instanceof ImpliedClauses i && !rootFailed) {
-        impliedClauses += i.impliedClauses(model);
+      } else {
+        propagatorLeft = true;
+        if (c instanceof ImpliedClauses i && !rootFailed) {
+          impliedClauses += i.impliedClauses(model);
+        }
       }
     }
+    if (PURE_CLAUSE_LITERALS
+        && freeSearch
+        && branching == Branching.ALTERNATE
+        && annotation != null
+        && !propagatorLeft
+        && allBinary()) {
+      // every constraint became clauses and every variable is 0/1: the model is a CNF, and the
+      // turns of the annotation (or dom/wdeg) and of activity branching only make slower SAT
+      // decisions. Nonograms at 600 s, two seeds: 2026 hard_03 53-56 s instead of 388 s and
+      // unsolved, 2013 dom_14 4-22 s instead of 79-129 s; 19 of 58 runs faster, 1 slower. Not with
+      // wider domains: pentominoes, whose regular constraints become clauses too, lost up to 4x
+      branching = Branching.LITERALS;
+      annotation = null;
+      annotationRun = false;
+      activityBranching = false;
+      pureClauses = true;
+    }
   }
+
+  /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
+  private boolean allBinary() {
+    for (IntVar x : vars) {
+      if (x != null && x.getSize() > 2) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Whether a free search whose model is clauses only, with no constraint left in the store once
+   * {@link #encodeGraphs} has run, leaves all decisions to the SAT solver (as {@link
+   * Branching#LITERALS}). On by default; the system property {@code jacop.lcg.pureClauseLiterals}
+   * set to false turns it off.
+   */
+  static final boolean PURE_CLAUSE_LITERALS =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pureClauseLiterals", "true"));
+
+  /** Whether the model became clauses only and its search was left to the SAT solver. */
+  public boolean pureClauses;
 
   /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
@@ -4031,11 +4097,16 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Hands the store back for search without learning: its changes are no longer recorded. The
-   * solver cannot solve again afterwards; its best solution stays readable.
+   * Hands the store back for search without learning: its changes are no longer recorded, and the
+   * layered-graph constraints that went to the solver as clauses are in the store again. The solver
+   * cannot solve again afterwards; its best solution stays readable.
    */
   public void release() {
     trail.detach();
+    for (LayeredGraphConstraint g : encodedGraphs) {
+      g.restoreConstraint(store);
+    }
+    encodedGraphs.clear();
   }
 
   /**
