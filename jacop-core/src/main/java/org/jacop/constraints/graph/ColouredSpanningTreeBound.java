@@ -140,13 +140,7 @@ public class ColouredSpanningTreeBound extends Constraint
   private boolean firstCall = true;
 
   // edge filtering on the tree of the shifted weights
-  private final int[] treeParent;
-  private final int[] treeEdge;
-  private final int[] depth;
-  private final int[] adjStart;
-  private final int[] adjEdge;
-  private final int[] queue;
-  private final long[] replacement;
+  private final TreeReducedCosts reducedCosts;
 
   /**
    * It constructs the constraint.
@@ -267,13 +261,7 @@ public class ColouredSpanningTreeBound extends Constraint
     inTree = new boolean[m];
     shifted = new long[m];
 
-    treeParent = new int[n];
-    treeEdge = new int[n];
-    depth = new int[n];
-    adjStart = new int[n + 1];
-    adjEdge = new int[2 * Math.max(n - 1, 0)];
-    queue = new int[n];
-    replacement = new long[m];
+    reducedCosts = new TreeReducedCosts(n, m);
 
     setScope(es, new IntVar[] {cost});
   }
@@ -298,7 +286,7 @@ public class ColouredSpanningTreeBound extends Constraint
     int selected = 0;
     for (int e = 0; e < m; e++) {
       if (es[e].min() == 1) {
-        if (!union(tail[e], head[e])) {
+        if (!TreeReducedCosts.union(parent, tail[e], head[e])) {
           throw Store.failException;
         }
         selectedWeight += weights[e];
@@ -313,12 +301,12 @@ public class ColouredSpanningTreeBound extends Constraint
     }
     int k = 0;
     for (int v = 0; v < n; v++) {
-      if (find(v) == v) {
+      if (TreeReducedCosts.find(parent, v) == v) {
         component[v] = k++;
       }
     }
     for (int v = 0; v < n; v++) {
-      component[v] = component[find(v)];
+      component[v] = component[TreeReducedCosts.find(parent, v)];
     }
 
     if (selected < n - 1) {
@@ -369,7 +357,8 @@ public class ColouredSpanningTreeBound extends Constraint
           continue;
         }
         int c = colours[e];
-        if ((c < 0 || colourCount[c] < residual[c]) && union(candA[i], candB[i])) {
+        if ((c < 0 || colourCount[c] < residual[c])
+            && TreeReducedCosts.union(parent, candA[i], candB[i])) {
           inSet[e] = true;
           if (c >= 0) {
             colourCount[c]++;
@@ -581,7 +570,8 @@ public class ColouredSpanningTreeBound extends Constraint
     }
     cost.domain.inMin(store.level, cost, (int) Math.max(bound, Integer.MIN_VALUE));
     if (offset > 0) {
-      filterEdges(store, lower, cost.max() * SCALE + offset);
+      reducedCosts.filter(
+          store, es, tail, head, inTree, shifted, lower, cost.max() * SCALE + offset);
     }
   }
 
@@ -608,7 +598,9 @@ public class ColouredSpanningTreeBound extends Constraint
     while (hs > 0) {
       int c = heap[0];
       int e = byColour[c][next[c]++];
-      if (es[e].min() == 0 && es[e].max() == 1 && union(tail[e], head[e])) {
+      if (es[e].min() == 0
+          && es[e].max() == 1
+          && TreeReducedCosts.union(parent, tail[e], head[e])) {
         inTree[e] = true;
         total += weights[e] + (c == colourNo ? 0 : mult[c]);
       }
@@ -676,7 +668,7 @@ public class ColouredSpanningTreeBound extends Constraint
     Arrays.sort(free, 0, fn, Comparator.comparingLong((Integer e) -> shifted[e]));
     for (int i = 0; i < fn; i++) {
       int e = free[i];
-      if (union(tail[e], head[e])) {
+      if (TreeReducedCosts.union(parent, tail[e], head[e])) {
         inTree[e] = true;
         total += shifted[e];
       }
@@ -691,114 +683,7 @@ public class ColouredSpanningTreeBound extends Constraint
     for (int e = 0; e < m; e++) {
       inTree[e] = es[e].min() == 1;
       if (inTree[e]) {
-        union(tail[e], head[e]);
-      }
-    }
-  }
-
-  private boolean union(int a, int b) {
-    int ra = find(a);
-    int rb = find(b);
-    if (ra == rb) {
-      return false;
-    }
-    parent[ra] = rb;
-    return true;
-  }
-
-  private int find(int v) {
-    int r = v;
-    while (parent[r] != r) {
-      r = parent[r];
-    }
-    while (parent[v] != r) {
-      int next = parent[v];
-      parent[v] = r;
-      v = next;
-    }
-    return r;
-  }
-
-  // reduced-cost filtering on the tree in inTree for the weights in shifted (see
-  // SpanningTreeBound): lower is its weight and upper the largest shifted weight a tree may have
-  private void filterEdges(Store store, long lower, long upper) {
-
-    Arrays.fill(adjStart, 0);
-    int treeSize = 0;
-    for (int e = 0; e < m; e++) {
-      if (inTree[e]) {
-        adjStart[tail[e] + 1]++;
-        adjStart[head[e] + 1]++;
-        treeSize++;
-      }
-    }
-    if (treeSize != n - 1) {
-      // the graph is not connected; Tree fails on it
-      return;
-    }
-    for (int v = 0; v < n; v++) {
-      adjStart[v + 1] += adjStart[v];
-    }
-    int[] fill = Arrays.copyOf(adjStart, n);
-    for (int e = 0; e < m; e++) {
-      if (inTree[e]) {
-        adjEdge[fill[tail[e]]++] = e;
-        adjEdge[fill[head[e]]++] = e;
-      }
-    }
-    Arrays.fill(treeParent, -1);
-    treeParent[0] = 0;
-    treeEdge[0] = -1;
-    depth[0] = 0;
-    int qh = 0;
-    int qt = 0;
-    queue[qt++] = 0;
-    while (qh < qt) {
-      int v = queue[qh++];
-      for (int i = adjStart[v]; i < adjStart[v + 1]; i++) {
-        int e = adjEdge[i];
-        int w = tail[e] == v ? head[e] : tail[e];
-        if (treeParent[w] < 0) {
-          treeParent[w] = v;
-          treeEdge[w] = e;
-          depth[w] = depth[v] + 1;
-          queue[qt++] = w;
-        }
-      }
-    }
-
-    Arrays.fill(replacement, Long.MAX_VALUE);
-    for (int e = 0; e < m; e++) {
-      if (inTree[e] || es[e].max() == 0 || tail[e] == head[e]) {
-        continue;
-      }
-      int u = tail[e];
-      int v = head[e];
-      long heaviest = Long.MIN_VALUE;
-      while (u != v) {
-        if (depth[u] < depth[v]) {
-          int t = u;
-          u = v;
-          v = t;
-        }
-        int f = treeEdge[u];
-        if (es[f].min() == 0 && shifted[f] > heaviest) {
-          heaviest = shifted[f];
-        }
-        if (shifted[e] < replacement[f]) {
-          replacement[f] = shifted[e];
-        }
-        u = treeParent[u];
-      }
-      if (heaviest == Long.MIN_VALUE || lower - heaviest + shifted[e] > upper) {
-        es[e].domain.in(store.level, es[e], 0, 0);
-      }
-    }
-    for (int e = 0; e < m; e++) {
-      if (inTree[e]
-          && es[e].min() == 0
-          && (replacement[e] == Long.MAX_VALUE || lower - shifted[e] + replacement[e] > upper)) {
-        es[e].domain.in(store.level, es[e], 1, 1);
+        TreeReducedCosts.union(parent, tail[e], head[e]);
       }
     }
   }
@@ -813,26 +698,32 @@ public class ColouredSpanningTreeBound extends Constraint
     if (!cost.singleton()) {
       return false;
     }
-    long sum = 0;
-    int selected = 0;
-    int[] count = new int[colourNo];
-    for (int v = 0; v < n; v++) {
-      parent[v] = v;
-    }
-    for (int e = 0; e < m; e++) {
-      if (!es[e].singleton()) {
+    for (IntVar e : es) {
+      if (!e.singleton()) {
         return false;
       }
-      if (es[e].value() == 1) {
-        if (!union(tail[e], head[e])) {
-          return false;
-        }
-        if (colours[e] >= 0 && ++count[colours[e]] > caps[colours[e]]) {
-          return false;
-        }
-        sum += weights[e];
-        selected++;
+    }
+    // the selected edges: a forest of n-1 edges within the colour limits, of weight at most cost
+    int[] count = new int[colourNo];
+    long sum = 0;
+    int selected = 0;
+    Arrays.setAll(parent, v -> v);
+    for (int e = 0; e < m; e++) {
+      if (es[e].value() == 0) {
+        continue;
       }
+      if (!TreeReducedCosts.union(parent, tail[e], head[e])) {
+        return false;
+      }
+      int c = colours[e];
+      if (c >= 0) {
+        count[c]++;
+        if (count[c] > caps[c]) {
+          return false;
+        }
+      }
+      sum += weights[e];
+      selected++;
     }
     return selected == Math.max(n - 1, 0) && cost.value() >= sum;
   }
