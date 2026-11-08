@@ -77,6 +77,35 @@ final class LinearSplit {
    * @param defined receives the variable of each block sum, which its block defines
    * @return the sum of the blocks with c's relation and right-hand side, or null
    */
+  /**
+   * Whether sums of 0/1 variables (with at most one other variable) stay whole for the LCG solver's
+   * unary counter: when {@code jacop.lcg.clauses} names their class (or "all").
+   */
+  private static final boolean COUNTER_CLAUSES = counterClauses();
+
+  private static boolean counterClauses() {
+    String cl = System.getProperty("jacop.lcg.clauses", "none");
+    return "all".equals(cl) || java.util.Arrays.asList(cl.split(",")).contains("LinearInt");
+  }
+
+  private static final int COUNTER_ARITY = Integer.getInteger("jacop.lcg.clauses.boolArity", 256);
+
+  private static boolean counterShape(IntVar[] x, long[] w) {
+    if (x.length > COUNTER_ARITY) {
+      return false;
+    }
+    int others = 0;
+    for (int i = 0; i < x.length; i++) {
+      if (Math.abs(w[i]) != 1) {
+        return false;
+      }
+      if (x[i].min() < 0 || x[i].max() > 1) {
+        others++;
+      }
+    }
+    return others <= 1;
+  }
+
   static Constraint split(Store store, Constraint c, int limit, Consumer<IntVar> defined) {
     LinearForm f = form(c);
     if (limit <= 0 || f == null || f.relation() == LinearForm.NE || f.vars().length <= limit) {
@@ -85,6 +114,10 @@ final class LinearSplit {
     IntVar[] x = f.vars();
     long[] w = f.weights();
     int n = x.length;
+    if (COUNTER_CLAUSES && counterShape(x, w)) {
+      // the LCG solver writes it as one unary counter, whose counts are better kept whole
+      return null;
+    }
     if (f.c() < IntDomain.MIN_INT || f.c() > IntDomain.MAX_INT) {
       return null;
     }

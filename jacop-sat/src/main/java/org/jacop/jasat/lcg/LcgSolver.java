@@ -3481,6 +3481,8 @@ public final class LcgSolver implements ExternalPropagator {
    * The most clauses of a sum of 0/1 variables (with at most one other variable), which becomes a
    * unary counter, {@code jacop.lcg.clauses.counter}.
    */
+  static final boolean CLAUSE_DEBUG = Boolean.getBoolean("jacop.lcg.clauses.debug");
+
   static final int CLAUSE_COUNTER = Integer.getInteger("jacop.lcg.clauses.counter", 20000);
 
   /** The most unfixed 0/1 variables of such a sum, {@code jacop.lcg.clauses.boolArity}. */
@@ -3513,15 +3515,17 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (!x.singleton()) {
         arity++;
-        if (trail.id(x) >= vars.length || x.getSize() > CLAUSE_DOM) {
+        if (trail.id(x) >= vars.length || x.getSize() > CLAUSE_BOOL_ARITY + 1) {
           return false;
         }
-        if (x.min() < 0 || x.max() > 1) {
+        if (x.getSize() > CLAUSE_DOM) {
           wide++;
         }
       }
     }
-    return arity <= CLAUSE_ARITY || wide <= 1 && arity <= CLAUSE_BOOL_ARITY;
+    // one variable wider than the limit, such as the count of a counter; the encoder's own limits
+    // decide the rest
+    return wide <= 1 && arity <= CLAUSE_BOOL_ARITY && (wide == 0 || arity > 2);
   }
 
   private boolean encodeAsClauses(Constraint c) {
@@ -3553,6 +3557,13 @@ public final class LcgSolver implements ExternalPropagator {
               CLAUSE_COUNTER);
     }
     List<int[]> cs = clauseEncoder.encode(c);
+    if (CLAUSE_DEBUG) {
+      String s = c.toString();
+      System.out.println(
+          "% clauses "
+              + (cs == null ? "rejected " : cs.size() + " ")
+              + (s.length() > 300 ? s.substring(0, 300) : s));
+    }
     if (cs == null) {
       return false;
     }
