@@ -41,6 +41,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Cost bound of a spanning tree of an undirected graph: the selected edges must form a spanning
@@ -59,7 +62,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class SpanningTreeBound extends Constraint
-    implements SatisfiedPresent, Copyable<SpanningTreeBound> {
+    implements SatisfiedPresent, Explainable, Copyable<SpanningTreeBound> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -68,6 +71,8 @@ public class SpanningTreeBound extends Constraint
   final int[] weights;
   // the weights as long values for the reduced-cost filtering
   private final long[] longWeights;
+  // the reasons under lazy clause generation, made at the first explanation
+  private TreeExplanation explanation;
   final IntVar[] es;
   final IntVar cost;
   final int base;
@@ -181,6 +186,25 @@ public class SpanningTreeBound extends Constraint
     cost.domain.inMin(store.level, cost, (int) lower);
 
     reducedCosts.filter(store, es, tail, head, inTree, longWeights, lower, cost.max());
+  }
+
+  private TreeExplanation explanation() {
+    if (explanation == null) {
+      explanation = new TreeExplanation(n, es, tail, head, cost);
+    }
+    return explanation;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explanation().explain(trail, entry, longWeights, 0, 1, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    TreeExplanation t = explanation();
+    return t.addForcedConflict(trail, trail.size(), null, null, out)
+        || t.explainFailure(trail, longWeights, 0, 1, out);
   }
 
   @Override

@@ -42,6 +42,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Spanning tree with colour limits: the selected edges form a spanning tree of all nodes, at most
@@ -78,12 +81,15 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class ColouredSpanningTreeBound extends Constraint
-    implements SatisfiedPresent, SolutionHint, Copyable<ColouredSpanningTreeBound> {
+    implements SatisfiedPresent, SolutionHint, Explainable, Copyable<ColouredSpanningTreeBound> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The multipliers are rounded down to multiples of 1/SCALE when the bound is computed. */
   static final long SCALE = 1024;
+
+  /** The multiplier vectors kept for explanations, newest first. */
+  static final int HISTORY = 16;
 
   /** Subgradient steps at the first call. */
   static final int FIRST_STEPS = 300;
@@ -138,6 +144,15 @@ public class ColouredSpanningTreeBound extends Constraint
   private final int[] heap;
   private final boolean[] inTree;
   private final long[] shifted;
+
+  // the scaled multipliers of the last bounds, a ring, for explanations
+  private final long[][] history = new long[HISTORY][];
+  private int historySize;
+  private int historyNext;
+  // the weight of the selected edges at the last contraction
+  private long contractedWeight;
+  private TreeExplanation explanation;
+  private long[] explainWeights;
   private boolean firstCall = true;
 
   // the tree of the first call, the Lagrangian tree repaired into a common base: its edges first
@@ -282,20 +297,38 @@ public class ColouredSpanningTreeBound extends Constraint
       return;
     }
 
-    // the selected edges, contracted
+    int k = contract();
+    long selectedWeight = contractedWeight;
+    if (k > 1) {
+      long feasibleWeight = feasibility(k);
+      boolean first = firstCall;
+      firstCall = false;
+      lagrangian(store, feasibleWeight + selectedWeight, first ? FIRST_STEPS : STEPS);
+      if (first) {
+        // the filtering may have selected edges, so the components are made again
+        hintFrom(repairedTree(contract()));
+      }
+    } else if (selectedWeight > cost.max()) {
+      throw Store.failException;
+    } else {
+      cost.domain.inMin(store.level, cost, (int) selectedWeight);
+    }
+  }
+
+  // contracts the selected edges: components, colour counts and residual limits; fails on a cycle
+  // or a colour over its limit; returns the number of components
+  private int contract() {
     for (int v = 0; v < n; v++) {
       parent[v] = v;
     }
     Arrays.fill(colourCount, 0);
     long selectedWeight = 0;
-    int selected = 0;
     for (int e = 0; e < m; e++) {
       if (es[e].min() == 1) {
         if (!TreeReducedCosts.union(parent, tail[e], head[e])) {
           throw Store.failException;
         }
         selectedWeight += weights[e];
-        selected++;
         if (colours[e] >= 0 && ++colourCount[colours[e]] > caps[colours[e]]) {
           throw Store.failException;
         }
@@ -313,20 +346,8 @@ public class ColouredSpanningTreeBound extends Constraint
     for (int v = 0; v < n; v++) {
       component[v] = component[TreeReducedCosts.find(parent, v)];
     }
-
-    if (selected < n - 1) {
-      long feasibleWeight = feasibility(k);
-      boolean first = firstCall;
-      firstCall = false;
-      lagrangian(store, feasibleWeight + selectedWeight, first ? FIRST_STEPS : STEPS);
-      if (first) {
-        hintFrom(repairedTree(k));
-      }
-    } else if (selectedWeight > cost.max()) {
-      throw Store.failException;
-    } else {
-      cost.domain.inMin(store.level, cost, (int) selectedWeight);
-    }
+    contractedWeight = selectedWeight;
+    return k;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -571,6 +592,7 @@ public class ColouredSpanningTreeBound extends Constraint
     for (int e = 0; e < m; e++) {
       shifted[e] = weights[e] * SCALE + (colours[e] < 0 ? 0 : scaled[colours[e]]);
     }
+    remember(scaled);
     long lower = exactTree();
     long bound = Math.ceilDiv(lower - offset, SCALE);
     if (bound > cost.max()) {
@@ -581,6 +603,64 @@ public class ColouredSpanningTreeBound extends Constraint
       reducedCosts.filter(
           store, es, tail, head, inTree, shifted, lower, cost.max() * SCALE + offset);
     }
+  }
+
+  private void remember(long[] scaled) {
+    if (historySize > 0 && Arrays.equals(history[(historyNext + HISTORY - 1) % HISTORY], scaled)) {
+      return;
+    }
+    history[historyNext] = scaled;
+    historyNext = (historyNext + 1) % HISTORY;
+    historySize = Math.min(historySize + 1, HISTORY);
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // explanations: the cut and cycle sets of the bound, for each kept multiplier vector and the zero
+  // one, newest first, until one implies the atom
+
+  // the shifted weights of multiplier vector h (h == historySize: zero) in explainWeights; returns
+  // the offset
+  private long shiftWeights(int h) {
+    if (explanation == null) {
+      explanation = new TreeExplanation(n, es, tail, head, cost);
+      explainWeights = new long[m];
+    }
+    long[] scaled = h < historySize ? history[(historyNext + HISTORY - 1 - h) % HISTORY] : null;
+    long offset = 0;
+    for (int c = 0; scaled != null && c < colourNo; c++) {
+      offset += scaled[c] * caps[c];
+    }
+    for (int e = 0; e < m; e++) {
+      explainWeights[e] =
+          weights[e] * SCALE + (scaled == null || colours[e] < 0 ? 0 : scaled[colours[e]]);
+    }
+    return offset;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    for (int h = 0; h <= historySize; h++) {
+      long offset = shiftWeights(h);
+      if (explanation.explain(trail, entry, explainWeights, offset, SCALE, out)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    shiftWeights(historySize);
+    if (explanation.addForcedConflict(trail, trail.size(), colours, caps, out)) {
+      return true;
+    }
+    for (int h = 0; h <= historySize; h++) {
+      long offset = shiftWeights(h);
+      if (explanation.explainFailure(trail, explainWeights, offset, SCALE, out)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // minimum spanning tree with the selected edges first and the weights shifted by the

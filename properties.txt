@@ -278,6 +278,9 @@ unless stated otherwise):
 - org.jacop.fz.conditionalSelect: if_then_else on integers as
   ConditionalSelect (bounds the result by the branches still possible)
   instead of IfThenElse/Conditional.
+- org.jacop.fz.constraintHints: solution hints of constraints (a common
+  base of ColouredSpanningTreeBound) as the first values of the search
+  and the saved phases; default true.
 - org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
   costs of variables with a known sum; default true without LCG and
   false with LCG.
