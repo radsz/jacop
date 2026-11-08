@@ -2321,13 +2321,32 @@ public final class RevisedDualSimplex {
       row[j] = -1;
       upper[j] = up[j];
     }
-    for (int k = 0; k < m; k++) {
-      basis[k] = list[k];
-      row[list[k]] = k;
+    // the columns basic in the reduced basis first, with the steepest-edge weights of the reduced
+    // solve: with the slacks of the removed rows basic, the rows of the inverse for them are those
+    // of the reduced basis, so the weights are exact. The weights of the other rows are computed
+    // at the factorization, a BTRAN a row; unit weights there (as for a crash basis) leave the
+    // removal of the cost perturbation in exact mode thousands of degenerate pivots (neos2)
+    int known = 0;
+    if (red != null && red.weightsFrom >= mr) {
+      for (int r = 0; r < mr; r++) {
+        int c = red.basis[r];
+        int j = c < nr ? p.oldCol[c] : n + p.oldRow[c - nr];
+        if (b[j] && row[j] < 0) {
+          basis[known] = j;
+          row[j] = known;
+          weight[known++] = red.weight[r];
+        }
+      }
     }
-    // unit weights, as for a crash basis: exact ones cost a BTRAN a row
-    Arrays.fill(weight, 1);
-    weightsFrom = m;
+    int k = known;
+    for (int t = 0; t < m; t++) {
+      int j = list[t];
+      if (row[j] < 0) {
+        basis[k] = j;
+        row[j] = k++;
+      }
+    }
+    weightsFrom = known;
     factorValid = false;
     betaValid = false;
     placed = false;
