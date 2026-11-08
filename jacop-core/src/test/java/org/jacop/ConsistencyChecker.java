@@ -52,6 +52,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongSeq;
+import org.jacop.constraints.BottleneckAlldiff;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ConvexAllocation;
 import org.jacop.constraints.ConvexCost;
@@ -973,6 +974,36 @@ class ConsistencyChecker {
         x);
   }
 
+  /** alldifferent(x) and cost[i][x[i]] <= z for every i. */
+  private static Model bottleneckAlldiff(Store store, Random random) {
+    int n = 2 + random.nextInt(4);
+    int m = n + random.nextInt(3);
+    int[][] cost = new int[n][m];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < m; j++) {
+        cost[i][j] = random.nextInt(8);
+      }
+    }
+    IntVar[] x = vars(store, "x", n, 0, m - 1, random);
+    IntVar z = aVar(store, "z", 0, 8, random);
+    return new Model(
+        new BottleneckAlldiff(x, cost, 0, z),
+        t -> {
+          for (int i = 0; i < n; i++) {
+            if (cost[i][t[i]] > t[n]) {
+              return false;
+            }
+            for (int j = i + 1; j < n; j++) {
+              if (t[i] == t[j]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(x, new IntVar[] {z}));
+  }
+
   /** alldifferent(x) and sum(x) rel s, rel == or, with inequality set, <= or >=. */
   private static Model alldiffSum(
       Store store, Random random, boolean inequality, boolean hallIntervals) {
@@ -1307,6 +1338,7 @@ class ConsistencyChecker {
         // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
         new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),
         new Case("Alldistinct", Level.DOMAIN, (s, r) -> alldiff(s, r, true)),
+        new Case("BottleneckAlldiff", Level.DOMAIN, ConsistencyChecker::bottleneckAlldiff),
         new Case("Member", Level.DOMAIN, (s, r) -> member(s, r, "plain")),
         new Case("ReifiedMember", Level.DOMAIN, (s, r) -> member(s, r, "reified")),
         new Case("NotMember", Level.DOMAIN, (s, r) -> member(s, r, "not")),

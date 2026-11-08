@@ -63,6 +63,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BottleneckAlldiff;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -241,6 +242,8 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("Alldiff", alldiff("Alldiff")),
         Arguments.of("Alldifferent", alldiff("Alldifferent")),
         Arguments.of("Alldistinct", alldiff("Alldistinct")),
+        Arguments.of("BottleneckAlldiff", bottleneckAlldiff(true)),
+        Arguments.of("BottleneckAlldiffMatching", bottleneckAlldiff(false)),
         Arguments.of("AlldiffSum", alldiffSum(true)),
         Arguments.of("AlldiffSumNoHall", alldiffSum(false)),
         Arguments.of(
@@ -2558,6 +2561,40 @@ class GlobalConstraintBruteForceTest {
             return total <= x[n];
           },
           "prec=" + Arrays.deepToString(p) + " terms=" + Arrays.deepToString(t));
+    };
+  }
+
+  // x[0..n-1] pairwise different, every cost[i][x[i] - offset] at most the last; values out of a
+  // cost row are not allowed
+  private static Function<Random, Instance> bottleneckAlldiff(boolean domainConsistent) {
+    return random -> {
+      int n = 1 + random.nextInt(5);
+      int offset = random.nextInt(3) - 1;
+      int[][] cost = new int[n][];
+      for (int i = 0; i < n; i++) {
+        cost[i] = randomInts(random, 1 + random.nextInt(6), -2, 6);
+      }
+      int[][] domains = append(domains(random, n, -1, 6), domain(random, -3, 7));
+      return new Instance(
+          domains,
+          (store, v) ->
+              store.impose(
+                  new BottleneckAlldiff(Arrays.copyOf(v, n), cost, offset, v[n], domainConsistent)),
+          t -> {
+            for (int i = 0; i < n; i++) {
+              int w = t[i] - offset;
+              if (w < 0 || w >= cost[i].length || cost[i][w] > t[n]) {
+                return false;
+              }
+              for (int j = i + 1; j < n; j++) {
+                if (t[i] == t[j]) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          },
+          "offset=" + offset + " cost=" + Arrays.deepToString(cost));
     };
   }
 

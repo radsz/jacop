@@ -44,6 +44,7 @@ import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
+import org.jacop.fz.constraints.BottleneckAlldiffDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
@@ -376,6 +377,11 @@ public class Constraints implements ParserTreeConstants {
       if ((precedenceCost || unaryCost) && options.proof() == null) {
         support.implied(
             () -> new PrecedenceCostDetector(support, precedenceCost, unaryCost).detect(astTree));
+      }
+
+      // the bottleneck assignment bound it adds is redundant, and --proof does not encode it
+      if (BottleneckAlldiffDetector.enabled() && options.proof() == null) {
+        support.implied(() -> new BottleneckAlldiffDetector(support).detect(astTree));
       }
 
       support.detectBinPackingCliques();

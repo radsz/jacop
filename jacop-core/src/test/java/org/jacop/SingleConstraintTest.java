@@ -75,6 +75,7 @@ import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.BottleneckAlldiff;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
@@ -9099,5 +9100,48 @@ class SingleConstraintTest extends TestHelper {
     assertThat(reasons).containsOnlyKeys(x);
     assertThat(reasons.get(x)).containsOnly(y).hasSize(1);
     trail.detach();
+  }
+
+  @Test
+  void bottleneckAlldiffRemovesEveryValueAboveMaxZ() {
+    // the values of cost above max(z) were removed while the domain was enumerated, which skipped
+    // the value after each removed one (found by ConsistencyChecker)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar z = new IntVar(store, "z", 0, 5);
+    int[][] cost = {{9, 9, 1, 9, 9, 1}, {1, 9, 9, 1, 9, 9}};
+    store.impose(new BottleneckAlldiff(new IntVar[] {x, y}, cost, 0, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{2, 5}");
+    assertThat(y.dom().toString()).isEqualTo("{0, 3}");
+  }
+
+  @Test
+  void bottleneckAlldiffBoundsZByMatching() {
+    // each variable alone can cost 1, but only one of them can take value 0: the bottleneck is 5,
+    // which separate element and maximum constraints do not see
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2), new IntVar(store, "x2", 0, 2)
+    };
+    IntVar z = new IntVar(store, "z", 0, 10);
+    int[][] cost = {{1, 5, 9}, {1, 9, 5}, {1, 5, 5}};
+    store.impose(new BottleneckAlldiff(x, cost, 0, z));
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(5);
+    // with z <= 5 the costs of 9 go; every value left lies in a perfect matching
+    store.setLevel(store.level + 1);
+    z.domain.in(store.level, z, 0, 5);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[0].dom().toString()).isEqualTo("{0..1}");
+    assertThat(x[1].dom().toString()).isEqualTo("{0, 2}");
+    // below the bottleneck there is no assignment
+    Store other = new Store();
+    IntVar[] y = {
+      new IntVar(other, "y0", 0, 2), new IntVar(other, "y1", 0, 2), new IntVar(other, "y2", 0, 2)
+    };
+    other.impose(new BottleneckAlldiff(y, cost, 0, new IntVar(other, "w", 0, 4)));
+    assertThat(other.consistency()).isFalse();
   }
 }

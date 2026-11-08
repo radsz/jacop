@@ -57,6 +57,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.BottleneckAlldiff;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
@@ -458,7 +459,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(33)) {
+      return switch (rnd.nextInt(34)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -569,6 +570,22 @@ class LcgFuzzTest {
         }
         case 30 -> valuesWithDifferences();
         case 31 -> unaryEarlinessTardiness(p);
+        case 32 -> {
+          // costs of the values -1 to 3, some rows shorter; the bound may be a model variable
+          IntVar[] v = pick(x, 2 + rnd.nextInt(2));
+          int[][] cost = new int[v.length][];
+          for (int i = 0; i < v.length; i++) {
+            cost[i] = new int[4 + rnd.nextInt(2)];
+            for (int j = 0; j < cost[i].length; j++) {
+              cost[i][j] = rnd.nextInt(6);
+            }
+          }
+          IntVar bound = one();
+          if (Arrays.asList(v).contains(bound)) {
+            bound = intVar("bz", rnd.nextInt(3), 5);
+          }
+          yield new BottleneckAlldiff(v, cost, -1, bound, rnd.nextInt(3) > 0);
+        }
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
