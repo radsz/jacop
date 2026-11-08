@@ -2817,6 +2817,88 @@ class LcgSolverTest {
     layeredGraphsAgreeWithBruteForce(true);
   }
 
+  /**
+   * Free search of a 0/1 model whose regular constraints all become clauses leaves the decisions to
+   * the SAT solver, and still agrees with brute force; with one variable of three values, or with a
+   * constraint left in the store, it keeps its own branching.
+   */
+  @Test
+  void pureClauseModelsLeaveDecisionsToTheSatSolver() {
+    Random rnd = new Random(53);
+    int pure = 0;
+    int kept = 0;
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      int kind = instance % 3; // 0: pure 0/1, 1: one variable 0..2, 2: a constraint left
+      Store store = new Store();
+      int n = 6;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, kind == 1 && i == 0 ? 2 : 1);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
+        relations.add(regularRelation(x, rnd));
+      }
+      if (kind == 2) {
+        relations.add(new Relation(new XneqY(x[0], x[1]), t -> t[0] != t[1]));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      // the root propagation builds the graphs, as the FlatZinc front end does before solving; it
+      // may take value 2 from x0, which makes the model 0/1
+      if (!store.consistency()) {
+        assertThat(expected).as("instance %d", instance).isFalse();
+        unsat++;
+        continue;
+      }
+      boolean wide = kind == 1 && x[0].getSize() > 2;
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setGraphClauses(true);
+      solver.setBranching(LcgSolver.Branching.ALTERNATE);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (kind == 2 || wide) {
+        assertThat(solver.pureClauses).as("instance %d", instance).isFalse();
+        kept++;
+      } else if (solver.pureClauses) {
+        pure++;
+      } else if (expected) {
+        System.out.println(
+            "DBG "
+                + kind
+                + " enc="
+                + solver.graphConstraintsEncoded
+                + " left="
+                + store.getConstraints());
+      }
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+    }
+    System.out.printf("pure clauses: %d pure, %d kept, %d sat, %d unsat%n", pure, kept, sat, unsat);
+    assertThat(pure).isGreaterThan(100);
+    assertThat(kept).isGreaterThan(80);
+    assertThat(sat).isGreaterThan(50);
+    assertThat(unsat).isGreaterThan(50);
+  }
+
   private static void layeredGraphsAgreeWithBruteForce(boolean clauses) {
     Random rnd = new Random(clauses ? 41 : 31);
     long encoded = 0;
