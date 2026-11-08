@@ -243,6 +243,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
+                                <include>**/PerspectiveCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
@@ -426,6 +427,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
+                                <include>**/PerspectiveCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
@@ -610,6 +612,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
+                                <include>**/PerspectiveCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
@@ -794,6 +797,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
+                                <include>**/PerspectiveCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>

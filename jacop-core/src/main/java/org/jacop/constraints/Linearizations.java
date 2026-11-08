@@ -890,6 +890,126 @@ public final class Linearizations {
     return byVar;
   }
 
+  /**
+   * Returns the half-reified linear relations of a reified or implied linear constraint, each
+   * {@code b = 1 -> sum a x <= c} or {@code b = 0 -> sum a x <= c} over two or more variables:
+   * those whose big-M rows {@link #of} returns. The linear relaxation separates the perspective
+   * cuts of their disjunctions (the convex hull, of which the big-M row is one facet) from its
+   * solutions.
+   *
+   * @param c the constraint
+   * @return the implications, empty for other constraints
+   */
+  public static List<Implication> implications(Constraint c) {
+    List<Implication> sources = new ArrayList<>();
+    List<LinearForm> rows = new ArrayList<>();
+    try {
+      Class<?> k = c.getClass();
+      if (k == Reified.class && ((Reified) c).c.getClass() != In.class) {
+        Reified r = (Reified) c;
+        reified(LinearForms.of(r.c), r.b, true, rows, sources);
+      } else if (k == Implies.class) {
+        Implies r = (Implies) c;
+        reified(LinearForms.of(r.c), r.b, false, rows, sources);
+      } else if (k == XplusClteqZImplied.class) {
+        XplusClteqZImplied r = (XplusClteqZImplied) c;
+        reified(
+            new LinearForm(new IntVar[] {r.x, r.z}, new long[] {1, -1}, -r.c, LinearForm.LE),
+            r.b,
+            false,
+            rows,
+            sources);
+      }
+    } catch (ArithmeticException _) {
+      sources.clear();
+    }
+    return sources;
+  }
+
+  /** A half-reified linear relation {@code [b = when] -> sum a x <= c}. */
+  public static final class Implication {
+
+    private final IntVar[] vars;
+    private final long[] weights;
+    private final long side;
+    private final IntVar control;
+    private final boolean when;
+
+    /**
+     * Creates the implication, over copies of the arrays.
+     *
+     * @param vars the variables x
+     * @param weights the weights a
+     * @param side the side c
+     * @param control the 0/1 variable b
+     * @param when the value of b that implies the relation
+     */
+    public Implication(IntVar[] vars, long[] weights, long side, IntVar control, boolean when) {
+      this.vars = vars.clone();
+      this.weights = weights.clone();
+      this.side = side;
+      this.control = control;
+      this.when = when;
+    }
+
+    /**
+     * Returns the variables.
+     *
+     * @return the variables x
+     */
+    public IntVar[] vars() {
+      return vars.clone();
+    }
+
+    /**
+     * Returns the weights.
+     *
+     * @return the weights a
+     */
+    public long[] weights() {
+      return weights.clone();
+    }
+
+    /**
+     * Returns the side.
+     *
+     * @return the side c
+     */
+    public long side() {
+      return side;
+    }
+
+    /**
+     * Returns the control variable.
+     *
+     * @return the 0/1 variable b
+     */
+    public IntVar control() {
+      return control;
+    }
+
+    /**
+     * Returns the value of the control variable that implies the relation.
+     *
+     * @return true for b = 1, false for b = 0
+     */
+    public boolean when() {
+      return when;
+    }
+
+    @Override
+    public String toString() {
+      return (when ? "" : "!")
+          + control
+          + " -> "
+          + Arrays.toString(weights)
+          + " * "
+          + Arrays.toString(vars)
+          + " <= "
+          + side;
+    }
+  }
+
   private static void rows(Constraint c, List<LinearForm> out) {
     if (c instanceof Relaxable r) {
       out.addAll(r.relaxation());
@@ -1224,6 +1344,13 @@ public final class Linearizations {
    * the bounds, gives no row.
    */
   private static void reified(LinearForm f, IntVar b, boolean both, List<LinearForm> out) {
+    reified(f, b, both, out, null);
+  }
+
+  // as above, and for sources not null also the implications b = 1 -> f, b = 0 -> !f over two or
+  // more variables that have a big-M row, in the form sum a x <= c
+  private static void reified(
+      LinearForm f, IntVar b, boolean both, List<LinearForm> out, List<Implication> sources) {
     if (f == null || !boolean01(b) || f.vars().length == 0) {
       return;
     }
@@ -1243,26 +1370,26 @@ public final class Linearizations {
     long c = f.c();
     switch (f.relation()) {
       case LinearForm.LE -> {
-        implyLe(f, b, 1, c, least, most, out);
+        implyLe(f, b, 1, c, most, out, sources);
         if (both) {
-          implyGe(f, b, 0, Math.addExact(c, 1), least, most, out);
+          implyGe(f, b, 0, Math.addExact(c, 1), least, out, sources);
         }
       }
       case LinearForm.GE -> {
-        implyGe(f, b, 1, c, least, most, out);
+        implyGe(f, b, 1, c, least, out, sources);
         if (both) {
-          implyLe(f, b, 0, Math.subtractExact(c, 1), least, most, out);
+          implyLe(f, b, 0, Math.subtractExact(c, 1), most, out, sources);
         }
       }
       case LinearForm.EQ -> {
-        implyLe(f, b, 1, c, least, most, out);
-        implyGe(f, b, 1, c, least, most, out);
+        implyLe(f, b, 1, c, most, out, sources);
+        implyGe(f, b, 1, c, least, out, sources);
       }
       default -> {
         // x != c: only the negation is linear
         if (both) {
-          implyLe(f, b, 0, c, least, most, out);
-          implyGe(f, b, 0, c, least, most, out);
+          implyLe(f, b, 0, c, most, out, sources);
+          implyGe(f, b, 0, c, least, out, sources);
         }
       }
     }
@@ -1270,19 +1397,33 @@ public final class Linearizations {
 
   // b = when -> sum w x <= c: sum w x + M b <= c + M, or sum w x - M b <= c, with M = most - c
   private static void implyLe(
-      LinearForm f, IntVar b, int when, long c, long least, long most, List<LinearForm> out) {
+      LinearForm f,
+      IntVar b,
+      int when,
+      long c,
+      long most,
+      List<LinearForm> out,
+      List<Implication> sources) {
     long big = Math.subtractExact(most, c);
     if (big <= 0) {
       return; // holds anyway
     }
     out.add(
         withB(f, b, when == 1 ? big : -big, when == 1 ? Math.addExact(c, big) : c, LinearForm.LE));
-    perspective(f.vars(), f.weights(), 1, c, least, b, when, out);
+    if (sources != null && f.vars().length >= 2) {
+      sources.add(new Implication(f.vars(), f.weights(), c, b, when == 1));
+    }
   }
 
   // b = when -> sum w x >= c: sum w x - M b >= c - M, or sum w x + M b >= c, with M = c - least
   private static void implyGe(
-      LinearForm f, IntVar b, int when, long c, long least, long most, List<LinearForm> out) {
+      LinearForm f,
+      IntVar b,
+      int when,
+      long c,
+      long least,
+      List<LinearForm> out,
+      List<Implication> sources) {
     long big = Math.subtractExact(c, least);
     if (big <= 0) {
       return;
@@ -1294,89 +1435,14 @@ public final class Linearizations {
             when == 1 ? -big : big,
             when == 1 ? Math.subtractExact(c, big) : c,
             LinearForm.GE));
-    // sum w x >= c is sum -w x <= -c, whose least is -most
-    perspective(
-        f.vars(), f.weights(), -1, Math.negateExact(c), Math.negateExact(most), b, when, out);
-  }
-
-  /**
-   * Whether {@link #reified} adds the perspective rows of each half-reified relation besides its
-   * big-M row ({@code org.jacop.lp.perspective}, on by default).
-   */
-  static final boolean PERSPECTIVE =
-      !"false".equals(System.getProperty("org.jacop.lp.perspective"));
-
-  /**
-   * The perspective rows of {@code b = when -> sum s w x <= c} over two or more variables, where
-   * {@code least} is the least value of the sum within the bounds: for each variable {@code x_i}
-   * whose bound the implication tightens to {@code u'} (from {@code s w_i x_i <= c - least + min(s
-   * w_i x_i)}, rounded to an integer), {@code x_i <= u' + (max(x_i) - u') [b != when]}, or the same
-   * for a lower bound.
-   *
-   * <p>These are the one-variable inequalities of the convex hull of the disjunction {@code (b =
-   * when, sum s w x <= c, x in box) or (b != when, x in box)} (Balas 1979, 1998): with copies
-   * {@code x = x1 + x0}, {@code x1} in {@code [b] box} with {@code sum s w x1 <= c [b]} and {@code
-   * x0} in {@code (1 - [b]) box}, the projection on {@code (x, b)} is, for every subset {@code S}
-   * of the variables, {@code sum_{i in S} a_i x_i + [b] (sum_{i in S} a_i u_i + sum_{i not in S}
-   * a_i l_i - c) <= sum_{i in S} a_i u_i} (for {@code a_i > 0}, {@code u_i} the upper and {@code
-   * l_i} the lower bound; the other way round for {@code a_i < 0}). The full set is the big-M row
-   * and a single variable is its implied bound; that is the perspective reformulation of a
-   * semi-continuous variable (Frangioni and Gentile 2006; Günlük and Linderoth 2010), which with
-   * the big-M row alone the relaxation loses at a fractional b. The bound is rounded as for a
-   * Chvátal-Gomory cut, which is valid since x is integer.
-   *
-   * <p>E. Balas, Disjunctive programming, Annals of Discrete Mathematics 5 (1979) 3-51. E. Balas,
-   * Disjunctive programming: properties of the convex hull of feasible points, Discrete Applied
-   * Mathematics 89 (1998) 3-44. A. Frangioni and C. Gentile, Perspective cuts for a class of convex
-   * 0-1 mixed integer programs, Mathematical Programming 106 (2006) 225-236. O. Günlük and J.
-   * Linderoth, Perspective reformulations of mixed integer nonlinear programs with indicator
-   * variables, Mathematical Programming 124 (2010) 183-205.
-   */
-  private static void perspective(
-      IntVar[] vars,
-      long[] weights,
-      int s,
-      long c,
-      long least,
-      IntVar b,
-      int when,
-      List<LinearForm> out) {
-    if (!PERSPECTIVE || vars.length < 2) {
-      return; // with one variable the big-M row is the hull
-    }
-    for (int i = 0; i < vars.length; i++) {
-      long a = s * weights[i];
-      IntVar x = vars[i];
-      if (a == 0 || x.singleton()) {
-        continue;
+    if (sources != null && f.vars().length >= 2) {
+      // sum w x >= c is sum -w x <= -c
+      long[] negated = new long[f.weights().length];
+      for (int i = 0; i < negated.length; i++) {
+        negated[i] = Math.negateExact(f.weights()[i]);
       }
-      long lo = x.min();
-      long hi = x.max();
-      long room =
-          Math.addExact(Math.subtractExact(c, least), Math.multiplyExact(a, a > 0 ? lo : hi));
-      if (a > 0) {
-        long u = Math.floorDiv(room, a);
-        if (u < hi) {
-          out.add(boundRow(x, b, when, hi, u, LinearForm.LE));
-        }
-      } else {
-        long l = Math.ceilDiv(room, a);
-        if (l > lo) {
-          out.add(boundRow(x, b, when, lo, l, LinearForm.GE));
-        }
-      }
+      sources.add(new Implication(f.vars(), negated, Math.negateExact(c), b, when == 1));
     }
-  }
-
-  // b = when -> x <= tight (relation LE, loose = max x) or x >= tight (GE, loose = min x):
-  // x + (loose - tight) [b = when] <= loose, i.e. with b for when = 1 and 1 - b for when = 0
-  private static LinearForm boundRow(
-      IntVar x, IntVar b, int when, long loose, long tight, int relation) {
-    long gap = Math.subtractExact(loose, tight); // > 0 for LE, < 0 for GE
-    IntVar[] vs = {x, b};
-    return when == 1
-        ? new LinearForm(vs, new long[] {1, gap}, loose, relation)
-        : new LinearForm(vs, new long[] {1, -gap}, tight, relation);
   }
 
   private static LinearForm withB(LinearForm f, IntVar b, long wb, long c, int relation) {

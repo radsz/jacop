@@ -438,6 +438,17 @@ public class LinearRelaxation extends Constraint
   /** Statistics: energy cuts of cumulative resources added. */
   public long energyCuts;
 
+  // perspective cuts of the half-reified linear relations at the root, in the rounds of the
+  // capacity cuts, for an objective ({@link PerspectiveCuts})
+  private static final boolean PERSPECTIVE_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.perspectiveCuts"));
+
+  // the separation of the perspective cuts, or null
+  private PerspectiveCuts perspective;
+
+  /** Statistics: perspective cuts of half-reified linear relations added. */
+  public long perspectiveCuts;
+
   // the capacity cuts kept, as rows: they follow from the Routes, not from the rows, so a copy
   // takes them as rows of its own
   private final List<LinearForm> capacityForms = new ArrayList<>();
@@ -827,6 +838,7 @@ public class LinearRelaxation extends Constraint
     List<LinearForm> relaxed = new ArrayList<>();
     List<CapacityCuts> separations = new ArrayList<>();
     List<EnergyCuts> resources = new ArrayList<>();
+    List<Linearizations.Implication> implications = new ArrayList<>();
     for (Constraint c : constraints) {
       if (CAPACITY_CUTS && c instanceof Routes routes) {
         separations.add(new CapacityCuts(routes));
@@ -842,6 +854,9 @@ public class LinearRelaxation extends Constraint
         localForms.add(f);
       } else if (f == null && LINEARIZE) {
         relaxed.addAll(Linearizations.of(c));
+        if (PERSPECTIVE_CUTS && objective != null) {
+          implications.addAll(Linearizations.implications(c));
+        }
       }
     }
     // like the linearized rows, they are kept only when they help the root relaxation: the
@@ -956,6 +971,7 @@ public class LinearRelaxation extends Constraint
     r.pairCliques = pairCliques;
     r.capacity = separations;
     r.energy = resources;
+    r.perspective = implications.isEmpty() ? null : new PerspectiveCuts(implications);
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -2633,7 +2649,7 @@ public class LinearRelaxation extends Constraint
         rootHi[j] = x[j].max();
       }
       // the capacity and energy cuts are made once, at the first solve
-      if (!capacity.isEmpty() || !energy.isEmpty()) {
+      if (!capacity.isEmpty() || !energy.isEmpty() || perspective != null) {
         int status = capacityRounds();
         if (status != DualSimplex.OPTIMAL) {
           return status;
@@ -2851,6 +2867,7 @@ public class LinearRelaxation extends Constraint
     int[] firstRows = lpRow;
     int added = 0;
     int addedEnergy = 0;
+    int addedPerspective = 0;
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
@@ -2874,7 +2891,8 @@ public class LinearRelaxation extends Constraint
       List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen);
       int n = lp.columns();
       int routing = chosen.size();
-      if (!energy.isEmpty()) {
+      int ofPerspective = 0;
+      if (!energy.isEmpty() || perspective != null) {
         double[] value = new double[n];
         for (int j = 0; j < n; j++) {
           value[j] = lp.value(j);
@@ -2882,6 +2900,11 @@ public class LinearRelaxation extends Constraint
         List<MirCut> found = new ArrayList<>();
         for (int k = 0; k < energy.size(); k++) {
           found.addAll(energy.get(k).separate(energyColumns[k], value, lo, hi, CUTS_PER_ROUND));
+        }
+        Set<MirCut> perspectiveFound = Collections.newSetFromMap(new IdentityHashMap<>());
+        if (perspective != null) {
+          perspectiveFound.addAll(perspective.separate(columnOf, value, CUTS_PER_ROUND));
+          found.addAll(perspectiveFound);
         }
         found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
         for (MirCut row : found) {
@@ -2892,6 +2915,7 @@ public class LinearRelaxation extends Constraint
           }
           if (seen.add(key(row))) {
             chosen.add(row);
+            ofPerspective += perspectiveFound.contains(row) ? 1 : 0;
           }
         }
       }
@@ -2914,7 +2938,8 @@ public class LinearRelaxation extends Constraint
         break;
       }
       added += chosen.size();
-      addedEnergy += chosen.size() - routing;
+      addedEnergy += chosen.size() - routing - ofPerspective;
+      addedPerspective += ofPerspective;
       if (status != DualSimplex.OPTIMAL) {
         break;
       }
@@ -2928,9 +2953,11 @@ public class LinearRelaxation extends Constraint
       dropCuts(added, first, firstRows);
       added = 0;
       addedEnergy = 0;
+      addedPerspective = 0;
     }
-    capacityCuts += added - addedEnergy;
+    capacityCuts += added - addedEnergy - addedPerspective;
     energyCuts += addedEnergy;
+    perspectiveCuts += addedPerspective;
     keepCapacityForms(firstCount, added);
     // the cuts kept stay in the pool; the others may come back in search
     for (int i = firstCount; i < firstCount + added; i++) {
@@ -3648,6 +3675,7 @@ public class LinearRelaxation extends Constraint
     for (EnergyCuts e : energy) {
       c.energy.add(e.copy(map));
     }
+    c.perspective = perspective == null ? null : perspective.copy(map);
     return c;
   }
 
