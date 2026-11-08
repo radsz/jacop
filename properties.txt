@@ -66,11 +66,24 @@ Constraints (core):
 - org.jacop.unaryEarlinessTardiness.blocks: the most blocks of time
   slots of a machine in the assignment bound of
   UnaryEarlinessTardiness; slots are grouped into blocks of equal
-  length above it; default 128.
+  length above it; default 64.
 
 - org.jacop.unaryEarlinessTardiness.trial: the solves after which a
   machine of UnaryEarlinessTardiness whose bound never beat the exact
-  minima of its tasks is no longer solved (0 never stops); default 200.
+  minima of its tasks is no longer solved (0 never stops, and turns off
+  forcedRound and workPerPropagation too); default 200.
+
+- org.jacop.unaryEarlinessTardiness.forcedRound: the exact solves of
+  UnaryEarlinessTardiness, forced in search because a cheap upper
+  estimate says the node could fail, after which, if none of them
+  failed, only one in 16 is done until one fails; default 500.
+
+- org.jacop.unaryEarlinessTardiness.workPerPropagation: the work (inner
+  steps of the transportation solver, about a nanosecond each) the
+  exact solves of UnaryEarlinessTardiness in search may take per
+  propagation of the store; a forced solve is skipped while they took
+  more, which keeps the cost of the bound to a share of the search and
+  the search deterministic (0 no budget); default 1000.
 
 - org.jacop.diffn.dff: dual feasible functions in the area check of
   Diffn: 0 off, 1 gated (only when the rectangles fill at least half

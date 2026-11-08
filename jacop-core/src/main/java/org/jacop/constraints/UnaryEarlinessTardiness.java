@@ -80,7 +80,9 @@ import org.jacop.lcg.Explainable;
  * recomputed for the current costs, is still a valid bound, and the last flow moved greedily into
  * the current windows gives an upper bound of the optimum; the machines are solved exactly only
  * when that upper bound exceeds the maximum of the cost, so that the exact bound could fail. When a
- * round of 500 such solves failed nothing, only one in 16 is done until one fails. A machine owning
+ * round of 500 such solves failed nothing, only one in 16 is done until one fails, and a forced
+ * solve is skipped while the solves took more than 1000 steps of work per propagation of the store
+ * (a deterministic budget, so the bound costs a bounded share of the search). A machine owning
  * fewer than two costs, or whose bound did not beat the exact minima of its tasks in its first 200
  * solves, counts those minima instead.
  *
@@ -145,6 +147,15 @@ public class UnaryEarlinessTardiness extends Constraint
       Integer.getInteger("org.jacop.unaryEarlinessTardiness.forcedRound", 500);
 
   static final int SPARSE = 16;
+
+  // the work (inner steps of the solver, about a nanosecond each) the solves in propagation may
+  // take per propagation of the store, so that the bound costs a bounded share of the search
+  static final long WORK =
+      Long.getLong("org.jacop.unaryEarlinessTardiness.workPerPropagation", 1000);
+
+  // the work of the solves in propagation so far, and the store's propagations at this one
+  private long work;
+  private long propagations;
 
   // the solves forced in this round, how many of them failed, whether this propagation forced one,
   // the propagations that could force one, and the stride between forced solves
@@ -742,6 +753,9 @@ public class UnaryEarlinessTardiness extends Constraint
           }
         }
       }
+      if (adaptive) {
+        work += (long) nodes * nodes + 2L * jobs * blocks;
+      }
       if (dist[t] >= INF) {
         mc.feasible = false;
         mc.valid = false;
@@ -941,7 +955,7 @@ public class UnaryEarlinessTardiness extends Constraint
     }
     if (approximate
         && (upper >= INF || ceilScaled(upper) + outsideTotal > max)
-        && (!adaptive || eligible++ % stride == 0)) {
+        && (!adaptive || (eligible++ % stride == 0 && withinBudget()))) {
       // the bound could exceed the maximum: solve the machines exactly
       for (int m = 0; m < machine.length; m++) {
         Machine mc = machine[m];
@@ -970,6 +984,11 @@ public class UnaryEarlinessTardiness extends Constraint
       certify();
     }
     return total;
+  }
+
+  // whether the solves so far took less than their share of the work (always without a budget)
+  private boolean withinBudget() {
+    return WORK <= 0 || work <= WORK * propagations;
   }
 
   private static long add(long a, long b) {
@@ -1109,6 +1128,7 @@ public class UnaryEarlinessTardiness extends Constraint
     }
     adaptive = TRIAL > 0;
     forcedSolve = false;
+    propagations = store.numberConsistencyCalls;
     long bound = bound(true, true, cost.max());
     adaptive = false;
     if (forcedSolve && bound > cost.max()) {
