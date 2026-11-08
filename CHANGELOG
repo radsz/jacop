@@ -3386,6 +3386,14 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+199. The MiniZinc Challenge image (jacop-flatzinc/src/main/minizinc/
+     Dockerfile) trains the JVM's ahead-of-time cache (Java 25) on the
+     aot-training models with the image's own JVM and the classpath of
+     fzn-exec, and fzn-exec starts from it. On the 33 instances of the
+     2026 Challenge that JaCoP finishes in under 5 s the median run takes
+     0.27 s instead of 0.47 s, and about 0.9 s less with four runs on four
+     cores; the Challenge compares times in whole seconds.
+
 Version 4.11
 =============
 
