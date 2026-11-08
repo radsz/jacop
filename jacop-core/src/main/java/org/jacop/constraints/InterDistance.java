@@ -108,8 +108,8 @@ public class InterDistance extends Constraint implements SatisfiedPresent, Copya
   private final int[] dlCount;
 
   // forbidden regions fa[k]..fb[k], increasing and not touching
-  private long[] fa;
-  private long[] fb;
+  private final long[] fa;
+  private final long[] fb;
   private int nf;
 
   // ect[k][q]: earliest end of q tasks from release rel[k]; lst[k][q]: latest start of q tasks
@@ -125,7 +125,7 @@ public class InterDistance extends Constraint implements SatisfiedPresent, Copya
   private long[] ia = new long[16];
   private long[] ib = new long[16];
   private int ni;
-  private int[] externalStart;
+  private final int[] externalStart;
 
   // the coordinates of the interval ends and the releases, and the union-find over their segments
   private long[] coords = new long[16];

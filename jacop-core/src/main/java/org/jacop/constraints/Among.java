@@ -362,11 +362,10 @@ public class Among extends Constraint
     out.truncate(mark);
     // pushed into the set: n >= c and all but c others outside
     c = trail.minBefore(n, entry);
-    if (sides(trail, entry, y, (long) list.length - c, false, out)) {
-      if (DomainCover.entry(trail, entry, (v, o) -> !kSet.contains(v), out)) {
-        trail.addLowerBound(n, entry, out);
-        return true;
-      }
+    if (sides(trail, entry, y, (long) list.length - c, false, out)
+        && DomainCover.entry(trail, entry, (v, o) -> !kSet.contains(v), out)) {
+      trail.addLowerBound(n, entry, out);
+      return true;
     }
     out.truncate(mark);
     return false;

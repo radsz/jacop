@@ -138,6 +138,41 @@ class DualFeasibleFunctionsTest {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void energeticStripFailsWhereTheAreaCheckDoesNot() {
+    // in the strip [1, 3) of height 4 the three tall rectangles cover 4 + 3 + 3 > 2 * 4
+    int[][] r = {{1, 2, 0, 0, 1, 4}, {1, 2, 0, 1, 1, 3}, {0, 2, 0, 1, 2, 3}, {4, 4, 0, 3, 3, 1}};
+    assertThat(consistent(r, 0)).isTrue();
+    assertThat(consistent(r, 2)).isFalse();
+    assertThat(consistent(r, 1)).isFalse();
+  }
+
+  @Test
+  void energeticStripWithFunctionsFailsWhereThePlainEnergyDoesNot() {
+    int[][] r = {{0, 2, 0, 0, 2, 2}, {1, 3, 0, 0, 2, 2}, {0, 2, 0, 1, 2, 1}};
+    assertThat(consistent(r, 2)).isTrue();
+    assertThat(consistent(r, 1)).isFalse();
+  }
+
+  // rectangles {x min, x max, y min, y max, width, height} under Diffn with an energetic mode
+  private static boolean consistent(int[][] r, int energetic) {
+    Store store = new Store();
+    IntVar[][] rectangles = new IntVar[r.length][];
+    for (int i = 0; i < r.length; i++) {
+      rectangles[i] =
+          new IntVar[] {
+            new IntVar(store, r[i][0], r[i][1]),
+            new IntVar(store, r[i][2], r[i][3]),
+            new IntVar(store, r[i][4], r[i][4]),
+            new IntVar(store, r[i][5], r[i][5])
+          };
+    }
+    Diffn diffn = new Diffn(rectangles);
+    diffn.setEnergetic(energetic);
+    store.impose(diffn);
+    return store.consistency();
+  }
+
   // exhaustive search: rectangle i at every position where it fits
   private static boolean pack(boolean[][] used, int[] w, int[] h, int i) {
     if (i == w.length) {

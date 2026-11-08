@@ -79,7 +79,7 @@ public final class Linearizations {
     List<LinearForm> out = new ArrayList<>();
     try {
       rows(c, out);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.clear();
     }
     return out;
@@ -290,7 +290,7 @@ public final class Linearizations {
         continue;
       }
       for (IntVar v : f.vars()) {
-        if (v instanceof LpColumn c) {
+        if (v instanceof LpColumn c && !c.isFree()) {
           given.computeIfAbsent(c.variable(), k -> new LinkedHashMap<>()).putIfAbsent(c.value(), c);
         }
       }
@@ -997,7 +997,7 @@ public final class Linearizations {
     }
     try {
       reified(form, b, both, out);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.clear();
     }
     return out;
@@ -1037,7 +1037,7 @@ public final class Linearizations {
     List<LinearForm> out = new ArrayList<>();
     try {
       reified(f, b, both, out);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.clear();
     }
     return out;
@@ -1444,6 +1444,189 @@ public final class Linearizations {
     if (high < most) {
       out.add(new LinearForm(list, ones, high, LinearForm.LE));
     }
+  }
+
+  // the sorting-network rows of all-different permutations: on, "all" (also for constraints whose
+  // value encodings valueRows makes, which give the convex hull already), or off; at most
+  // ALLDIFF_NETWORK_MAX comparators over all constraints
+  private static final String ALLDIFF_NETWORK =
+      System.getProperty("org.jacop.lp.alldiffNetwork", "true");
+  private static final int ALLDIFF_NETWORK_MAX =
+      Integer.getInteger("org.jacop.lp.alldiffNetworkMax", 5_000);
+
+  /**
+   * Returns the sorting-network rows ({@link #alldifferentNetwork}) of the all-different
+   * constraints ({@link Alldiff}, {@link Alldifferent}, {@link Alldistinct}) that are permutations,
+   * except those whose value encodings {@link #valueRows} makes (they give the convex hull of the
+   * constraint with its domains, which is inside the permutahedron), at most {@code
+   * org.jacop.lp.alldiffNetworkMax} (5,000) comparators in all. {@code
+   * -Dorg.jacop.lp.alldiffNetwork=false} turns the rows off, {@code =all} makes them for every
+   * permutation.
+   *
+   * @param constraints the constraints
+   * @return the rows, over free columns of the relaxation ({@link LpColumn})
+   */
+  public static List<LinearForm> alldifferentNetworks(Collection<Constraint> constraints) {
+    List<LinearForm> out = new ArrayList<>();
+    if ("false".equals(ALLDIFF_NETWORK)) {
+      return out;
+    }
+    boolean all = "all".equals(ALLDIFF_NETWORK);
+    int comparators = 0;
+    for (Constraint c : constraints) {
+      IntVar[] list = alldifferentList(c);
+      if (list == null || !all && encodedByValueRows(list)) {
+        continue;
+      }
+      int size = comparators(list.length).size();
+      if (comparators + size > ALLDIFF_NETWORK_MAX) {
+        continue;
+      }
+      List<LinearForm> rows = alldifferentNetwork(list);
+      if (!rows.isEmpty()) {
+        comparators += size;
+        out.addAll(rows);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Returns the variables of an all-different constraint ({@link Alldiff}, {@link Alldifferent},
+   * {@link Alldistinct}) with three or more pairwise distinct variables, not all fixed.
+   *
+   * @param c the constraint
+   * @return the variables, or null for another constraint
+   */
+  public static IntVar[] alldifferentList(Constraint c) {
+    IntVar[] list;
+    if (c.getClass() == Alldiff.class || c.getClass() == Alldifferent.class) {
+      list = ((Alldifferent) c).list;
+    } else if (c.getClass() == Alldistinct.class) {
+      list = ((Alldistinct) c).list;
+    } else {
+      return null;
+    }
+    if (list.length < 3
+        || Arrays.stream(list).distinct().count() != list.length
+        || Arrays.stream(list).allMatch(IntVar::singleton)) {
+      return null;
+    }
+    return list;
+  }
+
+  // whether valueRows encodes every unfixed variable of the list (up to its column cap)
+  private static boolean encodedByValueRows(IntVar[] list) {
+    if (!VALUE_ENCODINGS) {
+      return false;
+    }
+    for (IntVar x : list) {
+      if (!x.singleton() && x.getSize() > VALUE_ENCODINGS_DOMAIN) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns the rows of the extended formulation of the permutahedron of an all-different whose
+   * variables take a permutation of a set V of n values (the union of their n domains has n
+   * values): the variables are the inputs of a sorting network (Batcher's odd-even merge sort, O(n
+   * log^2 n) comparators), each comparator with inputs a, b gets two free columns p (its min
+   * output) and q (its max output) with {@code p + q = a + b}, {@code p <= a} and {@code p <= b},
+   * and the outputs of the network are the values of V in increasing order. Goemans (Smallest
+   * compact formulation for the permutahedron, Mathematical Programming 153:5-11, 2015) shows that
+   * the projection of these rows onto the variables is the permutahedron of V, the convex hull of
+   * the permutations: all the Hall inequalities of the constraint (Williams and Yan, INFORMS
+   * Journal on Computing 13(2):96-103, 2001; Lee, Journal of Combinatorial Optimization
+   * 6(3):335-352, 2002) at once, with O(n log^2 n) rows instead of 2^n. Every permutation satisfies
+   * the rows with the columns at the values the network computes, so they hold for every solution.
+   *
+   * @param list the variables
+   * @return the rows over the variables and free columns ({@link LpColumn}), or an empty list when
+   *     the constraint is not a permutation or has fewer than three variables
+   */
+  public static List<LinearForm> alldifferentNetwork(IntVar[] list) {
+    int n = list.length;
+    List<LinearForm> out = new ArrayList<>();
+    if (n < 3 || Arrays.stream(list).distinct().count() != n) {
+      return out;
+    }
+    IntDomain union = list[0].dom();
+    for (IntVar x : list) {
+      union = union.union(x.dom());
+      if (union.getSize() > n) {
+        return out;
+      }
+    }
+    if (union.getSize() != n) {
+      return out; // fewer values than variables: the constraint fails by itself
+    }
+    int[] sorted = new int[n];
+    int t = 0;
+    for (ValueEnumeration en = union.valueEnumeration(); en.hasMoreElements(); ) {
+      sorted[t++] = en.nextElement();
+    }
+    List<int[]> network = comparators(n);
+    // the last comparator on each wire fixes its output to the value of its position
+    int[] last = new int[n];
+    Arrays.fill(last, -1);
+    for (int c = 0; c < network.size(); c++) {
+      last[network.get(c)[0]] = c;
+      last[network.get(c)[1]] = c;
+    }
+    IntVar[] wire = list.clone();
+    int lo = sorted[0];
+    int hi = sorted[n - 1];
+    String name = "net" + System.identityHashCode(out);
+    for (int c = 0; c < network.size(); c++) {
+      int a = network.get(c)[0];
+      int b = network.get(c)[1];
+      IntVar p =
+          last[a] == c
+              ? new LpColumn(name + "_" + c + "min", sorted[a], sorted[a])
+              : new LpColumn(name + "_" + c + "min", lo, hi);
+      IntVar q =
+          last[b] == c
+              ? new LpColumn(name + "_" + c + "max", sorted[b], sorted[b])
+              : new LpColumn(name + "_" + c + "max", lo, hi);
+      out.add(
+          new LinearForm(
+              new IntVar[] {p, q, wire[a], wire[b]}, new long[] {1, 1, -1, -1}, 0, LinearForm.EQ));
+      out.add(new LinearForm(new IntVar[] {p, wire[a]}, new long[] {1, -1}, 0, LinearForm.LE));
+      out.add(new LinearForm(new IntVar[] {p, wire[b]}, new long[] {1, -1}, 0, LinearForm.LE));
+      wire[a] = p;
+      wire[b] = q;
+    }
+    return out;
+  }
+
+  /**
+   * Returns the comparators of Batcher's odd-even merge sort of n wires, each {i, j} with i < j
+   * putting the smaller value on i: the network for the next power of two without the comparators
+   * of the wires from n on, which would carry values above all others and so never swap.
+   *
+   * @param n the number of wires
+   * @return the comparators in order
+   */
+  public static List<int[]> comparators(int n) {
+    List<int[]> out = new ArrayList<>();
+    int size = 1;
+    while (size < n) {
+      size <<= 1;
+    }
+    for (int p = 1; p < size; p <<= 1) {
+      for (int k = p; k >= 1; k >>= 1) {
+        for (int j = k % p; j + k < size; j += 2 * k) {
+          for (int i = 0; i < k && i + j + k < size; i++) {
+            if ((i + j) / (2 * p) == (i + j + k) / (2 * p) && i + j + k < n) {
+              out.add(new int[] {i + j, i + j + k});
+            }
+          }
+        }
+      }
+    }
+    return out;
   }
 
   /** A constraint outside this package that gives its own rows. */

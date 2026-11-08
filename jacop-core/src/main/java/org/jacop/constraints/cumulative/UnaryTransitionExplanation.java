@@ -76,17 +76,17 @@ final class UnaryTransitionExplanation {
   private static final int S_HI = 2;
   private static final int D_LO = 4;
   private static final int D_HI = 8;
-  private static final int PRESENT = 16;
+  private static final int PRESENT_ATOM = 16;
 
   // the bounds of a task in a view, and the atoms each one rests on in the normal view (est = min
   // s, ect = min s + min d, lst = max s, lct = max s + max d) and in the reversed view (est = -(max
   // s + max d), ect = -max s, lst = -(min s + min d), lct = -min s)
-  private static final int EST = 0;
-  private static final int ECT = 1;
-  private static final int LST = 2;
-  private static final int LCT = 3;
-  private static final int DUR = 4;
-  private static final int[][] ATOMS = {
+  private static final int EST_BOUND = 0;
+  private static final int ECT_BOUND = 1;
+  private static final int LST_BOUND = 2;
+  private static final int LCT_BOUND = 3;
+  private static final int DUR_BOUND = 4;
+  private static final int[][] BOUND_ATOMS = {
     {S_LO, S_LO | D_LO, S_HI, S_HI | D_HI, D_LO},
     {S_HI | D_HI, S_HI, S_LO | D_LO, S_LO, D_LO}
   };
@@ -205,10 +205,10 @@ final class UnaryTransitionExplanation {
               && (kind == AtomicTrail.GE
                   ? startAbove(trail, entry, i, v)
                   : startBelow(trail, entry, i, v));
-      atoms[i] |= PRESENT;
+      atoms[i] |= PRESENT_ATOM;
     } else if (role == 1) {
       ok = kind == AtomicTrail.LE && present[i] && durationBelow(trail, entry, i, v);
-      atoms[i] |= PRESENT;
+      atoms[i] |= PRESENT_ATOM;
     } else {
       ok = kind == AtomicTrail.LE && v <= 0 && !present[i] && absent(i);
     }
@@ -235,7 +235,7 @@ final class UnaryTransitionExplanation {
       if (present[i]) {
         ok = absent(i);
         if (ok) {
-          atoms[i] |= PRESENT;
+          atoms[i] |= PRESENT_ATOM;
         }
       }
     }
@@ -292,7 +292,7 @@ final class UnaryTransitionExplanation {
           && (long) sMin[j] + dMin[j] + c.transition(j, i) > sMax[i]
           && (long) sMax[j] - sMin[i] - c.transition(i, j) <= u) {
         atoms[i] |= S_LO | S_HI;
-        atoms[j] |= S_LO | D_LO | S_HI | PRESENT;
+        atoms[j] |= S_LO | D_LO | S_HI | PRESENT_ATOM;
         hole(d, v + 1, u);
         return true;
       }
@@ -326,7 +326,7 @@ final class UnaryTransitionExplanation {
    */
   private boolean lowerBound(int i, long target) {
     if (est[i] >= target) {
-      mark(i, EST);
+      mark(i, EST_BOUND);
       return true;
     }
     // the tasks i cannot precede
@@ -334,9 +334,9 @@ final class UnaryTransitionExplanation {
       int j = byEst[k];
       pred[j] = j != i && ect[i] + t(i, j) > lst[j];
       if (pred[j] && ect[j] + t(j, i) >= target) {
-        mark(i, ECT);
-        mark(j, LST);
-        mark(j, ECT);
+        mark(i, ECT_BOUND);
+        mark(j, LST_BOUND);
+        mark(j, ECT_BOUND);
         return true;
       }
     }
@@ -389,7 +389,7 @@ final class UnaryTransitionExplanation {
         continue;
       }
       if (ect[j] + t(j, i) >= target) {
-        mark(j, ECT);
+        mark(j, ECT_BOUND);
         return justify(i, j);
       }
       p += dur[j];
@@ -405,8 +405,8 @@ final class UnaryTransitionExplanation {
         for (int m = 0; m <= k; m++) {
           int x = byEst[m];
           if (x != i && (pred[x] || lst[x] <= limit)) {
-            mark(x, EST);
-            mark(x, DUR);
+            mark(x, EST_BOUND);
+            mark(x, DUR_BOUND);
             result = Math.max(result, justify(i, x));
           }
         }
@@ -418,9 +418,9 @@ final class UnaryTransitionExplanation {
 
   // marks why task j precedes i: a pair, or the detection the caller marks
   private int justify(int i, int j) {
-    mark(j, LST);
+    mark(j, LST_BOUND);
     if (pred[j]) {
-      mark(i, ECT);
+      mark(i, ECT_BOUND);
       return 1;
     }
     return 2;
@@ -454,11 +454,11 @@ final class UnaryTransitionExplanation {
       minOut = Math.min(minOut, t(i, j));
       long chain = Math.max(tt(families) + minOut, tt(families + (famI ? 0 : 1)));
       if (ect[i] + p + chain > lct[j]) {
-        mark(i, ECT);
+        mark(i, ECT_BOUND);
         for (int q = 0; q <= k; q++) {
-          mark(list[q], DUR);
-          mark(list[q], LCT);
-          mark(list[q], ECT);
+          mark(list[q], DUR_BOUND);
+          mark(list[q], LCT_BOUND);
+          mark(list[q], ECT_BOUND);
         }
         return true;
       }
@@ -496,13 +496,13 @@ final class UnaryTransitionExplanation {
       int j = byEst[k];
       if (j == i) {
         if (withI) {
-          mark(j, EST);
-          mark(j, DUR);
+          mark(j, EST_BOUND);
+          mark(j, DUR_BOUND);
         }
       } else if (lct[j] <= limit) {
-        mark(j, EST);
-        mark(j, DUR);
-        mark(j, LCT);
+        mark(j, EST_BOUND);
+        mark(j, DUR_BOUND);
+        mark(j, LCT_BOUND);
       }
     }
   }
@@ -517,7 +517,7 @@ final class UnaryTransitionExplanation {
       int at = detect(i, limit, true);
       if (at >= 0) {
         markDetection(i, limit, at, true);
-        mark(i, LCT);
+        mark(i, LCT_BOUND);
         return true;
       }
     }
@@ -610,7 +610,7 @@ final class UnaryTransitionExplanation {
   }
 
   private void mark(int i, int bound) {
-    atoms[i] |= ATOMS[view][bound] | PRESENT;
+    atoms[i] |= BOUND_ATOMS[view][bound] | PRESENT_ATOM;
   }
 
   private boolean spend(int steps) {
@@ -647,7 +647,7 @@ final class UnaryTransitionExplanation {
       if ((a & D_HI) != 0) {
         trail.addUpperBound(c.durations[i], position, out);
       }
-      if ((a & PRESENT) != 0 && c.optional != null) {
+      if ((a & PRESENT_ATOM) != 0 && c.optional != null) {
         trail.addLowerBound(c.optional[i], position, out);
       }
     }

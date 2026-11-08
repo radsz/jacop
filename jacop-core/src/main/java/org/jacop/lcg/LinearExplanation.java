@@ -183,7 +183,7 @@ public final class LinearExplanation {
               : Math.subtractExact(Math.subtractExact(rest, 1), product);
       addLiftedBounds(trail, entry, vars, weights, own, merged, upperSide, slack, out);
       return true;
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       out.truncate(mark);
       return false;
     }
@@ -306,7 +306,7 @@ public final class LinearExplanation {
           lessOrEqual && smallest > c
               ? Math.subtractExact(Math.subtractExact(smallest, c), 1)
               : Math.subtractExact(Math.subtractExact(c, 1), largest);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     boolean upperSide;
@@ -373,7 +373,7 @@ public final class LinearExplanation {
         long width = Math.max(0, Math.subtractExact(to, from));
         keys[m++] = Math.min(width, Integer.MAX_VALUE) << 32 | i;
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     Arrays.sort(keys, 0, m);
@@ -406,7 +406,7 @@ public final class LinearExplanation {
         long lowerSlack = Math.subtractExact(Math.subtractExact(restLows[i], 1), below);
         addLiftedBounds(trail, now, vars, weights, i, null, true, upperSlack, out);
         addLiftedBounds(trail, now, vars, weights, i, null, false, lowerSlack, out);
-      } catch (ArithmeticException overflow) {
+      } catch (ArithmeticException _) {
         out.truncate(mark);
         return false;
       }
@@ -471,7 +471,7 @@ public final class LinearExplanation {
                   rest, Math.multiplyExact(weights[i], trail.minBefore(vars[i], entry)));
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     if (rest % weights[own] != 0) {
@@ -530,7 +530,7 @@ public final class LinearExplanation {
       for (int i = 0; i < vars.length; i++) {
         sum = Math.addExact(sum, Math.multiplyExact(weights[i], trail.minBefore(vars[i], now)));
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     if (sum != c) {

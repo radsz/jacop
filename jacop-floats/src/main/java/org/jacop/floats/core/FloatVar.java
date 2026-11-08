@@ -50,10 +50,8 @@ public class FloatVar extends Var {
   static {
     try {
       Class.forName("org.jacop.floats.search.FloatSearchSupport");
-    } catch (ClassNotFoundException e) {
-      // FloatSearchSupport not available; search handlers not registered
-      String notAvailable = e.getMessage();
-      assert notAvailable != null || true; // optional dependency; ignore if absent
+    } catch (ClassNotFoundException _) {
+      // FloatSearchSupport not available (optional dependency); search handlers not registered
     }
   }
 

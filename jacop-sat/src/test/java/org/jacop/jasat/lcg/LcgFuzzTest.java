@@ -164,6 +164,7 @@ import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.constraints.cumulative.Reservoir;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.Geost;
@@ -252,7 +253,7 @@ class LcgFuzzTest {
       for (int i = 0; i < m; i++) {
         try {
           post(randomConstraint());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
           // arguments the constraint rejects, such as a variable repeated; draw another one
           i--;
         }
@@ -456,7 +457,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(31)) {
+      return switch (rnd.nextInt(32)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -565,8 +566,26 @@ class LcgFuzzTest {
           flow.useCompulsoryParts(rnd.nextBoolean());
           yield flow;
         }
+        case 30 -> valuesWithDifferences();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // Values over 4 or 5 variables, some pairs of which other constraints force to differ, so that
+    // Values reads a difference graph and its clique at the root
+    private Values valuesWithDifferences() {
+      IntVar[] v = pick(x, 4 + rnd.nextInt(2));
+      int pairs = 2 + rnd.nextInt(4);
+      for (int k = 0; k < pairs; k++) {
+        IntVar[] e = pick(v, 2);
+        if (rnd.nextBoolean()) {
+          post(new XneqY(e[0], e[1]));
+        } else {
+          IntVar t = intVar("vd", 1, 1 + rnd.nextInt(3));
+          post(rnd.nextBoolean() ? new Distance(e[0], e[1], t) : new XplusYeqZ(e[1], t, e[0]));
+        }
+      }
+      return new Values(v, intVar("nv", 1, 2 + rnd.nextInt(4)));
     }
 
     // sum of p = total and cost >= sum of random convex costs (absolute values, squares, squared
@@ -1106,6 +1125,268 @@ class LcgFuzzTest {
   }
 
   /**
+   * Diffn's energetic check on strips explains a failure by the rectangles with a part in the
+   * strip. On random strip packings (fixed sizes, a strip height set by a constraint, so that the
+   * extent the check uses is an atom) LCG with checked explanations must agree with search over the
+   * pairwise rule only.
+   */
+  @Test
+  void diffnEnergeticReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(100, RUNS / 4);
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = strips(seed, false) != CdclSolver.UNSAT;
+      int lcg = strips(seed, true);
+      assertThat(lcg).as("seed " + seed).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+    }
+  }
+
+  // a random strip packing: search over the pairwise rule (SAT or UNSAT), or LCG over Diffn with
+  // the energetic check
+  private static int strips(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 4 + rnd.nextInt(3);
+    int width = 5 + rnd.nextInt(4);
+    int height = 2 + rnd.nextInt(3);
+    IntVar limit = new IntVar(store, "H", height, height + 2);
+    IntVar[] x = new IntVar[n];
+    IntVar[] y = new IntVar[n];
+    IntVar[] w = new IntVar[n];
+    IntVar[] h = new IntVar[n];
+    List<IntVar> vars = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      int wi = 1 + rnd.nextInt(3);
+      int hi = 1 + rnd.nextInt(height);
+      int x0 = rnd.nextInt(width - wi + 1);
+      w[i] = new IntVar(store, "w" + i, wi, wi);
+      h[i] = new IntVar(store, "h" + i, hi, hi);
+      x[i] = new IntVar(store, "x" + i, x0, Math.min(width - wi, x0 + rnd.nextInt(4)));
+      y[i] = new IntVar(store, "y" + i, 0, height + 2);
+      store.impose(new XplusYlteqZ(y[i], h[i], limit));
+      vars.add(x[i]);
+      vars.add(y[i]);
+    }
+    vars.add(0, limit);
+    IntVar[] all = vars.toArray(new IntVar[0]);
+    if (!lcg) {
+      store.impose(new Nooverlap(x, y, w, h).pairwiseOnly());
+      if (!store.consistency()) {
+        return CdclSolver.UNSAT;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()))
+          ? CdclSolver.SAT
+          : CdclSolver.UNSAT;
+    }
+    Diffn diffn = new Diffn(x, y, w, h);
+    diffn.setEnergetic(1 + (int) (seed % 2));
+    store.impose(diffn);
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    return solver.solve();
+  }
+
+  /**
+   * DiffnK explains its pruning and failures by the boxes of the pairwise, volume or exclusion
+   * rule. On random small packings of boxes in two or three dimensions, strict or not, LCG with
+   * checked explanations must agree with depth-first search over the same constraint, and give a
+   * packing.
+   */
+  @Test
+  void diffnKReasonsAgreeWithSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = boxes(seed, false) != null;
+      Object[] lcg = boxes(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // random boxes in a small space: search over DiffnK (null if none), or LCG over DiffnK ({status,
+  // own reasons and failures of DiffnK})
+  private static Object[] boxes(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int k = 2 + rnd.nextInt(2);
+    boolean strict = rnd.nextBoolean();
+    int side = k == 2 ? 4 + rnd.nextInt(3) : 3 + rnd.nextInt(2);
+    int n = 3 + rnd.nextInt(k == 2 ? 4 : 3);
+    IntVar[][] origin = new IntVar[n][k];
+    IntVar[][] length = new IntVar[n][k];
+    List<IntVar> vars = new ArrayList<>();
+    IntVar limit = new IntVar(store, side, side);
+    for (int i = 0; i < n; i++) {
+      boolean optional = !strict && rnd.nextInt(3) == 0;
+      for (int d = 0; d < k; d++) {
+        int lo = 1 + rnd.nextInt(2);
+        int hi = lo + (rnd.nextInt(3) == 0 ? 1 : 0);
+        length[i][d] = new IntVar(store, "l" + i + "_" + d, lo, hi);
+        if (optional && d == 0) {
+          length[i][d].domain.unionAdapt(0, 0);
+        } else if (rnd.nextInt(6) == 0) {
+          // a hole in a length
+          length[i][d].domain.unionAdapt(hi + 2, hi + 2);
+        }
+        length[i][d].refreshBounds();
+        origin[i][d] = new IntVar(store, "o" + i + "_" + d, 0, side - 1);
+        if (rnd.nextInt(5) == 0) {
+          origin[i][d].domain.subtractAdapt(rnd.nextInt(side));
+          if (origin[i][d].domain.isEmpty()) {
+            origin[i][d].domain.unionAdapt(0, 0);
+          }
+          origin[i][d].refreshBounds();
+        }
+        store.impose(new XplusYlteqZ(origin[i][d], length[i][d], limit));
+        vars.add(origin[i][d]);
+        vars.add(length[i][d]);
+      }
+    }
+    IntVar[] all = vars.toArray(new IntVar[0]);
+    store.impose(new DiffnK(origin, length, strict));
+    if (!lcg) {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          boolean apart = false;
+          boolean empty = false;
+          for (int d = 0; d < k; d++) {
+            int oi = solver.value(origin[i][d]);
+            int li = solver.value(length[i][d]);
+            int oj = solver.value(origin[j][d]);
+            int lj = solver.value(length[j][d]);
+            apart |= oi + li <= oj || oj + lj <= oi;
+            empty |= li == 0 || lj == 0;
+          }
+          assertThat(apart || !strict && empty)
+              .as("seed %d: boxes %d and %d overlap", seed, i, j)
+              .isTrue();
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("DiffnK");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
+  }
+
+  /**
+   * LexChain explains a pruning that needs both sides of the chain (no tuple of a vector with the
+   * value lies between the bounds of the vectors below and above it) by the vectors around it. On
+   * random chains of three to five short vectors, with column sums and disequalities, LCG with
+   * checked explanations must agree with search over the chain posted as pairwise LexOrder.
+   */
+  @Test
+  void lexChainReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = lexChains(seed, false) != null;
+      Object[] lcg = lexChains(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over
+  // LexChain ({status, own reasons and failures of LexChain})
+  private static Object[] lexChains(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(3);
+    int n = 2 + rnd.nextInt(2);
+    int top = 2 + rnd.nextInt(3);
+    boolean strict = rnd.nextInt(3) == 0;
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    if (lcg) {
+      store.impose(new LexChain(x, strict));
+    } else {
+      for (int i = 0; i + 1 < m; i++) {
+        store.impose(new LexOrder(x[i], x[i + 1], strict));
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i + 1 < m; i++) {
+        int c = 0;
+        for (int j = 0; j < n && c == 0; j++) {
+          c = Integer.compare(solver.value(x[i][j]), solver.value(x[i + 1][j]));
+        }
+        assertThat(strict ? c < 0 : c <= 0)
+            .as("seed %d: vectors %d and %d", seed, i, i + 1)
+            .isTrue();
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("LexChain");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
+  }
+
+  /**
    * AmongSeq explains its pruning and failures by paths and negative cycles of its network. On
    * random small car-sequencing models (sequences over class variables, with repeated variables and
    * exact class counts) LCG with checked explanations must agree with search over the windows
@@ -1245,8 +1526,10 @@ class LcgFuzzTest {
       int hMin = rnd.nextBoolean() ? wMin : 1 + rnd.nextInt(3);
       w[i] = new IntVar(store, "w" + i, wMin, wMin + (rnd.nextInt(3) == 0 ? 1 : 0));
       h[i] = new IntVar(store, "h" + i, hMin, hMin + (rnd.nextInt(3) == 0 ? 1 : 0));
-      x[i] = new IntVar(store, "x" + i, 0, side - wMin);
-      y[i] = new IntVar(store, "y" + i, 0, side - hMin);
+      // wide root domains on odd seeds, so the container is an atom of the trail
+      int slack = seed % 2 == 1 ? 3 : 0;
+      x[i] = new IntVar(store, "x" + i, 0, side - wMin + slack);
+      y[i] = new IntVar(store, "y" + i, 0, side - hMin + slack);
       store.impose(new XplusYlteqZ(x[i], w[i], new IntVar(store, side, side)));
       store.impose(new XplusYlteqZ(y[i], h[i], new IntVar(store, side, side)));
     }
@@ -1268,7 +1551,10 @@ class LcgFuzzTest {
           ? new Object[0]
           : null;
     }
-    store.impose(new Diffn(x, y, w, h));
+    Diffn diffn = new Diffn(x, y, w, h);
+    // the energetic check on strips on a third of the seeds, with or without the functions
+    diffn.setEnergetic((int) (seed % 3));
+    store.impose(diffn);
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));

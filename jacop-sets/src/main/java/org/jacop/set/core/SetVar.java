@@ -52,10 +52,8 @@ public class SetVar extends Var implements Mirrored {
   static {
     try {
       Class.forName("org.jacop.set.search.SetSearchSupport");
-    } catch (ClassNotFoundException e) {
-      // SetSearchSupport not available; search handlers not registered
-      String notAvailable = e.getMessage();
-      assert notAvailable != null || true; // optional dependency; ignore if absent
+    } catch (ClassNotFoundException _) {
+      // SetSearchSupport not available (optional dependency); search handlers not registered
     }
   }
 

@@ -197,9 +197,9 @@ public final class ImposeGroundingHarness {
     try {
       c.impose().accept(store, x);
       return false;
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       return true;
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       // the grounding plans report it
       return false;
     }
@@ -488,7 +488,7 @@ public final class ImposeGroundingHarness {
           ground(store, x, plan, i -> true);
           phase = "search at level " + (root + 1);
           found = solveAll(store, x);
-        } catch (FailException e) {
+        } catch (FailException _) {
           // the grounding itself is inconsistent; no solutions
         }
         String diff = compare(found, expected);
@@ -538,7 +538,7 @@ public final class ImposeGroundingHarness {
         failures.add(
             where + ": notSatisfied() is " + p.notSatisfied() + " but the relation is " + holds);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       if (holds) {
         failures.add(where + ": FailException on impose although the relation holds");
       }

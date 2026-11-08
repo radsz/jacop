@@ -89,7 +89,7 @@ class PresolveFlatzincTest {
     Store original;
     try {
       original = load(model);
-    } catch (TrivialSolution e) {
+    } catch (TrivialSolution _) {
       // the front end solved the model while loading it
       return;
     }
@@ -118,7 +118,7 @@ class PresolveFlatzincTest {
     if (derivation.outcome() != Derivation.Outcome.INFEASIBLE) {
       IntVar[] counterparts = derivation.counterparts(vars);
       Store child = derivation.child();
-      Runnable record =
+      Runnable rec =
           () -> {
             if (derivation.returnSolution()) {
               found.add(values(vars));
@@ -126,9 +126,9 @@ class PresolveFlatzincTest {
           };
       if (child.consistency()) {
         if (counterparts.length == 0) {
-          record.run();
+          rec.run();
         } else {
-          solve(child, counterparts, record);
+          solve(child, counterparts, rec);
         }
       }
     }

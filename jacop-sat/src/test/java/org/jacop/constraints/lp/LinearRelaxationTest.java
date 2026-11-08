@@ -56,6 +56,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
@@ -344,6 +345,93 @@ class LinearRelaxationTest {
     assertThat(stronger).as("stronger %d weaker %d", stronger, weaker).isGreaterThan(weaker);
   }
 
+  /**
+   * With the dense tableau at its size cap, the cut rounds move the rows to the sparse simplex of
+   * JaLP; the cuts made there keep the optimum, and the move is undone when they do not raise the
+   * bound of the integer objective.
+   */
+  @Test
+  void cutsOnJalpAboveTheTableauCapKeepTheOptimum() {
+    int moved = 0;
+    int back = 0;
+    for (int run = 0; run < RUNS / 3; run++) {
+      Model probe = new Model(run);
+      if (probe.objective == null) {
+        continue;
+      }
+      long[] expected = search(probe);
+      Model model = new Model(run);
+      LinearRelaxation r = new LinearRelaxation(model.rows, model.objective, model.maximize);
+      r.setTableauCap(1);
+      model.store.impose(r);
+      long[] actual = search(model);
+      assertThat(actual).as("seed %d", run).isEqualTo(expected);
+      if (r.calls == 0 || Double.isNaN(r.cutBound)) {
+        continue;
+      }
+      // the bound is of the objective: below its optimum when minimizing, above when maximizing
+      double sign = model.maximize ? -1 : 1;
+      if (expected[0] == 1) {
+        double optimum = model.maximize ? -expected[1] : expected[1];
+        assertThat(sign * r.cutBound).as("seed %d", run).isLessThanOrEqualTo(sign * optimum + 1e-6);
+      }
+      if (r.sparseCuts) {
+        moved++;
+        assertThat(r.cuts).as("seed %d", run).isPositive();
+        assertThat(Math.ceil(sign * r.cutBound - 1e-6))
+            .as("seed %d", run)
+            .isGreaterThan(Math.ceil(sign * r.rootBound - 1e-6));
+      } else if (r.cuts == 0 && sign * r.cutBound > sign * r.rootBound + 1e-6) {
+        back++;
+      }
+    }
+    assertThat(moved).as("moved %d back %d", moved, back).isPositive();
+  }
+
+  /**
+   * The cuts from Gomory rows with multipliers at the default scale (2^36) and at the old one
+   * (2^20) keep the optimum. On these small models the two scales are about even (300 runs: 4
+   * stronger, 4 weaker); the finer scale pays off when cuts with large weights are rows of a later
+   * round (hoist, racp in the MiniZinc Challenge), which the benchmarks show.
+   */
+  @Test
+  void finerGomoryMultipliersKeepTheOptimum() {
+    int stronger = 0;
+    int weaker = 0;
+    for (int run = 0; run < RUNS; run++) {
+      Model probe = new Model(run);
+      if (probe.objective == null) {
+        continue;
+      }
+      long[] expected = search(probe);
+      if (expected[0] == 0) {
+        continue;
+      }
+      // the bound is of the objective: below its optimum when minimizing, above when maximizing
+      double sign = probe.maximize ? -1 : 1;
+      double optimum = probe.maximize ? -expected[1] : expected[1];
+      double[] bound = new double[2];
+      for (int k = 0; k < 2; k++) {
+        Model model = new Model(run);
+        LinearRelaxation r = new LinearRelaxation(model.rows, model.objective, model.maximize);
+        r.setGomoryScale(k == 0 ? 1L << 20 : 1L << 36);
+        model.store.impose(r);
+        assertThat(model.store.consistency()).as("seed %d", run).isTrue();
+        bound[k] = sign * r.cutBound;
+        if (!Double.isNaN(bound[k])) {
+          assertThat(bound[k])
+              .as("seed %d scale %d", run, k)
+              .isLessThanOrEqualTo(sign * optimum + 1e-6);
+        }
+      }
+      if (!Double.isNaN(bound[0]) && !Double.isNaN(bound[1])) {
+        stronger += bound[1] > bound[0] + 1e-6 ? 1 : 0;
+        weaker += bound[1] < bound[0] - 1e-6 ? 1 : 0;
+      }
+    }
+    assertThat(stronger + weaker).as("stronger %d weaker %d", stronger, weaker).isPositive();
+  }
+
   @Test
   void aloneAcceptsOnlyAssignmentsThatKeepTheRows() {
     for (int run = 0; run < RUNS / 5; run++) {
@@ -551,7 +639,6 @@ class LinearRelaxationTest {
     }
     LinearRelaxation r = LinearRelaxation.of(store, cost, true);
     assertThat(r).isNotNull();
-    // PC assertThat(r.pairCliques).isPositive();
     store.impose(r);
     assertThat(store.consistency()).isTrue();
     assertThat(cost.max()).isEqualTo(best);
@@ -1547,6 +1634,96 @@ class LinearRelaxationTest {
       } else {
         assertThat(copies).containsValue(v);
       }
+    }
+  }
+
+  /**
+   * The sorting-network rows and the Hall cuts of all-different constraints keep the optimum of
+   * random permutation and assignment models under lazy clause generation with the explanation
+   * checker on: the free columns of the network leave every explanation at their fixed bounds.
+   */
+  @Test
+  void alldifferentRowsKeepTheOptimumUnderLcg() {
+    long checked = 0;
+    int used = 0;
+    for (int run = 0; run < 16; run++) {
+      boolean permutation = run % 2 == 0;
+      long expected = new Permutation(run, permutation).optimum();
+
+      Permutation lcg = new Permutation(run, permutation);
+      LinearRelaxation l =
+          LinearRelaxation.of(
+              lcg.store,
+              lcg.cost,
+              false,
+              List.of(),
+              permutation ? Linearizations.alldifferentNetwork(lcg.x) : List.of(),
+              Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      assertThat(l).as("seed %d", run).isNotNull();
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+      used += l.alldiffCuts > 0 || l.simplexFreeColumns() > 0 ? 1 : 0;
+    }
+    assertThat(checked).isPositive();
+    assertThat(used).isPositive();
+  }
+
+  /**
+   * A random all-different over 5 to 7 variables, a permutation of spread values or domains from a
+   * larger pool, with a linear cost {@code cost = sum c_i x_i}.
+   */
+  private static final class Permutation {
+    final Store store = new Store();
+    final IntVar[] x;
+    final IntVar cost;
+
+    Permutation(int seed, boolean permutation) {
+      Random rnd = new Random(seed * 104_729L + 1);
+      int n = 5 + rnd.nextInt(3);
+      int size = permutation ? n : n + 2;
+      int[] values = new int[size];
+      for (int i = 0, at = rnd.nextInt(4); i < size; i++) {
+        at += 1 + rnd.nextInt(3);
+        values[i] = at;
+      }
+      x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntervalDomain d = new IntervalDomain();
+        for (int v : values) {
+          if (permutation || rnd.nextInt(4) > 0) {
+            d.unionAdapt(v, v);
+          }
+        }
+        if (d.isEmpty()) {
+          d.unionAdapt(values[i], values[i]);
+        }
+        x[i] = new IntVar(store, "x" + i, d);
+      }
+      int[] w = new int[n + 1];
+      IntVar[] vars = Arrays.copyOf(x, n + 1);
+      int range = 0;
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(19) - 9;
+        range += Math.abs(w[i]) * values[size - 1];
+      }
+      cost = new IntVar(store, "cost", -range, range);
+      vars[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(vars, w, "==", 0));
+      store.impose(new Alldistinct(x));
+    }
+
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
     }
   }
 

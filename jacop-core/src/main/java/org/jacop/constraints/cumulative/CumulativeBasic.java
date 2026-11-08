@@ -222,12 +222,12 @@ public class CumulativeBasic extends Constraint
   }
 
   private void updateTasksRes(Store store) {
-    int limitMax = limit.max();
+    int localLimitMax = limit.max();
     for (TaskView t : taskNormal) {
       // a task with zero duration does not use the resource, so it may use more than the limit
       if (t.dur.min() > 0) {
-        t.res.domain.inMax(store.level, t.res, limitMax);
-      } else if (t.res.min() > limitMax) {
+        t.res.domain.inMax(store.level, t.res, localLimitMax);
+      } else if (t.res.min() > localLimitMax) {
         t.dur.domain.inMax(store.level, t.dur, 0);
       }
     }

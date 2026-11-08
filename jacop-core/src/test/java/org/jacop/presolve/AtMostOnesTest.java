@@ -219,7 +219,7 @@ class AtMostOnesTest {
             first = st;
             break;
           }
-        } catch (org.jacop.core.FailException e) {
+        } catch (org.jacop.core.FailException _) {
           feasible = false;
         }
       }

@@ -138,6 +138,18 @@ public class Min extends AbstractMinMax
     } while (store.propagationHasOccurred);
 
     position.update(start);
+
+    // entailed once min is fixed to a value a list variable is fixed to, since every variable
+    // is already at least min: the constraint is not woken again by the other variables
+    if (min.singleton()) {
+      int value = min.value();
+      for (int i = start; i < l; i++) {
+        if (list[i].singleton() && list[i].value() == value) {
+          removeConstraint();
+          break;
+        }
+      }
+    }
   }
 
   @Override
@@ -201,11 +213,11 @@ public class Min extends AbstractMinMax
 
   @Override
   public long violation(ToIntFunction<IntVar> value) {
-    long min = Long.MAX_VALUE;
+    long localMin = Long.MAX_VALUE;
     for (IntVar v : list) {
-      min = Math.min(min, value.applyAsInt(v));
+      localMin = Math.min(localMin, value.applyAsInt(v));
     }
-    return Math.abs(min - value.applyAsInt(target));
+    return Math.abs(localMin - value.applyAsInt(target));
   }
 
   @Override
@@ -215,11 +227,11 @@ public class Min extends AbstractMinMax
 
   @Override
   public int functionalValue(ToIntFunction<IntVar> value) {
-    int min = Integer.MAX_VALUE;
+    int localMin = Integer.MAX_VALUE;
     for (IntVar v : list) {
-      min = Math.min(min, value.applyAsInt(v));
+      localMin = Math.min(localMin, value.applyAsInt(v));
     }
-    return min;
+    return localMin;
   }
 
   // [x < v] -> [min < v] for each x, and [min < v] -> one [x < v], for every threshold v

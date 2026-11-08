@@ -615,11 +615,11 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * all its variables; during search it is marked as entailed at the current level instead.
    */
   public void removeConstraint() {
-    Var[] scope = scopeArray();
-    if (scope.length == 0) {
+    Var[] localScope = scopeArray();
+    if (localScope.length == 0) {
       return;
     }
-    Store store = scope[0].getStore();
+    Store store = localScope[0].getStore();
     // During search the constraint is only marked, and the store skips it until it backtracks
     // below this level. Detaching it from every variable would copy their domains at this level.
     if (store.level > 0) {
@@ -627,7 +627,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
       return;
     }
     // Stream version is not used due to large performance overhead.
-    for (Var v : scope) {
+    for (Var v : localScope) {
       if (!v.singleton()) {
         v.removeConstraint(this);
       }

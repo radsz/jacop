@@ -122,7 +122,7 @@ public final class FreeSearch {
 
   /** A decision on the stack. */
   private static final class Frame {
-    Var var;
+    Var aVar;
     int value;
     PrimitiveConstraint choice;
     int firstIndex;
@@ -531,7 +531,7 @@ public final class FreeSearch {
           cost.domain.inMin(rootLevel, cost, limit + 1);
         }
         return !store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         store.recentlyFailedConstraint = null;
         return true;
       }
@@ -623,7 +623,7 @@ public final class FreeSearch {
       for (int i = 0; i < depth; i++) {
         Frame f = stack.get(i);
         boolean refuted = f.right || (i == depth - 1 && runEndedByFailure);
-        if (!(f.var instanceof IntVar x)) {
+        if (!(f.aVar instanceof IntVar x)) {
           if (refuted) {
             continue;
           }
@@ -696,7 +696,7 @@ public final class FreeSearch {
       if (probing) {
         probeFailures++;
       }
-      Var decision = failedFrame == null ? null : failedFrame.var;
+      Var decision = failedFrame == null ? null : failedFrame.aVar;
       // failures under the alternative branching would teach the heuristics of the main one
       // about a search they do not make, and so would the failures of a probe, whose bound on
       // the objective is not part of the problem
@@ -741,7 +741,7 @@ public final class FreeSearch {
     while (stackSize > 0) {
       Frame f = top();
       store.removeLevel(f.level);
-      if (!f.right && (f.choice != null || !f.var.singleton())) {
+      if (!f.right && (f.choice != null || !f.aVar.singleton())) {
         return false;
       }
       stackSize--;
@@ -777,10 +777,10 @@ public final class FreeSearch {
 
   /** Selects the next decision, or returns null when all variables of the branching are fixed. */
   private Frame choose(int firstIndex) {
-    Var var = select.getChoiceVariable(firstIndex);
+    Var aVar = select.getChoiceVariable(firstIndex);
     PrimitiveConstraint choice = null;
     int value = 0;
-    if (var != null) {
+    if (aVar != null) {
       value = select.getChoiceValue();
     } else {
       choice = select.getChoiceConstraint(firstIndex);
@@ -792,15 +792,15 @@ public final class FreeSearch {
       stack.add(new Frame());
     }
     Frame f = stack.get(stackSize++);
-    f.var = var;
+    f.aVar = aVar;
     f.value = value;
     f.choice = choice;
     f.firstIndex = firstIndex;
     f.right = false;
     f.projected =
         projection == null
-            || (var != null
-                ? projection.contains(var)
+            || (aVar != null
+                ? projection.contains(aVar)
                 : projection.containsAll(choice.arguments()));
     store.setLevel(store.level + 1);
     f.level = store.level;
@@ -811,14 +811,14 @@ public final class FreeSearch {
   private boolean leftBranch(Frame f) {
     decisions++;
     try {
-      if (f.var != null) {
-        if (f.var instanceof IntVar v) {
+      if (f.aVar != null) {
+        if (f.aVar instanceof IntVar v) {
           v.domain.inValue(store.level, v, f.value);
         } else {
-          handler(f.var).inValue(store, f.var, f.value, true);
+          handler(f.aVar).inValue(store, f.aVar, f.value, true);
         }
         for (SearchMonitor m : monitors) {
-          m.onDecision(f.var, f.value, true);
+          m.onDecision(f.aVar, f.value, true);
         }
       } else {
         store.impose(f.choice);
@@ -826,7 +826,7 @@ public final class FreeSearch {
           m.onDecision(f.choice, true);
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return propagate();
@@ -838,14 +838,14 @@ public final class FreeSearch {
     f.right = true;
     store.setLevel(f.level);
     try {
-      if (f.var != null) {
-        if (f.var instanceof IntVar v) {
+      if (f.aVar != null) {
+        if (f.aVar instanceof IntVar v) {
           v.domain.inComplement(store.level, v, f.value);
         } else {
-          handler(f.var).inComplement(store, f.var, f.value, true);
+          handler(f.aVar).inComplement(store, f.aVar, f.value, true);
         }
         for (SearchMonitor m : monitors) {
-          m.onDecision(f.var, f.value, false);
+          m.onDecision(f.aVar, f.value, false);
         }
       } else {
         store.impose(new Not(f.choice));
@@ -853,7 +853,7 @@ public final class FreeSearch {
           m.onDecision(f.choice, false);
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return propagate();
@@ -883,7 +883,7 @@ public final class FreeSearch {
         } else if (cost.max() > limit) {
           cost.domain.inMax(store.level, cost, limit);
         }
-      } catch (FailException e) {
+      } catch (FailException _) {
         store.recentlyFailedConstraint = null;
         return false;
       }
@@ -984,7 +984,7 @@ public final class FreeSearch {
           v.domain.in(store.level, v, lastSolution[i], lastSolution[i]);
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return store.consistency();

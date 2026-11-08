@@ -949,13 +949,13 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     int v = value[entry];
     EntryList scratch = new EntryList();
     if (kind[entry] == GE) {
-      int previous = minBefore(x, entry);
-      while (v - 1 > previous && excludedBefore(x, v - 1, entry, scratch)) {
+      int localPrevious = minBefore(x, entry);
+      while (v - 1 > localPrevious && excludedBefore(x, v - 1, entry, scratch)) {
         v--;
       }
     } else {
-      int previous = maxBefore(x, entry);
-      while (v + 1 < previous && excludedBefore(x, v + 1, entry, scratch)) {
+      int localPrevious = maxBefore(x, entry);
+      while (v + 1 < localPrevious && excludedBefore(x, v + 1, entry, scratch)) {
         v++;
       }
     }

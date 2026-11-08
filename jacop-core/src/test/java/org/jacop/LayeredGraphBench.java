@@ -30,6 +30,8 @@
 
 package org.jacop;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -92,6 +94,7 @@ class LayeredGraphBench {
           // Warm up once, then measure.
           run(p, seed, engine, 1);
           long[] r = run(p, seed, engine, seconds);
+          assertTrue(r[1] > 0, "no time measured for " + shape);
           double rate = r[0] / (r[1] / 1e9);
           if (reference < 0) {
             reference = (long) rate;

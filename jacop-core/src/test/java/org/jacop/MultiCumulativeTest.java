@@ -138,7 +138,7 @@ class MultiCumulativeTest {
 
   private record Model(Store store, IntVar[] starts, IntVar[] limits, IntVar[] all) {}
 
-  private static IntVar var(Store store, String name, int[] values) {
+  private static IntVar variable(Store store, String name, int[] values) {
     IntervalDomain d = new IntervalDomain();
     for (int v : values) {
       d.unionAdapt(v, v);
@@ -156,11 +156,11 @@ class MultiCumulativeTest {
     int m = in.heights().length;
     IntVar[] s = new IntVar[n];
     for (int i = 0; i < n; i++) {
-      s[i] = var(store, "s" + i, in.starts()[i]);
+      s[i] = variable(store, "s" + i, in.starts()[i]);
     }
     IntVar[] l = new IntVar[m];
     for (int r = 0; r < m; r++) {
-      l[r] = var(store, "l" + r, in.limits()[r]);
+      l[r] = variable(store, "l" + r, in.limits()[r]);
     }
     List<Constraint> cs = new ArrayList<>();
     for (int r = 0; r < m && kind != 0; r++) {
@@ -225,7 +225,7 @@ class MultiCumulativeTest {
         try {
           a.store().impose(decision(x, op, v));
           b.store().impose(decision(b.all()[i], op, v));
-        } catch (org.jacop.core.FailException e) {
+        } catch (org.jacop.core.FailException _) {
           break;
         }
         okA = a.store().consistency();

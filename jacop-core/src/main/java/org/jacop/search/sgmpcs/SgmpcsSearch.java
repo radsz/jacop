@@ -74,7 +74,7 @@ public class SgmpcsSearch {
   final boolean trace = false;
   final ImproveSolution<IntVar> search;
   final Function<Integer, Comparator<int[]>> solutionComparator =
-      p -> Comparator.comparingInt((int[] o) -> o[p]);
+      index -> Comparator.comparingInt((int[] o) -> o[index]);
   // e- number of elite solutions
   public int e = 4;
   // eInit- number of solution for selecting the best e elite solutions
@@ -252,11 +252,11 @@ public class SgmpcsSearch {
   private void logEliteSolutions(int variableCount) {
     log.debug("%% Selected best {} solutions", e);
     for (int i = 0; i < e; i++) {
-      StringBuilder solution = new StringBuilder("%% Solution ").append(i + 1).append(": ");
+      StringBuilder localSolution = new StringBuilder("%% Solution ").append(i + 1).append(": ");
       for (int j = 0; j < variableCount; j++) {
-        solution.append(elite[i][j]).append(" ");
+        localSolution.append(elite[i][j]).append(" ");
       }
-      log.debug("{}", solution);
+      log.debug("{}", localSolution);
     }
   }
 
@@ -413,16 +413,16 @@ public class SgmpcsSearch {
    */
   int bestCostSolution() {
     int currentCost = IntDomain.MAX_INT;
-    int solution = -1;
+    int localSolution = -1;
 
     for (int i = 0; i < elite.length; i++) {
       if (currentCost > elite[i][costPosition]) {
         currentCost = elite[i][costPosition];
-        solution = i;
+        localSolution = i;
       }
     }
 
-    return solution;
+    return localSolution;
   }
 
   /*
@@ -430,16 +430,16 @@ public class SgmpcsSearch {
    */
   int worstCostSolution() {
     int currentCost = IntDomain.MIN_INT;
-    int solution = -1;
+    int localSolution = -1;
 
     for (int i = 0; i < elite.length; i++) {
       if (currentCost < elite[i][costPosition]) {
         currentCost = elite[i][costPosition];
-        solution = i;
+        localSolution = i;
       }
     }
 
-    return solution;
+    return localSolution;
   }
 
   /**

@@ -51,7 +51,6 @@ class TrailedTupleSetTest {
       int tuples = 1 + random.nextInt(300);
       int records = random.nextInt(4);
       TrailedTupleSet set = new TrailedTupleSet(tuples, records);
-      int length = set.state.length;
       // The snapshots of the records when each level was entered, from level from.
       List<long[]> snapshots = new ArrayList<>();
       List<Integer> levels = new ArrayList<>();

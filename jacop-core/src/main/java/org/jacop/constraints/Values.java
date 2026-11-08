@@ -152,6 +152,12 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
   private int numberSingleton;
   private int differentSingletons;
 
+  /** The difference graph of the list and its clique, or null when there is none. */
+  private ValuesCliques cliques;
+
+  /** Whether the graph is fixed (a copy keeps its original's), so it is not read again. */
+  private boolean cliquesFixed;
+
   /**
    * It constructs Values constraint.
    *
@@ -184,14 +190,60 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == Values.class
-        && new ValuesExplanation(trail, list, count).explain(entry, out);
+    if (getClass() != Values.class) {
+      return false;
+    }
+    ValuesCliques graph = cliques;
+    IntVar y = trail.variable(entry);
+    if (graph != null && y == count && trail.kind(entry) == AtomicTrail.GE) {
+      if (graph.explainsLowerBound(trail.value(entry))) {
+        return true;
+      }
+    }
+    int mark = out.size();
+    if (new ValuesExplanation(trail, list, count).explain(entry, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    if (graph != null && y != count) {
+      for (int i = 0; i < list.length; i++) {
+        if (list[i] == y && graph.explainVariable(trail, list, count, i, entry, out)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == Values.class
-        && new ValuesExplanation(trail, list, count).explainFailure(out);
+    if (getClass() != Values.class) {
+      return false;
+    }
+    int mark = out.size();
+    if (new ValuesExplanation(trail, list, count).explainFailure(out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return cliques != null && cliques.explainFailure(trail, list, count, out);
+  }
+
+  /**
+   * Reads the difference graph of the list at the root, where the domains of the other constraints'
+   * variables are facts. The count must not be in the list, since the graph's clique bounds the
+   * values of the list alone.
+   */
+  private void readCliques(Store store) {
+    if (cliquesFixed || store.level != 0 || !ValuesCliques.ENABLED) {
+      return;
+    }
+    for (IntVar x : list) {
+      if (x == count) {
+        cliquesFixed = true;
+        return;
+      }
+    }
+    cliques = ValuesCliques.read(list, cliques);
   }
 
   @Override
@@ -202,6 +254,8 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
       count.domain.in(store.level, count, 0, 0);
       return;
     }
+
+    readCliques(store);
 
     if (!prepareValueIndex()) {
       consistencyWithHashing(store);
@@ -245,6 +299,10 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
       }
 
       applyCountPruning(store, null);
+
+      if (cliques != null) {
+        cliques.propagate(store, list, count);
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -959,22 +1017,26 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
    */
   private void consistencyWithHashing(Store store) {
 
-    IntVar[] order = sorted == null ? Arrays.copyOf(list, list.length) : sorted;
-    sorted = order;
+    IntVar[] localOrder = sorted == null ? Arrays.copyOf(list, list.length) : sorted;
+    sorted = localOrder;
 
     do {
 
       store.propagationHasOccurred = false;
 
-      Arrays.sort(order, minFdv);
+      Arrays.sort(localOrder, minFdv);
 
-      ValuesConsistencyState state = buildAdjAndCounts(order);
+      ValuesConsistencyState state = buildAdjAndCounts(localOrder);
 
       count.domain.in(store.level, count, state.minNumberDifferent, state.maxNumberDifferent);
 
       numberSingleton = state.numberSingleton;
       differentSingletons = state.singletonValues.getSize();
       applyCountPruning(store, state.singletonValues);
+
+      if (cliques != null) {
+        cliques.propagate(store, list, count);
+      }
 
     } while (store.propagationHasOccurred);
   }
@@ -1075,6 +1137,10 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
 
   @Override
   public Values copy(VarMap map) {
-    return new Values(map.get(list), map.get(count));
+    Values copy = new Values(map.get(list), map.get(count));
+    // the graph came from constraints a copy may not have; it keeps the original's
+    copy.cliques = cliques;
+    copy.cliquesFixed = true;
+    return copy;
   }
 }
