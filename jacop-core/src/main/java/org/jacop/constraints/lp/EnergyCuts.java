@@ -72,6 +72,14 @@ import org.jacop.util.DualFeasibleFunctions;
  * checked; the most violated prefix of each t is a candidate (and in mirror the latest ends). The
  * earliest and latest starts are those of the root, so the cuts hold for the whole search.
  *
+ * <p>With {@code org.jacop.lp.energyWindows=true} the separation also tries, for each release date
+ * t and root deadline d, the tasks released at t or later that end by d: a short window holds few
+ * tasks, so its cut can be violated where the prefixes of all tasks released at t are not. Applied
+ * to the uses of a dual feasible function ({@link #mapped(int)}), a window of a few large tasks
+ * gets the energy of their pairwise exclusion (J. Carlier and E. Néron, Computing redundant
+ * resources for the resource constrained project scheduling problem, European Journal of
+ * Operational Research 176(3) (2007) 1452-1463).
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -79,6 +87,9 @@ public final class EnergyCuts {
 
   // the least violation of a cut over its norm
   private static final double MIN_EFFICACY = 1e-4;
+
+  // also separate over the tasks of each window [t, d]: released at t or later and due by d
+  static boolean windows = Boolean.getBoolean("org.jacop.lp.energyWindows");
 
   private final IntVar[] starts;
   private final long[] dur;
@@ -230,6 +241,7 @@ public final class EnergyCuts {
       return;
     }
     long[] est = new long[n];
+    long[] due = new long[n];
     double[] start = new double[n];
     long[] p = new long[n];
     long[] r = new long[n];
@@ -240,9 +252,11 @@ public final class EnergyCuts {
       r[k] = oneMachine ? 1 : use[j];
       if (mirror) {
         est[k] = Math.negateExact(Math.addExact(hi[c], p[k]));
+        due[k] = Math.negateExact(lo[c]);
         start[k] = -value[c] - p[k];
       } else {
         est[k] = lo[c];
+        due[k] = Math.addExact(hi[c], p[k]);
         start[k] = value[c];
       }
     }
@@ -258,47 +272,75 @@ public final class EnergyCuts {
           return d != 0 ? d : Integer.compare(a, b);
         });
     long[] releases = Arrays.stream(est).distinct().sorted().toArray();
+    long[] deadlines =
+        windows ? Arrays.stream(due).distinct().sorted().toArray() : new long[] {Long.MAX_VALUE};
     for (long t : releases) {
-      // the prefix sums over the tasks released at t or later, in the order
-      long e = 0;
-      long ep = 0;
-      long usage = 0;
-      double activity = 0;
-      double squares = 0;
-      int count = 0;
-      int bestSize = 0;
-      double bestViolation = 0;
-      long bestRight = 0;
-      for (int q = 0; q < n; q++) {
-        int k = order[q];
-        if (est[k] < t) {
-          continue;
-        }
-        long ek = Math.multiplyExact(p[k], r[k]);
-        e = Math.addExact(e, ek);
-        ep = Math.addExact(ep, Math.multiplyExact(ek, p[k]));
-        usage = Math.addExact(usage, r[k]);
-        activity += (double) ek * start[k];
-        squares += (double) ek * ek;
-        if (++count < 2) {
-          continue;
-        }
-        long c = Math.min(capacity, usage);
-        // sum e S >= t E + (E^2 - c sum e p) / (2 c), with the right side rounded up
-        long twice = Math.subtractExact(Math.multiplyExact(e, e), Math.multiplyExact(c, ep));
-        long right = Math.addExact(Math.multiplyExact(t, e), Math.ceilDiv(twice, 2 * c));
-        double violation = (right - activity) / Math.sqrt(squares);
-        if (violation > bestViolation) {
-          bestViolation = violation;
-          bestSize = q + 1;
-          bestRight = right;
+      for (long d : deadlines) {
+        if (d > t) {
+          separate(
+              tasks, order, t, d, est, due, p, r, start, capacity, mirror, column, value, found);
         }
       }
-      if (bestSize > 0) {
-        MirCut cut = cut(tasks, order, bestSize, t, est, p, r, mirror, column, value, bestRight);
-        if (cut != null) {
-          found.add(cut);
-        }
+    }
+  }
+
+  // the most violated prefix, in the order, of the tasks released at t or later and due by d
+  private static void separate(
+      List<Integer> tasks,
+      Integer[] order,
+      long t,
+      long d,
+      long[] est,
+      long[] due,
+      long[] p,
+      long[] r,
+      double[] start,
+      long capacity,
+      boolean mirror,
+      int[] column,
+      double[] value,
+      List<MirCut> found) {
+    int n = order.length;
+    // the prefix sums over the tasks released at t or later, in the order
+    long e = 0;
+    long ep = 0;
+    long usage = 0;
+    double activity = 0;
+    double squares = 0;
+    int count = 0;
+    int bestSize = 0;
+    double bestViolation = 0;
+    long bestRight = 0;
+    for (int q = 0; q < n; q++) {
+      int k = order[q];
+      if (est[k] < t || due[k] > d) {
+        continue;
+      }
+      long ek = Math.multiplyExact(p[k], r[k]);
+      e = Math.addExact(e, ek);
+      ep = Math.addExact(ep, Math.multiplyExact(ek, p[k]));
+      usage = Math.addExact(usage, r[k]);
+      activity += (double) ek * start[k];
+      squares += (double) ek * ek;
+      if (++count < 2) {
+        continue;
+      }
+      long c = Math.min(capacity, usage);
+      // sum e S >= t E + (E^2 - c sum e p) / (2 c), with the right side rounded up
+      long twice = Math.subtractExact(Math.multiplyExact(e, e), Math.multiplyExact(c, ep));
+      long right = Math.addExact(Math.multiplyExact(t, e), Math.ceilDiv(twice, 2 * c));
+      double violation = (right - activity) / Math.sqrt(squares);
+      if (violation > bestViolation) {
+        bestViolation = violation;
+        bestSize = q + 1;
+        bestRight = right;
+      }
+    }
+    if (bestSize > 0) {
+      MirCut cut =
+          cut(tasks, order, bestSize, t, d, est, due, p, r, mirror, column, value, bestRight);
+      if (cut != null) {
+        found.add(cut);
       }
     }
   }
@@ -310,7 +352,9 @@ public final class EnergyCuts {
       Integer[] order,
       int size,
       long t,
+      long d,
       long[] est,
+      long[] due,
       long[] p,
       long[] r,
       boolean mirror,
@@ -322,7 +366,7 @@ public final class EnergyCuts {
     long g = 0;
     for (int q = 0; q < size; q++) {
       int k = order[q];
-      if (est[k] < t) {
+      if (est[k] < t || due[k] > d) {
         continue;
       }
       long ek = Math.multiplyExact(p[k], r[k]);

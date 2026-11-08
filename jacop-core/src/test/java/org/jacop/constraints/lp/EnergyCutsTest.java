@@ -224,6 +224,18 @@ class EnergyCutsTest {
   }
 
   @Test
+  void windowCutsKeepEverySchedule() {
+    boolean was = EnergyCuts.windows;
+    EnergyCuts.windows = true;
+    try {
+      energyCutsKeepEverySchedule();
+      mappedEnergyCutsKeepEverySchedule();
+    } finally {
+      EnergyCuts.windows = was;
+    }
+  }
+
+  @Test
   void oneMachineCutIsQueyranneInequality() {
     // three unit-usage tasks of durations 2, 3 and 4 on one machine, all released at 0: sum p S >=
     // 2*3 + 2*4 + 3*4 = 26; at S = 0 the cut over all three is violated
