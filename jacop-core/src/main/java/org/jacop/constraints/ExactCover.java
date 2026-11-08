@@ -378,7 +378,7 @@ public class ExactCover extends Constraint
   private void process(Store store, int event) {
     int o = event >>> 1;
     int value = event & 1;
-    if ((state[o] & (1 << value)) != 0) {
+    if ((state[o] & (value + 1)) != 0) {
       return;
     }
     if (value == 0) {
