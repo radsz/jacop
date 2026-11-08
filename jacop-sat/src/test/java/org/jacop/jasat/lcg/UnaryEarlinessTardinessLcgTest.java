@@ -61,8 +61,25 @@ class UnaryEarlinessTardinessLcgTest {
   // -Dunaryet.lcg.instances=5000 for a longer run
   private static final int INSTANCES = Integer.getInteger("unaryet.lcg.instances", 300);
 
-  private record Problem(
-      int n, int[] p, int[] lo, int[] hi, int[][] machines, int[][] terms, int[][] precedences) {
+  private static final class Problem {
+    final int n;
+    final int[] p;
+    final int[] lo;
+    final int[] hi;
+    final int[][] machines;
+    final int[][] terms;
+    final int[][] precedences;
+
+    Problem(
+        int n, int[] p, int[] lo, int[] hi, int[][] machines, int[][] terms, int[][] precedences) {
+      this.n = n;
+      this.p = p;
+      this.lo = lo;
+      this.hi = hi;
+      this.machines = machines;
+      this.terms = terms;
+      this.precedences = precedences;
+    }
 
     static Problem random(Random r) {
       int n = 3 + r.nextInt(4);

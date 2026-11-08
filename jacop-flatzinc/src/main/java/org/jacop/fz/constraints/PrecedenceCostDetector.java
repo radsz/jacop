@@ -472,8 +472,20 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
   }
 
   /** The tasks, machines, owners and terms of a UnaryEarlinessTardiness. */
-  private record UnaryPlan(
-      IntVar[] starts, int[] durations, int[][] machines, int[] owner, int[][] terms) {
+  private static final class UnaryPlan {
+    final IntVar[] starts;
+    final int[] durations;
+    final int[][] machines;
+    final int[] owner;
+    final int[][] terms;
+
+    UnaryPlan(IntVar[] starts, int[] durations, int[][] machines, int[] owner, int[][] terms) {
+      this.starts = starts;
+      this.durations = durations;
+      this.machines = machines;
+      this.owner = owner;
+      this.terms = terms;
+    }
 
     boolean contains(IntVar z) {
       for (IntVar s : starts) {

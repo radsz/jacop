@@ -164,7 +164,24 @@ class UnaryEarlinessTardinessTest {
   }
 
   /** Random tasks on one or two machines, with earliness and tardiness terms and boxes. */
-  record Problem(int n, int[] p, int[][] machines, int[] owner, int[][] terms, int[] lo, int[] hi) {
+  static final class Problem {
+    final int n;
+    final int[] p;
+    final int[][] machines;
+    final int[] owner;
+    final int[][] terms;
+    final int[] lo;
+    final int[] hi;
+
+    Problem(int n, int[] p, int[][] machines, int[] owner, int[][] terms, int[] lo, int[] hi) {
+      this.n = n;
+      this.p = p;
+      this.machines = machines;
+      this.owner = owner;
+      this.terms = terms;
+      this.lo = lo;
+      this.hi = hi;
+    }
 
     static Problem random(Random r, int maxTasks, int horizon, int maxDuration) {
       int n = 1 + r.nextInt(maxTasks);

@@ -1575,7 +1575,7 @@ public class UnaryEarlinessTardiness extends Constraint
       double[] g = new double[count];
       for (int k = 0; k < count; k++) {
         int[] q = precedences[k];
-        g[k] = at[q[0]] + q[2] - at[q[1]];
+        g[k] = (double) at[q[0]] + q[2] - at[q[1]];
         if (g[k] < 0 && lambda[k] <= 0) {
           g[k] = 0;
         }
