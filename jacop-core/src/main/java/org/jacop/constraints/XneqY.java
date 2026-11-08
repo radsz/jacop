@@ -79,6 +79,11 @@ public class XneqY extends AbstractConstraintXandY implements Copyable<XneqY>, L
     if (x.singleton()) {
       y.domain.inComplement(store.level, y, x.min());
     }
+
+    // with one variable fixed, the other no longer holds its value: no change can prune
+    if (x.singleton() || y.singleton()) {
+      removeConstraint();
+    }
   }
 
   @Override

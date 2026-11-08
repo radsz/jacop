@@ -78,6 +78,10 @@ public class XlteqY extends AbstractXcompY implements Copyable<XlteqY>, LinearEx
   public void consistency(final Store store) {
     x.domain.inMax(store.level, x, y.max());
     y.domain.inMin(store.level, y, x.min());
+    // entailed: further bound changes cannot prune, so the constraint is not woken again
+    if (x.max() <= y.min()) {
+      removeConstraint();
+    }
   }
 
   @Override
