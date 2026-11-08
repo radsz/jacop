@@ -317,7 +317,9 @@ unless stated otherwise):
 - org.jacop.fz.unaryEarlinessTardiness: UnaryEarlinessTardiness on
   earliness/tardiness sums whose starts are tasks of unary resources
   (disjunctive cliques, and tasks of a cumulative using more than half
-  of it); default true.
+  of it), with the precedences between those tasks; off by default (it
+  raises the proven lower bound, not the solutions found); default
+  false.
 - org.jacop.fz.sequence: Sequence for sliding-window cardinality
   constraints stated window by window.
 - jacop.fz.sequenceWindows: the fewest windows of a chain that becomes

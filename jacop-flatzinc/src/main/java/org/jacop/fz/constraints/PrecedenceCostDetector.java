@@ -125,15 +125,15 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
   }
 
   /**
-   * It tells if the detection of earliness and tardiness costs on unary resources is on: unless the
-   * system property org.jacop.fz.unaryEarlinessTardiness is false.
+   * It tells if the detection of earliness and tardiness costs on unary resources is on: only when
+   * the system property org.jacop.fz.unaryEarlinessTardiness is true. It is off by default: it
+   * raises the proven lower bounds but, on the instances measured, not the solutions found.
    *
    * @param freeSearch whether free search (-f) is used.
-   * @return false if the system property org.jacop.fz.unaryEarlinessTardiness is false.
+   * @return true if the system property org.jacop.fz.unaryEarlinessTardiness is true.
    */
   public static boolean unaryEnabled(boolean freeSearch) {
-    String p = System.getProperty("org.jacop.fz.unaryEarlinessTardiness");
-    return p == null || !"false".equalsIgnoreCase(p);
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.unaryEarlinessTardiness"));
   }
 
   /**

@@ -252,6 +252,7 @@ class PrecedenceCostFuzzTest {
         }
         System.setProperty("jacop.lcg.check", "true");
         System.setProperty("org.jacop.fz.precedenceCost", "true");
+        System.setProperty("org.jacop.fz.unaryEarlinessTardiness", "true");
         try {
           String[][] runs = {{"--lcg", "off", "-debug"}, {"-debug"}, {"-f", "-debug"}};
           for (String[] options : runs) {
@@ -273,6 +274,7 @@ class PrecedenceCostFuzzTest {
         } finally {
           System.clearProperty("jacop.lcg.check");
           System.clearProperty("org.jacop.fz.precedenceCost");
+          System.clearProperty("org.jacop.fz.unaryEarlinessTardiness");
         }
       }
     } catch (IllegalStateException e) {
