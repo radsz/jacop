@@ -266,11 +266,18 @@ public final class CapacityCuts {
         }
       }
     }
-    if (COMBS) {
-      cuts.addAll(CombCuts.separate(tails, heads, value, mandatory, flow));
-    }
     cuts.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
-    return cuts.size() > limit ? new ArrayList<>(cuts.subList(0, limit)) : cuts;
+    if (cuts.size() >= limit) {
+      return new ArrayList<>(cuts.subList(0, limit));
+    }
+    // blossoms and combs only take the slots the capacity cuts leave: competing for them by
+    // efficacy, they lowered the root bound on CVRP (A-n37-k5 659 to 643)
+    if (COMBS) {
+      List<Cut> combs = CombCuts.separate(tails, heads, value, mandatory, flow);
+      combs.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
+      cuts.addAll(combs.subList(0, Math.min(combs.size(), limit - cuts.size())));
+    }
+    return cuts;
   }
 
   // the routes needed by a set: its demand over the capacity, rounded up, and at least one
