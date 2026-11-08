@@ -416,6 +416,47 @@ class AlldifferentRowsTest {
   }
 
   /**
+   * The Hall cuts in search after the rows of the other constraints are dropped: a variable that is
+   * a column only through those rows is no longer one, and the cuts leave it out (it was read past
+   * the columns of the simplex).
+   */
+  @Test
+  void searchCutsAfterTheExtraRowsAreDropped() throws ReflectiveOperationException {
+    java.lang.reflect.Field before = LinearRelaxation.class.getDeclaredField("beforeExtra");
+    before.setAccessible(true);
+    java.lang.reflect.Method drop = LinearRelaxation.class.getDeclaredMethod("dropExtraRows");
+    drop.setAccessible(true);
+    int dropped = 0;
+    long cuts = 0;
+    for (int run = 0; run < INSTANCES / 4; run++) {
+      long expected = new VariantModel(run, true).optimum();
+      VariantModel m = new VariantModel(run, true);
+      LinearRelaxation r =
+          LinearRelaxation.of(
+              m.store,
+              m.cost,
+              false,
+              m.extra(),
+              java.util.Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      assertThat(r).as("run %d", run).isNotNull();
+      m.store.impose(r);
+      if (!m.store.consistency()) {
+        continue;
+      }
+      if (before.get(r) != null) {
+        drop.invoke(r);
+        dropped++;
+      }
+      long got = m.optimum();
+      assertThat(got).as("run %d", run).isEqualTo(expected);
+      cuts += r.alldiffSearchCuts;
+    }
+    assertThat(dropped).isPositive();
+    assertThat(cuts).isPositive();
+  }
+
+  /**
    * A random model: an all-different-except-0 (even seeds) or a global cardinality constraint with
    * variable counts (odd seeds) over n variables, with a linear cost.
    */
@@ -425,6 +466,12 @@ class AlldifferentRowsTest {
     final IntVar cost;
 
     VariantModel(int seed) {
+      this(seed, false);
+    }
+
+    // with split, the last variable is left out of the cost and of the knapsack: it is a column
+    // only through the row of extra()
+    VariantModel(int seed, boolean split) {
       Random rnd = new Random(seed * 6151L + 3);
       boolean except = seed % 2 == 0;
       int n = 4;
@@ -447,7 +494,8 @@ class AlldifferentRowsTest {
       long[] w = new long[n + 1];
       IntVar[] vars = Arrays.copyOf(x, n + 1);
       long range = 0;
-      for (int i = 0; i < n; i++) {
+      int shared = split ? n - 1 : n;
+      for (int i = 0; i < shared; i++) {
         // all-different-except-0: every variable wants a large value
         w[i] = except ? -1 - rnd.nextInt(9) : rnd.nextInt(19) - 9;
         range += Math.abs(w[i]) * (first + m);
@@ -461,13 +509,15 @@ class AlldifferentRowsTest {
       }
       store.impose(new LinearInt(vars, wi, "==", 0));
       // a second row, as the relaxation needs two: a knapsack over the variables
-      int[] a = new int[n];
+      int[] a = new int[shared];
       long most = 0;
-      for (int i = 0; i < n; i++) {
+      for (int i = 0; i < shared; i++) {
         a[i] = 1 + rnd.nextInt(3);
         most += (long) a[i] * (first + m - 1);
       }
-      store.impose(new LinearInt(x, a, "<=", (int) (most * (6 + rnd.nextInt(4)) / 10)));
+      store.impose(
+          new LinearInt(
+              Arrays.copyOf(x, shared), a, "<=", (int) (most * (6 + rnd.nextInt(4)) / 10)));
       if (except) {
         store.impose(new AlldifferentExceptZero(x));
       } else {
@@ -479,6 +529,17 @@ class AlldifferentRowsTest {
         }
         store.impose(new GCC(x, counters, first));
       }
+    }
+
+    // a row over the first and the last variable, which holds in their domains
+    List<LinearForm> extra() {
+      IntVar last = x[x.length - 1];
+      return List.of(
+          new LinearForm(
+              new IntVar[] {x[0], last},
+              new long[] {1, 1},
+              (long) x[0].max() + last.max(),
+              LinearForm.LE));
     }
 
     long optimum() {

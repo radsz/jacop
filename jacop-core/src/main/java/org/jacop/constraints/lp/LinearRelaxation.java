@@ -3807,6 +3807,9 @@ public class LinearRelaxation extends Constraint
     }
     truncateRows(baseRows);
     allRowsInSimplex(baseRows);
+    // the columns that came with the rows are gone: the search cuts leave their variables out
+    forgetColumns(capacityColumns, lp.columns());
+    forgetColumns(hallColumns, lp.columns());
     beforeExtra = null;
     extraForms = new ArrayList<>();
     extraRows = 0;
@@ -3816,6 +3819,20 @@ public class LinearRelaxation extends Constraint
     idle = 0;
     period = 1;
     credit = WORK;
+  }
+
+  // marks the columns from n on as not columns
+  private static void forgetColumns(int[][] columns, int n) {
+    if (columns == null) {
+      return;
+    }
+    for (int[] column : columns) {
+      for (int a = 0; a < column.length; a++) {
+        if (column[a] >= n) {
+          column[a] = -1;
+        }
+      }
+    }
   }
 
   // keeps the first m rows
