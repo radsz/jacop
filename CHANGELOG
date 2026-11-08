@@ -3673,9 +3673,9 @@ Version 5.0 (unreleased)
      under --lcg the generic share of reasons drops from 0.48 to 0.06 and
      the average reason from 128 to 41 atoms. On the 39 instances of
      osolpro benchmarks/matroid-intersection at 600 s the total time
-     drops from 1798 s to 480 s (all proved before and after), e.g.
-     ccd_150_30_s1 6 s instead of 563 s and cc_150_30_s2 2.4 s instead of
-     462 s.
+     drops from 1121 s to 506 s (all proved before and after), e.g.
+     ccd_100_20_s3 34 s instead of 486 s, cc_150_30_s2 2.4 s instead of
+     52 s, and five instances 1-1.5 s instead of 19-20 s.
 
 Version 4.11
 =============
