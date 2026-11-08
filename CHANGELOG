@@ -3170,6 +3170,32 @@ Version 5.0 (unreleased)
      --search-statistics stays, as -s -v without the -v lines after each
      solution, and so does -s -debug.
 
+189. JaSAT puts all assumptions of a solve call on one decision level and
+     keeps that level at restarts, after R. Hickey and F. Bacchus,
+     Speeding Up Assumption-Based SAT, SAT 2019, LNCS 11628, 164-182.
+     Before, each assumption opened its own level with its own CP
+     fixpoint, and every restart undid and rebuilt them all; the
+     core-guided phase of --lcg -f solves under many assumptions. The
+     assumptions are still assigned one at a time, each propagated before
+     the next: assigning them all and propagating once made the LCG
+     explanations about 7 times longer (ptv). A conflict on the
+     assumption level gives the core directly. A restart backtracks to
+     the root only when vivification or elimination is due; LcgSolver
+     exports bounds, presolves and refreshes the objective bound only at
+     the root, since bounds on the assumption level hold only under the
+     assumptions. CdclSolver.setAssumptionsOnOneLevel(false) and
+     --free-config lcg-assume-level=0 give the old behaviour. Counter:
+     on 34 optimisation instances of wide-quick, -f, 240 s, propagating
+     assumption decisions took a median 3.3 % of the SAT work, above
+     10 % on 13 (ptv up to 76 %). wide-quick, 240 s, 2 paired reps: -f
+     52 solved against 51 in both (work-task-variation seed-8 proved in
+     about 60 s), 2 families better and 0 worse in both, time geomean
+     0.967; default mode 51 against 51, neutral (geomean 1.013). Wide
+     set, -f, 600 s, 1 rep: 177 solved in both, 16 instances better and
+     10 worse, 6 families better and 1 worse; 12 open objectives better
+     and 2 worse (unit-commitment L12 3.33M to 1.49M, gbac UD3 11949 to
+     6771). CdclFuzzTest covers both settings with up to 24 assumptions.
+
 Version 4.11
 =============
 
