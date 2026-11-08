@@ -90,8 +90,27 @@ final class PairCliques {
    * @return the rows, the further rows and the number of clique rows
    */
   static PairCliques merge(List<LinearForm> given, List<LinearForm> others) {
+    return merge(given, others, List.of());
+  }
+
+  /**
+   * Returns the rows with the conflicts of pairs of 0/1 literals merged into cliques, with further
+   * conflicts that only help to make the cliques: the hints, such as the implied bounds of
+   * half-reified relations ({@link PerspectiveCuts#pairRows}), are rows of their own nowhere. A
+   * clique that covers a pair row of the given or the further rows joins the rows; one made of
+   * hints alone joins the further rows, tried at the first solve like them.
+   *
+   * @param given the rows; not changed
+   * @param others further rows, such as the linearised rows of other constraints; not changed
+   * @param hints conflicts that are no rows; not changed
+   * @return the rows, the further rows and the number of clique rows
+   */
+  static PairCliques merge(
+      List<LinearForm> given, List<LinearForm> others, List<LinearForm> hints) {
     List<LinearForm> forms = new ArrayList<>(given);
     forms.addAll(others);
+    int rowsAndFurther = forms.size();
+    forms.addAll(hints);
     Map<IntVar, Integer> column = new IdentityHashMap<>();
     List<IntVar> vars = new ArrayList<>();
     // the conflict of each pair row, as two literals: 2 j for x_j = 1, 2 j + 1 for x_j = 0
@@ -151,16 +170,29 @@ final class PairCliques {
     }
     List<LinearForm> rows = new ArrayList<>();
     List<LinearForm> further = new ArrayList<>();
-    for (int i = 0; i < forms.size(); i++) {
+    for (int i = 0; i < rowsAndFurther; i++) {
       int[] p = pair[i];
       if (p == null || !covered.contains(key(p[0], p[1]))) {
         (i < given.size() ? rows : further).add(forms.get(i));
       }
     }
     for (int[] clique : found) {
-      rows.add(row(clique, vars));
+      (coversRow(clique, edges, rowsAndFurther) ? rows : further).add(row(clique, vars));
     }
     return new PairCliques(rows, further, found.size());
+  }
+
+  // whether a pair of the clique is the conflict of one of the first rows (edges keep the first)
+  private static boolean coversRow(int[] clique, Map<Long, Integer> edges, int first) {
+    for (int a = 0; a < clique.length; a++) {
+      for (int b = a + 1; b < clique.length; b++) {
+        Integer i = edges.get(key(clique[a], clique[b]));
+        if (i != null && i < first) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   // a maximal clique with the conflict of u and v, greedily over their common neighbours

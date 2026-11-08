@@ -871,14 +871,15 @@ public class LinearRelaxation extends Constraint
         relaxed.add(f);
       }
     }
-    if (PERSPECTIVE_PAIRS) {
-      relaxed.addAll(PerspectiveCuts.pairRows(implications));
-    }
     int pairCliques = 0;
     // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
     // rows only make each call dearer
     if (PAIR_CLIQUES && objective != null) {
-      PairCliques merged = PairCliques.merge(localForms, relaxed);
+      PairCliques merged =
+          PairCliques.merge(
+              localForms,
+              relaxed,
+              PERSPECTIVE_PAIRS ? PerspectiveCuts.pairRows(implications) : List.of());
       localForms = merged.rows;
       relaxed = merged.further;
       pairCliques = merged.cliques;

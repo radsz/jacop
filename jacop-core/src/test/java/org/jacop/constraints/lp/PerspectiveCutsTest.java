@@ -33,6 +33,7 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +41,7 @@ import java.util.Random;
 import org.jacop.constraints.Linearizations.Implication;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearForm;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -127,6 +129,81 @@ class PerspectiveCutsTest {
     assertThat(cuts.get(0).rhs).isEqualTo(10);
     // at b = 0 the box is the hull
     assertThat(p.separate(columnOf, new double[] {10, 10, 0}, 10)).isEmpty();
+  }
+
+  @Test
+  void pairRowsKeepEverySolution() {
+    Random rnd = new Random(9);
+    int rows = 0;
+    for (int run = 0; run < INSTANCES; run++) {
+      Store store = new Store();
+      int n = 2 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      long[] a = new long[n];
+      long least = 0;
+      long most = 0;
+      for (int i = 0; i < n; i++) {
+        x[i] =
+            rnd.nextInt(3) == 0
+                ? new IntVar(store, "x" + i, -2, 3)
+                : new IntVar(store, "x" + i, 0, 1);
+        a[i] = (rnd.nextInt(4) + 1) * (rnd.nextBoolean() ? 1 : -1);
+        least += a[i] * (a[i] > 0 ? x[i].min() : x[i].max());
+        most += a[i] * (a[i] > 0 ? x[i].max() : x[i].min());
+      }
+      long c = least + rnd.nextInt((int) (most - least + 1));
+      IntVar b = new IntVar(store, "b", 0, 1);
+      boolean when = rnd.nextBoolean();
+      List<LinearForm> made = PerspectiveCuts.pairRows(List.of(new Implication(x, a, c, b, when)));
+      rows += made.size();
+      for (long[] s : solutions(x, a, c, when)) {
+        for (LinearForm f : made) {
+          long activity = 0;
+          for (int k = 0; k < f.vars().length; k++) {
+            activity +=
+                f.weights()[k]
+                    * (f.vars()[k] == b ? s[n] : s[Arrays.asList(x).indexOf(f.vars()[k])]);
+          }
+          assertThat(f.relation() == LinearForm.LE ? activity <= f.c() : activity >= f.c())
+              .as("run %d %s at %s", run, f, Arrays.toString(s))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(rows).isGreaterThan(INSTANCES / 4);
+  }
+
+  @Test
+  void hintsMakeCliquesButNoRowsOfTheirOwn() {
+    // the model states x + y <= 1; the hints b -> x = 0 and b -> y = 0 close the clique {x, y, b},
+    // and the hint !c -> x = 0 is alone
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    LinearForm model = new LinearForm(new IntVar[] {x, y}, new long[] {1, 1}, 1, LinearForm.LE);
+    List<LinearForm> hints =
+        List.of(
+            new LinearForm(new IntVar[] {x, b}, new long[] {1, 1}, 1, LinearForm.LE),
+            new LinearForm(new IntVar[] {y, b}, new long[] {1, 1}, 1, LinearForm.LE),
+            new LinearForm(new IntVar[] {x, c}, new long[] {1, -1}, 0, LinearForm.LE));
+    PairCliques merged = PairCliques.merge(List.of(model), List.of(), hints);
+    assertThat(merged.cliques).isEqualTo(1);
+    assertThat(merged.rows).hasSize(1);
+    assertThat(merged.rows.get(0).vars()).containsExactlyInAnyOrder(x, y, b);
+    assertThat(merged.further).isEmpty();
+    // hints alone: the clique is a further row
+    PairCliques alone =
+        PairCliques.merge(
+            List.of(),
+            List.of(),
+            List.of(
+                hints.get(0),
+                hints.get(1),
+                new LinearForm(new IntVar[] {x, y}, new long[] {1, 1}, 1, LinearForm.LE)));
+    assertThat(alone.rows).isEmpty();
+    assertThat(alone.further).hasSize(1);
   }
 
   // the integer points (x, b) of [b = when] -> sum a x <= c in the box
