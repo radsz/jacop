@@ -58,8 +58,11 @@ import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
@@ -680,6 +683,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
+            + "\n%%%mzn-stat: lpSparseCuts="
+            + r.sparseCuts
             + "\n%%%mzn-stat: lpCapacityCuts="
             + r.capacityCuts
             + "\n%%%mzn-stat: lpEnergyCuts="
@@ -704,6 +709,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.valueColumns
             + "\n%%%mzn-stat: lpSimplexValueColumns="
             + r.simplexValueColumns()
+            + "\n%%%mzn-stat: lpFreeColumns="
+            + r.freeColumns
+            + "\n%%%mzn-stat: lpSimplexFreeColumns="
+            + r.simplexFreeColumns()
+            + "\n%%%mzn-stat: lpAlldiffCuts="
+            + r.alldiffCuts
+            + "\n%%%mzn-stat: lpAlldiffBound="
+            + r.alldiffBound
+            + "\n%%%mzn-stat: lpTreeCuts="
+            + r.treeCuts
+            + "\n%%%mzn-stat: lpTreeBound="
+            + r.treeBound
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -2106,6 +2123,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean literalsOnly =
         branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
+    // the assumptions of core-guided, neighbourhood and lower-bound runs on one decision level
+    lcg.sat().setAssumptionsOnOneLevel(!"0".equals(options.freeConfig("lcg-assume-level", "1")));
     if (free) {
       lcg.setBranching(branching);
       if (branching != LcgSolver.Branching.ACTIVITY) {
@@ -2152,12 +2171,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the columns of tried encodings that the root trial dropped (gbac UD8 342 instead of 89). On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
-    // it in 60 s
+    // it in 60 s. Under -f also on when the relaxation has the subtour elimination cuts of trees,
+    // whose root solution is often the optimum (surface-based-tsp berlin52: -f finds it in 2 s with
+    // them, in 13-50 s without); in fixed search the activity runs it guides slowed berlin52 down
+    // (149 s instead of 60 s)
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching) && linearRelaxation.simplexValueColumns() > 0);
+                || "auto".equals(lpBranching)
+                    && (linearRelaxation.simplexValueColumns() > 0
+                        || free && linearRelaxation.treeConstraints() > 0));
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2401,6 +2425,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the start variables lcgDefaultSelect gave to set times, for the statistics
   private int setTimesStarts;
 
+  // the element positions lcgDefaultSelect branches on first, for the statistics
+  private int elementPositionCount;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
    * annotation. A model with cumulative or unary resources gets set times on the start variables of
@@ -2436,12 +2463,56 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
+    IntVar[] positions = elementPositions(vars);
+    elementPositionCount = positions.length;
+    if (positions.length > 0) {
+      // a model of elements over variable lists only, such as x[p[i]] = i (LangfordBin): dom/wdeg
+      // on the positions p; the list cells follow from them. On the cells, each in every element's
+      // list, dom/wdeg found no Langford sequence of 39 to 120 numbers in 120 s, on the positions
+      // all of them in under 6 s
+      SimpleSelect<IntVar> select =
+          new SimpleSelect<>(positions, new WeightedDegree<>(store), new IndomainMin<>());
+      select.inputOrderTieBreaking = false;
+      return select;
+    }
     SimpleSelect<IntVar> select =
         new SimpleSelect<>(
             vars.toArray(new IntVar[0]), new WeightedDegree<>(store), new IndomainMin<>());
     // ties go to the first variable met, without the input-order lookups per tie
     select.inputOrderTieBreaking = false;
     return select;
+  }
+
+  /**
+   * Returns the index variables, not yet fixed, of the element constraints over variable lists, in
+   * the order the store meets them, when every one of the given variables that is not fixed is in
+   * the scope of such an element; otherwise none.
+   */
+  private IntVar[] elementPositions(List<IntVar> vars) {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<Var> covered = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> indices = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> ordered = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if ((c instanceof ElementVariable || c instanceof ElementVariableFast) && seen.add(c)) {
+          covered.addAll(c.arguments());
+          IntVar index = ((AbstractElement) c).index();
+          if (!index.singleton() && indices.add(index)) {
+            ordered.add(index);
+          }
+        }
+      }
+    }
+    if (ordered.isEmpty()) {
+      return new IntVar[0];
+    }
+    for (IntVar x : vars) {
+      if (!x.singleton() && !covered.contains(x)) {
+        return new IntVar[0];
+      }
+    }
+    return ordered.toArray(new IntVar[0]);
   }
 
   /**
@@ -2572,6 +2643,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgPureClauses="
+            + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
             + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="
@@ -2610,6 +2683,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="
             + setTimesStarts
+            + "\n%%%mzn-stat: lcgElementPositions="
+            + elementPositionCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
@@ -2866,6 +2941,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
             // the columns of a table with a key column (a row lookup) follow the key
             .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
+            // the cells of a matrix only element constraints look up follow them
+            .follow(!"0".equals(options.freeConfig("ls-follow", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {

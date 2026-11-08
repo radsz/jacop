@@ -117,6 +117,10 @@ public class XplusYlteqZ extends AbstractConstraintXandYandZ
     x.domain.inMax(store.level, x, z.max() - y.min());
     y.domain.inMax(store.level, y, z.max() - x.min());
     z.domain.inMin(store.level, z, x.min() + y.min());
+    // entailed: further bound changes cannot prune, so the constraint is not woken again
+    if ((long) x.max() + y.max() <= z.min()) {
+      removeConstraint();
+    }
   }
 
   @Override

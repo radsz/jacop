@@ -46,7 +46,7 @@ final class LiteralMap {
   static final int NONE = 0;
 
   /** The largest root domain indexed by value. */
-  static final int DENSE_SPAN = 1 << 16;
+  static final int DENSE_SPAN = 1 << 20;
 
   // values per entry of the root domain below which the map stays sorted
   private static final int DENSITY = 16;

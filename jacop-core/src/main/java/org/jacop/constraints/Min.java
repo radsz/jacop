@@ -138,6 +138,18 @@ public class Min extends AbstractMinMax
     } while (store.propagationHasOccurred);
 
     position.update(start);
+
+    // entailed once min is fixed to a value a list variable is fixed to, since every variable
+    // is already at least min: the constraint is not woken again by the other variables
+    if (min.singleton()) {
+      int value = min.value();
+      for (int i = start; i < l; i++) {
+        if (list[i].singleton() && list[i].value() == value) {
+          removeConstraint();
+          break;
+        }
+      }
+    }
   }
 
   @Override

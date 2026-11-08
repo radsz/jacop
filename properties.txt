@@ -28,6 +28,12 @@ Java specific:
 - sub_circuit_dominance_pruning: use pruning method based on node
   domination in graphs; default false (one of sub_circuit_* must be true).
 
+- jacop.values.cliques: Values (MiniZinc nvalue) reads at the root the
+  pairs of its variables that other constraints force to differ (x != y,
+  alldifferent, x = y + t or |x - y| = t with t never 0, x = y + c with
+  c != 0) and bounds the number of values from below by a clique of
+  them; default true.
+
 - sub_circuit_dominance_skip: the largest number of calls the
   dominance pruning of Subcircuit is skipped after a call that pruned
   nothing (the skip doubles each time); default 32.
@@ -49,6 +55,9 @@ Constraints (core):
   estimated cheaper than enumeration), always (sumsets whenever within
   their limit) or off; default auto.
 
+- org.jacop.exactCover.inclusion: the DL+ rule of ExactCover; default
+  true.
+
 - jacop.convexAllocation.exact: the largest number of variables for
   which ConvexAllocation computes the bounds exactly; above it uses
   Lagrangian reduced costs; default 64.
@@ -62,6 +71,39 @@ Constraints (core):
 
 - jacop.cumulative.presenceFit: a task that may use nothing gets use 0
   where it fits nowhere (UnaryTimetable); default true.
+
+- org.jacop.unaryEarlinessTardiness.blocks: the most blocks of time
+  slots of a machine in the assignment bound of
+  UnaryEarlinessTardiness; slots are grouped into blocks of equal
+  length above it; default 64.
+
+- org.jacop.unaryEarlinessTardiness.trial: the solves after which a
+  machine of UnaryEarlinessTardiness whose bound never beat the exact
+  minima of its tasks is no longer solved (0 never stops, and turns off
+  forcedRound and workPerPropagation too); default 200.
+
+- org.jacop.unaryEarlinessTardiness.forcedRound: the exact solves of
+  UnaryEarlinessTardiness, forced in search because a cheap upper
+  estimate says the node could fail, after which, if none of them
+  failed, only one in 16 is done until one fails; default 500.
+
+- org.jacop.unaryEarlinessTardiness.workPerPropagation: the work (inner
+  steps of the transportation solver, about a nanosecond each) the
+  exact solves of UnaryEarlinessTardiness in search may take per
+  propagation of the store; a forced solve is skipped while they took
+  more, which keeps the cost of the bound to a share of the search and
+  the search deterministic (0 no budget); default 1000.
+
+- org.jacop.unaryEarlinessTardiness.filter: reduced-cost filtering of
+  the start bounds in UnaryEarlinessTardiness: a start bound is removed
+  when restricting the task's window raises the dual bound of its
+  machine above the maximum of the cost; default true.
+
+- org.jacop.unaryEarlinessTardiness.lagrange: iterations of the
+  subgradient search, at the root, of the Lagrangian multipliers of the
+  precedences given to UnaryEarlinessTardiness (the FlatZinc front end
+  gives it the precedences it finds between its tasks); 0 relaxes the
+  precedences without multipliers; default 30.
 
 - org.jacop.diffn.dff: dual feasible functions in the area check of
   Diffn: 0 off, 1 gated (only when the rectangles fill at least half
@@ -236,6 +278,10 @@ unless stated otherwise):
 - org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
   costs of variables with a known sum; default true without LCG and
   false with LCG.
+- org.jacop.fz.exactCover: ExactCover on the equalities
+  x_1 + ... + x_k = 1 over 0/1 variables; default false.
+- org.jacop.fz.exactCoverRows: the fewest equalities of such a cover;
+  default 4.
 - org.jacop.fz.differenceBounds: shortest-path bounds of the
   difference constraints before posting, and negative cycle check.
 - jacop.fz.differenceBudget: the most edge relaxations of each of its
@@ -281,6 +327,12 @@ unless stated otherwise):
 - org.jacop.fz.precedenceCost: PrecedenceCost on earliness/tardiness
   sums over start times with precedences; default true for fixed
   search and false for free search.
+- org.jacop.fz.unaryEarlinessTardiness: UnaryEarlinessTardiness on
+  earliness/tardiness sums whose starts are tasks of unary resources
+  (disjunctive cliques, and tasks of a cumulative using more than half
+  of it), with the precedences between those tasks; off by default (it
+  raises the proven lower bound, not the solutions found); default
+  false.
 - org.jacop.fz.sequence: Sequence for sliding-window cardinality
   constraints stated window by window.
 - jacop.fz.sequenceWindows: the fewest windows of a chain that becomes
@@ -293,6 +345,12 @@ unless stated otherwise):
 - org.jacop.fz.setUnion.min: the fewest singletons in a replaced
   chain; default 8.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
+- org.jacop.fz.tableCover: TableCover on tables over groups of the
+  variables of an all different (tilings); default true without LCG
+  and false with LCG.
+- org.jacop.fz.tableCoverGroups, org.jacop.fz.tableCoverTuples: the
+  fewest groups and the most tuples of such a cover; default 3 and
+  200000.
 - org.jacop.fz.weightedCompletion: WeightedCompletion on weighted sums
   of completion times on a unary resource.
 - org.jacop.fz.weightedCompletion.parallel: the same detection on
@@ -311,6 +369,9 @@ unless stated otherwise):
 
 Presolve:
 =========
+- org.jacop.fz.productDomains: int_times(x, y, z) restricts z to the
+  products of the values of x and y when there are at most 4096 value
+  pairs; default true.
 - jacop.presolve.alias: variable aliasing; default true.
 - jacop.presolve.affine: affine substitution (rule 2): on, aliases
   (aliases only, no views) or off; default on.
@@ -399,6 +460,9 @@ Literals and clauses:
   true.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
+- jacop.lcg.pureClauseLiterals: under free search, a model whose
+  variables are all 0/1 and whose constraints all became clauses leaves
+  every decision to the SAT solver; default true.
 - org.jacop.lcg.alldiffCover: cover clauses for an all-different whose
   variables have as many values as there are variables; default true.
 - org.jacop.lcg.alldiffCoverLimit: the most (variable, value) pairs
@@ -517,6 +581,11 @@ Cuts:
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.treeCuts: generalized subtour elimination cuts of the
+  forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at the
+  root, for an objective; a model with them also takes all its other
+  rows into the relaxation; default true.
+- org.jacop.lp.treeRounds: their rounds; default 200.
 
 Row pool and lazy rows:
 
@@ -620,6 +689,12 @@ JaLP sparse simplex:
   infeasibilities than the slack basis; default true.
 - org.jacop.jalp.crashExactWeights: exact steepest-edge weights of the
   crash basis; default false.
+- org.jacop.jalp.presolve: presolve the first solve of a JaLP problem
+  and start the whole problem from the postsolved basis; default true.
+- org.jacop.jalp.presolveRows: presolve only problems with at least
+  this many rows; default 1.
+- org.jacop.jalp.presolveTrace: print the sizes and the reductions of
+  each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
   comma separated list of primal and reobjective; default empty.
 
@@ -632,5 +707,8 @@ Debugging:
 - jacop.jasat.check: check the propagation invariants of the SAT solver
   at every fixpoint; default false.
 - jacop.ls.debug: print why local search rejects moves; default false.
+- jacop.ls.verify: check the incremental state of local search (sums,
+  counters, windows, element selections, followers) against values
+  computed afresh after every step; default false.
 - tmp.lattice: print the pruning of LinearEqualities by residue
   classes; default false.

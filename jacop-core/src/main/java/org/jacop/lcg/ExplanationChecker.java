@@ -119,7 +119,11 @@ public final class ExplanationChecker {
           return describe(c, entry, reason, "has an atom on a variable outside the constraint");
         }
       }
-      copy.imposeCopy(c);
+      if (!copy.imposeCopy(c)) {
+        checked--;
+        skipped++;
+        return null;
+      }
       if (!scratch.consistency()) {
         return null;
       }

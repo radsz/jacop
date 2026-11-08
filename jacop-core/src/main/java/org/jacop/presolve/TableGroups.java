@@ -517,6 +517,13 @@ final class TableGroups {
         solutions.add(tuple);
         return solutions.size() <= limits.tuples();
       }
+      // every value costs a node, so a domain larger than the nodes left reaches a limit for sure;
+      // stop before listing its values, which for a wide auxiliary domain would not fit in memory
+      long limit = Math.min(start + limits.nodes() + 1, limits.budget() + 1);
+      if (next.getSize() >= limit - nodes) {
+        nodes = limit;
+        return false;
+      }
       for (int value : next.dom().toIntArray()) {
         if (++nodes - start > limits.nodes() || nodes > limits.budget()) {
           return false;
