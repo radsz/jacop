@@ -133,6 +133,19 @@ public abstract class AbstractReifiedConstraint extends PrimitiveConstraint
 
   // the nested constraint's explanations, for Reified and Implies over a constraint without b
   private Explainable nested() {
+    if (!nestedKnown) {
+      nestedKnown = true;
+      nested = findNested();
+    }
+    return nested;
+  }
+
+  // found once: c.arguments() builds a set of c's variables, which for a reified sum of many terms
+  // cost more than the explanation (bnn-planner under LCG)
+  private boolean nestedKnown;
+  private Explainable nested;
+
+  private Explainable findNested() {
     if ((getClass() != Reified.class && getClass() != Implies.class)
         || !(c instanceof Explainable e)) {
       return null;

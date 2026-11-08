@@ -3577,6 +3577,9 @@ public final class LcgSolver implements ExternalPropagator {
     while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
       numAnnotationIndices--;
     }
+    while (numLastLevels > 0 && lastLevel[numLastLevels - 1] > level) {
+      lastSize = lastLevelSize[--numLastLevels];
+    }
     // a notified literal at or below the level stays assigned, and the solver does not notify it
     // again: it is applied at the next propagation (the root's, when a probe stopped at the
     // deadline)
@@ -4686,6 +4689,16 @@ public final class LcgSolver implements ExternalPropagator {
     return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
   }
 
+  // decideLast scans the variables in lastOrder[0, lastSize), moving the fixed ones past lastSize;
+  // lastLevelSize[k] is lastSize when the scan first ran at decision level lastLevel[k], restored
+  // when search backtracks below that level (the scan over all variables at each decision took
+  // 48 % of skill-allocation's run time)
+  private int[] lastOrder;
+  private int lastSize;
+  private int[] lastLevel = new int[16];
+  private int[] lastLevelSize = new int[16];
+  private int numLastLevels;
+
   /**
    * Without activity branching, once the solver has assigned every literal, branches on {@code [x
    * <= min]} of the unfixed variable with the smallest domain.
@@ -4695,14 +4708,47 @@ public final class LcgSolver implements ExternalPropagator {
     if (activityBranching || !structural.isEmpty()) {
       return 0;
     }
+    if (lastOrder == null || lastOrder.length != vars.length) {
+      lastOrder = new int[vars.length];
+      lastSize = 0;
+      for (int i = 0; i < vars.length; i++) {
+        if (vars[i] != null && !unused[i]) {
+          lastOrder[lastSize++] = i;
+        }
+      }
+      numLastLevels = 0;
+    }
+    int level = sat.decisionLevel();
+    if (numLastLevels == 0 || lastLevel[numLastLevels - 1] < level) {
+      if (numLastLevels == lastLevel.length) {
+        lastLevel = Arrays.copyOf(lastLevel, 2 * numLastLevels);
+        lastLevelSize = Arrays.copyOf(lastLevelSize, 2 * numLastLevels);
+      }
+      lastLevel[numLastLevels] = level;
+      lastLevelSize[numLastLevels++] = lastSize;
+    }
     int localBest = -1;
     int bestSize = Integer.MAX_VALUE;
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] != null && !unused[i] && !vars[i].singleton() && vars[i].getSize() < bestSize) {
-        localBest = i;
-        bestSize = vars[i].getSize();
+    int size = lastSize;
+    for (int p = 0; p < size; ) {
+      int i = lastOrder[p];
+      IntVar x = vars[i];
+      if (x.singleton()) {
+        // fixed at this level or below: out of the scan until a backtrack below the level
+        lastOrder[p] = lastOrder[--size];
+        lastOrder[size] = i;
+        continue;
+      }
+      p++;
+      if (!unused[i]) {
+        int n = x.getSize();
+        if (n < bestSize || (n == bestSize && i < localBest)) {
+          localBest = i;
+          bestSize = n;
+        }
       }
     }
+    lastSize = size;
     if (localBest < 0) {
       return 0;
     }
