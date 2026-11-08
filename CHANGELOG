@@ -3386,6 +3386,18 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+199. Values (MiniZinc nvalue) reads its difference graph once more at its
+     first call below the root, from the root constraints and domains.
+     Before, it read the graph only at root calls, so a difference
+     constraint imposed after its last root call was missed when nothing
+     woke it again at the root, for example with a count fixed in its
+     domain; the clique bound and the filtering of Fages and Lapegue
+     (CP 2013; Artificial Intelligence 212, 2014) then did nothing. The
+     filtering also computes the union of clique domains once for all
+     variables linked to the same clique variables: 6 to 28 unions per
+     call instead of 180 to 900 on the XCSP Rlfap instances, with the
+     same pruning.
+
 Version 4.11
 =============
 
