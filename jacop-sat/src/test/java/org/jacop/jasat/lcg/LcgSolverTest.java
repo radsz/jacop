@@ -66,6 +66,7 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.GlobalCardinality;
+import org.jacop.constraints.Implies;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
 import org.jacop.constraints.IncreasingSum;
@@ -87,6 +88,7 @@ import org.jacop.constraints.SumInt;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulYeqZ;
@@ -655,6 +657,50 @@ class LcgSolverTest {
       assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
     }
     assertThat(jumps).isGreaterThan(0);
+  }
+
+  /**
+   * The lower-bound runs start before the first solution. Every solution has the cost 0, and a cost
+   * above 0 leaves nine pigeons for eight holes, which branch and bound refutes only after many
+   * conflicts; the run that assumes the cost at its lower bound finds a solution at once.
+   */
+  @Test
+  void lowerBoundRunsStartBeforeTheFirstSolution() {
+    Store store = new Store();
+    int n = 10;
+    IntVar[] z = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      z[i] = new BooleanVar(store, "z" + i);
+    }
+    IntVar cost = new IntVar(store, "cost", 0, n);
+    IntVar[] terms = Arrays.copyOf(z, n + 1);
+    terms[n] = cost;
+    int[] weights = new int[n + 1];
+    Arrays.fill(weights, 1);
+    store.impose(new LinearInt(terms, weights, "==", n));
+    BooleanVar crowded = new BooleanVar(store, "crowded");
+    store.impose(new Reified(new XgteqC(cost, 1), crowded));
+    IntVar[] pigeon = new IntVar[9];
+    for (int i = 0; i < pigeon.length; i++) {
+      pigeon[i] = new IntVar(store, "p" + i, 0, 8);
+      // a cost above 0 closes the ninth hole
+      store.impose(new Implies(crowded, new XlteqC(pigeon[i], 7)));
+      for (int j = 0; j < i; j++) {
+        store.impose(new XneqY(pigeon[i], pigeon[j]));
+      }
+    }
+    assertThat(store.consistency()).isTrue();
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    // fixed search, each z at 0 first: the cost goes up and the pigeons are crowded
+    IntVar[] order = Arrays.copyOf(z, n + pigeon.length);
+    System.arraycopy(pigeon, 0, order, n, pigeon.length);
+    solver.setAnnotation(new SimpleSelect<>(order, null, new IndomainMin<>()), false);
+    solver.setLowerBoundSearch(0.5, 20);
+    solver.setTimeLimit(20_000);
+    assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(cost)).isZero();
+    assertThat(solver.lowerBoundRuns).isPositive();
   }
 
   /**

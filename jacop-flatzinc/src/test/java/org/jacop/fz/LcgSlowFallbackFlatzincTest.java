@@ -102,6 +102,74 @@ class LcgSlowFallbackFlatzincTest {
     checkOptimum(run("lcg-slow-rate=1,lcg-slow-at=0,ls=0.5,ls-patience=0"));
   }
 
+  private static final int REGULAR_N = 40;
+
+  private static int weight(int i) {
+    return 1 + i * 7 % 5;
+  }
+
+  // REGULAR_N variables 0..1 with no two consecutive zeros as a regular constraint, minimizing the
+  // weighted ones. Under LCG the regular constraint becomes clauses and leaves the store, so free
+  // search without learning must get it back, or it prints solutions with consecutive zeros.
+  private static String noTwoZeros() {
+    StringBuilder s = new StringBuilder();
+    s.append("predicate jacop_regular(array[int] of var int: x, int: Q, int: S, ");
+    s.append("array[int] of int: d, int: q0, set of int: F, int: min_index);\n");
+    StringBuilder xs = new StringBuilder();
+    StringBuilder weights = new StringBuilder();
+    int total = 0;
+    for (int i = 1; i <= REGULAR_N; i++) {
+      s.append("var 0..1: x").append(i).append(":: output_var;\n");
+      xs.append(i == 1 ? "" : ",").append('x').append(i);
+      weights.append(i == 1 ? "" : ",").append(weight(i));
+      total += weight(i);
+    }
+    s.append("var 0..").append(total).append(": cost:: output_var:: is_defined_var;\n");
+    // state 1: the last value was 1 (or there is none yet), state 2: it was 0
+    s.append("constraint jacop_regular([").append(xs).append("],2,2,[2,1,0,1],1,1..2,0);\n");
+    s.append("constraint int_lin_eq([").append(weights).append(",-1],[").append(xs);
+    s.append(",cost],0):: defines_var(cost);\nsolve minimize cost;\n");
+    return s.toString();
+  }
+
+  // the optimum of noTwoZeros by dynamic programming over the last value
+  private static int noTwoZerosOptimum() {
+    int lastZero = 0;
+    int lastOne = weight(1);
+    for (int i = 2; i <= REGULAR_N; i++) {
+      int zero = lastOne;
+      int one = Math.min(lastZero, lastOne) + weight(i);
+      lastZero = zero;
+      lastOne = one;
+    }
+    return Math.min(lastZero, lastOne);
+  }
+
+  @Test
+  void regularKeptAfterGivingWayAtOnce() throws IOException {
+    String out = run(noTwoZeros(), "lcg-slow-rate=1,lcg-slow-at=0");
+    assertTrue(out.contains("lcgSlowConflicts=0"), out);
+    Pattern value = Pattern.compile("x(\\d+) = (\\d);");
+    int cost = -1;
+    for (String solution : out.split("----------")) {
+      Matcher c = COST.matcher(solution);
+      if (!c.find()) {
+        continue;
+      }
+      int[] x = new int[REGULAR_N + 1];
+      Matcher m = value.matcher(solution);
+      while (m.find()) {
+        x[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
+      }
+      for (int i = 1; i < REGULAR_N; i++) {
+        assertTrue(x[i] + x[i + 1] > 0, "x" + i + " and x" + (i + 1) + " are 0:\n" + out);
+      }
+      cost = Integer.parseInt(c.group(1));
+    }
+    assertEquals(noTwoZerosOptimum(), cost, out);
+    assertTrue(out.contains("=========="), out);
+  }
+
   @Test
   void optimumWhenLcgIsFastEnough() throws IOException {
     String out = run("lcg-slow-rate=0.001,lcg-slow-at=0.5");
@@ -124,8 +192,12 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   private String run(String config) throws IOException {
+    return run(cover(), config);
+  }
+
+  private String run(String model, String config) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
-    Files.writeString(fzn, cover(), StandardCharsets.UTF_8);
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
     String[] args = {
       // without the linear relaxation, whose rows of the clauses would enforce them
       "--lcg",

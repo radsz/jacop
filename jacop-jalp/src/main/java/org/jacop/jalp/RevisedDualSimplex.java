@@ -217,6 +217,8 @@ public final class RevisedDualSimplex {
   private boolean presolvePending;
   private int presolvedRows = -1;
   private int presolvedColumns = -1;
+  // the reductions of each kind the presolve made, or null when it did not run
+  private int[] presolveReductions;
   // a reduced problem whose solve the pivot limit cut off: later solves go on with it, and any
   // other use of this problem first takes the basis postsolved from it (flushReduced)
   private RevisedDualSimplex reducedLp;
@@ -461,6 +463,7 @@ public final class RevisedDualSimplex {
     presolvePending = o.presolvePending;
     presolvedRows = o.presolvedRows;
     presolvedColumns = o.presolvedColumns;
+    presolveReductions = o.presolveReductions;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
     refactorWeight = o.refactorWeight;
@@ -828,6 +831,16 @@ public final class RevisedDualSimplex {
     return presolvedColumns;
   }
 
+  // the reductions of each kind the presolve made (see Presolve.counts), or null
+  int[] presolveReductions() {
+    return presolveReductions;
+  }
+
+  // the pivots of the reduced problem of the presolve, 0 without one
+  long reducedPivots() {
+    return reducedPivots;
+  }
+
   /**
    * Returns the structural columns the crash basis of the first solve made basic.
    *
@@ -1143,12 +1156,23 @@ public final class RevisedDualSimplex {
   // at a primal feasible basis: the status to return, or -1 to go on pivoting
   private int atOptimum() {
     if (skippedRows > 0) {
-      // the rows left out must hold on fresh basic values, or the solve stops at its limit
+      // the rows left out must hold on fresh basic values, or have no proof of infeasibility on
+      // fresh factors either; then their violation is round-off and the solve ends as if they
+      // held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
+      // one row off by 2e-5, the combination of the rows 0 over every column). A row with a
+      // proof stops the solve at its limit
       clearSkipped();
       refactor();
-      if (leavingRow() >= 0) {
-        return LIMIT;
+      for (int r = leavingRow(); r >= 0; r = leavingRow()) {
+        rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
+        if (proofHolds(r)) {
+          clearSkipped();
+          return LIMIT;
+        }
+        skipped[r] = true;
+        skippedRows++;
       }
+      clearSkipped();
     }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
@@ -2131,6 +2155,7 @@ public final class RevisedDualSimplex {
     Presolve p =
         new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
     boolean reduced = p.run();
+    presolveReductions = p.counts();
     ops += p.ops();
     if (PRESOLVE_TRACE) {
       System.err.println(
@@ -2296,13 +2321,32 @@ public final class RevisedDualSimplex {
       row[j] = -1;
       upper[j] = up[j];
     }
-    for (int k = 0; k < m; k++) {
-      basis[k] = list[k];
-      row[list[k]] = k;
+    // the columns basic in the reduced basis first, with the steepest-edge weights of the reduced
+    // solve: with the slacks of the removed rows basic, the rows of the inverse for them are those
+    // of the reduced basis, so the weights are exact. The weights of the other rows are computed
+    // at the factorization, a BTRAN a row; unit weights there (as for a crash basis) leave the
+    // removal of the cost perturbation in exact mode thousands of degenerate pivots (neos2)
+    int known = 0;
+    if (red != null && red.weightsFrom >= mr) {
+      for (int r = 0; r < mr; r++) {
+        int c = red.basis[r];
+        int j = c < nr ? p.oldCol[c] : n + p.oldRow[c - nr];
+        if (b[j] && row[j] < 0) {
+          basis[known] = j;
+          row[j] = known;
+          weight[known++] = red.weight[r];
+        }
+      }
     }
-    // unit weights, as for a crash basis: exact ones cost a BTRAN a row
-    Arrays.fill(weight, 1);
-    weightsFrom = m;
+    int k = known;
+    for (int t = 0; t < m; t++) {
+      int j = list[t];
+      if (row[j] < 0) {
+        basis[k] = j;
+        row[j] = k++;
+      }
+    }
+    weightsFrom = known;
     factorValid = false;
     betaValid = false;
     placed = false;
