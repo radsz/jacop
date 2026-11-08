@@ -3170,6 +3170,39 @@ Version 5.0 (unreleased)
      --search-statistics stays, as -s -v without the -v lines after each
      solution, and so does -s -debug.
 
+189. New constraints ExactCover and TableCover for exact cover problems,
+     with the DL+ rule of Chabert and Solnon: when every option left for
+     an element a that must be covered also covers an element b, the
+     options that cover b but not a are removed. ExactCover(x, sets, n)
+     selects options x[o] = 1 covering the elements sets[o] so that every
+     element 0..n-1 is covered once; it keeps the number of options of
+     every element and the selected option, restored on backtracking as
+     the dancing links of Algorithm X, so it also does what the
+     equalities sum(x[o] : e in sets[o]) = 1 do. TableCover(groups,
+     tuples, exact) is a tiling written as tables over groups of
+     variables (the cells of a piece and its placements) under an all
+     different: every tuple covers its group and its values, the values
+     at most once, or exactly once when exact. Under --lcg both explain
+     what they propagate by the options or tuples out of the domains
+     (a removal by DL+ at element a: the options of a that share no
+     element with it). The FlatZinc front end posts a redundant
+     TableCover when the variables of an all different are split into
+     the variable lists of tables (XCSP3 Pentominoes), by default
+     without LCG only: on the 14 XCSP3 Pentominoes at 240 s it takes
+     --lcg off from 6 to 14 solved (13 in about a second), and -p 4,
+     whose third thread runs --lcg off, from 143 s to 25 s in total;
+     under LCG its reasons cost more than its pruning saves on half of
+     them. -Dorg.jacop.fz.tableCover=true|false sets it in both modes.
+     Redundant ExactCover on the equalities x_1 + ... + x_k = 1 over 0/1
+     variables is opt-in, -Dorg.jacop.fz.exactCover=true: it changed
+     nothing on the instances it reaches. References: M. Chabert and
+     C. Solnon, A Global Constraint for the Exact Cover Problem:
+     Application to Conceptual Clustering, Journal of Artificial
+     Intelligence Research 67 (2020) 509-547; D. E. Knuth, Dancing
+     Links, in Millennial Perspectives in Computer Science (2000)
+     187-214; D. E. Knuth, The Art of Computer Programming, Volume 4B,
+     Section 7.2.2.1, Addison-Wesley, 2022.
+
 Version 4.11
 =============
 

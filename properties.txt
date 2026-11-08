@@ -49,6 +49,9 @@ Constraints (core):
   estimated cheaper than enumeration), always (sumsets whenever within
   their limit) or off; default auto.
 
+- org.jacop.exactCover.inclusion: the DL+ rule of ExactCover; default
+  true.
+
 - jacop.convexAllocation.exact: the largest number of variables for
   which ConvexAllocation computes the bounds exactly; above it uses
   Lagrangian reduced costs; default 64.
@@ -236,6 +239,10 @@ unless stated otherwise):
 - org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
   costs of variables with a known sum; default true without LCG and
   false with LCG.
+- org.jacop.fz.exactCover: ExactCover on the equalities
+  x_1 + ... + x_k = 1 over 0/1 variables; default false.
+- org.jacop.fz.exactCoverRows: the fewest equalities of such a cover;
+  default 4.
 - org.jacop.fz.differenceBounds: shortest-path bounds of the
   difference constraints before posting, and negative cycle check.
 - jacop.fz.differenceBudget: the most edge relaxations of each of its
@@ -293,6 +300,12 @@ unless stated otherwise):
 - org.jacop.fz.setUnion.min: the fewest singletons in a replaced
   chain; default 8.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
+- org.jacop.fz.tableCover: TableCover on tables over groups of the
+  variables of an all different (tilings); default true without LCG
+  and false with LCG.
+- org.jacop.fz.tableCoverGroups, org.jacop.fz.tableCoverTuples: the
+  fewest groups and the most tuples of such a cover; default 3 and
+  200000.
 - org.jacop.fz.weightedCompletion: WeightedCompletion on weighted sums
   of completion times on a unary resource.
 - org.jacop.fz.weightedCompletion.parallel: the same detection on
