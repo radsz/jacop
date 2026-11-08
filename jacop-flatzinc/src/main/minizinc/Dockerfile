@@ -21,7 +21,8 @@ RUN mvn -B -Pall -DskipTests -Dspotless.skip=true package \
   && mkdir -p /dist/lib /dist/mzn-lib \
   && cp "$(ls jacop-all/target/jacop-all-*.jar | grep -v -e sources -e javadoc)" /dist/jacop.jar \
   && cp -r jacop-all/target/lib/. /dist/lib/ \
-  && cp -r jacop-flatzinc/src/main/minizinc/org/jacop/minizinc/. /dist/mzn-lib/
+  && cp -r jacop-flatzinc/src/main/minizinc/org/jacop/minizinc/. /dist/mzn-lib/ \
+  && cp -r jacop-all/src/main/aot-training /dist/aot-training
 
 # Java 25 runtime.
 
@@ -38,10 +39,25 @@ COPY --from=jre /opt/java/openjdk /opt/java/openjdk
 COPY --from=build /dist/jacop.jar /jacop/jacop.jar
 COPY --from=build /dist/lib /jacop/lib
 COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
+COPY --from=build /dist/aot-training /jacop/aot-training
 
+# The JVM's ahead-of-time cache (Java 25): one training JVM solves the training models with their own
+# search, free search and LCG free search, and records the classes and method profiles they use.
+# fzn-exec starts from it, which saves about 0.2 s of start-up on every run (osolpro
+# benchmarks/jvm-startup); the Challenge compares times in whole seconds, so on easy instances that
+# is often a full second. The cache is made with the runtime JVM of this image and the classpath of
+# fzn-exec, or the JVM rejects it.
+RUN set -e; runs=""; \
+    for f in /jacop/aot-training/*.fzn; do runs="$runs -t 3000 $f -- -t 3000 -f $f -- -t 3000 --lcg -f $f --"; done; \
+    java -Xmx2G -Xss100M -XX:AOTCacheOutput=/jacop/jacop.aot -cp "/jacop/jacop.jar:/jacop/lib/*" \
+      org.jacop.fz.AotTraining $runs > /dev/null \
+  && rm -rf /jacop/aot-training /jacop/jacop.aot.config \
+  && chmod a+r /jacop/jacop.aot
+
+# JVM warnings (such as a rejected cache) go to stderr, never into the FlatZinc output on stdout
 RUN printf '%s\n' \
     '#!/bin/bash' \
-    'exec java -server -Xmx10G -Xss100M -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
+    'exec java -server -Xmx10G -Xss100M -XX:AOTCache=/jacop/jacop.aot -Xlog:disable -Xlog:all=warning:stderr -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
     > /entry_data/fzn-exec \
   && chmod a+x /entry_data/fzn-exec
 
