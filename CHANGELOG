@@ -3412,6 +3412,37 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+200. JaLP's presolve also removes parallel rows and merges parallel
+     columns (E. D. Andersen and K. D. Andersen, Presolving in linear
+     programming, Mathematical Programming 71 (1995) 221-245, sections
+     3.4 and 3.6). A row that is a multiple of another gives its bounds
+     to the kept row; columns that are multiples of each other in every
+     row and in the cost become one column with the summed bounds. The
+     basis postsolve gives a removed row its dual and a removed column a
+     value at a bound; where the merged bounds of rows or columns meet,
+     the sign of the dual or of the reduced cost tells which original
+     bound holds. The postsolved basis keeps the steepest-edge weights
+     of the reduced solve for the columns that stay basic (neos2 stalled
+     in degenerate pivots after the clean-up of the cost perturbation
+     with unit weights). Also fixed: a row skipped by the ratio test and
+     still violated at the end stopped the solve at its pivot limit on an
+     unbounded problem; now it does only when its proof holds on fresh
+     factors. -Dorg.jacop.jalp.presolveParallel=false turns the parallel
+     reductions off. LP bench (659 LPs, 120 s, against the presolve
+     without them): 0 wrong, 640 solved in both, pivots geomean 0.98
+     (jacop-root 0.97, miplib2017 0.96; neos-3555904-turama 8,824 to
+     2,680, mzzv42z 25,294 to 7,088, but dano3mip 57,825 to 103,410);
+     solve time about the same. Wide set: the parallel rules reach the
+     root LP of 72 of 240 instances; at 600 s on those, solved 46 to 46,
+     5 families better and 2 worse. Reproducible in three runs:
+     ATSP instance10_0p25 proved in 16 s instead of 60 s, accap
+     instance5 in 73 s instead of 100 s, still-life-wastage 13 in 44 s
+     instead of 80 s, stable-goods s-d19 7016 instead of 6636; worse
+     unit-commitment L12-T48G15L10, ptv pax_period_20_3b and
+     fox-geese-corn 17, which with the cost perturbation at 2e-6 do as
+     well as or better than before: the search follows a different
+     optimal root vertex.
+
 Version 4.11
 =============
 
