@@ -72,6 +72,39 @@ Constraints (core):
 - jacop.cumulative.presenceFit: a task that may use nothing gets use 0
   where it fits nowhere (UnaryTimetable); default true.
 
+- org.jacop.unaryEarlinessTardiness.blocks: the most blocks of time
+  slots of a machine in the assignment bound of
+  UnaryEarlinessTardiness; slots are grouped into blocks of equal
+  length above it; default 64.
+
+- org.jacop.unaryEarlinessTardiness.trial: the solves after which a
+  machine of UnaryEarlinessTardiness whose bound never beat the exact
+  minima of its tasks is no longer solved (0 never stops, and turns off
+  forcedRound and workPerPropagation too); default 200.
+
+- org.jacop.unaryEarlinessTardiness.forcedRound: the exact solves of
+  UnaryEarlinessTardiness, forced in search because a cheap upper
+  estimate says the node could fail, after which, if none of them
+  failed, only one in 16 is done until one fails; default 500.
+
+- org.jacop.unaryEarlinessTardiness.workPerPropagation: the work (inner
+  steps of the transportation solver, about a nanosecond each) the
+  exact solves of UnaryEarlinessTardiness in search may take per
+  propagation of the store; a forced solve is skipped while they took
+  more, which keeps the cost of the bound to a share of the search and
+  the search deterministic (0 no budget); default 1000.
+
+- org.jacop.unaryEarlinessTardiness.filter: reduced-cost filtering of
+  the start bounds in UnaryEarlinessTardiness: a start bound is removed
+  when restricting the task's window raises the dual bound of its
+  machine above the maximum of the cost; default true.
+
+- org.jacop.unaryEarlinessTardiness.lagrange: iterations of the
+  subgradient search, at the root, of the Lagrangian multipliers of the
+  precedences given to UnaryEarlinessTardiness (the FlatZinc front end
+  gives it the precedences it finds between its tasks); 0 relaxes the
+  precedences without multipliers; default 30.
+
 - org.jacop.diffn.dff: dual feasible functions in the area check of
   Diffn: 0 off, 1 gated (only when the rectangles fill at least half
   of the space, Steinberg's theorem), 2 always; default 1.
@@ -297,6 +330,12 @@ unless stated otherwise):
 - org.jacop.fz.precedenceCost: PrecedenceCost on earliness/tardiness
   sums over start times with precedences; default true for fixed
   search and false for free search.
+- org.jacop.fz.unaryEarlinessTardiness: UnaryEarlinessTardiness on
+  earliness/tardiness sums whose starts are tasks of unary resources
+  (disjunctive cliques, and tasks of a cumulative using more than half
+  of it), with the precedences between those tasks; off by default (it
+  raises the proven lower bound, not the solutions found); default
+  false.
 - org.jacop.fz.sequence: Sequence for sliding-window cardinality
   constraints stated window by window.
 - jacop.fz.sequenceWindows: the fewest windows of a chain that becomes
@@ -424,6 +463,9 @@ Literals and clauses:
   true.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
+- jacop.lcg.pureClauseLiterals: under free search, a model whose
+  variables are all 0/1 and whose constraints all became clauses leaves
+  every decision to the SAT solver; default true.
 - org.jacop.lcg.alldiffCover: cover clauses for an all-different whose
   variables have as many values as there are variables; default true.
 - org.jacop.lcg.alldiffCoverLimit: the most (variable, value) pairs
@@ -537,6 +579,11 @@ Cuts:
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.treeCuts: generalized subtour elimination cuts of the
+  forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at the
+  root, for an objective; a model with them also takes all its other
+  rows into the relaxation; default true.
+- org.jacop.lp.treeRounds: their rounds; default 200.
 
 Row pool and lazy rows:
 
@@ -658,5 +705,8 @@ Debugging:
 - jacop.jasat.check: check the propagation invariants of the SAT solver
   at every fixpoint; default false.
 - jacop.ls.debug: print why local search rejects moves; default false.
+- jacop.ls.verify: check the incremental state of local search (sums,
+  counters, windows, element selections, followers) against values
+  computed afresh after every step; default false.
 - tmp.lattice: print the pruning of LinearEqualities by residue
   classes; default false.

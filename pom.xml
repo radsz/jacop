@@ -290,6 +290,8 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ColouredTreeFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -479,6 +481,8 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ColouredTreeFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -669,6 +673,8 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ColouredTreeFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -859,6 +865,8 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
                                 <include>**/ColouredTreeFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>

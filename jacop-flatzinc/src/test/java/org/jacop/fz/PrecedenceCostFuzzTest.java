@@ -48,10 +48,12 @@ import org.junit.jupiter.api.io.TempDir;
  * Random small FlatZinc models of earliness and tardiness costs under precedences, written as
  * MiniZinc writes rcpsp-wet (int_max(0, a, y) over a = s - due or due - s, an int_lin_eq for the
  * objective, int_lin_le precedences, and pairs of tasks that must not overlap as two int_lin_le_imp
- * and a bool_clause), so that the front end posts a {@link org.jacop.constraints.PrecedenceCost}.
- * Each model is solved with the detection on (default search, LCG with the explanation checker, LCG
- * with free search) and compared with the optimum of the decomposition alone (detection off,
- * depth-first search).
+ * and a bool_clause), so that the front end posts a {@link org.jacop.constraints.PrecedenceCost},
+ * and on some a jacop_cumulative whose tasks that use more than half of it form a unary resource,
+ * so that it also posts a {@link org.jacop.constraints.UnaryEarlinessTardiness}. Each model is
+ * solved with the detection on (default search, LCG with the explanation checker, LCG with free
+ * search) and compared with the optimum of the decomposition alone (detection off, depth-first
+ * search).
  *
  * <pre>
  * mvn -Pmin -pl jacop-flatzinc test -Dtest=PrecedenceCostFuzzTest -Dprecedencefuzz.trials=1500
@@ -104,6 +106,33 @@ class PrecedenceCostFuzzTest {
                   + ");");
           constraints.add("constraint bool_clause([b" + b + ",c" + b + "],[]);");
         }
+      }
+    }
+    if (r.nextInt(3) == 0) {
+      // a disjunctive resource over some of the tasks, as MiniZinc's disjunctive with the JaCoP
+      // library writes it, so that a UnaryEarlinessTardiness is posted on it
+      StringBuilder st = new StringBuilder();
+      StringBuilder du = new StringBuilder();
+      StringBuilder us = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        if (r.nextInt(3) > 0) {
+          String sep = st.length() == 0 ? "" : ",";
+          st.append(sep).append("s").append(i);
+          du.append(sep).append(d[i]);
+          us.append(sep).append(1 + r.nextInt(2));
+        }
+      }
+      if (st.length() > 0) {
+        constraints.add(
+            "constraint jacop_cumulative(["
+                + st
+                + "],["
+                + du
+                + "],["
+                + us
+                + "],"
+                + (1 + r.nextInt(2))
+                + ");");
       }
     }
     List<String> ys = new ArrayList<>();
@@ -180,6 +209,9 @@ class PrecedenceCostFuzzTest {
     if (out.contains("% precedence cost:")) {
       detected++;
     }
+    if (out.contains("% unary earliness/tardiness:")) {
+      unaryDetected++;
+    }
     if (out.contains("=====UNSATISFIABLE=====")) {
       return -1;
     }
@@ -196,6 +228,7 @@ class PrecedenceCostFuzzTest {
   }
 
   private int detected;
+  private int unaryDetected;
 
   @Test
   void earlinessTardinessModelsHaveTheOptimumOfTheDecomposition() throws IOException {
@@ -210,13 +243,16 @@ class PrecedenceCostFuzzTest {
         }
         Integer expected;
         System.setProperty("org.jacop.fz.precedenceCost", "false");
+        System.setProperty("org.jacop.fz.unaryEarlinessTardiness", "false");
         try {
           expected = solve(model, "--lcg", "off");
         } finally {
           System.clearProperty("org.jacop.fz.precedenceCost");
+          System.clearProperty("org.jacop.fz.unaryEarlinessTardiness");
         }
         System.setProperty("jacop.lcg.check", "true");
         System.setProperty("org.jacop.fz.precedenceCost", "true");
+        System.setProperty("org.jacop.fz.unaryEarlinessTardiness", "true");
         try {
           String[][] runs = {{"--lcg", "off", "-debug"}, {"-debug"}, {"-f", "-debug"}};
           for (String[] options : runs) {
@@ -238,6 +274,7 @@ class PrecedenceCostFuzzTest {
         } finally {
           System.clearProperty("jacop.lcg.check");
           System.clearProperty("org.jacop.fz.precedenceCost");
+          System.clearProperty("org.jacop.fz.unaryEarlinessTardiness");
         }
       }
     } catch (IllegalStateException e) {
@@ -247,5 +284,7 @@ class PrecedenceCostFuzzTest {
     // the three runs with -debug report the constraint for most models with precedences and two
     // terms (not when no precedence links two tasks with costs)
     assertTrue(2 * detected >= 3 * withPrecedences, detected + " detections, " + withPrecedences);
+    // unary resources come from the disjunctive pairs and from the cumulatives
+    assertTrue(unaryDetected > 0, "no UnaryEarlinessTardiness posted");
   }
 }
