@@ -3412,7 +3412,40 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
-200. Free search (-f) under --lcg leaves every decision to the SAT
+200. Local search keeps more of its state incrementally, as Comet's
+     invariants do (L. Michel and P. Van Hentenryck, A constraint-based
+     architecture for local search, OOPSLA 2002, 83-100; P. Van
+     Hentenryck and L. Michel, Constraint-Based Local Search, MIT Press
+     2005). A trial move that changes many variables (a swap, or a
+     variable with the variables it defines) updates sums, counters and
+     windows as it goes but measures each touched constraint once at its
+     end, and undoes by restoring the sums of the touched rows at once.
+     Element constraints (new SelectingViolation, implemented by
+     ElementVariableFast) read a list variable only while their index
+     selects it, as the element invariant of Comet; domain rows of defined
+     variables are measured directly. A list variable that only element
+     constraints list[index] = y read (the pair matrix of the social
+     golfers model) is not moved by the search: after every move it takes
+     the value of y asked for with the most weight by the element
+     constraints selecting it, a functional invariant (CBLS, ch. 5), so a
+     golfer move needs no second move of a matrix cell (--free-config
+     ls-follow=0 turns this off; statistic followers in the
+     LocalSearch line). -Djacop.ls.verify=true checks the incremental
+     state against a fresh computation after every step. 54 CBLS
+     instances, local search only, 600 s: 28 to 30 solved (golfers 5_3_6
+     in 1.4 s, none before; costas 17 in 203 s; mqueens n20; one wwtpp
+     lost), costas 16 in 4 s instead of 18 s, better objectives on gfd,
+     largescheduling, liner and train. Wide set, -f with ls=0.1, 600 s:
+     178 to 178 solved, mean gap 0.074 to 0.075; a repeat of the 11
+     instances that differed shows 8 as run-to-run noise. Worse in both
+     runs: triangular n10 is proved in 270 s instead of 50 s (local search
+     finds the optimum 20 later, at 26 s instead of 9 s, and the
+     core-guided phase then lowers the bound one value at a time),
+     ihtc kletzander i09 (7810 instead of 6530 to 6730; local search
+     gives only the first solution, LNS does the rest) and trains18 (387
+     instead of 386).
+
+201. Free search (-f) under --lcg leaves every decision to the SAT
      solver when the model is a CNF: all its variables are 0/1 and every
      constraint became clauses (Regular and MDD under --lcg, change
      #447). Before, the runs took turns between the annotation (or

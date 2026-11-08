@@ -44,6 +44,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AmongSeq;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountValuesBounds;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
@@ -231,6 +232,77 @@ class LocalSearchTest {
             assertTrue(v[i] != v[j]);
           } else if (j + d < n) {
             assertTrue(v[i + d] - v[i] != v[j + d] - v[j], "row " + d);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Social golfers, 9 golfers in 3 groups of 3 for 4 rounds (Kirkman's schoolgirls), modelled as in
+   * the MiniZinc benchmark: each pair of a group looks its cell of a pair matrix up by an element
+   * constraint, cell = round. The cells only the element constraints read follow them, so a move of
+   * a golfer needs no second move of a cell.
+   */
+  @Test
+  void findsGolfersWithFollowers() {
+    int groups = 3;
+    int size = 3;
+    int rounds = 4;
+    int golfers = groups * size;
+    Store store = new Store();
+    IntVar[][] place = new IntVar[rounds][golfers];
+    IntVar[] cell = new IntVar[golfers * golfers];
+    for (int k = 0; k < cell.length; k++) {
+      cell[k] = new IntVar(store, "c" + k, 0, rounds);
+    }
+    List<IntVar> defined = new ArrayList<>();
+    List<IntVar> order = new ArrayList<>();
+    for (int r = 0; r < rounds; r++) {
+      for (int p = 0; p < golfers; p++) {
+        place[r][p] = new IntVar(store, "p" + r + "_" + p, 1, golfers);
+        order.add(place[r][p]);
+      }
+      store.impose(new Alldistinct(place[r]));
+      for (int g = 0; g < groups; g++) {
+        for (int i = 0; i < size; i++) {
+          for (int j = i + 1; j < size; j++) {
+            IntVar a = place[r][g * size + i];
+            IntVar b = place[r][g * size + j];
+            if (j == i + 1) {
+              store.impose(new XltY(a, b));
+            }
+            IntVar at = new IntVar(store, "at" + r + "_" + g + "_" + i + "_" + j, 1, cell.length);
+            // at = golfers * (a - 1) + b
+            store.impose(
+                new LinearInt(new IntVar[] {a, b, at}, new int[] {golfers, 1, -1}, "=", golfers));
+            store.impose(new ElementVariableFast(at, cell, new IntVar(store, r + 1, r + 1)));
+            defined.add(at);
+          }
+        }
+      }
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .order(order.toArray(new IntVar[0]))
+            .defined(defined)
+            .timeLimit(LIMIT)
+            .seed(5)
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(ls.toString().contains("followers="), ls.toString());
+    boolean[][] met = new boolean[golfers + 1][golfers + 1];
+    for (int r = 0; r < rounds; r++) {
+      int[] v = ls.getSolution(place[r]);
+      for (int g = 0; g < groups; g++) {
+        for (int i = 0; i < size; i++) {
+          for (int j = i + 1; j < size; j++) {
+            int a = v[g * size + i];
+            int b = v[g * size + j];
+            assertTrue(a < b);
+            assertTrue(!met[a][b], "golfers " + a + " and " + b + " meet twice");
+            met[a][b] = true;
           }
         }
       }

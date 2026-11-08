@@ -658,5 +658,8 @@ Debugging:
 - jacop.jasat.check: check the propagation invariants of the SAT solver
   at every fixpoint; default false.
 - jacop.ls.debug: print why local search rejects moves; default false.
+- jacop.ls.verify: check the incremental state of local search (sums,
+  counters, windows, element selections, followers) against values
+  computed afresh after every step; default false.
 - tmp.lattice: print the pruning of LinearEqualities by residue
   classes; default false.
