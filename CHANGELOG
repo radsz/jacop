@@ -3391,8 +3391,9 @@ Version 5.0 (unreleased)
      aot-training models with the image's own JVM and the classpath of
      fzn-exec, and fzn-exec starts from it. On the 33 instances of the
      2026 Challenge that JaCoP finishes in under 5 s the median run takes
-     0.27 s instead of 0.47 s, and about 0.9 s less with four runs on four
-     cores; the Challenge compares times in whole seconds.
+     0.27 s instead of 0.47 s; on a loaded machine (four runs on four
+     cores) zephyrus 14__6__10__3 took 2.2 s instead of 2.9-3.4 s. The
+     Challenge compares times in whole seconds.
 
 Version 4.11
 =============
