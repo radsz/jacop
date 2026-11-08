@@ -79,7 +79,7 @@ final class ClauseEncoder implements PbModel {
     int atLeast(IntVar x, int v);
 
     /** [x = v] for v in the root domain of a variable with more than two values. */
-    int equal(IntVar x, int v);
+    int valueLiteral(IntVar x, int v);
 
     /** A new solver variable that is no atom. */
     int auxiliary();
@@ -226,7 +226,7 @@ final class ClauseEncoder implements PbModel {
       String ge = name(lits.atLeast(x, d.max()));
       return v == d.max() ? ge : PbModel.not(ge);
     }
-    return name(lits.equal(x, v));
+    return name(lits.valueLiteral(x, v));
   }
 
   @Override

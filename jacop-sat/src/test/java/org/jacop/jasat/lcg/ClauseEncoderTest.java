@@ -317,7 +317,7 @@ class ClauseEncoderTest {
     }
 
     @Override
-    public int equal(IntVar x, int v) {
+    public int valueLiteral(IntVar x, int v) {
       add(x);
       int[] vals = values.get(x);
       for (int k = 0; k < vals.length; k++) {
@@ -452,7 +452,7 @@ class ClauseEncoderTest {
       boolean cp = propagates(factory, seed, pos, dom, idx);
       List<Integer> units = new ArrayList<>();
       for (int i = 0; i < x.size(); i++) {
-        units.add(cnf.equal(x.get(i), dom[i][idx[i]]));
+        units.add(cnf.valueLiteral(x.get(i), dom[i][idx[i]]));
       }
       boolean sat = satisfiable(whole, units);
       assertThat(sat).as(where + " at " + assignment(x, dom, idx)).isEqualTo(cp);
