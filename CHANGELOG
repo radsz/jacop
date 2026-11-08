@@ -3623,6 +3623,16 @@ Version 5.0 (unreleased)
      AztecDiamond-300 in 527 s); RamseyPartition-equ-3-0600 takes 200 s
      instead of 57 s to prove unsatisfiable.
 
+206. Bug fix: a search with a child search (as the FlatZinc front end
+     builds for integer then Boolean variables) that timed out while the
+     child was enumerating solutions ended with the child's part of the
+     last solution and the master's part of an earlier one. Assigning that
+     pair at the end of labeling threw FailException, so Fz2jacop -a -t
+     printed =====UNSATISFIABLE===== after the solutions instead of
+     =====TIME-OUT===== (seen on XCSP 2023 KidneyExchange-4-041_c23 with
+     --default-search input, in about half the runs). The master now
+     records its part before it stops.
+
 Version 4.11
 =============
 
