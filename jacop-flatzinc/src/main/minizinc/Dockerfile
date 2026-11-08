@@ -40,8 +40,8 @@ COPY --from=build /dist/jacop.jar /jacop/jacop.jar
 COPY --from=build /dist/lib /jacop/lib
 COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
 
-# The JVM's ahead-of-time cache (Java 25): one training JVM solves the training models with their own
-# search, free search and LCG free search, and records the classes and method profiles they use.
+# The JVM's ahead-of-time cache (Java 25): one training JVM solves the training models with their
+# own search, free search and LCG free search, and records the classes and method profiles they use.
 # fzn-exec starts from it, which saves about 0.2 s of start-up on every run (osolpro
 # benchmarks/jvm-startup); the Challenge compares times in whole seconds, so on easy instances that
 # is often a full second. The cache is made with the runtime JVM of this image and the classpath of
@@ -55,7 +55,9 @@ RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/aot-training 
   && chmod a+r /jacop/jacop.aot \
   && printf '%s\n' \
     '#!/bin/bash' \
-    'exec java -server -Xmx10G -Xss100M -XX:AOTCache=/jacop/jacop.aot -Xlog:disable -Xlog:all=warning:stderr -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
+    'exec java -server -Xmx10G -Xss100M -XX:AOTCache=/jacop/jacop.aot \' \
+    '  -Xlog:disable -Xlog:all=warning:stderr \' \
+    '  -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
     > /entry_data/fzn-exec \
   && chmod a+x /entry_data/fzn-exec
 
