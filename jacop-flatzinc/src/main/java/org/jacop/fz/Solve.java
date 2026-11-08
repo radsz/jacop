@@ -202,6 +202,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the linear relaxation (--lp), or null
   private LinearRelaxation linearRelaxation;
 
+  // above this many default search variables, the default search under --lcg branches in input
+  // order instead of dom/wdeg, whose scan over all of them at every decision costs too much
+  private static final int DOM_WDEG_LIMIT =
+      Integer.getInteger("org.jacop.fz.lcgDomWdegLimit", 50_000);
+
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
   private static final boolean LP_GUIDE_ROOT =
@@ -2426,6 +2431,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the element positions lcgDefaultSelect branches on first, for the statistics
   private int elementPositionCount;
 
+  // the default search variables lcgDefaultSelect gave to input order instead of dom/wdeg, for the
+  // statistics
+  private int inputOrderCount;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
    * annotation. A model with cumulative or unary resources gets set times on the start variables of
@@ -2472,6 +2481,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           new SimpleSelect<>(positions, new WeightedDegree<>(store), new IndomainMin<>());
       select.inputOrderTieBreaking = false;
       return select;
+    }
+    if (vars.size() > DOM_WDEG_LIMIT) {
+      // dom/wdeg scans every variable at each decision: on the 160,000 cells of XCSP3
+      // AztecDiamond-200 that is about 1 ms a decision, and no solution came in 60 s. Input order
+      // finds one in 1.2 s without a failure (AztecDiamond 200-300, Takuzu 040/050 and WordDesign1
+      // 065 solved at 60 s, none lost on the 17 fast gaps above 20,000 variables)
+      inputOrderCount = vars.size();
+      return new SimpleSelect<>(vars.toArray(new IntVar[0]), null, new IndomainMin<>());
     }
     SimpleSelect<IntVar> select =
         new SimpleSelect<>(
@@ -2683,6 +2700,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + setTimesStarts
             + "\n%%%mzn-stat: lcgElementPositions="
             + elementPositionCount
+            + "\n%%%mzn-stat: lcgInputOrder="
+            + inputOrderCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="

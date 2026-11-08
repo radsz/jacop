@@ -415,6 +415,10 @@ Search of the LCG solver:
 - jacop.lcg.late: none, or defined (the defined variables and the
   Booleans of redundant constraints are branched on last); default
   defined.
+- org.jacop.fz.lcgDomWdegLimit: above this many default search
+  variables, the default search of a model without a search annotation
+  branches in input order instead of dom/wdeg, whose scan over all of
+  them at every decision costs too much; default 50000.
 - jacop.lcg.lpGuideRoot: the activity runs of fixed search follow
   the root solution of the linear relaxation, not its last one;
   default true.
