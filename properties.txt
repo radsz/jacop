@@ -311,6 +311,9 @@ unless stated otherwise):
 
 Presolve:
 =========
+- org.jacop.fz.productDomains: int_times(x, y, z) restricts z to the
+  products of the values of x and y when there are at most 4096 value
+  pairs; default true.
 - jacop.presolve.alias: variable aliasing; default true.
 - jacop.presolve.affine: affine substitution (rule 2): on, aliases
   (aliases only, no views) or off; default on.
