@@ -431,6 +431,13 @@ public final class RevisedDualSimplex {
     seed = o.seed;
     exact = o.exact;
     cleaning = o.cleaning;
+    // copy() postsolves an open reduced solve first, so the copy has none
+    reducedLp = null;
+    reducedBy = null;
+    reducedPivots = 0;
+    reducedFactorizations = 0;
+    reducedRefactors = 0;
+    reducedOps = 0;
     boundLo = o.boundLo.clone();
     boundHi = o.boundHi.clone();
     lo = o.lo.clone();
