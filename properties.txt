@@ -534,6 +534,16 @@ Cuts:
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.alldiffCuts: Hall cuts of all-different constraints at
+  the root, for an objective; default true.
+- org.jacop.lp.alldiffVariants: the same cuts, with value copies, for
+  all-different with exceptions (alldifferent_except_0) and global
+  cardinality constraints (GCC, CountValues, CountValuesBounds);
+  default true.
+- org.jacop.lp.alldiffSearch: Hall cuts also in search, every few LP
+  solves; default true.
+- org.jacop.lp.alldiffSearchCuts: the most Hall cuts per separation in
+  search; default 10.
 
 Row pool and lazy rows:
 

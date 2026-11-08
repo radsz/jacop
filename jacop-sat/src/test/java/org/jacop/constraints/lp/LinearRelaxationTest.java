@@ -76,6 +76,7 @@ import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
+import org.jacop.search.InputOrderSelect;
 import org.jacop.search.LpGuidedSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
@@ -1671,6 +1672,106 @@ class LinearRelaxationTest {
     }
     assertThat(checked).isPositive();
     assertThat(used).isPositive();
+  }
+
+  /**
+   * The Hall cuts with value copies of all-different-except-0 and global cardinality constraints,
+   * at the root and in search, keep the optimum of random models under lazy clause generation with
+   * the explanation checker on.
+   */
+  @Test
+  void hallCutsWithCopiesKeepTheOptimumUnderLcg() {
+    long checked = 0;
+    int used = 0;
+    for (int run = 0; run < 16; run++) {
+      long expected = new Copies(run).optimum();
+      Copies lcg = new Copies(run);
+      LinearRelaxation l =
+          LinearRelaxation.of(
+              lcg.store,
+              lcg.cost,
+              false,
+              List.of(),
+              List.of(),
+              Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      assertThat(l).as("seed %d", run).isNotNull();
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      if (expected == Long.MIN_VALUE) {
+        assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.UNSAT);
+        continue;
+      }
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+      used += l.alldiffCuts + l.alldiffSearchCuts > 0 ? 1 : 0;
+    }
+    assertThat(checked).isPositive();
+    assertThat(used).isPositive();
+  }
+
+  /**
+   * An all-different-except-0 (even seeds) or a global cardinality constraint with variable counts
+   * (odd seeds) over 4 variables with more values than the LP encodes one by one, a knapsack row
+   * and a linear cost.
+   */
+  private static final class Copies {
+    final Store store = new Store();
+    final IntVar[] x = new IntVar[4];
+    final IntVar cost;
+
+    Copies(int seed) {
+      Random rnd = new Random(seed * 6151L + 3);
+      boolean except = seed % 2 == 0;
+      int n = x.length;
+      int first = except ? 0 : 1 + rnd.nextInt(3);
+      int m = 160;
+      for (int i = 0; i < n; i++) {
+        IntervalDomain d = new IntervalDomain();
+        for (int v = first; v < first + m; v++) {
+          if (rnd.nextInt(8) > 0 || v == 0) {
+            d.unionAdapt(v, v);
+          }
+        }
+        x[i] = new IntVar(store, "x" + i, d);
+      }
+      int[] w = new int[n + 1];
+      IntVar[] vars = Arrays.copyOf(x, n + 1);
+      int range = 0;
+      int[] a = new int[n];
+      long most = 0;
+      for (int i = 0; i < n; i++) {
+        w[i] = except ? -1 - rnd.nextInt(9) : rnd.nextInt(19) - 9;
+        range += Math.abs(w[i]) * (first + m);
+        a[i] = 1 + rnd.nextInt(3);
+        most += (long) a[i] * (first + m - 1);
+      }
+      cost = new IntVar(store, "cost", -range, range);
+      vars[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(vars, w, "==", 0));
+      store.impose(new LinearInt(x, a, "<=", (int) (most * (6 + rnd.nextInt(4)) / 10)));
+      if (except) {
+        store.impose(new AlldifferentExceptZero(x));
+      } else {
+        IntVar[] counters = new IntVar[m];
+        for (int k = 0; k < m; k++) {
+          int lo = rnd.nextInt(80) == 0 ? 1 : 0;
+          counters[k] = new IntVar(store, "c" + k, lo, lo + 1 + (rnd.nextInt(8) == 0 ? 2 : 0));
+        }
+        store.impose(new GCC(x, counters, first));
+      }
+    }
+
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new InputOrderSelect<>(store, x, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : Long.MIN_VALUE;
+    }
   }
 
   /**

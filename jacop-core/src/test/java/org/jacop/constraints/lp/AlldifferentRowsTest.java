@@ -36,7 +36,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Linearizations;
 import org.jacop.core.IntDomain;
@@ -211,6 +213,129 @@ class AlldifferentRowsTest {
     assertThat(cut.get(0).vars()).containsExactly(0, 1);
   }
 
+  /**
+   * No Hall cut with value copies cuts off a solution: all-different with exceptions, closed and
+   * open cardinality constraints with fixed or variable counts, random domains with holes and
+   * random LP values (some variables left out); a convex mix of solutions violates none.
+   */
+  @Test
+  void variantCutsKeepEverySolution() {
+    Random rnd = new Random(23);
+    int[] found = new int[4];
+    for (int run = 0; run < INSTANCES * 2; run++) {
+      int kind = run % 4;
+      int n = 3 + rnd.nextInt(4);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      int[] pool = values(rnd, 2 + rnd.nextInt(n));
+      for (int i = 0; i < n; i++) {
+        IntDomain d = domain(rnd, pool, pool[rnd.nextInt(pool.length)], false);
+        if (kind == 0 && rnd.nextBoolean()) {
+          d.unionAdapt(0, 0);
+        }
+        x[i] = new IntVar(store, "x" + i, d);
+      }
+      int[] counted = kind == 3 ? subset(rnd, pool) : pool;
+      int[] least = new int[counted.length];
+      int[] most = new int[counted.length];
+      IntVar[] counters = new IntVar[counted.length];
+      for (int k = 0; k < counted.length; k++) {
+        least[k] = rnd.nextInt(3) == 0 ? rnd.nextInt(2) : 0;
+        most[k] = least[k] + rnd.nextInt(3);
+        counters[k] = new IntVar(store, "c" + k, least[k], most[k]);
+      }
+      int[] exceptions = rnd.nextBoolean() ? new int[] {0} : new int[] {0, pool[0]};
+      AlldifferentCuts cuts =
+          switch (kind) {
+            case 0 -> AlldifferentCuts.except(x, exceptions);
+            case 1 -> AlldifferentCuts.cardinality(x, counted, least, most, true);
+            case 2 -> AlldifferentCuts.cardinality(x, counted, counters, true);
+            default -> AlldifferentCuts.cardinality(x, counted, least, most, false);
+          };
+      List<int[]> solutions = new ArrayList<>();
+      for (int[] s : tuples(x)) {
+        if (kind == 0
+            ? exceptDistinct(s, exceptions)
+            : counts(s, counted, least, most, kind != 3)) {
+          solutions.add(s);
+        }
+      }
+      for (int t = 0; t < 20; t++) {
+        double[] value = new double[n];
+        for (int i = 0; i < n; i++) {
+          value[i] =
+              rnd.nextInt(8) == 0
+                  ? Double.NaN
+                  : x[i].min() + rnd.nextDouble() * (x[i].max() - x[i].min());
+        }
+        for (AlldifferentCuts.Cut cut : cuts.separate(value, 100)) {
+          found[kind]++;
+          assertThat(activity(cut, value) < cut.bound() == cut.lower()).as("violated").isTrue();
+          for (int i : cut.vars()) {
+            assertThat(value[i]).isNotNaN();
+          }
+          for (int[] s : solutions) {
+            assertThat(holds(cut, s))
+                .as("run %d kind %d cut %s solution %s", run, kind, cut, Arrays.toString(s))
+                .isTrue();
+          }
+        }
+        if (!solutions.isEmpty()) {
+          double[] mix = new double[n];
+          double total = 0;
+          for (int[] s : solutions) {
+            double w = rnd.nextDouble();
+            total += w;
+            for (int i = 0; i < n; i++) {
+              mix[i] += w * s[i];
+            }
+          }
+          for (int i = 0; i < n; i++) {
+            mix[i] /= total;
+          }
+          assertThat(cuts.separate(mix, 100)).as("run %d kind %d", run, kind).isEmpty();
+        }
+      }
+    }
+    assertThat(Arrays.stream(found).min().orElse(0)).as(Arrays.toString(found)).isPositive();
+  }
+
+  /** The bounds with value copies on small cases. */
+  @Test
+  void variantBounds() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    // all-different except 0: the three take at most 3 + 2 + 1
+    List<AlldifferentCuts.Cut> cut =
+        AlldifferentCuts.except(x, new int[] {0}).separate(new double[] {2.9, 2.9, 2.9}, 10);
+    assertThat(cut).isNotEmpty();
+    assertThat(cut.get(0).lower()).isFalse();
+    assertThat(cut.get(0).bound()).isEqualTo(6);
+    // but any number of them may be 0
+    assertThat(AlldifferentCuts.except(x, new int[] {0}).separate(new double[] {0, 0, 0}, 10))
+        .isEmpty();
+    // four variables over {1, 2}, each value taken exactly twice: three of them sum to 5 at most
+    // and to 4 at least
+    IntVar[] y = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      y[i] = new IntVar(store, "y" + i, 1, 2);
+    }
+    AlldifferentCuts gcc =
+        AlldifferentCuts.cardinality(y, new int[] {2, 1}, new int[] {2, 2}, new int[] {2, 2}, true);
+    List<AlldifferentCuts.Cut> low = gcc.separate(new double[] {1.2, 1.2, 1.2, 2}, 10);
+    assertThat(low).isNotEmpty();
+    assertThat(low.get(0).lower()).isTrue();
+    assertThat(low.get(0).vars()).containsExactly(0, 1, 2);
+    assertThat(low.get(0).bound()).isEqualTo(4);
+    List<AlldifferentCuts.Cut> high = gcc.separate(new double[] {1, 1.8, 1.8, 1.8}, 10);
+    assertThat(high).isNotEmpty();
+    assertThat(high.get(0).lower()).isFalse();
+    assertThat(high.get(0).bound()).isEqualTo(5);
+  }
+
   /** The sums of the smallest and largest values of a domain with holes. */
   @Test
   void extremeSums() {
@@ -253,6 +378,116 @@ class AlldifferentRowsTest {
       moved += r.alldiffCuts > 0 || r.simplexFreeColumns() > 0 ? 1 : 0;
     }
     assertThat(moved).isPositive();
+  }
+
+  /**
+   * Random models with an all-different-except-0 or a global cardinality constraint and a linear
+   * objective keep their optimum with the relaxation and the Hall cuts with value copies, at the
+   * root and in search; the root bound is not above the optimum.
+   */
+  @Test
+  void variantRelaxationKeepsTheOptimum() {
+    int used = 0;
+    int lists = 0;
+    for (int run = 0; run < INSTANCES / 4; run++) {
+      long expected = new VariantModel(run).optimum();
+      VariantModel m = new VariantModel(run);
+      LinearRelaxation r =
+          LinearRelaxation.of(
+              m.store,
+              m.cost,
+              false,
+              List.of(),
+              List.of(),
+              java.util.Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      assertThat(r).as("run %d", run).isNotNull();
+      m.store.impose(r);
+      long got = m.optimum();
+      assertThat(got).as("run %d", run).isEqualTo(expected);
+      if (!Double.isNaN(r.alldiffBound)) {
+        assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+      }
+      lists += (int) r.alldiffVariantLists;
+      used += r.alldiffCuts + r.alldiffSearchCuts > 0 ? 1 : 0;
+    }
+    assertThat(lists).isPositive();
+    assertThat(used).isPositive();
+  }
+
+  /**
+   * A random model: an all-different-except-0 (even seeds) or a global cardinality constraint with
+   * variable counts (odd seeds) over n variables, with a linear cost.
+   */
+  static final class VariantModel {
+    final Store store = new Store();
+    final IntVar[] x;
+    final IntVar cost;
+
+    VariantModel(int seed) {
+      Random rnd = new Random(seed * 6151L + 3);
+      boolean except = seed % 2 == 0;
+      int n = 4;
+      x = new IntVar[n];
+      int first = except ? 0 : 1 + rnd.nextInt(3);
+      // more values than the LP encodes value by value (128), so the LP sees only the cuts
+      int m = 160;
+      for (int i = 0; i < n; i++) {
+        IntDomain d = new IntervalDomain();
+        for (int v = first; v < first + m; v++) {
+          if (rnd.nextInt(8) > 0 || v == 0) {
+            d.unionAdapt(v, v);
+          }
+        }
+        if (d.isEmpty()) {
+          d.unionAdapt(first, first);
+        }
+        x[i] = new IntVar(store, "x" + i, d);
+      }
+      long[] w = new long[n + 1];
+      IntVar[] vars = Arrays.copyOf(x, n + 1);
+      long range = 0;
+      for (int i = 0; i < n; i++) {
+        // all-different-except-0: every variable wants a large value
+        w[i] = except ? -1 - rnd.nextInt(9) : rnd.nextInt(19) - 9;
+        range += Math.abs(w[i]) * (first + m);
+      }
+      cost = new IntVar(store, "cost", (int) -range, (int) range);
+      vars[n] = cost;
+      w[n] = -1;
+      int[] wi = new int[n + 1];
+      for (int i = 0; i <= n; i++) {
+        wi[i] = (int) w[i];
+      }
+      store.impose(new LinearInt(vars, wi, "==", 0));
+      // a second row, as the relaxation needs two: a knapsack over the variables
+      int[] a = new int[n];
+      long most = 0;
+      for (int i = 0; i < n; i++) {
+        a[i] = 1 + rnd.nextInt(3);
+        most += (long) a[i] * (first + m - 1);
+      }
+      store.impose(new LinearInt(x, a, "<=", (int) (most * (6 + rnd.nextInt(4)) / 10)));
+      if (except) {
+        store.impose(new AlldifferentExceptZero(x));
+      } else {
+        IntVar[] counters = new IntVar[m];
+        for (int k = 0; k < m; k++) {
+          // mostly at most one copy, some values two or three, a few needed once
+          int lo = rnd.nextInt(80) == 0 ? 1 : 0;
+          counters[k] = new IntVar(store, "c" + k, lo, lo + 1 + (rnd.nextInt(8) == 0 ? 2 : 0));
+        }
+        store.impose(new GCC(x, counters, first));
+      }
+    }
+
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new InputOrderSelect<>(store, x, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : Long.MIN_VALUE;
+    }
   }
 
   /**
@@ -422,6 +657,63 @@ class AlldifferentRowsTest {
       a[i] = a[k];
       a[k] = t;
     }
+  }
+
+  // a nonempty random subset of the values
+  private static int[] subset(Random rnd, int[] values) {
+    List<Integer> out = new ArrayList<>();
+    for (int v : values) {
+      if (rnd.nextBoolean()) {
+        out.add(v);
+      }
+    }
+    if (out.isEmpty()) {
+      out.add(values[0]);
+    }
+    return out.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  // every tuple of the domains
+  private static List<int[]> tuples(IntVar[] x) {
+    List<int[]> out = new ArrayList<>();
+    out.add(new int[0]);
+    for (IntVar v : x) {
+      List<int[]> next = new ArrayList<>();
+      for (int[] s : out) {
+        for (var en = v.domain.valueEnumeration(); en.hasMoreElements(); ) {
+          int[] t = Arrays.copyOf(s, s.length + 1);
+          t[s.length] = en.nextElement();
+          next.add(t);
+        }
+      }
+      out = next;
+    }
+    return out;
+  }
+
+  // the values that are not exceptions are pairwise distinct
+  private static boolean exceptDistinct(int[] s, int[] exceptions) {
+    for (int i = 0; i < s.length; i++) {
+      for (int j = i + 1; j < s.length; j++) {
+        int v = s[i];
+        if (v == s[j] && Arrays.stream(exceptions).noneMatch(e -> e == v)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // each counted value is taken within its bounds, and only counted values when closed
+  private static boolean counts(int[] s, int[] values, int[] least, int[] most, boolean closed) {
+    for (int k = 0; k < values.length; k++) {
+      int v = values[k];
+      long c = Arrays.stream(s).filter(e -> e == v).count();
+      if (c < least[k] || c > most[k]) {
+        return false;
+      }
+    }
+    return !closed || Arrays.stream(s).allMatch(e -> Arrays.stream(values).anyMatch(v -> v == e));
   }
 
   // every all-different solution of the domains
