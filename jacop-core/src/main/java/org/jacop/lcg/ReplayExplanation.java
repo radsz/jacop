@@ -106,10 +106,9 @@ final class ReplayExplanation {
     this.trail = trail;
     this.constraint = constraint;
     this.scratch = scratch;
-    scratch.imposeCopy(constraint);
-    boolean consistent;
+    boolean consistent = scratch.imposeCopy(constraint);
     try {
-      consistent = scratch.store.consistency();
+      consistent = consistent && scratch.store.consistency();
     } catch (FailException _) {
       consistent = false;
     }

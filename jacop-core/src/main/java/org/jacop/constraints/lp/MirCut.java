@@ -178,8 +178,28 @@ final class MirCut {
    * @return {@code {g..., right}}: the weights followed by the right side, or null
    */
   static long[] raw(int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
+    return raw(columns, c, b, value, lo, hi, 0);
+  }
+
+  /**
+   * Returns the MIR cut of {@code sum c_k x_columns[k] <= b} as {@link #raw(int[], long[], long,
+   * double[], long[], long[])} does, with one more divisor tried before those of the inside
+   * columns: for a row of the tableau, the weight of its basic column, the divisor of the Gomory
+   * mixed-integer cut of the row.
+   *
+   * @param columns the columns of the row, each once (not changed)
+   * @param c the weights of the columns (not changed)
+   * @param b the right side
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @param first a divisor to try first, or 0 for none
+   * @return {@code {g..., right}}: the weights followed by the right side, or null
+   */
+  static long[] raw(
+      int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi, long first) {
     try {
-      return rawCut(columns, c, b, value, lo, hi);
+      return rawCut(columns, c, b, value, lo, hi, first);
     } catch (ArithmeticException _) {
       return null;
     }
@@ -187,6 +207,11 @@ final class MirCut {
 
   private static long[] rawCut(
       int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
+    return rawCut(columns, c, b, value, lo, hi, 0);
+  }
+
+  private static long[] rawCut(
+      int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi, long first) {
     int n = c.length;
     long[] cc = new long[n];
     boolean[] up = new boolean[n];
@@ -221,7 +246,7 @@ final class MirCut {
     if (count == 0) {
       return null;
     }
-    long d = bestDivisor(cc, side, xs, divisor, inside, count);
+    long d = bestDivisor(cc, side, xs, divisor, inside, count, Math.absExact(first));
     if (d == 0) {
       return null;
     }
@@ -252,7 +277,13 @@ final class MirCut {
 
   // the divisor of the most efficacious cut among the weights of the inside variables, halved
   private static long bestDivisor(
-      long[] cc, long side, double[] xs, long[] divisor, double[] inside, int count) {
+      long[] cc,
+      long side,
+      double[] xs,
+      long[] divisor,
+      double[] inside,
+      int count,
+      long preferred) {
     Integer[] order = new Integer[count];
     for (int i = 0; i < count; i++) {
       order[i] = i;
@@ -260,8 +291,16 @@ final class MirCut {
     Arrays.sort(order, (p, q) -> Double.compare(inside[q], inside[p]));
     long bestDivisor = 0;
     double best = MIN_EFFICACY;
-    long[] tried = new long[MAX_DIVISORS * 4];
+    long[] tried = new long[MAX_DIVISORS * 4 + 1];
     int triedCount = 0;
+    if (preferred > 0) {
+      tried[triedCount++] = preferred;
+      double e = efficacy(cc, side, xs, preferred);
+      if (e > best) {
+        best = e;
+        bestDivisor = preferred;
+      }
+    }
     int i = 0;
     int taken = 0;
     while (i < count && taken < MAX_DIVISORS) {

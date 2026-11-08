@@ -332,6 +332,12 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     }
     state.set(REST, restEq);
     state.set(POSITION, start);
+
+    // every variable is fixed or holds no counted value: the counts are exact and set, so no
+    // change can prune
+    if (start == n) {
+      removeConstraint();
+    }
   }
 
   /**

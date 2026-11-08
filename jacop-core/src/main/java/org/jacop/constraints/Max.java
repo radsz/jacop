@@ -133,6 +133,18 @@ public class Max extends AbstractMinMax
     } while (store.propagationHasOccurred);
 
     position.update(start);
+
+    // entailed once max is fixed to a value a list variable is fixed to, since every variable
+    // is already at most max: the constraint is not woken again by the other variables
+    if (max.singleton()) {
+      int value = max.value();
+      for (int i = start; i < l; i++) {
+        if (list[i].singleton() && list[i].value() == value) {
+          removeConstraint();
+          break;
+        }
+      }
+    }
   }
 
   private void handleSingleRemainingVariable(Store store, int start) {
