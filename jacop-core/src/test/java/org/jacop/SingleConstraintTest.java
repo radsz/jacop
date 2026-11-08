@@ -9104,8 +9104,9 @@ class SingleConstraintTest extends TestHelper {
 
   /**
    * The solution hint of a coloured spanning tree is a common base within the domains after the
-   * root propagation: n-1 edges without a cycle, within the colour limits, and with the selected
-   * edges in it, also when the filtering selected edges after the components were made.
+   * root propagation: n-1 edges without a cycle, within the colour limits, with the selected edges
+   * in it and of the least cost, also when the filtering selected edges after the components were
+   * made.
    */
   @Test
   void colouredSpanningTreeHintIsACommonBase() {
@@ -9158,13 +9159,20 @@ class SingleConstraintTest extends TestHelper {
           size++;
           if (colours[e] >= 0) {
             count[colours[e]]++;
-            assertThat(count[colours[e]]).as("trial %d colour", trial).isLessThanOrEqualTo(caps[colours[e]]);
+            assertThat(count[colours[e]])
+                .as("trial %d colour", trial)
+                .isLessThanOrEqualTo(caps[colours[e]]);
           }
         }
       }
       assertThat(size).as("trial %d", trial).isEqualTo(n - 1);
+      int weight = 0;
+      for (int i = 0; i < vars.length; i++) {
+        weight += values[i] * w[Arrays.asList(es).indexOf(vars[i])];
+      }
+      assertThat(weight).as("trial %d", trial).isEqualTo(cost.min());
     }
-    assertThat(hinted).isGreaterThan(100);
+    assertThat(hinted).isGreaterThan(50);
   }
 
   private static int root(int[] parent, int v) {

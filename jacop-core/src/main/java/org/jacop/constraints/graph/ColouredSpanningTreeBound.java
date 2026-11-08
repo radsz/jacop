@@ -77,6 +77,13 @@ import org.jacop.lcg.Explainable;
  * 2010), which is valid reduced-cost filtering of a Lagrangian relaxation (Sellmann, Theoretical
  * foundations of CP-based Lagrangian relaxation, CP 2004).
  *
+ * <p>Solution hint: at the first call the Lagrangian tree is made a common base (its edges first,
+ * greedily within the colour limits, then augmenting paths) and improved by edge swaps; when its
+ * weight meets the lower bound of the cost it is optimal and is given as a {@link SolutionHint}.
+ *
+ * <p>Lazy clause generation: the bounds are explained by {@link TreeExplanation} with the
+ * multipliers of the last calls; the absence of a common base keeps the generic reason.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -915,7 +922,16 @@ public class ColouredSpanningTreeBound extends Constraint
     return qt == n;
   }
 
+  // the hint is given only when the tree meets the lower bound of the cost, so it is optimal: a
+  // hint above the bound was measured to slow the search down as often as it sped it up
   private void hintFrom(int[] tree) {
+    long weight = 0;
+    for (int e = 0; e < m; e++) {
+      weight += (long) tree[e] * weights[e];
+    }
+    if (weight > cost.min()) {
+      return;
+    }
     hintVars = new IntVar[m];
     hint = new int[m];
     int i = 0;

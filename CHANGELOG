@@ -3654,25 +3654,28 @@ Version 5.0 (unreleased)
      Challenge or wide-set model combines weighted_spanning_tree with
      such limits, so the default benchmarks are not affected.
 
-207. ColouredSpanningTreeBound gives a solution hint and its own LCG
-     reasons, and SpanningTreeBound its own LCG reasons. The hint is the
-     Lagrangian tree made a common base (greedy within the colour limits,
-     completed by augmenting paths) and improved by edge swaps; the
-     FlatZinc front end tries the values of such hints first when the
-     model has no search annotation, and puts them in the saved phases
-     (-Dorg.jacop.fz.constraintHints=false turns it off). The reasons
+207. ColouredSpanningTreeBound and SpanningTreeBound give their own LCG
+     reasons, and ColouredSpanningTreeBound a solution hint. The reasons
      follow the cycle and cut optimality conditions of minimum spanning
-     trees (Tarjan, Inf. Process. Lett. 1982): a lower bound on the cost
-     cites only the excluded edges cheaper than an edge of their tree
-     path and the selected edges that a cheaper edge could replace; the
-     removal or selection of an edge adds the edges of its tree path or
-     of its fundamental cut and the maximum of the cost. A coloured tree
-     rebuilds the bound with the multipliers it used, kept per call.
-     Under --lcg the generic share of reasons on rb_100_s2 drops from
-     0.48 to 0.06 and the average reason from 128 to 41 atoms. On the 30
-     instances of osolpro benchmarks/matroid-intersection all 30 are
-     still proved at 240 s, with cc_150_30_s2 in 2.6 s instead of 202 s
-     and rb_100_s1 in 8.5 s instead of 34 s.
+     trees (Tarjan, Sensitivity analysis of minimum spanning trees, Inf.
+     Process. Lett. 14, 1982): a lower bound on the cost cites only the
+     excluded edges cheaper than an edge of their tree path and the
+     selected edges that a cheaper edge could replace; the removal or
+     selection of an edge adds the edges of its tree path or of its
+     fundamental cut and the maximum of the cost. A coloured tree rebuilds
+     its bound with the multipliers of its last calls; the absence of a
+     common base keeps the generic reason. The hint is the Lagrangian
+     tree made a common base and improved by edge swaps, given when its
+     weight meets the lower bound of the cost (so it is optimal); the
+     FlatZinc front end tries the values of such hints first when the
+     model has no search annotation and puts them in the saved phases
+     (-Dorg.jacop.fz.constraintHints=false turns it off). On rb_100_s2
+     under --lcg the generic share of reasons drops from 0.48 to 0.06 and
+     the average reason from 128 to 41 atoms. On the 39 instances of
+     osolpro benchmarks/matroid-intersection at 600 s the total time
+     drops from 1798 s to 480 s (all proved before and after), e.g.
+     ccd_150_30_s1 6 s instead of 563 s and cc_150_30_s2 2.4 s instead of
+     462 s.
 
 Version 4.11
 =============
