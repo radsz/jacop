@@ -715,6 +715,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.alldiffCuts
             + "\n%%%mzn-stat: lpAlldiffBound="
             + r.alldiffBound
+            + "\n%%%mzn-stat: lpTreeCuts="
+            + r.treeCuts
+            + "\n%%%mzn-stat: lpTreeBound="
+            + r.treeBound
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -2117,6 +2121,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean literalsOnly =
         branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
+    // the assumptions of core-guided, neighbourhood and lower-bound runs on one decision level
+    lcg.sat().setAssumptionsOnOneLevel(!"0".equals(options.freeConfig("lcg-assume-level", "1")));
     if (free) {
       lcg.setBranching(branching);
       if (branching != LcgSolver.Branching.ACTIVITY) {
@@ -2163,12 +2169,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the columns of tried encodings that the root trial dropped (gbac UD8 342 instead of 89). On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
-    // it in 60 s
+    // it in 60 s. Under -f also on when the relaxation has the subtour elimination cuts of trees,
+    // whose root solution is often the optimum (surface-based-tsp berlin52: -f finds it in 2 s with
+    // them, in 13-50 s without); in fixed search the activity runs it guides slowed berlin52 down
+    // (149 s instead of 60 s)
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching) && linearRelaxation.simplexValueColumns() > 0);
+                || "auto".equals(lpBranching)
+                    && (linearRelaxation.simplexValueColumns() > 0
+                        || free && linearRelaxation.treeConstraints() > 0));
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2630,6 +2641,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgPureClauses="
+            + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
             + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="
@@ -2926,6 +2939,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
             // the columns of a table with a key column (a row lookup) follow the key
             .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
+            // the cells of a matrix only element constraints look up follow them
+            .follow(!"0".equals(options.freeConfig("ls-follow", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
