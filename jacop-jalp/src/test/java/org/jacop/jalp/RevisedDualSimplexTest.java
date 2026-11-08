@@ -341,6 +341,39 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void twoEqualRowsWithFreeColumnsAreNotLeftAtTheLimit() {
+    // rows 5 and 8 are the same row, a range and an equation, over the free columns 9 and 12; at
+    // artificial bounds of 1e12 the basic slack of row 8 is off by 2e-5, and the combination of
+    // the two rows is 0 over every column, so no pivot can move it: the solve used to stop at its
+    // limit instead of finding the problem unbounded
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{1}, {1, 7, 8, 12}, {10}, {}, {8, 10}, {9, 12}, {1, 8}, {0}, {9, 12}};
+    double[][] vals = {
+      {-10000},
+      {-1, -4e-4, 0.03, 0.4},
+      {0.01},
+      {},
+      {-3, -3},
+      {-5, -0.1},
+      {-5, 0.01},
+      {0.2},
+      {-5, -0.1}
+    };
+    double[] rowLo = {-inf, -0.07, -inf, -inf, 8, 0.06, -0.08, -80, 0.06};
+    double[] rowHi = {500, -0.07, 0.09, 1200, 8, 0.09, inf, -80, 0.06};
+    double[] cost = {-100, 0.03, -30, -1, -0.1, -2, -0.2, 200, 3, -0.02, 3, -0.1, 0.3};
+    double[] lo = {-inf, -inf, -inf, -inf, 0.2, 0, -inf, -inf, 3, -inf, -inf, -inf, -inf};
+    double[] hi = {200, 0, 20, inf, inf, 2, 0.3, -200, inf, inf, -1, inf, inf};
+    RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+    lp.setExact(true);
+    lp.setPresolve(false);
+    for (int j = 0; j < lo.length; j++) {
+      lp.setBounds(j, lo[j], hi[j]);
+    }
+    assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+  }
+
+  @Test
   void givenDualsHaveNoPerturbation() {
     // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
     double inf = Double.POSITIVE_INFINITY;

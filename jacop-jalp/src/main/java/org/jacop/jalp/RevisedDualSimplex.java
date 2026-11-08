@@ -1143,12 +1143,23 @@ public final class RevisedDualSimplex {
   // at a primal feasible basis: the status to return, or -1 to go on pivoting
   private int atOptimum() {
     if (skippedRows > 0) {
-      // the rows left out must hold on fresh basic values, or the solve stops at its limit
+      // the rows left out must hold on fresh basic values, or have no proof of infeasibility on
+      // fresh factors either; then their violation is round-off and the solve ends as if they
+      // held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
+      // one row off by 2e-5, the combination of the rows 0 over every column). A row with a
+      // proof stops the solve at its limit
       clearSkipped();
       refactor();
-      if (leavingRow() >= 0) {
-        return LIMIT;
+      for (int r = leavingRow(); r >= 0; r = leavingRow()) {
+        rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
+        if (proofHolds(r)) {
+          clearSkipped();
+          return LIMIT;
+        }
+        skipped[r] = true;
+        skippedRows++;
       }
+      clearSkipped();
     }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
