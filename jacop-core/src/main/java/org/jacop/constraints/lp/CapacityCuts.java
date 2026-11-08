@@ -61,9 +61,10 @@ import org.jacop.core.IntVar;
  * and the bounds of the self loops at the first separation (the root), so they hold for the whole
  * search, also when separated later.
  *
- * <p>Over the same customers it also separates blossom and comb cuts, see {@link CombCuts} (Padberg
- * and Rao, Odd minimum cut-sets and b-matchings, Mathematics of Operations Research 7, 1982;
- * Grötschel and Padberg, Mathematical Programming 16, 1979).
+ * <p>For routes without a capacity (a travelling salesman tour) it also separates blossom and comb
+ * cuts over the same customers, see {@link CombCuts} (Padberg and Rao, Odd minimum cut-sets and
+ * b-matchings, Mathematics of Operations Research 7, 1982; Grötschel and Padberg, Mathematical
+ * Programming 16, 1979).
  */
 public final class CapacityCuts {
 
@@ -74,8 +75,9 @@ public final class CapacityCuts {
   private static final boolean MULTISTAR =
       !"false".equals(System.getProperty("org.jacop.lp.multistarCuts"));
 
-  // the blossom and comb cuts of the customers (CombCuts)
-  private static final boolean COMBS = !"false".equals(System.getProperty("org.jacop.lp.combCuts"));
+  // the blossom and comb cuts of the customers (CombCuts): true or false for all Routes; by default
+  // only for Routes without a capacity (travelling salesman tours), as on CVRP they were level
+  private static final String COMBS = System.getProperty("org.jacop.lp.combCuts", "");
 
   // flows below this are taken as zero in the support graph
   private static final double EPSILON = 1e-6;
@@ -284,7 +286,8 @@ public final class CapacityCuts {
     }
     // blossoms and combs only take the slots the capacity cuts leave: competing for them by
     // efficacy, they lowered the root bound on CVRP (A-n37-k5 659 to 643)
-    if (COMBS && combs) {
+    boolean uncapacitated = demands == null || capacity <= 0;
+    if (combs && ("true".equals(COMBS) || uncapacitated && !"false".equals(COMBS))) {
       List<Cut> found = CombCuts.separate(tails, heads, value, mandatory, flow);
       found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
       cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));

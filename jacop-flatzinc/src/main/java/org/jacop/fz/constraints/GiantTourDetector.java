@@ -80,13 +80,30 @@ import org.jacop.fz.SimpleNode;
  *       times at the end nodes (cvrp).
  * </ul>
  *
+ * <p>A travelling salesman tour, one circuit {@code circuit(x)} with no successor fixed, is a
+ * single route from its first node, taken as the depot, back to it. The detector posts the same
+ * arcs, cost rows and {@link Routes} for it, with the degree rows of the depot, so that the linear
+ * relaxation becomes the subtour elimination relaxation of Dantzig, Fulkerson and Johnson, with
+ * subtour cuts (the capacity cuts without demands) and blossom and comb cuts (Padberg and Rao,
+ * Grötschel and Padberg). This is off by default: System property org.jacop.fz.tsp=true turns it
+ * on, for tours of at most org.jacop.fz.tspArcs arcs (default 40,000). Use it for a pure TSP whose
+ * objective is the sum of the arc costs of the tour. On TSPLIB instances of 70 to 152 cities its
+ * bound is within 1 % of the optimum (median 0.07 %, against 0.75 % with free search and 10 % with
+ * the model's search without it), and proofs are often faster, but each LP solve costs time, so on
+ * tours of more than about 120 cities the solutions found within a time limit can be worse.
+ *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
  *
  * <p>References: P. Kilby and P. Shaw, Vehicle Routing, in Handbook of Constraint Programming,
  * Elsevier, 2006 (the giant-tour model); J. Lysgaard, A. N. Letchford and R. W. Eglese, A new
  * branch-and-cut algorithm for the capacitated vehicle routing problem, Mathematical Programming
- * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts).
+ * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts); G. Dantzig, R. Fulkerson
+ * and S. Johnson, Solution of a large-scale traveling-salesman problem, Operations Research 2(4),
+ * 1954 (the subtour elimination relaxation); M. W. Padberg and M. R. Rao, Odd minimum cut-sets and
+ * b-matchings, Mathematics of Operations Research 7(1), 1982, and M. Grötschel and M. W. Padberg,
+ * On the symmetric travelling salesman problem I and II, Mathematical Programming 16, 1979 (blossom
+ * and comb cuts).
  */
 public class GiantTourDetector implements ParserTreeConstants {
 
