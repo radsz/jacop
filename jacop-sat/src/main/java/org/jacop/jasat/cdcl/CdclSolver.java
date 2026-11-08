@@ -956,8 +956,8 @@ public final class CdclSolver {
   }
 
   private void newDecisionLevel() {
-    if (decisionLevel == trailLim.length) {
-      trailLim = Arrays.copyOf(trailLim, 2 * trailLim.length);
+    if (decisionLevel >= trailLim.length) {
+      trailLim = Arrays.copyOf(trailLim, 2 * decisionLevel + 2);
       qheadLim = Arrays.copyOf(qheadLim, trailLim.length);
     }
     qheadLim[decisionLevel] = qhead;
