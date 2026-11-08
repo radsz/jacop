@@ -453,6 +453,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: perspective cuts of half-reified linear relations added. */
   public long perspectiveCuts;
 
+  /** Statistics: the half-reified linear relations whose perspective cuts are separated. */
+  public long perspectiveRelations;
+
   // the capacity cuts kept, as rows: they follow from the Routes, not from the rows, so a copy
   // takes them as rows of its own
   private final List<LinearForm> capacityForms = new ArrayList<>();
@@ -980,6 +983,7 @@ public class LinearRelaxation extends Constraint
     r.capacity = separations;
     r.energy = resources;
     r.perspective = implications.isEmpty() ? null : new PerspectiveCuts(implications);
+    r.perspectiveRelations = implications.size();
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 

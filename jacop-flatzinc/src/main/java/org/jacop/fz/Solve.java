@@ -684,6 +684,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.energyCuts
             + "\n%%%mzn-stat: lpPerspectiveCuts="
             + r.perspectiveCuts
+            + "\n%%%mzn-stat: lpPerspectiveRelations="
+            + r.perspectiveRelations
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
             + "\n%%%mzn-stat: lpCapacitySearchCuts="
