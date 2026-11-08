@@ -33,8 +33,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import org.jacop.constraints.Routes;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -227,5 +229,141 @@ class CapacityCutsTest {
     CapacityCuts.Cut best = found.get(0);
     // either two arcs from the depot at least, or the arcs between 1 and 2 at most 0
     assertThat(best.entering() ? best.bound() : 2 - best.bound()).isEqualTo(2);
+  }
+
+  // every set of routes of a complete graph over n nodes with demands, by depth-first search: each
+  // route leaves the depot, visits customers within the capacity and returns
+  private static Set<List<Integer>> routes(
+      int n, int[] tails, int[] heads, int[] demands, int cap) {
+    int[][] arc = new int[n][n];
+    for (int[] r : arc) {
+      Arrays.fill(r, -1);
+    }
+    for (int a = 0; a < tails.length; a++) {
+      arc[tails[a]][heads[a]] = a;
+    }
+    Set<List<Integer>> result = new HashSet<>();
+    extend(0, 0, new boolean[n], new int[tails.length], arc, demands, cap, result);
+    return result;
+  }
+
+  private static void extend(
+      int at,
+      int load,
+      boolean[] visited,
+      int[] bits,
+      int[][] arc,
+      int[] demands,
+      int cap,
+      Set<List<Integer>> result) {
+    int n = visited.length;
+    if (at == 0) {
+      boolean all = true;
+      for (int v = 1; v < n; v++) {
+        all &= visited[v];
+      }
+      if (all) {
+        result.add(Arrays.stream(bits).boxed().toList());
+        return;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      int a = arc[at][v];
+      if (a < 0
+          || v == at
+          || at == 0 && v == 0
+          || v != 0 && (visited[v] || load + demands[v] > cap)) {
+        continue;
+      }
+      // routes from the depot start at increasing first customers only through distinct arcs
+      bits[a] = 1;
+      if (v != 0) {
+        visited[v] = true;
+      }
+      extend(v, v == 0 ? 0 : load + demands[v], visited, bits, arc, demands, cap, result);
+      if (v != 0) {
+        visited[v] = false;
+      }
+      bits[a] = 0;
+    }
+  }
+
+  /**
+   * Framed capacity cuts, and all the other cuts, keep every set of routes of random graphs with
+   * five to seven customers, from LP-like values that mix sets of routes.
+   */
+  @Test
+  void framedCutsKeepEverySetOfRoutes() {
+    int framed = 0;
+    for (int run = 0; run < Integer.getInteger("framed.instances", 40); run++) {
+      Random rnd = new Random(1000 + run);
+      int n = 6 + rnd.nextInt(3);
+      List<int[]> arcs = new ArrayList<>();
+      for (int t = 0; t < n; t++) {
+        for (int h = 0; h < n; h++) {
+          if (t != h && (t == 0 || h == 0 || rnd.nextInt(6) > 0)) {
+            arcs.add(new int[] {t, h});
+          }
+        }
+      }
+      int[] tails = arcs.stream().mapToInt(a -> a[0]).toArray();
+      int[] heads = arcs.stream().mapToInt(a -> a[1]).toArray();
+      int cap = 6 + rnd.nextInt(6);
+      int[] demands = new int[n];
+      for (int v = 1; v < n; v++) {
+        demands[v] = 1 + rnd.nextInt(cap / 2 + 1);
+      }
+      List<List<Integer>> solutions = new ArrayList<>(routes(n, tails, heads, demands, cap));
+      if (solutions.isEmpty()) {
+        continue;
+      }
+      Store store = new Store();
+      IntVar[] literals = new IntVar[tails.length];
+      for (int a = 0; a < literals.length; a++) {
+        literals[a] = new IntVar(store, "x" + a, 0, 1);
+      }
+      CapacityCuts cuts = new CapacityCuts(new Routes(tails, heads, literals, demands, cap));
+      for (int trial = 0; trial < 100; trial++) {
+        double[] value = new double[tails.length];
+        int k = 2 + rnd.nextInt(3);
+        for (int i = 0; i < k; i++) {
+          List<Integer> s = solutions.get(rnd.nextInt(solutions.size()));
+          for (int a = 0; a < value.length; a++) {
+            value[a] += s.get(a) / (double) k;
+          }
+        }
+        for (int a = 0; a < value.length; a++) {
+          if (rnd.nextInt(8) == 0) {
+            value[a] = rnd.nextDouble();
+          }
+        }
+        for (CapacityCuts.Cut cut : cuts.separate(value, 100)) {
+          if (Arrays.stream(cut.weights()).allMatch(w -> w == 1 || w == 2)
+              && Arrays.stream(cut.weights()).anyMatch(w -> w == 2)) {
+            framed++;
+          }
+          double act = activity(cut, value);
+          assertThat(cut.entering() ? act < cut.bound() : act > cut.bound())
+              .as("seed %d: the values violate %s", run, cut)
+              .isTrue();
+          for (List<Integer> s : solutions) {
+            int[] bits = s.stream().mapToInt(Integer::intValue).toArray();
+            assertThat(holds(cut, bits)).as("seed %d: %s cuts off %s", run, cut, s).isTrue();
+          }
+        }
+      }
+    }
+    System.out.println("framed cuts " + framed);
+    assertThat(framed).isPositive();
+  }
+
+  /** The bin packing number of a few item sets. */
+  @Test
+  void binPacking() {
+    assertThat(CapacityCuts.binPacking(new long[] {4, 4, 4}, 6)).isEqualTo(3);
+    assertThat(CapacityCuts.binPacking(new long[] {3, 3, 2, 2, 2}, 6)).isEqualTo(2);
+    assertThat(CapacityCuts.binPacking(new long[] {5, 4, 3}, 6)).isEqualTo(3);
+    assertThat(CapacityCuts.binPacking(new long[] {6, 1, 5}, 6)).isEqualTo(2);
+    assertThat(CapacityCuts.binPacking(new long[] {}, 6)).isZero();
   }
 }
