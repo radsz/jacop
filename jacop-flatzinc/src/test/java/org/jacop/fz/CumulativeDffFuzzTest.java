@@ -47,8 +47,9 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * Random small RCPSP models in FlatZinc (one or two cumulatives with fixed or two-valued resource
  * uses, precedences, makespan objective). Each is solved with the redundant resources of dual
- * feasible functions ({@code org.jacop.fz.cumulativeDff=3}) without LCG, with LCG and the
- * explanation checker, and with LCG and free search, and compared with the optimum without them.
+ * feasible functions ({@code org.jacop.fz.cumulativeDff=3}, variable uses too, at the root only or
+ * at every node in turn) without LCG, with LCG and the explanation checker, and with LCG and free
+ * search, and compared with the optimum without them.
  *
  * <pre>
  * mvn -Pmin -pl jacop-flatzinc test -Dtest=CumulativeDffFuzzTest -Dcumulativedff.trials=2000
@@ -171,10 +172,13 @@ class CumulativeDffFuzzTest {
         Integer expected = solve(model, "--lcg", "off");
         System.setProperty("jacop.lcg.check", "true");
         System.setProperty("org.jacop.fz.cumulativeDff", "3");
+        System.setProperty("org.jacop.fz.cumulativeDff.variableUses", "true");
         try {
           String[][] options = {{"--lcg", "off", "-debug"}, {"-debug"}, {"-f", "-debug"}};
           for (String[] o : options) {
             runs++;
+            // root-only resources on even trials, resources at every node on odd ones
+            System.setProperty("org.jacop.fz.cumulativeDff.at", trial % 2 == 0 ? "root" : "search");
             Integer got = solve(model, o);
             if (got == null || !got.equals(expected)) {
               failures.add(
@@ -193,6 +197,8 @@ class CumulativeDffFuzzTest {
         } finally {
           System.clearProperty("jacop.lcg.check");
           System.clearProperty("org.jacop.fz.cumulativeDff");
+          System.clearProperty("org.jacop.fz.cumulativeDff.variableUses");
+          System.clearProperty("org.jacop.fz.cumulativeDff.at");
         }
       }
     } catch (IllegalStateException e) {

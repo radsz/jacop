@@ -525,9 +525,12 @@ class GlobalConstraints implements ParserTreeConstants {
    * together use at most C, so for a dual feasible function f their uses f(r_j) sum to at most
    * f(C), and {@code cumulative(s, d, f(r), f(C))} holds in every solution. Its energy rules can
    * prune what the original's cannot. {@link DualFeasibleFunctions#redundantResources} chooses the
-   * functions from the smallest uses and lengths; a variable use with at most 64 values gets a
-   * mapped variable linked to it by a table. The resources are redundant: local search does not
-   * evaluate them, and they have degree weight 0.
+   * functions from the smallest uses and lengths. Only cumulatives with fixed uses get them, unless
+   * {@code org.jacop.fz.cumulativeDff.variableUses=true}, which maps a variable use with at most 64
+   * values to a variable linked to it by a table. With {@code org.jacop.fz.cumulativeDff.at=root}
+   * (the default) they propagate only at the root of search, with edge finding, as a bound step
+   * after each restart; {@code search} propagates them at every node. The resources are redundant:
+   * local search does not evaluate them, and they have degree weight 0.
    */
   private void poseDffResources(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
     int max = cumulativeDffResources();
@@ -538,8 +541,12 @@ class GlobalConstraints implements ParserTreeConstants {
     int n = r.length;
     int[] uses = new int[n];
     int[] lengths = new int[n];
+    boolean variableUses =
+        Boolean.parseBoolean(System.getProperty("org.jacop.fz.cumulativeDff.variableUses", FALSE));
     for (int j = 0; j < n; j++) {
-      if (r[j].min() < 0 || r[j].getSize() > DFF_MAX_USE_VALUES) {
+      if (r[j].min() < 0
+          || r[j].getSize() > DFF_MAX_USE_VALUES
+          || !variableUses && !r[j].singleton()) {
         return;
       }
       uses[j] = Math.min(r[j].min(), c);
@@ -602,6 +609,13 @@ class GlobalConstraints implements ParserTreeConstants {
       // energy rules run; the original cumulative checks that the tasks fit
       cumul.doTimeTable(false);
       cumul.doTimeTableDisjunctive(false);
+    }
+    if ("root".equals(System.getProperty("org.jacop.fz.cumulativeDff.at", "root"))) {
+      // a bound step at the root and after each restart: edge finding too, every call
+      cumul.doRootOnly(true);
+      cumul.doAdaptiveEnergyReasoning(false);
+      cumul.doEdgeFind(true);
+      cumul.doQuadraticEdgeFind(true);
     }
     support.delayedConstraints.add(cumul);
   }

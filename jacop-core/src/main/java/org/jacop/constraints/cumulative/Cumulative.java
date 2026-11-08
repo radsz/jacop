@@ -82,6 +82,9 @@ public class Cumulative extends CumulativeBasic {
   boolean doTimeTable = true;
   boolean doHorizontallyElasticEdgeFind;
   private HorizontallyElasticEdgeFinder horizontallyElastic;
+  // propagate only at the level of the first consistency call (the root of search), see rootOnly
+  private boolean rootOnly;
+  private int rootLevel = -1;
   boolean adaptiveEnergy;
   // calls in a row without pruning after which an adaptive rule starts to be skipped
   private static final int IDLE_LIMIT = 64;
@@ -256,8 +259,30 @@ public class Cumulative extends CumulativeBasic {
     }
   }
 
+  /**
+   * Sets whether this constraint propagates only at the root of search: the store level of its
+   * first consistency call, to which restarts and branch and bound with lazy clause generation
+   * return. It suits a redundant constraint whose rules are too costly at every node but can
+   * strengthen the root, for example with a better objective bound after each restart. Without
+   * pruning below the root the constraint does not check solutions, so only a redundant constraint
+   * may use it. Copies of the constraint do not keep it. It is off by default.
+   *
+   * @param root true to propagate only at the root, false at every node.
+   */
+  public void doRootOnly(boolean root) {
+    rootOnly = root;
+  }
+
   @Override
   public void consistency(Store store) {
+
+    if (rootOnly) {
+      if (rootLevel < 0) {
+        rootLevel = store.level;
+      } else if (store.level > rootLevel) {
+        return;
+      }
+    }
 
     do {
 
