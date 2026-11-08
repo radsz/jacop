@@ -31,6 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -92,8 +95,12 @@ public class LexChain extends Constraint
   /** Length of each vector. */
   final int n;
 
-  /** True when a variable occurs more than once in the chain. */
-  private final boolean hasDuplicates;
+  /**
+   * True when a variable occurs more than once in the chain, not counting a variable fixed at the
+   * root (a constant such as the first rows of a symmetry-broken matrix shares one variable per
+   * value): its domain never changes, so neither propagation nor the reasons see the repetition.
+   */
+  private boolean hasDuplicates;
 
   /** Smallest feasible tuple of each vector. */
   private final int[][] lower;
@@ -198,7 +205,7 @@ public class LexChain extends Constraint
     this.lastChanged = -1;
 
     IntVar[] all = Arrays.stream(this.x).flatMap(Arrays::stream).toArray(IntVar[]::new);
-    this.hasDuplicates = Arrays.stream(all).distinct().count() < all.length;
+    this.hasDuplicates = repeats(all, false);
 
     setScope(all);
   }
@@ -232,7 +239,22 @@ public class LexChain extends Constraint
         }
       }
     }
+    if (hasDuplicates && store.level == 0) {
+      hasDuplicates =
+          repeats(Arrays.stream(x).flatMap(Arrays::stream).toArray(IntVar[]::new), true);
+    }
     super.impose(store);
+  }
+
+  /** Whether a variable occurs twice; with skipFixed, a fixed variable does not count. */
+  private static boolean repeats(IntVar[] all, boolean skipFixed) {
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : all) {
+      if (!(skipFixed && v.singleton()) && !seen.add(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override
