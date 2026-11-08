@@ -32,12 +32,15 @@ package org.jacop.constraints.lp;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Linearizations.Implication;
 import org.jacop.core.IntVar;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Perspective cuts of half-reified linear relations, separated from an LP solution. For {@code [b =
@@ -57,8 +60,10 @@ import org.jacop.core.IntVar;
  * variable (Frangioni and Gentile 2006; Günlük and Linderoth 2010): at a fractional b the big-M row
  * alone lets each variable reach its bound. The most violated subset for a solution takes each i
  * whose {@code a_i x_i - (1 - beta) U_i} exceeds {@code beta L_i}, so the separation is exact and
- * linear. As x is integer, {@code sum_{i not in S} L_i - c} is rounded to the gcd of the weights in
- * S, as for a Chvátal-Gomory cut. The cuts use the root bounds, so they hold in the whole search.
+ * linear. As x is integer, {@code c - sum_{i not in S} L_i} is rounded down to a multiple of the
+ * gcd of the weights in S, as for a Chvátal-Gomory cut; since that rounding can make a single
+ * variable's cut (its implied integer bound) the most violated one, those are separated too. The
+ * cuts use the root bounds, so they hold in the whole search.
  *
  * <p>E. Balas, Disjunctive programming, Annals of Discrete Mathematics 5 (1979) 3-51. E. Balas,
  * Disjunctive programming: properties of the convex hull of feasible points, Discrete Applied
@@ -95,6 +100,59 @@ final class PerspectiveCuts {
   }
 
   /**
+   * Returns the cuts of single 0/1 variables of the implications over a 0/1 control, as rows: each
+   * is the conflict of two literals ({@code b = when} with {@code x = 1}, or with {@code x = 0}),
+   * which {@link PairCliques} merges with the other conflicts of the model into clique rows, much
+   * stronger than the pairs or any cut of one implication.
+   *
+   * @param implications the implications
+   * @return the rows {@code x <= [b != when]} or {@code x >= [b = when]}
+   */
+  static List<LinearForm> pairRows(List<Implication> implications) {
+    List<LinearForm> out = new ArrayList<>();
+    for (Implication imp : implications) {
+      IntVar b = imp.control();
+      IntVar[] vs = imp.vars();
+      long[] a = imp.weights();
+      if (b.min() < 0 || b.max() > 1) {
+        continue;
+      }
+      try {
+        long least = 0;
+        for (int k = 0; k < vs.length; k++) {
+          least =
+              Math.addExact(least, Math.multiplyExact(a[k], a[k] > 0 ? vs[k].min() : vs[k].max()));
+        }
+        for (int k = 0; k < vs.length; k++) {
+          IntVar x = vs[k];
+          if (x.min() != 0 || x.max() != 1 || a[k] == 0) {
+            continue;
+          }
+          // a_k x <= c - (least - min a_k x)
+          long room = Math.subtractExact(imp.side(), Math.subtractExact(least, Math.min(a[k], 0)));
+          IntVar[] pair = {x, b};
+          if (a[k] > 0 && room < a[k]) {
+            // [b = when] -> x = 0: x + b <= 1, or x - b <= 0
+            out.add(
+                imp.when()
+                    ? new LinearForm(pair, new long[] {1, 1}, 1, LinearForm.LE)
+                    : new LinearForm(pair, new long[] {1, -1}, 0, LinearForm.LE));
+          } else if (a[k] < 0 && room < 0) {
+            // [b = when] -> x = 1: x - b >= 0, or x + b >= 1
+            out.add(
+                imp.when()
+                    ? new LinearForm(pair, new long[] {1, -1}, 0, LinearForm.GE)
+                    : new LinearForm(pair, new long[] {1, 1}, 1, LinearForm.GE));
+          }
+        }
+      } catch (ArithmeticException _) {
+        // no rows of this implication
+      }
+    }
+    return out;
+  }
+
+  /**
    * It returns the copy over the variables of a copied store.
    *
    * @param map the variables of the copy
@@ -113,8 +171,9 @@ final class PerspectiveCuts {
   }
 
   /**
-   * It returns violated cuts {@code sum w x <= rhs} over the columns, most efficacious first, at
-   * most one for each implication. The bounds of the variables are those of now, the root.
+   * It returns violated cuts {@code sum w x <= rhs} over the columns, most efficacious first: for
+   * each implication the cut of the most violated subset and the violated cuts of single variables.
+   * The bounds of the variables are those of now, the root.
    *
    * @param columnOf the column of each variable that is one
    * @param value the LP solution by column
@@ -141,10 +200,7 @@ final class PerspectiveCuts {
         continue;
       }
       try {
-        MirCut cut = separate(implications.get(r), columns[r], controls[r], value);
-        if (cut != null) {
-          found.add(cut);
-        }
+        separate(implications.get(r), columns[r], controls[r], value, found);
       } catch (ArithmeticException _) {
         // no cut of this implication
       }
@@ -153,35 +209,82 @@ final class PerspectiveCuts {
     return found.size() > limit ? new ArrayList<>(found.subList(0, limit)) : found;
   }
 
-  // the most violated cut of one implication, or null when none is violated enough
-  private static MirCut separate(Implication imp, int[] column, int control, double[] value) {
+  // the violated cuts of one implication: that of the subset most violated before rounding, and
+  // those of the single variables, which the rounding to an integer bound may make the most
+  // violated ones
+  private static void separate(
+      Implication imp, int[] column, int control, double[] value, List<MirCut> found) {
     IntVar[] vs = imp.vars();
     long[] a = imp.weights();
     double b = value[control];
+    // also at beta = 1, where the rounded cuts are stronger than the big-M row
     double beta = imp.when() ? b : 1 - b;
-    if (beta >= 1 - 1e-9) {
-      return null; // the relation itself, a row or a cut of its own
+    int n = vs.length;
+    long[] lo = new long[n];
+    long[] hi = new long[n];
+    boolean[] best = new boolean[n];
+    boolean[] free = new boolean[n];
+    int size = 0;
+    for (int k = 0; k < n; k++) {
+      lo[k] = Math.multiplyExact(a[k], a[k] > 0 ? vs[k].min() : vs[k].max());
+      hi[k] = Math.multiplyExact(a[k], a[k] > 0 ? vs[k].max() : vs[k].min());
+      free[k] = column[k] >= 0 && hi[k] > lo[k];
+      best[k] = free[k] && a[k] * value[column[k]] - (1 - beta) * hi[k] > beta * lo[k] + 1e-9;
+      size += best[k] ? 1 : 0;
     }
-    // the weights of the cut by column, ascending, and the sums over S and over the others
+    List<MirCut> cuts = new ArrayList<>();
+    Set<List<Long>> seen = new HashSet<>();
+    if (size > 1) {
+      add(cut(imp, lo, hi, best, column, control, value), cuts, seen);
+    }
+    for (int k = 0; k < n; k++) {
+      if (free[k]) {
+        boolean[] one = new boolean[n];
+        one[k] = true;
+        add(cut(imp, lo, hi, one, column, control, value), cuts, seen);
+      }
+    }
+    found.addAll(cuts);
+  }
+
+  private static void add(MirCut cut, List<MirCut> cuts, Set<List<Long>> seen) {
+    if (cut == null) {
+      return;
+    }
+    List<Long> key = new ArrayList<>();
+    for (int k = 0; k < cut.columns.length; k++) {
+      key.add((long) cut.columns[k]);
+      key.add(cut.weights[k]);
+    }
+    key.add(cut.rhs);
+    if (seen.add(key)) {
+      cuts.add(cut);
+    }
+  }
+
+  // the cut of the subset in, sum_S a x + k beta <= sum_S U with k = sum_S U + sum_{not S} L - c
+  // and the side c - sum_{not S} L rounded down to a multiple of the gcd of the weights in S, or
+  // null when it is not violated enough
+  private static MirCut cut(
+      Implication imp,
+      long[] lo,
+      long[] hi,
+      boolean[] in,
+      int[] column,
+      int control,
+      double[] value) {
+    long[] a = imp.weights();
     Map<Integer, Long> weights = new TreeMap<>();
     long inS = 0;
     long outS = 0;
     long g = 0;
-    double violation = 0;
-    for (int k = 0; k < vs.length; k++) {
-      long lo = Math.multiplyExact(a[k], a[k] > 0 ? vs[k].min() : vs[k].max());
-      long hi = Math.multiplyExact(a[k], a[k] > 0 ? vs[k].max() : vs[k].min());
-      double in =
-          column[k] < 0 ? Double.NEGATIVE_INFINITY : a[k] * value[column[k]] - (1 - beta) * hi;
-      double out = beta * lo;
-      if (a[k] != 0 && hi > lo && in > out + 1e-9) {
+    for (int k = 0; k < a.length; k++) {
+      if (in[k]) {
         weights.merge(column[k], a[k], Math::addExact);
-        inS = Math.addExact(inS, hi);
+        inS = Math.addExact(inS, hi[k]);
         g = gcd(g, Math.abs(a[k]));
-        violation += in;
       } else {
-        outS = Math.addExact(outS, lo);
-        violation += out;
+        outS = Math.addExact(outS, lo[k]);
       }
     }
     weights.values().removeIf(w -> w == 0);
@@ -196,7 +299,7 @@ final class PerspectiveCuts {
     }
     // sum_S a x + k beta <= inS, i.e. + k b <= inS, or - k b <= inS - k, all divided by g
     weights.merge(control, imp.when() ? k : -k, Math::addExact);
-    long rhs = imp.when() ? inS : Math.subtractExact(inS, k);
+    long rhs = (imp.when() ? inS : Math.subtractExact(inS, k)) / g;
     int[] cs = new int[weights.size()];
     long[] ws = new long[weights.size()];
     int n = 0;
@@ -211,10 +314,6 @@ final class PerspectiveCuts {
       activity += ws[n] * value[cs[n]];
       norm += (double) ws[n] * ws[n];
       n++;
-    }
-    rhs /= g;
-    if (violation <= imp.side() * beta || norm == 0) {
-      return null;
     }
     double efficacy = (activity - rhs) / Math.sqrt(norm);
     return efficacy > MirCut.MIN_EFFICACY ? MirCut.row(cs, ws, rhs, efficacy) : null;

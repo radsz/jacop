@@ -443,6 +443,10 @@ public class LinearRelaxation extends Constraint
   private static final boolean PERSPECTIVE_CUTS =
       !"false".equals(System.getProperty("org.jacop.lp.perspectiveCuts"));
 
+  // the cuts of single 0/1 variables of the implications as pair rows, for the cliques
+  private static final boolean PERSPECTIVE_PAIRS =
+      !"false".equals(System.getProperty("org.jacop.lp.perspectivePairs"));
+
   // the separation of the perspective cuts, or null
   private PerspectiveCuts perspective;
 
@@ -866,6 +870,9 @@ public class LinearRelaxation extends Constraint
       if (f != null) {
         relaxed.add(f);
       }
+    }
+    if (PERSPECTIVE_PAIRS) {
+      relaxed.addAll(PerspectiveCuts.pairRows(implications));
     }
     int pairCliques = 0;
     // for an objective only, whose bound they raise: on satisfaction models (rubik) the longer
