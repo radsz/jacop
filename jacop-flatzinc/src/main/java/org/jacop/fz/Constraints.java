@@ -46,6 +46,7 @@ import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
+import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
@@ -371,8 +372,17 @@ public class Constraints implements ParserTreeConstants {
       }
 
       // earliness and tardiness costs under precedences, redundant; --proof does not encode it
-      if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {
-        support.implied(() -> new PrecedenceCostDetector(support).detect(astTree));
+      boolean precedenceCost = PrecedenceCostDetector.enabled(options.freeSearch());
+      boolean unaryCost = PrecedenceCostDetector.unaryEnabled(options.freeSearch());
+      if ((precedenceCost || unaryCost) && options.proof() == null) {
+        support.implied(
+            () -> new PrecedenceCostDetector(support, precedenceCost, unaryCost).detect(astTree));
+      }
+
+      // spanning trees with limits on the edges of disjoint sets (common bases of two matroids),
+      // redundant; --proof does not encode it
+      if (ColouredTreeDetector.enabled() && options.proof() == null) {
+        support.implied(() -> new ColouredTreeDetector(support).detect(astTree));
       }
 
       support.detectBinPackingCliques();

@@ -127,6 +127,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -171,6 +172,7 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.ColouredSpanningTreeBound;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -457,7 +459,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(32)) {
+      return switch (rnd.nextInt(34)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -567,6 +569,8 @@ class LcgFuzzTest {
           yield flow;
         }
         case 30 -> valuesWithDifferences();
+        case 31 -> unaryEarlinessTardiness(p);
+        case 32 -> colouredTree();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -607,6 +611,38 @@ class LcgFuzzTest {
       ConvexAllocation a = new ConvexAllocation(p, f, total, intVar("ac", 0, 6 + rnd.nextInt(20)));
       a.lagrangianOnly(rnd.nextInt(3) == 0);
       return a;
+    }
+
+    // three tasks of lengths 1 or 2 on one machine (or two on one and one alone), earliness and
+    // tardiness at most a cost variable
+    private UnaryEarlinessTardiness unaryEarlinessTardiness(IntVar[] p) {
+      int[] d = {1 + rnd.nextInt(2), 1 + rnd.nextInt(2), 1 + rnd.nextInt(2)};
+      boolean split = rnd.nextBoolean();
+      int[][] machines = split ? new int[][] {{0, 1}} : new int[][] {{0, 1, 2}};
+      int[] owner = {0, 0, split ? -1 : 0};
+      int[][] terms = new int[p.length][];
+      for (int i = 0; i < p.length; i++) {
+        terms[i] = new int[] {i, rnd.nextInt(5), rnd.nextInt(3), rnd.nextInt(3)};
+      }
+      return new UnaryEarlinessTardiness(p, d, machines, owner, terms, intVar("uet", 0, 12));
+    }
+
+    // a spanning tree of 3 nodes over the Booleans b as edges, with colour limits and a cost
+    private ColouredSpanningTreeBound colouredTree() {
+      int m = b.length;
+      int[] from = new int[m];
+      int[] to = new int[m];
+      int[] w = new int[m];
+      int[] colours = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = rnd.nextInt(3);
+        to[e] = rnd.nextInt(3);
+        w[e] = rnd.nextInt(4);
+        colours[e] = rnd.nextInt(3) - 1;
+      }
+      int[] caps = {rnd.nextInt(2), 1 + rnd.nextInt(1)};
+      return new ColouredSpanningTreeBound(
+          3, from, to, w, colours, caps, b, rnd.nextBoolean() ? one() : intVar("ct", 0, 8), 0);
     }
 
     // three starts under precedences with lags, earliness and tardiness at most a cost variable

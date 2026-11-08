@@ -5444,6 +5444,29 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(88);
   }
 
+  // the differences are imposed after the last root call of Values, which no root change wakes
+  // again; the graph is read at its first call below the root, so 3 values do not fit in 2
+  @Test
+  void testValuesReadsDifferencesImposedAfterItsLastRootCall() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 5);
+    }
+    IntVar count = new IntVar(store, "count", 2, 2);
+    store.impose(new Values(x, count));
+    assertThat(store.consistency()).isTrue();
+    store.impose(new XneqY(x[0], x[1]));
+    store.impose(new XneqY(x[1], x[2]));
+    store.impose(new XneqY(x[0], x[2]));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    x[0].domain.in(store.level, x[0], 1, 4);
+
+    assertThat(store.consistency()).isFalse();
+  }
+
   // x0, x1 and x2 differ pairwise (a clique of the difference graph), so there are at least 3
   // values although all the intervals overlap
   @Test

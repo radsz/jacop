@@ -2519,6 +2519,32 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /**
+   * Without a search annotation, the default search under --lcg branches in input order on a model
+   * with more than 50,000 search variables: dom/wdeg scans all of them at every decision (XCSP3
+   * AztecDiamond-200, 160,000 cells, had no solution in 60 s and has one in about a second).
+   */
+  @Test
+  void lcgDefaultSearchOnManyVariablesIsInInputOrder() throws Exception {
+    int n = 50_001;
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var bool: b").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i + 1 < n; i++) {
+      model
+          .append("constraint bool_clause([b")
+          .append(i)
+          .append(", b")
+          .append(i + 1)
+          .append("], []);\n");
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "--search-statistics")[0];
+    assertTrue(out.contains("----------"), out.substring(Math.max(0, out.length() - 2000)));
+    assertEquals(n, statistic(out, "lcgInputOrder"));
+  }
+
   private static String lastObjective(String out) {
     int at = out.lastIndexOf("obj = ");
     assertTrue(at >= 0, out);
