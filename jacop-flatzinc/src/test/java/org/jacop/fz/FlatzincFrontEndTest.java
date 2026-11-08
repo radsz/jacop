@@ -2199,6 +2199,36 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void engineStatisticsArePrintedOnlyInVerboseMode() throws IOException {
+    // -s prints the standard FlatZinc statistics only; the statistics of LCG, LP, presolve,
+    // components, ... come with -v (or --search-statistics, or -debug) as well
+    String model =
+        """
+        var 0..5: x :: output_var;
+        var 0..5: y :: output_var;
+        constraint int_lin_le([1, 1], [x, y], 7);
+        constraint int_ne(x, y);
+        solve maximize x;
+        """;
+    String plain = run(model, "-s")[0];
+    assertTrue(plain.contains("%%%mzn-stat: nodes="), plain);
+    for (String extra : List.of("lcg", "components", "presolve", "lp", "nodesPerSecond")) {
+      assertTrue(
+          plain.lines().noneMatch(l -> l.startsWith("%%%mzn-stat: " + extra)),
+          extra + "\n" + plain);
+    }
+    for (String[] flags :
+        List.of(
+            new String[] {"-s", "-v"},
+            new String[] {"--search-statistics"},
+            new String[] {"-s", "-debug"})) {
+      String out = run(model, flags)[0];
+      assertTrue(out.contains("%%%mzn-stat: lpRows="), String.join(" ", flags) + "\n" + out);
+      assertTrue(out.contains("%%%mzn-stat: components="), String.join(" ", flags) + "\n" + out);
+    }
+  }
+
+  @Test
   void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
     // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
     // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the

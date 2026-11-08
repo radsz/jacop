@@ -3204,6 +3204,23 @@ Version 5.0 (unreleased)
      -f 22 to 22, same objectives except two team-assignment instances
      whose root LP is the same in both (search timing); no wrong answer.
 
+189. The LCG explanation checker (-Djacop.lcg.check=true) and the
+     explanation minimality sampler (-Djacop.lcg.minimality) skip a
+     constraint whose copy needs variables outside its scope, such as
+     DifferenceCycles, whose scope holds only its literals. Before, the
+     sampler stopped the solver with "... is not a variable of the
+     constraint" (whirlpool with -Djacop.lcg.minimality); the checker
+     counts such reasons as skipped. Solving is unchanged.
+
+190. fzn-jacop prints the statistics of JaCoP's own components (lcg*,
+     presolve*, lp*, components*, lns*, ls*, symmetry*, probe*,
+     portfolio*, ...) only in verbose mode: with -s -v. -s alone prints
+     the standard FlatZinc statistics (and objectiveBound with
+     objectiveBoundTime); components*, lcgSlowConflicts and
+     portfolioSharedClauses, which -s printed before, now need -v too.
+     --search-statistics stays, as -s -v without the -v lines after each
+     solution, and so does -s -debug.
+
 Version 4.11
 =============
 

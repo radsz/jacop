@@ -1118,7 +1118,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotationVariables((SimpleNode) node.jjtGetChild(i), order);
     }
     Components.Outcome o = Components.solveSide(store, sat.collectedClauses(), cost, order, budget);
-    if (options.getStatistics()) {
+    if (options.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: components="
               + o.components()
@@ -3620,7 +3620,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             (int) freeSearch.getFailures(),
             freeSearch.getMaxDepth(),
             (int) freeSearch.getSolutions());
-        if (slowLcg != null) {
+        if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
         }
