@@ -270,6 +270,9 @@ unless stated otherwise):
   whose cost is a sum of arc costs.
 - org.jacop.fz.circuitCostPair: the pair reasoning of CircuitCost;
   default true without LCG and false with LCG.
+- org.jacop.fz.colouredTree: ColouredSpanningTreeBound on
+  weighted_spanning_tree with limits on the number of tree edges in
+  disjoint edge sets (colours); default true.
 - org.jacop.fz.costAlldifferent: CostAlldifferent for such costs.
 - org.jacop.fz.costGcc: CostGCC for such costs; default false.
 - org.jacop.fz.conditionalSelect: if_then_else on integers as
