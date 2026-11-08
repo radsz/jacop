@@ -119,8 +119,9 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
       IntVar decided = x;
       int at = 1;
       if (x instanceof LpColumn c) {
-        if (c.isArc()) {
-          // an arc of a layered graph is one of the edges of its value: the value column decides
+        if (c.isArc() || c.isFree()) {
+          // an arc of a layered graph is one of the edges of its value: the value column decides;
+          // a free column decides nothing
           continue;
         }
         decided = c.variable();

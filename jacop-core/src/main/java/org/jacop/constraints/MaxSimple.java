@@ -116,6 +116,13 @@ public class MaxSimple extends Constraint
       }
 
     } while (store.propagationHasOccurred);
+
+    // entailed once max is fixed to the value x1 or x2 is fixed to, since both are at most max
+    if (max.singleton()
+        && (x1.singleton() && x1.value() == max.value()
+            || x2.singleton() && x2.value() == max.value())) {
+      removeConstraint();
+    }
   }
 
   @Override

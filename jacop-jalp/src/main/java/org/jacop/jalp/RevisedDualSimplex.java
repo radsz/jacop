@@ -128,6 +128,13 @@ public final class RevisedDualSimplex {
   private static final int CRASH_ROWS =
       crashRows(System.getProperty("org.jacop.jalp.crash", "off"));
 
+  // the presolve of the first solve (org.jacop.jalp.presolve), for problems of at least this many
+  // rows (org.jacop.jalp.presolveRows)
+  private static final boolean PRESOLVE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolve", "true"));
+  private static final int PRESOLVE_ROWS = Integer.getInteger("org.jacop.jalp.presolveRows", 1);
+  private static final boolean PRESOLVE_TRACE = Boolean.getBoolean("org.jacop.jalp.presolveTrace");
+
   // a crash pivot must be at least this share of the largest entry of its column
   private static final double CRASH_PIVOT =
       Double.parseDouble(System.getProperty("org.jacop.jalp.crashPivot", "0.9"));
@@ -171,6 +178,8 @@ public final class RevisedDualSimplex {
   private boolean perturbed;
   private final long seed;
   private boolean exact;
+  // the solve cut off by its limit was removing the perturbation: the next one goes on with that
+  private boolean cleaning;
 
   // the bounds of the scaled problem, and the working bounds with artificial ones for infinities
   private double[] boundLo;
@@ -204,6 +213,18 @@ public final class RevisedDualSimplex {
   private int crashRows = CRASH_ROWS;
   private boolean crashPending;
   private int crashed;
+  // the first solve presolves the problem; the rows and columns its reduced problem kept
+  private boolean presolvePending;
+  private int presolvedRows = -1;
+  private int presolvedColumns = -1;
+  // a reduced problem whose solve the pivot limit cut off: later solves go on with it, and any
+  // other use of this problem first takes the basis postsolved from it (flushReduced)
+  private RevisedDualSimplex reducedLp;
+  private Presolve reducedBy;
+  private long reducedPivots;
+  private long reducedFactorizations;
+  private long reducedRefactors;
+  private long reducedOps;
 
   // work arrays by row or position, and by column for the row of the tableau (see allocateWork)
   private double[] rho = {};
@@ -376,6 +397,7 @@ public final class RevisedDualSimplex {
     Arrays.fill(weight, 1);
     weightsFrom = m;
     crashPending = CRASH_ROWS >= 0;
+    presolvePending = PRESOLVE;
   }
 
   // a deep copy of the state of another simplex
@@ -408,6 +430,14 @@ public final class RevisedDualSimplex {
     perturbed = o.perturbed;
     seed = o.seed;
     exact = o.exact;
+    cleaning = o.cleaning;
+    // copy() postsolves an open reduced solve first, so the copy has none
+    reducedLp = null;
+    reducedBy = null;
+    reducedPivots = 0;
+    reducedFactorizations = 0;
+    reducedRefactors = 0;
+    reducedOps = 0;
     boundLo = o.boundLo.clone();
     boundHi = o.boundHi.clone();
     lo = o.lo.clone();
@@ -428,6 +458,9 @@ public final class RevisedDualSimplex {
     crashRows = o.crashRows;
     crashPending = o.crashPending;
     crashed = o.crashed;
+    presolvePending = o.presolvePending;
+    presolvedRows = o.presolvedRows;
+    presolvedColumns = o.presolvedColumns;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
     refactorWeight = o.refactorWeight;
@@ -459,6 +492,7 @@ public final class RevisedDualSimplex {
    * @return the copy
    */
   public RevisedDualSimplex copy() {
+    flushReduced();
     return new RevisedDualSimplex(this);
   }
 
@@ -479,8 +513,10 @@ public final class RevisedDualSimplex {
    * @param c the new objective over the n columns, minimized
    */
   public void setCost(double[] c) {
+    flushReduced();
     System.arraycopy(c, 0, givenCost, 0, n);
     setCosts(true);
+    cleaning = false;
     placed = false;
     dualsChecked = false;
     if (factorValid) {
@@ -763,6 +799,36 @@ public final class RevisedDualSimplex {
   }
 
   /**
+   * Sets whether the first solve presolves the problem, as {@code org.jacop.jalp.presolve} does. It
+   * has no effect after a solve.
+   *
+   * @param on whether to presolve
+   */
+  public void setPresolve(boolean on) {
+    presolvePending = on && totalPivots == 0;
+  }
+
+  /**
+   * Returns the rows of the reduced problem the presolve of the first solve solved, or -1 when it
+   * did not run or reduced nothing.
+   *
+   * @return the rows kept
+   */
+  public int presolvedRows() {
+    return presolvedRows;
+  }
+
+  /**
+   * Returns the structural columns of the reduced problem the presolve of the first solve solved,
+   * or -1 when it did not run or reduced nothing.
+   *
+   * @return the columns kept
+   */
+  public int presolvedColumns() {
+    return presolvedColumns;
+  }
+
+  /**
    * Returns the structural columns the crash basis of the first solve made basic.
    *
    * @return the crashed columns
@@ -831,6 +897,7 @@ public final class RevisedDualSimplex {
    * @param max its upper bound, or positive infinity
    */
   public void setBounds(int j, double min, double max) {
+    flushReduced();
     double s = j < n ? 1 / colScale[j] : rowScale[j - n];
     double l = min * s;
     double h = max * s;
@@ -855,6 +922,14 @@ public final class RevisedDualSimplex {
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE}, {@link #UNBOUNDED} or {@link #LIMIT}
    */
   public int solve(int limit) {
+    int status = dualSolve(limit);
+    if (status != LIMIT) {
+      cleaning = false;
+    }
+    return status;
+  }
+
+  private int dualSolve(int limit) {
     infeasibleRow = -1;
     outsideValid = false;
     clearSkipped();
@@ -865,9 +940,27 @@ public final class RevisedDualSimplex {
         computeDuals();
       }
     }
-    if (exact && !perturbed) {
+    if (exact && !perturbed && !cleaning) {
       setCosts(true);
       computeDuals();
+    }
+    if (presolvePending) {
+      presolvePending = false;
+      if (totalPivots == 0 && m >= PRESOLVE_ROWS) {
+        limit -= presolve(limit);
+        crashPending = crashPending && totalPivots == 0;
+      }
+    } else if (reducedLp != null) {
+      long before = totalPivots;
+      int status = reducedLp.solve(limit);
+      accountReduced();
+      limit -= (int) (totalPivots - before);
+      if (status != LIMIT) {
+        endReduced(status);
+      }
+    }
+    if (reducedLp != null) {
+      return LIMIT;
     }
     if (crashPending) {
       crashPending = false;
@@ -1063,6 +1156,7 @@ public final class RevisedDualSimplex {
     }
     if (exact && perturbed) {
       // the costs as given: the columns whose reduced cost changed sign move to their other bound
+      cleaning = true;
       setCosts(false);
       computeDuals();
       placeNonbasic();
@@ -1155,6 +1249,7 @@ public final class RevisedDualSimplex {
    * @return the multipliers of the rows
    */
   public double[] farkas() {
+    flushReduced();
     return inverseRow(infeasibleRow);
   }
 
@@ -1166,6 +1261,7 @@ public final class RevisedDualSimplex {
    * @return the multipliers of the rows
    */
   public double[] inverseRow(int r) {
+    flushReduced();
     if (!factorValid) {
       factorize();
     }
@@ -1187,6 +1283,7 @@ public final class RevisedDualSimplex {
    * @return the duals by row
    */
   public double[] duals() {
+    flushReduced();
     return duals(cost);
   }
 
@@ -1199,6 +1296,7 @@ public final class RevisedDualSimplex {
    * @return the duals by row
    */
   public double[] givenDuals() {
+    flushReduced();
     return duals(trueCost);
   }
 
@@ -1224,6 +1322,7 @@ public final class RevisedDualSimplex {
    * @return the objective
    */
   public double objective() {
+    flushReduced();
     double z = 0;
     for (int j = 0; j < n; j++) {
       if (givenCost[j] != 0) {
@@ -1240,6 +1339,7 @@ public final class RevisedDualSimplex {
    * @return its value
    */
   public double value(int j) {
+    flushReduced();
     double v = row[j] >= 0 ? beta[row[j]] : upper[j] ? hi[j] : lo[j];
     return j < n ? v * colScale[j] : v / rowScale[j - n];
   }
@@ -1283,6 +1383,7 @@ public final class RevisedDualSimplex {
    * @return the basis
    */
   public Basis saveBasis() {
+    flushReduced();
     ops += cols + 2L * m;
     return new Basis(this);
   }
@@ -1296,6 +1397,7 @@ public final class RevisedDualSimplex {
    * @return whether it was restored
    */
   public boolean restoreBasis(Basis b) {
+    flushReduced();
     if (b.owner != this || b.epoch != rowEpoch || b.basic.length > m) {
       return false;
     }
@@ -1330,6 +1432,7 @@ public final class RevisedDualSimplex {
    * @return its row, or -1 when it is nonbasic
    */
   public int basicRow(int j) {
+    flushReduced();
     return row[j];
   }
 
@@ -1342,6 +1445,7 @@ public final class RevisedDualSimplex {
    * @param rowHi the upper bounds of the rows
    */
   public void addRows(int[][] columns, double[][] weights, double[] rowLo, double[] rowHi) {
+    flushReduced();
     if (columns.length > 0) {
       appendRows(columns, weights, rowLo, rowHi);
     }
@@ -1355,6 +1459,7 @@ public final class RevisedDualSimplex {
    * @return the old row of each new row, or null when no row was removed
    */
   public int[] removeRows(int[] rows) {
+    flushReduced();
     boolean[] gone = new boolean[m];
     int removed = 0;
     for (int i : rows) {
@@ -2014,6 +2119,199 @@ public final class RevisedDualSimplex {
     }
   }
 
+  /**
+   * Presolves the problem (see {@link Presolve}), solves the reduced problem from its slack basis
+   * with the same perturbed costs, and when that is optimal takes the basis made from it by the
+   * postsolve, so that the solve of the whole problem goes on from there.
+   *
+   * @param limit the most pivots for the reduced problem
+   * @return the pivots made
+   */
+  private int presolve(int limit) {
+    Presolve p =
+        new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
+    boolean reduced = p.run();
+    ops += p.ops();
+    if (PRESOLVE_TRACE) {
+      System.err.println(
+          "presolve rows "
+              + m
+              + " -> "
+              + p.rowsLeft()
+              + " columns "
+              + n
+              + " -> "
+              + p.columnsLeft()
+              + " reductions "
+              + Arrays.toString(p.counts()));
+    }
+    if (!reduced) {
+      if (factorValid) {
+        // the perturbation of a column may have changed sign
+        computeDuals();
+      }
+      return 0;
+    }
+    int nr = p.columnsLeft();
+    int mr = p.rowsLeft();
+    int[][] rc = new int[mr][];
+    double[][] rw = new double[mr][];
+    p.reducedRows(rc, rw);
+    double[] rl = new double[mr];
+    double[] rh = new double[mr];
+    for (int k = 0; k < mr; k++) {
+      rl[k] = p.rowLo(p.oldRow[k]);
+      rh[k] = p.rowHi(p.oldRow[k]);
+    }
+    double[] rcost = new double[nr];
+    for (int k = 0; k < nr; k++) {
+      rcost[k] = p.cost(p.oldCol[k]);
+    }
+    boolean[] basicR = new boolean[nr + mr];
+    boolean[] upperR = new boolean[nr + mr];
+    double[] valueR = new double[nr];
+    double[] yR = new double[mr];
+    int pivots = 0;
+    if (mr > 0) {
+      RevisedDualSimplex red = new RevisedDualSimplex(rc, rw, rl, rh, rcost, false);
+      red.crashPending = false;
+      red.presolvePending = false;
+      // the costs as perturbed here, so that the reduced optimum is optimal here too
+      System.arraycopy(rcost, 0, red.cost, 0, nr);
+      System.arraycopy(rcost, 0, red.trueCost, 0, nr);
+      red.refactorWeight = refactorWeight;
+      red.refactorUpdates = refactorUpdates;
+      for (int k = 0; k < nr; k++) {
+        red.setBounds(k, p.columnLo(p.oldCol[k]), p.columnHi(p.oldCol[k]));
+      }
+      long t0 = System.nanoTime();
+      int status = red.solve(limit);
+      if (PRESOLVE_TRACE) {
+        System.err.println(
+            "presolve reduced status "
+                + status
+                + " pivots "
+                + red.totalPivots
+                + " solve "
+                + (System.nanoTime() - t0) / 1e9);
+      }
+      reducedLp = red;
+      reducedBy = p;
+      reducedPivots = 0;
+      reducedFactorizations = 0;
+      reducedRefactors = 0;
+      reducedOps = 0;
+      long before = totalPivots;
+      accountReduced();
+      pivots = (int) (totalPivots - before);
+      if (status != LIMIT) {
+        endReduced(status);
+      }
+      return pivots;
+    }
+    postsolve(p, null, basicR, upperR, valueR, yR);
+    return pivots;
+  }
+
+  // adds the pivots, factorizations and work of the reduced problem since the last call
+  private void accountReduced() {
+    RevisedDualSimplex red = reducedLp;
+    long o = red.ops + (red.lu == null ? 0 : red.lu.ops);
+    totalPivots += red.totalPivots - reducedPivots;
+    factorizations += red.factorizations - reducedFactorizations;
+    refactorsForWork += red.refactorsForWork - reducedRefactors;
+    ops += o - reducedOps;
+    reducedPivots = red.totalPivots;
+    reducedFactorizations = red.factorizations;
+    reducedRefactors = red.refactorsForWork;
+    reducedOps = o;
+  }
+
+  // takes the basis postsolved from the reduced problem whose solve the limit cut off
+  private void flushReduced() {
+    if (reducedLp != null) {
+      endReduced(LIMIT);
+    }
+  }
+
+  // ends the solve of the reduced problem with this status and takes the basis postsolved from it
+  private void endReduced(int status) {
+    RevisedDualSimplex red = reducedLp;
+    Presolve p = reducedBy;
+    reducedLp = null;
+    reducedBy = null;
+    if (PRESOLVE_TRACE) {
+      System.err.println("presolve reduced end status " + status + " pivots " + red.totalPivots);
+    }
+    // the dual simplex keeps its basis dual feasible: an infeasible end or the limit leave a
+    // basis worth carrying over too, only an unbounded end does not
+    if (status == UNBOUNDED) {
+      return;
+    }
+    int nr = p.columnsLeft();
+    int mr = p.rowsLeft();
+    boolean[] basicR = new boolean[nr + mr];
+    boolean[] upperR = new boolean[nr + mr];
+    double[] valueR = new double[nr];
+    double[] yR = new double[mr];
+    postsolve(p, red, basicR, upperR, valueR, yR);
+  }
+
+  // maps the basis of the reduced problem (red, or none when no row was left) back to this one
+  private void postsolve(
+      Presolve p,
+      RevisedDualSimplex red,
+      boolean[] basicR,
+      boolean[] upperR,
+      double[] valueR,
+      double[] yR) {
+    int nr = p.columnsLeft();
+    int mr = p.rowsLeft();
+    if (red != null) {
+      for (int c = 0; c < nr + mr; c++) {
+        basicR[c] = red.row[c] >= 0;
+        upperR[c] = red.upper[c];
+      }
+      for (int k = 0; k < mr; k++) {
+        yR[k] = red.d[nr + k];
+      }
+    } else {
+      // no row left: every column at the bound its cost asks for
+      for (int k = 0; k < nr; k++) {
+        double c = p.cost(p.oldCol[k]);
+        upperR[k] = c < 0 || c == 0 && p.columnLo(p.oldCol[k]) == Double.NEGATIVE_INFINITY;
+      }
+    }
+    for (int k = 0; k < nr; k++) {
+      valueR[k] = upperR[k] ? p.columnHi(p.oldCol[k]) : p.columnLo(p.oldCol[k]);
+    }
+    boolean[] b = new boolean[cols];
+    boolean[] up = new boolean[cols];
+    int[] list = p.postsolve(basicR, upperR, valueR, yR, b, up);
+    ops += p.ops();
+    if (list == null) {
+      return;
+    }
+    for (int j = 0; j < cols; j++) {
+      row[j] = -1;
+      upper[j] = up[j];
+    }
+    for (int k = 0; k < m; k++) {
+      basis[k] = list[k];
+      row[list[k]] = k;
+    }
+    // unit weights, as for a crash basis: exact ones cost a BTRAN a row
+    Arrays.fill(weight, 1);
+    weightsFrom = m;
+    factorValid = false;
+    betaValid = false;
+    placed = false;
+    dualsChecked = false;
+    outsideValid = false;
+    presolvedRows = mr;
+    presolvedColumns = nr;
+  }
+
   // the order in which the crash gives away a slack row, by the kind of the slack (crashKind)
   private static final int[] SLACK_KIND = {3, 2, 1, 0};
 
@@ -2277,6 +2575,7 @@ public final class RevisedDualSimplex {
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE}, {@link #UNBOUNDED} or {@link #LIMIT}
    */
   public int solvePrimal(int limit) {
+    flushReduced();
     long start = totalPivots;
     int status = primalPivots(limit);
     // the primal pivots change the basis and the reduced costs: the dual simplex places every
