@@ -296,6 +296,11 @@ unless stated otherwise):
   whose tasks are ordered by precedences.
 - org.jacop.fz.giantTour: Routes for vehicle routes written as a
   giant tour.
+- org.jacop.fz.tsp: Routes, arc Booleans and cost rows also for a
+  pure travelling salesman tour (circuit with no fixed successor),
+  for the subtour, blossom and comb cuts of the LP; default false.
+  Use it for a pure TSP.
+- org.jacop.fz.tspArcs: the most arcs of such a tour; default 40000.
 - org.jacop.fz.routes: Routes for vehicle routes written as 0/1 arc
   variables.
 - org.jacop.fz.increasingSum: IncreasingSum on sums over ordered
@@ -570,6 +575,12 @@ Cuts:
 - org.jacop.lp.capacityRounds: their rounds; default 50.
 - org.jacop.lp.multistarCuts: multistar cuts over the same sets;
   default true.
+- org.jacop.lp.combCuts: blossom and comb cuts of Routes over the
+  mandatory customers, in the slots the capacity cuts leave; true or
+  false for every Routes; by default only for Routes without a
+  capacity (travelling salesman tours).
+- org.jacop.lp.combSearch: blossom and comb cuts also in search (by
+  default only at the root); default false.
 - org.jacop.lp.capacitySearch: capacity and multistar cuts also in
   search; default true.
 - org.jacop.lp.capacitySearchCuts: the most cuts per separation in
