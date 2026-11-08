@@ -3535,7 +3535,8 @@ Version 5.0 (unreleased)
      slower, the rest equal. Not for wider domains: pentominoes, whose
      regular constraints become clauses too, lost up to 4x with it.
      -Djacop.lcg.pureClauseLiterals=false turns it off.
-204. Bug fix: when LCG free search gives way to free search without
+     
+206. Bug fix: when LCG free search gives way to free search without
      learning (lcg-slow-rate), the regular and MDD constraints that went
      to the SAT solver as clauses are imposed in the store again. Before,
      free search without learning ran without them, printed solutions
@@ -3543,7 +3544,7 @@ Version 5.0 (unreleased)
      FAPP-aux-18-0350 with large tables posted as MDD, every solution
      after the switch broke about 140 of its 1,425 tables.
 
-204. Opt-in TSP mode of the FlatZinc front end: with
+207. Opt-in TSP mode of the FlatZinc front end: with
      -Dorg.jacop.fz.tsp=true, a pure travelling salesman model, one
      circuit(x) with no fixed successor and a tour length
      sum(i)(d[i, x[i]]), gets the arc Booleans, cost rows and Routes of
@@ -3569,7 +3570,7 @@ Version 5.0 (unreleased)
      or off, -Dorg.jacop.lp.combSearch=true also separates them in
      search, -Dorg.jacop.fz.tspArcs (default 40000) limits the arcs.
 
-206. JaLP's presolve also removes parallel rows and merges parallel
+208. JaLP's presolve also removes parallel rows and merges parallel
      columns (E. D. Andersen and K. D. Andersen, Presolving in linear
      programming, Mathematical Programming 71 (1995) 221-245, sections
      3.4 and 3.6). A row that is a multiple of another gives its bounds
@@ -3600,7 +3601,7 @@ Version 5.0 (unreleased)
      well as or better than before: the search follows a different
      optimal root vertex.
 
-206. Under --lcg the objective lower-bound search (lcg-lb) starts
+209. Under --lcg the objective lower-bound search (lcg-lb) starts
      before the first solution: each round assumes the objective at its
      root lower bound, one run per round and without shaving, until a
      solution is found. Before, those runs waited for a first solution.
@@ -3612,7 +3613,7 @@ Version 5.0 (unreleased)
      most 13), are proved optimal in 10-60 s; neither had a solution in
      600 s (00 in one of two runs).
 
-207. The default search under --lcg, for a model without a search
+210. The default search under --lcg, for a model without a search
      annotation, branches in input order with the smallest value instead
      of dom/wdeg when it has more than 50,000 search variables
      (-Dorg.jacop.fz.lcgDomWdegLimit, stat lcgInputOrder): dom/wdeg
@@ -3623,7 +3624,7 @@ Version 5.0 (unreleased)
      AztecDiamond-300 in 527 s); RamseyPartition-equ-3-0600 takes 200 s
      instead of 57 s to prove unsatisfiable.
 
-206. Bug fix: a search with a child search (as the FlatZinc front end
+211. Bug fix: a search with a child search (as the FlatZinc front end
      builds for integer then Boolean variables) that timed out while the
      child was enumerating solutions ended with the child's part of the
      last solution and the master's part of an earlier one. Assigning that
@@ -3633,7 +3634,7 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
-208. Hall cuts of item 188 with value copies, and in search. The
+212. Hall cuts of item 188 with value copies, and in search. The
      Williams-Yan cuts now also come from all-different constraints with
      exceptions (alldifferent_except_0, AlldifferentExcept) and from
      global cardinality constraints (GCC, CountValues,
@@ -3668,6 +3669,39 @@ Version 5.0 (unreleased)
      default 12 to 12 solved, one better objective (physician
      instance18_real 7750 to 6915), -f 12 to 12 with differences of
      search timing only; no wrong answer.
+
+213. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
+     for spanning trees with limits on the number of edges taken from
+     disjoint edge sets (colours). Such trees are the common bases of a
+     graphic and a partition matroid (Edmonds 1970). At every node it
+     checks that a common base exists with Cunningham's augmenting paths
+     (SIAM J. Comput. 1986), bounds the cost from below with the
+     Lagrangian relaxation of the colour limits (Held and Karp 1970),
+     which is exact since the matroid intersection polytope is integral
+     (see also Gabow and Tarjan 1984 for one colour), and removes edges
+     by reduced costs on the Lagrangian tree (Sellmann CP 2004, Regin et
+     al. CPAIOR 2010). The FlatZinc front end posts it as an implied
+     constraint for weighted_spanning_tree (jacop_wst) with sums of edge
+     variables with all coefficients 1 that restrict the tree
+     (-Dorg.jacop.fz.colouredTree=false turns it off). On 30 generated
+     colour-limited and rainbow spanning tree instances with 30 to 150
+     nodes (osolpro benchmarks/matroid-intersection) JaCoP proves all 30
+     instead of 15 in 600 s, e.g. rb_100_s1 optimum 758 in 26 s (best
+     774 before) and cc_60_12_s1 in 19 s instead of 495 s. No MiniZinc
+     Challenge or wide-set model combines weighted_spanning_tree with
+     such limits, so the default benchmarks are not affected.
+
+214. Values (MiniZinc nvalue) reads its difference graph once more at its
+     first call below the root, from the root constraints and domains.
+     Before, it read the graph only at root calls, so a difference
+     constraint imposed after its last root call was missed when nothing
+     woke it again at the root, for example with a count fixed in its
+     domain; the clique bound and the filtering of Fages and Lapegue
+     (CP 2013; Artificial Intelligence 212, 2014) then did nothing. The
+     filtering also computes the union of clique domains once for all
+     variables linked to the same clique variables: 6 to 28 unions per
+     call instead of 180 to 900 on the XCSP Rlfap instances, with the
+     same pruning.
 
 Version 4.11
 =============
