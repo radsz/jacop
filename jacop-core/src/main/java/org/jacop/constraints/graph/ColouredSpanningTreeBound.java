@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
@@ -77,7 +78,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class ColouredSpanningTreeBound extends Constraint
-    implements SatisfiedPresent, Copyable<ColouredSpanningTreeBound> {
+    implements SatisfiedPresent, SolutionHint, Copyable<ColouredSpanningTreeBound> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -138,6 +139,10 @@ public class ColouredSpanningTreeBound extends Constraint
   private final boolean[] inTree;
   private final long[] shifted;
   private boolean firstCall = true;
+
+  // the tree of the first call, the Lagrangian tree repaired into a common base: its edges first
+  private IntVar[] hintVars;
+  private int[] hint;
 
   // edge filtering on the tree of the shifted weights
   private final TreeReducedCosts reducedCosts;
@@ -314,6 +319,9 @@ public class ColouredSpanningTreeBound extends Constraint
       boolean first = firstCall;
       firstCall = false;
       lagrangian(store, feasibleWeight + selectedWeight, first ? FIRST_STEPS : STEPS);
+      if (first) {
+        hintFrom(repairedTree(k));
+      }
     } else if (selectedWeight > cost.max()) {
       throw Store.failException;
     } else {
@@ -674,6 +682,181 @@ public class ColouredSpanningTreeBound extends Constraint
       }
     }
     return total;
+  }
+
+  // the Lagrangian tree in inTree made a common base: its edges between components first, then the
+  // other free ones, each by increasing shifted weight, taken greedily within the residual limits
+  // and completed by augmenting paths; 0/1 per edge
+  private int[] repairedTree(int k) {
+    Integer[] order = new Integer[m];
+    int on = 0;
+    for (int e = 0; e < m; e++) {
+      if (es[e].min() == 0 && es[e].max() == 1 && component[tail[e]] != component[head[e]]) {
+        order[on++] = e;
+      }
+    }
+    Arrays.sort(
+        order,
+        0,
+        on,
+        Comparator.comparing((Integer e) -> !inTree[e]).thenComparingLong(e -> shifted[e]));
+    for (int v = 0; v < k; v++) {
+      parent[v] = v;
+    }
+    Arrays.fill(colourCount, 0);
+    Arrays.fill(inSet, false);
+    for (int i = 0; i < on; i++) {
+      int e = order[i];
+      int c = colours[e];
+      if ((c < 0 || colourCount[c] < residual[c])
+          && TreeReducedCosts.union(parent, component[tail[e]], component[head[e]])) {
+        inSet[e] = true;
+        if (c >= 0) {
+          colourCount[c]++;
+        }
+      }
+    }
+    feasibility(k);
+    int[] values = new int[m];
+    for (int e = 0; e < m; e++) {
+      values[e] = es[e].min() == 1 || inSet[e] ? 1 : 0;
+    }
+    improveBySwaps(values);
+    return values;
+  }
+
+  /** The most improving swaps the hint makes, per node. */
+  static final int SWAPS_PER_NODE = 4;
+
+  // local search on a spanning tree (0/1 per edge): the best swap of a free tree edge for a
+  // cheaper edge outside the tree that closes a cycle through it, within the colour limits, until
+  // there is none
+  private void improveBySwaps(int[] tree) {
+    int[] count = new int[colourNo];
+    for (int e = 0; e < m; e++) {
+      if (tree[e] == 1 && colours[e] >= 0) {
+        count[colours[e]]++;
+      }
+    }
+    int[] adjStart = new int[n + 1];
+    int[] adjEdge = new int[2 * (n - 1)];
+    int[] up = new int[n];
+    int[] upEdge = new int[n];
+    int[] depth = new int[n];
+    int[] queue = new int[n];
+    for (int swaps = 0; swaps < SWAPS_PER_NODE * n; swaps++) {
+      if (!rootTree(tree, adjStart, adjEdge, up, upEdge, depth, queue)) {
+        return;
+      }
+      int bestIn = -1;
+      int bestOut = -1;
+      long bestGain = 0;
+      for (int e = 0; e < m; e++) {
+        if (tree[e] == 1 || es[e].max() == 0 || tail[e] == head[e]) {
+          continue;
+        }
+        int ce = colours[e];
+        int u = tail[e];
+        int v = head[e];
+        while (u != v) {
+          if (depth[u] < depth[v]) {
+            int t = u;
+            u = v;
+            v = t;
+          }
+          int f = upEdge[u];
+          long gain = (long) weights[f] - weights[e];
+          if (es[f].min() == 0
+              && gain > bestGain
+              && (ce < 0 || ce == colours[f] || count[ce] < caps[ce])) {
+            bestGain = gain;
+            bestIn = e;
+            bestOut = f;
+          }
+          u = up[u];
+        }
+      }
+      if (bestIn < 0) {
+        return;
+      }
+      tree[bestIn] = 1;
+      tree[bestOut] = 0;
+      if (colours[bestIn] >= 0) {
+        count[colours[bestIn]]++;
+      }
+      if (colours[bestOut] >= 0) {
+        count[colours[bestOut]]--;
+      }
+    }
+  }
+
+  // roots the tree at node 0 (parent up, edge upEdge, depth); false when it is not spanning
+  private boolean rootTree(
+      int[] tree, int[] adjStart, int[] adjEdge, int[] up, int[] upEdge, int[] depth, int[] queue) {
+    Arrays.fill(adjStart, 0);
+    for (int e = 0; e < m; e++) {
+      if (tree[e] == 1) {
+        adjStart[tail[e] + 1]++;
+        adjStart[head[e] + 1]++;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      adjStart[v + 1] += adjStart[v];
+    }
+    if (adjStart[n] != 2 * (n - 1)) {
+      return false;
+    }
+    int[] fill = Arrays.copyOf(adjStart, n);
+    for (int e = 0; e < m; e++) {
+      if (tree[e] == 1) {
+        adjEdge[fill[tail[e]]++] = e;
+        adjEdge[fill[head[e]]++] = e;
+      }
+    }
+    Arrays.fill(up, -1);
+    up[0] = 0;
+    depth[0] = 0;
+    int qh = 0;
+    int qt = 0;
+    queue[qt++] = 0;
+    while (qh < qt) {
+      int v = queue[qh++];
+      for (int i = adjStart[v]; i < adjStart[v + 1]; i++) {
+        int e = adjEdge[i];
+        int w = tail[e] == v ? head[e] : tail[e];
+        if (up[w] < 0) {
+          up[w] = v;
+          upEdge[w] = e;
+          depth[w] = depth[v] + 1;
+          queue[qt++] = w;
+        }
+      }
+    }
+    return qt == n;
+  }
+
+  private void hintFrom(int[] tree) {
+    hintVars = new IntVar[m];
+    hint = new int[m];
+    int i = 0;
+    for (int value = 1; value >= 0; value--) {
+      for (int e = 0; e < m; e++) {
+        if (tree[e] == value) {
+          hintVars[i] = es[e];
+          hint[i++] = value;
+        }
+      }
+    }
+  }
+
+  @Override
+  public IntVar[] hintVariables() {
+    return hintVars == null ? es : hintVars;
+  }
+
+  @Override
+  public int[] hintValues() {
+    return hint;
   }
 
   private void resetSelected() {
