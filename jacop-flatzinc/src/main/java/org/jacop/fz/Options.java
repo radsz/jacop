@@ -188,6 +188,10 @@ public class Options {
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                maxsd=0|1 (counting-based search: the variable and value of largest solution
+                density in an alldifferent, linear or regular constraint first, before the other
+                heuristics and, with --lcg, in the runs of the annotation; default 0),
+                maxsd-linear=0|1 (maxSD counts linear constraints too; default 1),
                 scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),

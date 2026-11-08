@@ -111,6 +111,7 @@ import org.jacop.search.InitializeListener;
 import org.jacop.search.LastConflictSelect;
 import org.jacop.search.Lds;
 import org.jacop.search.LpGuidedSelect;
+import org.jacop.search.MaxSolutionDensity;
 import org.jacop.search.PrioritySearch;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
@@ -2117,6 +2118,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotated = lcgDefaultSelect(costVar);
     }
     if (free && annotated != null) {
+      annotated = maxSolutionDensityFirst(annotated, costVar);
+    }
+    if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
     }
     if (!free
@@ -3223,6 +3227,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       monitors.add(byCost);
       values = byCost;
     }
+    MaxSolutionDensity maxSd = maxSolutionDensity(vars);
+    if (maxSd != null) {
+      selects.add(maxSd);
+    }
     if ("afc".equals(heuristic)) {
       if (ints.length > 0) {
         selects.add(new SimpleSelect<>(ints, new AfcMaxDeg<>(store), values));
@@ -3253,6 +3261,50 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (floats.length > 0) {
       selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
     }
+  }
+
+  /**
+   * Counting-based search, --free-config maxsd=1: the maxSD heuristic of Pesant, Quimper and
+   * Zanarini (JAIR 43, 2012) on the variables of the constraints that count their solutions
+   * (alldifferent, linear, regular), before the other heuristics.
+   *
+   * @param vars the search variables.
+   * @return the selection, or null when it is off or no constraint counts.
+   */
+  // the maxSD selection of the free search, for the statistics; null when off
+  private MaxSolutionDensity maxSdSelect;
+
+  private MaxSolutionDensity maxSolutionDensity(IntVar[] vars) {
+    if (!"1".equals(options.freeConfig("maxsd", "0")) || vars.length == 0) {
+      return null;
+    }
+    MaxSolutionDensity maxSd =
+        new MaxSolutionDensity(vars, !"0".equals(options.freeConfig("maxsd-linear", "1")));
+    if (maxSd.countingConstraints().isEmpty()) {
+      return null;
+    }
+    if (options.debug()) {
+      IO.println("% " + maxSd);
+    }
+    maxSdSelect = maxSd;
+    return maxSd;
+  }
+
+  /** The runs of the annotation under LCG free search start with maxSD when it is on. */
+  private SelectChoicePoint<? extends Var> maxSolutionDensityFirst(
+      SelectChoicePoint<? extends Var> annotated, Var costVar) {
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar[] group : List.of(searchVars.getIntVars(), searchVars.getBoolVars())) {
+      for (IntVar x : group) {
+        if (x != costVar) {
+          vars.add(x);
+        }
+      }
+    }
+    MaxSolutionDensity maxSd = maxSolutionDensity(vars.toArray(new IntVar[0]));
+    return maxSd == null ? annotated : new SequenceSelect(List.of(maxSd, annotated));
   }
 
   private static <V extends Var> V[] withoutVars(
@@ -4221,6 +4273,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + nf.format(solutions)
             + (freeSearch != null && freeSearch.getNogoods() > 0
                 ? "\n%%%mzn-stat: nogoods=" + nf.format(freeSearch.getNogoods())
+                : "")
+            + (maxSdSelect != null
+                ? "\n%%%mzn-stat: maxsdConstraints="
+                    + maxSdSelect.countingConstraints().size()
+                    + "\n%%%mzn-stat: maxsdChoices="
+                    + nf.format(maxSdSelect.choices())
                 : "")
             + peakMemory()
             + (options.searchStatistics() ? searchStatistics() : "")

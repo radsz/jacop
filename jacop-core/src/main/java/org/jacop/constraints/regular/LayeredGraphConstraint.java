@@ -2160,4 +2160,90 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     return result;
   }
+
+  /**
+   * It reports the solution densities of the unfixed variables: the share of the paths of the
+   * layered graph, over the current domains, that take each value at each level, counted exactly by
+   * a forward and a backward pass (Pesant, Quimper and Zanarini, JAIR 43, 2012, Section 4.3).
+   *
+   * @param sink receives the densities.
+   * @return false before the graph is built, or when no path is left.
+   */
+  public boolean solutionDensities(org.jacop.constraints.SolutionDensities.Sink sink) {
+    if (state == null) {
+      return false;
+    }
+    int levels = list.length;
+    int nodes = slotBase;
+    double[] forward = new double[nodes];
+    double[] backward = new double[nodes];
+    for (int u = levelNodeStart[0]; u < levelNodeStart[1]; u++) {
+      forward[u] = 1.0d;
+    }
+    for (int level = 0; level < levels; level++) {
+      IntDomain dom = list[level].dom();
+      for (int slot = levelSlotStart[level]; slot < levelSlotStart[level + 1]; slot++) {
+        if (dom.contains(slotValue[slot])) {
+          for (int e = slotStart[slot]; e < slotStart[slot + 1]; e++) {
+            forward[slotEdge[2 * e + 1]] += forward[slotEdge[2 * e]];
+          }
+        }
+      }
+      scaleLevel(forward, level + 1);
+    }
+    boolean any = false;
+    for (int u = levelNodeStart[levels]; u < levelNodeStart[levels + 1]; u++) {
+      backward[u] = 1.0d;
+      any |= forward[u] > 0.0d;
+    }
+    if (!any) {
+      return false;
+    }
+    double[] counts = new double[16];
+    int[] vals = new int[16];
+    for (int level = levels - 1; level >= 0; level--) {
+      IntVar x = list[level];
+      IntDomain dom = x.dom();
+      int first = levelSlotStart[level];
+      int size = levelSlotStart[level + 1] - first;
+      if (counts.length < size) {
+        counts = new double[size];
+        vals = new int[size];
+      }
+      int m = 0;
+      for (int slot = first; slot < first + size; slot++) {
+        if (dom.contains(slotValue[slot])) {
+          double count = 0.0d;
+          for (int e = slotStart[slot]; e < slotStart[slot + 1]; e++) {
+            int u = slotEdge[2 * e];
+            double b = backward[slotEdge[2 * e + 1]];
+            count += forward[u] * b;
+            backward[u] += b;
+          }
+          // a value has one slot per level
+          counts[m] = count;
+          vals[m++] = slotValue[slot];
+        }
+      }
+      if (!x.singleton()
+          && !org.jacop.constraints.SolutionDensities.report(counts, vals, m, x, sink)) {
+        return false;
+      }
+      scaleLevel(backward, level);
+    }
+    return true;
+  }
+
+  // rescales the counts of the nodes of a level when they leave the range of doubles
+  private void scaleLevel(double[] counts, int level) {
+    double max = 0.0d;
+    for (int u = levelNodeStart[level]; u < levelNodeStart[level + 1]; u++) {
+      max = Math.max(max, counts[u]);
+    }
+    if (max > 1e100 || (max > 0.0d && max < 1e-100)) {
+      for (int u = levelNodeStart[level]; u < levelNodeStart[level + 1]; u++) {
+        counts[u] /= max;
+      }
+    }
+  }
 }
