@@ -506,6 +506,9 @@ Cuts:
 - org.jacop.lp.capacityRounds: their rounds; default 50.
 - org.jacop.lp.multistarCuts: multistar cuts over the same sets;
   default true.
+- org.jacop.lp.combCuts: blossom and comb cuts of Routes over the
+  mandatory customers, at the root and in search with the capacity
+  cuts; default true.
 - org.jacop.lp.capacitySearch: capacity and multistar cuts also in
   search; default true.
 - org.jacop.lp.capacitySearchCuts: the most cuts per separation in

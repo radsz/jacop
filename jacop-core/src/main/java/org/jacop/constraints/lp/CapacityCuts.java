@@ -60,6 +60,10 @@ import org.jacop.core.IntVar;
  * outside S, for the sets whose rounded capacity cut holds. The cuts use the demands, the capacity
  * and the bounds of the self loops at the first separation (the root), so they hold for the whole
  * search, also when separated later.
+ *
+ * <p>Over the same customers it also separates blossom and comb cuts, see {@link CombCuts} (Padberg
+ * and Rao, Odd minimum cut-sets and b-matchings, Mathematics of Operations Research 7, 1982;
+ * Grötschel and Padberg, Mathematical Programming 16, 1979).
  */
 public final class CapacityCuts {
 
@@ -69,6 +73,9 @@ public final class CapacityCuts {
   // the multistar cuts, also separated over the sets of the capacity cuts
   private static final boolean MULTISTAR =
       !"false".equals(System.getProperty("org.jacop.lp.multistarCuts"));
+
+  // the blossom and comb cuts of the customers (CombCuts)
+  private static final boolean COMBS = !"false".equals(System.getProperty("org.jacop.lp.combCuts"));
 
   // flows below this are taken as zero in the support graph
   private static final double EPSILON = 1e-6;
@@ -258,6 +265,9 @@ public final class CapacityCuts {
           cuts.add(m);
         }
       }
+    }
+    if (COMBS) {
+      cuts.addAll(CombCuts.separate(tails, heads, value, mandatory, flow));
     }
     cuts.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
     return cuts.size() > limit ? new ArrayList<>(cuts.subList(0, limit)) : cuts;
