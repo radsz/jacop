@@ -2996,8 +2996,8 @@ public final class LcgSolver implements ExternalPropagator {
           return result;
         }
       }
-      if (lowerBoundShare > 0 && best != null) {
-        if (shaveGrowth > 1) {
+      if (lowerBoundShare > 0) {
+        if (shaveGrowth > 1 && best != null) {
           // a round that did not improve the best solution gives the bound more of the next one
           share = best[objective] < before ? lowerBoundShare : Math.min(share * shaveGrowth, 4);
         }
@@ -3025,11 +3025,16 @@ public final class LcgSolver implements ExternalPropagator {
     while (true) {
       // after solve the domains are those of level 0
       int lb = Math.max(vars[objective].min(), raised);
-      if (best == null || lb >= best[objective]) {
+      // before the first solution the run assumes the objective at its lower bound, without
+      // shaving: puzzles such as ButtonsScissors have their first solutions only near the optimum
+      // and are much easier with the tightest bound (XCSP3 ButtonsScissors-00: 0.2 s with the
+      // objective at most 9, the optimum, no solution in 15 s with at most 13)
+      if (best == null ? lb >= vars[objective].max() : lb >= best[objective]) {
         return CdclSolver.UNKNOWN;
       }
       // objective <= target: the lower bound itself, or a step above it when shaving
-      int target = shaving ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
+      int target =
+          shaving && best != null ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
       int lit = -geLit(objective, target + 1);
       sat.setConflictLimit(limit);
       lowerBoundRuns++;
@@ -3041,10 +3046,12 @@ public final class LcgSolver implements ExternalPropagator {
         if (sat.conflicts < limit) {
           return result; // stopped by the deadline
         }
-        shaveStep = Math.max(1, shaveStep / 2);
+        if (best != null) {
+          shaveStep = Math.max(1, shaveStep / 2);
+        }
         return CdclSolver.UNKNOWN;
       }
-      if (sat.failedAssumptions().length == 0 || best[objective] <= target) {
+      if (sat.failedAssumptions().length == 0 || best != null && best[objective] <= target) {
         // no better solution at all; or the run found one within the target and then none
         // better, and every better one would be within the target too
         return result;
@@ -3053,7 +3060,9 @@ public final class LcgSolver implements ExternalPropagator {
       lowerBoundRaised++;
       raised = target + 1;
       reportBound(target + 1L);
-      if (!shaving) {
+      if (!shaving || best == null) {
+        // before the first solution one step per round: a sum objective (XCSP3 Cargo) raised its
+        // bound one by one for the whole round and found no solution
         return CdclSolver.UNKNOWN;
       }
       shaveStep = Math.min(2 * shaveStep, 1L << 30);
