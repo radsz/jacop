@@ -5561,3 +5561,183 @@ C	jacop:upTo1min/fastfood/ff59	ba20c0c45545bc52	obj1:plain	PASS	COMPLETE	1	7577	
 C	jacop:upTo1min/fastfood/ff59	ba20c0c45545bc52	obj1:f	PASS	COMPLETE	1	19326	2026-11-08T21:36:14Z	
 C	jacop:upTo1min/fastfood/ff59	ba20c0c45545bc52	obj1:lcg	PASS	COMPLETE	1	4797	2026-11-08T21:36:19Z	
 P	jacop:test/roster/chicroster_dataset_7	9fe9134e6ae1f52f	minimize	0	INCOMPLETE	0	0	0	60363	60	2026-11-08T21:36:32Z	jacop_count
+P	jacop:upTo5sec/hakank_choosing_teams2/hakank_choosing_teams2	e31753c7ac2529d5	satisfy		INCOMPLETE	2000000	2000000	1ae87fcaa7341a1c	38119	300	2026-11-08T21:37:40Z	jacop_count_values,jacop_value_precede_chain_int
+P	jacop:upTo5sec/filters/fir_1_1	d9c40672067d94f2	minimize	18	INCOMPLETE	2000000	2000000	3536ea03fb01bb6c	53047	300	2026-11-08T21:37:56Z	jacop_diff2_strict,jacop_maximum
+P	jacop:upTo10min/filters/ar_1_3	90509d28e9fa08b4	minimize	16	INCOMPLETE	2000000	2000000	adaddb69bbd8ea4f	58913	300	2026-11-08T21:38:56Z	jacop_diff2_strict,jacop_maximum
+P	jacop:upTo5sec/fjsp_disjunctive_optional/opt_fjsp_r00	f2a8297f4a359d80	minimize	148	INCOMPLETE	2000000	2000000	aac587a5c42ae8ea	124986	300	2026-11-08T21:39:08Z	jacop_disjunctive_optional
+P	jacop:above1hour/carpet-cutting/mzn_rnd_test.02	d105b9b99b157978	minimize	919	INCOMPLETE	2000000	2000000	cc7c74dffe05916a	46756	300	2026-11-08T21:39:46Z	jacop_cumulative,jacop_diff2_strict
+P	jacop:flakyTests/carpet-cutting/mzn_rnd_test.11	9b80ef374a258df5	minimize	963	INCOMPLETE	2000000	2000000	ba129bb7afa28c21	40530	300	2026-11-08T21:40:29Z	jacop_cumulative,jacop_diff2_strict
+P	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	minimize	3	COMPLETE	330074	330074	bbe7bcf75f431103	134588	300	2026-11-08T21:41:30Z	jacop_alldiff,jacop_assignment,jacop_global_cardinality_closed,jacop_regular
+P	jacop:upTo30sec/elitserien/handball12	c9dd6d703316e621	minimize	1	INCOMPLETE	792301	792301	82b801d78d45ff60	300218	300	2026-11-08T21:42:44Z	jacop_alldiff,jacop_assignment,jacop_count_values,jacop_member_int,jacop_regular
+P	jacop:above10min/cargo/challenge01_0s_1913	1756a5c26ed564ba	minimize	0	INCOMPLETE	0	0	0	300168	300	2026-11-08T21:45:35Z	jacop_cumulative,jacop_diff2_strict
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	all:f	PARTIAL	INCOMPLETE	0	300158	2026-11-08T21:46:31Z	0 of 330074 solutions before the limit
+P	jacop:above1hour/cargo/challenge04_1s_626	9251147651edafb7	minimize	714	INCOMPLETE	0	0	0	300146	300	2026-11-08T21:47:47Z	jacop_cumulative,jacop_diff2_strict
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	decomp:jacop_assignment	PASS	COMPLETE	330074	90475	2026-11-08T21:48:01Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	decomp:jacop_regular	PASS	COMPLETE	330074	86522	2026-11-08T21:49:28Z	
+P	jacop:above1hour/cargo/challenge05_1s_954	6b1f5df5b71f3659	minimize	2883	INCOMPLETE	0	0	0	300147	300	2026-11-08T21:50:50Z	jacop_cumulative,jacop_diff2_strict
+P	jacop:upTo5min/elitserien/handball5	707987a5382a1240	minimize	4	COMPLETE	5794	5794	ec46f2a439f899d6	65754	300	2026-11-08T21:52:05Z	jacop_alldiff,jacop_assignment,jacop_global_cardinality_closed,jacop_regular
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	300162	2026-11-08T21:54:28Z	0 of 330074 solutions before the limit
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	decomp:jacop_global_cardinality_closed	NO_DECOMPOSITION				2026-11-08T21:54:28Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:plain	PASS	COMPLETE	1	2525	2026-11-08T21:54:30Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:f	PASS	COMPLETE	1	6918	2026-11-08T21:54:37Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:lcg	PASS	COMPLETE	1	4556	2026-11-08T21:54:42Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:lcg-f	PASS	COMPLETE	1	2898	2026-11-08T21:54:45Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	5672	2026-11-08T21:54:51Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	6998	2026-11-08T21:54:58Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	6833	2026-11-08T21:55:04Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj1:plain	PASS	COMPLETE	1	5496	2026-11-08T21:55:10Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj1:f	PASS	COMPLETE	1	17896	2026-11-08T21:55:28Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj1:lcg	PASS	COMPLETE	1	8606	2026-11-08T21:55:36Z	
+C	jacop:upTo30sec/elitserien/handball20	7ef9871a05fe392f	obj1:lcg-f	PASS	COMPLETE	1	10417	2026-11-08T21:55:47Z	
+P	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	minimize	14	COMPLETE	181152	181152	faac32807aa59cd3	72725	300	2026-11-08T21:57:02Z	jacop_disjoint
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	all:f	PARTIAL	INCOMPLETE	0	300125	2026-11-08T21:57:06Z	0 of 5794 solutions before the limit
+P	jacop:cc_base	648a4b4a8a04a7b9	minimize	3837	INCOMPLETE	0	0	0	300145	300	2026-11-08T21:57:47Z	jacop_cumulative,jacop_diff2_strict
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	all:f	PASS	COMPLETE	181152	61643	2026-11-08T21:58:04Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	decomp:jacop_assignment	PASS	COMPLETE	5794	89856	2026-11-08T21:58:35Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	decomp:jacop_disjoint	PASS	COMPLETE	181152	78101	2026-11-08T21:59:22Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj0:plain	PASS	COMPLETE	1	4310	2026-11-08T21:59:26Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj0:f	PASS	COMPLETE	1	8029	2026-11-08T21:59:34Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj0:lcg	PASS	COMPLETE	1	2142	2026-11-08T21:59:36Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj0:lcg-f	PASS	COMPLETE	1	1371	2026-11-08T21:59:38Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj0:lcg:decomp:jacop_disjoint	PASS	COMPLETE	1	2122	2026-11-08T21:59:40Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj1:plain	PASS	COMPLETE	1	3239	2026-11-08T21:59:43Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	decomp:jacop_regular	PASS	COMPLETE	5794	68117	2026-11-08T21:59:44Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj1:f	PASS	COMPLETE	1	3213	2026-11-08T21:59:46Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj1:lcg	PASS	COMPLETE	1	2073	2026-11-08T21:59:48Z	
+C	jacop:upTo5min/company_competition/company_competition	d64a6ea72df091db	obj1:lcg-f	PASS	COMPLETE	1	1650	2026-11-08T21:59:50Z	
+P	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	minimize	4	COMPLETE	338178	338178	97795daec4dc165a	133113	300	2026-11-08T22:02:13Z	jacop_alldiff,jacop_assignment,jacop_global_cardinality_closed,jacop_regular
+P	jacop:upTo5sec/mapping/mesh2x2_1	15a7017b901d2f0f	minimize	1000	INCOMPLETE	4	4	27a64588bdbcbec	300157	300	2026-11-08T22:02:48Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	300210	2026-11-08T22:04:44Z	0 of 5794 solutions before the limit
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	decomp:jacop_global_cardinality_closed	NO_DECOMPOSITION				2026-11-08T22:04:44Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:plain	PASS	COMPLETE	1	23475	2026-11-08T22:05:07Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:f	PASS	COMPLETE	1	66741	2026-11-08T22:06:14Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:lcg	PASS	COMPLETE	1	13456	2026-11-08T22:06:27Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:lcg-f	PASS	COMPLETE	1	10759	2026-11-08T22:06:38Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	12609	2026-11-08T22:06:51Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	18463	2026-11-08T22:07:09Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	all:f	PARTIAL	INCOMPLETE	0	300179	2026-11-08T22:07:13Z	0 of 338178 solutions before the limit
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	10925	2026-11-08T22:07:20Z	
+P	jacop:upTo30sec/mapping/mesh2x2_mp3	87033c6c34dc8c91	minimize	1102	INCOMPLETE	4	4	f98186347cfd02d3	300138	300	2026-11-08T22:07:50Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj1:plain	PASS	COMPLETE	1	33006	2026-11-08T22:07:53Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	decomp:jacop_assignment	PASS	COMPLETE	338178	149490	2026-11-08T22:09:43Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj1:f	PASS	COMPLETE	1	142576	2026-11-08T22:10:16Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj1:lcg	PASS	COMPLETE	1	12069	2026-11-08T22:10:28Z	
+C	jacop:upTo5min/elitserien/handball5	707987a5382a1240	obj1:lcg-f	PASS	COMPLETE	1	13731	2026-11-08T22:10:42Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	decomp:jacop_regular	PASS	COMPLETE	338178	144259	2026-11-08T22:12:07Z	
+P	jacop:upTo5min/mapping/mesh2x2_mp3	8a4475a66478121b	minimize	1102	INCOMPLETE	4	4	8b79c19ee40be104	300157	300	2026-11-08T22:12:52Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+P	jacop:upTo1hour/multi-knapsack/mknap2-2	00748a631bacc790	maximize	8722	INCOMPLETE	0	0	0	300197	300	2026-11-08T22:16:05Z	jacop_knapsack
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	300142	2026-11-08T22:17:07Z	0 of 338178 solutions before the limit
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	decomp:jacop_global_cardinality_closed	NO_DECOMPOSITION				2026-11-08T22:17:07Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:plain	PASS	COMPLETE	1	23385	2026-11-08T22:17:31Z	
+P	jacop:upTo5sec/mrcpsp_optional/mm_m2_m2_27_9	688bab15a90acd5b	minimize	29	INCOMPLETE	2000000	2000000	f8fcd28b6e1b27	104476	300	2026-11-08T22:17:50Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_cumulative_optional,jacop_maximum
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:f	PASS	COMPLETE	1	36138	2026-11-08T22:18:07Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:lcg	PASS	COMPLETE	1	20266	2026-11-08T22:18:27Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:lcg-f	PASS	COMPLETE	1	15810	2026-11-08T22:18:43Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	14158	2026-11-08T22:18:57Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	31006	2026-11-08T22:19:28Z	
+P	jacop:above1hour/mapping/mesh3x3_mp3	ff56a3452dc4e8f9	minimize	933	INCOMPLETE	26	26	f41633b68118ebd7	300196	300	2026-11-08T22:19:41Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	16098	2026-11-08T22:19:44Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj1:plain	PASS	COMPLETE	1	31050	2026-11-08T22:20:15Z	
+P	jacop:upTo5sec/mrcpsp_optional/mm_m1_m1_50_6	a780d3fcc9800a73	minimize	44	INCOMPLETE	2000000	2000000	30708c08cc9bf3b6	56553	300	2026-11-08T22:20:39Z	jacop_cumulative_optional,jacop_maximum
+P	jacop:upTo5sec/fjsp_cumulative_optional/opt_fjsp_r00	79b1f35d1aa1a7bc	minimize	148	INCOMPLETE	2000000	2000000	241ba46ecffded4	79481	300	2026-11-08T22:21:59Z	jacop_cumulative_optional
+P	jacop:upTo5sec/hakank_subsets_100/hakank_subsets_100	22ffd7dcbc09f7cc	satisfy		INCOMPLETE	2000000	2000000	ea039def2aad7114	250730	300	2026-11-08T22:22:01Z	jacop_disjoint
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj1:f	PASS	COMPLETE	1	129833	2026-11-08T22:22:25Z	
+P	jacop:upTo5sec/hakank_choosing_teams/hakank_choosing_teams	722156aed5036c5f	satisfy		INCOMPLETE	2000000	2000000	d73e5a06edda83f4	30624	300	2026-11-08T22:22:31Z	jacop_alldiff,jacop_increasing,jacop_lex_lesseq_int
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj1:lcg	PASS	COMPLETE	1	24664	2026-11-08T22:22:50Z	
+C	jacop:upTo5min/elitserien/handball3	ef94e5027f7b0d9c	obj1:lcg-f	PASS	COMPLETE	1	46121	2026-11-08T22:23:36Z	
+P	jacop:upTo5sec/rcpsp_cumulatives/rcpsp_03	473c33e675273eab	minimize	54	INCOMPLETE	2000000	2000000	e72abfc8302555bf	227834	300	2026-11-08T22:25:48Z	jacop_cumulative_optional
+P	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	minimize	82	COMPLETE	6	6	6661bc8b2d4e0eaa	138782	300	2026-11-08T22:26:20Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_cost_regular
+P	jacop:upTo1min/template_design/catfood_3	851fb8f35e8485cb	minimize	408	INCOMPLETE	19	19	d793f3c67de12261	300191	300	2026-11-08T22:28:30Z	jacop_lex_lesseq_int
+P	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	minimize	91140	COMPLETE	1	1	6ff879d2829ceaa1	92228	300	2026-11-08T22:29:59Z	jacop_alldiff,jacop_alldifferent_except_0,jacop_maximum,jacop_minimum
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	all:f	PASS	COMPLETE	1	2988	2026-11-08T22:30:02Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	all:f	PASS	COMPLETE	6	259785	2026-11-08T22:30:40Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	decomp:jacop_alldifferent_except_0	PASS	COMPLETE	1	90551	2026-11-08T22:31:32Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	6	139593	2026-11-08T22:32:59Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	decomp:jacop_alldiff	PASS	COMPLETE	1	88524	2026-11-08T22:33:01Z	
+P	jacop:upTo30sec/template_design/catfood_3	1e36a3510c9ddd0c	minimize	408	INCOMPLETE	19	19	ab79417cc496de2a	300138	300	2026-11-08T22:34:27Z	jacop_lex_lesseq_int
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	decomp:jacop_minimum	PASS	COMPLETE	1	91341	2026-11-08T22:34:32Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	decomp:jacop_alldiff	PASS	COMPLETE	6	155474	2026-11-08T22:35:35Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	decomp:jacop_maximum	PASS	COMPLETE	1	89967	2026-11-08T22:36:02Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	std	PASS	COMPLETE	1	91381	2026-11-08T22:37:33Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	std:f	PASS	COMPLETE	1	2549	2026-11-08T22:37:36Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	objstd:lcg	PASS	COMPLETE	1	29699	2026-11-08T22:38:06Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:plain	PASS	COMPLETE	1	99295	2026-11-08T22:39:45Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	decomp:jacop_cost_regular	PARTIAL	INCOMPLETE	2	300151	2026-11-08T22:40:35Z	2 of 6 solutions before the limit
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:f	PASS	COMPLETE	1	106711	2026-11-08T22:41:32Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:lcg	PASS	COMPLETE	1	34827	2026-11-08T22:42:06Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:lcg-f	PASS	COMPLETE	1	12092	2026-11-08T22:42:19Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:lcg:decomp:jacop_alldifferent_except_0	PASS	COMPLETE	1	32658	2026-11-08T22:42:51Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	19128	2026-11-08T22:43:10Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:plain	PASS	COMPLETE	1	156259	2026-11-08T22:43:11Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:lcg:decomp:jacop_minimum	PASS	COMPLETE	1	20954	2026-11-08T22:43:31Z	
+P	jacop:above1hour/template_design/herbs_2	a84c213ed4ab8f82	minimize		INCOMPLETE	0	0	0	300119	300	2026-11-08T22:44:27Z	jacop_lex_lesseq_int
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	1	58290	2026-11-08T22:44:30Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj1:plain	PASS	COMPLETE	1	72388	2026-11-08T22:45:42Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj1:f	PASS	COMPLETE	1	51817	2026-11-08T22:46:34Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:f	PASS	COMPLETE	1	207425	2026-11-08T22:46:38Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj1:lcg	PASS	COMPLETE	1	38985	2026-11-08T22:47:13Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:lcg	PASS	COMPLETE	1	35447	2026-11-08T22:47:14Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:lcg-f	PASS	COMPLETE	1	50591	2026-11-08T22:48:04Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	33897	2026-11-08T22:48:38Z	
+C	jacop:upTo30sec/liner-sf-repositioning/fm3_11	167bf8b35a48aab3	obj1:lcg-f	PASS	COMPLETE	1	92156	2026-11-08T22:48:45Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	24361	2026-11-08T22:49:03Z	
+P	jacop:upTo10min/zephyrus/12__8__6__3	57af53ad4f42def2	minimize	1300	INCOMPLETE	393507	393507	c565ada3ee0d1b5b	300128	300	2026-11-08T22:49:28Z	jacop_lex_lesseq_int
+P	jacop:above1hour/gfd-schedule/n25f5d20m10k3	6631700f72d44b93	minimize	5	INCOMPLETE	0	0	0	300169	300	2026-11-08T22:53:47Z	jacop_count,jacop_cumulative,jacop_nvalue
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj0:lcg:decomp:jacop_cost_regular	PARTIAL	INCOMPLETE	0	300156	2026-11-08T22:54:03Z	
+P	jacop:upTo1hour/zephyrus/12__6__8__3	60a768a0e4555de6	minimize	1300	INCOMPLETE	341287	341287	40ba2605288c46de	300139	300	2026-11-08T22:54:30Z	jacop_lex_lesseq_int
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj1:plain	PASS	COMPLETE	1	82172	2026-11-08T22:55:25Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj1:f	PASS	COMPLETE	1	170740	2026-11-08T22:58:16Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj1:lcg	PASS	COMPLETE	1	33890	2026-11-08T22:58:50Z	
+P	jacop:upTo5sec/zephyrus/12__6__6__3	af15680097fe7d1e	minimize	780	INCOMPLETE	1716998	1716998	aed582de10512842	300139	300	2026-11-08T22:59:31Z	jacop_lex_lesseq_int
+C	jacop:upTo5min/ttppv_cost_regular/circ8abal	08ecbd8710560bc8	obj1:lcg-f	PASS	COMPLETE	1	49238	2026-11-08T22:59:39Z	
+P	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	minimize	1170	COMPLETE	29607	29607	19f34079ff58245a	87793	300	2026-11-08T23:01:01Z	jacop_lex_lesseq_int
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	all:f	PASS	COMPLETE	29607	15787	2026-11-08T23:01:16Z	
+P	jacop:upTo1hour/p1f/12	5da1c159fd578764	minimize	484	INCOMPLETE	134	134	ffc3f66e90420fb2	300155	300	2026-11-08T23:01:36Z	jacop_alldiff,jacop_assignment,jacop_circuit,jacop_lex_less_int
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	decomp:jacop_lex_lesseq_int	PASS	COMPLETE	29607	173127	2026-11-08T23:04:10Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj0:plain	PASS	COMPLETE	1	8134	2026-11-08T23:04:18Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj0:f	PASS	COMPLETE	1	2148	2026-11-08T23:04:20Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj0:lcg	PASS	COMPLETE	1	1859	2026-11-08T23:04:22Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj0:lcg-f	PASS	COMPLETE	1	1963	2026-11-08T23:04:24Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj0:lcg:decomp:jacop_lex_lesseq_int	PASS	COMPLETE	1	2099	2026-11-08T23:04:26Z	
+P	jacop:gfd-schedule	530d12478665c506	minimize	1	INCOMPLETE	0	0	0	300170	300	2026-11-08T23:04:41Z	jacop_count,jacop_nvalue
+P	jacop:upTo5sec/nfc/12_2_5	cd2afee6e1b8efb8	minimize	1074	INCOMPLETE	2000000	2000000	8ed16ea1eff0ca16	28421	300	2026-11-08T23:05:10Z	jacop_networkflow
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj1:plain	PASS	COMPLETE	1	66277	2026-11-08T23:05:32Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj1:f	PASS	COMPLETE	1	1700	2026-11-08T23:05:34Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj1:lcg	PASS	COMPLETE	1	1678	2026-11-08T23:05:35Z	
+C	jacop:upTo5min/zephyrus/14__8__6__3	6dcf3b9c28d6f0d5	obj1:lcg-f	PASS	COMPLETE	1	1726	2026-11-08T23:05:37Z	
+P	jacop:flakyTests/nfc/24_4_10	2b1eb9a13fdef9e9	minimize	1912	INCOMPLETE	2000000	2000000	1c2809c61a0a266f	51534	300	2026-11-08T23:06:02Z	jacop_networkflow
+P	jacop:upTo5sec/elitserien/handball7	0cb1161bbdec469b	satisfy		INCOMPLETE	972085	972085	dceecdcc2f4cac96	300189	300	2026-11-08T23:06:36Z	jacop_alldiff,jacop_assignment,jacop_count_values,jacop_lex_less_int,jacop_regular
+P	jacop:upTo30sec/stochastic-vrp/vrp-s3-v2-c6_vrp-v2-c6_det	16146d8376e987af	minimize	194	INCOMPLETE	2000000	2000000	35d274565781ddea	102338	300	2026-11-08T23:07:23Z	jacop_circuit,jacop_maximum
+P	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	minimize	80	COMPLETE	2	2	fc57acab52b04260	121992	300	2026-11-08T23:08:22Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_cost_regular
+P	jacop:upTo5min/stochastic-vrp/vrp-s4-v2-c6_vrp-v2-c6_det	d20d0c144376344a	minimize	221	INCOMPLETE	2000000	2000000	43219688cc7c0516	105402	300	2026-11-08T23:09:12Z	jacop_circuit,jacop_maximum
+P	jacop:upTo10min/stochastic-vrp/vrp-s3-v2-c7_vrp-v2-c7_det	a691fb574f4d0933	minimize	230	INCOMPLETE	2000000	2000000	33cb01709ee82ecf	94063	300	2026-11-08T23:10:52Z	jacop_circuit,jacop_maximum
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	all:f	PASS	COMPLETE	2	171948	2026-11-08T23:11:14Z	
+P	jacop:above1hour/zephyrus/14__10__8__3	a78645731cd7a3e8	minimize	2600	INCOMPLETE	0	0	0	300166	300	2026-11-08T23:11:38Z	jacop_lex_lesseq_int
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	2	119021	2026-11-08T23:13:13Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	decomp:jacop_alldiff	PASS	COMPLETE	2	128890	2026-11-08T23:15:22Z	
+P	jacop:upTo5min/opd/small_bibd_08_28_14	d837fb2cdcd98bf6	minimize	6	INCOMPLETE	835	835	199d70f8070559d0	300182	300	2026-11-08T23:17:27Z	jacop_lex_lesseq_int
+P	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	minimize	7	COMPLETE	130	130	2dfdbc3b511c10a6	101867	300	2026-11-08T23:19:31Z	jacop_lex_lesseq_int
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	decomp:jacop_cost_regular	PARTIAL	INCOMPLETE	2	300140	2026-11-08T23:20:23Z	2 of 2 solutions before the limit
+P	jacop:cvrp	433696c5260cf72e	minimize	696	INCOMPLETE	0	0	0	300175	300	2026-11-08T23:20:53Z	jacop_circuit
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:plain	PASS	COMPLETE	1	111324	2026-11-08T23:22:14Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	all:f	PARTIAL	INCOMPLETE	0	300137	2026-11-08T23:24:31Z	0 of 130 solutions before the limit
+P	jacop:upTo5sec/is/jZ9pQqRxJ2	8f1b612ba710d6ea	minimize	210944	INCOMPLETE	2000000	2000000	bf5a97d4459e4093	237211	300	2026-11-08T23:24:51Z	jacop_circuit,jacop_table_int
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:f	PASS	COMPLETE	1	222586	2026-11-08T23:25:56Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:lcg	PASS	COMPLETE	1	20285	2026-11-08T23:26:17Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:lcg-f	PASS	COMPLETE	1	11948	2026-11-08T23:26:29Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	19528	2026-11-08T23:26:48Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	11959	2026-11-08T23:27:00Z	
+P	jacop:upTo30sec/is/A3PZaPjnUz	427112399e11e3a9	minimize	103936	INCOMPLETE	2000000	2000000	9f7a5b3becc0462	234060	300	2026-11-08T23:28:47Z	jacop_circuit,jacop_table_int
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	decomp:jacop_lex_lesseq_int	PARTIAL	INCOMPLETE	5	300186	2026-11-08T23:29:31Z	5 of 130 solutions before the limit
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj0:plain	PASS	COMPLETE	1	16942	2026-11-08T23:29:48Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj0:f	PASS	COMPLETE	1	38150	2026-11-08T23:30:27Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj0:lcg	PASS	COMPLETE	1	6319	2026-11-08T23:30:33Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj0:lcg-f	PASS	COMPLETE	1	6889	2026-11-08T23:30:40Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj0:lcg:decomp:jacop_lex_lesseq_int	PASS	COMPLETE	1	30987	2026-11-08T23:31:11Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj1:plain	PASS	COMPLETE	1	30971	2026-11-08T23:31:42Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj1:f	PASS	COMPLETE	1	13267	2026-11-08T23:31:55Z	
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj0:lcg:decomp:jacop_cost_regular	PARTIAL	INCOMPLETE	1	300141	2026-11-08T23:32:00Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj1:lcg	PASS	COMPLETE	1	6962	2026-11-08T23:32:02Z	
+C	jacop:upTo5min/mqueens2/n12	7476338edb872c2f	obj1:lcg-f	PASS	COMPLETE	1	4345	2026-11-08T23:32:06Z	
+P	jacop:model	d6cf929b1d10d439	minimize	210944	INCOMPLETE	2000000	2000000	55a7738a4b6661e2	208931	300	2026-11-08T23:32:17Z	jacop_circuit,jacop_table_int
+C	jacop:upTo5min/ttppv_cost_regular/circ8dbal	4f2ee766d9c18b69	obj1:plain	PASS	COMPLETE	1	143047	2026-11-08T23:34:23Z	
