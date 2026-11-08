@@ -3412,6 +3412,14 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+200. Bug fix: when LCG free search gives way to free search without
+     learning (lcg-slow-rate), the regular and MDD constraints that went
+     to the SAT solver as clauses are imposed in the store again. Before,
+     free search without learning ran without them, printed solutions
+     that violate them and could claim a wrong optimum: on XCSP3 2025
+     FAPP-aux-18-0350 with large tables posted as MDD, every solution
+     after the switch broke about 140 of its 1,425 tables.
+
 Version 4.11
 =============
 
