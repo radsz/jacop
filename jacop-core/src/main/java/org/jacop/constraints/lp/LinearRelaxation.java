@@ -428,6 +428,9 @@ public class LinearRelaxation extends Constraint
   // the separations of the capacity cuts, one for each Routes with its arcs among the columns
   private List<CapacityCuts> capacity = new ArrayList<>();
 
+  // blossom and comb cuts (CombCuts) also in search, not only at the root
+  private static final boolean COMB_SEARCH = Boolean.getBoolean("org.jacop.lp.combSearch");
+
   // energy cuts of the cumulative resources at the root, in the rounds of the capacity cuts
   private static final boolean ENERGY_CUTS =
       !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
@@ -2871,7 +2874,7 @@ public class LinearRelaxation extends Constraint
     }
     for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
       // energy cuts stay at the root; in search only capacity cuts are separated
-      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen);
+      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen, true);
       int n = lp.columns();
       int routing = chosen.size();
       if (!energy.isEmpty()) {
@@ -2944,7 +2947,7 @@ public class LinearRelaxation extends Constraint
 
   // the cuts violated by the solution of the simplex, at most limit and within the dense cap, as
   // rows; the keys of the cuts chosen are added to seen, and cuts already seen are left out
-  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen) {
+  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen, boolean root) {
     List<MirCut> chosen = new ArrayList<>();
     int n = lp.columns();
     for (int c = 0; c < capacity.size(); c++) {
@@ -2955,7 +2958,7 @@ public class LinearRelaxation extends Constraint
       for (int a = 0; a < literals.length; a++) {
         value[a] = column[a] < 0 ? literals[a].min() : lp.value(column[a]);
       }
-      for (CapacityCuts.Cut cut : cc.separate(value, limit)) {
+      for (CapacityCuts.Cut cut : cc.separate(value, limit, root || COMB_SEARCH)) {
         MirCut row = row(cut, column);
         long m = (long) lp.rows() + chosen.size() + 1;
         if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
@@ -2984,7 +2987,7 @@ public class LinearRelaxation extends Constraint
   // ones go into the simplex and the pool, and the relaxation is solved again with them
   private int searchCapacityCuts(int limit) {
     capacitySeparations++;
-    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen);
+    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen, false);
     if (chosen.isEmpty()) {
       capacityPeriod = Math.min(2 * capacityPeriod, CAPACITY_MAX_PERIOD);
       return LpSolver.OPTIMAL;

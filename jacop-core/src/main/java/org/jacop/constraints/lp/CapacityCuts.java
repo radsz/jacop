@@ -218,6 +218,18 @@ public final class CapacityCuts {
    * @return the cuts
    */
   public List<Cut> separate(double[] value, int limit) {
+    return separate(value, limit, true);
+  }
+
+  /**
+   * It returns the cuts violated by values of the arcs, the most effective first.
+   *
+   * @param value the value of each arc in the LP solution
+   * @param limit the most cuts returned
+   * @param combs whether blossom and comb cuts ({@link CombCuts}) fill the slots left
+   * @return the cuts
+   */
+  public List<Cut> separate(double[] value, int limit, boolean combs) {
     // the nodes every route must visit: a self loop that is fixed to 0 or none, at the first
     // separation (the root), so that the cuts made later in the search hold everywhere too
     if (mandatory == null) {
@@ -272,10 +284,10 @@ public final class CapacityCuts {
     }
     // blossoms and combs only take the slots the capacity cuts leave: competing for them by
     // efficacy, they lowered the root bound on CVRP (A-n37-k5 659 to 643)
-    if (COMBS) {
-      List<Cut> combs = CombCuts.separate(tails, heads, value, mandatory, flow);
-      combs.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
-      cuts.addAll(combs.subList(0, Math.min(combs.size(), limit - cuts.size())));
+    if (COMBS && combs) {
+      List<Cut> found = CombCuts.separate(tails, heads, value, mandatory, flow);
+      found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
+      cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));
     }
     return cuts;
   }
