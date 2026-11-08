@@ -40,6 +40,7 @@ import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
+import org.jacop.fz.Node;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
@@ -111,6 +112,11 @@ public class ColouredTreeDetector implements ParserTreeConstants {
     switch (node.getName()) {
       case "jacop_wst" -> trees.add(node);
       case "int_lin_le", "int_lin_eq", "bool_lin_le", "bool_lin_eq" -> {
+        Integer limit = parInt(node.jjtGetChild(2));
+        if (limit == null) {
+          // the bound of bool_lin_le and bool_lin_eq may be a variable
+          return;
+        }
         int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
         for (int x : a) {
           if (x != 1) {
@@ -118,12 +124,24 @@ public class ColouredTreeDetector implements ParserTreeConstants {
           }
         }
         sumVars.add(support.getVarArray((SimpleNode) node.jjtGetChild(1)));
-        sumLimits.add(support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)));
+        sumLimits.add(limit);
       }
       default -> {
         // not used
       }
     }
+  }
+
+  // the value of an int literal or int parameter, null for anything else
+  private Integer parInt(Node child) {
+    if (!(child instanceof ASTScalarFlatExpr expr)) {
+      return null;
+    }
+    return switch (expr.getType()) {
+      case 0 -> expr.getInt();
+      case 2 -> support.dictionary.checkInt(expr.getIdent());
+      default -> null;
+    };
   }
 
   private void tree(ASTConstElem node) {
