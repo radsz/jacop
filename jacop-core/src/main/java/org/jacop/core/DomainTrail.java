@@ -39,8 +39,9 @@ package org.jacop.core;
  * restoring a sequential walk over memory, where a trail per domain would touch a separate array
  * per changed variable.
  *
- * <p>An entry has {@link #INTS} ints (a kind and the level, then values chosen by the domain), one
- * long and {@link #OBJECTS} objects (the domain, then objects chosen by the domain).
+ * <p>An entry has {@link #INTS_PER_ENTRY} ints (a kind and the level, then values chosen by the
+ * domain), one long and {@link #OBJECTS_PER_ENTRY} objects (the domain, then objects chosen by the
+ * domain).
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
@@ -60,10 +61,10 @@ public final class DomainTrail {
   }
 
   /** The number of ints of an entry. */
-  static final int INTS = 8;
+  static final int INTS_PER_ENTRY = 8;
 
   /** The number of objects of an entry. */
-  static final int OBJECTS = 4;
+  static final int OBJECTS_PER_ENTRY = 4;
 
   /** The log of the number of entries of the first segment. */
   private static final int FIRST_SHIFT = 8;
@@ -108,9 +109,9 @@ public final class DomainTrail {
     int s = segment(entry);
     int i = offset(entry, s);
     int[] in = ints[s];
-    in[i * INTS] = kind;
-    in[i * INTS + 1] = level;
-    objects[s][i * OBJECTS] = domain;
+    in[i * INTS_PER_ENTRY] = kind;
+    in[i * INTS_PER_ENTRY + 1] = level;
+    objects[s][i * OBJECTS_PER_ENTRY] = domain;
     return entry;
   }
 
@@ -120,9 +121,9 @@ public final class DomainTrail {
       throw new IllegalStateException("Trail too large");
     }
     int n = FIRST << s;
-    ints[s] = new int[n * INTS];
+    ints[s] = new int[n * INTS_PER_ENTRY];
     longs[s] = new long[n];
-    objects[s] = new Object[n * OBJECTS];
+    objects[s] = new Object[n * OBJECTS_PER_ENTRY];
     capacity += n;
   }
 
@@ -147,7 +148,7 @@ public final class DomainTrail {
    */
   int getInt(int entry, int k) {
     int s = segment(entry);
-    return ints[s][offset(entry, s) * INTS + k];
+    return ints[s][offset(entry, s) * INTS_PER_ENTRY + k];
   }
 
   /**
@@ -159,7 +160,7 @@ public final class DomainTrail {
    */
   void setInt(int entry, int k, int value) {
     int s = segment(entry);
-    ints[s][offset(entry, s) * INTS + k] = value;
+    ints[s][offset(entry, s) * INTS_PER_ENTRY + k] = value;
   }
 
   /**
@@ -193,7 +194,7 @@ public final class DomainTrail {
    */
   Object getObject(int entry, int k) {
     int s = segment(entry);
-    return objects[s][offset(entry, s) * OBJECTS + k];
+    return objects[s][offset(entry, s) * OBJECTS_PER_ENTRY + k];
   }
 
   /**
@@ -205,7 +206,7 @@ public final class DomainTrail {
    */
   void setObject(int entry, int k, Object value) {
     int s = segment(entry);
-    objects[s][offset(entry, s) * OBJECTS + k] = value;
+    objects[s][offset(entry, s) * OBJECTS_PER_ENTRY + k] = value;
   }
 
   /**
@@ -226,12 +227,12 @@ public final class DomainTrail {
       int entry = size - 1;
       int s = segment(entry);
       int i = offset(entry, s);
-      if (ints[s][i * INTS + 1] < level) {
+      if (ints[s][i * INTS_PER_ENTRY + 1] < level) {
         return;
       }
       size = entry;
       Object[] in = objects[s];
-      int o = i * OBJECTS;
+      int o = i * OBJECTS_PER_ENTRY;
       ((Entry) in[o]).undo(this, entry);
       in[o] = null;
       in[o + 1] = null;

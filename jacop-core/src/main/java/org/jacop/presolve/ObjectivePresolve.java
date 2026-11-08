@@ -456,7 +456,7 @@ public final class ObjectivePresolve implements Rule {
       if (shifted == 0 || (minimize ? after <= before : after >= before)) {
         return null;
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return null;
     }
     if (store != null) {
@@ -715,7 +715,7 @@ public final class ObjectivePresolve implements Rule {
         }
       }
       return true;
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
   }
@@ -730,7 +730,7 @@ public final class ObjectivePresolve implements Rule {
         IntVar y;
         try {
           y = expandableVariable(expression, x, used);
-        } catch (ArithmeticException overflow) {
+        } catch (ArithmeticException _) {
           return false;
         }
         if (y == null) {
@@ -753,7 +753,7 @@ public final class ObjectivePresolve implements Rule {
         try {
           constant[0] =
               Math.addExact(constant[0], Math.multiplyExact(cy, Math.multiplyExact(ky, d.rhs())));
-        } catch (ArithmeticException overflow) {
+        } catch (ArithmeticException _) {
           return false;
         }
         if (!add(expression, constant, d, y, -cy * ky)) {
@@ -889,7 +889,7 @@ public final class ObjectivePresolve implements Rule {
         }
       }
       constant[0] = Math.addExact(constant[0], m);
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return;
     }
     shifted++;

@@ -62,7 +62,7 @@ final class MirCut {
   private static final int MAX_DIVISORS = 8;
 
   // whether a cut with weights too large or too far apart is scaled down instead of dropped
-  static final boolean REDUCE = !"false".equals(System.getProperty("org.jacop.lp.reduceCuts"));
+  static final boolean REDUCE_CUTS = !"false".equals(System.getProperty("org.jacop.lp.reduceCuts"));
 
   // the largest ratio of the weights of a cut, against badly scaled rows in the simplex
   private static final double MAX_RATIO = 1e4;
@@ -161,7 +161,7 @@ final class MirCut {
 
   private static MirCut cut(int[] columns, long[] c, long b, double[] value, long[] lo, long[] hi) {
     long[] g = rawCut(columns, c, b, value, lo, hi);
-    return g == null ? null : finishCut(columns, g, g[c.length], value, lo, hi, REDUCE, 2);
+    return g == null ? null : finishCut(columns, g, g[c.length], value, lo, hi, REDUCE_CUTS, 2);
   }
 
   /**

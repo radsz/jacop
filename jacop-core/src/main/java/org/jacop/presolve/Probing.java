@@ -215,7 +215,7 @@ public final class Probing {
           passes++;
           changed = pass();
         }
-      } catch (FailException e) {
+      } catch (FailException _) {
         feasible = false;
       }
     }
@@ -380,25 +380,25 @@ public final class Probing {
    * Tries x = value one level above the root; with record, keeps the bounds of every variable after
    * a successful probe.
    */
-  private boolean probe(IntVar x, int value, boolean record) {
-    return probe(x, value, value, record);
+  private boolean probe(IntVar x, int value, boolean rec) {
+    return probe(x, value, value, rec);
   }
 
   /**
    * Tries min &lt;= x &lt;= max one level above the root; with record, keeps the bounds of every
    * variable after a successful probe.
    */
-  private boolean probe(IntVar x, int min, int max, boolean record) {
+  private boolean probe(IntVar x, int min, int max, boolean rec) {
     probes++;
     store.setLevel(root + 1);
     boolean consistent;
     try {
       x.domain.in(store.level, x, min, max);
       consistent = store.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       consistent = false;
     }
-    if (consistent && record) {
+    if (consistent && rec) {
       for (int i = 0; i < vars.size(); i++) {
         IntVar v = vars.get(i);
         lastMin[i] = v.min();

@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import org.jacop.decomposition.FznModel.Constraint;
 import org.jacop.decomposition.FznModel.Expr;
 import org.jacop.decomposition.FznModel.Ident;
@@ -530,7 +531,7 @@ class DecompositionCheck {
       List<Expr> vars;
       List<Expr> values;
       if (d.isArray) {
-        if (!(parsed instanceof FznModel.Call(String fn, List<Expr> args))
+        if (!(parsed instanceof FznModel.Call(_, List<Expr> args))
             || !(args.getLast() instanceof FznModel.ArrayLit(List<Expr> elements))) {
           continue;
         }
@@ -756,7 +757,9 @@ class DecompositionCheck {
   }
 
   private static Set<String> csv(String s) {
-    return s.isBlank() ? Set.of() : Set.copyOf(Arrays.asList(s.split("\\s*,\\s*")));
+    return s.isBlank()
+        ? Set.of()
+        : Arrays.stream(s.split(",")).map(String::strip).collect(Collectors.toUnmodifiableSet());
   }
 
   private static String now() {

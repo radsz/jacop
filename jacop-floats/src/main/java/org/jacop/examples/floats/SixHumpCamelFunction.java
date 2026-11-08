@@ -133,9 +133,7 @@ public class SixHumpCamelFunction {
             + store.numberConstraints());
 
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
-    SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<>(
-            store, new FloatVar[] {x1, x2}, null); // new LargestDomainFloat<FloatVar>());
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, new FloatVar[] {x1, x2}, null);
 
     Optimize<FloatVar> min = new Optimize<>(store, label, s, f);
     boolean result = min.minimize();

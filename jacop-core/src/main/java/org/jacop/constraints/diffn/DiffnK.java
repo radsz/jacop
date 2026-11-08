@@ -38,6 +38,9 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Non-overlapping k-dimensional boxes with variable origins and lengths (MiniZinc {@code diffn_k}
@@ -72,9 +75,12 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<DiffnK> {
+public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<DiffnK>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  // whether LCG explains the pruning and failures by the boxes of the rule (else generically)
+  static final boolean EXPLAIN = !"false".equals(System.getProperty("org.jacop.diffnk.reasons"));
 
   final Box[] box;
 
@@ -759,6 +765,24 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
       v = multiply(v, Math.max(0, high[d] - low[d]));
     }
     return v;
+  }
+
+  /**
+   * Explains an atom by the pairwise rule on two boxes or, non-strict, by the exclusion of a box;
+   * see {@link DiffnKExplanation}. Other atoms get the generic reason.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return EXPLAIN && DiffnKExplanation.explain(trail, this, entry, out);
+  }
+
+  /**
+   * Explains a failure by two boxes that cannot be apart or by the boxes of a volume overload; see
+   * {@link DiffnKExplanation}. Other failures get the generic reason.
+   */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return EXPLAIN && DiffnKExplanation.explainFailure(trail, this, out);
   }
 
   /** Product of two non-negative longs, saturated at Long.MAX_VALUE. */

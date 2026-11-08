@@ -287,8 +287,8 @@ public class Nonogram extends ExampleFd {
     IntDomain blackEncountered = new IntervalDomain(black, black);
     IntDomain whiteEncountered = new IntervalDomain(white, white);
 
-    FsmTransition white = new FsmTransition(whiteEncountered, currentState);
-    currentState.addTransition(white);
+    FsmTransition localWhite = new FsmTransition(whiteEncountered, currentState);
+    currentState.addTransition(localWhite);
 
     for (int i = 0; i < sequence.length; i++) {
       if (sequence[i] == 0) {
@@ -297,22 +297,22 @@ public class Nonogram extends ExampleFd {
       for (int j = 0; j < sequence[i]; j++) {
         // Black transition
         FsmState nextState = new FsmState();
-        FsmTransition black = new FsmTransition(blackEncountered, nextState);
-        currentState.addTransition(black);
+        FsmTransition localBlack = new FsmTransition(blackEncountered, nextState);
+        currentState.addTransition(localBlack);
         result.allStates.add(currentState);
         currentState = nextState;
       }
       // White transitions
       if (i + 1 != sequence.length) {
         FsmState nextState = new FsmState();
-        white = new FsmTransition(whiteEncountered, nextState);
-        currentState.addTransition(white);
+        localWhite = new FsmTransition(whiteEncountered, nextState);
+        currentState.addTransition(localWhite);
         result.allStates.add(currentState);
         currentState = nextState;
       }
 
-      white = new FsmTransition(whiteEncountered, currentState);
-      currentState.addTransition(white);
+      localWhite = new FsmTransition(whiteEncountered, currentState);
+      currentState.addTransition(localWhite);
     }
 
     result.allStates.add(currentState);

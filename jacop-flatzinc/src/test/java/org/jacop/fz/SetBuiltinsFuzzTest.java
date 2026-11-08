@@ -139,9 +139,9 @@ class SetBuiltinsFuzzTest {
   }
 
   /** An argument of a call: variable index var, or a constant value when var is negative. */
-  private record Arg(int var, int value, String text) {
+  private record Arg(int aVar, int value, String text) {
     int of(int[] v) {
-      return var >= 0 ? v[var] : value;
+      return aVar >= 0 ? v[aVar] : value;
     }
   }
 
@@ -216,7 +216,7 @@ class SetBuiltinsFuzzTest {
     /** Two set arguments, at least one of them a variable. */
     Arg[] twoSets() {
       Arg a = set(true);
-      Arg b = a.var < 0 ? setVar() : set(true);
+      Arg b = a.aVar < 0 ? setVar() : set(true);
       return r.nextBoolean() ? new Arg[] {a, b} : new Arg[] {b, a};
     }
 
@@ -515,7 +515,7 @@ class SetBuiltinsFuzzTest {
       }
       case 1 -> {
         Arg x = m.intArg();
-        Arg s = m.set(x.var >= 0);
+        Arg s = m.set(x.aVar >= 0);
         String[] kind = {"", "_reif", "_imp"};
         String k = kind[r.nextInt(3)];
         if (k.isEmpty()) {
@@ -557,7 +557,7 @@ class SetBuiltinsFuzzTest {
         String[] op = {"union", "intersect", "diff", "symdiff"};
         String name = op[r.nextInt(op.length)];
         Arg[] ab = m.twoSets();
-        Arg c = m.set(ab[0].var >= 0 && ab[1].var >= 0);
+        Arg c = m.set(ab[0].aVar >= 0 && ab[1].aVar >= 0);
         return new Call(
             "set_" + name + "(" + ab[0].text + ", " + ab[1].text + ", " + c.text + ")",
             v -> operation(name, ab[0].of(v), ab[1].of(v)) == c.of(v));
@@ -568,7 +568,7 @@ class SetBuiltinsFuzzTest {
         String[] texts = new String[n];
         for (int i = 0; i < n; i++) {
           Arg a = m.set(true);
-          while (a.var >= 0) {
+          while (a.aVar >= 0) {
             a = m.set(true);
           }
           consts[i] = a.value;
@@ -623,7 +623,7 @@ class SetBuiltinsFuzzTest {
         Arg[] xs = setVars(m, r);
         int u = 0;
         for (Arg a : xs) {
-          int lub = m.vars.get(a.var).lub;
+          int lub = m.vars.get(a.aVar).lub;
           u |= lub & (r.nextInt(3) == 0 ? lub >> 1 | lub << 1 : -1);
         }
         int universe = u;
@@ -673,7 +673,7 @@ class SetBuiltinsFuzzTest {
       case 13 -> {
         // the index set of b covers the elements the set may hold, as link_set_to_booleans asks
         Arg s = m.setVar();
-        int lub = m.vars.get(s.var).lub;
+        int lub = m.vars.get(s.aVar).lub;
         int offset = Integer.numberOfTrailingZeros(lub) - OFF - r.nextInt(2);
         int n = 31 - Integer.numberOfLeadingZeros(lub) - OFF - offset + 1 + r.nextInt(2);
         Arg[] bs = new Arg[n];
@@ -737,7 +737,7 @@ class SetBuiltinsFuzzTest {
         Arg[] xs = new Arg[n];
         for (int i = 0; i < n; i++) {
           Arg a = m.set(true);
-          while (constants && a.var >= 0) {
+          while (constants && a.aVar >= 0) {
             a = m.set(true);
           }
           xs[i] = a;

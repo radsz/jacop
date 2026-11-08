@@ -571,7 +571,7 @@ public final class GeostInstance {
   /** The variables of a posted model, in solution-vector order. */
   public record Posted(IntVar[] vars, Constraint constraint) {}
 
-  static IntVar var(Store store, String name, int[] values) {
+  static IntVar aVar(Store store, String name, int[] values) {
     IntervalDomain dom = new IntervalDomain();
     for (int v : values) {
       dom.unionAdapt(v, v);
@@ -599,7 +599,7 @@ public final class GeostInstance {
           vars[i * w + j] =
               constants.computeIfAbsent(doms[j][0], v -> new IntVar(store, "c" + v, v, v));
         } else {
-          vars[i * w + j] = var(store, nm, doms[j]);
+          vars[i * w + j] = aVar(store, nm, doms[j]);
         }
       }
     }

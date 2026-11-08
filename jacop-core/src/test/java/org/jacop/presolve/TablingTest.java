@@ -138,7 +138,7 @@ class TablingTest {
     s.impose(new XplusYeqZ(t, y, x));
     s.impose(new AbsXeqY(t, new IntVar(s, "z", 2, 2)));
     Tabling rule = new Tabling();
-    Derivation d = Derivation.of(s).rule(rule).derive();
+    Derivation.of(s).rule(rule).derive();
     assertThat(rule.statistics().tables()).isEqualTo(1);
   }
 
@@ -192,7 +192,7 @@ class TablingTest {
     s.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, "==", 4));
     s.impose(new XneqY(x[0], x[1]));
     Tabling rule = new Tabling(new Tabling.Limits(3, 3, 100, 1000, 1000, false));
-    Derivation d = Derivation.of(s).rule(rule).derive();
+    Derivation.of(s).rule(rule).derive();
     assertThat(rule.statistics().tables()).isZero();
   }
 

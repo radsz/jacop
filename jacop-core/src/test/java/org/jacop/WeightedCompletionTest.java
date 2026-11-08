@@ -131,7 +131,7 @@ class WeightedCompletionTest {
             default -> x.domain.inMax(store.level, x, v);
           }
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           consistent = false;
         }
       }

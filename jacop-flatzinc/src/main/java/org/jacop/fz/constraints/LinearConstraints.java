@@ -1145,37 +1145,37 @@ class LinearConstraints implements ParserTreeConstants {
   /**
    * Handles the single-variable NE case: x != c.
    *
-   * @param var the variable
+   * @param aVar the variable
    * @param value the constant value
    * @param boolVar the boolean variable for reification/implication
    * @param isReified true for reified, false for implied
    */
-  private void handleSingleVarNe(IntVar var, int value, IntVar boolVar, boolean isReified) {
+  private void handleSingleVarNe(IntVar aVar, int value, IntVar boolVar, boolean isReified) {
     if (isReified) {
-      if (var.domain.isIntersecting(value, value)) {
-        support.pose(support.fzXneqCreified(var, value, boolVar));
+      if (aVar.domain.isIntersecting(value, value)) {
+        support.pose(support.fzXneqCreified(aVar, value, boolVar));
       } else {
         boolVar.domain.inValue(store.level, boolVar, 1);
       }
     } else {
-      support.pose(support.fzXneqCimplied(var, value, boolVar));
+      support.pose(support.fzXneqCimplied(aVar, value, boolVar));
     }
   }
 
   /**
    * Poses XneqC constraint as either reified or implied.
    *
-   * @param var the variable
+   * @param aVar the variable
    * @param value the constant value
    * @param boolVar the boolean variable for reification/implication
    * @param isReified true to use reified, false to use implied
    */
   private void poseXneqConstReifiedOrImplied(
-      IntVar var, int value, IntVar boolVar, boolean isReified) {
+      IntVar aVar, int value, IntVar boolVar, boolean isReified) {
     if (isReified) {
-      support.pose(support.fzXneqCreified(var, value, boolVar));
+      support.pose(support.fzXneqCreified(aVar, value, boolVar));
     } else {
-      support.pose(support.fzXneqCimplied(var, value, boolVar));
+      support.pose(support.fzXneqCimplied(aVar, value, boolVar));
     }
   }
 

@@ -392,8 +392,7 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
     long sMin = bounds[0];
     long sMax = bounds[1];
 
-    return sMax <= sum.min()
-        && sMin >= sum.max(); // sMin == sMax && sMin == sum.min() && sMin == sum.max();
+    return sMax <= sum.min() && sMin >= sum.max();
   }
 
   /**

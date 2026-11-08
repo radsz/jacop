@@ -556,15 +556,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
-      // the cliques of the tables, over columns of their values that the relaxation alone has;
-      // only for an objective, whose bound they raise
+      // the cliques and the convex hulls of the tables, over columns of their values that the
+      // relaxation alone has; only for an objective, whose bound they raise. They are tried at the
+      // first solve with a share of the size cap of their own: table-layout has 172 rows of its
+      // own and 2,702 table rows, which raise its root bound from 1,344 to 1,427
       if (objective != null && TABLE_CLIQUES && !dictionary.tables().isEmpty()) {
-        cliques = TableCliques.rows(dictionary.tables());
-        clauses.addAll(cliques.rows());
+        cliques =
+            TableCliques.rows(
+                dictionary.tables(),
+                options.lcg() ? implications(sat.collectedClauses()) : Map.of());
       }
       linearRelaxation =
           LinearRelaxation.of(
-              store, objective, maximize, clauses, splitSums(), options.lpSimplex());
+              store,
+              objective,
+              maximize,
+              clauses,
+              cliques == null ? List.of() : cliques.all(),
+              splitSums(),
+              options.lpSimplex());
     }
     if (linearRelaxation != null) {
       store.impose(linearRelaxation);
@@ -579,10 +589,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
                       + cliques.rows().size()
+                      + "\n%%%mzn-stat: lpTableHulls="
+                      + cliques.hulls().size()
                       + "\n%%%mzn-stat: lpTableColumns="
-                      + cliques.columns())
+                      + (cliques.columns() + cliques.hullColumns()))
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  // the implications z -> a of the binary clauses (not z or a) given to the SAT solver
+  private static Map<IntVar, List<IntVar>> implications(List<IntVar[][]> clauses) {
+    Map<IntVar, List<IntVar>> implied = new IdentityHashMap<>();
+    for (IntVar[][] clause : clauses) {
+      if (clause[0].length == 1 && clause[1].length == 1) {
+        implied.computeIfAbsent(clause[1][0], k -> new ArrayList<>()).add(clause[0][0]);
+      }
+    }
+    return implied;
   }
 
   // the block sums of the split linear constraints that are still variables
@@ -663,6 +686,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
+            + "\n%%%mzn-stat: lpCapacitySearchCuts="
+            + r.capacitySearchCuts
+            + "\n%%%mzn-stat: lpCapacitySeparations="
+            + r.capacitySeparations
             + "\n%%%mzn-stat: lpBaseBound="
             + r.baseBound
             + "\n%%%mzn-stat: lpExtraRows="
@@ -675,6 +702,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pooledCuts
             + "\n%%%mzn-stat: lpValueColumns="
             + r.valueColumns
+            + "\n%%%mzn-stat: lpSimplexValueColumns="
+            + r.simplexValueColumns()
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -1029,7 +1058,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // dual fixing follows --presolve-dual and stays off with on_restart, as the dual reductions do
     boolean dual = !options.getAll() && options.presolveDual() && dictionary.onRestart == null;
     IntVar cost = null;
-    boolean minimize = true;
+    boolean localMinimize = true;
     ASTSolveKind kind = null;
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       if (node.jjtGetChild(i) instanceof ASTSolveKind k) {
@@ -1039,10 +1068,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int k = kind == null ? -1 : getKind(kind.getKind());
     if (k != 0) {
       cost = k > 0 ? objectiveVariable((ASTSolveExpr) kind.jjtGetChild(0)) : null;
-      minimize = k == 1;
+      localMinimize = k == 1;
       dual &= cost != null;
     }
-    CumulativeReductions rule = new CumulativeReductions(dual).objective(cost, minimize);
+    CumulativeReductions rule = new CumulativeReductions(dual).objective(cost, localMinimize);
     // clauses kept for the LCG solver are not in the store
     for (IntVar[][] clause : sat.collectedClauses()) {
       rule.lock(clause[0]).lock(clause[1]);
@@ -1083,7 +1112,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotationVariables((SimpleNode) node.jjtGetChild(i), order);
     }
     Components.Outcome o = Components.solveSide(store, sat.collectedClauses(), cost, order, budget);
-    if (options.getStatistics()) {
+    if (options.searchStatistics()) {
       IO.println(
           "%%%mzn-stat: components="
               + o.components()
@@ -1154,13 +1183,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (count < 2) {
       return;
     }
-    SearchItem<T> si = new SearchItem<>(store, dictionary);
+    SearchItem<T> localSi = new SearchItem<>(store, dictionary);
     if (count == 2) {
-      si.searchParameters(node, 0);
+      localSi.searchParameters(node, 0);
     } else {
-      si.searchParametersForSeveralAnnotations(node, 0);
+      localSi.searchParametersForSeveralAnnotations(node, 0);
     }
-    addSearchVariables(si, frozen);
+    addSearchVariables(localSi, frozen);
   }
 
   private static void addSearchVariables(SearchItem<?> si, Set<Var> frozen) {
@@ -1410,19 +1439,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void searchCountTwo(Options opt, ASTSolveItem node) {
-    SearchItem<T> si = new SearchItem<>(store, dictionary);
-    si.searchParameters(node, 0);
+    SearchItem<T> localSi = new SearchItem<>(store, dictionary);
+    localSi.searchParameters(node, 0);
     ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(1);
     solveKind = getKind(kind.getKind());
-    annotatedSearch = si;
-    runSearchForSingleAnnotation(opt, kind, solveKind, si, node);
+    annotatedSearch = localSi;
+    runSearchForSingleAnnotation(opt, kind, solveKind, localSi, node);
   }
 
   private void searchCountMany(ASTSolveItem node) {
-    SearchItem<T> si = new SearchItem<>(store, dictionary);
-    si.searchParametersForSeveralAnnotations(node, 0);
+    SearchItem<T> localSi = new SearchItem<>(store, dictionary);
+    localSi.searchParametersForSeveralAnnotations(node, 0);
 
-    ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(si.searchSeq);
+    ArrayList<SearchItem<T>> nsi = parseSearchAnnotations(localSi.searchSeq);
 
     if ((options.freeSearch() || options.lcg()) && !nsi.isEmpty()) {
       annotatedSearch = new SearchItem<>(store, dictionary);
@@ -1433,16 +1462,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (options.freeSearch()) {
       keepAnnotationPrecision(nsi);
-      ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(si.searchSeqSize());
+      ASTSolveKind kind = (ASTSolveKind) node.jjtGetChild(localSi.searchSeqSize());
       solveKind = getKind(kind.getKind());
       run_single_search(solveKind, kind, null);
       return;
     }
 
     if (nsi.size() == 1) {
-      runSingleOrSequenceSearch(node, si, nsi.getFirst());
+      runSingleOrSequenceSearch(node, localSi, nsi.getFirst());
     } else {
-      runSequenceSearchFromMultiple(node, si, nsi);
+      runSequenceSearchFromMultiple(node, localSi, nsi);
     }
   }
 
@@ -2119,7 +2148,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     // decisions from the solution of the linear relaxation: on, off, or auto, on when the
-    // relaxation has value columns (LP-only 0/1 columns x = v), whose solution names the values. On
+    // simplex has value columns (LP-only 0/1 columns x = v), whose solution names the values: not
+    // the columns of tried encodings that the root trial dropped (gbac UD8 342 instead of 89). On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
     // it in 60 s
@@ -2127,7 +2157,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching) && linearRelaxation.valueColumns > 0);
+                || "auto".equals(lpBranching) && linearRelaxation.simplexValueColumns() > 0);
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2153,6 +2183,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       lcg.setLateVariables(late);
     }
+    if (!"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
+      // the Booleans of redundant constraints, such as the arcs of a giant tour's Routes, follow
+      // from the model's variables: branching on them first, as on the model's Booleans, took 53 s
+      // instead of 0.9 s to the first solution of vrplc13_11_15_s3 with -f
+      lcg.setLateVariables(dictionary.auxiliaryVariables);
+    }
     if (free) {
       // turns: activity branching changes between the two orders at each restart. Each order wins
       // clearly on some models (smelt, java-routing and jobshop swv07 without, community-detection
@@ -2166,7 +2202,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         case "on" -> lcg.setBooleansFirst(true);
         case "off" -> lcg.setBooleansFirst(false);
         case "turns" -> lcg.setBooleansFirstTurns(true);
-        case "" -> {}
+        case "" -> {
+          // not set: the solver default
+        }
         default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
       }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
@@ -3000,21 +3038,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (allSolutions) {
       // solutions are told apart by the output variables, so they are fixed first and the
       // other variables are completed once per solution
-      DefaultSearchVars output = new DefaultSearchVars(dictionary);
-      output.outputVars();
+      DefaultSearchVars localOutput = new DefaultSearchVars(dictionary);
+      localOutput.outputVars();
       Set<Var> outputSet = Collections.newSetFromMap(new IdentityHashMap<>());
-      outputSet.addAll(Arrays.asList(output.getSetVars()));
-      outputSet.addAll(Arrays.asList(output.getIntVars()));
-      outputSet.addAll(Arrays.asList(output.getBoolVars()));
-      outputSet.addAll(Arrays.asList(output.getFloatVars()));
+      outputSet.addAll(Arrays.asList(localOutput.getSetVars()));
+      outputSet.addAll(Arrays.asList(localOutput.getIntVars()));
+      outputSet.addAll(Arrays.asList(localOutput.getBoolVars()));
+      outputSet.addAll(Arrays.asList(localOutput.getFloatVars()));
       shown = outputSet.toArray(new Var[0]);
       addFreeSelects(
           selects,
           monitors,
-          output.getSetVars(),
-          output.getIntVars(),
-          output.getBoolVars(),
-          output.getFloatVars(),
+          localOutput.getSetVars(),
+          localOutput.getIntVars(),
+          localOutput.getBoolVars(),
+          localOutput.getFloatVars(),
           null);
       addFreeSelects(
           selects,
@@ -3576,7 +3614,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             (int) freeSearch.getFailures(),
             freeSearch.getMaxDepth(),
             (int) freeSearch.getSolutions());
-        if (slowLcg != null) {
+        if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
         }
@@ -4070,9 +4108,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   private DepthFirstSearch<T> addChildSequenceSearch(
       SearchItem<T> item, DepthFirstSearch<T> lastSearch) {
-    DepthFirstSearch<T> label = sub_search(item, lastSearch, false);
-    lastSearch.addChildSearch(label);
-    DepthFirstSearch<T> newLast = getLastSearch(label);
+    DepthFirstSearch<T> localLabel = sub_search(item, lastSearch, false);
+    lastSearch.addChildSearch(localLabel);
+    DepthFirstSearch<T> newLast = getLastSearch(localLabel);
     if (!printSearchInfo) {
       newLast.setPrintInfo(false);
     }
@@ -4258,54 +4296,52 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   DepthFirstSearch<T> sub_search(SearchItem<T> si, DepthFirstSearch<T> l, boolean master) {
-    DepthFirstSearch<T> label =
-        switch (si.type()) {
-          case INT_SEARCH, BOOL_SEARCH -> subSearchIntOrBool(si, master);
-          case SET_SEARCH -> subSearchSet(si, master);
-          case PRIORITY_SEARCH -> subSearchPriority(si);
-          case WARM_START -> subSearchWarmStart(si, master);
-          case SEQ_SEARCH -> subSearchSeq(si, l);
-          case FLOAT_SEARCH -> subSearchFloat(si, master);
-          default -> subSearchDefault();
-        };
-    return label;
+    return switch (si.type()) {
+      case INT_SEARCH, BOOL_SEARCH -> subSearchIntOrBool(si, master);
+      case SET_SEARCH -> subSearchSet(si, master);
+      case PRIORITY_SEARCH -> subSearchPriority(si);
+      case WARM_START -> subSearchWarmStart(si, master);
+      case SEQ_SEARCH -> subSearchSeq(si, l);
+      case FLOAT_SEARCH -> subSearchFloat(si, master);
+      default -> subSearchDefault();
+    };
   }
 
   private DepthFirstSearch<T> subSearchIntOrBool(SearchItem<T> si, boolean master) {
-    DepthFirstSearch<T> label = int_search(si);
+    DepthFirstSearch<T> localLabel = int_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variableSelection);
+      localLabel.setSelectChoicePoint(variableSelection);
     }
-    heuristicSeqSearch |= applyHeuristicSearch(label, si);
-    listSeqSearches.add(label);
-    label.setPrintInfo(false);
-    return label;
+    heuristicSeqSearch |= applyHeuristicSearch(localLabel, si);
+    listSeqSearches.add(localLabel);
+    localLabel.setPrintInfo(false);
+    return localLabel;
   }
 
   private DepthFirstSearch<T> subSearchSet(SearchItem<T> si, boolean master) {
-    DepthFirstSearch<T> label = set_search(si);
+    DepthFirstSearch<T> localLabel = set_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variableSelection);
+      localLabel.setSelectChoicePoint(variableSelection);
     }
-    heuristicSeqSearch |= applyHeuristicSearch(label, si);
-    listSeqSearches.add(label);
-    label.setPrintInfo(false);
-    return label;
+    heuristicSeqSearch |= applyHeuristicSearch(localLabel, si);
+    listSeqSearches.add(localLabel);
+    localLabel.setPrintInfo(false);
+    return localLabel;
   }
 
   private DepthFirstSearch<T> subSearchPriority(SearchItem<T> si) {
-    DepthFirstSearch<T> label = priority_search(si);
-    listSeqSearches.add(label);
-    return label;
+    DepthFirstSearch<T> localLabel = priority_search(si);
+    listSeqSearches.add(localLabel);
+    return localLabel;
   }
 
   private DepthFirstSearch<T> subSearchWarmStart(SearchItem<T> si, boolean master) {
-    DepthFirstSearch<T> label = warm_start_search(si);
+    DepthFirstSearch<T> localLabel = warm_start_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variableSelection);
+      localLabel.setSelectChoicePoint(variableSelection);
     }
-    listSeqSearches.add(label);
-    return label;
+    listSeqSearches.add(localLabel);
+    return localLabel;
   }
 
   private DepthFirstSearch<T> subSearchSeq(SearchItem<T> si, DepthFirstSearch<T> lastSearch) {
@@ -4323,14 +4359,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private DepthFirstSearch<T> subSearchFloat(SearchItem<T> si, boolean master) {
-    DepthFirstSearch<T> label = float_search(si);
+    DepthFirstSearch<T> localLabel = float_search(si);
     if (!master) {
-      label.setSelectChoicePoint(variableSelection);
+      localLabel.setSelectChoicePoint(variableSelection);
     }
-    heuristicSeqSearch |= applyHeuristicSearch(label, si);
-    listSeqSearches.add(label);
-    label.setPrintInfo(false);
-    return label;
+    heuristicSeqSearch |= applyHeuristicSearch(localLabel, si);
+    listSeqSearches.add(localLabel);
+    localLabel.setPrintInfo(false);
+    return localLabel;
   }
 
   private DepthFirstSearch<T> subSearchDefault() {
@@ -4448,17 +4484,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     DepthFirstSearch<T>[] searches = buildPrioritySearchesArray(si.getSearchItems());
 
     SearchItem.ComparatorsVar<IntVar> vs = si.getVarSelect();
-    PrioritySearch<T> label =
+    PrioritySearch<T> localLabel =
         new PrioritySearch<>(
             (T[]) si.vars(),
             (ComparatorVariable<T>) vs.v1,
             (ComparatorVariable<T>) vs.v2,
             searches);
-    label.setPrintInfo(false);
-    label.setAssignSolution(false);
+    localLabel.setPrintInfo(false);
+    localLabel.setAssignSolution(false);
 
-    configurePriorityLabel(label, searches);
-    return label;
+    configurePriorityLabel(localLabel, searches);
+    return localLabel;
   }
 
   private DepthFirstSearch<T>[] buildPrioritySearchesArray(ArrayList<SearchItem<T>> items) {
@@ -4799,7 +4835,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   void credit_search(DepthFirstSearch<T> label, int creditValue, int bbsValue) {
 
-    int maxDepth = 1000; // IntDomain.MAX_INT;
+    int maxDepth = 1000;
     CreditCalculator<T> credit = new CreditCalculator<>(creditValue, bbsValue, maxDepth);
 
     if (label.getConsistencyListener() == null) {

@@ -169,7 +169,7 @@ class FloatBuiltinsFuzzTest {
     int n = linear ? 1 + random.nextInt(3) : fn.arity();
     int[] lo = new int[n];
     int[] hi = new int[n];
-    int[] var = new int[n];
+    int[] aVar = new int[n];
     double[] w = new double[n];
     StringBuilder fzn = new StringBuilder();
     StringBuilder constraints = new StringBuilder();
@@ -180,8 +180,8 @@ class FloatBuiltinsFuzzTest {
       int b = linear ? 3 : fn.hi();
       lo[i] = a + random.nextInt(b - a + 1);
       hi[i] = Math.min(b, lo[i] + random.nextInt(4));
-      var[i] = i > 0 && random.nextInt(5) == 0 ? var[random.nextInt(i)] : i;
-      if (var[i] == i) {
+      aVar[i] = i > 0 && random.nextInt(5) == 0 ? aVar[random.nextInt(i)] : i;
+      if (aVar[i] == i) {
         fzn.append("var ").append(lo[i]).append("..").append(hi[i]).append(": x").append(i);
         fzn.append(":: output_var;\n");
         fzn.append("var float: f").append(i).append(";\n");
@@ -189,7 +189,7 @@ class FloatBuiltinsFuzzTest {
         constraints.append(");\n");
         search.add("x" + i);
       }
-      args.add("f" + var[i]);
+      args.add("f" + aVar[i]);
       w[i] = quarter(random);
       w[i] = w[i] == 0 ? 1.5 : w[i];
     }
@@ -220,11 +220,11 @@ class FloatBuiltinsFuzzTest {
         v,
         lo,
         hi,
-        var,
+        aVar,
         () -> {
           double[] x = new double[n];
           for (int i = 0; i < n; i++) {
-            x[i] = v[var[i]];
+            x[i] = v[aVar[i]];
           }
           double r;
           if (linear) {
@@ -299,14 +299,14 @@ class FloatBuiltinsFuzzTest {
       hi[i] = Math.min(b, lo[i] + random.nextInt(4));
     }
     // a variable used twice now and then
-    int[] var = new int[n];
+    int[] aVar = new int[n];
     for (int i = 0; i < n; i++) {
-      var[i] = i > 0 && random.nextInt(5) == 0 ? var[random.nextInt(i)] : i;
+      aVar[i] = i > 0 && random.nextInt(5) == 0 ? aVar[random.nextInt(i)] : i;
     }
     StringBuilder fzn = new StringBuilder();
     StringJoiner search = new StringJoiner(",");
     for (int i = 0; i < n; i++) {
-      if (var[i] == i) {
+      if (aVar[i] == i) {
         fzn.append("var ").append(lo[i]).append("..").append(hi[i]).append(": x").append(i);
         fzn.append(":: output_var;\n");
         // a float with bounds or without
@@ -321,7 +321,7 @@ class FloatBuiltinsFuzzTest {
     }
     StringBuilder constraints = new StringBuilder();
     for (int i = 0; i < n; i++) {
-      if (var[i] == i) {
+      if (aVar[i] == i) {
         constraints.append("constraint int2float(x").append(i).append(",f").append(i);
         constraints.append(");\n");
       }
@@ -336,8 +336,8 @@ class FloatBuiltinsFuzzTest {
       case 0, 1 -> {
         // float_eq/ne/le/lt(f0, f1) or with a constant
         boolean constant = kind == 1;
-        String a = "f" + var[0];
-        String b = constant ? q(c) : "f" + var[1];
+        String a = "f" + aVar[0];
+        String b = constant ? q(c) : "f" + aVar[1];
         if (constant && random.nextBoolean()) {
           String s = a;
           a = b;
@@ -368,7 +368,7 @@ class FloatBuiltinsFuzzTest {
           w[i] = quarter(random);
           w[i] = w[i] == 0 ? 0.5 : w[i];
           ws.add(q(w[i]));
-          vs.add("f" + var[i]);
+          vs.add("f" + aVar[i]);
         }
         constraints
             .append("constraint float_lin_")
@@ -393,7 +393,7 @@ class FloatBuiltinsFuzzTest {
       default -> {
         // r = fn(f...), then b <-> r op c, op one of le, lt; c away from every value of r
         String rel = random.nextBoolean() ? "le" : "lt";
-        double[] values = values(fn, n, lo, hi, var);
+        double[] values = values(fn, n, lo, hi, aVar);
         double cc = c;
         for (int tries = 0; tries < 50 && tooClose(values, cc); tries++) {
           cc = quarter(random) + random.nextInt(8) / 8.0 - 0.5;
@@ -405,7 +405,7 @@ class FloatBuiltinsFuzzTest {
         fzn.append("var float: r;\n");
         StringJoiner args = new StringJoiner(",");
         for (int i = 0; i < n; i++) {
-          args.add("f" + var[i]);
+          args.add("f" + aVar[i]);
         }
         constraints.append("constraint ").append(fn.name()).append("(").append(args);
         constraints.append(",r);\n");
@@ -445,11 +445,11 @@ class FloatBuiltinsFuzzTest {
         v,
         lo,
         hi,
-        var,
+        aVar,
         () -> {
           double[] x = new double[n];
           for (int i = 0; i < n; i++) {
-            x[i] = v[var[i]];
+            x[i] = v[aVar[i]];
           }
           Boolean holds = relation.holds(x);
           if (holds == null) {
@@ -457,7 +457,7 @@ class FloatBuiltinsFuzzTest {
           }
           StringJoiner sol = new StringJoiner(" ");
           for (int i = 0; i < n; i++) {
-            if (var[i] == i) {
+            if (aVar[i] == i) {
               sol.add("x" + i + " = " + v[i] + ";");
             }
           }
@@ -486,7 +486,7 @@ class FloatBuiltinsFuzzTest {
     };
   }
 
-  private static double[] values(Function fn, int n, int[] lo, int[] hi, int[] var) {
+  private static double[] values(Function fn, int n, int[] lo, int[] hi, int[] aVar) {
     List<Double> values = new ArrayList<>();
     int[] v = new int[n];
     enumerate(
@@ -494,11 +494,11 @@ class FloatBuiltinsFuzzTest {
         v,
         lo,
         hi,
-        var,
+        aVar,
         () -> {
           double[] x = new double[n];
           for (int i = 0; i < n; i++) {
-            x[i] = v[var[i]];
+            x[i] = v[aVar[i]];
           }
           values.add(fn.f().applyAsDouble(x));
         });
@@ -514,17 +514,17 @@ class FloatBuiltinsFuzzTest {
     return false;
   }
 
-  private static void enumerate(int i, int[] v, int[] lo, int[] hi, int[] var, Runnable check) {
+  private static void enumerate(int i, int[] v, int[] lo, int[] hi, int[] aVar, Runnable check) {
     if (i == v.length) {
       check.run();
       return;
     }
-    if (var[i] != i) {
-      enumerate(i + 1, v, lo, hi, var, check);
+    if (aVar[i] != i) {
+      enumerate(i + 1, v, lo, hi, aVar, check);
       return;
     }
     for (v[i] = lo[i]; v[i] <= hi[i]; v[i]++) {
-      enumerate(i + 1, v, lo, hi, var, check);
+      enumerate(i + 1, v, lo, hi, aVar, check);
     }
   }
 

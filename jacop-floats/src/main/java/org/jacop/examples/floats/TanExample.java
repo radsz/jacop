@@ -85,9 +85,7 @@ public class TanExample {
             + store.numberConstraints());
 
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
-    SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<>(
-            store, new FloatVar[] {p, q}, null); // new SmallestDomainFloat<FloatVar>());
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, new FloatVar[] {p, q}, null);
     label.setAssignSolution(true);
     label.getSolutionListener().recordSolutions(true);
     label.getSolutionListener().searchAll(true);

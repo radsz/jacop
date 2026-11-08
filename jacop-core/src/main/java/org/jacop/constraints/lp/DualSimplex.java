@@ -89,10 +89,13 @@ final class DualSimplex implements LpSolver {
   private boolean[] normValid;
 
   // the ratio test, with the columns it flips to their other bound
-  private RatioTest ratioTest;
+  private final RatioTest ratioTest;
 
   /** Statistics: pivots made. */
   long totalPivots;
+
+  // counts the changes of the rows: a saved basis is for the rows of one count
+  private long rowEpoch;
 
   /**
    * Creates the problem with the slack basis.
@@ -165,6 +168,7 @@ final class DualSimplex implements LpSolver {
     pivots = o.pivots;
     infeasibleRow = o.infeasibleRow;
     totalPivots = o.totalPivots;
+    rowEpoch = o.rowEpoch;
   }
 
   /**
@@ -312,6 +316,7 @@ final class DualSimplex implements LpSolver {
     betaValid = false;
     m = m2;
     cols = cols2;
+    rowEpoch++;
   }
 
   /**
@@ -420,7 +425,76 @@ final class DualSimplex implements LpSolver {
     infeasibleRow = -1;
     m = m2;
     cols = cols2;
+    rowEpoch++;
     return oldRow;
+  }
+
+  // a basis saved by saveBasis: the tableau with its basis, reduced costs and row norms
+  private static final class Basis {
+    final DualSimplex owner;
+    final long epoch;
+    final double[][] tableau;
+    final int[] basic;
+    final boolean[] atUpper;
+    final double[] reduced;
+    final double[] norms;
+    final boolean[] normsValid;
+    final int sinceRefactor;
+
+    Basis(DualSimplex s) {
+      owner = s;
+      epoch = s.rowEpoch;
+      tableau = new double[s.m][];
+      for (int i = 0; i < s.m; i++) {
+        tableau[i] = s.t[i].clone();
+      }
+      basic = s.basis.clone();
+      atUpper = s.upper.clone();
+      reduced = s.d.clone();
+      norms = s.norm.clone();
+      normsValid = s.normValid.clone();
+      sinceRefactor = s.pivots;
+    }
+  }
+
+  /**
+   * Saves the current basis with a copy of its tableau, which costs about one pivot.
+   *
+   * @return the basis
+   */
+  @Override
+  public Object saveBasis() {
+    return new Basis(this);
+  }
+
+  /**
+   * Makes a saved basis the current one, copying its tableau back. A basis saved before the rows
+   * changed, or by another simplex, is not restored.
+   *
+   * @param basis the basis
+   * @return whether it was restored
+   */
+  @Override
+  public boolean restoreBasis(Object basis) {
+    if (!(basis instanceof Basis b) || b.owner != this || b.epoch != rowEpoch) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      System.arraycopy(b.tableau[i], 0, t[i], 0, cols);
+    }
+    System.arraycopy(b.basic, 0, this.basis, 0, m);
+    Arrays.fill(row, -1);
+    for (int i = 0; i < m; i++) {
+      row[this.basis[i]] = i;
+    }
+    System.arraycopy(b.atUpper, 0, upper, 0, cols);
+    System.arraycopy(b.reduced, 0, d, 0, cols);
+    System.arraycopy(b.norms, 0, norm, 0, m);
+    System.arraycopy(b.normsValid, 0, normValid, 0, m);
+    pivots = b.sinceRefactor;
+    betaValid = false;
+    infeasibleRow = -1;
+    return true;
   }
 
   /**

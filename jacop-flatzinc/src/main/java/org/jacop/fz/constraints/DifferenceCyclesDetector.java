@@ -134,22 +134,22 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
     switch (node.getName()) {
       case "int_lin_le" -> linear(node, null, false, false);
       case "int_lin_eq" -> linear(node, null, true, false);
-      case "int_lin_le_imp" -> linear(node, var(node, 3), false, false);
-      case "int_lin_le_reif" -> linear(node, var(node, 3), false, true);
-      case "int_lin_eq_imp", "int_lin_eq_reif" -> linear(node, var(node, 3), true, false);
-      case "int_le" -> difference(var(node, 0), var(node, 1), 0, null, 1);
-      case "int_lt" -> difference(var(node, 0), var(node, 1), -1, null, 1);
-      case "int_le_imp" -> difference(var(node, 0), var(node, 1), 0, var(node, 2), 1);
-      case "int_lt_imp" -> difference(var(node, 0), var(node, 1), -1, var(node, 2), 1);
+      case "int_lin_le_imp" -> linear(node, aVar(node, 3), false, false);
+      case "int_lin_le_reif" -> linear(node, aVar(node, 3), false, true);
+      case "int_lin_eq_imp", "int_lin_eq_reif" -> linear(node, aVar(node, 3), true, false);
+      case "int_le" -> difference(aVar(node, 0), aVar(node, 1), 0, null, 1);
+      case "int_lt" -> difference(aVar(node, 0), aVar(node, 1), -1, null, 1);
+      case "int_le_imp" -> difference(aVar(node, 0), aVar(node, 1), 0, aVar(node, 2), 1);
+      case "int_lt_imp" -> difference(aVar(node, 0), aVar(node, 1), -1, aVar(node, 2), 1);
       case "int_le_reif" -> {
         // x <= y, or y < x when false
-        difference(var(node, 0), var(node, 1), 0, var(node, 2), 1);
-        difference(var(node, 1), var(node, 0), -1, var(node, 2), 0);
+        difference(aVar(node, 0), aVar(node, 1), 0, aVar(node, 2), 1);
+        difference(aVar(node, 1), aVar(node, 0), -1, aVar(node, 2), 0);
       }
       case "int_lt_reif" -> {
         // x < y, or y <= x when false
-        difference(var(node, 0), var(node, 1), -1, var(node, 2), 1);
-        difference(var(node, 1), var(node, 0), 0, var(node, 2), 0);
+        difference(aVar(node, 0), aVar(node, 1), -1, aVar(node, 2), 1);
+        difference(aVar(node, 1), aVar(node, 0), 0, aVar(node, 2), 0);
       }
       default -> {
         // not a difference constraint
@@ -159,7 +159,7 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
 
   // constants come from a scratch store, so that reading the model adds no variable to it; arcs
   // through constants are dropped and constant literals are resolved before the constraint is built
-  private IntVar var(ASTConstElem node, int i) {
+  private IntVar aVar(ASTConstElem node, int i) {
     return scalar(node, i);
   }
 

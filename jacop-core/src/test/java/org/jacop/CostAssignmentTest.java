@@ -244,7 +244,7 @@ class CostAssignmentTest {
     vars.add(cost);
     try {
       post(store, in, x, cost, gcc, structural);
-    } catch (FailException e) {
+    } catch (FailException _) {
       return new TreeSet<>();
     }
     TreeSet<String> found = new TreeSet<>();

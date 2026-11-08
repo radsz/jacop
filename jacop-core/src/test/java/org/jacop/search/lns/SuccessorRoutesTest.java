@@ -120,9 +120,9 @@ class SuccessorRoutesTest {
     AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(1)));
     assertEquals(1, lns.routings().size());
     RouteStructure r = lns.routings().get(0);
-    assertEquals(C, r.customers());
+    assertEquals(C, r.customerCount());
     Set<String> found = new HashSet<>();
-    for (int[] route : r.routes()) {
+    for (int[] route : r.bestRoutes()) {
       found.add(Arrays.toString(route));
     }
     assertEquals(Set.of("[0, 1]", "[2, 3]", "[4, 5]"), found);
@@ -208,8 +208,8 @@ class SuccessorRoutesTest {
     s.removeLevel(s.level);
     s.setLevel(s.level - 1);
     RouteStructure r = lns.routings().get(0);
-    assertEquals(1, r.routes().length);
-    assertEquals(6, r.routes()[0].length);
+    assertEquals(1, r.bestRoutes().length);
+    assertEquals(6, r.bestRoutes()[0].length);
     // one route: route removal falls back to removing related customers
     boolean[] removed = r.routeRemoval(0.4, new Random(8));
     int count = 0;

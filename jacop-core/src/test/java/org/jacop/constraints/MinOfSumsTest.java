@@ -168,7 +168,7 @@ class MinOfSumsTest {
         } else {
           x.domain.in(store.level, x, IntDomain.MIN_INT, cut);
         }
-      } catch (org.jacop.core.FailException e) {
+      } catch (org.jacop.core.FailException _) {
         trace.add("fail");
         return trace;
       }

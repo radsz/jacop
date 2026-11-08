@@ -570,7 +570,7 @@ class GlobalConstraintBruteForceTest {
             v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
           }
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           consistent = false;
         }
       }
@@ -625,7 +625,7 @@ class GlobalConstraintBruteForceTest {
       Set<List<Integer>> found;
       try {
         found = solveAllAliased(aliased, trial % 3, random.nextInt(), a, b);
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         continue;
       } catch (RuntimeException e) {
         throw new AssertionError(
@@ -739,7 +739,7 @@ class GlobalConstraintBruteForceTest {
       Set<List<Integer>> found;
       try {
         found = solveAll(wrapped, trial % 3, random.nextInt());
-      } catch (IllegalArgumentException | UnsupportedOperationException e) {
+      } catch (IllegalArgumentException | UnsupportedOperationException _) {
         continue;
       } catch (RuntimeException e) {
         throw new AssertionError(
@@ -1092,22 +1092,22 @@ class GlobalConstraintBruteForceTest {
       int rows = 2 + random.nextInt(3);
       int n = 1 + random.nextInt(9 / rows);
       boolean strict = random.nextBoolean();
-      int[] var = new int[rows * n];
+      int[] aVar = new int[rows * n];
       int vars = 0;
-      for (int k = 0; k < var.length; k++) {
-        var[k] = repeated && k > 0 && random.nextInt(3) == 0 ? var[random.nextInt(k)] : vars++;
+      for (int k = 0; k < aVar.length; k++) {
+        aVar[k] = repeated && k > 0 && random.nextInt(3) == 0 ? aVar[random.nextInt(k)] : vars++;
       }
       return new Instance(
           domains(random, vars, 0, 2),
           (store, x) -> {
             IntVar[][] matrix = new IntVar[rows][n];
-            for (int k = 0; k < var.length; k++) {
-              matrix[k / n][k % n] = x[var[k]];
+            for (int k = 0; k < aVar.length; k++) {
+              matrix[k / n][k % n] = x[aVar[k]];
             }
             store.impose(new LexChain(matrix, strict));
           },
           x -> {
-            int[] t = Arrays.stream(var).map(k -> x[k]).toArray();
+            int[] t = Arrays.stream(aVar).map(k -> x[k]).toArray();
             for (int i = 0; i + 1 < rows; i++) {
               int c =
                   Arrays.compare(
@@ -1119,7 +1119,7 @@ class GlobalConstraintBruteForceTest {
             }
             return true;
           },
-          "rows=" + rows + " strict=" + strict + " positions=" + Arrays.toString(var));
+          "rows=" + rows + " strict=" + strict + " positions=" + Arrays.toString(aVar));
     };
   }
 
@@ -3093,9 +3093,9 @@ class GlobalConstraintBruteForceTest {
     int vars = 2 + random.nextInt(4);
     int items = vars + random.nextInt(2);
     int bins = 2 + random.nextInt(2);
-    int[] var = new int[items];
+    int[] aVar = new int[items];
     for (int i = 0; i < items; i++) {
-      var[i] = i < vars ? i : random.nextInt(vars);
+      aVar[i] = i < vars ? i : random.nextInt(vars);
     }
     int[] weights = randomInts(random, items, 0, 4);
     return new Instance(
@@ -3105,7 +3105,7 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> {
           IntVar[] item = new IntVar[items];
           for (int i = 0; i < items; i++) {
-            item[i] = x[var[i]];
+            item[i] = x[aVar[i]];
           }
           store.impose(
               new Binpacking(
@@ -3119,8 +3119,8 @@ class GlobalConstraintBruteForceTest {
           int[] load = new int[bins];
           int[] count = new int[bins];
           for (int i = 0; i < items; i++) {
-            load[x[var[i]]] += weights[i];
-            count[x[var[i]]]++;
+            load[x[aVar[i]]] += weights[i];
+            count[x[aVar[i]]]++;
           }
           for (int b = 0; b < bins; b++) {
             if (load[b] != x[vars + b] || count[b] != x[vars + bins + b]) {
@@ -3129,7 +3129,7 @@ class GlobalConstraintBruteForceTest {
           }
           return true;
         },
-        "items=" + Arrays.toString(var) + " weights=" + Arrays.toString(weights));
+        "items=" + Arrays.toString(aVar) + " weights=" + Arrays.toString(weights));
   }
 
   /**
@@ -3748,7 +3748,7 @@ class GlobalConstraintBruteForceTest {
       Set<List<Integer>> found;
       try {
         found = solveOnViews(instance, a, b, random.nextLong());
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         // a precondition of the instance on the domains, which a factor can thin out
         continue;
       } catch (RuntimeException e) {

@@ -241,8 +241,8 @@ public class LexChain extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    for (int k : varToPositions[varToSlot.get(var)]) {
+  public void queueVariable(int level, Var aVar) {
+    for (int k : varToPositions[varToSlot.get(aVar)]) {
       if (!positionChanged[k]) {
         positionChanged[k] = true;
         int i = k / n;

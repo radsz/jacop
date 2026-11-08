@@ -123,7 +123,7 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
         smallest = Math.addExact(smallest, Math.min(lo, hi));
         largest = Math.addExact(largest, Math.max(lo, hi));
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     // the bounds cited are lifted: on the side that holds, the sum's bound may move by the slack
@@ -176,7 +176,7 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
       if (lo == trail.maxBefore(vars[i], position)) {
         try {
           rest = Math.subtractExact(rest, Math.multiplyExact(weights[i], lo));
-        } catch (ArithmeticException overflow) {
+        } catch (ArithmeticException _) {
           return false;
         }
       } else if (free < 0 || vars[free] == vars[i]) {

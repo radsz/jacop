@@ -2783,7 +2783,35 @@ Version 5.0 (unreleased)
      with -f); solved 168 = 168 by default and 163 to 164 with -f, and
      the other differences are on instances where nothing is posted.
 
-172. Local search measures a table (HybridTable) by its distance to the
+172. Tables in the linear relaxation. The rows TableCliques makes from a
+     table (clique rows of its pair conflicts) now come with the convex
+     hull of the table (Balas, "Disjunctive programming", Annals of
+     Discrete Mathematics 5, 1979; the extended formulation of Bergman,
+     Cire, van Hoeve and Hooker, "Decision Diagrams for Optimization",
+     2016, section 2.2): one LP-only tuple column per live tuple, or the
+     value columns of a position that tells the tuples apart (the index
+     of a 2-D element), sum = 1, [x = v] = sum of the tuples with v for
+     small domains and x = sum t_x lambda for the others. A Boolean that
+     implies values on two or more positions (AndBool in the store, binary
+     clauses under LCG) is tied to the tuples that agree with them. The
+     table rows are tried at the first solve like the value encodings,
+     with their own share of the sparse size cap, and kept only when they
+     raise the bound or make the relaxation infeasible. The tables that
+     ElementTableDetector merges from elements sharing an index are now
+     registered too, so table-layout's width/height pairs reach the LP.
+     -Dorg.jacop.lp.tableEncodings=false turns the hulls off;
+     org.jacop.lp.tableTuples (2000) and org.jacop.lp.tableTupleColumns
+     (20000) limit them. Root bounds: table-layout 2011 rises on all five
+     instances (en-760 1344 to 1427, optimum 1604; en-1000-1615 1855 to
+     2201), depot_placement u159_4 126 to 252, vrplc9_5_10_s2 26 to 28.6,
+     is A3PZaPjnUz 47104 to 50805; physician-scheduling only 1140 to 1145.
+     A 5 s probe of the wide set shows the LP differs on 30 of 220
+     instances; those 30 at 600 s, paired: solved 23 = 23 by default (3
+     better, 0 worse; vrplc9_5_10_s2 proved in 35 s instead of 77 s), 24
+     = 24 with -f (1 better, 3 worse, all three within the spread of runs
+     at other time limits; evm-super-compilation 121 s to 58 s).
+
+173. Local search measures a table (HybridTable) by its distance to the
      nearest tuple, the number of columns that must change, instead of
      0/1 (violation degrees, Van Hentenryck and Michel, Constraint-Based
      Local Search, MIT Press 2005); tables over 50,000 cells stay copy
@@ -2798,7 +2826,7 @@ Version 5.0 (unreleased)
      Wide set at 60 s, -f ls=0.1: 163 to 164 solved, with solutions 192
      to 192.
 
-173. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
+174. ConvexAllocation: a bound for sum f_i(x_i) <= cost with
      sum x_i = total and convex costs f_i (ConvexCost: weighted maxima
      of affine pieces, their squares, or tables). The minimum of the
      separable convex allocation is found by the greedy on marginal
@@ -2828,7 +2856,7 @@ Version 5.0 (unreleased)
      57738 to 57174, and with -f 117 to 120 solved, gbac 968 to 785,
      the other changes being run-to-run noise.
 
-174. Local search searches the machine sequences of disjunctive scheduling
+175. Local search searches the machine sequences of disjunctive scheduling
      models with critical-path neighbourhoods, the scheduling abstraction
      of Comet's constraint-based local search (Van Hentenryck and Michel,
      "Scheduling abstractions for local search", CPAIOR 2004). Machines are
@@ -2856,7 +2884,7 @@ Version 5.0 (unreleased)
      (optimal in both) and mspsp hard_01 (gives way at once) have such a
      graph, so the rest is run-to-run noise.
 
-175. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
+176. New redundant constraint HornFlow (org.jacop.constraints.cumulative)
      for cumulative scheduling: the preemptive relaxation checked by a
      maximum flow from tasks to elementary intervals, after W. A. Horn,
      Some simple scheduling algorithms, Naval Research Logistics
@@ -2886,7 +2914,53 @@ Version 5.0 (unreleased)
      24 with -f; wide set (220, 29 with a cumulative), 167 to 167 and
      159 to 160, changes within noise. Hence off by default.
 
-176. The experimental cut-based conflict analysis of --lcg
+177. The FlatZinc front end finds vehicle routes written as a giant tour
+     (circuit(x) over the customers and a start and an end node per
+     vehicle, with each end node's successor fixed to the next start
+     node: cvrp, vrplc, stochastic-vrp and vrp-submission of the
+     Challenge; P. Kilby and P. Shaw, Vehicle Routing, Handbook of
+     Constraint Programming, 2006) and posts a redundant Routes (item
+     122) over new arc Booleans b[i,j] <-> x[i] = j between customers,
+     with one depot arc out of and into each customer and their degree
+     rows. A quantity accumulated along the tour (T[x[n]] >= T[n] + q[n]
+     with q >= 0, such as the load) gives the demands and the capacity,
+     so the linear relaxation gets the rounded capacity cuts of item 144
+     (J. Lysgaard, A. N. Letchford and R. W. Eglese, Mathematical
+     Programming 100(2), 2004). Each element d = c[x[i]] over a constant
+     array gets the row d = sum c[j] b[i,j], and every accumulated
+     quantity the row sum T[x[n]] = sum T[m] over the nodes, which holds
+     because x is a permutation: it ties an objective written as the
+     arrival times at the end nodes (cvrp) to the arc costs. Root LP
+     bounds go from 0 to 34 on cvrp simple2 (optimal, proved in 224
+     nodes), 0 to 446 on P-n16-k8 (optimum 450), 0 to 661 on A-n37-k5
+     and 0 to 461 on vrp-submission A_4v_22l (best known 481); vrplc
+     9_5_10_s1 61 to 146 (optimum 351, time windows). The new Booleans
+     are branched on last under lazy clause generation, and the route
+     neighbourhoods of LNS keep using the circuit itself.
+     -Dorg.jacop.fz.giantTour=false turns the detection off. 34
+     giant-tour instances of the Challenge, 60 s: optima proved 14 to 19
+     by default and 14 to 20 with -f (A_4v_22l 820 to 481 optimal), 13
+     better / 9 worse by default (objective geomean 0.976) and 13 / 5
+     with -f (0.987); vrplc13_11_20_s4 finds no solution in 60 s in
+     either mode (its first solution comes after 46 s without the
+     detection). Wide set (220, 60 s): the detection fires on the 4
+     giant-tour instances only; solved 166 to 164 by default and 156 to
+     157 with -f, all changes outside them are run-to-run noise
+     (vrplc9_5_10_s2 finds its optimum 329 at 9.7 s instead of 17 s
+     but no longer proves it in 60 s by default).
+
+178. The redundant constraints the FlatZinc layer adds next to the
+     model's own are marked implied in the store (Support.implied), so
+     local search does not evaluate them: the CumulativeUnary and the
+     pairwise disjunctions of a cumulative, the cumulative projections
+     of a diffn (with the variables of their spans), the all different
+     of a circuit, subcircuit or assignment (unless the model states the
+     same all different), the OverlappingAlldiff of overlapping
+     all_different pairs, the bin packing conflict cliques, HornFlow
+     and PrecedenceCost. Before, only the constraints of the detectors were
+     marked (item 165). Store.isImposingImplied is new.
+
+179. The experimental cut-based conflict analysis of --lcg
      (-Djacop.lcg.linear=learn, off by default) also uses the
      explanation of a constraint that has no linear relation when all its
      atoms are on 0/1 variables: the clause is then an exact linear row
@@ -2902,14 +2976,14 @@ Version 5.0 (unreleased)
      within noise. %% lcg-linear also reports rowConstraints and
      rowsMillis (root rows made and the time taken).
 
-177. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
+180. Bug fix: under --lcg the reason of WeightedCompletion on a capacity
      above 1 left out the holes a pruned bound skipped. When the latest
      start computed for a task (or the cost's minimum) fell on a removed
      value, the domain moved past it, and the reason (start bounds and
      cost.max()) did not imply the recorded bound; LcgFuzzTest found it.
      The reason now adds the != atoms of those holes.
 
-178. Energy cuts of cumulative resources in the LP relaxation
+181. Energy cuts of cumulative resources in the LP relaxation
      (org.jacop.constraints.lp.EnergyCuts). For every Cumulative of an
      objective model, LinearRelaxation separates at the root the
      mean-busy-time inequalities of a set S of tasks released at t or
@@ -2953,7 +3027,150 @@ Version 5.0 (unreleased)
      161, 7 families better and 3 worse in both modes, all changed
      instances but one without kept cuts (noise).
 
-179. LP cut rounds above the dense tableau cap and finer Gomory
+182. DiffnK explains its pruning and failures under --lcg by the boxes
+     of the rule that fired, instead of by the bounds of all boxes:
+     a pairwise separation by the origin and length bounds of the two
+     boxes (with the holes skipped by the pruned bound), a volume or fit
+     failure by the boxes it counted, and the exclusion of a
+     non-strict box by the atoms that make it zero-sized or absent. The
+     average reason drops from about 149 to about 15 atoms on
+     products-and-shelves (-Dorg.jacop.diffnk.reasons=false restores
+     the generic reason).
+     Diffn has a new energetic check on strips (setEnergetic,
+     -Dorg.jacop.diffn.energetic=0|1|2, off by default): for each
+     dimension and each strip [t1, t2) with t1 an earliest or latest
+     start and t2 an earliest or latest end, the minimal parts of the
+     rectangles inside the strip must pack into the strip, tested with
+     the dual feasible functions of item 155 (mode 1) or by area only
+     (mode 2) (F. Clautiaux, A. Jouglet, J. Carlier and A. Moukrim, A new
+     constraint programming approach for the orthogonal packing problem,
+     Comput. Oper. Res. 35(3):944-959, 2008; S. P. Fekete and
+     J. Schepers, Math. Methods Oper. Res. 60(2):311-329, 2004). Its
+     failures are explained by the strip rectangles' bounds that place
+     them in the strip and the extent.
+     At 600 s (three rounds each, default and -f search, same jar with
+     the generic reason as base) the five 2025 products-and-shelves
+     instances all reach the optimum in every round: ps-50-09 is proved
+     in 109-125 s by default and 240-326 s with -f, where the base finds
+     the optimum but proves nothing in 600 s; ps-25-01 goes from 154-180
+     s to 28-35 s (default) and from 374-394 s to 24-27 s (-f); ps-25-03
+     from 60-72 s to 5-7 s; ps-50-06 from 34-39 s to 14-18 s. The
+     energetic check stays off: on the 70 hardest Challenge Diffn
+     instances at 240 s it solves 28 -> 18 (mode 1) and 28 -> 25
+     (mode 2), and on the 25 carpet-cutting instances at 600 s mode 2
+     solves 12 -> 11 with 8 better and 8 worse.
+
+183. The automatic LP guide of the FlatZinc front end
+     (--free-config lcg-lp-branching=auto) turns on only when the simplex
+     has value columns. Before, it also turned on for the columns of
+     tried value encodings that the root trial dropped. New
+     LinearRelaxation.simplexValueColumns() and stat
+     lpSimplexValueColumns. This turns the guide off on 43 wide-set
+     instances. At 600 s the same number are solved in both modes;
+     with -f tower 2025 goes from 111 to 24 s and spot5 28 from 25 to
+     12 s, but vrplc9_5_10_s2 goes from 17 to 150 s
+     (lcg-lp-branching=on restores the guide there).
+
+184. Under --lcg, AndBoolSimple and OrBoolSimple (bool_and and bool_or of
+     two Booleans) and XplusYeqC (x + y = c) explain their own atoms and
+     failures instead of a replayed or generic reason. A result of AND
+     fixed to 0 cites the operand at 0, a result fixed to 1 both
+     operands, an operand cites the result and, when needed, the other
+     operand (OR by duality), including the negated and the entailed
+     constraint under Reified. x + y = c walks the values of the atom
+     against their mirrors c - v in the other variable, like the shift
+     explanations of equalities (ShiftExplanation.explainMirror). On opd
+     flener_et_al_15_350_100 the AND reasons stop being replayed (388k)
+     or generic (54k) at the same length (1.9 atoms); on cgt
+     cgt_5_h27_r0.05_s0.8_0 the x + y = c reasons go from 39 atoms, a
+     third generic, to 1 atom. On the 46 wide instances that post these
+     constraints (240 s, paired, scored by section 7 of the scoring
+     rules): --lcg S = +14, -f S = +1 over two repetitions.
+
+185. Symmetry detection in fzn-jacop builds the graph of a constant array
+     once per content: an array whose elements are all constants (a table
+     of tuples, given by name or written out) becomes one key shared by
+     every constraint that uses the same contents, instead of one vertex
+     per position for each use, and named int arrays are read and their
+     constants interned once. Huge constant tables now fit in the 1 s
+     detection budget (org.jacop.fz.symmetryTime): on the 15 groupsplitter
+     instances graph building was cut off by the deadline on all 15, now
+     it completes on all in 0.12-0.33 s CPU and orbitopes are posted on 6.
+     Tables with equal contents get the same colour, so constraints over
+     the same table are interchangeable. Of the 165 Challenge instances
+     with the slowest detection, graph deadlines drop from 136 to 103 (the
+     rest are graphs of 100k-1.3M vertices, not tables); on the wide set
+     10 of 220 instances post different symmetry constraints and the rest
+     post the same. Benchmarks (600 s): groupsplitter 10 to 10 solved by
+     default (u15g5pref0 309 to 412) and 10 to 9 with -f (u12g2pref1
+     proved at 549 s before, not by 600 s now); the 10 changed wide
+     instances 8 to 8 in both modes.
+
+186. The dense simplex (below 100 rows) keeps and restores bases too,
+     like JaLP in 132: DualSimplex gets saveBasis/restoreBasis, which
+     copy the tableau, the basis and the edge norms, and refuse a basis
+     saved before rows were added or removed or in another copy. Since a
+     save copies the whole tableau, the linear relaxation saves dense
+     bases only at the first denseBasisDepth (3) levels below the level
+     of the first LP solve (org.jacop.lp.denseBasisDepth, -1 turns dense
+     saves off). Keeping the LU factors with a JaLP basis was measured
+     and not done: refactorizations after restores take 1 to 14 % of the
+     LP time (JFR, train_3, still_life2, rcpsp-wet j90), and saves
+     outnumber restores about 20 to 1, so copying the factors at each
+     save would cost more than it saves. Tuning at 240 s on 26 LP-heavy
+     -f instances: denseBasisDepth 3 solves 20 (sparse only 19) with 226
+     s of LP time instead of 319 s; basisJump 4 and maxBases 8 or 128 are
+     no better, so they stay 2 and 32. On the 73 wide-set instances that
+     restore dense bases (600 s, base and candidate in the same round):
+     by default 66 to 66 solved, 2 families better and 1 worse; with -f
+     63 to 64 solved (blocks-world 16-4-83 proved optimal in 414 s), 5
+     families better and none worse; city-position is slower with -f
+     (city-5-06 222 s to 307 s).
+
+187. Capacity cuts of a Routes (item 144) are also separated in search:
+     every few optimal LP solves after the root (from 4, doubled up to
+     1024 while nothing is violated, halved when cuts are found), up to
+     10 cuts go into the row pool, where they age out like other cuts.
+     The mandatory customers are fixed at the root, so these cuts hold
+     for the whole search. New directed multistar cuts over the same
+     sets: Q x(in(S)) >= d(S) + sum over outside customers j of
+     d_j (x(j->S) + x(S->j)), after N. R. Araque, L. Hall and T. L.
+     Magnanti, Capacitated trees, capacitated routing and associated
+     polyhedra, CORE discussion paper 9061 (1990), and A. N. Letchford,
+     R. W. Eglese and J. Lysgaard, Multistars, partial multistars and the
+     capacitated vehicle routing problem, Mathematical Programming 94
+     (2002) 21-40; the separation follows J. Lysgaard, A. N. Letchford
+     and R. W. Eglese, A new branch-and-cut algorithm for the capacitated
+     vehicle routing problem, Mathematical Programming 100 (2004)
+     423-445. A multistar cut is added only for a set whose rounded
+     capacity cut holds: when both competed, the multistar cuts took the
+     slots of the capacity cuts and the root bound fell.
+     -Dorg.jacop.lp.capacitySearch=false and
+     -Dorg.jacop.lp.multistarCuts=false turn them off; statistics
+     lpCapacitySearchCuts and lpCapacitySeparations. Checks: every cut
+     keeps every set of routes of 3,000 random graphs found by
+     enumeration (CapacityCutsTest), and a CVRP keeps its optimum with
+     the LCG explanation checker on. 25 vrp instances of the Challenge,
+     240 s, the default (both on) against both off: -f 13 better / 6
+     worse (objective geomean 0.996), proofs faster (A-n32-k5 171 to
+     58 s); default 9 / 7 (0.999), A-n32-k5 proved. Search cuts alone
+     against both off: -f 13 / 6 (0.997), 2 more proved near the limit;
+     default 9 / 6 (1.000). The multistar cuts are level (against search
+     cuts alone, -f 8 / 10, default 2 / 2). At 60 s the search cuts gave
+     default 16-18 / 2-4 (geomean 0.95); the gain shrinks at 240 s.
+     Energy cuts (item 180) stay at the root. Framed capacity cuts are
+     not separated.
+
+188. fzn-jacop prints the statistics of JaCoP's own components (lcg*,
+     presolve*, lp*, components*, lns*, ls*, symmetry*, probe*,
+     portfolio*, ...) only in verbose mode: with -s -v. -s alone prints
+     the standard FlatZinc statistics (and objectiveBound with
+     objectiveBoundTime); components*, lcgSlowConflicts and
+     portfolioSharedClauses, which -s printed before, now need -v too.
+     --search-statistics stays, as -s -v without the -v lines after each
+     solution, and so does -s -debug.
+
+189. LP cut rounds above the dense tableau cap and finer Gomory
      multipliers. When the dense simplex has no room for a round of
      cuts (m+50 rows by m+50+n columns would pass maxTableau, 4M
      entries), LinearRelaxation moves the root LP to a JaLP simplex

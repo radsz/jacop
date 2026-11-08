@@ -125,10 +125,10 @@ public class MinOfSumsDetector implements ParserTreeConstants {
       IntVar m;
       IntVar[] list;
       if (node.getName().equals("int_min")) {
-        list = new IntVar[] {var(node, 0), var(node, 1)};
-        m = var(node, 2);
+        list = new IntVar[] {variable(node, 0), variable(node, 1)};
+        m = variable(node, 2);
       } else {
-        m = var(node, 0);
+        m = variable(node, 0);
         list = support.getVarArray(child(node, 1));
       }
       IntVar[] x = new IntVar[list.length];
@@ -226,7 +226,7 @@ public class MinOfSumsDetector implements ParserTreeConstants {
     sums.put(z, new Sum(p, q, node));
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar variable(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 
