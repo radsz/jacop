@@ -98,7 +98,9 @@ public final class ExplanationMinimality {
       return null;
     }
     try {
-      copy.imposeCopy(c);
+      if (!copy.imposeCopy(c)) {
+        return null;
+      }
       if (!copy.store.consistency()) {
         return new int[] {n, 0, 0};
       }
