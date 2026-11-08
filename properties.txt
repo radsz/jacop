@@ -501,6 +501,9 @@ Cuts:
   apart is scaled down instead of dropped; default true.
 - org.jacop.lp.slackGomory: root Gomory cuts over the rows and their
   slacks (false: MIR of the aggregate of the rows alone); default true.
+- org.jacop.lp.coverCuts: lifted cover cuts (Gu, Nemhauser and
+  Savelsbergh 2000) of the knapsacks in the LP rows, in the root cut
+  rounds; default true.
 - org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
   root; default true.
 - org.jacop.lp.capacityRounds: their rounds; default 50.
