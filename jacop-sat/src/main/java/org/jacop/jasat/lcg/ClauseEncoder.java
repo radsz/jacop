@@ -522,10 +522,13 @@ final class ClauseEncoder implements PbModel {
     long maxRest = y == null ? c : c - Math.min(wy * y.min(), wy * y.max());
     // counts above maxRest + 1 or n never matter
     int k = (int) Math.max(0, Math.min(n, maxRest + 1));
-    if ((double) n * k * 4 + 2L * (k + 1) > counterLimit) {
+    // under a reification the counter takes the plain limit: a guarded sum is usually one of many
+    // (a neuron, a time step), and their counters together outgrow the model
+    int cap = guard.isEmpty() ? counterLimit : limit;
+    if ((double) n * k * 4 + 2L * (k + 1) > cap) {
       throw REJECTED;
     }
-    currentLimit = counterLimit;
+    currentLimit = Math.max(currentLimit, cap);
     // s[i][j] = [l[0] + ... + l[i] >= j], j = 1..k
     String[] prev = new String[k + 1];
     prev[0] = "1";

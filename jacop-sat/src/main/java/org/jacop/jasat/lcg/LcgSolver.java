@@ -55,6 +55,7 @@ import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -2376,6 +2377,7 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
+    clauseObjective = objective;
     encodeGraphs();
     this.objective = trail.id(objective);
     best = null;
@@ -3429,6 +3431,7 @@ public final class LcgSolver implements ExternalPropagator {
         org.jacop.core.ConstraintProfile.of(c);
       }
     }
+    objectiveTerms = objectiveTerms();
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
@@ -3522,6 +3525,59 @@ public final class LcgSolver implements ExternalPropagator {
         && !CLAUSE_SET.contains(name);
   }
 
+  /**
+   * The variables of the objective's definition (the objective and the terms of a linear form over
+   * it), or an empty set. A constraint over them stays a propagator: the core-guided phase and the
+   * LP read the definitions of the objective's terms from the store, such as {@code b <=> x = c} of
+   * a term b (spot5 28 loses its at-most-one groups and its proof when they are clauses).
+   */
+  private java.util.Set<IntVar> objectiveTerms() {
+    java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES)) {
+      return terms;
+    }
+    terms.add(clauseObjective);
+    List<LinearForm> forms = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null && f.relation() == LinearForm.EQ) {
+        forms.add(f);
+      }
+    }
+    // the objective's sum, then the definitions of its terms that are defined once more (blocks
+    // of a split sum, y = b of bool2int), as the core phase follows them
+    Map<IntVar, Integer> occurs = new IdentityHashMap<>();
+    for (LinearForm f : forms) {
+      for (IntVar x : f.vars()) {
+        occurs.merge(x, 1, Integer::sum);
+      }
+    }
+    java.util.Set<IntVar> last = java.util.Set.of(clauseObjective);
+    for (int round = 0; !last.isEmpty() && round < 4; round++) {
+      java.util.Set<IntVar> added = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : forms) {
+        boolean follow = false;
+        for (IntVar x : f.vars()) {
+          follow |= last.contains(x) && (round == 0 || occurs.get(x) <= 2);
+        }
+        if (follow) {
+          for (IntVar x : f.vars()) {
+            if (terms.add(x)) {
+              added.add(x);
+            }
+          }
+        }
+      }
+      last = added;
+    }
+    return terms;
+  }
+
+  private java.util.Set<IntVar> objectiveTerms = java.util.Set.of();
+
+  /** The objective of {@link #minimize}, known when its terms are left out of the clauses. */
+  private IntVar clauseObjective;
+
   private boolean clauseCandidate(Constraint c) {
     if ("none".equals(CLAUSE_CLASSES)
         || !("all".equals(CLAUSE_CLASSES)
@@ -3532,7 +3588,7 @@ public final class LcgSolver implements ExternalPropagator {
     int arity = 0;
     int wide = 0;
     for (org.jacop.core.Var v : c.arguments()) {
-      if (!(v instanceof IntVar x)) {
+      if (!(v instanceof IntVar x) || objectiveTerms.contains(x)) {
         return false;
       }
       if (!x.singleton()) {
