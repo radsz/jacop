@@ -85,7 +85,8 @@ final class LinearSplit {
 
   private static boolean counterClauses() {
     String cl = System.getProperty("jacop.lcg.clauses", "none");
-    return "all".equals(cl) || java.util.Arrays.asList(cl.split(",")).contains("LinearInt");
+    List<String> names = java.util.Arrays.asList(cl.split(","));
+    return "all".equals(cl) || names.contains("LinearInt") || names.contains("counter");
   }
 
   private static final int COUNTER_ARITY = Integer.getInteger("jacop.lcg.clauses.boolArity", 256);

@@ -3502,9 +3502,31 @@ public final class LcgSolver implements ExternalPropagator {
 
   private ClauseEncoder clauseEncoder;
 
+  /** The classes "counter" in {@code jacop.lcg.clauses} gives to the unary counter alone. */
+  private static final java.util.Set<String> COUNTER_CLASSES =
+      java.util.Set.of(
+          "LinearInt",
+          "SumBool",
+          "LinearBool",
+          "SumInt",
+          "Count",
+          "CountBounds",
+          "AtMost",
+          "AtLeast");
+
+  private boolean counterOnly(Constraint c) {
+    String name = c.getClass().getSimpleName();
+    return CLAUSE_SET.contains("counter")
+        && COUNTER_CLASSES.contains(name)
+        && !"all".equals(CLAUSE_CLASSES)
+        && !CLAUSE_SET.contains(name);
+  }
+
   private boolean clauseCandidate(Constraint c) {
     if ("none".equals(CLAUSE_CLASSES)
-        || !("all".equals(CLAUSE_CLASSES) || CLAUSE_SET.contains(c.getClass().getSimpleName()))) {
+        || !("all".equals(CLAUSE_CLASSES)
+            || CLAUSE_SET.contains(c.getClass().getSimpleName())
+            || counterOnly(c))) {
       return false;
     }
     int arity = 0;
@@ -3556,7 +3578,7 @@ public final class LcgSolver implements ExternalPropagator {
               CLAUSE_LIMIT,
               CLAUSE_COUNTER);
     }
-    List<int[]> cs = clauseEncoder.encode(c);
+    List<int[]> cs = clauseEncoder.encode(c, counterOnly(c));
     if (CLAUSE_DEBUG) {
       String s = c.toString();
       System.out.println(

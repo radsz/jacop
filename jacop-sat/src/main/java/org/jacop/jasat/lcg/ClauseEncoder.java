@@ -92,6 +92,7 @@ final class ClauseEncoder implements PbModel {
   private final int limit;
   private final int counterLimit;
   private int currentLimit;
+  private boolean countersOnly;
   private final List<int[]> clauses = new ArrayList<>();
   private final List<String> guard = new ArrayList<>();
 
@@ -122,6 +123,19 @@ final class ClauseEncoder implements PbModel {
    * @return its clauses, or null when it keeps its propagator
    */
   List<int[]> encode(Constraint c) {
+    return encode(c, false);
+  }
+
+  /**
+   * Encodes a constraint.
+   *
+   * @param c the constraint
+   * @param counters true to encode only sums of 0/1 terms (with at most one other term), as unary
+   *     counters
+   * @return its clauses, or null when it keeps its propagator
+   */
+  List<int[]> encode(Constraint c, boolean counters) {
+    countersOnly = counters;
     clauses.clear();
     guard.clear();
     currentLimit = limit;
@@ -421,6 +435,13 @@ final class ClauseEncoder implements PbModel {
     long[] ws = new long[w.size()];
     for (int i = 0; i < ws.length; i++) {
       ws[i] = w.get(i);
+    }
+    if (countersOnly) {
+      if (relation == LinearForm.NE || !counterShape(terms, ws)) {
+        throw REJECTED;
+      }
+      unaryCounter(terms, ws, relation, c);
+      return;
     }
     if (relation != LinearForm.NE && counterShape(terms, ws) && orderCombos(terms) > limit) {
       unaryCounter(terms, ws, relation, c);
