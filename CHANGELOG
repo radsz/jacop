@@ -3412,7 +3412,45 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
-200. Presolve tabling (--presolve-tabling) no longer runs out of memory
+200. New global UnaryEarlinessTardiness bounds a sum of earliness and
+     tardiness costs of tasks on unary machines by the assignment
+     bound of Sourd and Kedad-Sidhoum: each task is split into unit
+     operations assigned to time slots of capacity one, with unit costs
+     whose sum never exceeds the task's cost, and the minimum cost
+     transportation (successive shortest paths over at most 64 blocks
+     of slots) gives the bound. It filters start bounds by reduced
+     costs of the dual, relaxes given precedences s_j >= s_i + d in
+     the Lagrangian way with multipliers from a subgradient search at
+     the root, and explains its failures and prunings under --lcg by
+     windows weakened against the stored dual. Exact solves are
+     screened (old flow still optimal, dual under the current windows,
+     greedy repair) and capped by a deterministic work budget. The
+     FlatZinc front end adds it next to PrecedenceCost on unary
+     resources when -Dorg.jacop.fz.unaryEarlinessTardiness=true; it is
+     off by default, since it raises proven bounds but not the
+     solutions found in a time limit. On 36 one-machine and job-shop
+     earliness/tardiness instances (240 s) the mean gap between bound
+     and best solution goes from 84 % to 39 % on the one-machine
+     family under the model search and from 60 % to 28 % with -f; on
+     job shops with costs on every operation from 100 % to 88 % under
+     the model search. On the rcpsp-wet and rcpsp-wet-diverse Challenge
+     instances (600 s) it proves j30_27_5-wet-diverse-4 in 152 s (not
+     proved in 600 s without it) and lowers the upper bound of
+     j30_44_8-wet-diverse-4 under -f from 19020 to 17632. References: F. Sourd and S. Kedad-Sidhoum, The
+     one-machine problem with earliness and tardiness penalties,
+     Journal of Scheduling 6(6), 533-549, 2003; F. Sourd, New exact
+     algorithms for one-machine earliness-tardiness scheduling,
+     INFORMS Journal on Computing 21(1), 167-175, 2009; M. L. Fisher,
+     The Lagrangian relaxation method for solving integer programming
+     problems, Management Science 27(1), 1-18, 1981; M. Held, P. Wolfe
+     and H. P. Crowder, Validation of subgradient optimization,
+     Mathematical Programming 6, 62-88, 1974. Checks:
+     UnaryEarlinessTardinessTest (bound against brute force, with and
+     without precedences; filtering keeps every supported start),
+     GlobalConstraintBruteForceTest, UnaryEarlinessTardinessLcgTest and
+     LcgFuzzTest (explanation checker on), PrecedenceCostFuzzTest.
+
+201. Presolve tabling (--presolve-tabling) no longer runs out of memory
      on groups over wide domains. Its enumeration listed every value of
      the variable it branched on into an array before the node limit
      could stop it; with auxiliary variables of about 10^9 values this
@@ -3422,7 +3460,7 @@ Version 5.0 (unreleased)
      group reached its node limit before too, so it gets no table either
      way.
 
-201. Local search keeps more of its state incrementally, as Comet's
+202. Local search keeps more of its state incrementally, as Comet's
      invariants do (L. Michel and P. Van Hentenryck, A constraint-based
      architecture for local search, OOPSLA 2002, 83-100; P. Van
      Hentenryck and L. Michel, Constraint-Based Local Search, MIT Press
@@ -3455,7 +3493,7 @@ Version 5.0 (unreleased)
      gives only the first solution, LNS does the rest) and trains18 (387
      instead of 386).
 
-202. Free search (-f) under --lcg leaves every decision to the SAT
+203. Free search (-f) under --lcg leaves every decision to the SAT
      solver when the model is a CNF: all its variables are 0/1 and every
      constraint became clauses (Regular and MDD under --lcg, change
      #447). Before, the runs took turns between the annotation (or
