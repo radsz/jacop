@@ -48,11 +48,9 @@ COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
 # fzn-exec, or the JVM rejects it. JVM warnings (such as a rejected cache) go to stderr, never into
 # the FlatZinc output on stdout.
 # The training models are mounted from the build stage, so they never become part of the image.
-RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/tmp/aot-training \
-    runs="" \
-  && for f in /tmp/aot-training/*.fzn; do runs="$runs -t 3000 $f -- -t 3000 -f $f -- -t 3000 --lcg -f $f --"; done \
-  && java -Xmx2G -Xss100M -XX:AOTCacheOutput=/jacop/jacop.aot -cp "/jacop/jacop.jar:/jacop/lib/*" \
-      org.jacop.fz.AotTraining $runs > /dev/null \
+RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/aot-training \
+    java -Xmx2G -Xss100M -XX:AOTCacheOutput=/jacop/jacop.aot -cp "/jacop/jacop.jar:/jacop/lib/*" \
+      org.jacop.fz.AotTraining --models /aot-training > /dev/null \
   && rm -f /jacop/jacop.aot.config \
   && chmod a+r /jacop/jacop.aot \
   && printf '%s\n' \
