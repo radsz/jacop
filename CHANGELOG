@@ -3633,6 +3633,20 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
+208. Activity branching under --lcg bumps every integer variable whose
+     atoms conflict analysis resolved or minimised away, as MiniSat bumps
+     every variable the analysis meets (N. Een, N. Sorensson, An
+     Extensible SAT-solver, SAT 2003), not only the variables of the
+     learnt clause; each variable once per conflict. On the 220 instances
+     of the wide set at 600 s: fixed search 179 solved instead of 178, 22
+     instances better and 9 worse, no family worse (2019 liner-sf-
+     repositioning tp7_4 proved optimal, celar graph11 309218 -> 239859);
+     -f 178 solved in both, 19 better and 14 worse, 7 families better and
+     3 worse. -Djacop.lcg.bump=learnt restores the old bumping. Reason-
+     side bumping (J. H. Liang, V. Ganesh, P. Poupart, K. Czarnecki,
+     Learning Rate Based Branching Heuristic for SAT Solvers, SAT 2016)
+     was tried and lost on top of it.
+
 Version 4.11
 =============
 

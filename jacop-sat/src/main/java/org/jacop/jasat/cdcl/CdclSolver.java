@@ -122,25 +122,13 @@ public final class CdclSolver {
   private double[] activity = new double[0];
   private byte[] seen = new byte[0];
 
-  /**
-   * Which literals of an analysis besides the learnt ones go to {@link
-   * ExternalPropagator#notifyAnalysedLiteral}.
-   */
-  private int analysedNotify = ANALYSED_NONE;
+  /** Whether the analysed variables besides the learnt ones go to the external propagator. */
+  private boolean analysedNotify;
 
   /** Per variable: the conflict stamp of the last {@link #notifyAnalysed} that named it. */
   private int[] analysedMark = new int[0];
 
   private int analysedStamp;
-
-  /** Analysed literals: none, only the learnt ones go to the propagator. */
-  public static final int ANALYSED_NONE = 0;
-
-  /** Analysed literals: every variable the analysis met (resolved or minimised away too). */
-  public static final int ANALYSED_SEEN = 1;
-
-  /** Analysed literals: as {@link #ANALYSED_SEEN}, and the reasons of the learnt literals. */
-  public static final int ANALYSED_REASONS = 2;
 
   private final VarHeap order = new VarHeap();
 
@@ -797,6 +785,18 @@ public final class CdclSolver {
   }
 
   /**
+   * Sets whether the external propagator hears, through {@link
+   * ExternalPropagator#notifyAnalysedLiteral}, of every variable a conflict analysis resolved or
+   * minimised away besides the learnt clause's ones, as MiniSat bumps them (N. Eén, N. Sörensson,
+   * An Extensible SAT-solver, SAT 2003). Off by default.
+   *
+   * @param on whether to tell the propagator of the analysed variables
+   */
+  public void setAnalysedNotify(boolean on) {
+    analysedNotify = on;
+  }
+
+  /**
    * Sets the size up to which an external propagator's reasons are kept as learnt clauses once
    * conflict analysis has asked for them (2 by default: binary reasons are kept). Larger reasons
    * are temporary: they live while their literal stays assigned, unwatched, and are deleted when it
@@ -804,22 +804,6 @@ public final class CdclSolver {
    *
    * @param size the largest reason kept, at least 2
    */
-  /**
-   * Sets which literals of each conflict analysis, besides the learnt clause's, the external
-   * propagator hears of through {@link ExternalPropagator#notifyAnalysedLiteral}: {@link
-   * #ANALYSED_NONE} (the default), {@link #ANALYSED_SEEN} every variable the analysis resolved or
-   * minimised away, as MiniSat bumps them (N. Eén, N. Sörensson, An Extensible SAT-solver, SAT
-   * 2003), or {@link #ANALYSED_REASONS} also the variables of the reasons of the learnt literals,
-   * the "reason side" of J. H. Liang, V. Ganesh, P. Poupart, K. Czarnecki, Learning Rate Based
-   * Branching Heuristic for SAT Solvers, SAT 2016. Only reasons already computed are read, so no
-   * lazy explanation is asked for.
-   *
-   * @param mode the mode
-   */
-  public void setAnalysedNotify(int mode) {
-    analysedNotify = mode;
-  }
-
   public void setExternalReasonKeep(int size) {
     externalReasonKeep = Math.max(2, size);
   }
@@ -1656,7 +1640,7 @@ public final class CdclSolver {
       for (int i = 0; i < learntSize; i++) {
         external.notifyLearntLiteral(toDimacs(learnt[i]));
       }
-      if (analysedNotify != ANALYSED_NONE) {
+      if (analysedNotify) {
         notifyAnalysed(analysedEnd);
       }
     }
@@ -1678,8 +1662,7 @@ public final class CdclSolver {
 
   /**
    * Tells the external propagator of the variables the analysis met that are not in the learnt
-   * clause: the first {@code end} of {@code toClear}, and with {@link #ANALYSED_REASONS} the
-   * literals of the reasons the learnt literals already have.
+   * clause: the first {@code end} of {@code toClear}, the variables resolved before minimisation.
    */
   private void notifyAnalysed(int end) {
     if (++analysedStamp == Integer.MAX_VALUE) {
@@ -1692,26 +1675,6 @@ public final class CdclSolver {
     }
     for (int i = 0; i < end; i++) {
       notifyAnalysedVar(toClear[i], stamp);
-    }
-    if (analysedNotify != ANALYSED_REASONS) {
-      return;
-    }
-    for (int i = 0; i < learntSize; i++) {
-      int v = learnt[i] >> 1;
-      int r = reason[v];
-      if (r == NO_REASON || r == UNIT_REASON || r == EXTERNAL_REASON) {
-        continue;
-      }
-      if (r < NO_REASON) {
-        notifyAnalysedVar((-2 - r) >> 1, stamp);
-      } else {
-        int[] a = reasonArena(r);
-        int off = reasonOffset(r);
-        int size = a[off + SIZE];
-        for (int k = 0; k < size; k++) {
-          notifyAnalysedVar(a[off + HEADER + k] >> 1, stamp);
-        }
-      }
     }
   }
 

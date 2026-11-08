@@ -514,12 +514,9 @@ public final class LcgSolver implements ExternalPropagator {
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
-    sat.setAnalysedNotify(
-        switch (System.getProperty("jacop.lcg.bump", "learnt")) {
-          case "seen" -> CdclSolver.ANALYSED_SEEN;
-          case "reasons" -> CdclSolver.ANALYSED_REASONS;
-          default -> CdclSolver.ANALYSED_NONE;
-        });
+    // activity bumps every variable the conflict analysis met, not only the learnt clause's
+    // (MiniSat): 600 s wide set, default mode 22 better / 9 worse, -f 19 / 14
+    sat.setAnalysedNotify(!"learnt".equals(System.getProperty("jacop.lcg.bump", "seen")));
     // after the first 1,000 conflicts in focused mode, stable mode for good: restarts are far
     // rarer, and each costs the CP propagation back down. Under --lcg -f, on the 123 mznbench
     // instances with at least 2,000 conflicts in 60 s, 23 better and 13 worse, 59 against 54 runs
