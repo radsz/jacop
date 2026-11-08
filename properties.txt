@@ -534,6 +534,11 @@ Cuts:
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.treeCuts: generalized subtour elimination cuts of the
+  forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at the
+  root, for an objective; a model with them also takes all its other
+  rows into the relaxation; default true.
+- org.jacop.lp.treeRounds: their rounds; default 200.
 
 Row pool and lazy rows:
 

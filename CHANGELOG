@@ -3395,6 +3395,26 @@ Version 5.0 (unreleased)
      cores) zephyrus 14__6__10__3 took 2.2 s instead of 2.9-3.4 s. The
      Challenge compares times in whole seconds.
 
+200. The linear relaxation makes generalized subtour elimination cuts of
+     the forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at
+     the root, for an objective: for a set S of nodes and a node k of S,
+     the selected edges inside S are at most the selected nodes of S
+     other than k (Lucena and Resende, Strong lower bounds for the prize
+     collecting Steiner problem in graphs, Discrete Applied Mathematics
+     141, 2004; Padberg and Wolsey, Trees and cuts, Annals of Discrete
+     Mathematics 17, 1983). A most violated cut for each k is a maximum
+     weight closure found with one maximum flow (Picard, Management
+     Science 22, 1976). A model with trees also takes all its other rows
+     into the relaxation and keeps them in search, and under -f the
+     solution of the relaxation guides the annotation's runs
+     (lcg-lp-branching=auto). On the 2026 Challenge's surface-based-tsp
+     the root bound is now the optimum on all five instances (st70: 490
+     before, 675; ch130: 3,744 before, 6,112). At 240 s, two runs each,
+     -f proves st70 in 1.5-1.8 s (before: not in 240 s) and berlin52 in
+     1.6-2.4 s (15 s); fixed search proves st70 in 22-23 s (not in 240 s)
+     and berlin52 in 6-8 s (13 s). -Dorg.jacop.lp.treeCuts=false turns
+     the cuts off; org.jacop.lp.treeRounds (200) bounds their rounds.
+
 Version 4.11
 =============
 

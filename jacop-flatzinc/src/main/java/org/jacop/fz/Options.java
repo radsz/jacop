@@ -245,7 +245,7 @@ public class Options {
                 lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
-                relaxation has value columns),
+                relaxation has value columns, or under -f tree cuts),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
