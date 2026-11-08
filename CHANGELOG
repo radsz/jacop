@@ -3535,6 +3535,13 @@ Version 5.0 (unreleased)
      slower, the rest equal. Not for wider domains: pentominoes, whose
      regular constraints become clauses too, lost up to 4x with it.
      -Djacop.lcg.pureClauseLiterals=false turns it off.
+204. Bug fix: when LCG free search gives way to free search without
+     learning (lcg-slow-rate), the regular and MDD constraints that went
+     to the SAT solver as clauses are imposed in the store again. Before,
+     free search without learning ran without them, printed solutions
+     that violate them and could claim a wrong optimum: on XCSP3 2025
+     FAPP-aux-18-0350 with large tables posted as MDD, every solution
+     after the switch broke about 140 of its 1,425 tables.
 
 204. Opt-in TSP mode of the FlatZinc front end: with
      -Dorg.jacop.fz.tsp=true, a pure travelling salesman model, one

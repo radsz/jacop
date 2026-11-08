@@ -3371,6 +3371,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Whether {@link #encodeGraphs} ran. */
   private boolean graphsEncoded;
 
+  /** The layered-graph constraints {@link #encodeGraphs} removed from the store. */
+  private final List<LayeredGraphConstraint> encodedGraphs = new ArrayList<>();
+
   /**
    * Sets whether layered-graph constraints (regular, mdd) become clauses of the solver, before it
    * starts; on by default.
@@ -3427,6 +3430,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
+        encodedGraphs.add(g);
         graphConstraintsEncoded++;
       } else {
         propagatorLeft = true;
@@ -4074,11 +4078,16 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Hands the store back for search without learning: its changes are no longer recorded. The
-   * solver cannot solve again afterwards; its best solution stays readable.
+   * Hands the store back for search without learning: its changes are no longer recorded, and the
+   * layered-graph constraints that went to the solver as clauses are in the store again. The solver
+   * cannot solve again afterwards; its best solution stays readable.
    */
   public void release() {
     trail.detach();
+    for (LayeredGraphConstraint g : encodedGraphs) {
+      g.restoreConstraint(store);
+    }
+    encodedGraphs.clear();
   }
 
   /**
