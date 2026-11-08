@@ -3633,6 +3633,23 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
+208. The local-search thread (ls) of the parallel portfolio moves up from
+     seventh to second place among the extra threads, ahead of default and
+     free-chs-luby, so -p 3 and -p 4 run it in place of free-chs-luby
+     (-p 4: the options given, lcg-lits, ls, default). The thread runs
+     local search for up to half the time while it improves within 5 s,
+     then CP free search from its solution. With -f -p 4 at 600 s on 4
+     cores, against develop-5.0 324b78d21 in the same round: the wide set
+     (220) is neutral (185 to 186 solved, 15 better / 15 worse), job shops
+     9 of 17 solved instead of 7 (la38, ta71 proved; ta51 126 to 4 s), and
+     the local-search set (54) gives cutstock type04 a solution and better
+     objectives to cutstock type10 and largescheduling; on the wide set
+     cargo challenge16 152917 to 125910 and ihtc-2024 marte i01 5159 to
+     4388. -p 4 without -f is neutral (wide-quick, 240 s, 53 to 54 solved).
+     Sequential -f keeps local search off: it adds 1 to 3 s to every easy
+     instance (wide-quick 1 better / 18 worse at 240 s). Data in osolpro
+     benchmarks/ls-default.
+
 Version 4.11
 =============
 

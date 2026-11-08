@@ -77,10 +77,17 @@ final class Portfolio {
    * and after --lcg on (the default without options): LCG branching on the solver's literals solves
    * the most instances the others do not, then free search without LCG, then depth-first search on
    * the annotation without and with LCG. The LCG settings that differ only in core-guided or
-   * lower-bound search (lcg, lcg-bb) solve the same instances as one another.
+   * lower-bound search (lcg, lcg-bb) solve the same instances as one another. Local search (ls) and
+   * then default come before free-chs-luby: with -f -p 4 at 600 s, ls in place of free-chs-luby
+   * solves 9 of 17 job shops instead of 7, gives cutstock type04 a solution and better objectives
+   * to largescheduling and cargo, and is neutral on the wide set (186 of 220 against 185; osolpro
+   * benchmarks/ls-default).
    */
   private static final String[][] CONFIGS = {
     {"lcg-lits", "--lcg", "on", "-f", "--free-config", "lcg-branching=literals"},
+    // local search for half the time, as long as it progresses, then free search from its solution
+    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"},
+    {"default", "--lcg", "off"},
     {
       "free-chs-luby",
       "--lcg",
@@ -89,12 +96,9 @@ final class Portfolio {
       "--free-config",
       "heuristic=chs,restarts=luby,scale=100"
     },
-    {"default", "--lcg", "off"},
     {"lcg-fixed", "--lcg", "on"},
     {"free-afc", "--lcg", "off", "-f", "--free-config", "heuristic=afc,phase=0"},
     {"free", "--lcg", "off", "-f"},
-    // local search for half the time, as long as it progresses, then free search from its solution
-    {"ls", "--lcg", "off", "-f", "--free-config", "ls=0.5,ls-patience=5000"},
     {"lcg", "--lcg", "on", "-f"},
     {"lcg-bb", "--lcg", "on", "-f", "--free-config", "lcg-core=0,lcg-lb=0"},
     {"free-cacd", "--lcg", "off", "-f", "--free-config", "heuristic=cacd"},
