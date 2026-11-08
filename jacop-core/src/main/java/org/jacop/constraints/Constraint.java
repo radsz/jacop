@@ -500,9 +500,6 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
     return consistencyCalls;
   }
 
-  /** Study-only profiler slot. */
-  public Object profileSlot;
-
   /** Counts a consistency call of the store for the constraint; only the store calls it. */
   public final void countConsistencyCall() {
     consistencyCalls++;

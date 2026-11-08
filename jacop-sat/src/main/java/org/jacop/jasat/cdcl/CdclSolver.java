@@ -1021,21 +1021,6 @@ public final class CdclSolver {
   // ----------------------------------------------------------------------------- propagation
 
   private int propagate() {
-    if (org.jacop.core.ConstraintProfile.ON) {
-      long t0 = System.nanoTime();
-      long p0 = propagations;
-      int r = propagate0();
-      org.jacop.core.ConstraintProfile.satNs += System.nanoTime() - t0;
-      org.jacop.core.ConstraintProfile.satProps += propagations - p0;
-      if (r != NO_CONFLICT) {
-        org.jacop.core.ConstraintProfile.conflicts++;
-      }
-      return r;
-    }
-    return propagate0();
-  }
-
-  private int propagate0() {
     if (lowWatchedDue) {
       lowWatchedDue = false;
       int c = propagateLowWatched();
