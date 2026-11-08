@@ -3507,6 +3507,32 @@ Version 5.0 (unreleased)
      regular constraints become clauses too, lost up to 4x with it.
      -Djacop.lcg.pureClauseLiterals=false turns it off.
 
+204. Opt-in TSP mode of the FlatZinc front end: with
+     -Dorg.jacop.fz.tsp=true, a pure travelling salesman model, one
+     circuit(x) with no fixed successor and a tour length
+     sum(i)(d[i, x[i]]), gets the arc Booleans, cost rows and Routes of
+     the giant-tour detection (item 177) with its
+     first node as the depot. The linear relaxation becomes the subtour
+     elimination relaxation (Dantzig, Fulkerson and Johnson, Operations
+     Research 2, 1954) with subtour cuts and new blossom and comb cuts
+     (CombCuts: Padberg and Rao, Odd minimum cut-sets and b-matchings,
+     Mathematics of Operations Research 7, 1982; Groetschel and Padberg,
+     On the symmetric travelling salesman problem, Mathematical
+     Programming 16, 1979; separation as in Letchford, Reinelt and
+     Theis, Mathematical Programming 116, 2008). Use it for a pure TSP;
+     it is off by default because only such models gain. 42 TSPLIB
+     instances (14 to 152 cities, osolpro benchmarks/tsp), 600 s:
+     proved 20 -> 23 with the model's search and 24 -> 30 with -f
+     (kroA100, gr120, pr152, rat99, eil101, st70; time geomean of the
+     common proofs 0.93 and 0.67); the bound gap to the optimum on the
+     25 instances of 70 cities or more falls from a median of 3.4 % to
+     0 % (max 11.9 % to 0.8 %), and from 0.7 % to 0 % with -f. Blossom
+     and comb cuts are separated at the root, and by default only for
+     Routes without a capacity: on 59 CVRP instances they were level
+     (osolpro #322). -Dorg.jacop.lp.combCuts=true|false forces them on
+     or off, -Dorg.jacop.lp.combSearch=true also separates them in
+     search, -Dorg.jacop.fz.tspArcs (default 40000) limits the arcs.
+
 Version 4.11
 =============
 

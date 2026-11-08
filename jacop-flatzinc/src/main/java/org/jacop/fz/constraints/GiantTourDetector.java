@@ -87,10 +87,11 @@ import org.jacop.fz.SimpleNode;
  * subtour cuts (the capacity cuts without demands) and blossom and comb cuts (Padberg and Rao,
  * Grötschel and Padberg). This is off by default: System property org.jacop.fz.tsp=true turns it
  * on, for tours of at most org.jacop.fz.tspArcs arcs (default 40,000). Use it for a pure TSP whose
- * objective is the sum of the arc costs of the tour. On TSPLIB instances of 70 to 152 cities its
- * bound is within 1 % of the optimum (median 0.07 %, against 0.75 % with free search and 10 % with
- * the model's search without it), and proofs are often faster, but each LP solve costs time, so on
- * tours of more than about 120 cities the solutions found within a time limit can be worse.
+ * objective is the sum of the arc costs of the tour. On 42 TSPLIB instances at 600 s it proves 30
+ * optima instead of 24 with free search (23 instead of 20 with the model's search), and on the
+ * instances of 70 to 152 cities its bound is within 0.8 % of the optimum (median 0 %, against 0.7 %
+ * with free search and 3.4 % with the model's search without it). Each LP solve costs time, so at
+ * short time limits the solutions found on tours of more than about 120 cities can be worse.
  *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
