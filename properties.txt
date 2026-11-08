@@ -699,6 +699,9 @@ JaLP sparse simplex:
   and start the whole problem from the postsolved basis; default true.
 - org.jacop.jalp.presolveRows: presolve only problems with at least
   this many rows; default 1.
+- org.jacop.jalp.presolveParallel: in the presolve, merge parallel rows
+  and parallel columns (Andersen and Andersen 1995, sections 3.4 and
+  3.6); default true.
 - org.jacop.jalp.presolveTrace: print the sizes and the reductions of
   each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
