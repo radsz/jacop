@@ -85,7 +85,7 @@ final class LoadDistribution {
   }
 
   static double down(double d) {
-    return d == 0 ? 0 : Math.nextDown(d);
+    return d <= 0 ? 0 : Math.nextDown(d);
   }
 
   static double up(double d) {
@@ -106,7 +106,7 @@ final class LoadDistribution {
     for (int t = 0; t <= top; t++) {
       double l = lo[t];
       double h = hi[t];
-      if (h == 0) {
+      if (h <= 0) {
         continue;
       }
       for (int k = 0; k < size; k++) {

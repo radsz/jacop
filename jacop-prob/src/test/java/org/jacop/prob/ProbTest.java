@@ -949,7 +949,7 @@ class ProbTest {
       num = num.add(binom);
       binom =
           binom
-              .multiply(java.math.BigInteger.valueOf(n - k))
+              .multiply(java.math.BigInteger.valueOf((long) n - k))
               .divide(java.math.BigInteger.valueOf(k + 1L));
     }
     // num / 2^60 fits a long
