@@ -96,3 +96,53 @@ in any Maven profile; run it on demand with
 Globals without a decomposition yet (reported as `NO_DECOMPOSITION`): `jacop_geost`,
 `jacop_geost_bb` and the graph constraints (`jacop_wst`, `jacop_tree`, `jacop_steiner`,
 `jacop_path`, `jacop_dpath`, `jacop_dreachable`, `jacop_connected`).
+
+# The all-solutions suite
+
+`org.jacop.decomposition.AllSolutionsSuite` builds a growing suite of small problems whose
+solutions JaCoP enumerates completely within 5 minutes, and checks that every other way of solving
+them gives exactly the same solutions. A propagator, explanation or search bug that removes a
+solution, or lets a wrong one through, shows as a difference. Like `DecompositionCheck` it is a
+tool, not part of the build:
+
+```
+mvn -Pmin -pl jacop-benchmarks test -Dtest=AllSolutionsSuite -Dsurefire.rerunFailingTestsCount=0 \
+    -Dsuite.threads=3 \
+    -Dsuite.roots=jacop=src/test/fz,hakank=../../osolpro/hakank-suite/fz,mznc=../../minizinc-competition/fz
+```
+
+For each problem, smallest FlatZinc file first, an optimisation problem is solved to its best value
+`v` and becomes the satisfaction problem `objective <= v` (`>=` for maximisation). The problem
+joins the suite when the reference run, JaCoP's own constraints with a static search
+(`input_order`, `indomain_min`), finishes within `suite.timeout` (300 s). Every variable that no
+constraint defines is printed, so two solutions that differ only in unprinted variables are told
+apart. Then:
+
+| Check | What must hold |
+|---|---|
+| `all:f` | `-a -f` prints the same set of solutions. |
+| `decomp:C` | With every occurrence of global `C` replaced by MiniZinc's standard decomposition (`StdDecompositions`), the same set. |
+| `std`, `std:f` | When `<inst>.std.fzn` exists (the same model flattened with MiniZinc's standard library), the same set of solutions projected on the variables both files print, with static and with free search. |
+| `objK:MODE` | LCG cannot enumerate solutions, so the sets are compared through random linear objectives over the printed variables. Their minimum over the reference solutions is known; the native model minimised with `MODE` (`plain`, `f`, `lcg`, `lcg-f`), each decomposed model (`obj0:lcg:decomp:C`) and the standard-library twin (`objstd:lcg`) must prove the same minimum, and every solution they print must be a reference solution. |
+
+Verdicts: `PASS`; `PARTIAL` (a run stopped at the limit, and what it printed is correct);
+`WRONG` (a printed solution is not a reference solution); `MISSED` (a finished run lacks reference
+solutions or proves a worse minimum); `DUPLICATES`; `ERROR`; `UNSUPPORTED` and `NO_DECOMPOSITION`
+(nothing checked). Failed checks keep their model in `target/all-solutions-suite/`.
+
+The next problem is picked to keep the suite balanced across constraints: the smallest file that
+contains the global constraint with the fewest suite problems so far, at most `suite.familyCap` (3)
+problems per model directory and `suite.cap` (30) per constraint; a model directory is given up
+once one of its instances was too slow. Results are appended to `suite-state.tsv` as they come
+(a new run continues from there; `suite.retry=WRONG,ERROR` checks again), and `suite-coverage.md`
+is the per-constraint table of the suite.
+
+`allsolutions/` holds small models written for the constraints that no benchmark problem uses:
+`models/*.mzn`, flattened by `allsolutions/gen.sh` with JaCoP's library (`<m>/<m>.fzn`) and with
+MiniZinc's standard library (`<m>/<m>.std.fzn`), where `allsolutions/shims/` decomposes the
+predicates that only JaCoP has.
+
+Other properties: `suite.solutions` (solution limit, 2000000), `suite.maxBytes` (largest FlatZinc
+file, 1000000), `suite.objectives` (2), `suite.allOutput` (true), `suite.problems` (regular
+expression on names such as `jacop:upTo5sec/...`), `suite.maxProblems`, `suite.hours`,
+`suite.state`, `suite.report`, `suite.out`.

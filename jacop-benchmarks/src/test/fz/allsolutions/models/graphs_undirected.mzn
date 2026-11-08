@@ -1,0 +1,11 @@
+include "globals.mzn";
+int: N = 4; int: E = 5;
+array[1..E] of int: from = [1, 1, 2, 2, 3];
+array[1..E] of int: to =   [2, 3, 3, 4, 4];
+array[1..E] of int: w =    [1, 2, 1, 2, 3];
+array[1..N] of var bool: ns1; array[1..E] of var bool: es1;
+array[1..N] of var bool: ns2; array[1..E] of var bool: es2;
+var 0..10: K1;
+constraint bounded_path(N, E, from, to, w, 1, 4, ns1, es1, K1);
+constraint reachable(N, E, from, to, 2, ns2, es2) /\ sum(i in 1..E)(bool2int(es2[i])) <= 2;
+solve satisfy;

@@ -1,0 +1,10 @@
+include "globals.mzn";
+array[1..3] of var 0..2: x;
+array[1..2] of var bool: y;
+var bool: b1; var bool: b2; var bool: b3; var bool: b4;
+constraint b1 <-> table(x, [| 0, 1, 2 | 1, 1, 0 | 2, 0, 1 | 2, 2, 2 |]);
+constraint b2 -> table([x[1], x[3]], [| 0, 0 | 1, 2 |]);
+constraint b3 <-> table(y, [| true, false | false, true |]);
+constraint b4 -> table(y, [| true, true |]);
+constraint b1 \/ b2;
+solve satisfy;

@@ -1,0 +1,10 @@
+include "globals.mzn";
+array[1..4] of var 0..3: x;
+var 0..3: y; var 0..4: c1; var 0..4: c2;
+var bool: b1; var bool: b2;
+constraint count_geq(x, y, c1);
+constraint count_leq(x, 2, c2);
+constraint count_gt([x[1], x[2], x[3]], 1, 1);
+constraint b1 <-> at_least(2, x, 1);
+constraint b2 <-> at_most(1, x, 2);
+solve satisfy;

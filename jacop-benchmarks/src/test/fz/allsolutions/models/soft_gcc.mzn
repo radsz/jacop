@@ -1,0 +1,13 @@
+include "soft_global_cardinality_int.mzn";
+array[1..4] of var 1..3: x;
+array[1..2] of var 0..3: hc;
+array[1..2] of var 1..2: sc;
+var 0..8: cost;
+array[1..4] of var 1..3: y;
+array[1..2] of var 0..4: hd;
+array[1..2] of var 1..2: sd;
+var 0..8: cost2;
+constraint soft_global_cardinality_int(x, [1, 2], hc, sc, cost);
+constraint soft_global_cardinality_int(y, [1, 3], hd, sd, cost2, true);
+constraint cost <= 1 /\ cost2 <= 1;
+solve satisfy;

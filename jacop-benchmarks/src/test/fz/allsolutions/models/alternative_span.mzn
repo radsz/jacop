@@ -1,0 +1,11 @@
+include "globals.mzn";
+var opt 0..4: s0; var 1..4: d0;
+array[1..3] of var opt 0..4: s;
+array[1..3] of int: d = [2, 1, 3];
+var opt 0..5: t0; var 0..6: e0;
+array[1..2] of var opt 0..4: t;
+array[1..2] of int: dt = [1, 2];
+constraint alternative(s0, d0, s, d);
+constraint span(t0, e0, t, dt);
+constraint occurs(s0) /\ occurs(t[1]);
+solve satisfy;

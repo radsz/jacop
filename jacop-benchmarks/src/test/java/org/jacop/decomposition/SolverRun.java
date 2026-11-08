@@ -78,6 +78,9 @@ final class SolverRun {
 
   private final Set<Long> hashes = new HashSet<>();
 
+  /** Called with the text of every printed solution, or null. */
+  private java.util.function.Consumer<String> listener;
+
   /** Hash of each solution in the order in which they were printed. */
   final List<Long> order = new ArrayList<>();
 
@@ -95,6 +98,11 @@ final class SolverRun {
     return hashes.contains(hash(solution));
   }
 
+  /** Hashes of the distinct solutions. */
+  Set<Long> hashes() {
+    return hashes;
+  }
+
   /** Order-independent digest of the set of distinct solutions. */
   String digest() {
     return Long.toHexString(distinctDigest);
@@ -102,6 +110,17 @@ final class SolverRun {
 
   static SolverRun run(
       Path fzn, List<String> options, boolean all, int solutionLimit, int timeoutMillis) {
+    return run(fzn, options, all, solutionLimit, timeoutMillis, null);
+  }
+
+  /** As {@link #run(Path, List, boolean, int, int)}, calling {@code listener} on each solution. */
+  static SolverRun run(
+      Path fzn,
+      List<String> options,
+      boolean all,
+      int solutionLimit,
+      int timeoutMillis,
+      java.util.function.Consumer<String> listener) {
     List<String> cmd = new ArrayList<>();
     cmd.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
     cmd.add("-Xss64m");
@@ -125,6 +144,7 @@ final class SolverRun {
     cmd.add(fzn.toString());
 
     SolverRun result = new SolverRun();
+    result.listener = listener;
     long start = System.nanoTime();
     try {
       Path stderr = Files.createTempFile("decomp", ".err");
@@ -216,6 +236,9 @@ final class SolverRun {
   private void addSolution(String text) {
     solutions++;
     lastSolution = text;
+    if (listener != null) {
+      listener.accept(text);
+    }
     long h = hash(text);
     order.add(h);
     if (hashes.add(h)) {

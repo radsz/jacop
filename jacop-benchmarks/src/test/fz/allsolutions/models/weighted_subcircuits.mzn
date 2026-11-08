@@ -1,0 +1,10 @@
+include "weighted_subcircuits.mzn";
+int: n = 5;
+array[1..n, 1..n] of int: d = [| 1, 3, 4, 2, 7 | 3, 2, 4, 6, 3 | 4, 4, 1, 5, 8 | 2, 6, 5, 2, 6 | 7, 3, 8, 6, 1 |];
+array[1..n] of var 1..n: next;
+array[1..n] of var 0..2: tour;
+array[1..2] of var 0..40: tc;
+var 0..60: cost;
+constraint weighted_subcircuits(next, tour, d, tc, cost);
+constraint cost <= 14;
+solve satisfy;

@@ -1,0 +1,16 @@
+include "globals.mzn";
+int: N = 4; int: E = 6;
+array[1..E] of int: from = [1, 1, 2, 3, 2, 4];
+array[1..E] of int: to =   [2, 3, 3, 4, 4, 1];
+array[1..E] of int: w =    [1, 2, 1, 2, 3, 1];
+array[1..N] of var bool: ns1; array[1..E] of var bool: es1;
+array[1..N] of var bool: ns2; array[1..E] of var bool: es2;
+array[1..N] of var bool: ns3; array[1..E] of var bool: es3;
+array[1..E] of var bool: es4;
+var 0..10: K1; var 0..10: K3; var 0..10: K4;
+constraint bounded_dpath(N, E, from, to, w, 1, 4, ns1, es1, K1);
+constraint dtree(N, E, from, to, 1, ns2, es2);
+constraint dsteiner(N, E, from, to, w, 1, ns3, es3, K3) /\ ns3[4];
+constraint d_weighted_spanning_tree(N, E, from, to, w, 1, es4, K4) /\ K4 <= 5;
+constraint dconnected(from, to, ns2, es2);
+solve satisfy;
