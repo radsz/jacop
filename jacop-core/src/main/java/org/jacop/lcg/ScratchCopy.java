@@ -81,9 +81,22 @@ final class ScratchCopy {
     return s;
   }
 
-  /** Imposes a copy of the constraint in the scratch store. */
-  void imposeCopy(Constraint c) {
-    store.impose(((Copyable<?>) c).copy(varMap()));
+  /**
+   * Imposes a copy of the constraint in the scratch store.
+   *
+   * @return false when the copy needs a variable outside the constraint's arguments (such as the
+   *     node variables of {@link org.jacop.constraints.DifferenceCycles}, whose scope holds only
+   *     its literals), so that the constraint cannot be copied alone
+   */
+  boolean imposeCopy(Constraint c) {
+    Constraint copy;
+    try {
+      copy = ((Copyable<?>) c).copy(varMap());
+    } catch (IllegalArgumentException _) {
+      return false;
+    }
+    store.impose(copy);
+    return true;
   }
 
   /** Returns the copy of an integer variable, or null when it is not one of the constraint. */

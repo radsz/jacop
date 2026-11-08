@@ -242,6 +242,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
@@ -429,6 +430,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
@@ -617,6 +619,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
@@ -805,6 +808,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>

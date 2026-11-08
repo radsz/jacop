@@ -3161,7 +3161,58 @@ Version 5.0 (unreleased)
      Energy cuts (item 180) stay at the root. Framed capacity cuts are
      not separated.
 
-188. fzn-jacop prints the statistics of JaCoP's own components (lcg*,
+188. All-different rows in the LP relaxation (--lp and the automatic LP).
+     A permutation (an all-different of n variables over exactly n
+     values) whose variables have no value encodings (domains over 64
+     values, or encodings off) gets the extended formulation of the
+     permutahedron by a sorting network: each comparator of Batcher's
+     odd-even merge network gives a free LP-only column pair with
+     p + q = a + b, p <= a, p <= b, and the outputs are fixed to the
+     sorted values; O(n log^2 n) rows and columns instead of the 2^n
+     facets, after M. X. Goemans, Smallest compact formulation for the
+     permutahedron, Mathematical Programming 153 (2015) 5-11. The rows
+     are tried at the first solve and kept only when they raise the
+     bound. With value encodings the assignment polytope already gives
+     the convex hull, so -Dorg.jacop.lp.alldiffNetwork=all is needed to
+     add the network there (=false turns it off;
+     -Dorg.jacop.lp.alldiffNetworkMax caps the comparators, 5,000).
+     Every all-different of an optimisation model also separates Hall
+     cuts at the root, after the capacity and energy cuts: sorting the
+     LP values gives, for every prefix of k variables, the cut sum >= the
+     k smallest values of the union of their domains (and <= the k
+     largest), the inequalities of H. P. Williams and H. Yan,
+     Representations of the all_different predicate of constraint
+     satisfaction in integer programming, INFORMS Journal on Computing
+     13 (2001) 96-103, and J. Lee, All-different polytopes, Journal of
+     Combinatorial Optimization 6 (2002) 335-352, for which sorting
+     finds the most violated cut of each size. They are kept like the
+     capacity cuts; -Dorg.jacop.lp.alldiffCuts=false turns them off.
+     New LpColumn kind: a free column (no CP variable), which an LCG
+     explanation removes at its bounds without facts. Statistics
+     lpFreeColumns, lpSimplexFreeColumns, lpAlldiffCuts and
+     lpAlldiffBound. Checks (AlldifferentRowsTest): the network sorts
+     every 0-1 input for n up to 16, every permutation is a point of the
+     rows and the LP optimum of random costs is the best permutation;
+     no Hall cut cuts off any solution of random domains, nor a convex
+     mix of them; random models keep their optimum with the relaxation,
+     also under LCG with the explanation checker (LinearRelaxationTest).
+     Reach: none of the 38 all-different optimisation instances of the
+     wide set changes (their permutations are value encoded). Hall cuts
+     raise the root bound of ghoulomb (34.1 to 38.1, 42.6 to 49.4),
+     lot-sizing pigment30b (0 to 190) and team-assignment. On those 35
+     instances at 600 s, base against new: default 26 to 27 solved,
+     -f 22 to 22, same objectives except two team-assignment instances
+     whose root LP is the same in both (search timing); no wrong answer.
+
+189. The LCG explanation checker (-Djacop.lcg.check=true) and the
+     explanation minimality sampler (-Djacop.lcg.minimality) skip a
+     constraint whose copy needs variables outside its scope, such as
+     DifferenceCycles, whose scope holds only its literals. Before, the
+     sampler stopped the solver with "... is not a variable of the
+     constraint" (whirlpool with -Djacop.lcg.minimality); the checker
+     counts such reasons as skipped. Solving is unchanged.
+
+190. fzn-jacop prints the statistics of JaCoP's own components (lcg*,
      presolve*, lp*, components*, lns*, ls*, symmetry*, probe*,
      portfolio*, ...) only in verbose mode: with -s -v. -s alone prints
      the standard FlatZinc statistics (and objectiveBound with
@@ -3170,7 +3221,7 @@ Version 5.0 (unreleased)
      --search-statistics stays, as -s -v without the -v lines after each
      solution, and so does -s -debug.
 
-189. New constraints ExactCover and TableCover for exact cover problems,
+191. New constraints ExactCover and TableCover for exact cover problems,
      with the DL+ rule of Chabert and Solnon: when every option left for
      an element a that must be covered also covers an element b, the
      options that cover b but not a are removed. ExactCover(x, sets, n)
@@ -3202,6 +3253,80 @@ Version 5.0 (unreleased)
      Links, in Millennial Perspectives in Computer Science (2000)
      187-214; D. E. Knuth, The Art of Computer Programming, Volume 4B,
      Section 7.2.2.1, Addison-Wesley, 2022.
+
+192. LP cut rounds above the dense tableau cap and finer Gomory
+     multipliers. When the dense simplex has no room for a round of
+     cuts (m+50 rows by m+50+n columns would pass maxTableau, 4M
+     entries), LinearRelaxation moves the root LP to a JaLP simplex
+     over the same rows and runs the cut rounds there; it goes back to
+     the dense tableau, at the same optimum and without the cuts, when
+     they do not raise the bound of the integer objective (mqueens n11:
+     cuts reach 0.9999, the bound stays 1). Switch
+     -Dorg.jacop.lp.sparseCuts=false, stat lpSparseCuts. The rows of
+     the basis inverse that weight the exact slack Gomory and aggregate
+     MIR cuts are scaled to integers at 2^36
+     (-Dorg.jacop.lp.gomoryScale) instead of 2^20, with 2^20 as the
+     fallback on overflow: once the cuts of the first round are rows
+     with weights up to 2^24, multipliers rounded at 2^20 are too coarse
+     and no MIR divisor is violated in later rounds. The slack Gomory
+     MIR now tries the weight of the basic column first, the divisor of
+     the textbook Gomory mixed-integer cut
+     (-Dorg.jacop.lp.gomoryDivisor). Reference: R. E. Gomory, An
+     algorithm for integer solutions to linear programs, in Recent
+     Advances in Mathematical Programming, McGraw-Hill (1963) 269-302;
+     H. Marchand and L. A. Wolsey, Aggregation and mixed integer
+     rounding to solve MIPs, Operations Research 49(3) (2001) 363-371.
+     Root bounds on the wide set (16 of 169 objective instances move):
+     hoist PU_2_8_1 gap closed 0 to 77 % (the float GMI probe reaches
+     77 %), radiation i8-7 59 to 100 %, racp j30_26 13 to 17 %, wmsmc
+     38 to 39 %; connect 0086_02 25 to 19 % and unit-commitment L12 33
+     to 32 % (another cut path). Checks: optimum kept by DFS and by LCG
+     with the explanation checker with the move forced on every model
+     (LinearRelaxationTest), and the cuts of both scales valid on random
+     models. Benchmarks at 600 s: hoist, radiation, racp, mqueens and
+     other moved instances (17), 13 to 13 solved by default and with
+     -f; wide set (220), 178 to 177 solved, 3 families better and 5
+     worse, and none of the 16 instances that changed makes a cut or
+     moves to JaLP (timing noise).
+
+193. LexChain gives its own LCG reasons on more chains. The FlatZinc front
+     end shares one variable per constant, so the vectors of
+     SocialGolfers (lex_chain over rows that hold the same constants)
+     counted as having repeated variables, and LexChain refused every
+     reason (the generic reason of all its arguments: 373 atoms on
+     SocialGolfers-08-04-10, 94 % of its reasons). Variables fixed at
+     the root no longer count as repeated. A value of x[i] that lies
+     between the lower chain from x[0] and the upper chain from x[m-1]
+     on neither side alone, but is ruled out by both together, now gets
+     a two-sided reason, and a failure where the two chains cross is
+     explained by the window of vectors around the crossing. Reasons on
+     SocialGolfers-08-04-10 go from 373 to about 7 atoms, generic 94 %
+     to 0 %. Reference: M. Carlsson and N. Beldiceanu, Arc-consistency
+     for a chain of lexicographic ordering constraints, SICS Technical
+     Report T2002-18 (2002). Checks: AtomicTrailTest (repeated constant,
+     both sides), LcgFuzzTest.lexChainReasonsAgreeWithPairwiseSearch
+     (LexChain against pairwise LexOrder with the explanation checker on).
+
+194. The FlatZinc front end restricts the result of int_times to the
+     products of its factors' values when there are at most 4096 value
+     pairs (-Dorg.jacop.fz.productDomains=false turns it off). Molnar
+     (XCSP3 2022) multiplies squares into triple products in 64..262144;
+     with interval domains every product variable had 1,000-3,000 bound
+     literals under --lcg and each conflict ran about 2,300 SAT
+     propagations along those chains. The same search needs 2,198
+     instead of 20,380 literals; Molnar-3-8 is proved in 28 s instead
+     of 70 s and Molnar-4-4 in 26 s instead of 52 s. CP-SAT needs as
+     many conflicts there; the gap is the cost per conflict.
+
+195. The default search under --lcg branches first, with dom/wdeg and
+     the smallest value, on the index variables of variable element
+     constraints when every search variable is an index or a list
+     variable of one (stat lcgElementPositions). LangfordBin (XCSP3
+     2025) places numbers with element constraints from positions p to
+     cells v; dom/wdeg on the cells bumped every list variable on each
+     element failure and never found a solution, while on the positions
+     LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
+     240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
 Version 4.11
 =============

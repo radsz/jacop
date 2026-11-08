@@ -33,6 +33,7 @@ package org.jacop;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -44,6 +45,8 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
+import org.jacop.lcg.ExplanationMinimality;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -144,6 +147,12 @@ class DifferenceCyclesTest {
     }
     atoms.sort(String::compareTo);
     assertEquals(List.of("b1", "b2"), atoms);
+    // the scope holds only the literals, so the explanation checker and the minimality sampler
+    // cannot copy the constraint alone and skip it instead of throwing
+    ExplanationChecker checker = new ExplanationChecker(trail);
+    assertNull(checker.checkFailure(cycles, out));
+    assertEquals(1, checker.skipped);
+    assertNull(new ExplanationMinimality(trail).minimise(cycles, -1, out));
     trail.detach();
   }
 
