@@ -421,6 +421,9 @@ Literals and clauses:
   true.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
+- jacop.lcg.pureClauseLiterals: under free search, a model whose
+  variables are all 0/1 and whose constraints all became clauses leaves
+  every decision to the SAT solver; default true.
 - org.jacop.lcg.alldiffCover: cover clauses for an all-different whose
   variables have as many values as there are variables; default true.
 - org.jacop.lcg.alldiffCoverLimit: the most (variable, value) pairs

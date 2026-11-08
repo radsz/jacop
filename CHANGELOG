@@ -3412,6 +3412,20 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+200. Free search (-f) under --lcg leaves every decision to the SAT
+     solver when the model is a CNF: all its variables are 0/1 and every
+     constraint became clauses (Regular and MDD under --lcg, change
+     #447). Before, the runs took turns between the annotation (or
+     dom/wdeg), the SAT solver's literals and activity branching, which
+     on such a model are only slower SAT decisions. On nonograms
+     (regular over 1..2 cells, stat lcgPureClauses) at 600 s with two
+     seeds: MiniZinc Challenge 2026 hard_03 is solved in 53-56 s (388 s
+     and unsolved before), hard_02 in 6-23 s (34-39 s), 2013 dom_14 in
+     4-22 s (79-129 s); of 29 nonogram instances 19 runs are faster, 1
+     slower, the rest equal. Not for wider domains: pentominoes, whose
+     regular constraints become clauses too, lost up to 4x with it.
+     -Djacop.lcg.pureClauseLiterals=false turns it off.
+
 Version 4.11
 =============
 
