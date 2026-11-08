@@ -263,6 +263,7 @@ setup to run configuration. -->
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -452,6 +453,7 @@ setup to run configuration. -->
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -642,6 +644,7 @@ setup to run configuration. -->
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -832,6 +835,7 @@ setup to run configuration. -->
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>

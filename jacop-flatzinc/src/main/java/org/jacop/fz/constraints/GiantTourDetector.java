@@ -96,6 +96,9 @@ public class GiantTourDetector implements ParserTreeConstants {
   // the most arcs of one tour: one Boolean each
   private static final int MAX_ARCS = 20_000;
 
+  // the most arcs of such a tour
+  private static final int MAX_TSP_ARCS = Integer.getInteger("org.jacop.fz.tspArcs", 40_000);
+
   // the most variables of a row read for an increment: a[n] = T[n] + slack[n] + d[n] has four
   private static final int MAX_ROW = 5;
 
@@ -292,14 +295,16 @@ public class GiantTourDetector implements ParserTreeConstants {
         fixedCount++;
       }
     }
-    if (fixedCount == 0) {
+    // a travelling salesman tour: its first node is the depot, both start and end of one route
+    boolean tsp = fixedCount == 0;
+    if (tsp && !Boolean.getBoolean("org.jacop.fz.tsp")) {
       return;
     }
     // customer number (1..k) of each node, or 0 for a depot node
     int[] customer = new int[n];
     List<Integer> customers = new ArrayList<>();
     customers.add(-1);
-    for (int v = 0; v < n; v++) {
+    for (int v = tsp ? 1 : 0; v < n; v++) {
       if (!fixed[v] && !target[v]) {
         customer[v] = customers.size();
         customers.add(v);
@@ -319,6 +324,10 @@ public class GiantTourDetector implements ParserTreeConstants {
         starts.add(v);
       }
       end[v] = fixed[v] && !target[v];
+    }
+    if (tsp) {
+      starts.add(0);
+      end[0] = true;
     }
     if (starts.isEmpty()) {
       return;
@@ -378,7 +387,7 @@ public class GiantTourDetector implements ParserTreeConstants {
     for (int i = 1; i <= k; i++) {
       count += x[customers.get(i)].getSize();
     }
-    if (count > MAX_ARCS) {
+    if (count > (tsp ? MAX_TSP_ARCS : MAX_ARCS)) {
       return;
     }
     for (int i = 1; i <= k; i++) {
@@ -456,6 +465,10 @@ public class GiantTourDetector implements ParserTreeConstants {
       }
     }
 
+    if (tsp && !depotRows(x, offset, customers, arc, posted)) {
+      return;
+    }
+
     int[] tails = new int[arcs.size()];
     int[] heads = new int[arcs.size()];
     for (int a = 0; a < tails.length; a++) {
@@ -470,7 +483,9 @@ public class GiantTourDetector implements ParserTreeConstants {
     posted.add(routes);
     if (support.options.debug()) {
       FzConsole.println(
-          "% redundant Routes of a giant tour: "
+          (tsp
+                  ? "% redundant Routes of a travelling salesman tour: "
+                  : "% redundant Routes of a giant tour: ")
               + k
               + " customers, "
               + tails.length
@@ -484,6 +499,35 @@ public class GiantTourDetector implements ParserTreeConstants {
     }
     support.delayedConstraints.addAll(posted);
     support.dictionary.addAuxiliaryVariables(literals);
+  }
+
+  // the degree rows of the depot of a travelling salesman tour and b[0,j] <-> x[0] = j; false when
+  // the depot has no arc out or in
+  private static boolean depotRows(
+      IntVar[] x, int offset, List<Integer> customers, IntVar[][] arc, List<Constraint> posted) {
+    int k = customers.size() - 1;
+    List<IntVar> out = new ArrayList<>();
+    List<IntVar> in = new ArrayList<>();
+    List<Integer> vs = new ArrayList<>();
+    for (int j = 1; j <= k; j++) {
+      if (arc[0][j] != null) {
+        out.add(arc[0][j]);
+        vs.add(customers.get(j) + offset);
+      }
+      if (arc[j][0] != null) {
+        in.add(arc[j][0]);
+      }
+    }
+    if (out.isEmpty() || in.isEmpty()) {
+      return false;
+    }
+    posted.add(ones(out));
+    posted.add(ones(in));
+    posted.add(
+        new ChannelReif(
+                x[0], out.toArray(new IntVar[0]), vs.stream().mapToInt(Integer::intValue).toArray())
+            .setDegreeWeight(0));
+    return true;
   }
 
   private static Constraint ones(List<IntVar> vs) {
