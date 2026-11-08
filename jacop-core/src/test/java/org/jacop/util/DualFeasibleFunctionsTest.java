@@ -32,7 +32,9 @@ package org.jacop.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Random;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -82,6 +84,75 @@ class DualFeasibleFunctionsTest {
       assertThat(best[s]).as("%s, capacity %d, sum %d", name, c, s).isLessThanOrEqualTo(fc);
     }
     assertThat(f.map(0)).isZero();
+  }
+
+  @Test
+  void redundantResourcesAreDualFeasibleAndAddEnergy() {
+    Random random = new Random(11);
+    int found = 0;
+    for (int t = 0; t < 2000; t++) {
+      int c = 2 + random.nextInt(MAX_CAPACITY - 1);
+      int n = 2 + random.nextInt(8);
+      int[] uses = new int[n];
+      int[] lengths = new int[n];
+      for (int j = 0; j < n; j++) {
+        uses[j] = random.nextInt(c + 1);
+        lengths[j] = 1 + random.nextInt(5);
+      }
+      List<DualFeasibleFunctions.Resource> chosen =
+          DualFeasibleFunctions.redundantResources(uses, lengths, c, 3);
+      assertThat(chosen.size()).isLessThanOrEqualTo(3);
+      double last = Double.MAX_VALUE;
+      for (DualFeasibleFunctions.Resource f : chosen) {
+        check(c, f::map, f.toString());
+        for (int x = 1; x <= c + 2; x++) {
+          assertThat(f.map(x)).as("%s monotone at %d", f, x).isGreaterThanOrEqualTo(f.map(x - 1));
+        }
+        assertThat(f.gain()).isPositive().isLessThanOrEqualTo(last);
+        last = f.gain();
+        found++;
+      }
+    }
+    assertThat(found).isPositive();
+  }
+
+  @Test
+  void redundantResourceFindsAnOverloadThePlainEnergyMisses() {
+    // five tasks of length 2 that each use 4 of 10 within [0, 4): the plain energy 40 fits, but
+    // at most two run together, so they need 5 time units; u^(2) maps each use to half
+    int[] uses = {4, 4, 4, 4, 4};
+    int[] lengths = {2, 2, 2, 2, 2};
+    List<DualFeasibleFunctions.Resource> chosen =
+        DualFeasibleFunctions.redundantResources(uses, lengths, 10, 1);
+    assertThat(chosen).hasSize(1);
+    DualFeasibleFunctions.Resource f = chosen.get(0);
+    assertThat(2 * f.map(4)).isEqualTo(f.capacity());
+
+    assertThat(cumulativeOverStartsUpTo2(null)).isTrue();
+    assertThat(cumulativeOverStartsUpTo2(f)).isFalse();
+  }
+
+  // the five tasks above under the plain cumulative, and the redundant one of f when f is given
+  private static boolean cumulativeOverStartsUpTo2(DualFeasibleFunctions.Resource f) {
+    Store store = new Store();
+    IntVar[] s = new IntVar[5];
+    IntVar[] d = new IntVar[5];
+    IntVar[] r = new IntVar[5];
+    IntVar[] fr = new IntVar[5];
+    for (int j = 0; j < 5; j++) {
+      s[j] = new IntVar(store, 0, 2);
+      d[j] = new IntVar(store, 2, 2);
+      r[j] = new IntVar(store, 4, 4);
+      if (f != null) {
+        fr[j] = new IntVar(store, (int) f.map(4), (int) f.map(4));
+      }
+    }
+    store.impose(new Cumulative(s, d, r, new IntVar(store, 10, 10)));
+    if (f != null) {
+      int cap = (int) f.capacity();
+      store.impose(new Cumulative(s, d, fr, new IntVar(store, cap, cap)));
+    }
+    return store.consistency();
   }
 
   @Test

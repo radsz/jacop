@@ -30,7 +30,9 @@
 
 package org.jacop.util;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Integer dual feasible functions (DFFs) and the two-dimensional orthogonal packing test built on
@@ -73,7 +75,17 @@ import java.util.Arrays;
  *       doi:10.1016/j.cor.2006.05.012
  *   <li>A. Steinberg. A strip-packing algorithm with absolute performance bound 2. SIAM Journal on
  *       Computing 26(2):401-409, 1997. doi:10.1137/S0097539793255801
+ *   <li>J. Carlier and E. Néron. Computing redundant resources for the resource constrained project
+ *       scheduling problem. European Journal of Operational Research 176(3):1452-1463, 2007.
+ *       doi:10.1016/j.ejor.2005.09.034
  * </ol>
+ *
+ * <p>{@link #redundantResources} picks, for one cumulative resource, the functions whose mapped
+ * uses form redundant resources in the sense of Carlier and Néron [6]: tasks that run together use
+ * at most C, so their mapped uses sum to at most f(C), and a cumulative constraint over the mapped
+ * uses and capacity f(C) holds in every solution. Its time table is never stronger than the
+ * original one, but its energy rules can be: three tasks that each use 0.4 C cannot all overlap,
+ * and u^(2) maps each of them to C / 2.
  *
  * <p>An instance is not thread safe: it keeps work arrays between calls.
  *
@@ -235,6 +247,199 @@ public final class DualFeasibleFunctions {
       }
     }
     return false;
+  }
+
+  /**
+   * One dual feasible function for a cumulative resource of capacity C, as {@link
+   * #redundantResources} chooses it.
+   */
+  public static final class Resource {
+
+    private final int kind;
+    private final int parameter;
+    private final int c;
+    private final double gain;
+
+    Resource(int kind, int parameter, int c, double gain) {
+      this.kind = kind;
+      this.parameter = parameter;
+      this.c = c;
+      this.gain = gain;
+    }
+
+    /**
+     * The capacity the function maps C to.
+     *
+     * @return f(C).
+     */
+    public long capacity() {
+      return map(c);
+    }
+
+    /**
+     * The mapped use. The function is non-decreasing; uses below 0 count as 0 and uses above C as
+     * C, which keeps the resource redundant since a task that uses more than C has length 0 in
+     * every solution.
+     *
+     * @param x a resource use.
+     * @return f(x).
+     */
+    public long map(int x) {
+      int y = Math.max(0, Math.min(x, c));
+      switch (kind) {
+        case FS1:
+          return fs1(y, c, parameter);
+        case FS2:
+          return fs2(y, c, parameter);
+        case CCM1:
+          return ccm1(y, c, parameter);
+        default:
+          return y;
+      }
+    }
+
+    /**
+     * The energy the mapped uses add over the plain ones, summed over the tasks the function does
+     * not map to 0, in units of C / (C * f(C)): {@code sum_j p_j * max(0, f(r_j) * C - r_j *
+     * f(C))}.
+     *
+     * @return the gain used to rank the functions, 0 before ranking.
+     */
+    public double gain() {
+      return gain;
+    }
+
+    @Override
+    public String toString() {
+      String name =
+          switch (kind) {
+            case FS1 -> "u^(" + parameter + ")";
+            case FS2 -> "U^(" + parameter + ")";
+            case CCM1 -> "f_CCM1(" + parameter + ")";
+            default -> "id";
+          };
+      return name + " C=" + c + " f(C)=" + capacity();
+    }
+  }
+
+  /** The largest k tried for u^(k) by {@link #redundantResources}. */
+  static final int MAX_K_RESOURCE = 16;
+
+  /**
+   * Chooses dual feasible functions that turn a cumulative resource into redundant resources, as
+   * Carlier and Néron do for the resource constrained project scheduling problem [6]. It tries
+   * u^(k) for k up to 16 and U^(e) and f_CCM1 for every parameter that changes the mapping (with
+   * f(C) at most {@link #MAX_SIDE}), keeps a function only if it maps some task's use to a larger
+   * share of the capacity than the plain one ({@link Resource#gain()} &gt; 0), and does not map
+   * every use to 0 or f(C) (a set of pairwise disjoint tasks, which disjunctive reasoning covers),
+   * drops the functions that another kept function dominates on these uses, and returns at most
+   * {@code max} of the rest, the largest gain first.
+   *
+   * @param uses the smallest resource use of each task, each from 0 to c.
+   * @param lengths the smallest length of each task.
+   * @param c the capacity, from 2 to {@link #MAX_SIDE}.
+   * @param max the most functions returned.
+   * @return the chosen functions; empty when none adds anything.
+   */
+  public static List<Resource> redundantResources(int[] uses, int[] lengths, int c, int max) {
+    List<Resource> result = new ArrayList<>();
+    int n = uses.length;
+    if (c < 2 || c > MAX_SIDE || max <= 0 || n < 2) {
+      return result;
+    }
+    List<Resource> candidates = new ArrayList<>();
+    int half = c / 2;
+    for (int k = 1; k <= MAX_K_RESOURCE && k <= half; k++) {
+      candidates.add(new Resource(FS1, k, c, 0));
+    }
+    int[] lower = new int[n];
+    int[] upper = new int[n];
+    int nl = 0;
+    int nu = 0;
+    for (int x : uses) {
+      if (x >= 1 && x <= half) {
+        lower[nl++] = x;
+        upper[nu++] = x;
+      } else if (x > half && c - x + 1 <= half) {
+        upper[nu++] = c - x + 1;
+      }
+    }
+    for (int p : distinctSorted(lower, nl)) {
+      candidates.add(new Resource(CCM1, p, c, 0));
+    }
+    for (int p : distinctSorted(upper, nu)) {
+      candidates.add(new Resource(FS2, p, c, 0));
+    }
+    List<long[]> vectors = new ArrayList<>();
+    List<Resource> scored = new ArrayList<>();
+    for (Resource f : candidates) {
+      long cap = f.capacity();
+      if (cap > MAX_SIDE) {
+        continue;
+      }
+      long[] v = new long[n];
+      double gain = 0;
+      boolean between = false;
+      for (int j = 0; j < n; j++) {
+        v[j] = f.map(uses[j]);
+        if (v[j] > 0 && v[j] < cap) {
+          between = true;
+        }
+        long d = v[j] * c - (long) uses[j] * cap;
+        if (v[j] > 0 && d > 0) {
+          gain += (double) d * Math.max(lengths[j], 0);
+        }
+      }
+      if (gain > 0 && between) {
+        scored.add(new Resource(f.kind, f.parameter, c, gain));
+        vectors.add(v);
+      }
+    }
+    // a function whose every mapped share is at most another's adds nothing to that other one
+    int m = scored.size();
+    boolean[] dropped = new boolean[m];
+    for (int a = 0; a < m; a++) {
+      for (int b = 0; b < m && !dropped[a]; b++) {
+        if (a != b
+            && !dropped[b]
+            && dominates(
+                vectors.get(b),
+                scored.get(b).capacity(),
+                vectors.get(a),
+                scored.get(a).capacity(),
+                b < a)) {
+          dropped[a] = true;
+        }
+      }
+    }
+    for (int a = 0; a < m; a++) {
+      if (!dropped[a]) {
+        result.add(scored.get(a));
+      }
+    }
+    result.sort((x, y) -> Double.compare(y.gain, x.gain));
+    return result.size() > max ? new ArrayList<>(result.subList(0, max)) : result;
+  }
+
+  // whether a / capA >= b / capB everywhere; equal shares count as domination only when tie is set,
+  // so that of two functions with the same shares one is kept
+  private static boolean dominates(long[] a, long capA, long[] b, long capB, boolean tie) {
+    boolean strict = false;
+    for (int j = 0; j < a.length; j++) {
+      long l = a[j] * capB;
+      long r = b[j] * capA;
+      if (l < r) {
+        return false;
+      }
+      if (l > r) {
+        strict = true;
+      }
+    }
+    return strict || tie;
+  }
+
+  private static int[] distinctSorted(int[] values, int n) {
+    return Arrays.stream(values, 0, n).distinct().sorted().toArray();
   }
 
   // the functions tried in dimension d for the n sizes s (all positive) and capacity c, and the

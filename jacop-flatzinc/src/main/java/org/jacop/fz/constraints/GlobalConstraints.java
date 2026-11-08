@@ -140,6 +140,7 @@ import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.Restriction;
+import org.jacop.constraints.table.Table;
 import org.jacop.constraints.table.TableCompressor;
 import org.jacop.constraints.table.TableReified;
 import org.jacop.core.BooleanVar;
@@ -161,6 +162,7 @@ import org.jacop.set.constraints.AdisjointB;
 import org.jacop.set.constraints.AeqB;
 import org.jacop.set.constraints.AeqS;
 import org.jacop.set.core.SetVar;
+import org.jacop.util.DualFeasibleFunctions;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -481,6 +483,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void applyCumulativeImpliedOptions(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
     poseHornFlow(s, d, r, b);
+    poseDffResources(s, d, r, b);
     String p = System.getProperty("fz_cumulative_use_disjunctions");
     if (p != null) {
       useDisjunctions = Boolean.parseBoolean(p);
@@ -496,6 +499,112 @@ class GlobalConstraints implements ParserTreeConstants {
     if (useDisjunctions) {
       support.implied(() -> impliedDisjunctionConstraints(s, d, r, b));
     }
+  }
+
+  /** The most values of a variable resource use that {@link #poseDffResources} maps. */
+  private static final int DFF_MAX_USE_VALUES = 64;
+
+  /**
+   * The number of redundant resources from dual feasible functions posted per cumulative, from the
+   * system property {@code org.jacop.fz.cumulativeDff}: 0 (the default) posts none.
+   *
+   * @return the number, at least 0.
+   */
+  static int cumulativeDffResources() {
+    try {
+      return Math.max(0, Integer.parseInt(System.getProperty("org.jacop.fz.cumulativeDff", "0")));
+    } catch (NumberFormatException e) {
+      return 0;
+    }
+  }
+
+  /**
+   * Posts redundant resources of a cumulative with a fixed capacity, from dual feasible functions
+   * as in Carlier and Néron, "Computing redundant resources for the resource constrained project
+   * scheduling problem", European Journal of Operational Research 176(3), 2007: tasks that run
+   * together use at most C, so for a dual feasible function f their uses f(r_j) sum to at most
+   * f(C), and {@code cumulative(s, d, f(r), f(C))} holds in every solution. Its energy rules can
+   * prune what the original's cannot. {@link DualFeasibleFunctions#redundantResources} chooses the
+   * functions from the smallest uses and lengths; a variable use with at most 64 values gets a
+   * mapped variable linked to it by a table. The resources are redundant: local search does not
+   * evaluate them, and they have degree weight 0.
+   */
+  private void poseDffResources(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    int max = cumulativeDffResources();
+    if (max == 0 || !b.singleton() || s.length < 3) {
+      return;
+    }
+    int c = b.value();
+    int n = r.length;
+    int[] uses = new int[n];
+    int[] lengths = new int[n];
+    for (int j = 0; j < n; j++) {
+      if (r[j].min() < 0 || r[j].getSize() > DFF_MAX_USE_VALUES) {
+        return;
+      }
+      uses[j] = Math.min(r[j].min(), c);
+      lengths[j] = Math.max(d[j].min(), 0);
+    }
+    List<DualFeasibleFunctions.Resource> chosen =
+        DualFeasibleFunctions.redundantResources(uses, lengths, c, max);
+    if (chosen.isEmpty()) {
+      return;
+    }
+    support.implied(
+        () -> {
+          for (DualFeasibleFunctions.Resource f : chosen) {
+            poseDffResource(s, d, r, f);
+          }
+        });
+  }
+
+  private void poseDffResource(
+      IntVar[] s, IntVar[] d, IntVar[] r, DualFeasibleFunctions.Resource f) {
+    int n = r.length;
+    // divide out the common factor of the mapped uses and the capacity
+    long g = f.capacity();
+    for (IntVar v : r) {
+      for (ValueEnumeration e = v.dom().valueEnumeration(); e.hasMoreElements(); ) {
+        g = gcd(g, f.map(e.nextElement()));
+      }
+    }
+    int cap = (int) (f.capacity() / g);
+    IntVar[] mapped = new IntVar[n];
+    for (int j = 0; j < n; j++) {
+      if (r[j].singleton()) {
+        mapped[j] = support.dictionary.getConstant((int) (f.map(r[j].value()) / g));
+      } else {
+        int[][] tuples = new int[r[j].getSize()][];
+        IntVar m = new IntVar(store);
+        int t = 0;
+        for (ValueEnumeration e = r[j].dom().valueEnumeration(); e.hasMoreElements(); ) {
+          int x = e.nextElement();
+          int y = (int) (f.map(x) / g);
+          m.addDom(y, y);
+          tuples[t++] = new int[] {x, y};
+        }
+        support.pose(new Table(new IntVar[] {r[j], m}, tuples));
+        mapped[j] = m;
+      }
+    }
+    Cumulative cumul = new Cumulative(s, d, mapped, support.dictionary.getConstant(cap));
+    if (!allVarGround(r)) {
+      cumul.doQuadraticEdgeFind(true);
+    }
+    cumul.setDegreeWeight(0);
+    if (support.options.debug()) {
+      FzConsole.println("% redundant resource " + f + " / " + g + " on " + n + " tasks");
+    }
+    support.delayedConstraints.add(configureCumulative(cumul));
+  }
+
+  private static long gcd(long a, long b) {
+    while (b != 0) {
+      long t = a % b;
+      a = b;
+      b = t;
+    }
+    return Math.abs(a);
   }
 
   /**
