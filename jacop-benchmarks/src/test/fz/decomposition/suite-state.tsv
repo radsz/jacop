@@ -1940,3 +1940,234 @@ C	mznc:upTo5sec/2023_pennies-opt/n7	fced51d299c59c58	obj1:plain	PASS	COMPLETE	1	
 C	mznc:upTo5sec/2023_pennies-opt/n7	fced51d299c59c58	obj1:f	PASS	COMPLETE	1	14114	2026-11-08T17:36:03Z	
 C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	decomp:jacop_array_var_bool_element_nonshifted	PASS	COMPLETE	362880	56075	2026-11-08T17:36:04Z	
 C	mznc:upTo5sec/2023_pennies-opt/n7	fced51d299c59c58	obj1:lcg	PASS	COMPLETE	1	10617	2026-11-08T17:36:14Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	decomp:jacop_assignment	PASS	COMPLETE	11	57123	2026-11-08T17:36:31Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	351720	60435	2026-11-08T17:37:04Z	351720 of 362880 solutions before the limit
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	decomp:jacop_regular	PASS	COMPLETE	11	36734	2026-11-08T17:37:08Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fced51d299c59c58	obj1:lcg-f	PARTIAL	INCOMPLETE	1	60263	2026-11-08T17:37:14Z	
+P	jacop:upTo5sec/hakank_nclass/hakank_nclass	932a230de343c3a6	satisfy		COMPLETE	1	1	dda3f389dbdeaecb	652	60	2026-11-08T17:37:15Z	jacop_disjoint
+C	jacop:upTo5sec/hakank_nclass/hakank_nclass	932a230de343c3a6	all:f	PASS	COMPLETE	1	653	2026-11-08T17:37:15Z	
+C	jacop:upTo5sec/hakank_nclass/hakank_nclass	932a230de343c3a6	decomp:jacop_disjoint	PASS	COMPLETE	1	661	2026-11-08T17:37:16Z	
+P	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	satisfy		COMPLETE	1	1	1e1a9a23a52f1b8e	630	60	2026-11-08T17:37:17Z	jacop_nvalue
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	all:f	PASS	COMPLETE	1	704	2026-11-08T17:37:17Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	decomp:jacop_nvalue	PASS	COMPLETE	1	522	2026-11-08T17:37:18Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj0:plain	PASS	COMPLETE	1	1001	2026-11-08T17:37:19Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj0:f	PASS	COMPLETE	1	835	2026-11-08T17:37:20Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj0:lcg	PASS	COMPLETE	1	784	2026-11-08T17:37:20Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj0:lcg-f	PASS	COMPLETE	1	829	2026-11-08T17:37:21Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj0:lcg:decomp:jacop_nvalue	PASS	COMPLETE	1	757	2026-11-08T17:37:22Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj1:plain	PASS	COMPLETE	1	757	2026-11-08T17:37:23Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj1:f	PASS	COMPLETE	1	678	2026-11-08T17:37:23Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj1:lcg	PASS	COMPLETE	1	714	2026-11-08T17:37:24Z	
+C	jacop:upTo5sec/hakank_not_all_equal/hakank_not_all_equal	a17e5e36351c1998	obj1:lcg-f	PASS	COMPLETE	1	803	2026-11-08T17:37:25Z	
+P	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	satisfy		COMPLETE	1	1	595f4a77d114a8db	740	60	2026-11-08T17:37:26Z	jacop_count_values
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	all:f	PASS	COMPLETE	1	703	2026-11-08T17:37:26Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	decomp:jacop_count_values	PASS	COMPLETE	1	751	2026-11-08T17:37:27Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj0:plain	PASS	COMPLETE	1	1015	2026-11-08T17:37:28Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj0:f	PASS	COMPLETE	1	720	2026-11-08T17:37:29Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj0:lcg	PASS	COMPLETE	1	1028	2026-11-08T17:37:30Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj0:lcg-f	PASS	COMPLETE	1	1333	2026-11-08T17:37:31Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj0:lcg:decomp:jacop_count_values	PASS	COMPLETE	1	1050	2026-11-08T17:37:32Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj1:plain	PASS	COMPLETE	1	731	2026-11-08T17:37:33Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj1:f	PASS	COMPLETE	1	708	2026-11-08T17:37:34Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj1:lcg	PASS	COMPLETE	1	880	2026-11-08T17:37:35Z	
+C	jacop:upTo5sec/gcc_magic_sequence_all/gcc_magic_sequence_all	ed3e2c2a89833352	obj1:lcg-f	PASS	COMPLETE	1	1240	2026-11-08T17:37:36Z	
+P	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	satisfy		COMPLETE	48	48	3a24bdccb149f2fc	848	60	2026-11-08T17:37:37Z	jacop_list_diff2
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	all:f	PASS	COMPLETE	48	993	2026-11-08T17:37:38Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	decomp:jacop_list_diff2	PASS	COMPLETE	48	696	2026-11-08T17:37:38Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	std	PASS	COMPLETE	48	827	2026-11-08T17:37:39Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	std:f	PASS	COMPLETE	48	726	2026-11-08T17:37:40Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	objstd:lcg	PASS	COMPLETE	1	824	2026-11-08T17:37:41Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj0:plain	PASS	COMPLETE	1	1011	2026-11-08T17:37:42Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj0:f	PASS	COMPLETE	1	959	2026-11-08T17:37:43Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj0:lcg	PASS	COMPLETE	1	845	2026-11-08T17:37:44Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj0:lcg-f	PASS	COMPLETE	1	962	2026-11-08T17:37:45Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj0:lcg:decomp:jacop_list_diff2	PASS	COMPLETE	1	763	2026-11-08T17:37:45Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj1:plain	PASS	COMPLETE	1	827	2026-11-08T17:37:46Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj1:f	PASS	COMPLETE	1	687	2026-11-08T17:37:47Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj1:lcg	PASS	COMPLETE	1	577	2026-11-08T17:37:48Z	
+C	jacop:upTo5sec/hakank_diffn_global/hakank_diffn_global	70d54126848ffa85	obj1:lcg-f	PASS	COMPLETE	1	669	2026-11-08T17:37:48Z	
+P	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	maximize	3	COMPLETE	2	2	bcd9c886c4054b83	657	60	2026-11-08T17:37:50Z	jacop_networkflow
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	all:f	PASS	COMPLETE	2	593	2026-11-08T17:37:50Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	decomp:jacop_networkflow	PASS	COMPLETE	2	660	2026-11-08T17:37:51Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	std	PASS	COMPLETE	2	567	2026-11-08T17:37:51Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	std:f	PASS	COMPLETE	2	679	2026-11-08T17:37:52Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	objstd:lcg	PASS	COMPLETE	1	573	2026-11-08T17:37:53Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj0:plain	PASS	COMPLETE	1	1031	2026-11-08T17:37:54Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj0:f	PASS	COMPLETE	1	728	2026-11-08T17:37:54Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj0:lcg	PASS	COMPLETE	1	864	2026-11-08T17:37:55Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj0:lcg-f	PASS	COMPLETE	1	880	2026-11-08T17:37:56Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj0:lcg:decomp:jacop_networkflow	PASS	COMPLETE	1	683	2026-11-08T17:37:57Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj1:plain	PASS	COMPLETE	1	802	2026-11-08T17:37:58Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj1:f	PASS	COMPLETE	1	680	2026-11-08T17:37:58Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj1:lcg	PASS	COMPLETE	1	800	2026-11-08T17:37:59Z	
+C	jacop:upTo5sec/hakank_max_flow_winston1_network_flow/hakank_max_flow_winston1_network_flow	c5629c6f581b5c95	obj1:lcg-f	PASS	COMPLETE	1	633	2026-11-08T17:38:00Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	362880	58156	2026-11-08T17:38:03Z	
+P	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	minimize	80	COMPLETE	252	252	aa921b9e6c18f891	954	60	2026-11-08T17:38:03Z	jacop_cost_regular,jacop_count
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	all:f	PASS	COMPLETE	252	1391	2026-11-08T17:38:05Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	60266	2026-11-08T17:38:08Z	0 of 11 solutions before the limit
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	decomp:jacop_global_cardinality_closed	NO_DECOMPOSITION				2026-11-08T17:38:08Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:plain	PASS	COMPLETE	1	32672	2026-11-08T17:38:41Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	std	PASS	COMPLETE	362880	59354	2026-11-08T17:39:02Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	decomp:jacop_cost_regular	PARTIAL	INCOMPLETE	0	60580	2026-11-08T17:39:05Z	0 of 252 solutions before the limit
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	decomp:jacop_count	PASS	COMPLETE	252	2201	2026-11-08T17:39:08Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj0:plain	PASS	COMPLETE	1	1737	2026-11-08T17:39:09Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj0:f	PASS	COMPLETE	1	1827	2026-11-08T17:39:11Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj0:lcg	PASS	COMPLETE	1	1961	2026-11-08T17:39:13Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj0:lcg-f	PASS	COMPLETE	1	1306	2026-11-08T17:39:14Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj0:lcg:decomp:jacop_cost_regular	PASS	COMPLETE	1	4677	2026-11-08T17:39:19Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj0:lcg:decomp:jacop_count	PASS	COMPLETE	1	1263	2026-11-08T17:39:20Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj1:plain	PASS	COMPLETE	1	1111	2026-11-08T17:39:21Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj1:f	PASS	COMPLETE	1	934	2026-11-08T17:39:22Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj1:lcg	PASS	COMPLETE	1	1357	2026-11-08T17:39:24Z	
+C	jacop:upTo5sec/cost_regular/cost_regular_opt_30_1	7c74a4c774255d8c	obj1:lcg-f	PASS	COMPLETE	1	1494	2026-11-08T17:39:25Z	
+P	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	satisfy		COMPLETE	1	1	338eceb798bc1c80	833	60	2026-11-08T17:39:26Z	jacop_lex_lesseq_bool
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	all:f	PASS	COMPLETE	1	488	2026-11-08T17:39:27Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	decomp:jacop_lex_lesseq_bool	PASS	COMPLETE	1	513	2026-11-08T17:39:27Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj0:plain	PASS	COMPLETE	1	654	2026-11-08T17:39:28Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj0:f	PASS	COMPLETE	1	626	2026-11-08T17:39:28Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj0:lcg	PASS	COMPLETE	1	529	2026-11-08T17:39:29Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj0:lcg-f	PASS	COMPLETE	1	648	2026-11-08T17:39:30Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj0:lcg:decomp:jacop_lex_lesseq_bool	PASS	COMPLETE	1	906	2026-11-08T17:39:30Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj1:plain	PASS	COMPLETE	1	577	2026-11-08T17:39:31Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj1:f	PASS	COMPLETE	1	584	2026-11-08T17:39:32Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj1:lcg	PASS	COMPLETE	1	541	2026-11-08T17:39:32Z	
+C	jacop:upTo5sec/bibd/03_03_01	a4938ac44faa3159	obj1:lcg-f	PASS	COMPLETE	1	625	2026-11-08T17:39:33Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:f	PARTIAL	INCOMPLETE	1	60232	2026-11-08T17:39:41Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	std:f	PASS	COMPLETE	362880	48621	2026-11-08T17:39:51Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:lcg	PASS	COMPLETE	1	22335	2026-11-08T17:40:03Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	objstd:lcg	PASS	COMPLETE	1	12859	2026-11-08T17:40:04Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:plain	PASS	COMPLETE	1	7821	2026-11-08T17:40:11Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:f	PASS	COMPLETE	1	12730	2026-11-08T17:40:24Z	
+P	jacop:upTo5sec/hakank_choosing_teams/hakank_choosing_teams	722156aed5036c5f	satisfy		INCOMPLETE	1682293	1682293	d8901ff00b7816dc	60524	60	2026-11-08T17:40:33Z	jacop_alldiff,jacop_increasing,jacop_lex_lesseq_int
+P	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	satisfy		COMPLETE	1	1	fe0ffb61f0103f5a	1092	60	2026-11-08T17:40:34Z	jacop_count_values,jacop_maximum,jacop_maximum_arg_int
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	all:f	PASS	COMPLETE	1	1026	2026-11-08T17:40:36Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg	PASS	COMPLETE	1	11383	2026-11-08T17:40:36Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	decomp:jacop_maximum	PASS	COMPLETE	1	1056	2026-11-08T17:40:37Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	decomp:jacop_maximum_arg_int	PASS	COMPLETE	1	665	2026-11-08T17:40:37Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:lcg-f	PASS	COMPLETE	1	33992	2026-11-08T17:40:37Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	decomp:jacop_count_values	PASS	COMPLETE	1	751	2026-11-08T17:40:38Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:plain	PASS	COMPLETE	1	1611	2026-11-08T17:40:40Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:f	PASS	COMPLETE	1	2114	2026-11-08T17:40:42Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:lcg	PASS	COMPLETE	1	1975	2026-11-08T17:40:44Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:lcg-f	PASS	COMPLETE	1	1871	2026-11-08T17:40:46Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	1	1499	2026-11-08T17:40:47Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:lcg:decomp:jacop_maximum_arg_int	PASS	COMPLETE	1	1399	2026-11-08T17:40:48Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj0:lcg:decomp:jacop_count_values	PASS	COMPLETE	1	1619	2026-11-08T17:40:50Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj1:plain	PASS	COMPLETE	1	1220	2026-11-08T17:40:51Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj1:f	PASS	COMPLETE	1	1157	2026-11-08T17:40:52Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj1:lcg	PASS	COMPLETE	1	879	2026-11-08T17:40:53Z	
+C	jacop:upTo5sec/hakank_max_number_of_occurrences/hakank_max_number_of_occurrences	03f1e755cf826c7f	obj1:lcg-f	PASS	COMPLETE	1	1035	2026-11-08T17:40:54Z	
+P	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	satisfy		COMPLETE	4	4	ff78f84b9ddfa46b	736	60	2026-11-08T17:40:55Z	jacop_alldiff,jacop_alldifferent_except_0
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	all:f	PASS	COMPLETE	4	683	2026-11-08T17:40:56Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	decomp:jacop_alldifferent_except_0	PASS	COMPLETE	4	835	2026-11-08T17:40:57Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	decomp:jacop_alldiff	PASS	COMPLETE	4	798	2026-11-08T17:40:57Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj0:plain	PASS	COMPLETE	1	985	2026-11-08T17:40:58Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj0:f	PASS	COMPLETE	1	841	2026-11-08T17:40:59Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj0:lcg	PASS	COMPLETE	1	856	2026-11-08T17:41:00Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	22849	2026-11-08T17:41:00Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj0:lcg-f	PASS	COMPLETE	1	1033	2026-11-08T17:41:01Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj0:lcg:decomp:jacop_alldifferent_except_0	PASS	COMPLETE	1	1067	2026-11-08T17:41:02Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	1374	2026-11-08T17:41:04Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj1:plain	PASS	COMPLETE	1	1143	2026-11-08T17:41:05Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj1:f	PASS	COMPLETE	1	942	2026-11-08T17:41:06Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj1:lcg	PASS	COMPLETE	1	1442	2026-11-08T17:41:07Z	
+C	jacop:upTo5sec/hakank_ordering_a_list_of_lists/hakank_ordering_a_list_of_lists	650079f49d048d73	obj1:lcg-f	PASS	COMPLETE	1	1317	2026-11-08T17:41:09Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg-f	PASS	COMPLETE	1	34808	2026-11-08T17:41:10Z	
+P	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	minimize	4	COMPLETE	24	24	bf9c91c319d55cbe	802	60	2026-11-08T17:41:10Z	jacop_int_set_channel,jacop_maximum
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	all:f	PASS	COMPLETE	24	798	2026-11-08T17:41:11Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	decomp:jacop_maximum	PASS	COMPLETE	24	933	2026-11-08T17:41:12Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	decomp:jacop_int_set_channel	PASS	COMPLETE	24	975	2026-11-08T17:41:13Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	std	PASS	COMPLETE	24	851	2026-11-08T17:41:14Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	std:f	PASS	COMPLETE	24	1339	2026-11-08T17:41:15Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	objstd:lcg	PASS	COMPLETE	1	1347	2026-11-08T17:41:17Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj0:plain	PASS	COMPLETE	1	890	2026-11-08T17:41:18Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg:decomp:jacop_table_int	PASS	COMPLETE	1	8202	2026-11-08T17:41:19Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj0:f	PASS	COMPLETE	1	1285	2026-11-08T17:41:19Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj0:lcg	PASS	COMPLETE	1	1955	2026-11-08T17:41:21Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj0:lcg-f	PASS	COMPLETE	1	1739	2026-11-08T17:41:23Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	1	1839	2026-11-08T17:41:25Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj0:lcg:decomp:jacop_int_set_channel	PASS	COMPLETE	1	1818	2026-11-08T17:41:26Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj1:plain	PASS	COMPLETE	1	1554	2026-11-08T17:41:28Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj1:f	PASS	COMPLETE	1	2372	2026-11-08T17:41:30Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj1:lcg	PASS	COMPLETE	1	1840	2026-11-08T17:41:32Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	14921	2026-11-08T17:41:33Z	
+C	jacop:upTo5sec/hakank_conference/hakank_conference	79c8500f6a10a5ca	obj1:lcg-f	PASS	COMPLETE	1	1462	2026-11-08T17:41:34Z	
+P	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	satisfy		COMPLETE	1040	1040	3d35ebf410a14181	1013	60	2026-11-08T17:41:35Z	jacop_member_int_reif
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	all:f	PASS	COMPLETE	1040	1071	2026-11-08T17:41:36Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	decomp:jacop_member_int_reif	PASS	COMPLETE	1040	2740	2026-11-08T17:41:38Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj0:plain	PASS	COMPLETE	1	1442	2026-11-08T17:41:40Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj0:f	PASS	COMPLETE	1	1414	2026-11-08T17:41:41Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj0:lcg	PASS	COMPLETE	1	1539	2026-11-08T17:41:43Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj0:lcg-f	PASS	COMPLETE	1	1151	2026-11-08T17:41:44Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg:decomp:jacop_array_var_bool_element_nonshifted	PASS	COMPLETE	1	11378	2026-11-08T17:41:45Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj0:lcg:decomp:jacop_member_int_reif	PASS	COMPLETE	1	1176	2026-11-08T17:41:45Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj1:plain	PASS	COMPLETE	1	946	2026-11-08T17:41:46Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj1:f	PASS	COMPLETE	1	1166	2026-11-08T17:41:47Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj1:lcg	PASS	COMPLETE	1	1066	2026-11-08T17:41:48Z	
+C	jacop:upTo5sec/member_reif_var_first/member_reif_var_first	143244342bfefec3	obj1:lcg-f	PASS	COMPLETE	1	1113	2026-11-08T17:41:50Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	9519	2026-11-08T17:41:54Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	58264	2026-11-08T17:41:59Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	9098	2026-11-08T17:42:03Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj1:plain	PASS	COMPLETE	1	4778	2026-11-08T17:42:08Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	11154	2026-11-08T17:42:10Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj1:f	PASS	COMPLETE	1	7637	2026-11-08T17:42:16Z	
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj1:lcg	PASS	COMPLETE	1	9757	2026-11-08T17:42:26Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj1:plain	PASS	COMPLETE	1	34272	2026-11-08T17:42:44Z	
+P	mznc:upTo5sec/2012_filters/fir_1_1	85d83788a0e0b545	minimize	18	INCOMPLETE	1067412	1067412	f51d2a6ad364c240	60559	60	2026-11-08T17:42:51Z	jacop_diff2_strict,jacop_maximum
+C	mznc:upTo1min/2023_travelling-thief/n10_k3_c5000_l10000_u10100_r46	f5c5de86351f3a7f	obj1:lcg-f	PASS	COMPLETE	1	43845	2026-11-08T17:43:10Z	
+P	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	minimize	418	COMPLETE	1	1	e6e051533842281a	1003	60	2026-11-08T17:43:12Z	jacop_lex_lesseq_int
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	all:f	PASS	COMPLETE	1	1051	2026-11-08T17:43:13Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	decomp:jacop_lex_lesseq_int	PASS	COMPLETE	1	878	2026-11-08T17:43:14Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj0:plain	PASS	COMPLETE	1	1188	2026-11-08T17:43:15Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj0:f	PASS	COMPLETE	1	1263	2026-11-08T17:43:16Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj0:lcg	PASS	COMPLETE	1	1433	2026-11-08T17:43:18Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj0:lcg-f	PASS	COMPLETE	1	2656	2026-11-08T17:43:20Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj0:lcg:decomp:jacop_lex_lesseq_int	PASS	COMPLETE	1	1543	2026-11-08T17:43:22Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj1:plain	PASS	COMPLETE	1	1698	2026-11-08T17:43:23Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj1:f	PASS	COMPLETE	1	1842	2026-11-08T17:43:25Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj1:lcg	PASS	COMPLETE	1	2189	2026-11-08T17:43:27Z	
+C	jacop:upTo5sec/template_design/catfood_2	7acd2127e094edf9	obj1:lcg-f	PASS	COMPLETE	1	3149	2026-11-08T17:43:31Z	
+P	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	minimize	36	COMPLETE	35	35	927b01e30755ddf	993	60	2026-11-08T17:43:33Z	jacop_if_then_else_int
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	all:f	PASS	COMPLETE	35	1280	2026-11-08T17:43:35Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	decomp:jacop_if_then_else_int	PASS	COMPLETE	35	1045	2026-11-08T17:43:36Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	std	PASS	COMPLETE	35	1074	2026-11-08T17:43:37Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	std:f	PASS	COMPLETE	35	1071	2026-11-08T17:43:38Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	objstd:lcg	PASS	COMPLETE	1	1032	2026-11-08T17:43:39Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj0:plain	PASS	COMPLETE	1	1087	2026-11-08T17:43:40Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj0:f	PASS	COMPLETE	1	1151	2026-11-08T17:43:41Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj0:lcg	PASS	COMPLETE	1	1214	2026-11-08T17:43:42Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj0:lcg-f	PASS	COMPLETE	1	998	2026-11-08T17:43:43Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj1:f	PARTIAL	INCOMPLETE	0	60493	2026-11-08T17:43:45Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj0:lcg:decomp:jacop_if_then_else_int	PASS	COMPLETE	1	1493	2026-11-08T17:43:45Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj1:plain	PASS	COMPLETE	1	1635	2026-11-08T17:43:46Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj1:f	PASS	COMPLETE	1	1511	2026-11-08T17:43:48Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj1:lcg	PASS	COMPLETE	1	955	2026-11-08T17:43:49Z	
+C	hakank:solvedByOthersOnly/hakank_post_office_problem3/post_office_problem3	bf5b1df4d233db3c	obj1:lcg-f	PASS	COMPLETE	1	1832	2026-11-08T17:43:51Z	
+P	jacop:upTo10min/filters/ar_1_3	90509d28e9fa08b4	minimize	16	INCOMPLETE	878679	878679	57f068d06b3be08b	60694	60	2026-11-08T17:43:54Z	jacop_diff2_strict,jacop_maximum
+P	mznc:upTo30sec/2022_team-assignment/data1_4_6	4631f88624893ad4	maximize	2948	COMPLETE	136	136	5cbc08dbf997850e	11809	60	2026-11-08T17:44:07Z	jacop_alldiff,jacop_bin_packing,jacop_bin_packing_capacity,jacop_maximum,jacop_minimum
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj1:lcg	PASS	COMPLETE	1	22992	2026-11-08T17:44:08Z	
+C	mznc:upTo30sec/2022_team-assignment/data1_4_6	4631f88624893ad4	all:f	PASS	COMPLETE	136	1683	2026-11-08T17:44:09Z	
+C	jacop:upTo5min/elitserien/handball17	3538367cfe8b08a1	obj1:lcg-f	PASS	COMPLETE	1	15646	2026-11-08T17:44:23Z	
+P	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	maximize	445	COMPLETE	335	335	fb09d16a82c8ea36	1339	60	2026-11-08T17:44:26Z	jacop_subcircuit
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	all:f	PASS	COMPLETE	335	1911	2026-11-08T17:44:28Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	decomp:jacop_subcircuit	PASS	COMPLETE	335	3030	2026-11-08T17:44:31Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj0:plain	PASS	COMPLETE	1	1234	2026-11-08T17:44:33Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj0:f	PASS	COMPLETE	1	1533	2026-11-08T17:44:34Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj0:lcg	PASS	COMPLETE	1	1199	2026-11-08T17:44:35Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj0:lcg-f	PASS	COMPLETE	1	1648	2026-11-08T17:44:37Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj0:lcg:decomp:jacop_subcircuit	PASS	COMPLETE	1	3141	2026-11-08T17:44:40Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj1:plain	PASS	COMPLETE	1	1459	2026-11-08T17:44:42Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj1:f	PASS	COMPLETE	1	1148	2026-11-08T17:44:43Z	
+C	mznc:upTo30sec/2022_team-assignment/data1_4_6	4631f88624893ad4	decomp:jacop_bin_packing	PASS	COMPLETE	136	34055	2026-11-08T17:44:43Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj1:lcg	PASS	COMPLETE	1	1169	2026-11-08T17:44:44Z	
+C	jacop:upTo5sec/mario/mario_easy_5	59a91c845c3259ca	obj1:lcg-f	PASS	COMPLETE	1	1192	2026-11-08T17:44:45Z	
+P	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	minimize	8	COMPLETE	14	14	d20538ea0cb03d7b	1235	60	2026-11-08T17:44:48Z	jacop_geost
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	all:f	PASS	COMPLETE	14	957	2026-11-08T17:44:49Z	
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	decomp:jacop_geost	NO_DECOMPOSITION				2026-11-08T17:44:49Z	
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	obj0:plain	PASS	COMPLETE	1	1333	2026-11-08T17:44:50Z	
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	obj0:f	PASS	COMPLETE	1	1210	2026-11-08T17:44:51Z	
+C	mznc:upTo30sec/2022_team-assignment/data1_4_6	4631f88624893ad4	decomp:jacop_minimum	PASS	COMPLETE	136	9475	2026-11-08T17:44:52Z	
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	obj0:lcg	PASS	COMPLETE	1	1354	2026-11-08T17:44:52Z	
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	obj0:lcg-f	PASS	COMPLETE	1	1757	2026-11-08T17:44:54Z	
+P	mznc:upTo5sec/2021_perfect_square/57	8a064e6e83ffecc7	satisfy		INCOMPLETE	0	0	0	60448	60	2026-11-08T17:44:55Z	jacop_diff2_strict
+C	jacop:upTo5sec/carpet_cutting_geost/carpet_cutting_geost	09036918c1e3934f	obj1:plain	PASS	COMPLETE	1	2490	2026-11-08T17:44:57Z	

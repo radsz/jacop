@@ -287,6 +287,37 @@ final class JacopDecompositions {
             new FznModel.ArrayLit(ly)));
   }
 
+  /**
+   * jacop_diffn_k(posn, size, k, strict): box i occupies posn[i * k + d] .. posn[i * k + d] +
+   * size[i * k + d] in dimension d; two boxes are apart in some dimension (fzn_diffn_k), or under
+   * strict = false one of them has a zero size somewhere (fzn_diffn_nonstrict_k).
+   */
+  static void diffnK(FznBuilder b, List<Expr> a) {
+    List<Term> p = b.array(a.get(0));
+    List<Term> l = b.array(a.get(1));
+    int k = (int) b.intArg(a.get(2));
+    boolean strict = b.term(a.get(3)).isTrue();
+    int n = p.size() / k;
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        List<Term> or = new ArrayList<>();
+        for (int d = 0; d < k; d++) {
+          Term pi = p.get(i * k + d);
+          Term li = l.get(i * k + d);
+          Term pj = p.get(j * k + d);
+          Term lj = l.get(j * k + d);
+          if (!strict) {
+            or.add(b.eqReif(li, FznBuilder.constant(0)));
+            or.add(b.eqReif(lj, FznBuilder.constant(0)));
+          }
+          or.add(b.linearReif(new long[] {1, 1, -1}, List.of(pi, li, pj), "le", 0));
+          or.add(b.linearReif(new long[] {1, 1, -1}, List.of(pj, lj, pi), "le", 0));
+        }
+        b.clause(or, List.of());
+      }
+    }
+  }
+
   /** jacop_sort(x, y): y is x sorted, through a permutation as fzn_sort does. */
   static void sort(FznBuilder b, List<Expr> a) {
     List<Term> x = b.array(a.get(0));

@@ -1,0 +1,16 @@
+% Written by hand: MiniZinc 2.10 rewrites decreasing(x) to increasing(reverse(x)), so no
+% flattening reaches jacop_decreasing or jacop_strictly_decreasing.
+predicate jacop_decreasing(array [int] of var int: x);
+predicate jacop_strictly_decreasing(array [int] of var int: x);
+var 0..4: x1:: output_var;
+var 0..4: x2:: output_var;
+var 0..4: x3:: output_var;
+var 0..4: x4:: output_var;
+var 0..5: y1:: output_var;
+var 0..5: y2:: output_var;
+var 0..5: y3:: output_var;
+var 0..5: y4:: output_var;
+constraint jacop_decreasing([x1,x2,x3,x4]);
+constraint jacop_strictly_decreasing([y1,y2,y3,y4]);
+constraint int_le(x2,y2);
+solve satisfy;

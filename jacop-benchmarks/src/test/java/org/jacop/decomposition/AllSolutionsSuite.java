@@ -1066,16 +1066,44 @@ class AllSolutionsSuite {
   // ---------------------------------------------------------------------------------------------
   // Coverage report.
 
+  private static final Pattern BUILTIN =
+      Pattern.compile("\\bpredicate\\s+(jacop_[a-z0-9_]+)\\s*\\(");
+
+  /**
+   * Returns the jacop_* predicates that a library file declares without a body, the ones that can
+   * appear in FlatZinc; functions, tests and predicates with a body never do.
+   */
+  static Set<String> builtins(String library) {
+    String text = library.replaceAll("%[^\\n]*", "");
+    Set<String> names = new TreeSet<>();
+    Matcher m = BUILTIN.matcher(text);
+    while (m.find()) {
+      int depth = 1;
+      int i = m.end();
+      while (i < text.length() && depth > 0) {
+        char c = text.charAt(i++);
+        if (c == '(') {
+          depth++;
+        } else if (c == ')') {
+          depth--;
+        }
+      }
+      while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
+        i++;
+      }
+      if (i < text.length() && text.charAt(i) == ';') {
+        names.add(m.group(1));
+      }
+    }
+    return names;
+  }
+
   private void report() throws IOException {
     Set<String> universe = new TreeSet<>();
     if (Files.isDirectory(mznlib)) {
-      Pattern def = Pattern.compile("\\bjacop_[a-z0-9_]+\\b");
       try (Stream<Path> s = Files.walk(mznlib)) {
         for (Path p : s.filter(x -> x.toString().endsWith(".mzn")).toList()) {
-          Matcher m = def.matcher(Files.readString(p));
-          while (m.find()) {
-            universe.add(m.group());
-          }
+          universe.addAll(builtins(Files.readString(p)));
         }
       }
     }

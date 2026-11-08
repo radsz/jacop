@@ -1,0 +1,18 @@
+% Written by hand: MiniZinc 2.10 rewrites decreasing(x) to increasing(reverse(x)), so no
+% flattening reaches jacop_decreasing or jacop_strictly_decreasing.
+var 0..4: x1:: output_var;
+var 0..4: x2:: output_var;
+var 0..4: x3:: output_var;
+var 0..4: x4:: output_var;
+var 0..5: y1:: output_var;
+var 0..5: y2:: output_var;
+var 0..5: y3:: output_var;
+var 0..5: y4:: output_var;
+constraint int_le(x2,x1);
+constraint int_le(x3,x2);
+constraint int_le(x4,x3);
+constraint int_lt(y2,y1);
+constraint int_lt(y3,y2);
+constraint int_lt(y4,y3);
+constraint int_le(x2,y2);
+solve satisfy;

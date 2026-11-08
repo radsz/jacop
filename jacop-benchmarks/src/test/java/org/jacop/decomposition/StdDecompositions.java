@@ -191,6 +191,7 @@ final class StdDecompositions {
     DECOMPOSERS.put("jacop_deviation", JacopDecompositions::deviation);
     DECOMPOSERS.put("jacop_spread", JacopDecompositions::spread);
     DECOMPOSERS.put("jacop_diff2", JacopDecompositions::diff2);
+    DECOMPOSERS.put("jacop_diffn_k", JacopDecompositions::diffnK);
     DECOMPOSERS.put("jacop_sort", JacopDecompositions::sort);
     DECOMPOSERS.put("jacop_sort_permutation", JacopDecompositions::sortPermutation);
     DECOMPOSERS.put("jacop_alldifferent_opt", JacopDecompositions::allDifferentOpt);
