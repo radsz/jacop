@@ -3535,7 +3535,8 @@ Version 5.0 (unreleased)
      slower, the rest equal. Not for wider domains: pentominoes, whose
      regular constraints become clauses too, lost up to 4x with it.
      -Djacop.lcg.pureClauseLiterals=false turns it off.
-204. Bug fix: when LCG free search gives way to free search without
+     
+206. Bug fix: when LCG free search gives way to free search without
      learning (lcg-slow-rate), the regular and MDD constraints that went
      to the SAT solver as clauses are imposed in the store again. Before,
      free search without learning ran without them, printed solutions
@@ -3543,7 +3544,7 @@ Version 5.0 (unreleased)
      FAPP-aux-18-0350 with large tables posted as MDD, every solution
      after the switch broke about 140 of its 1,425 tables.
 
-204. Opt-in TSP mode of the FlatZinc front end: with
+207. Opt-in TSP mode of the FlatZinc front end: with
      -Dorg.jacop.fz.tsp=true, a pure travelling salesman model, one
      circuit(x) with no fixed successor and a tour length
      sum(i)(d[i, x[i]]), gets the arc Booleans, cost rows and Routes of
@@ -3569,7 +3570,7 @@ Version 5.0 (unreleased)
      or off, -Dorg.jacop.lp.combSearch=true also separates them in
      search, -Dorg.jacop.fz.tspArcs (default 40000) limits the arcs.
 
-206. JaLP's presolve also removes parallel rows and merges parallel
+208. JaLP's presolve also removes parallel rows and merges parallel
      columns (E. D. Andersen and K. D. Andersen, Presolving in linear
      programming, Mathematical Programming 71 (1995) 221-245, sections
      3.4 and 3.6). A row that is a multiple of another gives its bounds
@@ -3600,7 +3601,7 @@ Version 5.0 (unreleased)
      well as or better than before: the search follows a different
      optimal root vertex.
 
-206. Under --lcg the objective lower-bound search (lcg-lb) starts
+209. Under --lcg the objective lower-bound search (lcg-lb) starts
      before the first solution: each round assumes the objective at its
      root lower bound, one run per round and without shaving, until a
      solution is found. Before, those runs waited for a first solution.
@@ -3612,7 +3613,7 @@ Version 5.0 (unreleased)
      most 13), are proved optimal in 10-60 s; neither had a solution in
      600 s (00 in one of two runs).
 
-207. The default search under --lcg, for a model without a search
+210. The default search under --lcg, for a model without a search
      annotation, branches in input order with the smallest value instead
      of dom/wdeg when it has more than 50,000 search variables
      (-Dorg.jacop.fz.lcgDomWdegLimit, stat lcgInputOrder): dom/wdeg
@@ -3623,7 +3624,7 @@ Version 5.0 (unreleased)
      AztecDiamond-300 in 527 s); RamseyPartition-equ-3-0600 takes 200 s
      instead of 57 s to prove unsatisfiable.
 
-206. Bug fix: a search with a child search (as the FlatZinc front end
+211. Bug fix: a search with a child search (as the FlatZinc front end
      builds for integer then Boolean variables) that timed out while the
      child was enumerating solutions ended with the child's part of the
      last solution and the master's part of an earlier one. Assigning that
@@ -3633,7 +3634,43 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
-206. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
+212. Hall cuts of item 188 with value copies, and in search. The
+     Williams-Yan cuts now also come from all-different constraints with
+     exceptions (alldifferent_except_0, AlldifferentExcept) and from
+     global cardinality constraints (GCC, CountValues,
+     CountValuesBounds): for the k variables of a prefix S of the
+     sorted LP values, each counted value v enters the greedy sum of the
+     k smallest (or largest) values at most min(u_v, |S holding v|)
+     times and at least max(0, l_v - |variables outside S holding v|)
+     times, and an excepted value any number of times: the extremal
+     points of the multiset permutahedron, after R. Rado, An
+     inequality, Journal of the London Mathematical Society 27 (1952)
+     1-6, with H. P. Williams and H. Yan (2001) and J. Lee (2002) as in
+     item 188. An all-different whose variables are not all LP columns
+     now keeps its cuts over the columns among them (two or more);
+     before, it was left out. -Dorg.jacop.lp.alldiffVariants=false turns
+     the copies off. Hall cuts are also separated in search, as the
+     capacity cuts of item 187 (every 4 to 1024 optimal solves, up to
+     -Dorg.jacop.lp.alldiffSearchCuts=10 cuts into the row pool), with
+     -Dorg.jacop.lp.alldiffSearch=true; they are off by default, as at
+     240 s they cost lot-sizing pigment20a and cable-tree-wiring A022
+     their optimum. Statistics lpAlldiffLists, lpAlldiffVariantLists,
+     lpAlldiffSearchCuts and lpAlldiffSeparations. Checks
+     (AlldifferentRowsTest): no cut with copies cuts off a solution of
+     random domains or a convex mix of them; random models with an
+     all-different-except-0 or a GCC keep their optimum, also under LCG
+     with the explanation checker (LinearRelaxationTest), and also after
+     the rows of the other constraints are dropped in search. Reach (429
+     Challenge optimisation instances with these constraints, 20 s): 243
+     have Hall lists, 99 of them with copies. The root bound of
+     physician-scheduling rises from 570 to 670, 1145 to 1245 and 570 to
+     620 (twice), and of vaccine v11 from 119 to 118 and v857 from 203 to
+     202 (maximisation); the 21 instances whose root changes, at 600 s:
+     default 12 to 12 solved, one better objective (physician
+     instance18_real 7750 to 6915), -f 12 to 12 with differences of
+     search timing only; no wrong answer.
+
+213. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
      for spanning trees with limits on the number of edges taken from
      disjoint edge sets (colours). Such trees are the common bases of a
      graphic and a partition matroid (Edmonds 1970). At every node it
@@ -3654,7 +3691,7 @@ Version 5.0 (unreleased)
      Challenge or wide-set model combines weighted_spanning_tree with
      such limits, so the default benchmarks are not affected.
 
-206. Values (MiniZinc nvalue) reads its difference graph once more at its
+214. Values (MiniZinc nvalue) reads its difference graph once more at its
      first call below the root, from the root constraints and domains.
      Before, it read the graph only at root calls, so a difference
      constraint imposed after its last root call was missed when nothing
