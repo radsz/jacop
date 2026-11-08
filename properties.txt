@@ -460,6 +460,24 @@ Literals and clauses:
   true.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
+- jacop.lcg.clauses: constraints given to the SAT solver as clauses
+  in place of propagators: none, all, or a comma-separated list of
+  class names (for example FzXeqC,Reified,Implies,SumBool); default
+  none. A constraint over the objective's definition stays a propagator.
+  The name counter gives the 0/1 sums (LinearInt, SumBool, LinearBool,
+  SumInt, Count, AtMost, AtLeast) to a unary counter alone and keeps
+  them unsplit in the FlatZinc front end, which can slow down a model
+  whose long sums are then not encoded.
+- jacop.lcg.clauses.limit: the most clauses of one constraint; default
+  256.
+- jacop.lcg.clauses.dom: the largest domain of its variables, one
+  variable of a longer constraint may be wider; default 64.
+- jacop.lcg.clauses.counter: the most clauses of the unary counter of
+  a 0/1 sum outside a reification; default 20000.
+- jacop.lcg.clauses.boolArity: the most unfixed variables of a
+  constraint as clauses, and the largest domain of any; default 256.
+- jacop.lcg.clauses.debug: print each constraint tried and its clause
+  count; default false.
 - jacop.lcg.pureClauseLiterals: under free search, a model whose
   variables are all 0/1 and whose constraints all became clauses leaves
   every decision to the SAT solver; default true.

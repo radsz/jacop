@@ -3426,11 +3426,6 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     boolean propagatorLeft = false;
-    if (org.jacop.core.ConstraintProfile.ON) {
-      for (Constraint c : store.getConstraints()) {
-        org.jacop.core.ConstraintProfile.of(c);
-      }
-    }
     objectiveTerms = objectiveTerms();
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
@@ -3477,15 +3472,13 @@ public final class LcgSolver implements ExternalPropagator {
   /** The most values a variable of such a constraint may have, {@code jacop.lcg.clauses.dom}. */
   static final int CLAUSE_DOM = Integer.getInteger("jacop.lcg.clauses.dom", 64);
 
-  /** The most unfixed variables of such a constraint, {@code jacop.lcg.clauses.arity}. */
-  static final int CLAUSE_ARITY = Integer.getInteger("jacop.lcg.clauses.arity", 16);
-
-  /**
-   * The most clauses of a sum of 0/1 variables (with at most one other variable), which becomes a
-   * unary counter, {@code jacop.lcg.clauses.counter}.
-   */
+  /** Prints each constraint tried as clauses, {@code jacop.lcg.clauses.debug}. */
   static final boolean CLAUSE_DEBUG = Boolean.getBoolean("jacop.lcg.clauses.debug");
 
+  /**
+   * The most clauses of a sum of 0/1 variables (with at most one other variable) outside a
+   * reification, which becomes a unary counter, {@code jacop.lcg.clauses.counter}.
+   */
   static final int CLAUSE_COUNTER = Integer.getInteger("jacop.lcg.clauses.counter", 20000);
 
   /** The most unfixed 0/1 variables of such a sum, {@code jacop.lcg.clauses.boolArity}. */

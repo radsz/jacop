@@ -33,6 +33,7 @@ package org.jacop.jasat.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +42,7 @@ import java.util.TreeMap;
 import java.util.function.BiFunction;
 import org.jacop.constraints.*;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -384,6 +386,33 @@ class ClauseEncoderTest {
                 "  %-20s encoded=%d rejected=%d solutions=%d cpStronger=%d upStronger=%d of %d%n",
                 k, st[0], st[1], st[2], st[3], st[4], st[5]));
     assertThat(stats.get("XplusYeqZ")[0]).isPositive();
+  }
+
+  @Test
+  void counterUnderReificationKeepsThePlainLimit() {
+    Store store = new Store();
+    BooleanVar[] x = new BooleanVar[12];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+    }
+    BooleanVar b = new BooleanVar(store, "b");
+    Cnf cnf = new Cnf();
+    for (BooleanVar y : x) {
+      cnf.add(y);
+    }
+    cnf.add(b);
+    // alone, the sum of 12 0/1 terms >= 6 becomes a counter of about 300 clauses
+    assertThat(new ClauseEncoder(cnf, 16, 4096).encode(new LinearInt(x, ones(x.length), ">=", 6)))
+        .isNotNull();
+    // reified (one sum of many, bnn-planner made 3.3 million clauses of them), the plain limit
+    Constraint reified = new Reified(new LinearInt(x, ones(x.length), ">=", 6), b);
+    assertThat(new ClauseEncoder(cnf, 16, 4096).encode(reified)).isNull();
+  }
+
+  private static int[] ones(int n) {
+    int[] w = new int[n];
+    Arrays.fill(w, 1);
+    return w;
   }
 
   private static void check(

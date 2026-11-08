@@ -3507,6 +3507,25 @@ Version 5.0 (unreleased)
      regular constraints become clauses too, lost up to 4x with it.
      -Djacop.lcg.pureClauseLiterals=false turns it off.
 
+204. With lazy clause generation (--lcg), -Djacop.lcg.clauses=Class,...
+     gives small constraints of the named classes (or all) to the SAT
+     solver as clauses in place of propagators; default none. The
+     clauses come from the constraints' pseudo-Boolean encodings:
+     clauses as they are, linear relations by the order encoding
+     (Tamura, Taga, Kitagawa and Banbara, Compiling finite linear CSP
+     into SAT, Constraints 14(2), 2009) with the direct encoding of
+     two-variable equalities, and 0/1 sums by a unary counter (Sinz,
+     Towards an optimal CNF encoding of Boolean cardinality constraints,
+     CP 2005). A constraint becomes clauses only within
+     jacop.lcg.clauses.limit (256 clauses), .dom (64 values) and
+     .counter, and constraints over the objective's definition stay
+     propagators, since the core-guided phase reads them. On the wide
+     benchmark set at 240 s the links (FzXeqC, FzXneqC, Reified,
+     Implies, Not, XeqC-like, ChannelReif, ChannelImply, In) and small
+     Boolean constraints (AndBoolSimple, OrBoolSimple, XorBool, SumBool,
+     LinearBool) raise conflicts per second by 16-27 % but change the
+     solved counts little, so the option stays off.
+
 Version 4.11
 =============
 
