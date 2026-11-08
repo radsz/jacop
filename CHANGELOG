@@ -3170,6 +3170,15 @@ Version 5.0 (unreleased)
      --search-statistics stays, as -s -v without the -v lines after each
      solution, and so does -s -debug.
 
+189. Constraints that hold for every value left mark themselves entailed,
+     so later changes of their variables no longer wake them: XlteqY,
+     XplusClteqZ, XplusYlteqZ, XneqY, Min, Max, MaxSimple,
+     ElementVariableFast, Not, SumBool with !=, and CountValues /
+     CountValuesBounds. Before, they kept being called after they held
+     (1.1 million calls in 30 s on word-equations, 2.8 million on accap
+     with -f). Search heuristics that count active constraints, such as
+     most_constrained, can choose differently.
+
 Version 4.11
 =============
 
