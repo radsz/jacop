@@ -394,7 +394,7 @@ class AllSolutionsSuite {
   // Checking one problem.
 
   /** A random linear objective over output variables and its minimum over the reference. */
-  private static final class Objective {
+  static final class Objective {
     final List<String> names = new ArrayList<>();
     final List<Integer> positions = new ArrayList<>();
     final List<Expr> vars = new ArrayList<>();
@@ -768,7 +768,7 @@ class AllSolutionsSuite {
    * Names of the variables and arrays a model prints, without those MiniZinc introduced: the names
    * of introduced variables depend on the library a model was flattened with.
    */
-  private static Set<String> outputNames(FznModel model) {
+  static Set<String> outputNames(FznModel model) {
     Set<String> names = new HashSet<>();
     for (FznModel.Item item : model.items) {
       FznModel.Decl d = item.decl;
@@ -783,7 +783,7 @@ class AllSolutionsSuite {
   }
 
   /** Hash of the printed lines of the given variables, in name order. */
-  private static long projection(String solution, Set<String> names) {
+  static long projection(String solution, Set<String> names) {
     List<String> lines = new ArrayList<>();
     for (String line : solution.split("\n")) {
       int eq = line.indexOf('=');
@@ -948,7 +948,7 @@ class AllSolutionsSuite {
     return objectives(model, sha, null, objectives, 0);
   }
 
-  private static List<Objective> objectives(
+  static List<Objective> objectives(
       FznModel model, String sha, Set<String> only, int count, long salt) {
     List<String> names = new ArrayList<>();
     List<Integer> positions = new ArrayList<>();
@@ -997,7 +997,7 @@ class AllSolutionsSuite {
     return result;
   }
 
-  private static Term objectiveTerm(FznBuilder b, Objective o) {
+  static Term objectiveTerm(FznBuilder b, Objective o) {
     List<Term> terms = new ArrayList<>();
     long[] coefs = new long[o.vars.size() + 1];
     long lo = 0;

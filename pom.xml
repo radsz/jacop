@@ -376,6 +376,7 @@ setup to run configuration. -->
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/AllSolutionsModelsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
@@ -572,6 +573,7 @@ setup to run configuration. -->
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/AllSolutionsModelsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -763,6 +765,7 @@ setup to run configuration. -->
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/AllSolutionsModelsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
@@ -930,6 +933,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
                                 <include>**/ImplicitGlobalsFlatzincTest.java</include>
                                 <include>**/MinizincBasedUpTo5SecondsTest.java</include>
+                                <include>**/AllSolutionsModelsTest.java</include>
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
