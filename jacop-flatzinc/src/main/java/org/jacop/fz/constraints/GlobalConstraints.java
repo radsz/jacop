@@ -595,7 +595,15 @@ class GlobalConstraints implements ParserTreeConstants {
     if (support.options.debug()) {
       FzConsole.println("% redundant resource " + f + " / " + g + " on " + n + " tasks");
     }
-    support.delayedConstraints.add(configureCumulative(cumul));
+    configureCumulative(cumul);
+    if (!Boolean.parseBoolean(System.getProperty("org.jacop.fz.cumulativeDff.timeTable", FALSE))) {
+      // the time table of mapped uses, and the pairwise rule built on it, never prune more than
+      // the original resource's (a set of tasks that fits under C fits under f(C)), so only the
+      // energy rules run; the original cumulative checks that the tasks fit
+      cumul.doTimeTable(false);
+      cumul.doTimeTableDisjunctive(false);
+    }
+    support.delayedConstraints.add(cumul);
   }
 
   private static long gcd(long a, long b) {
