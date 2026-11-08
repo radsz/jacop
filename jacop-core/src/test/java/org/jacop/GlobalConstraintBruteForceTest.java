@@ -120,6 +120,7 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -326,6 +327,9 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::weightedCompletion),
         Arguments.of("PrecedenceCost", precedenceCost(false)),
         Arguments.of("PrecedenceCostChain", precedenceCost(true)),
+        Arguments.of(
+            "UnaryEarlinessTardiness",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::unaryEarlinessTardiness),
         Arguments.of(
             "WeightedCompletionParallel",
             (Function<Random, Instance>)
@@ -2355,6 +2359,77 @@ class GlobalConstraintBruteForceTest {
               + " lag="
               + Arrays.toString(lag));
     };
+  }
+
+  // starts s[0..n-1] of tasks with durations on one or two unary machines (a task may be on
+  // both, or on none), with sums of earliness and tardiness terms at most the last variable
+  private static Instance unaryEarlinessTardiness(Random random) {
+    int n = 1 + random.nextInt(4);
+    int[] d = new int[n];
+    for (int i = 0; i < n; i++) {
+      d[i] = 1 + random.nextInt(3);
+    }
+    boolean two = random.nextBoolean();
+    List<Integer> first = new ArrayList<>();
+    List<Integer> second = new ArrayList<>();
+    int[] owner = new int[n];
+    for (int i = 0; i < n; i++) {
+      int kind = random.nextInt(4);
+      owner[i] = kind == 3 ? -1 : 0;
+      if (kind != 3) {
+        first.add(i);
+      }
+      if (two && kind >= 2) {
+        second.add(i);
+        if (kind == 3) {
+          owner[i] = 1;
+        }
+      }
+    }
+    int[][] machines =
+        two
+            ? new int[][] {
+              first.stream().mapToInt(Integer::intValue).toArray(),
+              second.stream().mapToInt(Integer::intValue).toArray()
+            }
+            : new int[][] {first.stream().mapToInt(Integer::intValue).toArray()};
+    List<int[]> terms = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int k = random.nextInt(3); k > 0; k--) {
+        terms.add(new int[] {i, random.nextInt(10) - 1, random.nextInt(4), random.nextInt(4)});
+      }
+    }
+    int[][] t = terms.toArray(new int[0][]);
+    int[][] domains = append(domains(random, n, 0, 7), domain(random, 0, 6 * n));
+    return new Instance(
+        domains,
+        (store, v) ->
+            store.impose(
+                new UnaryEarlinessTardiness(Arrays.copyOf(v, n), d, machines, owner, t, v[n])),
+        x -> {
+          for (int[] m : machines) {
+            for (int a = 0; a < m.length; a++) {
+              for (int b = a + 1; b < m.length; b++) {
+                if (x[m[a]] < x[m[b]] + d[m[b]] && x[m[b]] < x[m[a]] + d[m[a]]) {
+                  return false;
+                }
+              }
+            }
+          }
+          int total = 0;
+          for (int[] r : t) {
+            total += r[2] * Math.max(0, r[1] - x[r[0]]) + r[3] * Math.max(0, x[r[0]] - r[1]);
+          }
+          return total <= x[n];
+        },
+        "d="
+            + Arrays.toString(d)
+            + " machines="
+            + Arrays.deepToString(machines)
+            + " owner="
+            + Arrays.toString(owner)
+            + " terms="
+            + Arrays.deepToString(t));
   }
 
   // starts s[0..n-1] under random acyclic precedences (a chain when chain), with sums of

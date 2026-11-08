@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.PrecedenceCost;
+import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -65,6 +66,14 @@ import org.jacop.fz.SimpleNode;
  * <p>It is on with the model's search and off with free search (-f); the system property {@code
  * org.jacop.fz.precedenceCost} set to true or false turns it on or off in both.
  *
+ * <p>When some of the starts of such a sum are tasks of unary resources (the cliques of the
+ * disjunctive clique detection, and the tasks of a {@code jacop_cumulative} that use more than half
+ * of its capacity), with fixed durations, it also posts a redundant {@link UnaryEarlinessTardiness}
+ * on those resources, which bounds the sum by the assignment bound of Sourd and Kedad-Sidhoum
+ * (2003); precedences are not needed for it. Each task's costs are counted on the resource with the
+ * most work among those it is on. The system property {@code org.jacop.fz.unaryEarlinessTardiness}
+ * set to false turns this part off.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -86,6 +95,12 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
   private final List<IntVar[]> diffVars = new ArrayList<>();
   private final List<Long> diffLags = new ArrayList<>();
   private final List<ASTConstElem> sums = new ArrayList<>();
+  // unary resources: starts and fixed durations
+  private final List<IntVar[]> unaryStarts = new ArrayList<>();
+  private final List<int[]> unaryDurations = new ArrayList<>();
+
+  private final boolean precedenceCost;
+  private final boolean unary;
 
   /**
    * It creates a detector reading variables through the given support.
@@ -93,7 +108,32 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
    * @param support the support of the FlatZinc front end.
    */
   public PrecedenceCostDetector(Support support) {
+    this(support, true, true);
+  }
+
+  /**
+   * It creates a detector reading variables through the given support.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param precedenceCost whether it posts {@link PrecedenceCost}.
+   * @param unary whether it posts {@link UnaryEarlinessTardiness}.
+   */
+  public PrecedenceCostDetector(Support support, boolean precedenceCost, boolean unary) {
     this.support = support;
+    this.precedenceCost = precedenceCost;
+    this.unary = unary;
+  }
+
+  /**
+   * It tells if the detection of earliness and tardiness costs on unary resources is on: unless the
+   * system property org.jacop.fz.unaryEarlinessTardiness is false.
+   *
+   * @param freeSearch whether free search (-f) is used.
+   * @return false if the system property org.jacop.fz.unaryEarlinessTardiness is false.
+   */
+  public static boolean unaryEnabled(boolean freeSearch) {
+    String p = System.getProperty("org.jacop.fz.unaryEarlinessTardiness");
+    return p == null || !"false".equalsIgnoreCase(p);
   }
 
   /**
@@ -121,6 +161,11 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
     if (hinge.isEmpty()) {
       return;
     }
+    if (unary) {
+      for (IntVar[][] r : support.unaryResources) {
+        unaryResource(r[0], r[1]);
+      }
+    }
     for (ASTConstElem node : sums) {
       sum(node);
     }
@@ -146,11 +191,55 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
         sums.add(node);
         linear(node, false);
       }
+      case "jacop_cumulative" -> cumulative(node);
       case "int_le" -> difference(scalar(node, 0), scalar(node, 1), 0);
       case "int_lt" -> difference(scalar(node, 0), scalar(node, 1), -1);
       default -> {
         // not part of an earliness or tardiness cost
       }
+    }
+  }
+
+  // the tasks of a cumulative that use more than half of its capacity, so no two overlap
+  private void cumulative(ASTConstElem node) {
+    if (!unary) {
+      return;
+    }
+    IntVar[] s = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] d = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar[] r = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar b = scalar(node, 3);
+    if (s == null || d == null || r == null || s.length != d.length || s.length != r.length) {
+      return;
+    }
+    List<IntVar> starts = new ArrayList<>();
+    List<IntVar> durations = new ArrayList<>();
+    for (int i = 0; i < s.length; i++) {
+      if (2L * r[i].min() > b.max()) {
+        starts.add(s[i]);
+        durations.add(d[i]);
+      }
+    }
+    unaryResource(starts.toArray(new IntVar[0]), durations.toArray(new IntVar[0]));
+  }
+
+  // a unary resource over the tasks with a fixed positive duration and a start not fixed
+  private void unaryResource(IntVar[] s, IntVar[] d) {
+    List<IntVar> starts = new ArrayList<>();
+    List<Integer> durations = new ArrayList<>();
+    Map<IntVar, Boolean> seen = new IdentityHashMap<>();
+    for (int i = 0; i < s.length; i++) {
+      if (d[i].singleton()
+          && d[i].value() > 0
+          && !s[i].singleton()
+          && seen.put(s[i], true) == null) {
+        starts.add(s[i]);
+        durations.add(d[i].value());
+      }
+    }
+    if (starts.size() >= 2) {
+      unaryStarts.add(starts.toArray(new IntVar[0]));
+      unaryDurations.add(durations.stream().mapToInt(Integer::intValue).toArray());
     }
   }
 
@@ -276,8 +365,24 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
     if (terms.size() < 2 || (z != null && task.containsKey(z)) || (z == null && c < 0)) {
       return;
     }
-    List<int[]> precedences = precedences(starts, task);
-    if (precedences.isEmpty() || (z != null && starts.contains(z))) {
+    UnaryPlan plan = unary ? unaryPlan(starts, terms) : null;
+    List<int[]> precedences =
+        precedenceCost
+            ? precedences(new ArrayList<>(starts), new IdentityHashMap<>(task))
+            : List.of();
+    if (plan != null && plan.contains(z)) {
+      plan = null;
+    }
+    if (!precedences.isEmpty()) {
+      // the starts with the variables the precedences go through
+      List<IntVar> all = new ArrayList<>(starts);
+      precedences = precedences(all, task);
+      if (z != null && all.contains(z)) {
+        precedences = List.of();
+      }
+      starts.addAll(all.subList(starts.size(), all.size()));
+    }
+    if (precedences.isEmpty() && plan == null) {
       return;
     }
     // z >= sum - c, as a new variable when c is not 0
@@ -299,25 +404,138 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
           new LinearInt(new IntVar[] {bound, z}, new int[] {1, -1}, "==", (int) c)
               .setDegreeWeight(0));
     }
-    PrecedenceCost pc =
-        new PrecedenceCost(
-            starts.toArray(new IntVar[0]),
-            precedences.toArray(new int[0][]),
-            terms.toArray(new int[0][]),
-            bound);
-    // redundant, so degree-based variable selections see the degrees of the model
-    pc.setDegreeWeight(0);
-    if (support.options.debug()) {
-      FzConsole.println(
-          "% precedence cost: "
-              + starts.size()
-              + " tasks, "
-              + precedences.size()
-              + " precedences, "
-              + terms.size()
-              + " terms");
+    if (!precedences.isEmpty()) {
+      PrecedenceCost pc =
+          new PrecedenceCost(
+              starts.toArray(new IntVar[0]),
+              precedences.toArray(new int[0][]),
+              terms.toArray(new int[0][]),
+              bound);
+      // redundant, so degree-based variable selections see the degrees of the model
+      pc.setDegreeWeight(0);
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% precedence cost: "
+                + starts.size()
+                + " tasks, "
+                + precedences.size()
+                + " precedences, "
+                + terms.size()
+                + " terms");
+      }
+      support.delayedConstraints.add(pc);
     }
-    support.delayedConstraints.add(pc);
+    if (plan != null) {
+      UnaryEarlinessTardiness et =
+          new UnaryEarlinessTardiness(
+              plan.starts, plan.durations, plan.machines, plan.owner, plan.terms, bound);
+      et.setDegreeWeight(0);
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% unary earliness/tardiness: "
+                + plan.starts.length
+                + " tasks, "
+                + plan.machines.length
+                + " machines, "
+                + plan.terms.length
+                + " terms");
+      }
+      support.delayedConstraints.add(et);
+    }
+  }
+
+  /** The tasks, machines, owners and terms of a UnaryEarlinessTardiness. */
+  private record UnaryPlan(
+      IntVar[] starts, int[] durations, int[][] machines, int[] owner, int[][] terms) {
+
+    boolean contains(IntVar z) {
+      for (IntVar s : starts) {
+        if (s == z) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
+  /**
+   * The unary resources with a task that has a cost, over the cost terms on the starts; null when
+   * there is none. The tasks of the resources join the starts of the terms (without a cost if they
+   * have none); a task with costs counts them on its resource with the most work.
+   */
+  private UnaryPlan unaryPlan(List<IntVar> termStarts, List<int[]> terms) {
+    if (unaryStarts.isEmpty()) {
+      return null;
+    }
+    boolean[] costly = new boolean[termStarts.size()];
+    for (int[] t : terms) {
+      costly[t[0]] |= t[2] + t[3] > 0;
+    }
+    Map<IntVar, Integer> position = new IdentityHashMap<>();
+    for (int i = 0; i < termStarts.size(); i++) {
+      position.put(termStarts.get(i), i);
+    }
+    List<Integer> chosen = new ArrayList<>();
+    for (int r = 0; r < unaryStarts.size(); r++) {
+      for (IntVar s : unaryStarts.get(r)) {
+        Integer i = position.get(s);
+        if (i != null && costly[i]) {
+          chosen.add(r);
+          break;
+        }
+      }
+    }
+    if (chosen.isEmpty()) {
+      return null;
+    }
+    List<IntVar> starts = new ArrayList<>(termStarts);
+    Map<IntVar, Integer> index = new IdentityHashMap<>(position);
+    List<Integer> durations = new ArrayList<>();
+    for (int i = 0; i < starts.size(); i++) {
+      durations.add(0);
+    }
+    int[][] machines = new int[chosen.size()][];
+    long[] work = new long[chosen.size()];
+    for (int m = 0; m < chosen.size(); m++) {
+      IntVar[] s = unaryStarts.get(chosen.get(m));
+      int[] d = unaryDurations.get(chosen.get(m));
+      machines[m] = new int[s.length];
+      for (int k = 0; k < s.length; k++) {
+        Integer i = index.get(s[k]);
+        if (i == null) {
+          i = starts.size();
+          index.put(s[k], i);
+          starts.add(s[k]);
+          durations.add(d[k]);
+        } else if (durations.get(i) != 0 && durations.get(i) != d[k]) {
+          // the same start with two durations: not one task
+          return null;
+        }
+        durations.set(i, d[k]);
+        machines[m][k] = i;
+        work[m] += d[k];
+      }
+      if (starts.size() > MAX_TASKS) {
+        return null;
+      }
+    }
+    int n = starts.size();
+    int[] owner = new int[n];
+    Arrays.fill(owner, -1);
+    for (int m = 0; m < machines.length; m++) {
+      for (int i : machines[m]) {
+        if (owner[i] < 0 || work[m] > work[owner[i]]) {
+          owner[i] = m;
+        }
+      }
+    }
+    int[] duration = new int[n];
+    for (int i = 0; i < n; i++) {
+      // a task on no resource keeps a duration of 1, which only its own window uses
+      duration[i] = Math.max(1, durations.get(i));
+    }
+    return new UnaryPlan(
+        starts.toArray(new IntVar[0]), duration, machines, owner, terms.toArray(new int[0][]));
   }
 
   // whether the terms have negative coefficients and the one other variable 1
