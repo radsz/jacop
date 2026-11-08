@@ -4167,6 +4167,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (int l : clause) {
       int value = sat.value(l);
       if (value > 0 || value == 0 && litVar[Math.abs(l)] != i) {
+        keepLater(i, clause);
         return;
       }
       numFalse += value < 0 ? 1 : 0;
@@ -4186,6 +4187,35 @@ public final class LcgSolver implements ExternalPropagator {
     if (extendedKeep > 0 && proof == null && !sat.hasProof()) {
       keepNogood(i, open, rest);
     }
+  }
+
+  // a nogood learnt beside a first-UIP clause (jacop.lcg.extendedBoth) that removes nothing now:
+  // kept, open literals the atoms of x and rest the others, to propagate once the rest is false
+  private void keepLater(int i, int[] clause) {
+    if (extendedKeep <= 0 || proof != null || sat.hasProof()) {
+      return;
+    }
+    int numOpen = 0;
+    for (int l : clause) {
+      int d = Math.abs(l);
+      numOpen += d < litVar.length && litVar[d] == i ? 1 : 0;
+    }
+    if (numOpen == clause.length) {
+      return;
+    }
+    int[] open = new int[numOpen];
+    int[] rest = new int[clause.length - numOpen];
+    int o = 0;
+    int r = 0;
+    for (int l : clause) {
+      int d = Math.abs(l);
+      if (d < litVar.length && litVar[d] == i) {
+        open[o++] = l;
+      } else {
+        rest[r++] = l;
+      }
+    }
+    keepNogood(i, open, rest);
   }
 
   /**
@@ -4297,10 +4327,11 @@ public final class LcgSolver implements ExternalPropagator {
       nogoodOpen = Arrays.copyOf(nogoodOpen, n);
       nogoodRest = Arrays.copyOf(nogoodRest, n);
     }
-    // watch the literal that became false last, at the highest level
+    // watch a literal that is not false, or else the one that became false last
     int w = 0;
     for (int k = 1; k < rest.length; k++) {
-      if (sat.levelOf(rest[k]) > sat.levelOf(rest[w])) {
+      if (sat.value(rest[w]) < 0
+          && (sat.value(rest[k]) >= 0 || sat.levelOf(rest[k]) > sat.levelOf(rest[w]))) {
         w = k;
       }
     }

@@ -349,6 +349,12 @@ public final class CdclSolver {
   // of one integer variable, to be propagated by the external propagator; only search() allows it
   private boolean extendedAllowed;
   private boolean extendedLearnt;
+  // with jacop.lcg.extendedBoth the analysis goes on to the first UIP and the clause of the
+  // extended
+  // UIP is learnt beside it (side clause, solver literals, conflict-level atoms first)
+  private final boolean extendedBoth = Boolean.getBoolean("jacop.lcg.extendedBoth");
+  private int[] side = new int[16];
+  private int sideSize;
 
   /** Creates an empty solver. */
   public CdclSolver() {
@@ -1520,6 +1526,7 @@ public final class CdclSolver {
 
   /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
   private int analyze() {
+    sideSize = 0;
     learntSize = 0;
     addLearnt(0);
     toClearSize = 0;
@@ -1560,7 +1567,7 @@ public final class CdclSolver {
           p = uip;
           break;
         }
-        if (extendedAllowed && stopExtended(n)) {
+        if (extendedAllowed && sideSize == 0 && stopExtended(n)) {
           break;
         }
       }
@@ -1723,6 +1730,18 @@ public final class CdclSolver {
     assert samePermutation(before, frontier, n)
         : "extendedUip must reorder the frontier, not change it";
     if (kept < 2) {
+      return false;
+    }
+    if (extendedBoth) {
+      if (side.length < kept + learntSize) {
+        side = new int[2 * (kept + learntSize)];
+      }
+      for (int k = 0; k < kept; k++) {
+        side[sideSize++] = toLit(frontier[k]) ^ 1;
+      }
+      for (int i = 1; i < learntSize; i++) {
+        side[sideSize++] = learnt[i];
+      }
       return false;
     }
     for (int k = 0; k < n; k++) {
@@ -3103,6 +3122,59 @@ public final class CdclSolver {
     walking = on;
   }
 
+  /**
+   * Learns the clause of the extended UIP beside the first-UIP clause just learnt: watched on two
+   * literals that are not false, or propagating its only one, and passed to the external
+   * propagator.
+   */
+  private void learnSide() {
+    int n = sideSize;
+    sideSize = 0;
+    int open = 0;
+    for (int i = 0; i < n; i++) {
+      if (vals[side[i]] >= 0) {
+        int tmp = side[open];
+        side[open++] = side[i];
+        side[i] = tmp;
+      }
+    }
+    if (open == 0) {
+      return;
+    }
+    if (open == 1 && n > 1) {
+      int maxIndex = 1;
+      for (int i = 2; i < n; i++) {
+        if (level[side[i] >> 1] > level[side[maxIndex] >> 1]) {
+          maxIndex = i;
+        }
+      }
+      int tmp = side[1];
+      side[1] = side[maxIndex];
+      side[maxIndex] = tmp;
+    }
+    if (proof != null) {
+      proof.add(side, 0, n);
+    }
+    int ref = -1;
+    if (n == 2) {
+      addLearntBinary(side[0], side[1]);
+    } else {
+      ref = allocate(side, n, true, computeLbd(side, 0, n));
+      learnts = push(learnts, numLearnts++, ref);
+      attach(ref);
+      bumpClause(ref);
+    }
+    if (open == 1 && n > 1 && vals[side[0]] == 0) {
+      assignAt(side[0], n == 2 ? -2 - side[1] : ref, decisionLevel);
+    }
+    extendedUips++;
+    int[] dimacs = new int[n];
+    for (int i = 0; i < n; i++) {
+      dimacs[i] = toDimacs(side[i]);
+    }
+    external.extendedNogood(dimacs);
+  }
+
   private void learnClause() {
     int lbd;
     boolean extended = extendedLearnt;
@@ -3159,6 +3231,9 @@ public final class CdclSolver {
         dimacs[i] = toDimacs(learnt[i]);
       }
       external.extendedNogood(dimacs);
+    }
+    if (sideSize > 0) {
+      learnSide();
     }
     lbdSum += lbd;
     emaFastBeta *= 1 - 0.03;
