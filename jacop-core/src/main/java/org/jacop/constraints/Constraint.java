@@ -501,6 +501,28 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /** Counts a consistency call of the store for the constraint; only the store calls it. */
+  /** Experimental: nanoseconds spent in consistency, counted only under -Djacop.flowtrace.time. */
+  private long consistencyNanos;
+
+  /**
+   * Experimental: nanoseconds spent in this constraint's consistency, counted only when the store
+   * times its calls (-Djacop.flowtrace.time=true).
+   *
+   * @return the nanoseconds
+   */
+  public final long consistencyNanos() {
+    return consistencyNanos;
+  }
+
+  /**
+   * Experimental: adds time spent in consistency.
+   *
+   * @param nanos nanoseconds
+   */
+  public final void addConsistencyNanos(long nanos) {
+    consistencyNanos += nanos;
+  }
+
   public final void countConsistencyCall() {
     consistencyCalls++;
   }

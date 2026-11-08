@@ -115,6 +115,37 @@ public interface ExternalPropagator {
   }
 
   /**
+   * The integer variable of a SAT variable for the experimental flow trace ({@link FlowTrace}), or
+   * -1.
+   *
+   * @param aVar a SAT variable (DIMACS numbering)
+   * @return an index of an integer variable, or -1
+   */
+  default int traceVariable(int aVar) {
+    return -1;
+  }
+
+  /**
+   * Experimental: whether conflict analysis reports each literal it meets ({@link
+   * #notifyAnalysedLiteral}) and its end ({@link #notifyAnalysisDone}).
+   *
+   * @return true to be told
+   */
+  default boolean wantsAnalysed() {
+    return false;
+  }
+
+  /**
+   * Experimental: a literal met by conflict analysis, on the conflict side or in the learnt clause.
+   *
+   * @param lit the literal (DIMACS)
+   */
+  default void notifyAnalysedLiteral(int lit) {}
+
+  /** Experimental: the end of a conflict analysis, after the learnt literals were notified. */
+  default void notifyAnalysisDone() {}
+
+  /**
    * The integer variable whose atom a solver variable is, for semantic UIPs.
    *
    * @param aVar the solver variable, from 1

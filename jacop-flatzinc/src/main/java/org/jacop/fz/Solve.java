@@ -2610,6 +2610,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + setTimesStarts
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
+            + "\n%%%mzn-stat: lcgFlowFocusDecisions="
+            + lcg.flowFocusDecisions
+            + "\n%%%mzn-stat: lcgFlowModularity="
+            + lcg.flowModularity
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="

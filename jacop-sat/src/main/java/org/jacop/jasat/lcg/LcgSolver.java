@@ -69,6 +69,7 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
+import org.jacop.jasat.cdcl.FlowTrace;
 import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.ClauseModel;
@@ -3509,6 +3510,9 @@ public final class LcgSolver implements ExternalPropagator {
     if (litVar[dimacsVar] < 0) {
       return; // not an atom
     }
+    if (flowReason || flowSpread || flowFocus) {
+      markAnalysed(litVar[dimacsVar], learntVarsBuf, true);
+    }
     if (branching != Branching.LITERALS) {
       bump(litVar[dimacsVar]);
     }
@@ -3913,6 +3917,11 @@ public final class LcgSolver implements ExternalPropagator {
     long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
     long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
     return bLo <= aLo && aHi <= bHi;
+  }
+
+  @Override
+  public int traceVariable(int aVar) {
+    return aVar < litVar.length ? litVar[aVar] : -1;
   }
 
   @Override
@@ -4738,6 +4747,259 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  // experimental: variables met in conflict analysis change branching (-Djacop.lcg.flow=off|
+  // reason|spread|focus, combined with '+'): reason bumps the reason-side variables, spread bumps
+  // the strongest neighbours of the learnt ones in a FlowGraph, focus prefers the most active
+  // variable of the FlowGraph cluster of the last conflict's UIP
+  private static final String FLOW_MODE = System.getProperty("jacop.lcg.flow", "off");
+  private final boolean flowReason = FLOW_MODE.contains("reason");
+  private final boolean flowSpread = FLOW_MODE.contains("spread");
+  private final boolean flowFocus = FLOW_MODE.contains("focus");
+  private final double flowReasonBump =
+      Double.parseDouble(System.getProperty("jacop.lcg.flowReason", "0.5"));
+  private final double flowSpreadBump =
+      Double.parseDouble(System.getProperty("jacop.lcg.flowSpread", "0.2"));
+  private final double flowFocusRatio =
+      Double.parseDouble(System.getProperty("jacop.lcg.flowFocusRatio", "0.5"));
+  private final int flowCap = Integer.getInteger("jacop.lcg.flowCap", 16);
+  private final int flowEvery = Integer.getInteger("jacop.lcg.flowEvery", 1000);
+  // focus only while the clusters' modularity is at least this (0: always)
+  private final double flowFocusGate =
+      Double.parseDouble(System.getProperty("jacop.lcg.flowGate", "0"));
+  private boolean flowModular = true;
+
+  /** Statistics: the modularity of the last clusters, in thousandths. */
+  public long flowModularity = -1;
+
+  private FlowGraph flowGraph;
+  private int[] analysedVars = new int[64];
+  private int numAnalysed;
+  private int[] learntVarsBuf = new int[64];
+  private int numLearntVars;
+  private int[] analysedStamp = new int[0];
+  private int analysedEpoch = 1;
+  private int flowUip = -1; // the variable of the last learnt clause's first literal
+  private long flowLabelsAt = -1;
+  private int[] clusterStart = new int[0];
+  private int[] clusterMembers = new int[0];
+  private int[] clusterOf = new int[0];
+
+  /** Statistics: decisions taken from the cluster of the last conflict. */
+  public long flowFocusDecisions;
+
+  @Override
+  public boolean wantsAnalysed() {
+    return flowReason || flowSpread || flowFocus;
+  }
+
+  private void markAnalysed(int i, int[] buf, boolean learnt) {
+    if (analysedStamp.length < vars.length) {
+      analysedStamp = Arrays.copyOf(analysedStamp, vars.length);
+    }
+    int stamp = learnt ? -analysedEpoch : analysedEpoch;
+    if (analysedStamp[i] == -analysedEpoch || analysedStamp[i] == stamp) {
+      return; // already a learnt variable, or seen in the same role
+    }
+    analysedStamp[i] = stamp;
+    if (learnt) {
+      if (numLearntVars == learntVarsBuf.length) {
+        learntVarsBuf = Arrays.copyOf(learntVarsBuf, 2 * numLearntVars);
+      }
+      learntVarsBuf[numLearntVars++] = i;
+    } else {
+      if (numAnalysed == analysedVars.length) {
+        analysedVars = Arrays.copyOf(analysedVars, 2 * numAnalysed);
+      }
+      analysedVars[numAnalysed++] = i;
+    }
+  }
+
+  @Override
+  public void notifyAnalysedLiteral(int lit) {
+    int d = Math.abs(lit);
+    int i = d < litVar.length ? litVar[d] : -1;
+    if (i >= 0) {
+      markAnalysed(i, analysedVars, false);
+    }
+  }
+
+  @Override
+  public void notifyAnalysisDone() {
+    if (flowSpread || flowFocus) {
+      if (flowGraph == null) {
+        flowGraph = new FlowGraph(8, 0.95);
+      }
+      flowGraph.grow(vars.length);
+    }
+    if (numLearntVars > 0) {
+      flowUip = learntVarsBuf[0];
+    }
+    if (flowReason && branching != Branching.LITERALS) {
+      for (int j = 0; j < numAnalysed; j++) {
+        int i = analysedVars[j];
+        if (analysedStamp[i] != -analysedEpoch) {
+          bumpBy(i, flowReasonBump);
+        }
+      }
+    }
+    if (flowSpread && branching != Branching.LITERALS) {
+      for (int j = 0; j < numLearntVars; j++) {
+        int a = learntVarsBuf[j];
+        double max = 0;
+        for (int s = 0; s < flowGraph.k(); s++) {
+          if (flowGraph.neighbour(a, s) >= 0) {
+            max = Math.max(max, flowGraph.weight(a, s));
+          }
+        }
+        if (max <= 0) {
+          continue;
+        }
+        for (int s = 0; s < flowGraph.k(); s++) {
+          int b = flowGraph.neighbour(a, s);
+          if (b >= 0 && analysedStamp[b] != -analysedEpoch) {
+            bumpBy(b, flowSpreadBump * flowGraph.weight(a, s) / max);
+          }
+        }
+      }
+    }
+    if (flowGraph != null) {
+      // the pairs of the learnt variables first, then of the conflict side, up to flowCap
+      int[] vs = new int[flowCap];
+      int m = 0;
+      for (int j = 0; j < numLearntVars && m < flowCap; j++) {
+        vs[m++] = learntVarsBuf[j];
+      }
+      for (int j = 0; j < numAnalysed && m < flowCap; j++) {
+        if (analysedStamp[analysedVars[j]] != -analysedEpoch) {
+          vs[m++] = analysedVars[j];
+        }
+      }
+      flowGraph.addConflict(vs, m);
+    }
+    numAnalysed = 0;
+    numLearntVars = 0;
+    analysedEpoch++;
+  }
+
+  private void bumpBy(int i, double f) {
+    if ((activity[i] += f * activityInc) > 1e100) {
+      for (int k = 0; k < activity.length; k++) {
+        activity[k] *= 1e-100;
+      }
+      activityInc *= 1e-100;
+    }
+    heapOf(i).increased(i);
+  }
+
+  // clusters of the FlowGraph as lists of members, recomputed every flowEvery conflicts
+  private void flowClusters() {
+    if (flowGraph == null || sat.conflicts - flowLabelsAt < flowEvery && flowLabelsAt >= 0) {
+      return;
+    }
+    flowLabelsAt = sat.conflicts;
+    flowGraph.grow(vars.length);
+    flowGraph.propagateLabels(5);
+    double q = flowGraph.modularity();
+    flowModularity = Math.round(1000 * q);
+    flowModular = q >= flowFocusGate;
+    int n = vars.length;
+    int[] lab = flowGraph.label;
+    clusterOf = Arrays.copyOf(lab, n);
+    clusterStart = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      clusterStart[lab[i] + 1]++;
+    }
+    for (int i = 0; i < n; i++) {
+      clusterStart[i + 1] += clusterStart[i];
+    }
+    clusterMembers = new int[n];
+    int[] fill = Arrays.copyOf(clusterStart, n);
+    for (int i = 0; i < n; i++) {
+      clusterMembers[fill[lab[i]]++] = i;
+    }
+  }
+
+  // the most active unfixed variable of the cluster of the last UIP, in heap h, when its activity
+  // is at least flowFocusRatio of the heap's best; otherwise i
+  private int flowFocusChoice(int i, VarHeap h) {
+    if (!flowModular || flowUip < 0 || flowUip >= clusterOf.length) {
+      return i;
+    }
+    int c = clusterOf[flowUip];
+    int from = clusterStart[c];
+    int to = Math.min(clusterStart[c + 1], from + 512);
+    if (to - from < 2) {
+      return i;
+    }
+    int best = -1;
+    for (int j = from; j < to; j++) {
+      int x = clusterMembers[j];
+      if (!vars[x].singleton() && heapOf(x) == h && (best < 0 || activity[x] > activity[best])) {
+        best = x;
+      }
+    }
+    if (best >= 0 && best != i && activity[best] >= flowFocusRatio * activity[i]) {
+      flowFocusDecisions++;
+      return best;
+    }
+    return i;
+  }
+
+  // experimental trace for offline study (null unless -Djacop.flowtrace is set)
+  private final FlowTrace flow = FlowTrace.get();
+  private boolean flowScopes;
+
+  private void traceDecision(int i) {
+    if (!flowScopes) {
+      flowScopes = true;
+      flow.write("V " + vars.length);
+      flow.onClose(this::traceCosts);
+      for (int v = 0; v < vars.length; v++) {
+        if (vars[v] != null) {
+          flow.write("S " + v + " " + vars[v].getSize());
+        }
+      }
+      StringBuilder b = new StringBuilder();
+      for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+        b.setLength(0);
+        b.append("C ").append(c.getClass().getSimpleName());
+        for (Var v : c.arguments()) {
+          if (v instanceof IntVar x) {
+            int id = trail.id(x);
+            if (id >= 0 && id < vars.length) {
+              b.append(' ').append(id);
+            }
+          }
+        }
+        flow.write(b.toString());
+      }
+    }
+    flow.decision(i, sat.decisionLevel());
+  }
+
+  // the constraints' consistency calls and time, with their scopes, at the end of a trace
+  private void traceCosts() {
+    StringBuilder b = new StringBuilder();
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      b.setLength(0);
+      b.append("P ")
+          .append(c.getClass().getSimpleName())
+          .append(' ')
+          .append(c.consistencyCalls())
+          .append(' ')
+          .append(c.consistencyNanos());
+      for (Var v : c.arguments()) {
+        if (v instanceof IntVar x) {
+          int id = trail.id(x);
+          if (id >= 0 && id < vars.length) {
+            b.append(' ').append(id);
+          }
+        }
+      }
+      flow.write(b.toString());
+    }
+  }
+
   private int activityDecision() {
     popFixed(heap);
     popFixed(wide);
@@ -4755,9 +5017,15 @@ public final class LcgSolver implements ExternalPropagator {
         && !vars[conflictVar].singleton()
         && heapOf(conflictVar) == h) {
       i = conflictVar; // last-conflict branching (Lecoutre et al. 2009)
+    } else if (flowFocus) {
+      flowClusters();
+      i = flowFocusChoice(i, h);
     }
     conflictVar = -1;
     decisionVar = i;
+    if (flow != null) {
+      traceDecision(i);
+    }
     if (late[i]) {
       lateDecisions++;
     }

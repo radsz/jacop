@@ -272,6 +272,11 @@ public final class CdclSolver {
 
   // --- external propagator (see ExternalPropagator)
   private ExternalPropagator external;
+  // experimental trace of conflicts for offline study (null unless -Djacop.flowtrace is set)
+  private final FlowTrace flow = FlowTrace.get();
+  private int flowTarget = -1;
+  private boolean analysedNotify;
+  private int[] flowLearnt = new int[16];
   private int externalReasonKeep = 2;
   private boolean[] observed = new boolean[0];
   // the trail prefix whose observed assignments the propagator has seen
@@ -1508,6 +1513,11 @@ public final class CdclSolver {
 
   /** First-UIP analysis of the current conflict into {@code learnt}; returns the backjump level. */
   private int analyze() {
+    analysedNotify = notifying && external.wantsAnalysed();
+    if (flow != null) {
+      flow.conflict(decisionLevel);
+      flowTarget = -1;
+    }
     learntSize = 0;
     addLearnt(0);
     toClearSize = 0;
@@ -1552,6 +1562,9 @@ public final class CdclSolver {
       ref = reasonRef(p >> 1);
       seen[p >> 1] = 0;
       pathCount--;
+      if (flow != null) {
+        flowTarget = flowVariable(p >> 1);
+      }
       if (notifying) {
         closeFrontier(p >> 1);
       }
@@ -1591,6 +1604,12 @@ public final class CdclSolver {
       for (int i = 0; i < learntSize; i++) {
         external.notifyLearntLiteral(toDimacs(learnt[i]));
       }
+    }
+    if (flow != null) {
+      traceLearnt();
+    }
+    if (analysedNotify) {
+      external.notifyAnalysisDone();
     }
 
     if (learntSize == 1) {
@@ -1781,8 +1800,40 @@ public final class CdclSolver {
   }
 
   /** Marks the variable of a reason literal; returns 1 when it is at the conflict level. */
+  /** The integer variable of SAT variable v for the flow trace, or -1. */
+  private int flowVariable(int v) {
+    return external == null ? -1 : external.traceVariable(v + 1);
+  }
+
+  private void traceLearnt() {
+    int n = 0;
+    for (int i = 0; i < learntSize; i++) {
+      int g = flowVariable(learnt[i] >> 1);
+      if (g < 0) {
+        continue;
+      }
+      boolean dup = false;
+      for (int k = 0; k < n && !dup; k++) {
+        dup = flowLearnt[k] == g;
+      }
+      if (!dup) {
+        if (n == flowLearnt.length) {
+          flowLearnt = Arrays.copyOf(flowLearnt, 2 * n);
+        }
+        flowLearnt[n++] = g;
+      }
+    }
+    flow.learnt(flowLearnt, n);
+  }
+
   private int analyzeLit(int q) {
     int v = q >> 1;
+    if (flow != null && level[v] > 0) {
+      flow.edge(flowVariable(v), flowTarget);
+    }
+    if (analysedNotify && level[v] > 0) {
+      external.notifyAnalysedLiteral(v + 1);
+    }
     if (seen[v] != 0 || level[v] == 0 || reason[v] == UNIT_REASON) {
       return 0;
     }
@@ -3081,6 +3132,9 @@ public final class CdclSolver {
 
   private void restart() {
     restarts++;
+    if (flow != null) {
+      flow.restart();
+    }
     backtrack(0);
     if (external != null) {
       external.notifyRestart();

@@ -60,6 +60,9 @@ import org.jacop.util.SparseSet;
 @Slf4j
 public class Store {
 
+  // experimental: time each consistency call of each constraint (statistics only)
+  private static final boolean TIME_CONSTRAINTS = Boolean.getBoolean("jacop.flowtrace.time");
+
   /** It stores standard fail exception used when empty domain encountered. */
   public static final FailException failException = new FailException();
 
@@ -949,7 +952,17 @@ public class Store {
           numberConsistencyCalls++;
           currentConstraint.countConsistencyCall();
           long changesBefore = domainChanges;
-          currentConstraint.consistency(this);
+          if (TIME_CONSTRAINTS) {
+            Constraint timed = currentConstraint;
+            long t0 = System.nanoTime();
+            try {
+              timed.consistency(this);
+            } finally {
+              timed.addConsistencyNanos(System.nanoTime() - t0);
+            }
+          } else {
+            currentConstraint.consistency(this);
+          }
           if (variableActivityManagement) {
             updateActivities(currentConstraint);
             variablesPrunned.clear();
