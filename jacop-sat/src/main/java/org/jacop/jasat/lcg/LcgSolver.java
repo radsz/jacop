@@ -3423,15 +3423,58 @@ public final class LcgSolver implements ExternalPropagator {
             }
           }
         };
+    boolean propagatorLeft = false;
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
         graphConstraintsEncoded++;
-      } else if (c instanceof ImpliedClauses i && !rootFailed) {
-        impliedClauses += i.impliedClauses(model);
+      } else {
+        propagatorLeft = true;
+        if (c instanceof ImpliedClauses i && !rootFailed) {
+          impliedClauses += i.impliedClauses(model);
+        }
       }
     }
+    if (PURE_CLAUSE_LITERALS
+        && freeSearch
+        && branching == Branching.ALTERNATE
+        && annotation != null
+        && !propagatorLeft
+        && allBinary()) {
+      // every constraint became clauses and every variable is 0/1: the model is a CNF, and the
+      // turns of the annotation (or dom/wdeg) and of activity branching only make slower SAT
+      // decisions. Nonograms at 600 s, two seeds: 2026 hard_03 53-56 s instead of 388 s and
+      // unsolved, 2013 dom_14 4-22 s instead of 79-129 s; 19 of 58 runs faster, 1 slower. Not with
+      // wider domains: pentominoes, whose regular constraints become clauses too, lost up to 4x
+      branching = Branching.LITERALS;
+      annotation = null;
+      annotationRun = false;
+      activityBranching = false;
+      pureClauses = true;
+    }
   }
+
+  /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
+  private boolean allBinary() {
+    for (IntVar x : vars) {
+      if (x != null && x.getSize() > 2) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Whether a free search whose model is clauses only, with no constraint left in the store once
+   * {@link #encodeGraphs} has run, leaves all decisions to the SAT solver (as {@link
+   * Branching#LITERALS}). On by default; the system property {@code jacop.lcg.pureClauseLiterals}
+   * set to false turns it off.
+   */
+  static final boolean PURE_CLAUSE_LITERALS =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pureClauseLiterals", "true"));
+
+  /** Whether the model became clauses only and its search was left to the SAT solver. */
+  public boolean pureClauses;
 
   /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
@@ -3576,6 +3619,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
       numAnnotationIndices--;
+    }
+    while (numLastLevels > 0 && lastLevel[numLastLevels - 1] > level) {
+      lastSize = lastLevelSize[--numLastLevels];
     }
     // a notified literal at or below the level stays assigned, and the solver does not notify it
     // again: it is applied at the next propagation (the root's, when a probe stopped at the
@@ -3737,14 +3783,17 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
-    deleteLpSteps();
-    if (onBound != null && objective >= 0 && store.level == baseLevel) {
-      rootBound();
+    // a restart under assumptions keeps their level, whose bounds hold only under them
+    if (store.level == baseLevel) {
+      deleteLpSteps();
+      if (onBound != null && objective >= 0) {
+        rootBound();
+      }
+      if (restartPresolve > 0) {
+        presolveAtRestart();
+      }
+      exchangeShared();
     }
-    if (restartPresolve > 0 && store.level == baseLevel) {
-      presolveAtRestart();
-    }
-    exchangeShared();
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {
@@ -4683,6 +4732,16 @@ public final class LcgSolver implements ExternalPropagator {
     return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
   }
 
+  // decideLast scans the variables in lastOrder[0, lastSize), moving the fixed ones past lastSize;
+  // lastLevelSize[k] is lastSize when the scan first ran at decision level lastLevel[k], restored
+  // when search backtracks below that level (the scan over all variables at each decision took
+  // 48 % of skill-allocation's run time)
+  private int[] lastOrder;
+  private int lastSize;
+  private int[] lastLevel = new int[16];
+  private int[] lastLevelSize = new int[16];
+  private int numLastLevels;
+
   /**
    * Without activity branching, once the solver has assigned every literal, branches on {@code [x
    * <= min]} of the unfixed variable with the smallest domain.
@@ -4692,14 +4751,47 @@ public final class LcgSolver implements ExternalPropagator {
     if (activityBranching || !structural.isEmpty()) {
       return 0;
     }
+    if (lastOrder == null || lastOrder.length != vars.length) {
+      lastOrder = new int[vars.length];
+      lastSize = 0;
+      for (int i = 0; i < vars.length; i++) {
+        if (vars[i] != null && !unused[i]) {
+          lastOrder[lastSize++] = i;
+        }
+      }
+      numLastLevels = 0;
+    }
+    int level = sat.decisionLevel();
+    if (numLastLevels == 0 || lastLevel[numLastLevels - 1] < level) {
+      if (numLastLevels == lastLevel.length) {
+        lastLevel = Arrays.copyOf(lastLevel, 2 * numLastLevels);
+        lastLevelSize = Arrays.copyOf(lastLevelSize, 2 * numLastLevels);
+      }
+      lastLevel[numLastLevels] = level;
+      lastLevelSize[numLastLevels++] = lastSize;
+    }
     int localBest = -1;
     int bestSize = Integer.MAX_VALUE;
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] != null && !unused[i] && !vars[i].singleton() && vars[i].getSize() < bestSize) {
-        localBest = i;
-        bestSize = vars[i].getSize();
+    int size = lastSize;
+    for (int p = 0; p < size; ) {
+      int i = lastOrder[p];
+      IntVar x = vars[i];
+      if (x.singleton()) {
+        // fixed at this level or below: out of the scan until a backtrack below the level
+        lastOrder[p] = lastOrder[--size];
+        lastOrder[size] = i;
+        continue;
+      }
+      p++;
+      if (!unused[i]) {
+        int n = x.getSize();
+        if (n < bestSize || (n == bestSize && i < localBest)) {
+          localBest = i;
+          bestSize = n;
+        }
       }
     }
+    lastSize = size;
     if (localBest < 0) {
       return 0;
     }

@@ -72,7 +72,10 @@ public interface ExternalPropagator {
    */
   default void notifyBacktrack(int level) {}
 
-  /** The solver restarted; {@link #notifyBacktrack} to level 0 came just before. */
+  /**
+   * The solver restarted; {@link #notifyBacktrack} came just before, to level 0, or to level 1 when
+   * the solver searches under assumptions, which it keeps on level 1 at restarts.
+   */
   default void notifyRestart() {}
 
   /**

@@ -248,6 +248,9 @@ public class Options {
                 relaxation has value columns, or under -f tree cuts),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
+                neighbourhood and lower-bound runs on one decision level, kept at restarts;
+                0 gives each its own level, default 1),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),
@@ -287,7 +290,9 @@ public class Options {
                 evaluated), ls-sym=1|0 (1, the default: the symmetry breaking constraints JaCoP
                 adds are not evaluated; a solution is moved onto a symmetric one that holds them),
                 ls-keys=1|0 (1, the default: the other columns of a table with a key column follow
-                the key as definitions)
+                the key as definitions), ls-follow=1|0 (1, the default: a variable of the lists of
+                element constraints list[index] = y that nothing else reads is not moved but takes
+                the value of y most of the element constraints selecting it ask for)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
