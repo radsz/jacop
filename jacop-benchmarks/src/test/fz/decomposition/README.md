@@ -140,7 +140,14 @@ is the per-constraint table of the suite.
 `allsolutions/` holds small models written for the constraints that no benchmark problem uses:
 `models/*.mzn`, flattened by `allsolutions/gen.sh` with JaCoP's library (`<m>/<m>.fzn`) and with
 MiniZinc's standard library (`<m>/<m>.std.fzn`), where `allsolutions/shims/` decomposes the
-predicates that only JaCoP has.
+predicates that only JaCoP has. Model names start with `m_` so that a model never shadows a
+library file of the same name (`lex_chain_less_bool.mzn` did). `models/<m>.jacop-flags` adds
+flags to the JaCoP flattening and `models/<m>.no-std` skips the standard one.
+`AllSolutionsModelsTest` (in the build) runs every model that has both flattenings.
+
+A reference run that prints solutions and then `=====UNSATISFIABLE=====` is an error, not a
+complete run: JaCoP did that at the time limit before the fix of the timed-out child search
+(KidneyExchange-4-041_c23), and the suite then reported false `WRONG` verdicts.
 
 Other properties: `suite.solutions` (solution limit, 2000000), `suite.maxBytes` (largest FlatZinc
 file, 1000000), `suite.objectives` (2), `suite.allOutput` (true), `suite.problems` (regular

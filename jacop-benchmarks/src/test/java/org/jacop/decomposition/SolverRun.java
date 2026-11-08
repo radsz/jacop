@@ -219,7 +219,16 @@ final class SolverRun {
           addSolution(current.toString());
           current.setLength(0);
         }
-        case "==========", "=====UNSATISFIABLE=====" -> seen = Status.COMPLETE;
+        case "==========" -> seen = Status.COMPLETE;
+        case "=====UNSATISFIABLE=====" -> {
+          if (solutions > 0) {
+            // a contradiction: JaCoP printed solutions and then claimed there are none
+            seen = Status.ERROR;
+            error = "=====UNSATISFIABLE===== after " + solutions + " solutions";
+          } else {
+            seen = Status.COMPLETE;
+          }
+        }
         case "=====UNKNOWN=====", "=====UNSATorUNBOUNDED=====", "=====UNBOUNDED=====" -> {
           // keep INCOMPLETE
         }
