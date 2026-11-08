@@ -3424,10 +3424,17 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     boolean propagatorLeft = false;
+    if (org.jacop.core.ConstraintProfile.ON) {
+      for (Constraint c : store.getConstraints()) {
+        org.jacop.core.ConstraintProfile.of(c);
+      }
+    }
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
         graphConstraintsEncoded++;
+      } else if (clauseCandidate(c) && encodeAsClauses(c)) {
+        constraintsAsClauses++;
       } else {
         propagatorLeft = true;
         if (c instanceof ImpliedClauses i && !rootFailed) {
@@ -3452,6 +3459,99 @@ public final class LcgSolver implements ExternalPropagator {
       activityBranching = false;
       pureClauses = true;
     }
+  }
+
+  /**
+   * The classes of small constraints that become clauses of the solver in place of their
+   * propagators ({@link ClauseEncoder}): a comma-separated list of simple class names, "all" or
+   * "none", by the system property {@code jacop.lcg.clauses}.
+   */
+  static final String CLAUSE_CLASSES = System.getProperty("jacop.lcg.clauses", "none");
+
+  /** The most clauses one constraint may become, {@code jacop.lcg.clauses.limit}. */
+  static final int CLAUSE_LIMIT = Integer.getInteger("jacop.lcg.clauses.limit", 256);
+
+  /** The most values a variable of such a constraint may have, {@code jacop.lcg.clauses.dom}. */
+  static final int CLAUSE_DOM = Integer.getInteger("jacop.lcg.clauses.dom", 64);
+
+  /** The most unfixed variables of such a constraint, {@code jacop.lcg.clauses.arity}. */
+  static final int CLAUSE_ARITY = Integer.getInteger("jacop.lcg.clauses.arity", 16);
+
+  private static final java.util.Set<String> CLAUSE_SET =
+      new java.util.HashSet<>(Arrays.asList(CLAUSE_CLASSES.split(",")));
+
+  /** Statistics: constraints given to the solver as clauses by {@link ClauseEncoder}. */
+  public long constraintsAsClauses;
+
+  /** Statistics: clauses of those constraints. */
+  public long constraintClauses;
+
+  /** The constraints removed from the store as clauses, put back by {@link #release}. */
+  private final List<Constraint> encodedConstraints = new ArrayList<>();
+
+  private ClauseEncoder clauseEncoder;
+
+  private boolean clauseCandidate(Constraint c) {
+    if ("none".equals(CLAUSE_CLASSES)
+        || !("all".equals(CLAUSE_CLASSES) || CLAUSE_SET.contains(c.getClass().getSimpleName()))) {
+      return false;
+    }
+    int arity = 0;
+    for (org.jacop.core.Var v : c.arguments()) {
+      if (!(v instanceof IntVar x)) {
+        return false;
+      }
+      if (!x.singleton()) {
+        arity++;
+        if (trail.id(x) >= vars.length || x.getSize() > CLAUSE_DOM) {
+          return false;
+        }
+      }
+    }
+    return arity <= CLAUSE_ARITY;
+  }
+
+  private boolean encodeAsClauses(Constraint c) {
+    if (clauseEncoder == null) {
+      clauseEncoder =
+          new ClauseEncoder(
+              new ClauseEncoder.Literals() {
+                @Override
+                public int atLeast(IntVar x, int v) {
+                  return geLit(trail.id(x), v);
+                }
+
+                @Override
+                public int equal(IntVar x, int v) {
+                  return eqVar(trail.id(x), v);
+                }
+
+                @Override
+                public int auxiliary() {
+                  return newAuxiliary();
+                }
+
+                @Override
+                public IntDomain root(IntVar x) {
+                  return x.dom();
+                }
+              },
+              CLAUSE_LIMIT);
+    }
+    List<int[]> cs = clauseEncoder.encode(c);
+    if (cs == null) {
+      return false;
+    }
+    for (int[] cl : cs) {
+      constraintClauses++;
+      if (!rootFailed && !sat.addClause(cl)) {
+        rootFailed = true;
+        clauseFailedAtRoot = true;
+      }
+    }
+    c.removeConstraint();
+    encodedConstraints.add(c);
+    return true;
   }
 
   /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
@@ -4079,6 +4179,11 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public void release() {
     trail.detach();
+    // search without learning needs the propagators of the constraints that became clauses
+    for (Constraint c : encodedConstraints) {
+      c.impose(store);
+    }
+    encodedConstraints.clear();
   }
 
   /**
