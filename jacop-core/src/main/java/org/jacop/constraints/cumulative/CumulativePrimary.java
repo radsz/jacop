@@ -52,6 +52,15 @@ import org.jacop.core.TimeStamp;
  * CumulativePrimary implements the cumulative constraint using time tabling
  * algorithm.
  *
+ * The sweep follows the scalable sweep of A. Letort, N. Beldiceanu and M. Carlsson, "A Scalable
+ * Sweep Algorithm for the cumulative Constraint", CP 2012, LNCS 7514, pp. 439-454: the tasks under
+ * pruning are kept by resource use, and at each change of the profile only the tasks whose use
+ * crosses the gap between the profile and the limit are touched, instead of every task under
+ * pruning. Unlike that paper, which computes the earliest start only, the sweep keeps removing
+ * every start that overlaps a point without room (holes), as before; the tasks are kept in two
+ * bit sets over the order of increasing resource use, which scans faster than the paper's heaps
+ * when, as on largescheduling, tasks cross the gap at almost every profile change.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
@@ -90,8 +99,8 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
   private final int[] eventIndex;
   private final int[] eventValue;
 
-  // sweep state, reused between calls: the state of each task and the waiting and conflicting
-  // tasks in heaps keyed by resource use (Letort, Beldiceanu and Carlsson, CP 2012)
+  // sweep state, reused between calls: the state of each task and the waiting tasks (use at most
+  // the gap) and conflicting tasks (use more), as bit sets over the order by resource use
   private static final byte NONE = 0;
   private static final byte WAITING = 1;
   private static final byte CONFLICT = 2;

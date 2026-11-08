@@ -3623,6 +3623,19 @@ Version 5.0 (unreleased)
      AztecDiamond-300 in 527 s); RamseyPartition-equ-3-0600 takes 200 s
      instead of 57 s to prove unsatisfiable.
 
+208. Cumulative with constant durations and resource uses (the time table
+     of CumulativeBasic, Cumulative and CumulativeUnary) sweeps as the
+     scalable sweep of Letort, Beldiceanu and Carlsson ("A Scalable Sweep
+     Algorithm for the cumulative Constraint", CP 2012): at each change of
+     the profile it touches only the tasks whose resource use crosses the
+     room left under the limit, instead of every task under pruning. Its
+     explanations under --lcg read the load of the compulsory parts at a
+     time point from a profile built once per explanation, O(log n)
+     instead of a sum over all tasks. Pruning and reasons are unchanged.
+     On largescheduling instance-1600-2 (1600 tasks) the search makes
+     2.1x the nodes in 60 s: the old explanations stalled it for most of
+     the run after 8 solutions.
+
 Version 4.11
 =============
 
