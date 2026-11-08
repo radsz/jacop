@@ -143,6 +143,7 @@ import org.jacop.constraints.diffn.DiffnDecomposed;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.graph.BoundedPath;
+import org.jacop.constraints.graph.ColouredSpanningTreeBound;
 import org.jacop.constraints.graph.Path;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.graph.Steiner;
@@ -445,6 +446,12 @@ class GlobalConstraintBruteForceTest {
         Arguments.of(
             "DWeightedSpanningTreeDense",
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::denseArborescence),
+        Arguments.of(
+            "ColouredSpanningTree",
+            (Function<Random, Instance>) r -> colouredSpanningTree(r, true)),
+        Arguments.of(
+            "ColouredSpanningTreeBound",
+            (Function<Random, Instance>) r -> colouredSpanningTree(r, false)),
         Arguments.of("Steiner", weightedGraph("Steiner", false)),
         Arguments.of("DSteiner", weightedGraph("Steiner", true)),
         Arguments.of("SteinerDense", (Function<Random, Instance>) r -> denseSteiner(r, false)),
@@ -1841,6 +1848,101 @@ class GlobalConstraintBruteForceTest {
               + " w="
               + Arrays.toString(w));
     };
+  }
+
+  /**
+   * A spanning tree with colour limits on a random multigraph: 2 to 5 nodes, 3 to 9 edges, weights
+   * in 0..5, colours 0..2 or none, limits 0..2 and a narrow cost window, so that the matroid
+   * intersection test and the Lagrangian bound decide often. With the tree, the bound is posted
+   * next to {@link WeightedSpanningTree} and the colour sums, as the FlatZinc detector does; alone,
+   * its own semantics are checked (a spanning tree within the limits, cost at least its weight).
+   * Variables: es, then the cost.
+   */
+  private static Instance colouredSpanningTree(Random random, boolean withTree) {
+    int n = 2 + random.nextInt(4);
+    int m = 3 + random.nextInt(7);
+    int base = random.nextInt(2);
+    int colourNo = 1 + random.nextInt(3);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] w = new int[m];
+    int[] colours = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(n);
+      w[e] = random.nextInt(6);
+      colours[e] = random.nextInt(colourNo + 1) - 1;
+    }
+    int[] caps = new int[colourNo];
+    for (int c = 0; c < colourNo; c++) {
+      caps[c] = random.nextInt(3);
+    }
+    int[][] domains = new int[m + 1][];
+    for (int e = 0; e < m; e++) {
+      int r = random.nextInt(8);
+      domains[e] = r == 0 ? new int[] {0} : r == 1 ? new int[] {1} : new int[] {0, 1};
+    }
+    int lo = random.nextInt(3 * n) - 2;
+    domains[m] = domain(random, lo, lo + 2 + random.nextInt(10));
+    int[] fromNumber = Arrays.stream(from).map(v -> v + base).toArray();
+    int[] toNumber = Arrays.stream(to).map(v -> v + base).toArray();
+    return new Instance(
+        domains,
+        (store, x) -> {
+          IntVar[] es = Arrays.copyOfRange(x, 0, m);
+          if (withTree) {
+            store.imposeDecomposition(
+                new WeightedSpanningTree(n, fromNumber, toNumber, w, null, es, x[m], base, false));
+            for (int c = 0; c < colourNo; c++) {
+              final int colour = c;
+              IntVar[] members =
+                  IntStream.range(0, m)
+                      .filter(e -> colours[e] == colour)
+                      .mapToObj(e -> es[e])
+                      .toArray(IntVar[]::new);
+              if (members.length > 0) {
+                int[] ones = new int[members.length];
+                Arrays.fill(ones, 1);
+                store.impose(new LinearInt(members, ones, "<=", caps[c]));
+              }
+            }
+          }
+          store.impose(
+              new ColouredSpanningTreeBound(
+                  n, fromNumber, toNumber, w, colours, caps, es, x[m], base));
+        },
+        x -> {
+          int[] es = Arrays.copyOfRange(x, 0, m);
+          int sum = 0;
+          int[] count = new int[colourNo];
+          for (int e = 0; e < m; e++) {
+            sum += es[e] * w[e];
+            if (es[e] == 1 && colours[e] >= 0 && ++count[colours[e]] > caps[colours[e]]) {
+              return false;
+            }
+          }
+          if (withTree ? sum != x[m] : sum > x[m]) {
+            return false;
+          }
+          int[] ns = new int[n];
+          Arrays.fill(ns, 1);
+          for (int r = 0; r < n; r++) {
+            if (GraphSemantics.tree(from, to, ns, es, r)) {
+              return true;
+            }
+          }
+          return false;
+        },
+        "from="
+            + Arrays.toString(fromNumber)
+            + " to="
+            + Arrays.toString(toNumber)
+            + " w="
+            + Arrays.toString(w)
+            + " colours="
+            + Arrays.toString(colours)
+            + " caps="
+            + Arrays.toString(caps));
   }
 
   /**
