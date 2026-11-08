@@ -445,6 +445,17 @@ public class LinearRelaxation extends Constraint
   private boolean denseIdentity;
   private int denseRows;
   private int denseDormant;
+  private long denseCuts;
+
+  // whether the move to the sparse simplex was tried; it is tried once, by the first round of cuts
+  // at the root that does not fit the dense tableau
+  private boolean sparseTried;
+
+  // the capacity, energy and Hall cuts kept on the sparse simplex after the move, which go when
+  // the rows go back to the dense tableau
+  private int movedCapacity;
+  private int movedEnergy;
+  private int movedAlldiff;
 
   /** Statistics: whether the rows moved from the full dense tableau to JaLP for the cuts. */
   public boolean sparseCuts;
@@ -2752,18 +2763,18 @@ public class LinearRelaxation extends Constraint
         rootLo[j] = x[j].min();
         rootHi[j] = x[j].max();
       }
-      // the capacity, energy and Hall cuts are made once, at the first solve
+      // the capacity, energy and Hall cuts are made once, at the first solve; a round of them
+      // that does not fit the dense tableau moves the rows to the sparse simplex
+      int status = DualSimplex.OPTIMAL;
       if (!capacity.isEmpty() || !energy.isEmpty()) {
-        int status = capacityRounds();
-        if (status != DualSimplex.OPTIMAL) {
-          return status;
-        }
+        status = capacityRounds();
       }
-      if (!hall.isEmpty()) {
-        int status = hallRounds();
-        if (status != DualSimplex.OPTIMAL) {
-          return status;
-        }
+      if (status == DualSimplex.OPTIMAL && !hall.isEmpty()) {
+        status = hallRounds();
+      }
+      if (status != DualSimplex.OPTIMAL) {
+        forgetDense();
+        return status;
       }
     }
     // the bounds of the first solve, which hold everywhere, also for the cuts made at restarts
@@ -2777,8 +2788,8 @@ public class LinearRelaxation extends Constraint
     }
     Set<List<Long>> seen = new HashSet<>();
     int status = DualSimplex.OPTIMAL;
-    long cutsBefore = cuts;
-    boolean moved = !restarting && moveToSparse();
+    // the rows may have moved already, for the capacity, energy or Hall cuts
+    boolean moved = denseBeforeCuts != null || !restarting && moveToSparse();
     for (int round = 0; round < CUT_ROUNDS; round++) {
       List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen);
       if (chosen.isEmpty()) {
@@ -2810,27 +2821,27 @@ public class LinearRelaxation extends Constraint
     }
     if (moved
         && status == DualSimplex.OPTIMAL
-        && (cuts == cutsBefore
+        && (cuts == denseCuts
             || integerBound(lp.value(0)) == integerBound(denseBeforeCuts.value(0)))) {
       // the cuts do not raise the bound of the integer objective: the sparse simplex would only
       // make each solve in search dearer than the dense one (mqueens), so back to the dense
       // tableau, at the same optimum, without the cuts
-      droppedPivots += lp.pivots() - denseBeforeCuts.pivots();
-      lp = denseBeforeCuts;
-      simplex = Simplex.DENSE;
-      truncateRows(denseRows);
-      lpRow = denseLpRow;
-      inLp = denseInLp;
-      inactive = denseInactive;
-      identityRows = denseIdentity;
-      dormant = denseDormant;
-      cuts = cutsBefore;
-      sparseCuts = false;
+      int capacityMoved = movedCapacity + movedEnergy;
+      int alldiffMoved = movedAlldiff;
+      capacityCuts -= movedCapacity;
+      energyCuts -= movedEnergy;
+      alldiffCuts -= movedAlldiff;
+      int forms = capacityForms.size();
+      capacityForms.subList(forms - capacityMoved - alldiffMoved, forms).clear();
+      backToDense();
+      if (capacityMoved > 0) {
+        capacityBound = lp.value(0);
+      }
+      if (alldiffMoved > 0) {
+        alldiffBound = lp.value(0);
+      }
     }
-    denseBeforeCuts = null;
-    denseLpRow = null;
-    denseInLp = null;
-    denseInactive = null;
+    forgetDense();
     if (status == DualSimplex.OPTIMAL && !restarting) {
       cutBound = lp.value(0);
     }
@@ -2852,9 +2863,10 @@ public class LinearRelaxation extends Constraint
     int m = lp.rows();
     int n = lp.columns();
     long room = (long) (m + CUTS_PER_ROUND) * (m + CUTS_PER_ROUND + n + 1);
-    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
+    if (!SPARSE_CUTS || sparseTried || simplex != Simplex.DENSE || room <= tableauCap) {
       return false;
     }
+    sparseTried = true;
     int[][] cs = new int[m][];
     double[][] ws = new double[m][];
     double[] lo = new double[m];
@@ -2896,10 +2908,45 @@ public class LinearRelaxation extends Constraint
     denseIdentity = identityRows;
     denseRows = rows();
     denseDormant = dormant;
+    denseCuts = cuts;
     lp = s;
     simplex = Simplex.SPARSE;
     sparseCuts = true;
     return true;
+  }
+
+  // forgets the dense simplex the rows moved from, and the cuts kept after the move
+  private void forgetDense() {
+    denseBeforeCuts = null;
+    denseLpRow = null;
+    denseInLp = null;
+    denseInactive = null;
+    movedCapacity = 0;
+    movedEnergy = 0;
+    movedAlldiff = 0;
+  }
+
+  /**
+   * Goes back from the sparse simplex to the dense one the rows moved from ({@link #moveToSparse}),
+   * at its optimum and without the rows added after the move; the capacity cuts among those rows
+   * may come back in search.
+   */
+  private void backToDense() {
+    for (int i = denseRows; i < rows(); i++) {
+      capacitySeen.remove(key(MirCut.row(rowColumns[i], rowWeights[i], rowHi[i], 0)));
+    }
+    droppedPivots += lp.pivots() - denseBeforeCuts.pivots();
+    lp = denseBeforeCuts;
+    simplex = Simplex.DENSE;
+    truncateRows(denseRows);
+    lpRow = denseLpRow;
+    inLp = denseInLp;
+    inactive = denseInactive;
+    identityRows = denseIdentity;
+    dormant = denseDormant;
+    cuts = denseCuts;
+    sparseCuts = false;
+    forgetDense();
   }
 
   // whether the MIR of a row of the tableau also tries the weight of its basic column as divisor,
@@ -3083,6 +3130,10 @@ public class LinearRelaxation extends Constraint
     int[] firstRows = lpRow;
     int added = 0;
     int addedEnergy = 0;
+    // the cuts added before the rows moved to the sparse simplex in these rounds, if they move
+    boolean movedHere = false;
+    int addedDense = 0;
+    int energyDense = 0;
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
@@ -3103,7 +3154,7 @@ public class LinearRelaxation extends Constraint
     }
     for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
       // energy cuts stay at the root; in search only capacity cuts are separated
-      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen);
+      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen, false);
       int n = lp.columns();
       int routing = chosen.size();
       if (!energy.isEmpty()) {
@@ -3117,9 +3168,7 @@ public class LinearRelaxation extends Constraint
         }
         found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
         for (MirCut row : found) {
-          long m = (long) lp.rows() + chosen.size() + 1;
-          if (chosen.size() - routing >= CUTS_PER_ROUND
-              || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+          if (chosen.size() - routing >= CUTS_PER_ROUND) {
             break;
           }
           if (seen.add(key(row))) {
@@ -3127,6 +3176,12 @@ public class LinearRelaxation extends Constraint
           }
         }
       }
+      if (fitRound(chosen, seen)) {
+        movedHere = true;
+        addedDense = added;
+        energyDense = addedEnergy;
+      }
+      routing = Math.min(routing, chosen.size());
       if (chosen.isEmpty()) {
         break;
       }
@@ -3157,9 +3212,17 @@ public class LinearRelaxation extends Constraint
         && added > 0
         && Math.abs(lp.value(0) - start) <= 1e-6 * (1 + Math.abs(start))) {
       // cuts that do not move the bound only make each solve dearer
-      dropCuts(added, first, firstRows);
+      if (movedHere) {
+        backToDense();
+        dropCuts(addedDense, first, firstRows);
+      } else {
+        dropCuts(added, first, firstRows);
+      }
       added = 0;
       addedEnergy = 0;
+    } else if (movedHere) {
+      movedCapacity += added - addedEnergy - (addedDense - energyDense);
+      movedEnergy += addedEnergy - energyDense;
     }
     capacityCuts += added - addedEnergy;
     energyCuts += addedEnergy;
@@ -3202,6 +3265,9 @@ public class LinearRelaxation extends Constraint
     LpSolver first = lp.copy();
     int[] firstRows = lpRow;
     int added = 0;
+    // the cuts added before the rows moved to the sparse simplex in these rounds, if they move
+    boolean movedHere = false;
+    int addedDense = 0;
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
@@ -3220,16 +3286,17 @@ public class LinearRelaxation extends Constraint
       }
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
       List<MirCut> chosen = new ArrayList<>();
-      int n = lp.columns();
       for (MirCut row : found) {
-        long m = (long) lp.rows() + chosen.size() + 1;
-        if (chosen.size() >= CUTS_PER_ROUND
-            || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+        if (chosen.size() >= CUTS_PER_ROUND) {
           break;
         }
         if (seen.add(key(row))) {
           chosen.add(row);
         }
+      }
+      if (fitRound(chosen, seen)) {
+        movedHere = true;
+        addedDense = added;
       }
       if (chosen.isEmpty()) {
         break;
@@ -3260,8 +3327,15 @@ public class LinearRelaxation extends Constraint
         && added > 0
         && Math.abs(lp.value(0) - start) <= 1e-6 * (1 + Math.abs(start))) {
       // cuts that do not move the bound only make each solve dearer
-      dropCuts(added, first, firstRows);
+      if (movedHere) {
+        backToDense();
+        dropCuts(addedDense, first, firstRows);
+      } else {
+        dropCuts(added, first, firstRows);
+      }
       added = 0;
+    } else if (denseBeforeCuts != null) {
+      movedAlldiff += added - addedDense;
     }
     alldiffCuts += added;
     keepCapacityForms(firstCount, added);
@@ -3289,9 +3363,46 @@ public class LinearRelaxation extends Constraint
     return MirCut.row(cs, ws, sign * cut.bound(), cut.efficacy());
   }
 
-  // the cuts violated by the solution of the simplex, at most limit and within the dense cap, as
-  // rows; the keys of the cuts chosen are added to seen, and cuts already seen are left out
-  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen) {
+  // whether k more rows fit the tableau: always for the sparse simplex, within the cap for the
+  // dense one
+  private boolean fits(int k) {
+    long m = (long) lp.rows() + k;
+    return simplex != Simplex.DENSE || m * (m + lp.columns()) <= tableauCap;
+  }
+
+  /**
+   * Fits a round of root cuts, capacity, energy or Hall cuts, to the simplex: when the round does
+   * not fit the dense tableau the rows move to the sparse simplex ({@link #moveToSparse}), which
+   * takes it whole, and otherwise the round is cut to what fits, and the keys of the cuts left out
+   * are taken out of seen.
+   *
+   * @param chosen the cuts of the round, in their order of choice
+   * @param seen the keys of the cuts chosen so far
+   * @return whether the rows moved
+   */
+  private boolean fitRound(List<MirCut> chosen, Set<List<Long>> seen) {
+    if (fits(chosen.size())) {
+      return false;
+    }
+    if (!restarting && moveToSparse()) {
+      return true;
+    }
+    int k = chosen.size();
+    while (k > 0 && !fits(k)) {
+      k--;
+    }
+    List<MirCut> left = chosen.subList(k, chosen.size());
+    for (MirCut c : left) {
+      seen.remove(key(c));
+    }
+    left.clear();
+    return false;
+  }
+
+  // the cuts violated by the solution of the simplex, at most limit and, with capped, within the
+  // dense cap, as rows; the keys of the cuts chosen are added to seen, and cuts already seen are
+  // left out
+  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen, boolean capped) {
     List<MirCut> chosen = new ArrayList<>();
     int n = lp.columns();
     for (int c = 0; c < capacity.size(); c++) {
@@ -3305,7 +3416,8 @@ public class LinearRelaxation extends Constraint
       for (CapacityCuts.Cut cut : cc.separate(value, limit)) {
         MirCut row = row(cut, column);
         long m = (long) lp.rows() + chosen.size() + 1;
-        if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+        if (chosen.size() >= limit
+            || capped && simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
           break;
         }
         if (row != null && seen.add(key(row))) {
@@ -3331,7 +3443,7 @@ public class LinearRelaxation extends Constraint
   // ones go into the simplex and the pool, and the relaxation is solved again with them
   private int searchCapacityCuts(int limit) {
     capacitySeparations++;
-    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen);
+    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen, true);
     if (chosen.isEmpty()) {
       capacityPeriod = Math.min(2 * capacityPeriod, CAPACITY_MAX_PERIOD);
       return LpSolver.OPTIMAL;

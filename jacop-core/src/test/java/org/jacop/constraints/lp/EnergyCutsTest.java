@@ -34,8 +34,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.InputOrderSelect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -184,5 +189,80 @@ class EnergyCutsTest {
     assertThat(best.columns).containsExactly(0, 1, 2);
     assertThat(best.weights).containsExactly(-2, -3, -4);
     assertThat(best.rhs).isEqualTo(-26);
+  }
+
+  /**
+   * Random resources with a weighted sum of starts to minimize keep their optimum when the energy
+   * cuts do not fit the dense tableau (a cap of one entry) and the rows move to the sparse simplex
+   * for them; the bound of the cuts is not above the optimum, and on some instances the rows stay
+   * on the sparse simplex with the cuts.
+   */
+  @Test
+  void energyCutsOnJalpAboveTheTableauCapKeepTheOptimum() {
+    Random rnd = new Random(11);
+    int kept = 0;
+    for (int instance = 0; instance < INSTANCES / 3; instance++) {
+      long seed = rnd.nextLong();
+      long expected = optimum(new Random(seed), null);
+      LinearRelaxation[] r = new LinearRelaxation[1];
+      long actual = optimum(new Random(seed), r);
+      assertThat(actual).as("instance %d", instance).isEqualTo(expected);
+      if (r[0] == null || expected == Long.MIN_VALUE) {
+        continue;
+      }
+      if (!Double.isNaN(r[0].capacityBound)) {
+        assertThat(r[0].capacityBound)
+            .as("instance %d", instance)
+            .isLessThanOrEqualTo(expected + 1e-6);
+      }
+      if (r[0].sparseCuts && r[0].energyCuts > 0) {
+        kept++;
+      }
+    }
+    assertThat(kept).isPositive();
+  }
+
+  // the least weighted sum of starts of a random resource with a precedence, by search, with the
+  // relaxation at a tableau cap of one entry when relaxation is given
+  private static long optimum(Random rnd, LinearRelaxation[] relaxation) {
+    Store store = new Store();
+    int n = 4 + rnd.nextInt(3);
+    int cap = 1 + rnd.nextInt(3);
+    IntVar[] starts = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] use = new IntVar[n];
+    int[] w = new int[n + 1];
+    IntVar[] vars = new IntVar[n + 1];
+    int range = 0;
+    for (int j = 0; j < n; j++) {
+      starts[j] = new IntVar(store, "s" + j, rnd.nextInt(3), 12);
+      int d = 1 + rnd.nextInt(3);
+      dur[j] = new IntVar(store, d, d);
+      int u = 1 + rnd.nextInt(cap);
+      use[j] = new IntVar(store, u, u);
+      w[j] = 1 + rnd.nextInt(4);
+      vars[j] = starts[j];
+      range += w[j] * 12;
+    }
+    IntVar cost = new IntVar(store, "cost", 0, range);
+    vars[n] = cost;
+    w[n] = -1;
+    store.impose(new LinearInt(vars, w, "==", 0));
+    store.impose(
+        new LinearInt(new IntVar[] {starts[0], starts[1]}, new int[] {1, -1}, "<=", -dur[0].min()));
+    store.impose(new Cumulative(starts, dur, use, new IntVar(store, cap, cap)));
+    if (relaxation != null) {
+      LinearRelaxation r = LinearRelaxation.of(store, cost, false);
+      if (r != null) {
+        r.setTableauCap(1);
+        store.impose(r);
+      }
+      relaxation[0] = r;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    boolean found =
+        search.labeling(store, new InputOrderSelect<>(store, starts, new IndomainMin<>()), cost);
+    return found ? search.getCostValue() : Long.MIN_VALUE;
   }
 }
