@@ -3221,7 +3221,42 @@ Version 5.0 (unreleased)
      --search-statistics stays, as -s -v without the -v lines after each
      solution, and so does -s -debug.
 
-189. LexChain gives its own LCG reasons on more chains. The FlatZinc front
+191. LP cut rounds above the dense tableau cap and finer Gomory
+     multipliers. When the dense simplex has no room for a round of
+     cuts (m+50 rows by m+50+n columns would pass maxTableau, 4M
+     entries), LinearRelaxation moves the root LP to a JaLP simplex
+     over the same rows and runs the cut rounds there; it goes back to
+     the dense tableau, at the same optimum and without the cuts, when
+     they do not raise the bound of the integer objective (mqueens n11:
+     cuts reach 0.9999, the bound stays 1). Switch
+     -Dorg.jacop.lp.sparseCuts=false, stat lpSparseCuts. The rows of
+     the basis inverse that weight the exact slack Gomory and aggregate
+     MIR cuts are scaled to integers at 2^36
+     (-Dorg.jacop.lp.gomoryScale) instead of 2^20, with 2^20 as the
+     fallback on overflow: once the cuts of the first round are rows
+     with weights up to 2^24, multipliers rounded at 2^20 are too coarse
+     and no MIR divisor is violated in later rounds. The slack Gomory
+     MIR now tries the weight of the basic column first, the divisor of
+     the textbook Gomory mixed-integer cut
+     (-Dorg.jacop.lp.gomoryDivisor). Reference: R. E. Gomory, An
+     algorithm for integer solutions to linear programs, in Recent
+     Advances in Mathematical Programming, McGraw-Hill (1963) 269-302;
+     H. Marchand and L. A. Wolsey, Aggregation and mixed integer
+     rounding to solve MIPs, Operations Research 49(3) (2001) 363-371.
+     Root bounds on the wide set (16 of 169 objective instances move):
+     hoist PU_2_8_1 gap closed 0 to 77 % (the float GMI probe reaches
+     77 %), radiation i8-7 59 to 100 %, racp j30_26 13 to 17 %, wmsmc
+     38 to 39 %; connect 0086_02 25 to 19 % and unit-commitment L12 33
+     to 32 % (another cut path). Checks: optimum kept by DFS and by LCG
+     with the explanation checker with the move forced on every model
+     (LinearRelaxationTest), and the cuts of both scales valid on random
+     models. Benchmarks at 600 s: hoist, radiation, racp, mqueens and
+     other moved instances (17), 13 to 13 solved by default and with
+     -f; wide set (220), 178 to 177 solved, 3 families better and 5
+     worse, and none of the 16 instances that changed makes a cut or
+     moves to JaLP (timing noise).
+
+192. LexChain gives its own LCG reasons on more chains. The FlatZinc front
      end shares one variable per constant, so the vectors of
      SocialGolfers (lex_chain over rows that hold the same constants)
      counted as having repeated variables, and LexChain refused every
@@ -3239,7 +3274,7 @@ Version 5.0 (unreleased)
      both sides), LcgFuzzTest.lexChainReasonsAgreeWithPairwiseSearch
      (LexChain against pairwise LexOrder with the explanation checker on).
 
-190. The FlatZinc front end restricts the result of int_times to the
+193. The FlatZinc front end restricts the result of int_times to the
      products of its factors' values when there are at most 4096 value
      pairs (-Dorg.jacop.fz.productDomains=false turns it off). Molnar
      (XCSP3 2022) multiplies squares into triple products in 64..262144;
@@ -3250,7 +3285,7 @@ Version 5.0 (unreleased)
      of 70 s and Molnar-4-4 in 26 s instead of 52 s. CP-SAT needs as
      many conflicts there; the gap is the cost per conflict.
 
-191. The default search under --lcg branches first, with dom/wdeg and
+194. The default search under --lcg branches first, with dom/wdeg and
      the smallest value, on the index variables of variable element
      constraints when every search variable is an index or a list
      variable of one (stat lcgElementPositions). LangfordBin (XCSP3

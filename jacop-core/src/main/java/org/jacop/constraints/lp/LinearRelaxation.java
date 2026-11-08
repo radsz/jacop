@@ -116,8 +116,13 @@ public class LinearRelaxation extends Constraint
   // the scales tried for the multipliers, the largest first
   private static final long[] SCALES = {1L << 40, 1L << 32, 1L << 24, 1L << 16, 1L << 8, 1};
 
-  // the scale of the rows of the basis inverse the Gomory cuts come from
-  private static final long GOMORY_SCALE = 1L << 20;
+  // the scale of the rows of the basis inverse the Gomory cuts come from, and the one tried when
+  // that overflows. The rounding error of a multiplier times the weights of its row must stay well
+  // below the weight of the basic column in the combination: with the cuts of a first round as
+  // rows, whose weights reach 2^24, the multipliers of 2^20 were too coarse and the later rounds
+  // found no violated Gomory cut (hoist, racp, radiation)
+  private static final long GOMORY_SCALE = Long.getLong("org.jacop.lp.gomoryScale", 1L << 36);
+  private static final long GOMORY_FALLBACK = 1L << 20;
 
   private final IntVar[] x;
   // whether each column is an auxiliary column of the relaxation ({@link LpColumn}), not a
@@ -143,7 +148,10 @@ public class LinearRelaxation extends Constraint
   private boolean[] hasHi;
   private final IntVar objective;
   private LpSolver lp;
-  private final Simplex simplex;
+  // the simplex of the relaxation: the one it was created with, or the sparse one after the rows
+  // of a full dense tableau moved there for the cuts
+  private Simplex simplex;
+  private final Simplex createdWith;
 
   // the pivots of simplices dropped for a copy kept before them
   private long droppedPivots;
@@ -421,6 +429,55 @@ public class LinearRelaxation extends Constraint
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
+
+  // whether the rows of a dense tableau with no room for a round of cuts move to the sparse
+  // simplex, which has no tableau, for the cut rounds; they stay there, with the cuts, when the
+  // cuts raise the bound of the integer objective, and go back to the dense tableau otherwise
+  private static final boolean SPARSE_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.sparseCuts"));
+
+  // the dense simplex whose rows moved to the sparse one for the cuts, and its rows in the pool,
+  // until the cut rounds end
+  private LpSolver denseBeforeCuts;
+  private int[] denseLpRow;
+  private boolean[] denseInLp;
+  private int[] denseInactive;
+  private boolean denseIdentity;
+  private int denseRows;
+  private int denseDormant;
+
+  /** Statistics: whether the rows moved from the full dense tableau to JaLP for the cuts. */
+  public boolean sparseCuts;
+
+  // the size cap of the dense tableau for the cuts of this relaxation
+  private long tableauCap = MAX_TABLEAU;
+
+  // the scale of the multipliers of the Gomory rows of this relaxation
+  private long gomoryScale = GOMORY_SCALE;
+
+  /**
+   * Sets the scale of the rows of the basis inverse the Gomory cuts come from: their largest entry
+   * becomes about the scale before they are rounded to integers. The default is {@code
+   * org.jacop.lp.gomoryScale} (2^36); a row that overflows at that scale is taken again at 2^20.
+   *
+   * @param scale the scale, at least 1
+   */
+  public void setGomoryScale(long scale) {
+    gomoryScale = scale;
+  }
+
+  /**
+   * Sets the size cap of the dense tableau, rows times columns, for the cuts of this relaxation:
+   * the cut rounds stop adding cuts to the dense tableau at the cap, and the rows move to the
+   * sparse simplex when a round of cuts would pass it. The default is {@code
+   * org.jacop.lp.maxTableau} (4,000,000); tests set a small cap to reach the move on small models.
+   *
+   * @param cap the most entries of the dense tableau with the cuts
+   */
+  public void setTableauCap(long cap) {
+    tableauCap = cap;
+  }
+
   private static final double MAX_PARALLELISM = 0.9;
 
   // rounded capacity cuts of the Routes constraints at the root, before the MIR cuts: rounds and
@@ -587,6 +644,7 @@ public class LinearRelaxation extends Constraint
       Simplex simplex) {
     numberId = idNumber.incrementAndGet();
     this.simplex = simplex;
+    this.createdWith = simplex;
     this.objective = objective;
     this.maximize = maximize;
     Map<IntVar, Integer> column = new IdentityHashMap<>();
@@ -2719,6 +2777,8 @@ public class LinearRelaxation extends Constraint
     }
     Set<List<Long>> seen = new HashSet<>();
     int status = DualSimplex.OPTIMAL;
+    long cutsBefore = cuts;
+    boolean moved = !restarting && moveToSparse();
     for (int round = 0; round < CUT_ROUNDS; round++) {
       List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen);
       if (chosen.isEmpty()) {
@@ -2748,11 +2808,104 @@ public class LinearRelaxation extends Constraint
         break;
       }
     }
+    if (moved
+        && status == DualSimplex.OPTIMAL
+        && (cuts == cutsBefore
+            || integerBound(lp.value(0)) == integerBound(denseBeforeCuts.value(0)))) {
+      // the cuts do not raise the bound of the integer objective: the sparse simplex would only
+      // make each solve in search dearer than the dense one (mqueens), so back to the dense
+      // tableau, at the same optimum, without the cuts
+      droppedPivots += lp.pivots() - denseBeforeCuts.pivots();
+      lp = denseBeforeCuts;
+      simplex = Simplex.DENSE;
+      truncateRows(denseRows);
+      lpRow = denseLpRow;
+      inLp = denseInLp;
+      inactive = denseInactive;
+      identityRows = denseIdentity;
+      dormant = denseDormant;
+      cuts = cutsBefore;
+      sparseCuts = false;
+    }
+    denseBeforeCuts = null;
+    denseLpRow = null;
+    denseInLp = null;
+    denseInactive = null;
     if (status == DualSimplex.OPTIMAL && !restarting) {
       cutBound = lp.value(0);
     }
     return status;
   }
+
+  /**
+   * Moves the rows of a dense tableau that has no room for a round of cuts to the sparse simplex of
+   * JaLP, which has no tableau: its cost per pivot is its nonzeros, and its Gomory rows come from
+   * the sparse rows of its basis inverse. The rows are those in the dense simplex, in the same
+   * order; the sparse simplex is solved from scratch with the root budget and taken when it reaches
+   * the same optimum, so the cuts start from the same bound. {@link #cutRounds} goes back to the
+   * dense simplex when the cuts do not raise the bound of the integer objective. {@code
+   * -Dorg.jacop.lp.sparseCuts=false} turns the move off.
+   *
+   * @return whether the rows moved
+   */
+  private boolean moveToSparse() {
+    int m = lp.rows();
+    int n = lp.columns();
+    long room = (long) (m + CUTS_PER_ROUND) * (m + CUTS_PER_ROUND + n + 1);
+    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
+      return false;
+    }
+    int[][] cs = new int[m][];
+    double[][] ws = new double[m][];
+    double[] lo = new double[m];
+    double[] hi = new double[m];
+    long nonzeros = 0;
+    for (int k = 0; k < m; k++) {
+      int i = lpRow[k];
+      cs[k] = rowColumns[i];
+      ws[k] = new double[rowWeights[i].length];
+      for (int t = 0; t < ws[k].length; t++) {
+        ws[k][t] = rowWeights[i][t];
+      }
+      nonzeros += cs[k].length;
+      lo[k] = hasLo[i] ? (double) rowLo[i] : Double.NEGATIVE_INFINITY;
+      hi[k] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
+    }
+    if (nonzeros > MAX_NONZEROS) {
+      return false;
+    }
+    double[] cost = new double[n];
+    cost[0] = maximize ? -1 : 1;
+    LpSolver s = sparse(cs, ws, lo, hi, cost);
+    for (int j = 0; j < n; j++) {
+      setBounds(s, j);
+    }
+    long size = Math.max(1, s.pivotWork());
+    int status = rootSolve(s, (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
+    double before = lp.value(0);
+    if (status != LpSolver.OPTIMAL
+        || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
+      droppedPivots += s.pivots();
+      return false;
+    }
+    droppedPivots += lp.pivots();
+    denseBeforeCuts = lp;
+    denseLpRow = lpRow.clone();
+    denseInLp = inLp.clone();
+    denseInactive = inactive.clone();
+    denseIdentity = identityRows;
+    denseRows = rows();
+    denseDormant = dormant;
+    lp = s;
+    simplex = Simplex.SPARSE;
+    sparseCuts = true;
+    return true;
+  }
+
+  // whether the MIR of a row of the tableau also tries the weight of its basic column as divisor,
+  // the divisor of the textbook Gomory mixed-integer cut
+  private static final boolean GOMORY_DIVISOR =
+      !"false".equals(System.getProperty("org.jacop.lp.gomoryDivisor"));
 
   private static final boolean SLACK_GOMORY =
       !"false".equals(System.getProperty("org.jacop.lp.slackGomory"));
@@ -2781,10 +2934,19 @@ public class LinearRelaxation extends Constraint
    * lambda a x <= sum lambda b}, which puts every slack at a side, a slack keeps its own rounding,
    * which is what the Gomory cut of the textbook, with its real weights, does; its weights are the
    * exact rationals of that cut over a common denominator, scaled down safely when large ({@link
-   * MirCut#reduce}).
+   * MirCut#reduce}). The MIR also tries the weight of the basic column as its divisor, the divisor
+   * of the textbook cut.
+   *
+   * @param lambda the row of the basis inverse, scaled to integers, by row of the relaxation
+   * @param basic the basic column of that row
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @param found the cuts found, to which the cuts of this row are added
+   * @return false when the arithmetic overflowed, so that a smaller scale may be tried
    */
-  private void slackGomory(
-      long[] lambda, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+  private boolean slackGomory(
+      long[] lambda, int basic, double[] value, long[] lo, long[] hi, List<MirCut> found) {
     int n = lp.columns();
     int m = lambda.length;
     long[] coef = new long[n];
@@ -2837,7 +2999,7 @@ public class LinearRelaxation extends Constraint
         xlo[n + i] = hasLo[i] ? Math.max(least, rowLo[i]) : least;
         xhi[n + i] = hasHi[i] ? Math.min(most, rowHi[i]) : most;
         if (xlo[n + i] > xhi[n + i]) {
-          return;
+          return true;
         }
         xv[n + i] = v;
         columns[q] = n + i;
@@ -2848,7 +3010,7 @@ public class LinearRelaxation extends Constraint
         neg[k] = Math.negateExact(weights[k]);
       }
       for (long[] w : new long[][] {weights, neg}) {
-        long[] g = MirCut.raw(columns, w, 0, xv, xlo, xhi);
+        long[] g = MirCut.raw(columns, w, 0, xv, xlo, xhi, GOMORY_DIVISOR ? coef[basic] : 0);
         if (g == null) {
           continue;
         }
@@ -2887,8 +3049,10 @@ public class LinearRelaxation extends Constraint
         }
       }
     } catch (ArithmeticException _) {
-      // no cut from this row
+      // no cut from this row at this scale
+      return false;
     }
+    return true;
   }
 
   /**
@@ -3243,12 +3407,19 @@ public class LinearRelaxation extends Constraint
     }
     sources.sort(Comparator.comparingDouble(j -> Math.abs(value[j] - Math.floor(value[j]) - 0.5)));
     for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
-      long[] lambda = scaled(byRow(lp.inverseRow(lp.basicRow(j))), GOMORY_SCALE);
+      double[] y = byRow(lp.inverseRow(lp.basicRow(j)));
+      long[] lambda = scaled(y, gomoryScale);
       if (lambda != null) {
-        if (slackGomory) {
-          slackGomory(lambda, value, lo, hi, found);
+        long[] coarse = null;
+        if (slackGomory && !slackGomory(lambda, j, value, lo, hi, found)) {
+          coarse = scaled(y, GOMORY_FALLBACK);
+          slackGomory(coarse, j, value, lo, hi, found);
         }
-        mir(aggregate(lambda), value, lo, hi, found);
+        Aggregate g = aggregate(lambda);
+        if (g == null && gomoryScale != GOMORY_FALLBACK) {
+          g = aggregate(coarse != null ? coarse : scaled(y, GOMORY_FALLBACK));
+        }
+        mir(g, value, lo, hi, found);
       }
     }
     for (Aggregate row : unitRows) {
@@ -3258,8 +3429,7 @@ public class LinearRelaxation extends Constraint
     List<MirCut> chosen = new ArrayList<>();
     for (MirCut c : found) {
       long m = (long) lp.rows() + chosen.size() + 1;
-      if (chosen.size() >= CUTS_PER_ROUND
-          || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+      if (chosen.size() >= CUTS_PER_ROUND || simplex == Simplex.DENSE && m * (m + n) > tableauCap) {
         break;
       }
       List<Long> key = new ArrayList<>();
@@ -3559,6 +3729,10 @@ public class LinearRelaxation extends Constraint
   private void dropExtraRows() {
     droppedPivots += lp.pivots() - beforeExtra.pivots();
     lp = beforeExtra;
+    if (lp instanceof DualSimplex) {
+      // the cuts may have moved the rows to the sparse simplex; the rows before them are dense
+      simplex = Simplex.DENSE;
+    }
     truncateRows(baseRows);
     allRowsInSimplex(baseRows);
     beforeExtra = null;
@@ -3821,7 +3995,11 @@ public class LinearRelaxation extends Constraint
     }
     LinearRelaxation c =
         new LinearRelaxation(
-            copies, extraCopies, objective == null ? null : map.get(objective), maximize, simplex);
+            copies,
+            extraCopies,
+            objective == null ? null : map.get(objective),
+            maximize,
+            createdWith);
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
