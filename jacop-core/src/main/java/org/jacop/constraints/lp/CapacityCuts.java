@@ -82,6 +82,13 @@ public final class CapacityCuts {
   // flows below this are taken as zero in the support graph
   private static final double EPSILON = 1e-6;
 
+  // the framed capacity cuts, over partitions of the same sets
+  private static final boolean FRAMED =
+      !"false".equals(System.getProperty("org.jacop.lp.framedCuts"));
+
+  // the most parts of a frame: the bin packing number of their demands is found exactly
+  private static final int MAX_PARTS = 12;
+
   private final int[] tails;
   private final int[] heads;
   private final IntVar[] literals;
@@ -292,6 +299,13 @@ public final class CapacityCuts {
       found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
       cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));
     }
+    // framed cuts only take the slots the capacity, multistar and comb cuts leave
+    if (FRAMED && cuts.size() < limit) {
+      List<Cut> found = new ArrayList<>();
+      framed(mandatory, flow, value, found);
+      found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
+      cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));
+    }
     return cuts;
   }
 
@@ -456,5 +470,186 @@ public final class CapacityCuts {
         true,
         d,
         violation / Math.sqrt(norm));
+  }
+
+  // the framed capacity cuts (P. Augerat, Polyhedral approach of the capacitated vehicle routing
+  // problem, PhD thesis, Grenoble, 1995; P. Augerat, J. M. Belenguer, E. Benavent, A. Corberan and
+  // D. Naddef, Separating capacity constraints in the CVRP using tabu search, European Journal of
+  // Operational Research 106, 1998): for a frame H partitioned into S_1..S_t, x(into H) + sum_i
+  // x(into S_i) >= t + r, with r the bin packing number of the demands d(S_i) in bins of the
+  // capacity (undirected, x(delta(H)) + sum_i x(delta(S_i)) >= 2t + 2r, as in = out). Directed, an
+  // arc from outside H into S_i counts twice and an arc from S_j into S_i once. As in the shrinking
+  // heuristics of Lysgaard, Letchford and Eglese (CVRPSEP), the parts are the connected pieces of
+  // the customers over the edges above a threshold, and the frames are grown from each part by the
+  // part with the largest flow to the frame.
+  private void framed(boolean[] mandatory, double[][] flow, double[] value, List<Cut> cuts) {
+    if (demands == null || capacity <= 0) {
+      return;
+    }
+    BitSet customers = new BitSet(n);
+    for (int v = 1; v < n; v++) {
+      if (mandatory[v]) {
+        customers.set(v);
+      }
+    }
+    Set<List<Integer>> frames = new HashSet<>();
+    for (double threshold : new double[] {1 - EPSILON, 0.5}) {
+      int[] part = parts(customers, flow, threshold);
+      int count = 0;
+      for (int v = customers.nextSetBit(0); v >= 0; v = customers.nextSetBit(v + 1)) {
+        count = Math.max(count, part[v] + 1);
+      }
+      long[] demand = new long[count];
+      double[][] between = new double[count][count];
+      for (int v = customers.nextSetBit(0); v >= 0; v = customers.nextSetBit(v + 1)) {
+        demand[part[v]] += demands[v];
+        for (int w = customers.nextSetBit(0); w >= 0; w = customers.nextSetBit(w + 1)) {
+          if (part[v] != part[w]) {
+            between[part[v]][part[w]] += flow[v][w];
+          }
+        }
+      }
+      for (int seed = 0; seed < count; seed++) {
+        if (demand[seed] > capacity) {
+          continue;
+        }
+        boolean[] inFrame = new boolean[count];
+        inFrame[seed] = true;
+        double[] toFrame = Arrays.copyOf(between[seed], count);
+        for (int t = 2; t <= MAX_PARTS; t++) {
+          int best = -1;
+          for (int q = 0; q < count; q++) {
+            if (!inFrame[q] && demand[q] <= capacity && (best < 0 || toFrame[q] > toFrame[best])) {
+              best = q;
+            }
+          }
+          if (best < 0 || toFrame[best] <= EPSILON) {
+            break;
+          }
+          inFrame[best] = true;
+          for (int q = 0; q < count; q++) {
+            toFrame[q] += between[best][q];
+          }
+          Cut c = framedCut(inFrame, part, demand, value, frames);
+          if (c != null) {
+            cuts.add(c);
+          }
+        }
+      }
+    }
+  }
+
+  // the framed capacity cut of the parts in the frame, or null when the values do not violate it
+  private Cut framedCut(
+      boolean[] inFrame, int[] part, long[] demand, double[] value, Set<List<Integer>> frames) {
+    List<Integer> key = new ArrayList<>();
+    List<Long> items = new ArrayList<>();
+    for (int q = 0; q < inFrame.length; q++) {
+      if (inFrame[q]) {
+        key.add(q);
+        items.add(demand[q]);
+      }
+    }
+    if (!frames.add(key)) {
+      return null;
+    }
+    int t = items.size();
+    long bound = t + binPacking(items.stream().mapToLong(Long::longValue).toArray(), capacity);
+    List<Integer> arcs = new ArrayList<>();
+    List<Long> weights = new ArrayList<>();
+    double lhs = 0;
+    double norm = 0;
+    for (int a = 0; a < tails.length; a++) {
+      int tail = tails[a];
+      int head = heads[a];
+      if (tail == head || !inPart(head, part, inFrame)) {
+        continue;
+      }
+      boolean fromFrame = inPart(tail, part, inFrame);
+      if (fromFrame && part[tail] == part[head]) {
+        continue;
+      }
+      long w = fromFrame ? 1 : 2;
+      arcs.add(a);
+      weights.add(w);
+      lhs += w * value[a];
+      norm += (double) w * w;
+    }
+    double violation = bound - lhs;
+    if (arcs.isEmpty() || violation <= MIN_VIOLATION) {
+      return null;
+    }
+    return new Cut(
+        arcs.stream().mapToInt(Integer::intValue).toArray(),
+        weights.stream().mapToLong(Long::longValue).toArray(),
+        true,
+        bound,
+        violation / Math.sqrt(norm));
+  }
+
+  private static boolean inPart(int v, int[] part, boolean[] inFrame) {
+    return part[v] >= 0 && inFrame[part[v]];
+  }
+
+  // the part of each node of h: its connected piece over the edges with a flow above threshold
+  private int[] parts(BitSet h, double[][] flow, double threshold) {
+    int[] part = new int[n];
+    Arrays.fill(part, -1);
+    int[] stack = new int[n];
+    int count = 0;
+    for (int start = h.nextSetBit(0); start >= 0; start = h.nextSetBit(start + 1)) {
+      if (part[start] >= 0) {
+        continue;
+      }
+      int top = 0;
+      stack[top++] = start;
+      part[start] = count;
+      while (top > 0) {
+        int v = stack[--top];
+        for (int w = h.nextSetBit(0); w >= 0; w = h.nextSetBit(w + 1)) {
+          if (part[w] < 0 && flow[v][w] > threshold) {
+            part[w] = count;
+            stack[top++] = w;
+          }
+        }
+      }
+      count++;
+    }
+    return part;
+  }
+
+  // the least number of bins of the capacity that hold the items, each at most the capacity, by
+  // depth-first search over the items in decreasing order
+  static long binPacking(long[] items, long capacity) {
+    long[] sorted =
+        Arrays.stream(items).filter(i -> i > 0).map(i -> -i).sorted().map(i -> -i).toArray();
+    long total = Arrays.stream(sorted).sum();
+    for (int bins = (int) Math.ceilDiv(total, capacity); bins < sorted.length; bins++) {
+      if (fits(sorted, 0, new long[bins], capacity)) {
+        return bins;
+      }
+    }
+    return sorted.length;
+  }
+
+  private static boolean fits(long[] items, int i, long[] load, long capacity) {
+    if (i == items.length) {
+      return true;
+    }
+    for (int b = 0; b < load.length; b++) {
+      if (load[b] + items[i] <= capacity) {
+        load[b] += items[i];
+        boolean ok = fits(items, i + 1, load, capacity);
+        load[b] -= items[i];
+        if (ok) {
+          return true;
+        }
+      }
+      // an empty bin is like every later empty bin
+      if (load[b] == 0) {
+        break;
+      }
+    }
+    return false;
   }
 }
