@@ -3654,7 +3654,7 @@ Version 5.0 (unreleased)
      Challenge or wide-set model combines weighted_spanning_tree with
      such limits, so the default benchmarks are not affected.
 
-207. ColouredSpanningTreeBound and SpanningTreeBound give their own LCG
+208. ColouredSpanningTreeBound and SpanningTreeBound give their own LCG
      reasons, and ColouredSpanningTreeBound a solution hint. The reasons
      follow the cycle and cut optimality conditions of minimum spanning
      trees (Tarjan, Sensitivity analysis of minimum spanning trees, Inf.
