@@ -217,6 +217,8 @@ public final class RevisedDualSimplex {
   private boolean presolvePending;
   private int presolvedRows = -1;
   private int presolvedColumns = -1;
+  // the reductions of each kind the presolve made, or null when it did not run
+  private int[] presolveReductions;
   // a reduced problem whose solve the pivot limit cut off: later solves go on with it, and any
   // other use of this problem first takes the basis postsolved from it (flushReduced)
   private RevisedDualSimplex reducedLp;
@@ -461,6 +463,7 @@ public final class RevisedDualSimplex {
     presolvePending = o.presolvePending;
     presolvedRows = o.presolvedRows;
     presolvedColumns = o.presolvedColumns;
+    presolveReductions = o.presolveReductions;
     totalPivots = o.totalPivots;
     factorizations = o.factorizations;
     refactorWeight = o.refactorWeight;
@@ -826,6 +829,11 @@ public final class RevisedDualSimplex {
    */
   public int presolvedColumns() {
     return presolvedColumns;
+  }
+
+  // the reductions of each kind the presolve made (see Presolve.counts), or null
+  int[] presolveReductions() {
+    return presolveReductions;
   }
 
   /**
@@ -2142,6 +2150,7 @@ public final class RevisedDualSimplex {
     Presolve p =
         new Presolve(n, rowIdx, rowVal, colIdx, colVal, colLen, cost, trueCost, boundLo, boundHi);
     boolean reduced = p.run();
+    presolveReductions = p.counts();
     ops += p.ops();
     if (PRESOLVE_TRACE) {
       System.err.println(

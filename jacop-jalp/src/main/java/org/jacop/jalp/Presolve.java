@@ -31,6 +31,7 @@
 package org.jacop.jalp;
 
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * A presolve of the problem of a {@link RevisedDualSimplex} for its first solve, with a postsolve
@@ -38,8 +39,10 @@ import java.util.Arrays;
  * programming", Mathematical Programming 71 (1995) 221-245, that keep a basis easy to recover:
  * empty, singleton and redundant rows (and row bounds that the column bounds imply), empty, fixed
  * and dominated columns (dual fixing: a column whose cost and entries all pull it to one bound is
- * fixed there), implied free column singletons, and doubleton equations (one column of the equation
- * is substituted by the other).
+ * fixed there), implied free column singletons, doubleton equations (one column of the equation is
+ * substituted by the other), parallel rows (a row that is a multiple of another gives its bounds to
+ * the other and goes) and parallel columns (a column that is a multiple of another, in its entries
+ * and its cost, is merged into it, which then stands for their sum).
  *
  * <p>The problem is the internal one of the simplex, already scaled: the rows {@code L_i <= a_i x
  * <= U_i} with the slack of row i as column {@code n + i}, and the perturbed costs. The reduced
@@ -79,6 +82,19 @@ final class Presolve {
   private static final byte FIX_COLUMN = 2;
   private static final byte FREE_COLUMN = 3;
   private static final byte DOUBLETON = 4;
+  private static final byte PARALLEL_ROW = 5;
+  private static final byte PARALLEL_COLUMN = 6;
+
+  // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
+  // this, relative, from the multiple are not parallel
+  private static final double PARALLEL = 1e-12;
+
+  // the rounds of the passes and of the search for parallel rows and columns
+  private static final int MAX_ROUNDS = 4;
+
+  // whether parallel rows and columns are looked for (org.jacop.jalp.presolveParallel)
+  private static final boolean PARALLEL_RULES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveParallel", "true"));
 
   private final int n;
   private final int m;
@@ -225,26 +241,20 @@ final class Presolve {
    *     (the simplex then finds and proves that on the whole problem)
    */
   boolean run() {
-    boolean changed = true;
-    for (int pass = 0; changed && pass < MAX_PASSES; pass++) {
-      changed = false;
-      for (int i = 0; i < m; i++) {
-        if (rowAlive[i]) {
-          int r = reduceRow(i);
-          if (r < 0) {
-            return false;
-          }
-          changed |= r > 0;
-        }
+    for (int round = 0; round < MAX_ROUNDS; round++) {
+      if (!passes()) {
+        return false;
       }
-      for (int j = 0; j < n; j++) {
-        if (colAlive[j]) {
-          int r = reduceColumn(j);
-          if (r < 0) {
-            return false;
-          }
-          changed |= r > 0;
-        }
+      if (!PARALLEL_RULES) {
+        break;
+      }
+      int found = parallelRows();
+      if (found < 0) {
+        return false;
+      }
+      found += parallelColumns();
+      if (found == 0) {
+        break;
       }
     }
     if (rowsLeft == m && colsLeft == n && !relaxed) {
@@ -271,6 +281,33 @@ final class Presolve {
     return true;
   }
 
+  // the passes over the rows and columns until nothing changes; false when the bounds cannot hold
+  private boolean passes() {
+    boolean changed = true;
+    for (int pass = 0; changed && pass < MAX_PASSES; pass++) {
+      changed = false;
+      for (int i = 0; i < m; i++) {
+        if (rowAlive[i]) {
+          int r = reduceRow(i);
+          if (r < 0) {
+            return false;
+          }
+          changed |= r > 0;
+        }
+      }
+      for (int j = 0; j < n; j++) {
+        if (colAlive[j]) {
+          int r = reduceColumn(j);
+          if (r < 0) {
+            return false;
+          }
+          changed |= r > 0;
+        }
+      }
+    }
+    return true;
+  }
+
   /**
    * Returns the work of the presolve, in the units of {@link RevisedDualSimplex#work()}.
    *
@@ -290,12 +327,12 @@ final class Presolve {
 
   /**
    * Returns how many reductions of each kind were made: rows dropped, singleton rows, columns
-   * fixed, free columns, doubletons.
+   * fixed, free columns, doubletons, parallel rows, parallel columns.
    *
    * @return the counts
    */
   int[] counts() {
-    int[] c = new int[5];
+    int[] c = new int[7];
     for (int t = 0; t < records; t++) {
       c[kind[t]]++;
     }
@@ -693,6 +730,197 @@ final class Presolve {
     return 1;
   }
 
+  // rows whose entries over the columns left are multiples of each other: the later one goes and
+  // its bounds, divided by the multiple, tighten the bounds of the other (Andersen and Andersen,
+  // section 3.4); the number removed, or -1 when the bounds cannot hold
+  private int parallelRows() {
+    int[] cols = new int[n];
+    double[] vals = new double[n];
+    double[] dense = new double[n];
+    int[][] keptCols = new int[m][];
+    double[][] keptVals = new double[m][];
+    int[] next = new int[m];
+    HashMap<Long, Integer> first = new HashMap<>();
+    int found = 0;
+    for (int i = 0; i < m; i++) {
+      if (!rowAlive[i] || rowCount[i] < 2) {
+        continue;
+      }
+      int len = gather(rIdx[i], rVal[i], rLen[i], colAlive, cols, vals, dense);
+      long h = hash(cols, vals, len);
+      Integer head = first.get(h);
+      int k = head == null ? -1 : head;
+      while (k >= 0) {
+        double lambda = multiple(keptCols[k], keptVals[k], cols, vals, len);
+        if (lambda != 0) {
+          if (mergeRows(k, i, lambda) < 0) {
+            return -1;
+          }
+          found++;
+          break;
+        }
+        k = next[k];
+      }
+      if (k < 0) {
+        keptCols[i] = Arrays.copyOf(cols, len);
+        keptVals[i] = Arrays.copyOf(vals, len);
+        next[i] = head == null ? -1 : head;
+        first.put(h, i);
+      }
+    }
+    return found;
+  }
+
+  // row i is lambda times row k: s_i = lambda s_k, so the bounds of s_i bound s_k
+  private int mergeRows(int k, int i, double lambda) {
+    double l = lambda > 0 ? rowLo[i] / lambda : rowHi[i] / lambda;
+    double h = lambda > 0 ? rowHi[i] / lambda : rowLo[i] / lambda;
+    byte tight = 0;
+    if (raises(l, rowLo[k])) {
+      rowLo[k] = l;
+      tight |= 1;
+    }
+    if (lowers(h, rowHi[k])) {
+      rowHi[k] = h;
+      tight |= 2;
+    }
+    if (rowLo[k] > rowHi[k]) {
+      if (rowLo[k] > rowHi[k] + INFEASIBLE * (1 + Math.abs(rowHi[k]))) {
+        return -1;
+      }
+      if ((tight & 1) != 0) {
+        rowHi[k] = rowLo[k];
+      } else {
+        rowLo[k] = rowHi[k];
+      }
+    }
+    int t = record(PARALLEL_ROW, i, -1);
+    recOther[t] = k;
+    recNum[0][t] = lambda;
+    recFlag[t] = tight;
+    removeRow(i);
+    return 1;
+  }
+
+  // columns whose entries over the rows left and whose costs are multiples of each other: x_k =
+  // lambda x_j in all rows and in the objective, so the later one, x_k, goes and x_j stands for x_j
+  // + lambda x_k, with the bounds of that sum (Andersen and Andersen, section 3.6). The costs
+  // compared are those without the perturbation; the reduced problem keeps the perturbed cost of
+  // x_j, and the solve of the whole problem makes up for the perturbation of x_k
+  private int parallelColumns() {
+    int[] rows = new int[m];
+    double[] vals = new double[m];
+    double[] dense = new double[m];
+    int[][] keptRows = new int[n][];
+    double[][] keptVals = new double[n][];
+    int[] next = new int[n];
+    HashMap<Long, Integer> first = new HashMap<>();
+    int found = 0;
+    for (int k = 0; k < n; k++) {
+      if (!colAlive[k] || colCount[k] < 1) {
+        continue;
+      }
+      int len = gather(cIdx[k], cVal[k], cLen[k], rowAlive, rows, vals, dense);
+      long h = hash(rows, vals, len);
+      Integer head = first.get(h);
+      int j = head == null ? -1 : head;
+      boolean free = lo[k] == Double.NEGATIVE_INFINITY && hi[k] == Double.POSITIVE_INFINITY;
+      while (j >= 0 && !free) {
+        double lambda = multiple(keptRows[j], keptVals[j], rows, vals, len);
+        if (lambda != 0 && sameMultiple(wtrue[k], lambda * wtrue[j])) {
+          mergeColumns(j, k, lambda);
+          found++;
+          break;
+        }
+        j = next[j];
+      }
+      if (free || j < 0) {
+        keptRows[k] = Arrays.copyOf(rows, len);
+        keptVals[k] = Arrays.copyOf(vals, len);
+        next[k] = head == null ? -1 : head;
+        first.put(h, k);
+      }
+    }
+    return found;
+  }
+
+  // column k is lambda times column j: x_j + lambda x_k takes the place of x_j
+  private void mergeColumns(int j, int k, double lambda) {
+    double newLo = lo[j] + (lambda > 0 ? lambda * lo[k] : lambda * hi[k]);
+    double newHi = hi[j] + (lambda > 0 ? lambda * hi[k] : lambda * lo[k]);
+    int t = record(PARALLEL_COLUMN, -1, k);
+    recOther[t] = j;
+    recNum[0][t] = lambda;
+    recNum[1][t] = lo[j];
+    recNum[2][t] = hi[j];
+    recNum[3][t] = lo[k];
+    recNum[4][t] = hi[k];
+    recNum[5][t] = newLo;
+    recNum[6][t] = newHi;
+    lo[j] = newLo;
+    hi[j] = newHi;
+    colAlive[k] = false;
+    colsLeft--;
+    int[] ci = cIdx[k];
+    double[] cv = cVal[k];
+    ops += cLen[k];
+    for (int e = 0; e < cLen[k]; e++) {
+      if (rowAlive[ci[e]] && cv[e] != 0) {
+        rowCount[ci[e]]--;
+      }
+    }
+  }
+
+  // the entries of a row or column over the columns or rows left, sorted by index, into idx and
+  // val; the count. dense is all 0 and is left so
+  private int gather(
+      int[] at, double[] of, int len, boolean[] alive, int[] idx, double[] val, double[] dense) {
+    int count = 0;
+    ops += len;
+    for (int e = 0; e < len; e++) {
+      if (alive[at[e]] && of[e] != 0) {
+        idx[count++] = at[e];
+        dense[at[e]] = of[e];
+      }
+    }
+    Arrays.sort(idx, 0, count);
+    for (int e = 0; e < count; e++) {
+      val[e] = dense[idx[e]];
+      dense[idx[e]] = 0;
+    }
+    return count;
+  }
+
+  // a hash of the indices and of the entries divided by the first, rounded, so that multiples of
+  // each other have the same hash
+  private static long hash(int[] idx, double[] val, int len) {
+    long h = len;
+    for (int e = 0; e < len; e++) {
+      h = h * 0x9E3779B97F4A7C15L + idx[e];
+      h = h * 31 + Math.round(val[e] / val[0] * 1e6);
+    }
+    return h;
+  }
+
+  // lambda when the entries given are lambda times the entries kept (same indices), else 0
+  private double multiple(int[] keptIdx, double[] keptVal, int[] idx, double[] val, int len) {
+    if (keptIdx.length != len) {
+      return 0;
+    }
+    ops += len;
+    double lambda = val[0] / keptVal[0];
+    for (int e = 0; e < len; e++) {
+      if (idx[e] != keptIdx[e] || !sameMultiple(val[e], lambda * keptVal[e])) {
+        return 0;
+      }
+    }
+    return lambda;
+  }
+
+  private static boolean sameMultiple(double a, double b) {
+    return Math.abs(a - b) <= PARALLEL * Math.max(Math.abs(a), Math.abs(b));
+  }
+
   // adds f to the entry of column j in row i, with fill-in and cancellation
   private void addEntry(int i, int j, double f) {
     int[] idx = rIdx[i];
@@ -873,7 +1101,10 @@ final class Presolve {
    * Makes a basis of the whole problem from an optimal basis of the reduced one. A removed row gets
    * a basic slack, or the column it removed becomes basic, whichever keeps the duals feasible; the
    * dual of the row then follows from the reduced cost of that column (Andersen and Andersen,
-   * section 4). A removed column is nonbasic at the bound it was fixed to.
+   * section 4). A removed column is nonbasic at the bound it was fixed to. A removed parallel row
+   * takes the bound and the dual of the row it was merged into when that row's slack sits at a
+   * bound the removed row set; a removed parallel column is nonbasic at the bound that, with the
+   * bound of the column it was merged into, makes the bound of their sum.
    *
    * @param basicR whether each column of the reduced problem (structural, then slack) is basic
    * @param upperR whether each nonbasic column of the reduced problem is at its upper bound
@@ -932,6 +1163,12 @@ final class Presolve {
           if (!basic[j] && recFlag[t] != 0) {
             singletonBasis(t, i, j, y, value, basic, upper);
           }
+          break;
+        case PARALLEL_ROW:
+          parallelRowBasis(t, i, recOther[t], y, basic, upper);
+          break;
+        case PARALLEL_COLUMN:
+          parallelColumnBasis(t, j, recOther[t], value, basic, upper);
           break;
         default:
           doubletonBasis(t, i, j, recOther[t], y, value, basic, upper);
@@ -1032,6 +1269,61 @@ final class Presolve {
     }
     basic[k] = true;
     y[i] = reducedCost(recNum[3][t], k, recLenA[t], y) / ak;
+  }
+
+  // the removed row i, lambda times the kept row k: its slack is basic, unless the slack of row k
+  // sits at a bound that row i set; then the slack of row i takes that bound and the dual of row k
+  private void parallelRowBasis(int t, int i, int k, double[] y, boolean[] basic, boolean[] upper) {
+    basic[n + i] = true;
+    y[i] = 0;
+    if (basic[n + k]) {
+      return;
+    }
+    boolean atUpper = upper[n + k];
+    if ((recFlag[t] & (atUpper ? 2 : 1)) == 0) {
+      return;
+    }
+    double lambda = recNum[0][t];
+    // s_i = lambda s_k: at the upper bound of s_k, s_i is at its upper bound when lambda > 0
+    basic[n + i] = false;
+    upper[n + i] = atUpper == lambda > 0;
+    basic[n + k] = true;
+    y[i] = y[k] / lambda;
+    y[k] = 0;
+  }
+
+  // the removed column k, lambda times the kept column j, which stood for x_j + lambda x_k: when
+  // x_j is basic, x_k is at a finite bound; when x_j is at a bound of the sum, both are at the
+  // bounds that make it
+  private void parallelColumnBasis(
+      int t, int k, int j, double[] value, boolean[] basic, boolean[] upper) {
+    double lambda = recNum[0][t];
+    double loJ = recNum[1][t];
+    double hiJ = recNum[2][t];
+    double loK = recNum[3][t];
+    double hiK = recNum[4][t];
+    basic[k] = false;
+    if (basic[j]) {
+      upper[k] = loK == Double.NEGATIVE_INFINITY;
+      value[k] = upper[k] ? hiK : loK;
+      return;
+    }
+    double v = value[j];
+    boolean atHi = recNum[6][t] != Double.POSITIVE_INFINITY && same(v, recNum[6][t]);
+    boolean atLo = recNum[5][t] != Double.NEGATIVE_INFINITY && same(v, recNum[5][t]);
+    if (atLo) {
+      upper[j] = false;
+      value[j] = loJ;
+      upper[k] = lambda < 0;
+    } else if (atHi) {
+      upper[j] = true;
+      value[j] = hiJ;
+      upper[k] = lambda > 0;
+    } else {
+      // inside the bounds of the sum (a free column at 0): x_k at a finite bound, x_j as it was
+      upper[k] = loK == Double.NEGATIVE_INFINITY;
+    }
+    value[k] = upper[k] ? hiK : loK;
   }
 
   // whether v is a lower bound above lower bound b by more than the tolerance
