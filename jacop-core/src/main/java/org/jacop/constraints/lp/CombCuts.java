@@ -252,7 +252,9 @@ final class CombCuts {
       lhs += y[e[0]][e[1]];
     }
     int t = teeth.size();
-    if (lhs - (h.cardinality() + (t - 1) / 2) <= MIN_VIOLATION) {
+    // t is odd, so the halves are exact
+    long handBound = (long) h.cardinality() + (t - 1) / 2;
+    if (lhs - handBound <= MIN_VIOLATION) {
       return null;
     }
     List<BitSet> sets = grow(h, teeth, y, count);
@@ -262,7 +264,7 @@ final class CombCuts {
       hand.set(original[v]);
     }
     List<BitSet> toothSets = new ArrayList<>();
-    long bound = hand.cardinality() - (t + 1) / 2;
+    long bound = (long) hand.cardinality() - (t + 1) / 2;
     for (BitSet s : sets) {
       BitSet o = new BitSet(original.length);
       for (int v = s.nextSetBit(0); v >= 0; v = s.nextSetBit(v + 1)) {

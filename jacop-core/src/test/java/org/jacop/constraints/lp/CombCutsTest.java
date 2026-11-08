@@ -53,7 +53,35 @@ class CombCutsTest {
 
   private static final int INSTANCES = Integer.getInteger("comb.instances", 60);
 
-  private record Graph(int n, int[] tails, int[] heads, boolean[] optional) {
+  // a graph: the arcs as tails and heads, and the nodes with a self loop (optional)
+  private static final class Graph {
+    private final int n;
+    private final int[] tails;
+    private final int[] heads;
+    private final boolean[] optional;
+
+    Graph(int n, int[] tails, int[] heads, boolean[] optional) {
+      this.n = n;
+      this.tails = tails;
+      this.heads = heads;
+      this.optional = optional;
+    }
+
+    int n() {
+      return n;
+    }
+
+    int[] tails() {
+      return tails;
+    }
+
+    int[] heads() {
+      return heads;
+    }
+
+    boolean[] optional() {
+      return optional;
+    }
 
     int arc(int t, int h) {
       for (int a = 0; a < tails.length; a++) {
