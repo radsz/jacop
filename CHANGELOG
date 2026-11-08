@@ -3412,6 +3412,42 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+200. Hall cuts of item 188 with value copies, and in search. The
+     Williams-Yan cuts now also come from all-different constraints with
+     exceptions (alldifferent_except_0, AlldifferentExcept) and from
+     global cardinality constraints (GCC, CountValues,
+     CountValuesBounds): for the k variables of a prefix S of the
+     sorted LP values, each counted value v enters the greedy sum of the
+     k smallest (or largest) values at most min(u_v, |S holding v|)
+     times and at least max(0, l_v - |variables outside S holding v|)
+     times, and an excepted value any number of times: the extremal
+     points of the multiset permutahedron, after R. Rado, An
+     inequality, Journal of the London Mathematical Society 27 (1952)
+     1-6, with H. P. Williams and H. Yan (2001) and J. Lee (2002) as in
+     item 188. An all-different whose variables are not all LP columns
+     now keeps its cuts over the columns among them (two or more);
+     before, it was left out. -Dorg.jacop.lp.alldiffVariants=false turns
+     the copies off. Hall cuts are also separated in search, as the
+     capacity cuts of item 187 (every 4 to 1024 optimal solves, up to
+     -Dorg.jacop.lp.alldiffSearchCuts=10 cuts into the row pool), with
+     -Dorg.jacop.lp.alldiffSearch=true; they are off by default, as at
+     240 s they cost lot-sizing pigment20a and cable-tree-wiring A022
+     their optimum. Statistics lpAlldiffLists, lpAlldiffVariantLists,
+     lpAlldiffSearchCuts and lpAlldiffSeparations. Checks
+     (AlldifferentRowsTest): no cut with copies cuts off a solution of
+     random domains or a convex mix of them; random models with an
+     all-different-except-0 or a GCC keep their optimum, also under LCG
+     with the explanation checker (LinearRelaxationTest), and also after
+     the rows of the other constraints are dropped in search. Reach (429
+     Challenge optimisation instances with these constraints, 20 s): 243
+     have Hall lists, 99 of them with copies. The root bound of
+     physician-scheduling rises from 570 to 670, 1145 to 1245 and 570 to
+     620 (twice), and of vaccine v11 from 119 to 118 and v857 from 203 to
+     202 (maximisation); the 21 instances whose root changes, at 600 s:
+     default 12 to 12 solved, one better objective (physician
+     instance18_real 7750 to 6915), -f 12 to 12 with differences of
+     search timing only; no wrong answer.
+
 Version 4.11
 =============
 
