@@ -3412,6 +3412,16 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
+200. Presolve tabling (--presolve-tabling) no longer runs out of memory
+     on groups over wide domains. Its enumeration listed every value of
+     the variable it branched on into an array before the node limit
+     could stop it; with auxiliary variables of about 10^9 values this
+     took gigabytes per level (work-task-variation, 2025 MiniZinc
+     Challenge: out of memory at 3 GB within 2 s). It now gives up on a
+     group as soon as a domain is larger than the nodes left; such a
+     group reached its node limit before too, so it gets no table either
+     way.
+
 Version 4.11
 =============
 
