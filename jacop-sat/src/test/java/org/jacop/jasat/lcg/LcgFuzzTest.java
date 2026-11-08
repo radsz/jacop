@@ -127,6 +127,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -253,7 +254,7 @@ class LcgFuzzTest {
       for (int i = 0; i < m; i++) {
         try {
           post(randomConstraint());
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
           // arguments the constraint rejects, such as a variable repeated; draw another one
           i--;
         }
@@ -457,7 +458,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(31)) {
+      return switch (rnd.nextInt(33)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -566,8 +567,27 @@ class LcgFuzzTest {
           flow.useCompulsoryParts(rnd.nextBoolean());
           yield flow;
         }
+        case 30 -> valuesWithDifferences();
+        case 31 -> unaryEarlinessTardiness(p);
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // Values over 4 or 5 variables, some pairs of which other constraints force to differ, so that
+    // Values reads a difference graph and its clique at the root
+    private Values valuesWithDifferences() {
+      IntVar[] v = pick(x, 4 + rnd.nextInt(2));
+      int pairs = 2 + rnd.nextInt(4);
+      for (int k = 0; k < pairs; k++) {
+        IntVar[] e = pick(v, 2);
+        if (rnd.nextBoolean()) {
+          post(new XneqY(e[0], e[1]));
+        } else {
+          IntVar t = intVar("vd", 1, 1 + rnd.nextInt(3));
+          post(rnd.nextBoolean() ? new Distance(e[0], e[1], t) : new XplusYeqZ(e[1], t, e[0]));
+        }
+      }
+      return new Values(v, intVar("nv", 1, 2 + rnd.nextInt(4)));
     }
 
     // sum of p = total and cost >= sum of random convex costs (absolute values, squares, squared
@@ -589,6 +609,20 @@ class LcgFuzzTest {
       ConvexAllocation a = new ConvexAllocation(p, f, total, intVar("ac", 0, 6 + rnd.nextInt(20)));
       a.lagrangianOnly(rnd.nextInt(3) == 0);
       return a;
+    }
+
+    // three tasks of lengths 1 or 2 on one machine (or two on one and one alone), earliness and
+    // tardiness at most a cost variable
+    private UnaryEarlinessTardiness unaryEarlinessTardiness(IntVar[] p) {
+      int[] d = {1 + rnd.nextInt(2), 1 + rnd.nextInt(2), 1 + rnd.nextInt(2)};
+      boolean split = rnd.nextBoolean();
+      int[][] machines = split ? new int[][] {{0, 1}} : new int[][] {{0, 1, 2}};
+      int[] owner = {0, 0, split ? -1 : 0};
+      int[][] terms = new int[p.length][];
+      for (int i = 0; i < p.length; i++) {
+        terms[i] = new int[] {i, rnd.nextInt(5), rnd.nextInt(3), rnd.nextInt(3)};
+      }
+      return new UnaryEarlinessTardiness(p, d, machines, owner, terms, intVar("uet", 0, 12));
     }
 
     // three starts under precedences with lags, earliness and tardiness at most a cost variable
@@ -1267,6 +1301,102 @@ class LcgFuzzTest {
       }
     }
     long[] counts = solver.explanationStatistics().get("DiffnK");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
+  }
+
+  /**
+   * LexChain explains a pruning that needs both sides of the chain (no tuple of a vector with the
+   * value lies between the bounds of the vectors below and above it) by the vectors around it. On
+   * random chains of three to five short vectors, with column sums and disequalities, LCG with
+   * checked explanations must agree with search over the chain posted as pairwise LexOrder.
+   */
+  @Test
+  void lexChainReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = lexChains(seed, false) != null;
+      Object[] lcg = lexChains(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over
+  // LexChain ({status, own reasons and failures of LexChain})
+  private static Object[] lexChains(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(3);
+    int n = 2 + rnd.nextInt(2);
+    int top = 2 + rnd.nextInt(3);
+    boolean strict = rnd.nextInt(3) == 0;
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    if (lcg) {
+      store.impose(new LexChain(x, strict));
+    } else {
+      for (int i = 0; i + 1 < m; i++) {
+        store.impose(new LexOrder(x[i], x[i + 1], strict));
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i + 1 < m; i++) {
+        int c = 0;
+        for (int j = 0; j < n && c == 0; j++) {
+          c = Integer.compare(solver.value(x[i][j]), solver.value(x[i + 1][j]));
+        }
+        assertThat(strict ? c < 0 : c <= 0)
+            .as("seed %d: vectors %d and %d", seed, i, i + 1)
+            .isTrue();
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("LexChain");
     return new Object[] {
       status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
     };

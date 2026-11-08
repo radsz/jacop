@@ -72,7 +72,10 @@ public interface ExternalPropagator {
    */
   default void notifyBacktrack(int level) {}
 
-  /** The solver restarted; {@link #notifyBacktrack} to level 0 came just before. */
+  /**
+   * The solver restarted; {@link #notifyBacktrack} came just before, to level 0, or to level 1 when
+   * the solver searches under assumptions, which it keeps on level 1 at restarts.
+   */
   default void notifyRestart() {}
 
   /**
@@ -126,10 +129,10 @@ public interface ExternalPropagator {
   /**
    * The integer variable whose atom a solver variable is, for semantic UIPs.
    *
-   * @param var the solver variable, from 1
+   * @param aVar the solver variable, from 1
    * @return a non-negative index shared by the atoms of one integer variable, or -1 for none
    */
-  default int integerVariable(int var) {
+  default int integerVariable(int aVar) {
     return -1;
   }
 

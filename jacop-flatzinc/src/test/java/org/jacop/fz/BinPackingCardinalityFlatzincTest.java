@@ -92,9 +92,9 @@ class BinPackingCardinalityFlatzincTest {
       up[b] = low[b] + random.nextInt(3);
     }
     // a repeated bin variable is counted once per occurrence
-    int[] var = new int[n];
+    int[] aVar = new int[n];
     for (int i = 0; i < n; i++) {
-      var[i] = random.nextInt(8) == 0 && i > 0 ? random.nextInt(i) : i;
+      aVar[i] = random.nextInt(8) == 0 && i > 0 ? random.nextInt(i) : i;
     }
 
     StringBuilder fzn = new StringBuilder();
@@ -105,7 +105,7 @@ class BinPackingCardinalityFlatzincTest {
     StringBuilder items = new StringBuilder();
     for (int i = 0; i < n; i++) {
       xs.append(i == 0 ? "" : ",").append('x').append(i);
-      items.append(i == 0 ? "" : ",").append('x').append(var[i]);
+      items.append(i == 0 ? "" : ",").append('x').append(aVar[i]);
     }
     fzn.append("array [1..")
         .append(n)
@@ -181,7 +181,7 @@ class BinPackingCardinalityFlatzincTest {
         x[i] = 1 + c % values;
         c /= values;
       }
-      if (holds(x, var, w, cap, cover, low, up, kind)) {
+      if (holds(x, aVar, w, cap, cover, low, up, kind)) {
         expected.add("x = array1d(1.." + n + ", " + Arrays.toString(x) + ");");
       }
     }
@@ -189,11 +189,11 @@ class BinPackingCardinalityFlatzincTest {
   }
 
   private static boolean holds(
-      int[] x, int[] var, int[] w, int[] cap, int[] cover, int[] low, int[] up, Kind kind) {
+      int[] x, int[] aVar, int[] w, int[] cap, int[] cover, int[] low, int[] up, Kind kind) {
     int bins = cap.length;
     int[] load = new int[bins];
-    for (int i = 0; i < var.length; i++) {
-      int b = x[var[i]];
+    for (int i = 0; i < aVar.length; i++) {
+      int b = x[aVar[i]];
       if (b > bins) {
         return false; // no such bin
       }
@@ -207,7 +207,7 @@ class BinPackingCardinalityFlatzincTest {
     // a repeated cover value is counted within the intersection of its bounds
     for (int k = 0; k < cover.length; k++) {
       int count = 0;
-      for (int v : var) {
+      for (int v : aVar) {
         count += x[v] == cover[k] ? 1 : 0;
       }
       if (count < low[k] || count > up[k]) {
@@ -215,7 +215,7 @@ class BinPackingCardinalityFlatzincTest {
       }
     }
     if (kind != Kind.COUNT_VALUES_BOUNDS) {
-      for (int v : var) {
+      for (int v : aVar) {
         if (Arrays.stream(cover).noneMatch(c -> c == x[v])) {
           return false; // closed
         }

@@ -85,6 +85,10 @@ public class Not extends PrimitiveConstraint
   @Override
   public void consistency(final Store store) {
     c.notConsistency(store);
+    // entailed: the negated constraint can no longer hold, so no change can prune
+    if (c.notSatisfied()) {
+      removeConstraint();
+    }
   }
 
   @Override

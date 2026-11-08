@@ -300,7 +300,7 @@ public class OnRestart implements RestartHook {
     public void impose(Store store) {
       super.impose(store);
       for (Var v : positions.keySet()) {
-        record(v);
+        rec(v);
       }
     }
 
@@ -311,10 +311,10 @@ public class OnRestart implements RestartHook {
 
     @Override
     public void queueVariable(int level, Var v) {
-      record(v);
+      rec(v);
     }
 
-    private void record(Var v) {
+    private void rec(Var v) {
       if (!v.singleton()) {
         return;
       }

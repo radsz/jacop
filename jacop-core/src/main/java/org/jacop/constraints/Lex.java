@@ -54,7 +54,7 @@ public class Lex extends DecomposedConstraint<Constraint> {
   private final boolean lexLt;
 
   /** A two dimensional array containing arrays which have to be lexicographically ordered. */
-  private IntVar[][] x;
+  private final IntVar[][] x;
 
   /** It contains constraints of the lex constraint decomposition. */
   List<Constraint> constraints;

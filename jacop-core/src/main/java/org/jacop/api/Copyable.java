@@ -121,7 +121,7 @@ public interface Copyable<T extends Constraint> {
         protected Boolean computeValue(Class<?> type) {
           try {
             return type.getMethod("copy", VarMap.class).getDeclaringClass() == type;
-          } catch (NoSuchMethodException e) {
+          } catch (NoSuchMethodException _) {
             return false;
           }
         }

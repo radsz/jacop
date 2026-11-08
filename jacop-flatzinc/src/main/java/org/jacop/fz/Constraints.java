@@ -52,6 +52,7 @@ import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
+import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
@@ -66,6 +67,7 @@ import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
+import org.jacop.fz.constraints.TableCoverDetector;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -86,7 +88,7 @@ public class Constraints implements ParserTreeConstants {
   static final int GT = 3;
   static final int LE = 4;
   static final int GE = 5;
-  final ConstraintFncs cf; // = new org.jacop.fz.constraints.ConstraintFncs(store, dict, sat);
+  final ConstraintFncs cf;
   final Tables dictionary;
   final Store store;
   // ============ SAT solver interface ==============
@@ -346,6 +348,18 @@ public class Constraints implements ParserTreeConstants {
       if (XorSystemDetector.enabled() && options.proof() == null) {
         new XorSystemDetector(support).detect(astTree);
       }
+
+      // exact covers of the equalities x_1 + ... + x_k = 1, redundant and opt-in; --proof does not
+      // encode them
+      if (ExactCoverDetector.enabled() && options.proof() == null) {
+        new ExactCoverDetector(support).detect(astTree);
+      }
+
+      // tilings written as tables and an all different, redundant, by default without LCG (the
+      // --lcg off thread of -p); --proof does not encode them
+      if (TableCoverDetector.enabled(options.lcg()) && options.proof() == null) {
+        new TableCoverDetector(support).detect(astTree);
+      }
       store.imposingImplied(false);
 
       // the lattices of the equalities: congruences, and the reformulation of market split
@@ -357,8 +371,11 @@ public class Constraints implements ParserTreeConstants {
       }
 
       // earliness and tardiness costs under precedences, redundant; --proof does not encode it
-      if (PrecedenceCostDetector.enabled(options.freeSearch()) && options.proof() == null) {
-        support.implied(() -> new PrecedenceCostDetector(support).detect(astTree));
+      boolean precedenceCost = PrecedenceCostDetector.enabled(options.freeSearch());
+      boolean unaryCost = PrecedenceCostDetector.unaryEnabled(options.freeSearch());
+      if ((precedenceCost || unaryCost) && options.proof() == null) {
+        support.implied(
+            () -> new PrecedenceCostDetector(support, precedenceCost, unaryCost).detect(astTree));
       }
 
       support.detectBinPackingCliques();

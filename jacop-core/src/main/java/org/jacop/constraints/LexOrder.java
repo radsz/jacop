@@ -522,7 +522,7 @@ public class LexOrder extends Constraint
       if (i == a) {
         forceLt(i);
       }
-    } else { // if (x[i].min() == y[i].max()) // ???
+    } else {
       updateBeta(i - 1);
     }
 

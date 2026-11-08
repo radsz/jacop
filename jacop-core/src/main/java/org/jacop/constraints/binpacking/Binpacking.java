@@ -140,7 +140,7 @@ public class Binpacking extends Constraint
   /** True if the bin-count bound also uses f_CCM1 and reduction RMax. */
   private boolean strongBinCountBound;
 
-  private int minBinNumber;
+  private final int minBinNumber;
   private long sizeAllItems;
 
   /** The sums alpha' and beta' of the last NoSum. */
@@ -514,7 +514,7 @@ public class Binpacking extends Constraint
   private final int[] binOtherWeights;
 
   /** Bins to be (re)processed in the current consistency call, indexed from 0. */
-  private BitSet todo = new BitSet();
+  private final BitSet todo = new BitSet();
 
   /** Removes bin binIdx from an item and schedules the bins whose item sets changed. */
   private void removeBin(Store store, IntVar b, int binIdx) {
@@ -551,10 +551,10 @@ public class Binpacking extends Constraint
     }
     int loadMin = load[i].min();
     int loadMax = load[i].max();
-    BinItem[] candidates = binCandidates;
+    BinItem[] localCandidates = binCandidates;
     int[] weights = binCandidateWeights;
     int candidatesLength = 0;
-    long required = 0;
+    long localRequired = 0;
     long possible = 0;
     int binIdx = i + minBinNumber;
     for (BinItem itemEl : item) {
@@ -562,20 +562,20 @@ public class Binpacking extends Constraint
       if (b.min() <= binIdx && b.max() >= binIdx && b.dom().contains(binIdx)) {
         possible += itemEl.weight();
         if (b.singleton()) {
-          required += itemEl.weight();
+          localRequired += itemEl.weight();
         } else {
           weights[candidatesLength] = itemEl.weight();
-          candidates[candidatesLength++] = itemEl;
+          localCandidates[candidatesLength++] = itemEl;
         }
       }
     }
-    load[i].domain.in(store.level, load[i], clamp(required), clamp(possible));
+    load[i].domain.in(store.level, load[i], clamp(localRequired), clamp(possible));
     applyLoadMaintenanceToCandidates(
-        store, i, binIdx, required, possible, candidates, candidatesLength);
+        store, i, binIdx, localRequired, possible, localCandidates, candidatesLength);
     if (!linearRulesOnly) {
-      applyTighteningBounds(store, i, required, weights, candidatesLength);
+      applyTighteningBounds(store, i, localRequired, weights, candidatesLength);
       applyEliminationAndCommitment(
-          store, i, binIdx, required, candidates, weights, candidatesLength);
+          store, i, binIdx, localRequired, localCandidates, weights, candidatesLength);
     }
     if (load[i].min() != loadMin || load[i].max() != loadMax) {
       todo.set(i);

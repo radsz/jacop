@@ -96,7 +96,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
   private record Goal(Kind kind, String expression) {}
 
   private static final String HIERARCHY = "goal_hierarchy";
-  private static final String PARETO = "pareto";
+  private static final String PARETO_ANNOTATION = "pareto";
 
   /** The prefix of the output variables the goals are copied into. */
   static final String PREFIX = "X_JACOP_GOAL_";
@@ -111,9 +111,10 @@ final class Goals implements MultiObjective.Subsolver<String> {
 
   private static final Pattern SOLVE = Pattern.compile("(?m)^\\s*solve\\b");
   private static final Pattern CONSTRAINT = Pattern.compile("(?m)^\\s*constraint\\b");
-  private static final Pattern GOAL = Pattern.compile("\\s*(\\w+)\\s*\\(\\s*([^()]*?)\\s*\\)\\s*");
+  private static final Pattern GOAL = Pattern.compile("(\\w+)\\s*\\(([^()]*)\\)");
   private static final Pattern GOAL_VALUE =
       Pattern.compile("^" + PREFIX + "(\\d+)_\\s*=\\s*(-?\\d+)\\s*;$");
+  private static final Pattern DECIMAL = Pattern.compile("\\d\\.\\d");
   private static final Pattern IDENTIFIER = Pattern.compile("[A-Za-z][A-Za-z0-9_]*");
 
   private final Options options;
@@ -160,7 +161,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
     String model;
     try {
       String tail = tail(file);
-      if (!tail.contains(HIERARCHY) && !tail.contains(PARETO + "(")) {
+      if (!tail.contains(HIERARCHY) && !tail.contains(PARETO_ANNOTATION + "(")) {
         return null;
       }
       model = Files.readString(file, StandardCharsets.ISO_8859_1);
@@ -201,13 +202,13 @@ final class Goals implements MultiObjective.Subsolver<String> {
     boolean isPareto = false;
     int at = annotation(item, HIERARCHY);
     if (at < 0) {
-      at = annotation(item, PARETO);
+      at = annotation(item, PARETO_ANNOTATION);
       isPareto = true;
     }
     if (at < 0) {
       return null;
     }
-    String name = isPareto ? PARETO : HIERARCHY;
+    String name = isPareto ? PARETO_ANNOTATION : HIERARCHY;
     int open = item.indexOf('(', at);
     int close = closing(item, open);
     if (close < 0) {
@@ -277,7 +278,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
       return null;
     }
     for (String g : split(list)) {
-      Matcher m = GOAL.matcher(g);
+      Matcher m = GOAL.matcher(g.strip());
       if (!m.matches()) {
         return "goal " + g.strip() + " is not supported";
       }
@@ -288,7 +289,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
             case "sat_goal" -> Kind.SAT;
             default -> null;
           };
-      String x = m.group(2);
+      String x = m.group(2).strip();
       if (kind == null || isFloat(x, model)) {
         return "goal " + g.strip() + " is not supported (only integer and Boolean goals are)";
       }
@@ -333,7 +334,7 @@ final class Goals implements MultiObjective.Subsolver<String> {
                     + "\\b")
             .matcher(model);
     return decl.find()
-        && (decl.group(1).contains("float") || decl.group(1).matches(".*\\d\\.\\d.*"));
+        && (decl.group(1).contains("float") || DECIMAL.matcher(decl.group(1)).find());
   }
 
   /**
@@ -612,10 +613,8 @@ final class Goals implements MultiObjective.Subsolver<String> {
         if (m.matches()) {
           values[Integer.parseInt(m.group(1))] = Integer.parseInt(m.group(2));
         }
-      } else if (!s.isEmpty() || !solution.isEmpty()) {
-        if (!s.startsWith("=====")) {
-          solution.append(l).append('\n');
-        }
+      } else if ((!s.isEmpty() || !solution.isEmpty()) && !s.startsWith("=====")) {
+        solution.append(l).append('\n');
       }
     }
 

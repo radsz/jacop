@@ -111,11 +111,11 @@ public class HornFlow extends Constraint
   private long capacity;
 
   // elementary intervals [time[k], time[k + 1]) for k < intervals
-  private long[] time;
+  private final long[] time;
   private int intervals;
   // capacity left by the compulsory parts in each interval, and the flow into the sink
-  private long[] intervalCap;
-  private long[] intervalFlow;
+  private final long[] intervalCap;
+  private final long[] intervalFlow;
   // energy each task still needs, and the flow from the source
   private final long[] demand;
   private final long[] taskFlow;
@@ -128,19 +128,19 @@ public class HornFlow extends Constraint
   private final int[] arcOffset;
   private long[] arcFlow;
   // the tasks with an arc into interval k: coverTask[coverStart[k] .. coverStart[k + 1])
-  private int[] coverStart;
+  private final int[] coverStart;
   private int[] coverTask;
 
   // Dinic's levels and current arcs
   private final int[] taskLevel;
-  private int[] intervalLevel;
+  private final int[] intervalLevel;
   private final int[] taskCurrent;
-  private int[] intervalCurrent;
-  private int[] queue;
+  private final int[] intervalCurrent;
+  private final int[] queue;
   private int sinkLevel;
 
   // the intervals of the minimum cut after a failed check
-  private boolean[] inCut;
+  private final boolean[] inCut;
 
   /**
    * It creates the flow check of a cumulative resource.

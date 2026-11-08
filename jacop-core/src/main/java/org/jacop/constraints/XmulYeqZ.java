@@ -203,7 +203,7 @@ public class XmulYeqZ extends AbstractXopYeqZ
       Interval q = IntDomain.divIntBounds(z.min(), z.max(), c, d);
       min = Math.max(q.min(), v.min());
       max = Math.min(q.max(), v.max());
-    } catch (FailException e) {
+    } catch (FailException _) {
       return null;
     }
     return min <= max ? new Interval(min, max) : null;

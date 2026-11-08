@@ -165,13 +165,15 @@ public class Options {
                 Print this message.
             -a, --all, --all-solutions
             -v, --verbose
+                Print more: with -s also the statistics of JaCoP's own components (lcg*,
+                presolve*, lp*, components*, lns*, ls*, symmetry*, probe*, portfolio*, ...).
             -t <value>, --time-out <value>
                 <value> - time in milisecond.
             -s, --statistics
                 Print the standard FlatZinc statistics (nodes, failures, restarts, peakDepth, ...).
             --search-statistics
-                As -s, and also the statistics of JaCoP's own components (lcg*, presolve*, lp*,
-                lns*, ls*, symmetry*, probe*, portfolio*, ...). -debug together with -s does the same.
+                As -s, and also the statistics of JaCoP's own components, as -s -v but without
+                the -v output after each solution. -debug together with -s does the same.
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
             --gap <percent>
@@ -243,9 +245,12 @@ public class Options {
                 lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
-                relaxation has value columns),
+                relaxation has value columns, or under -f tree cuts),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
+                neighbourhood and lower-bound runs on one decision level, kept at restarts;
+                0 gives each its own level, default 1),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),
@@ -285,7 +290,9 @@ public class Options {
                 evaluated), ls-sym=1|0 (1, the default: the symmetry breaking constraints JaCoP
                 adds are not evaluated; a solution is moved onto a symmetric one that holds them),
                 ls-keys=1|0 (1, the default: the other columns of a table with a key column follow
-                the key as definitions)
+                the key as definitions), ls-follow=1|0 (1, the default: a variable of the lists of
+                element constraints list[index] = y that nothing else reads is not moved but takes
+                the value of y most of the element constraints selecting it ask for)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints
@@ -936,13 +943,14 @@ public class Options {
 
   /**
    * It returns true if the statistics of JaCoP's own components (LCG, presolve, LP, LNS, local
-   * search, symmetry, probing, portfolio) are printed as well as the standard FlatZinc ones: with
-   * --search-statistics, or with -s and -debug.
+   * search, symmetry, probing, components, portfolio) are printed as well as the standard FlatZinc
+   * ones: with -s and -v, with --search-statistics (the same as -s -v, kept for scripts), or with
+   * -s and -debug.
    *
    * @return true if the extra statistics are printed, false otherwise.
    */
   public boolean searchStatistics() {
-    return statistics && (searchStatistics || debug);
+    return statistics && (verbose || searchStatistics || debug);
   }
 
   /**

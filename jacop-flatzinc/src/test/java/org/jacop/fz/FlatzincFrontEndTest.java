@@ -147,7 +147,9 @@ class FlatzincFrontEndTest {
     // MiniZinc Challenge 2023: 4.7 million nodes against Choco's 22 thousand).
     String out = run(pigeonsAfterFreeVariables(3), "-s")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
-    int failures = Integer.parseInt(out.replaceAll("(?s).*%%%mzn-stat: failures=(\\d+).*", "$1"));
+    Matcher fm = Pattern.compile("%%%mzn-stat: failures=(\\d+)").matcher(out);
+    assertTrue(fm.find(), out);
+    int failures = Integer.parseInt(fm.group(1));
     assertTrue(failures < 200, out);
   }
 
@@ -554,20 +556,20 @@ class FlatzincFrontEndTest {
     int c = rnd.nextInt(9) - 4;
     int[] lo = new int[k];
     int[] hi = new int[k];
-    int[] var = new int[k];
+    int[] aVar = new int[k];
     for (int i = 0; i < k; i++) {
       lo[i] = bools ? 0 : rnd.nextInt(7) - 3;
       hi[i] = bools ? 1 : lo[i] + rnd.nextInt(4);
-      var[i] = i > 0 && rnd.nextInt(5) == 0 ? var[rnd.nextInt(i)] : i;
+      aVar[i] = i > 0 && rnd.nextInt(5) == 0 ? aVar[rnd.nextInt(i)] : i;
     }
     StringBuilder fzn = new StringBuilder();
     StringJoiner args = new StringJoiner(",");
     for (int i = 0; i < k; i++) {
-      if (var[i] == i) {
+      if (aVar[i] == i) {
         fzn.append(bools ? "var bool" : "var " + lo[i] + ".." + hi[i]).append(": x").append(i);
         fzn.append(":: output_var;\n");
       }
-      args.add("x" + var[i]);
+      args.add("x" + aVar[i]);
     }
     boolean reif = !kind.isEmpty();
     if (reif) {
@@ -597,10 +599,10 @@ class FlatzincFrontEndTest {
         v,
         lo,
         hi,
-        var,
+        aVar,
         () -> {
           for (int i = 0; i < k; i++) {
-            value[i] = v[var[i]];
+            value[i] = v[aVar[i]];
           }
           Boolean holds;
           if (fName.startsWith("int_lin_") || w != null) {
@@ -632,7 +634,7 @@ class FlatzincFrontEndTest {
           }
           StringJoiner sol = new StringJoiner(" ");
           for (int i = 0; i < k; i++) {
-            if (var[i] == i) {
+            if (aVar[i] == i) {
               sol.add(
                   "x"
                       + i
@@ -657,17 +659,17 @@ class FlatzincFrontEndTest {
   }
 
   private static void enumerateBuiltin(
-      int i, int[] v, int[] lo, int[] hi, int[] var, Runnable check) {
+      int i, int[] v, int[] lo, int[] hi, int[] aVar, Runnable check) {
     if (i == v.length) {
       check.run();
       return;
     }
-    if (var[i] != i) {
-      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+    if (aVar[i] != i) {
+      enumerateBuiltin(i + 1, v, lo, hi, aVar, check);
       return;
     }
     for (v[i] = lo[i]; v[i] <= hi[i]; v[i]++) {
-      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+      enumerateBuiltin(i + 1, v, lo, hi, aVar, check);
     }
   }
 
@@ -2197,6 +2199,36 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void engineStatisticsArePrintedOnlyInVerboseMode() throws IOException {
+    // -s prints the standard FlatZinc statistics only; the statistics of LCG, LP, presolve,
+    // components, ... come with -v (or --search-statistics, or -debug) as well
+    String model =
+        """
+        var 0..5: x :: output_var;
+        var 0..5: y :: output_var;
+        constraint int_lin_le([1, 1], [x, y], 7);
+        constraint int_ne(x, y);
+        solve maximize x;
+        """;
+    String plain = run(model, "-s")[0];
+    assertTrue(plain.contains("%%%mzn-stat: nodes="), plain);
+    for (String extra : List.of("lcg", "components", "presolve", "lp", "nodesPerSecond")) {
+      assertTrue(
+          plain.lines().noneMatch(l -> l.startsWith("%%%mzn-stat: " + extra)),
+          extra + "\n" + plain);
+    }
+    for (String[] flags :
+        List.of(
+            new String[] {"-s", "-v"},
+            new String[] {"--search-statistics"},
+            new String[] {"-s", "-debug"})) {
+      String out = run(model, flags)[0];
+      assertTrue(out.contains("%%%mzn-stat: lpRows="), String.join(" ", flags) + "\n" + out);
+      assertTrue(out.contains("%%%mzn-stat: components="), String.join(" ", flags) + "\n" + out);
+    }
+  }
+
+  @Test
   void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
     // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
     // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the
@@ -2485,6 +2517,32 @@ class FlatzincFrontEndTest {
       assertEquals(lastObjective(dfs), lastObjective(lcg), lcg);
       assertEquals(jobs * machines, statistic(lcg, "lcgSetTimesStarts"), lcg);
     }
+  }
+
+  /**
+   * Without a search annotation, the default search under --lcg branches in input order on a model
+   * with more than 50,000 search variables: dom/wdeg scans all of them at every decision (XCSP3
+   * AztecDiamond-200, 160,000 cells, had no solution in 60 s and has one in about a second).
+   */
+  @Test
+  void lcgDefaultSearchOnManyVariablesIsInInputOrder() throws Exception {
+    int n = 50_001;
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var bool: b").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i + 1 < n; i++) {
+      model
+          .append("constraint bool_clause([b")
+          .append(i)
+          .append(", b")
+          .append(i + 1)
+          .append("], []);\n");
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "--search-statistics")[0];
+    assertTrue(out.contains("----------"), out.substring(Math.max(0, out.length() - 2000)));
+    assertEquals(n, statistic(out, "lcgInputOrder"));
   }
 
   private static String lastObjective(String out) {

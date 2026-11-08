@@ -434,7 +434,7 @@ class ConsistencyChecker {
     try {
       c.consistency(store);
       result = domainsOf(vars);
-    } catch (FailException e) {
+    } catch (FailException _) {
       result = "FAIL";
     }
     store.removeLevel(level + 1);
@@ -508,7 +508,7 @@ class ConsistencyChecker {
   private static Model precedenceCost(Store s, Random r) {
     int n = 2 + r.nextInt(3);
     IntVar[] x = vars(s, "s", n, 0, 6, r);
-    IntVar z = var(s, "z", 0, 4 * n, r);
+    IntVar z = aVar(s, "z", 0, 4 * n, r);
     List<int[]> prec = new ArrayList<>();
     for (int j = 1; j < n; j++) {
       for (int i = 0; i < j; i++) {
@@ -539,7 +539,7 @@ class ConsistencyChecker {
         concat(x, new IntVar[] {z}));
   }
 
-  private static IntVar var(Store store, String name, int lo, int hi, Random random) {
+  private static IntVar aVar(Store store, String name, int lo, int hi, Random random) {
     IntVar v = new IntVar(store, name);
     for (int k = lo; k <= hi; k++) {
       if (random.nextInt(5) > 0) {
@@ -565,10 +565,10 @@ class ConsistencyChecker {
     int t = random.nextInt(2 * n + 2);
     IntVar total =
         random.nextBoolean()
-            ? var(store, "t", t, t, random)
-            : var(store, "t", t - 2, t + 3, random);
+            ? aVar(store, "t", t, t, random)
+            : aVar(store, "t", t - 2, t + 3, random);
     int start = -5 + random.nextInt(30);
-    IntVar cost = var(store, "c", start, start + 25, random);
+    IntVar cost = aVar(store, "c", start, start + 25, random);
     ConvexAllocation c = new ConvexAllocation(x, f, total, cost);
     c.lagrangianOnly(lagrangian);
     return new Model(
@@ -630,7 +630,7 @@ class ConsistencyChecker {
 
   private static IntVar[] vars(Store store, String prefix, int n, int lo, int hi, Random random) {
     return IntStream.range(0, n)
-        .mapToObj(i -> var(store, prefix + i, lo, hi, random))
+        .mapToObj(i -> aVar(store, prefix + i, lo, hi, random))
         .toArray(IntVar[]::new);
   }
 
@@ -654,7 +654,7 @@ class ConsistencyChecker {
   /** sum(w[i] * x[i]) rel s, with s the last variable. */
   private static Model linear(Store store, Random random, int[] w, String rel, boolean dom) {
     IntVar[] x = vars(store, "x", w.length, -3, 3, random);
-    IntVar s = var(store, "s", -8, 8, random);
+    IntVar s = aVar(store, "s", -8, 8, random);
     Constraint c = dom ? new LinearIntDom(x, w, rel, s) : new LinearInt(x, w, rel, s);
     return new Model(
         c,
@@ -681,7 +681,9 @@ class ConsistencyChecker {
     for (int i = 0; i < n; i++) {
       w[i] = (1 + random.nextInt(5)) * (random.nextBoolean() ? 1 : -1);
       b[i] =
-          random.nextBoolean() ? new BooleanVar(store, "b" + i) : var(store, "b" + i, 0, 1, random);
+          random.nextBoolean()
+              ? new BooleanVar(store, "b" + i)
+              : aVar(store, "b" + i, 0, 1, random);
     }
     if (constant) {
       int c = random.nextInt(13) - 6;
@@ -695,7 +697,7 @@ class ConsistencyChecker {
           b,
           linearOverReals(w, c, rel));
     }
-    IntVar s = var(store, "s", -8, 12, random);
+    IntVar s = aVar(store, "s", -8, 12, random);
     return new Model(
         new LinearBool(b, w, rel, s),
         t -> holds(rel, IntStream.range(0, n).mapToLong(i -> (long) w[i] * t[i]).sum(), t[n]),
@@ -745,9 +747,9 @@ class ConsistencyChecker {
       int[] range,
       TriFunction<IntVar, IntVar, IntVar, Constraint> constraint,
       Predicate<int[]> relation) {
-    IntVar x = var(store, "x", range[0], range[1], random);
-    IntVar y = var(store, "y", range[2], range[3], random);
-    IntVar z = var(store, "z", range[4], range[5], random);
+    IntVar x = aVar(store, "x", range[0], range[1], random);
+    IntVar y = aVar(store, "y", range[2], range[3], random);
+    IntVar z = aVar(store, "z", range[4], range[5], random);
     return new Model(constraint.apply(x, y, z), relation, new IntVar[] {x, y, z});
   }
 
@@ -790,8 +792,8 @@ class ConsistencyChecker {
   /** Element: value = list[index - 1]. */
   private static Model element(Store store, Random random, boolean variableList, boolean fast) {
     int n = 2 + random.nextInt(3);
-    IntVar index = var(store, "i", 0, n + 1, random);
-    IntVar value = var(store, "v", 0, 5, random);
+    IntVar index = aVar(store, "i", 0, n + 1, random);
+    IntVar value = aVar(store, "v", 0, 5, random);
     if (variableList) {
       IntVar[] list = vars(store, "l", n, 0, 5, random);
       Constraint c =
@@ -853,7 +855,7 @@ class ConsistencyChecker {
         IntStream.range(0, n)
             .mapToObj(i -> interval(store, "r" + i, 1, 2, random))
             .toArray(IntVar[]::new);
-    IntVar limit = var(store, "b", 1, 3, random);
+    IntVar limit = aVar(store, "b", 1, 3, random);
     Constraint c =
         switch (kind) {
           case 1 -> new CumulativeBasic(s, d, r, limit);
@@ -886,7 +888,7 @@ class ConsistencyChecker {
     IntVar[] x = new IntVar[n];
     for (int i = 0; i < n; i++) {
       int lo = random.nextInt(9);
-      x[i] = var(store, "x" + i, lo, Math.min(11, lo + 1 + random.nextInt(7)), random);
+      x[i] = aVar(store, "x" + i, lo, Math.min(11, lo + 1 + random.nextInt(7)), random);
     }
     IntVar[] d = new IntVar[n];
     IntVar[] one = new IntVar[n];
@@ -919,7 +921,7 @@ class ConsistencyChecker {
     IntVar[] x = new IntVar[n];
     for (int i = 0; i < n; i++) {
       int lo = random.nextInt(7);
-      x[i] = var(store, "x" + i, lo, Math.min(9, lo + 1 + random.nextInt(6)), random);
+      x[i] = aVar(store, "x" + i, lo, Math.min(9, lo + 1 + random.nextInt(6)), random);
     }
     return new Model(
         new MultiInterDistance(x, m, p),
@@ -981,7 +983,7 @@ class ConsistencyChecker {
     int rel = inequality ? 1 + random.nextInt(2) : 0;
     int sLo = n * lo + n * (n - 1) / 2;
     int sHi = n * hi - n * (n - 1) / 2;
-    IntVar s = var(store, "s", sLo - 2, sHi + 2, random);
+    IntVar s = aVar(store, "s", sLo - 2, sHi + 2, random);
     return new Model(
         new AlldiffSum(x, rel == 0 ? "==" : rel == 1 ? "<=" : ">=", s, hallIntervals),
         t -> {
@@ -1061,7 +1063,7 @@ class ConsistencyChecker {
   private static Model minMax(Store store, Random random, boolean min) {
     int n = 2 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, -3, 3, random);
-    IntVar m = var(store, "m", -3, 3, random);
+    IntVar m = aVar(store, "m", -3, 3, random);
     return new Model(
         min ? new Min(x, m) : new Max(x, m),
         t -> {
@@ -1088,24 +1090,24 @@ class ConsistencyChecker {
             "XeqY",
             Level.DOMAIN,
             (s, r) -> {
-              IntVar x = var(s, "x", -6, 6, r);
-              IntVar y = var(s, "y", -6, 6, r);
+              IntVar x = aVar(s, "x", -6, 6, r);
+              IntVar y = aVar(s, "y", -6, 6, r);
               return new Model(new XeqY(x, y), t -> t[0] == t[1], new IntVar[] {x, y});
             }),
         new Case(
             "XplusCeqZ",
             Level.DOMAIN,
             (s, r) -> {
-              IntVar x = var(s, "x", -6, 6, r);
-              IntVar z = var(s, "z", -4, 8, r);
+              IntVar x = aVar(s, "x", -6, 6, r);
+              IntVar z = aVar(s, "z", -4, 8, r);
               return new Model(new XplusCeqZ(x, 2, z), t -> t[0] + 2 == t[1], new IntVar[] {x, z});
             }),
         new Case(
             "XplusYeqC",
             Level.DOMAIN,
             (s, r) -> {
-              IntVar x = var(s, "x", -6, 6, r);
-              IntVar y = var(s, "y", -4, 8, r);
+              IntVar x = aVar(s, "x", -6, 6, r);
+              IntVar y = aVar(s, "y", -4, 8, r);
               return new Model(new XplusYeqC(x, y, 2), t -> t[0] + t[1] == 2, new IntVar[] {x, y});
             }),
         new Case(
@@ -1132,8 +1134,8 @@ class ConsistencyChecker {
             Level.BOUNDS_D,
             (s, r) -> {
               int c = r.nextInt(7) - 3;
-              IntVar x = var(s, "x", -4, 4, r);
-              IntVar z = var(s, "z", -12, 12, r);
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -12, 12, r);
               return new Model(new XmulCeqZ(x, c, z), t -> t[0] * c == t[1], new IntVar[] {x, z});
             }),
         // exact least costs F_i(v) with the others in their intervals (Hochbaum's greedy)
@@ -1197,8 +1199,8 @@ class ConsistencyChecker {
             "AbsXeqY (bounds)",
             Level.BOUNDS_Z,
             (s, r) -> {
-              IntVar x = var(s, "x", -5, 5, r);
-              IntVar y = var(s, "y", -2, 6, r);
+              IntVar x = aVar(s, "x", -5, 5, r);
+              IntVar y = aVar(s, "y", -2, 6, r);
               return new Model(
                   new AbsXeqY(x, y, false), t -> Math.abs(t[0]) == t[1], new IntVar[] {x, y});
             }),
@@ -1221,7 +1223,7 @@ class ConsistencyChecker {
               int n = 2 + r.nextInt(3);
               String rel = RELATIONS[r.nextInt(RELATIONS.length)];
               IntVar[] x = vars(s, "x", n, -3, 3, r);
-              IntVar sum = var(s, "s", -8, 8, r);
+              IntVar sum = aVar(s, "s", -8, 8, r);
               return new Model(
                   new SumInt(x, rel, sum),
                   t -> holds(rel, Arrays.stream(t, 0, n).sum(), t[n]),
@@ -1271,8 +1273,8 @@ class ConsistencyChecker {
             Level.DOMAIN,
             (s, r) -> {
               int c = r.nextInt(7) - 3;
-              IntVar x = var(s, "x", -4, 4, r);
-              IntVar z = var(s, "z", -4, 4, r);
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -4, 4, r);
               return new Model(new XplusCneqZ(x, c, z), t -> t[0] + c != t[1], new IntVar[] {x, z});
             }),
         new Case(
@@ -1280,9 +1282,9 @@ class ConsistencyChecker {
             Level.DOMAIN,
             (s, r) -> {
               int c = r.nextInt(7) - 3;
-              IntVar b = r.nextBoolean() ? new BooleanVar(s, "b") : var(s, "b", 0, 1, r);
-              IntVar x = var(s, "x", -4, 4, r);
-              IntVar z = var(s, "z", -4, 4, r);
+              IntVar b = r.nextBoolean() ? new BooleanVar(s, "b") : aVar(s, "b", 0, 1, r);
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -4, 4, r);
               return new Model(
                   new XplusClteqZImplied(b, x, c, z),
                   t -> t[0] == 0 || t[1] + c <= t[2],
@@ -1324,7 +1326,7 @@ class ConsistencyChecker {
               int n = 2 + r.nextInt(4);
               int value = r.nextInt(3);
               IntVar[] x = vars(s, "x", n, 0, 2, r);
-              IntVar c = var(s, "c", 0, n, r);
+              IntVar c = aVar(s, "c", 0, n, r);
               return new Model(
                   new Count(x, c, value),
                   t -> Arrays.stream(t, 0, n).filter(v -> v == value).count() == t[n],
@@ -1353,8 +1355,8 @@ class ConsistencyChecker {
             (s, r) -> {
               int n = 2 + r.nextInt(4);
               IntVar[] x = vars(s, "x", n, 0, 2, r);
-              IntVar c = var(s, "c", 0, n, r);
-              IntVar y = var(s, "y", 0, 2, r);
+              IntVar c = aVar(s, "c", 0, n, r);
+              IntVar y = aVar(s, "y", 0, 2, r);
               return new Model(
                   new CountVar(x, c, y),
                   t -> Arrays.stream(t, 0, n).filter(v -> v == t[n + 1]).count() == t[n],
@@ -1368,7 +1370,7 @@ class ConsistencyChecker {
               int a = r.nextInt(3);
               int b = a + r.nextInt(2);
               IntVar[] x = vars(s, "x", n, 0, 3, r);
-              IntVar c = var(s, "c", 0, n, r);
+              IntVar c = aVar(s, "c", 0, n, r);
               return new Model(
                   new Among(x, new IntervalDomain(a, b), c),
                   t -> Arrays.stream(t, 0, n).filter(v -> a <= v && v <= b).count() == t[n],
@@ -1409,7 +1411,7 @@ class ConsistencyChecker {
             (s, r) -> {
               int n = 2 + r.nextInt(3);
               IntVar[] x = vars(s, "x", n, 0, 3, r);
-              IntVar c = var(s, "c", 0, n + 1, r);
+              IntVar c = aVar(s, "c", 0, n + 1, r);
               return new Model(
                   new Values(x, c),
                   t -> Arrays.stream(t, 0, n).distinct().count() == t[n],
@@ -1435,7 +1437,7 @@ class ConsistencyChecker {
               boolean strict = r.nextBoolean();
               int n = 2 + r.nextInt(3);
               IntVar[] x = vars(s, "x", n, 0, 4, r);
-              IntVar sum = var(s, "s", 0, 4 * n, r);
+              IntVar sum = aVar(s, "s", 0, 4 * n, r);
               return new Model(
                   new IncreasingSum(x, sum, strict),
                   t ->
@@ -1450,7 +1452,7 @@ class ConsistencyChecker {
             (s, r) -> {
               int n = 2 + r.nextInt(4);
               IntVar[] x = vars(s, "x", n, 0, 5, r);
-              IntVar count = var(s, "c", 0, n + 1, r);
+              IntVar count = aVar(s, "c", 0, n + 1, r);
               return new Model(
                   new IncreasingNValue(x, count),
                   t ->
@@ -1501,7 +1503,7 @@ class ConsistencyChecker {
               int[] d = r.ints(n, 0, 4).toArray();
               int[] use = r.ints(n, 0, capacity + 1).toArray();
               int[] w = r.ints(n, 0, 4).toArray();
-              IntVar c = var(s, "c", 0, 40, r);
+              IntVar c = aVar(s, "c", 0, 40, r);
               return new Model(
                   new WeightedCompletion(x, d, use, w, capacity, c),
                   t -> {
@@ -1530,7 +1532,7 @@ class ConsistencyChecker {
               IntVar[] x = vars(s, "x", n, 0, 5, r);
               int[] d = r.ints(n, 0, 4).toArray();
               int[] due = r.ints(n, 0, 8).toArray();
-              IntVar c = var(s, "c", 0, n, r);
+              IntVar c = aVar(s, "c", 0, n, r);
               return new Model(
                   new LateCount(x, d, due, c),
                   t -> {

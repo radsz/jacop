@@ -65,7 +65,7 @@ class SetSupersetTest {
   /** A set argument: either a variable with domain lo..hi, or a fixed set literal. */
   private record SetArg(String name, int lo, int hi, Integer fixed) {
 
-    static SetArg var(String name, int lo, int hi) {
+    static SetArg aVar(String name, int lo, int hi) {
       return new SetArg(name, lo, hi, null);
     }
 
@@ -97,10 +97,10 @@ class SetSupersetTest {
   }
 
   static Stream<Arguments> cases() {
-    SetArg x = SetArg.var("x", 1, 4);
-    SetArg y = SetArg.var("y", 1, 4);
-    SetArg xNarrow = SetArg.var("x", 1, 3);
-    SetArg yShifted = SetArg.var("y", 2, 5);
+    SetArg x = SetArg.aVar("x", 1, 4);
+    SetArg y = SetArg.aVar("y", 1, 4);
+    SetArg xNarrow = SetArg.aVar("x", 1, 3);
+    SetArg yShifted = SetArg.aVar("y", 2, 5);
     SetArg c23 = SetArg.fixed(mask(2, 3));
     SetArg c123 = SetArg.fixed(mask(1, 2, 3));
     SetArg empty = SetArg.fixed(0);

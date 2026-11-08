@@ -283,10 +283,10 @@ public class Fsm {
       s.id = id++;
     }
 
-    Set<FsmState> finalStates = new HashSet<>(this.finalStates);
+    Set<FsmState> localFinalStates = new HashSet<>(this.finalStates);
     Set<FsmState> states = new HashSet<>(this.allStates);
 
-    this.finalStates = finalStates;
+    this.finalStates = localFinalStates;
     this.allStates = states;
   }
 
@@ -520,8 +520,6 @@ public class Fsm {
 
     Mdd result = new Mdd(vars);
     positions[initState.id] = 0;
-    // not needed as constructor is already doing it.
-    // result.freePosition += vars[0].getSize();
 
     for (int l = 0; l < vars.length; l++) {
       for (int i = 0; i < stateNumber; i++) {

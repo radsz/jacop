@@ -40,9 +40,9 @@ import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.Functional;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.SelectingViolation;
 import org.jacop.api.Simplifiable;
 import org.jacop.api.VarMap;
-import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -71,7 +71,7 @@ import org.jacop.lcg.PbModel;
  */
 public class ElementVariableFast extends AbstractElement
     implements Functional,
-        Violation,
+        SelectingViolation,
         Simplifiable,
         SatisfiedPresent,
         Copyable<ElementVariableFast>,
@@ -180,6 +180,9 @@ public class ElementVariableFast extends AbstractElement
       int position = index.value() - 1 - indexOffset;
       value.domain.in(store.level, value, list[position].domain);
       list[position].domain.in(store.level, list[position], value.domain);
+      if (value.singleton()) {
+        removeConstraint();
+      }
       return;
     }
 
@@ -191,6 +194,8 @@ public class ElementVariableFast extends AbstractElement
     long supportBits = 0;
     IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
     boolean indexDomNonEmpty = false;
+    // whether every selectable position is fixed to the fixed value: then the constraint holds
+    boolean entailed = value.singleton();
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
 
@@ -204,6 +209,7 @@ public class ElementVariableFast extends AbstractElement
       } else {
         min = Math.min(min, list[position].min());
         max = Math.max(max, list[position].max());
+        entailed = entailed && list[position].singleton() && list[position].value() == valueMin;
         if (smallValue) {
           supportBits |= list[position].domain.bitsFrom(valueMin);
         }
@@ -226,6 +232,12 @@ public class ElementVariableFast extends AbstractElement
       IntVar lp = list[index.value() - 1 - indexOffset];
       value.domain.in(store.level, value, lp.domain);
       lp.domain.in(store.level, lp, value.domain);
+      if (value.singleton()) {
+        removeConstraint();
+      }
+    } else if (entailed) {
+      // the positions not removed from the index all hold the value, so no change can prune
+      removeConstraint();
     }
   }
 
@@ -357,6 +369,31 @@ public class ElementVariableFast extends AbstractElement
       return 1;
     }
     return value.applyAsInt(list[i]) == value.applyAsInt(this.value) ? 0 : 1;
+  }
+
+  @Override
+  public IntVar selector() {
+    return index;
+  }
+
+  @Override
+  public IntVar[] selectable() {
+    return list.clone();
+  }
+
+  @Override
+  public int firstSelector() {
+    return indexOffset + 1;
+  }
+
+  @Override
+  public IntVar[] alwaysRead() {
+    return new IntVar[] {value};
+  }
+
+  @Override
+  public IntVar selectedEquals() {
+    return value;
   }
 
   @Override

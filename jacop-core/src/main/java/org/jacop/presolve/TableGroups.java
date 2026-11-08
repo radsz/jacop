@@ -372,17 +372,17 @@ final class TableGroups {
     for (int c : members) {
       group.add(constraints.get(c));
     }
-    IntVar[] scope = new IntVar[positions.length];
+    IntVar[] localScope = new IntVar[positions.length];
     IntVar[] copy = new IntVar[positions.length];
     for (int i = 0; i < positions.length; i++) {
-      scope[i] = (IntVar) variables.get(positions[i]);
-      copy[i] = map.get(scope[i]);
+      localScope[i] = (IntVar) variables.get(positions[i]);
+      copy[i] = map.get(localScope[i]);
     }
     try {
       for (Constraint c : group) {
         scratch.impose(((Copyable<?>) c).copy(map));
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       infeasible = true;
       return null;
     }
@@ -395,12 +395,12 @@ final class TableGroups {
       return null;
     }
     long all = 1;
-    for (IntVar v : scope) {
+    for (IntVar v : localScope) {
       // only a count up to the number of solutions matters
       all = all > limits.tuples() ? all : all * v.getSize();
     }
     if (all == e.solutions.size()) {
-      return new Group(List.copyOf(group), scope, null);
+      return new Group(List.copyOf(group), localScope, null);
     }
     if (e.failures == 0
         && limits.onlyStronger()
@@ -409,7 +409,7 @@ final class TableGroups {
       // prune nothing more, only cost more
       return null;
     }
-    return new Group(List.copyOf(group), scope, e.solutions.toArray(new int[0][]));
+    return new Group(List.copyOf(group), localScope, e.solutions.toArray(new int[0][]));
   }
 
   /**
@@ -440,7 +440,7 @@ final class TableGroups {
         try {
           x.domain.inComplement(store.level, x, value);
           weaker = store.consistency() && unsupported(vars, tuples);
-        } catch (FailException f) {
+        } catch (FailException _) {
           // the table fails too
         }
         while (store.level > level) {
@@ -517,6 +517,13 @@ final class TableGroups {
         solutions.add(tuple);
         return solutions.size() <= limits.tuples();
       }
+      // every value costs a node, so a domain larger than the nodes left reaches a limit for sure;
+      // stop before listing its values, which for a wide auxiliary domain would not fit in memory
+      long limit = Math.min(start + limits.nodes() + 1, limits.budget() + 1);
+      if (next.getSize() >= limit - nodes) {
+        nodes = limit;
+        return false;
+      }
       for (int value : next.dom().toIntArray()) {
         if (++nodes - start > limits.nodes() || nodes > limits.budget()) {
           return false;
@@ -531,7 +538,7 @@ final class TableGroups {
           } else {
             failures++;
           }
-        } catch (FailException f) {
+        } catch (FailException _) {
           failures++;
         }
         // propagation may have raised the level further (raiseLevelBeforeConsistency)

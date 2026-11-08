@@ -50,6 +50,7 @@ import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.search.DepthFirstSearch;
@@ -59,6 +60,7 @@ import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Automatic tabulation in presolve: the derived store has the same solutions, with the same
@@ -138,7 +140,7 @@ class TablingTest {
     s.impose(new XplusYeqZ(t, y, x));
     s.impose(new AbsXeqY(t, new IntVar(s, "z", 2, 2)));
     Tabling rule = new Tabling();
-    Derivation d = Derivation.of(s).rule(rule).derive();
+    Derivation.of(s).rule(rule).derive();
     assertThat(rule.statistics().tables()).isEqualTo(1);
   }
 
@@ -171,6 +173,29 @@ class TablingTest {
     assertThat(larger.statistics().childConstraints()).isEqualTo(1);
   }
 
+  @Test
+  @Timeout(30)
+  void aGroupOverWideDomainsStopsWithoutListingTheirValues() {
+    // x0 != x1 != ... != x9 over about 10^9 values each: the enumeration used to copy all values of
+    // the variable it branches on into an array at each of its 10 levels, about 4 GB a level,
+    // before
+    // its node limit could stop it (work-task-variation, 2025 MiniZinc Challenge)
+    Store s = new Store();
+    IntVar[] x = new IntVar[10];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(s, "x" + i, IntDomain.MIN_INT, IntDomain.MAX_INT);
+    }
+    for (int i = 0; i + 1 < x.length; i++) {
+      s.impose(new XneqY(x[i], x[i + 1]));
+    }
+    Tabling rule = new Tabling();
+    Derivation d = Derivation.of(s).rule(rule).derive();
+    assertThat(d.outcome()).isEqualTo(Derivation.Outcome.DERIVED);
+    assertThat(rule.statistics().tables()).isZero();
+    assertThat(rule.statistics().nodes()).isEqualTo(Tabling.Limits.DEFAULT.nodes() + 1);
+    assertThat(d.statistics().childConstraints()).isEqualTo(x.length - 1);
+  }
+
   /** x + y = z and x != y over 0..200: 40,200 solutions. */
   private static Store sumOfDistinct() {
     Store s = new Store();
@@ -192,7 +217,7 @@ class TablingTest {
     s.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, "==", 4));
     s.impose(new XneqY(x[0], x[1]));
     Tabling rule = new Tabling(new Tabling.Limits(3, 3, 100, 1000, 1000, false));
-    Derivation d = Derivation.of(s).rule(rule).derive();
+    Derivation.of(s).rule(rule).derive();
     assertThat(rule.statistics().tables()).isZero();
   }
 

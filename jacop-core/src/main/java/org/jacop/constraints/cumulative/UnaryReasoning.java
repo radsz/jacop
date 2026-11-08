@@ -112,7 +112,7 @@ class UnaryReasoning {
   // detectable precedences: the state of each task and the tasks postponed behind a blocking task
   private static final int WAITING = 0;
   private static final int FILTERED = 1;
-  private static final int POSTPONED = 2;
+  private static final int POSTPONED_STATE = 2;
   private int[] state = new int[0];
   private int[] postponed = new int[0];
 
@@ -764,7 +764,7 @@ class UnaryReasoning {
         int k = lstOrder[indexQ];
         if (state[k] == FILTERED) {
           schedule(k);
-        } else if (state[k] == POSTPONED || blocking != -1) {
+        } else if (state[k] == POSTPONED_STATE || blocking != -1) {
           // k and the blocking task must each precede the other
           throw Store.failException;
         } else {
@@ -787,7 +787,7 @@ class UnaryReasoning {
           nPostponed = 0;
         }
       } else {
-        state[i] = POSTPONED;
+        state[i] = POSTPONED_STATE;
         postponed[nPostponed++] = i;
       }
     }

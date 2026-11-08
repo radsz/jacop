@@ -1084,7 +1084,7 @@ public class Store {
   public void impose(Constraint c) {
 
     checkImposeAllowed();
-    record(c);
+    rec(c);
     c.impose(this);
   }
 
@@ -1103,7 +1103,7 @@ public class Store {
     }
 
     checkImposeAllowed();
-    record(c);
+    rec(c);
     c.impose(this, queueIndex);
   }
 
@@ -1118,7 +1118,7 @@ public class Store {
   public void imposeWithConsistency(Constraint c) throws FailException {
 
     checkImposeAllowed();
-    record(c);
+    rec(c);
     c.impose(this);
 
     if (!consistency()) {
@@ -1142,7 +1142,7 @@ public class Store {
     }
 
     checkImposeAllowed();
-    record(c);
+    rec(c);
     c.impose(this, queueIndex);
 
     if (!consistency()) {
@@ -1622,7 +1622,7 @@ public class Store {
     return model == null ? List.of() : Collections.unmodifiableList(model);
   }
 
-  private void record(Constraint c) {
+  private void rec(Constraint c) {
     if (model != null) {
       model.add(c);
     }

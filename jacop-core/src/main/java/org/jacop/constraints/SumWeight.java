@@ -317,7 +317,7 @@ public class SumWeight extends Constraint
       long variability;
       try {
         variability = Math.multiplyExact(width, Math.abs(weights[i]));
-      } catch (ArithmeticException e) {
+      } catch (ArithmeticException _) {
         variability = Long.MAX_VALUE; // never skip the pass
       }
       maxVariability = Math.max(maxVariability, variability);

@@ -44,6 +44,7 @@ import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.Functional;
+import org.jacop.api.SelectingViolation;
 import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
 import org.jacop.constraints.AbstractReifiedConstraint;
@@ -83,6 +84,14 @@ import org.jacop.lcg.LinearForm;
  * as violated or not. Constraints over other kinds of variables are not evaluated, so an assignment
  * the local search takes as a solution is always checked by propagation in the store before it is
  * reported.
+ *
+ * <p>The violations are kept as invariants, in the manner of Comet (Michel and Van Hentenryck, "A
+ * constraint-based architecture for local search", OOPSLA 2002; Van Hentenryck and Michel,
+ * Constraint-Based Local Search, MIT Press 2005): a move updates the sums of its linear rows, the
+ * value counts of its all different and the windows of its sequences, and the defined variables
+ * follow their definitions. A trial move that changes many variables (a swap, or a variable with
+ * what it defines) only lists the constraints it touches and measures each once; an element
+ * constraint reads a variable of its list only while its index selects it.
  *
  * <p>For optimisation, each solution adds the bound {@code cost < best} as a constraint of the
  * local search, which then looks for a better solution.
@@ -126,6 +135,8 @@ public final class LocalSearch {
   private static final int SMALL_DOMAIN = 8;
   private static final double WEIGHT_LIMIT = 1e12;
   private static final boolean DEBUG_REJECT = Boolean.getBoolean("jacop.ls.debug");
+  // checks after every step that the incremental state equals the state computed afresh
+  private static final boolean VERIFY = Boolean.getBoolean("jacop.ls.verify");
 
   private final Store store;
   private final IntVar cost;
@@ -145,6 +156,7 @@ public final class LocalSearch {
   private final int scheduling;
   private final boolean skipImplied;
   private final boolean tableKeys;
+  private final boolean follow;
   // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
   private final Set<Constraint> symmetry;
   private final Canonicalizer canonicalizer;
@@ -173,6 +185,22 @@ public final class LocalSearch {
   // constraints whose violation a swap of the values of two of their variables may lower
   // without changing how often each value is taken
   private boolean[] swaps;
+  // per constraint: the variable whose domain it is (a defined variable's domain row), or -1
+  private int[] domainVar;
+  // per element constraint (a SelectingViolation): its index variable (-1 for other constraints),
+  // the index value that selects position 0, and the variables of its list
+  private int[] selIndex;
+  private int[] selFirst;
+  private int[][] selList;
+  private int[][] selAlways;
+  // per element constraint: the variable the selected one must equal (selectedEquals), or -1
+  private int[] selEq;
+  // the variables that follow the element constraints selecting them (see buildFollowers), none
+  // when null; the followers to choose a value for again at the end of the current move
+  private boolean[] follower;
+  private int[] followQueue;
+  private int followCount;
+  private boolean[] followQueued;
   // the index of each variable of the store among the variables of the local search, or -1
   private int[] slot;
   private final Values values = new Values();
@@ -182,6 +210,20 @@ public final class LocalSearch {
   // occurrences of each variable: the constraints and its coefficient in each (0 if not linear)
   private int[][] occ;
   private long[][] occCoef;
+  // per occurrence: how a move of the variable updates the constraint (OCC_LINEAR and so on)
+  private byte[][] occKind;
+  // per variable: the positions in occ of its counted and window occurrences, which undoing a trial
+  // move updates back one by one (the sums of linear rows are restored at once)
+  private int[][] occCounted;
+  // per variable: the element constraints that read it only while their index selects it (Comet's
+  // element invariant), kept out of its occurrences; and those whose index selects it now
+  private int[][] selOcc;
+  private int[][] selBy;
+  private int[] selByCount;
+  // per element constraint: the variable of its list its index selects now, if it is one of these
+  // conditional occurrences, otherwise -1; and per position whether that occurrence is conditional
+  private int[] selCur;
+  private boolean[][] selCond;
 
   // the violated constraints
   private int[] violated;
@@ -214,8 +256,21 @@ public final class LocalSearch {
   private int[] undoValue = new int[64];
   private int undoSize;
   private boolean recording;
+  // during a trial move: the constraints it touched, measured once at its end
+  private boolean deferred;
+  private int[] touched;
+  private long[] touchedLhs;
+  private int touchedCount;
+  private long[] touchStamp;
+  private long trialStamp;
   // the weighted violation of all constraints
   private double total;
+
+  private static final byte OCC_OTHER = 0;
+  private static final byte OCC_LINEAR = 1;
+  private static final byte OCC_COUNTED = 2;
+  private static final byte OCC_WINDOW = 3;
+  private static final byte OCC_SELECTOR = 4;
 
   private static final int LINEAR_DEFINITION = 0;
   private static final int REIFIED_DEFINITION = 1;
@@ -270,6 +325,7 @@ public final class LocalSearch {
     scheduling = b.scheduling;
     skipImplied = b.skipImplied;
     tableKeys = b.tableKeys;
+    follow = b.follow;
     symmetry = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     if (b.canonicalizer != null) {
       symmetry.addAll(b.symmetry);
@@ -584,6 +640,15 @@ public final class LocalSearch {
     copies = new IntVar[m][];
     measures = new Violation[m];
     swaps = new boolean[m];
+    domainVar = new int[m];
+    Arrays.fill(domainVar, -1);
+    selIndex = new int[m];
+    Arrays.fill(selIndex, -1);
+    selFirst = new int[m];
+    selList = new int[m][];
+    selAlways = new int[m][];
+    selEq = new int[m];
+    Arrays.fill(selEq, -1);
     int c = 0;
     for (Object[] row : rows) {
       scope[c] = (int[]) row[0];
@@ -610,10 +675,20 @@ public final class LocalSearch {
       measures[c] = measured.get(k);
       swaps[c] = swapsValues(measuredConstraints.get(k));
       scope[c] = scopeOf(measuredConstraints.get(k));
+      if (measuredConstraints.get(k) instanceof SelectingViolation e) {
+        selIndex[c] = indexOf(e.selector());
+        selFirst[c] = e.firstSelector();
+        selList[c] = Arrays.stream(e.selectable()).mapToInt(this::indexOf).toArray();
+        selAlways[c] = Arrays.stream(e.alwaysRead()).mapToInt(this::indexOf).toArray();
+        if (e.selectedEquals() != null) {
+          selEq[c] = indexOf(e.selectedEquals());
+        }
+      }
       c++;
     }
     for (int i : domainRows) {
       measures[c] = value -> distance(domains[i], value.applyAsInt(vars[i]));
+      domainVar[c] = i;
       scope[c] = new int[] {i};
       c++;
     }
@@ -647,9 +722,15 @@ public final class LocalSearch {
     buildCounters();
     buildOccurrences();
     buildDefinitions(measured.size());
+    if (follow) {
+      buildFollowers();
+    }
     violated = new int[m];
     violatedPos = new int[m];
     Arrays.fill(violatedPos, -1);
+    touched = new int[m];
+    touchedLhs = new long[m];
+    touchStamp = new long[m];
     if (scheduling != 0 && cost != null) {
       buildSchedule();
     }
@@ -1079,17 +1160,10 @@ public final class LocalSearch {
   private double trySwap(int i, int j) {
     int vi = val[i];
     int vj = val[j];
-    double before = total;
-    trial = true;
-    recording = true;
-    undoSize = 0;
+    beginTrial();
     moveDefined(i, vj);
     moveDefined(j, vi);
-    recording = false;
-    double d = total - before;
-    undo();
-    trial = false;
-    return d;
+    return endTrial();
   }
 
   /**
@@ -1186,18 +1260,19 @@ public final class LocalSearch {
       // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
       return;
     }
-    int[] var = new int[n];
+    int[] aVar = new int[n];
     int[] dur = new int[n];
     int[] release = new int[n];
-    int[] deadline = new int[n];
+    int[] localDeadline = new int[n];
     for (int t = 0; t < n; t++) {
-      var[t] = taskVar.get(t);
+      aVar[t] = taskVar.get(t);
       dur[t] = taskDur.get(t);
-      release[t] = domains[var[t]].min();
-      deadline[t] = domains[var[t]].max();
+      release[t] = domains[aVar[t]].min();
+      localDeadline[t] = domains[aVar[t]].max();
     }
     schedule =
-        new DisjunctiveSchedule(var, dur, release, deadline, arcs, machines, scheduling, random);
+        new DisjunctiveSchedule(
+            aVar, dur, release, localDeadline, arcs, machines, scheduling, random);
     scheduleTasks = n;
     scheduleMachines = machines.size();
   }
@@ -1322,7 +1397,7 @@ public final class LocalSearch {
    */
   private boolean scheduleSearch() {
     DisjunctiveSchedule ds = schedule;
-    int[] tasks = ds.var;
+    int[] tasks = ds.aVar;
     int[] priority = new int[ds.n];
     for (int k = 0; k < ds.n; k++) {
       priority[k] = val[tasks[k]];
@@ -1807,17 +1882,24 @@ public final class LocalSearch {
    */
   private void moveDefined(int i, int v) {
     setValue(i, v);
-    if (dependents[i].length == 0) {
-      return;
+    if (dependents[i].length > 0) {
+      push(dependents[i]);
+      while (heapSize > 0) {
+        int d = pop();
+        int y = defOut[d];
+        int w = defined(d);
+        if (w != val[y]) {
+          setValue(y, w);
+          push(dependents[y]);
+        }
+      }
     }
-    push(dependents[i]);
-    while (heapSize > 0) {
-      int d = pop();
-      int y = defOut[d];
-      int w = defined(d);
-      if (w != val[y]) {
-        setValue(y, w);
-        push(dependents[y]);
+    while (followCount > 0) {
+      int f = followQueue[--followCount];
+      followQueued[f] = false;
+      int w = followed(f);
+      if (w != val[f]) {
+        setValue(f, w);
       }
     }
   }
@@ -1864,26 +1946,12 @@ public final class LocalSearch {
 
   /** The change of the weighted violation if variable i takes value v, with what it defines. */
   private double tryMove(int i, int v) {
-    if (dependents[i].length == 0) {
+    if (dependents[i].length == 0 && (follower == null || !leads[i])) {
       return delta(i, v);
     }
-    double before = total;
-    trial = true;
-    recording = true;
-    undoSize = 0;
+    beginTrial();
     moveDefined(i, v);
-    recording = false;
-    double change = total - before;
-    undo();
-    trial = false;
-    return change;
-  }
-
-  private void undo() {
-    for (int k = undoSize - 1; k >= 0; k--) {
-      setValue(undoVar[k], undoValue[k]);
-    }
-    undoSize = 0;
+    return endTrial();
   }
 
   private int addVar(IntVar x, List<IntVar> varList) {
@@ -1954,7 +2022,7 @@ public final class LocalSearch {
           distinct.add(x);
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       return false;
     }
     int[] s = new int[distinct.size()];
@@ -2032,7 +2100,7 @@ public final class LocalSearch {
     }
     try {
       target.impose(((Copyable<?>) c).copy(varMap));
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       return false;
     }
     scope[row] = s.stream().mapToInt(Integer::intValue).toArray();
@@ -2042,10 +2110,24 @@ public final class LocalSearch {
 
   private void buildOccurrences() {
     int n = vars.length;
+    selCond = new boolean[m][];
+    for (int c = 0; c < m; c++) {
+      if (selIndex[c] >= 0) {
+        selCond[c] = new boolean[selList[c].length];
+        for (int p = 0; p < selList[c].length; p++) {
+          selCond[c][p] = selectedAt(c, selList[c][p]) == p;
+        }
+      }
+    }
     int[] count = new int[n];
+    int[] condCount = new int[n];
     for (int c = 0; c < m; c++) {
       for (int i : scope[c]) {
-        count[i]++;
+        if (selectedAt(c, i) >= 0) {
+          condCount[i]++;
+        } else {
+          count[i]++;
+        }
       }
       if (enforcer[c] >= 0 && !contains(scope[c], enforcer[c])) {
         count[enforcer[c]]++;
@@ -2053,14 +2135,24 @@ public final class LocalSearch {
     }
     occ = new int[n][];
     occCoef = new long[n][];
+    selOcc = new int[n][];
+    selBy = new int[n][];
+    selByCount = new int[n];
     for (int i = 0; i < n; i++) {
       occ[i] = new int[count[i]];
       occCoef[i] = new long[count[i]];
+      selOcc[i] = new int[condCount[i]];
+      selBy[i] = new int[Math.min(condCount[i], 4)];
     }
     Arrays.fill(count, 0);
+    Arrays.fill(condCount, 0);
     for (int c = 0; c < m; c++) {
       for (int k = 0; k < scope[c].length; k++) {
         int i = scope[c][k];
+        if (selectedAt(c, i) >= 0) {
+          selOcc[i][condCount[i]++] = c;
+          continue;
+        }
         occ[i][count[i]] = c;
         occCoef[i][count[i]] = coef[c] == null ? 0 : coef[c][k];
         count[i]++;
@@ -2072,6 +2164,221 @@ public final class LocalSearch {
         count[e]++;
       }
     }
+    selCur = new int[m];
+    Arrays.fill(selCur, -1);
+    occKind = new byte[n][];
+    occCounted = new int[n][];
+    for (int i = 0; i < n; i++) {
+      occKind[i] = new byte[occ[i].length];
+      int counted = 0;
+      for (int k = 0; k < occ[i].length; k++) {
+        occKind[i][k] = occurrenceKind(occ[i][k], i, occCoef[i][k]);
+        if (occKind[i][k] == OCC_COUNTED || occKind[i][k] == OCC_WINDOW) {
+          counted++;
+        }
+      }
+      occCounted[i] = new int[counted];
+      counted = 0;
+      for (int k = 0; k < occ[i].length; k++) {
+        if (occKind[i][k] == OCC_COUNTED || occKind[i][k] == OCC_WINDOW) {
+          occCounted[i][counted++] = k;
+        }
+      }
+    }
+  }
+
+  private byte occurrenceKind(int c, int i, long a) {
+    if (coef[c] != null && a != 0) {
+      return OCC_LINEAR;
+    }
+    if (counters[c] != null) {
+      return OCC_COUNTED;
+    }
+    if (windows[c] != null) {
+      return OCC_WINDOW;
+    }
+    return selIndex[c] == i ? OCC_SELECTOR : OCC_OTHER;
+  }
+
+  // finds again, for every element constraint, the variable its index selects
+  private void reselectAll() {
+    Arrays.fill(selByCount, 0);
+    Arrays.fill(selCur, -1);
+    for (int c = 0; c < m; c++) {
+      if (selIndex[c] >= 0) {
+        reselect(c);
+      }
+    }
+  }
+
+  // element constraint c reads the variable its index selects now
+  private void reselect(int c) {
+    int now = -1;
+    long p = (long) val[selIndex[c]] - selFirst[c];
+    if (p >= 0 && p < selList[c].length && selCond[c][(int) p]) {
+      now = selList[c][(int) p];
+    }
+    int old = selCur[c];
+    if (old == now) {
+      return;
+    }
+    if (old >= 0) {
+      int[] by = selBy[old];
+      int last = --selByCount[old];
+      for (int t = 0; t <= last; t++) {
+        if (by[t] == c) {
+          by[t] = by[last];
+          break;
+        }
+      }
+    }
+    if (now >= 0) {
+      if (selByCount[now] == selBy[now].length) {
+        selBy[now] = Arrays.copyOf(selBy[now], Math.max(4, 2 * selBy[now].length));
+      }
+      selBy[now][selByCount[now]++] = c;
+    }
+    selCur[c] = now;
+  }
+
+  /**
+   * Finds the followers: variables of the lists of element constraints that only element
+   * constraints of the form list[index] = y read, and only while their index selects them (and the
+   * domain row of the variable). Each of them is not moved by the search but, after every move,
+   * takes the value of y most of the element constraints selecting it ask for, by weight. A model
+   * whose element constraints look up a matrix this way, such as the social golfers' pair matrix,
+   * then needs one move where it needed two, Comet's functional invariants in local search (Van
+   * Hentenryck and Michel, Constraint-Based Local Search, MIT Press 2005, chapter 5).
+   */
+  private void buildFollowers() {
+    int n = vars.length;
+    boolean[] f = new boolean[n];
+    boolean any = false;
+    for (int i = 0; i < n; i++) {
+      if (selOcc[i].length == 0
+          || defOf[i] >= 0
+          || dependents[i].length > 0
+          || i == costIndex
+          || grouped(i)
+          || domains[i].singleton()) {
+        continue;
+      }
+      boolean ok = true;
+      for (int c : occ[i]) {
+        ok &= domainVar[c] == i;
+      }
+      for (int c : selOcc[i]) {
+        ok &= selEq[c] >= 0 && selEq[c] != i;
+      }
+      f[i] = ok;
+      any |= ok;
+    }
+    if (!any) {
+      return;
+    }
+    follower = f;
+    followQueue = new int[n];
+    followQueued = new boolean[n];
+    leads = new boolean[n];
+    int count = 0;
+    for (int c = 0; c < m; c++) {
+      if (selIndex[c] < 0) {
+        continue;
+      }
+      boolean hasFollower = false;
+      for (int x : selList[c]) {
+        hasFollower |= f[x];
+      }
+      if (hasFollower) {
+        // a move of the index or of y chooses the value of a follower again
+        leads[selIndex[c]] = true;
+        for (int x : selAlways[c]) {
+          leads[x] = true;
+        }
+      }
+    }
+    for (boolean b : f) {
+      count += b ? 1 : 0;
+    }
+    classes.merge("followers", count, Integer::sum);
+  }
+
+  // the variables whose move may choose the value of a follower again
+  private boolean[] leads;
+
+  private void queueFollower(int f) {
+    if (f >= 0 && follower[f] && !followQueued[f]) {
+      followQueued[f] = true;
+      followQueue[followCount++] = f;
+    }
+  }
+
+  /**
+   * The value of follower f: the value of y that the element constraints selecting f ask for with
+   * the most weight, among the values of its domain; its current value on a tie or when none
+   * selects it.
+   */
+  private int followed(int f) {
+    int count = selByCount[f];
+    if (count == 0) {
+      return val[f];
+    }
+    int[] by = selBy[f];
+    int bestVal = val[f];
+    double best = 0;
+    for (int k = 0; k < count; k++) {
+      int v = val[selEq[by[k]]];
+      if (k > 0 && alreadyCounted(by, k, v)) {
+        continue;
+      }
+      double w = 0;
+      for (int t = k; t < count; t++) {
+        if (val[selEq[by[t]]] == v) {
+          w += weight[by[t]];
+        }
+      }
+      if (domains[f].contains(v) && (w > best || w == best && v == val[f])) {
+        best = w;
+        bestVal = v;
+      }
+    }
+    return bestVal;
+  }
+
+  private boolean alreadyCounted(int[] by, int k, int v) {
+    for (int t = 0; t < k; t++) {
+      if (val[selEq[by[t]]] == v) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // a variable a move does not change: fixed, or a follower
+  private boolean fixedForMoves(int i) {
+    return domains[i].singleton() || follower != null && follower[i];
+  }
+
+  /**
+   * The position of variable i in the list of element constraint c when c reads i only while its
+   * index selects that position, otherwise -1 (i is the index, is read always, or is in the list
+   * more than once).
+   */
+  private int selectedAt(int c, int i) {
+    if (selIndex == null || selIndex[c] < 0 || selIndex[c] == i || contains(selAlways[c], i)) {
+      return -1;
+    }
+    int at = -1;
+    int[] list = selList[c];
+    for (int p = 0; p < list.length; p++) {
+      if (list[p] == i) {
+        if (at >= 0) {
+          return -1;
+        }
+        at = p;
+      }
+    }
+    return at;
   }
 
   private static boolean contains(int[] a, int x) {
@@ -2120,7 +2427,7 @@ public final class LocalSearch {
         try {
           x.domain.in(store.level, x, v, v);
           ok = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           ok = false;
         }
         if (!ok) {
@@ -2162,6 +2469,7 @@ public final class LocalSearch {
     Arrays.fill(viol, 0);
     total = 0;
     recount();
+    reselectAll();
     for (int c = 0; c < m; c++) {
       if (coef[c] != null) {
         long s = 0;
@@ -2171,6 +2479,18 @@ public final class LocalSearch {
         lhs[c] = s;
       }
       setViolation(c, currentViolation(c));
+    }
+    if (follower != null) {
+      followCount = 0;
+      Arrays.fill(followQueued, false);
+      for (int f = 0; f < follower.length; f++) {
+        if (follower[f]) {
+          int w = followed(f);
+          if (w != val[f]) {
+            setValue(f, w);
+          }
+        }
+      }
     }
   }
 
@@ -2184,6 +2504,9 @@ public final class LocalSearch {
     }
     if (counters[c] != null) {
       return counters[c].duplicates;
+    }
+    if (domainVar[c] >= 0) {
+      return distance(domains[domainVar[c]], val[domainVar[c]]);
     }
     if (measures[c] != null) {
       return measured(c, -1, 0);
@@ -2252,7 +2575,7 @@ public final class LocalSearch {
         }
       }
       ok = ok && scratch.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       ok = false;
     } finally {
       scratch.removeLevel(level);
@@ -2281,6 +2604,10 @@ public final class LocalSearch {
     if (counters[c] != null) {
       return counters[c].after(val[i], v);
     }
+    if (domainVar[c] >= 0) {
+      int x = domainVar[c];
+      return distance(domains[x], x == i ? v : val[x]);
+    }
     if (measures[c] != null) {
       return measured(c, i, v);
     }
@@ -2303,6 +2630,15 @@ public final class LocalSearch {
     for (int k = 0; k < cs.length; k++) {
       int c = cs[k];
       long after = violationAfter(c, i, v, as[k]);
+      if (after != viol[c]) {
+        d += weight[c] * (scaled(after) - scaled(viol[c]));
+      }
+    }
+    // the element constraints whose index selects i
+    int[] by = selBy[i];
+    for (int k = selByCount[i] - 1; k >= 0; k--) {
+      int c = by[k];
+      long after = violationAfter(c, i, v, 0);
       if (after != viol[c]) {
         d += weight[c] * (scaled(after) - scaled(viol[c]));
       }
@@ -2345,20 +2681,189 @@ public final class LocalSearch {
     val[i] = v;
     int[] cs = occ[i];
     long[] as = occCoef[i];
+    byte[] kinds = occKind[i];
+    boolean stamp = changed != null && !trial;
+    long step = (long) v - old;
     for (int k = 0; k < cs.length; k++) {
       int c = cs[k];
-      if (changed != null && !trial) {
+      if (stamp) {
         changed[c] = clock;
       }
-      if (coef[c] != null && as[k] != 0) {
-        lhs[c] = sat(lhs[c] + as[k] * ((long) v - old));
-      } else if (counters[c] != null && v != old) {
-        counters[c].remove(old);
-        counters[c].add(v);
-      } else if (windows[c] != null && v != old) {
-        windows[c].move(i, old, v);
+      if (deferred) {
+        // before the sum changes: undoing the trial restores it
+        touch(c);
       }
+      switch (kinds[k]) {
+        case OCC_LINEAR -> lhs[c] = sat(lhs[c] + as[k] * step);
+        case OCC_COUNTED -> {
+          if (v != old) {
+            counters[c].remove(old);
+            counters[c].add(v);
+          }
+        }
+        case OCC_WINDOW -> {
+          if (v != old) {
+            windows[c].move(i, old, v);
+          }
+        }
+        case OCC_SELECTOR -> {
+          if (follower != null) {
+            queueFollower(selCur[c]);
+          }
+          reselect(c);
+        }
+        default -> {
+          // measured again below
+        }
+      }
+      if (follower != null && selIndex[c] >= 0) {
+        queueFollower(selCur[c]);
+      }
+      if (!deferred) {
+        setViolation(c, currentViolation(c));
+      }
+    }
+    if (selOcc[i].length > 0) {
+      if (stamp) {
+        for (int c : selOcc[i]) {
+          changed[c] = clock;
+        }
+      }
+      int[] by = selBy[i];
+      for (int k = selByCount[i] - 1; k >= 0; k--) {
+        evaluate(by[k]);
+      }
+    }
+  }
+
+  // measures constraint c again, or lists it to be measured at the end of a trial move
+  private void evaluate(int c) {
+    if (deferred) {
+      touch(c);
+    } else {
       setViolation(c, currentViolation(c));
+    }
+  }
+
+  /**
+   * Checks that the sums, selections, defined values and violations kept incrementally equal those
+   * computed from the values afresh (with -Djacop.ls.verify=true).
+   */
+  private void verify() {
+    for (int c = 0; c < m; c++) {
+      if (coef[c] != null) {
+        long sum = 0;
+        for (int k = 0; k < scope[c].length; k++) {
+          sum = sat(sum + coef[c][k] * val[scope[c][k]]);
+        }
+        if (sum != lhs[c]) {
+          throw new IllegalStateException("row " + c + ": sum " + lhs[c] + ", afresh " + sum);
+        }
+      }
+      if (selIndex[c] >= 0) {
+        int sel = selCur[c];
+        long p = (long) val[selIndex[c]] - selFirst[c];
+        int expect =
+            p >= 0 && p < selList[c].length && selCond[c][(int) p] ? selList[c][(int) p] : -1;
+        if (expect != sel
+            || (expect >= 0 && !contains(Arrays.copyOf(selBy[expect], selByCount[expect]), c))) {
+          throw new IllegalStateException(
+              "element " + c + ": selects " + sel + ", afresh " + expect);
+        }
+      }
+      long v = currentViolation(c);
+      if (v != viol[c]) {
+        throw new IllegalStateException(
+            "constraint " + c + ": violation " + viol[c] + ", afresh " + v);
+      }
+    }
+    for (int d : topological) {
+      if (defined(d) != val[defOut[d]]) {
+        throw new IllegalStateException("definition " + d + ": value " + val[defOut[d]]);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- trial moves
+
+  /**
+   * Starts a trial move that may change many variables (a variable with what it defines, or a
+   * swap). Until {@link #endTrial} the moves keep the sums, counters and windows of the constraints
+   * up to date but only list the constraints they touch; each of these is measured once at the end,
+   * instead of after every variable that changes in it, and again when the move is undone.
+   */
+  private void beginTrial() {
+    trial = true;
+    deferred = true;
+    recording = true;
+    undoSize = 0;
+    touchedCount = 0;
+    if (++trialStamp == Long.MAX_VALUE) {
+      Arrays.fill(touchStamp, 0);
+      trialStamp = 1;
+    }
+  }
+
+  /** Ends a trial move: the change of the weighted violation it makes, and undoes it. */
+  private double endTrial() {
+    recording = false;
+    double change = 0;
+    for (int t = 0; t < touchedCount; t++) {
+      int c = touched[t];
+      long after = currentViolation(c);
+      if (after != viol[c]) {
+        change += weight[c] * (scaled(after) - scaled(viol[c]));
+      }
+    }
+    undoTrial();
+    touchedCount = 0;
+    deferred = false;
+    trial = false;
+    return change;
+  }
+
+  private void touch(int c) {
+    if (touchStamp[c] != trialStamp) {
+      touchStamp[c] = trialStamp;
+      touchedLhs[touchedCount] = lhs[c];
+      touched[touchedCount++] = c;
+    }
+  }
+
+  /**
+   * Undoes a trial move: the values back in reverse order, with the counters and windows they
+   * changed, then the sums of the touched rows and the selections of the touched element
+   * constraints at once. The violations were not changed.
+   */
+  private void undoTrial() {
+    for (int t = 0; t < touchedCount; t++) {
+      lhs[touched[t]] = touchedLhs[t];
+    }
+    for (int u = undoSize - 1; u >= 0; u--) {
+      int i = undoVar[u];
+      int old = val[i];
+      int v = undoValue[u];
+      if (old == v) {
+        continue;
+      }
+      val[i] = v;
+      int[] cs = occ[i];
+      for (int k : occCounted[i]) {
+        int c = cs[k];
+        if (counters[c] != null) {
+          counters[c].remove(old);
+          counters[c].add(v);
+        } else {
+          windows[c].move(i, old, v);
+        }
+      }
+    }
+    undoSize = 0;
+    for (int t = 0; t < touchedCount; t++) {
+      int c = touched[t];
+      if (selIndex[c] >= 0) {
+        reselect(c);
+      }
     }
   }
 
@@ -2410,6 +2915,9 @@ public final class LocalSearch {
         progressed = true;
       }
       steps++;
+      if (VERIFY) {
+        verify();
+      }
       double score = totalViolation();
       if (score < bestScore) {
         bestScore = score;
@@ -2478,7 +2986,7 @@ public final class LocalSearch {
           continue;
         }
       }
-      if (domains[i].singleton()) {
+      if (fixedForMoves(i)) {
         continue;
       }
       if (grouped(i)) {
@@ -2601,6 +3109,11 @@ public final class LocalSearch {
         return false;
       }
     }
+    for (int c : selOcc[i]) {
+      if (changed[c] >= at) {
+        return false;
+      }
+    }
     return true;
   }
 
@@ -2643,7 +3156,7 @@ public final class LocalSearch {
     jumpValue[i] = bestVal;
     jumpScore[i] = best;
     jumpAt[i] = clock;
-    setGood(i, best < 0);
+    setGood(i, best < 0 && (follower == null || !follower[i]));
     return best;
   }
 
@@ -2698,7 +3211,7 @@ public final class LocalSearch {
       n = addSnapped(d, (long) old - Math.floorDiv(excess, a), old, out, n);
       n = addSnapped(d, (long) old - Math.ceilDiv(excess, a), old, out, n);
     }
-    if (other) {
+    if (other || selByCount[i] > 0) {
       // constraints other than linear ones say nothing about where to go: a random value
       int r = d.getElementAt(random.nextInt(d.getSize()));
       if (r != old && !has(out, n, r)) {
@@ -2721,7 +3234,7 @@ public final class LocalSearch {
     if (defOf[i] >= 0) {
       i = upstream(i);
     }
-    return i < 0 || domains[i].singleton() ? -1 : i;
+    return i < 0 || fixedForMoves(i) ? -1 : i;
   }
 
   /**
@@ -2860,6 +3373,7 @@ public final class LocalSearch {
       if (vi == vj
           || defOf[i] >= 0
           || defOf[j] >= 0
+          || follower != null && (follower[i] || follower[j])
           || !domains[i].contains(vj)
           || !domains[j].contains(vi)) {
         continue;
@@ -2867,16 +3381,10 @@ public final class LocalSearch {
       if ((tabu[i] > steps || tabu[j] > steps) && random.nextInt(4) > 0) {
         continue;
       }
-      double before = total;
-      trial = true;
-      recording = true;
-      undoSize = 0;
+      beginTrial();
       moveDefined(i, vj);
       moveDefined(j, vi);
-      recording = false;
-      double d = total - before;
-      undo();
-      trial = false;
+      double d = endTrial();
       if (d < best) {
         best = d;
         bi = i;
@@ -3012,7 +3520,7 @@ public final class LocalSearch {
       } else {
         i = random.nextInt(vars.length);
       }
-      if (defOf[i] >= 0 && (i = upstream(i)) < 0) {
+      if (defOf[i] >= 0 && (i = upstream(i)) < 0 || follower != null && follower[i]) {
         continue;
       }
       IntDomain d = domains[i];
@@ -3136,7 +3644,7 @@ public final class LocalSearch {
         }
         return false;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       if (DEBUG_REJECT) {
         System.out.println("% rejected (fail) by " + store.recentlyFailedConstraint);
       }
@@ -3152,7 +3660,7 @@ public final class LocalSearch {
       try {
         x.domain.in(store.level, x, val[i], val[i]);
         ok = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         ok = false;
       }
       if (!ok) {
@@ -3179,7 +3687,7 @@ public final class LocalSearch {
       if (!store.consistency()) {
         return false;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return completeOthers();
@@ -3223,7 +3731,7 @@ public final class LocalSearch {
           }
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
     return true;
@@ -3302,6 +3810,7 @@ public final class LocalSearch {
     private int scheduling = SCHEDULE_NS | SCHEDULE_N4;
     private boolean skipImplied = true;
     private boolean tableKeys = true;
+    private boolean follow = true;
     private Collection<? extends Constraint> symmetry = List.of();
     private Canonicalizer canonicalizer;
 
@@ -3445,6 +3954,19 @@ public final class LocalSearch {
      */
     public Builder tableKeys(boolean on) {
       tableKeys = on;
+      return this;
+    }
+
+    /**
+     * Whether a variable of the lists of element constraints that nothing else reads follows them
+     * (default true): it is not moved itself, but takes the value most of the element constraints
+     * selecting it ask for, see {@link SelectingViolation#selectedEquals()}.
+     *
+     * @param on whether to.
+     * @return this builder.
+     */
+    public Builder follow(boolean on) {
+      follow = on;
       return this;
     }
 

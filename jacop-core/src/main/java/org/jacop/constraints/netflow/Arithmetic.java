@@ -300,16 +300,16 @@ public class Arithmetic extends DecomposedConstraint<Constraint> {
 
       super(new IntVar(store, "Zero-cost", 0, 0));
 
-      int[][] eqns = copyEquations();
+      int[][] localEqns = copyEquations();
       Node root = addNode("source/sink", -sum[0]);
       flip(sum);
-      Node[] nodes = createEquationNodes(eqns);
+      Node[] nodes = createEquationNodes(localEqns);
 
       for (int i = 0; i < nodes.length; i++) {
-        addArcsForEquation(eqns, sum, root, nodes, i);
+        addArcsForEquation(localEqns, sum, root, nodes, i);
       }
 
-      assertEquationsBalanced(eqns, sum);
+      assertEquationsBalanced(localEqns, sum);
     }
 
     private int[][] copyEquations() {

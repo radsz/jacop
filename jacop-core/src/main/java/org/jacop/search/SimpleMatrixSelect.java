@@ -150,15 +150,15 @@ public class SimpleMatrixSelect<T extends Var> implements SelectChoicePoint<T> {
 
     int no = 0;
 
-    for (T[] var : vars) {
+    for (T[] aVar : vars) {
 
       List<T> current = new ArrayList<>();
 
-      if (ASSERTS_ENABLED && var.length <= pivotPosition) {
+      if (ASSERTS_ENABLED && aVar.length <= pivotPosition) {
         throw new IllegalStateException("Assertion failed");
       }
 
-      for (T t : var) {
+      for (T t : aVar) {
         current.add(t);
         if (!position.containsKey(t)) {
           position.put(t, no++);

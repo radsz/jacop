@@ -341,6 +341,66 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void twoEqualRowsWithFreeColumnsAreNotLeftAtTheLimit() {
+    // rows 5 and 8 are the same row, a range and an equation, over the free columns 9 and 12; at
+    // artificial bounds of 1e12 the basic slack of row 8 is off by 2e-5, and the combination of
+    // the two rows is 0 over every column, so no pivot can move it: the solve used to stop at its
+    // limit instead of finding the problem unbounded
+    double inf = Double.POSITIVE_INFINITY;
+    int[][] cols = {{1}, {1, 7, 8, 12}, {10}, {}, {8, 10}, {9, 12}, {1, 8}, {0}, {9, 12}};
+    double[][] vals = {
+      {-10000},
+      {-1, -4e-4, 0.03, 0.4},
+      {0.01},
+      {},
+      {-3, -3},
+      {-5, -0.1},
+      {-5, 0.01},
+      {0.2},
+      {-5, -0.1}
+    };
+    double[] rowLo = {-inf, -0.07, -inf, -inf, 8, 0.06, -0.08, -80, 0.06};
+    double[] rowHi = {500, -0.07, 0.09, 1200, 8, 0.09, inf, -80, 0.06};
+    double[] cost = {-100, 0.03, -30, -1, -0.1, -2, -0.2, 200, 3, -0.02, 3, -0.1, 0.3};
+    double[] lo = {-inf, -inf, -inf, -inf, 0.2, 0, -inf, -inf, 3, -inf, -inf, -inf, -inf};
+    double[] hi = {200, 0, 20, inf, inf, 2, 0.3, -200, inf, inf, -1, inf, inf};
+    RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+    lp.setExact(true);
+    lp.setPresolve(false);
+    for (int j = 0; j < lo.length; j++) {
+      lp.setBounds(j, lo[j], hi[j]);
+    }
+    assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+  }
+
+  @Test
+  void parallelRowsMergedIntoAnEquationKeepTheReducedOptimum() {
+    // rows 1 and 4 are rows 0 and 3 negated, all <= : merged, rows 0 and 3 are equations, whose
+    // slacks the reduced solve leaves at their lower bound (from rows 1 and 4) with negative
+    // duals, so held at their upper bound. The flag alone put the slacks of rows 1 and 4 at their
+    // bounds, and the whole problem started away from the reduced optimum (on
+    // neos-3555904-turama, 61809 rows outside their bounds and 120 s instead of 5 s)
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{1, 2, 3}, {1, 2, 3}, {0, 1, 2, 3}, {0, 3}, {0, 3}, {0, 1, 3}},
+            new double[][] {{-1, -1, 4}, {1, 1, -4}, {-3, 4, 2, -3}, {3, 3}, {-3, -3}, {-3, 3, -1}},
+            new double[] {-inf, -inf, -inf, -inf, -inf, -inf},
+            new double[] {3, -3, 2, 6, -6, 0},
+            new double[] {-5, 1, -2, 0},
+            true);
+    lp.setExact(true);
+    double[] hi = {2, 6, 2, 7};
+    for (int j = 0; j < hi.length; j++) {
+      lp.setBounds(j, 0, hi[j]);
+    }
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolveReductions()[Presolve.PARALLEL_ROW]).isEqualTo(2);
+    assertThat(lp.objective()).isCloseTo(-7.75, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
+  }
+
+  @Test
   void givenDualsHaveNoPerturbation() {
     // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
     double inf = Double.POSITIVE_INFINITY;
@@ -390,12 +450,14 @@ class RevisedDualSimplexTest {
       int n = 1 + rnd.nextInt(14);
       Lp p = new Lp(rnd, m, n, 0.4, rnd.nextInt(3));
       RevisedDualSimplex slack = p.simplex(scale);
+      slack.setPresolve(false);
       slack.setCrash(-1);
       int status = solveAndCheck(p, slack, scale, "run " + run + " slack basis");
       assertThat(slack.crashed()).isZero();
       for (int rows = 0; rows <= 2; rows++) {
         String what = "run " + run + " crash " + rows;
         RevisedDualSimplex lp = p.simplex(scale);
+        lp.setPresolve(false);
         lp.setCrash(rows);
         assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
         crashed += lp.crashed() > 0 ? 1 : 0;
@@ -410,6 +472,247 @@ class RevisedDualSimplexTest {
       }
     }
     assertThat(crashed).isGreaterThan(runs);
+  }
+
+  @Test
+  void presolvedSolvesAgreeWithPlainOnes() {
+    Random rnd = new Random(23);
+    // the chunks of the chunked solves, apart so that they leave the problems as they were
+    Random chunks = new Random(29);
+    Random parallels = new Random(31);
+    int[] reductions = new int[7];
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
+    int reduced = 0;
+    int optimal = 0;
+    for (int run = 0; run < runs; run++) {
+      boolean scale = rnd.nextBoolean();
+      int m = 1 + rnd.nextInt(14);
+      int n = 1 + rnd.nextInt(16);
+      // sparse rows, so that singleton and doubleton rows, free column singletons and empty
+      // columns are common
+      double density = 0.1 + 0.3 * rnd.nextDouble();
+      int spread = rnd.nextInt(3);
+      Lp p = new Lp(rnd, m, n, density, spread);
+      if (rnd.nextBoolean()) {
+        for (int j = 0; j < n; j++) {
+          if (rnd.nextInt(6) == 0) {
+            p.hi[j] = p.lo[j] == Double.NEGATIVE_INFINITY ? 0 : p.lo[j];
+            p.lo[j] = p.hi[j];
+          } else if (rnd.nextInt(4) == 0) {
+            p.cost[j] = 0;
+          }
+        }
+      }
+      // parallel rows and columns, from their own generator so that the problems above stay. Not
+      // with entries spread over 1e-4 to 1e4: a vertex where two such parallel rows meet is
+      // degenerate and ill-conditioned, and the solves without presolve end off the optimum by
+      // more than the tolerance of the comparison (7e-6 on an optimum of -0.02)
+      boolean withParallels = spread < 2;
+      if (withParallels && parallels.nextBoolean()) {
+        for (int c = parallels.nextInt(3); c >= 0; c--) {
+          addParallelRow(p, parallels);
+        }
+      }
+      if (withParallels && parallels.nextBoolean()) {
+        for (int c = parallels.nextInt(3); c >= 0; c--) {
+          addParallelColumn(p, parallels);
+        }
+        n = p.cost.length;
+      }
+      if (rnd.nextInt(4) > 0) {
+        feasibleAround(p);
+      }
+      RevisedDualSimplex plain = p.simplex(scale);
+      plain.setPresolve(false);
+      int status = solveAndCheck(p, plain, scale, "run " + run + " without presolve");
+      assertThat(plain.presolvedRows()).isEqualTo(-1);
+      String what = "run " + run + " presolved";
+      RevisedDualSimplex lp = p.simplex(scale);
+      lp.setPresolve(true);
+      assertThat(solveAndCheck(p, lp, scale, what)).as(what).isEqualTo(status);
+      // a solve in short chunks, as the root solve of LinearRelaxation makes, goes on with the
+      // reduced problem; a query in between takes the basis postsolved from it
+      RevisedDualSimplex chunked = p.simplex(scale);
+      chunked.setPresolve(true);
+      for (int k = 0;
+          k < 100_000 && chunked.solve(1 + chunks.nextInt(3)) == RevisedDualSimplex.LIMIT;
+          k++) {
+        if (chunks.nextInt(8) == 0) {
+          chunked.objective();
+        }
+      }
+      if (lp.presolveReductions() != null) {
+        for (int k = 0; k < reductions.length; k++) {
+          reductions[k] += lp.presolveReductions()[k];
+        }
+      }
+      String inChunks = what + " in chunks";
+      assertThat(solveAndCheck(p, chunked, scale, inChunks)).as(inChunks).isEqualTo(status);
+      if (status == RevisedDualSimplex.OPTIMAL) {
+        optimal++;
+        if (lp.presolvedRows() >= 0) {
+          reduced++;
+        }
+        assertThat(lp.objective())
+            .as(what)
+            .isCloseTo(
+                plain.objective(),
+                org.assertj.core.data.Offset.offset(
+                    objectiveTolerance(scale) * (1 + Math.abs(plain.objective()))));
+        // warm starts after the presolved first solve hold their certificates too
+        for (int j = 0; j < n; j++) {
+          if (rnd.nextInt(3) == 0 && p.hi[j] != INF && p.lo[j] != p.hi[j]) {
+            Lp q = copy(p);
+            q.hi[j] = q.lo[j] == Double.NEGATIVE_INFINITY ? q.hi[j] - 1 : q.lo[j];
+            q.bounds(lp);
+            solveAndCheck(q, lp, scale, what + " then column " + j + " tightened");
+            break;
+          }
+        }
+      }
+    }
+    assertThat(reduced).isGreaterThan(optimal / 2);
+    // every kind of reduction was made, parallel rows and columns too
+    assertThat(reductions).as(java.util.Arrays.toString(reductions)).doesNotContain(0);
+  }
+
+  // a multiple of a row with two or more entries, with bounds that are a multiple of the row's
+  // bounds, tighter, looser or an equation
+  private static void addParallelRow(Lp p, Random rnd) {
+    int m = p.rowLo.length;
+    int i = rnd.nextInt(m);
+    if (p.cols[i].length < 2) {
+      return;
+    }
+    double lambda = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(4)) / 2.0;
+    double[] v = new double[p.vals[i].length];
+    for (int e = 0; e < v.length; e++) {
+      v[e] = lambda * p.vals[i][e];
+    }
+    double lo = p.rowLo[i];
+    double hi = p.rowHi[i];
+    switch (rnd.nextInt(4)) {
+      case 0 -> {
+        lo = lo == -INF ? -INF : lo + rnd.nextInt(3);
+        hi = hi == INF ? INF : hi + rnd.nextInt(3);
+      }
+      case 1 -> {
+        lo = lo == -INF ? (hi == INF ? -INF : hi - 2) : lo - rnd.nextInt(3);
+        hi = hi == INF ? INF : hi - rnd.nextInt(2);
+      }
+      case 2 -> {
+        double b = lo != -INF ? lo : hi != INF ? hi : 0;
+        lo = b;
+        hi = b;
+      }
+      default -> {
+        lo = -INF;
+        hi = hi == INF ? lo : hi;
+        if (hi == -INF) {
+          hi = 1;
+        }
+      }
+    }
+    if (lo > hi) {
+      double t = lo;
+      lo = hi;
+      hi = t;
+    }
+    // s_new = lambda s_i: its bounds are lambda times the bounds above
+    double newLo = lambda > 0 ? lambda * lo : lambda * hi;
+    double newHi = lambda > 0 ? lambda * hi : lambda * lo;
+    p.cols = java.util.Arrays.copyOf(p.cols, m + 1);
+    p.vals = java.util.Arrays.copyOf(p.vals, m + 1);
+    p.cols[m] = p.cols[i].clone();
+    p.vals[m] = v;
+    p.rowLo = java.util.Arrays.copyOf(p.rowLo, m + 1);
+    p.rowHi = java.util.Arrays.copyOf(p.rowHi, m + 1);
+    p.rowLo[m] = newLo;
+    p.rowHi[m] = newHi;
+  }
+
+  // a multiple of a column, in its rows and in the objective, with bounds of its own
+  private static void addParallelColumn(Lp p, Random rnd) {
+    int n = p.cost.length;
+    int j = rnd.nextInt(n);
+    double lambda = (rnd.nextBoolean() ? 1 : -1) * (1 + rnd.nextInt(4)) / 2.0;
+    for (int i = 0; i < p.cols.length; i++) {
+      for (int e = 0; e < p.cols[i].length; e++) {
+        if (p.cols[i][e] == j) {
+          int len = p.cols[i].length;
+          p.cols[i] = java.util.Arrays.copyOf(p.cols[i], len + 1);
+          p.vals[i] = java.util.Arrays.copyOf(p.vals[i], len + 1);
+          p.cols[i][len] = n;
+          p.vals[i][len] = lambda * p.vals[i][e];
+          break;
+        }
+      }
+    }
+    p.cost = java.util.Arrays.copyOf(p.cost, n + 1);
+    p.lo = java.util.Arrays.copyOf(p.lo, n + 1);
+    p.hi = java.util.Arrays.copyOf(p.hi, n + 1);
+    p.cost[n] = lambda * p.cost[j];
+    int kind = rnd.nextInt(4);
+    double l = rnd.nextInt(5) - 2.0;
+    p.lo[n] = kind == 1 ? -INF : l;
+    p.hi[n] = kind == 2 ? INF : kind == 3 ? l : l + 1 + rnd.nextInt(3);
+    if (p.lo[n] == -INF && p.hi[n] == INF) {
+      p.hi[n] = l;
+    }
+  }
+
+  // moves the bounds of the rows so that a point within the column bounds satisfies them all
+  private static void feasibleAround(Lp p) {
+    int n = p.cost.length;
+    double[] x = new double[n];
+    for (int j = 0; j < n; j++) {
+      x[j] = p.lo[j] != Double.NEGATIVE_INFINITY ? p.lo[j] : p.hi[j] != INF ? p.hi[j] : 0;
+      if (p.hi[j] != INF && p.lo[j] != Double.NEGATIVE_INFINITY) {
+        x[j] = (p.lo[j] + p.hi[j]) / 2;
+      }
+    }
+    for (int i = 0; i < p.rowLo.length; i++) {
+      double s = p.activity(i, x);
+      double width = p.rowHi[i] - p.rowLo[i];
+      if (p.rowLo[i] == p.rowHi[i]) {
+        p.rowLo[i] = s;
+        p.rowHi[i] = s;
+      } else if (p.rowLo[i] == Double.NEGATIVE_INFINITY) {
+        p.rowHi[i] = Math.max(p.rowHi[i], s);
+      } else if (p.rowHi[i] == INF) {
+        p.rowLo[i] = Math.min(p.rowLo[i], s);
+      } else {
+        p.rowLo[i] = s - width / 2;
+        p.rowHi[i] = s + width / 2;
+      }
+    }
+  }
+
+  @Test
+  void aPresolvedSolveEndsWithFewPivotsAfterTheReducedOne() {
+    // x0 = 2 x1 (doubleton), x2 only in row 1 (free column singleton), 1 <= x3 <= 3 (singleton
+    // row), x4 fixed, x5 with no row (empty column): min x0 + x1 - x2 + x3 + x5
+    int[][] cols = {{0, 1}, {2, 0, 3}, {3}, {4, 1}};
+    double[][] vals = {{1, -2}, {1, 1, 1}, {1}, {1, 1}};
+    double[] rowLo = {0, 4, 1, 1};
+    double[] rowHi = {0, 4, 3, 10};
+    double[] cost = {1, 1, -1, 1, 0, 1};
+    RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+    lp.setExact(true);
+    lp.setPresolve(true);
+    lp.setBounds(0, 0, 10);
+    lp.setBounds(1, 0, 10);
+    lp.setBounds(2, -INF, INF);
+    lp.setBounds(3, 0, 10);
+    lp.setBounds(4, 2, 2);
+    lp.setBounds(5, 0, 5);
+    assertThat(lp.solve(1000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolvedRows()).isLessThan(4);
+    // x2 = 4 - x0 - x3, so the objective is 2 x0 + x1 + 2 x3 - 4 = 5 x1 + 2 x3 - 4: x1 = 0, x3 = 1
+    assertThat(lp.objective()).isCloseTo(-2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.value(3)).isCloseTo(1, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.value(4)).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.value(5)).isCloseTo(0, org.assertj.core.data.Offset.offset(1e-9));
   }
 
   @Test

@@ -120,6 +120,7 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -127,7 +128,10 @@ import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.binpacking.VectorBinpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -295,6 +299,9 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("LexChainRepeated", lexChain(true)),
         Arguments.of("Values", (Function<Random, Instance>) GlobalConstraintBruteForceTest::values),
         Arguments.of(
+            "ValuesDifferences",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuesDifferences),
+        Arguments.of(
             "Assignment", (Function<Random, Instance>) GlobalConstraintBruteForceTest::assignment),
         Arguments.of("Max", maxOrMin(true)),
         Arguments.of("Min", maxOrMin(false)),
@@ -326,6 +333,9 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::weightedCompletion),
         Arguments.of("PrecedenceCost", precedenceCost(false)),
         Arguments.of("PrecedenceCostChain", precedenceCost(true)),
+        Arguments.of(
+            "UnaryEarlinessTardiness",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::unaryEarlinessTardiness),
         Arguments.of(
             "WeightedCompletionParallel",
             (Function<Random, Instance>)
@@ -570,7 +580,7 @@ class GlobalConstraintBruteForceTest {
             v.domain.inComplement(store.level, v, random.nextBoolean() ? v.min() : v.max());
           }
           consistent = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           consistent = false;
         }
       }
@@ -625,7 +635,7 @@ class GlobalConstraintBruteForceTest {
       Set<List<Integer>> found;
       try {
         found = solveAllAliased(aliased, trial % 3, random.nextInt(), a, b);
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         continue;
       } catch (RuntimeException e) {
         throw new AssertionError(
@@ -739,7 +749,7 @@ class GlobalConstraintBruteForceTest {
       Set<List<Integer>> found;
       try {
         found = solveAll(wrapped, trial % 3, random.nextInt());
-      } catch (IllegalArgumentException | UnsupportedOperationException e) {
+      } catch (IllegalArgumentException | UnsupportedOperationException _) {
         continue;
       } catch (RuntimeException e) {
         throw new AssertionError(
@@ -1092,22 +1102,22 @@ class GlobalConstraintBruteForceTest {
       int rows = 2 + random.nextInt(3);
       int n = 1 + random.nextInt(9 / rows);
       boolean strict = random.nextBoolean();
-      int[] var = new int[rows * n];
+      int[] aVar = new int[rows * n];
       int vars = 0;
-      for (int k = 0; k < var.length; k++) {
-        var[k] = repeated && k > 0 && random.nextInt(3) == 0 ? var[random.nextInt(k)] : vars++;
+      for (int k = 0; k < aVar.length; k++) {
+        aVar[k] = repeated && k > 0 && random.nextInt(3) == 0 ? aVar[random.nextInt(k)] : vars++;
       }
       return new Instance(
           domains(random, vars, 0, 2),
           (store, x) -> {
             IntVar[][] matrix = new IntVar[rows][n];
-            for (int k = 0; k < var.length; k++) {
-              matrix[k / n][k % n] = x[var[k]];
+            for (int k = 0; k < aVar.length; k++) {
+              matrix[k / n][k % n] = x[aVar[k]];
             }
             store.impose(new LexChain(matrix, strict));
           },
           x -> {
-            int[] t = Arrays.stream(var).map(k -> x[k]).toArray();
+            int[] t = Arrays.stream(aVar).map(k -> x[k]).toArray();
             for (int i = 0; i + 1 < rows; i++) {
               int c =
                   Arrays.compare(
@@ -1119,7 +1129,7 @@ class GlobalConstraintBruteForceTest {
             }
             return true;
           },
-          "rows=" + rows + " strict=" + strict + " positions=" + Arrays.toString(var));
+          "rows=" + rows + " strict=" + strict + " positions=" + Arrays.toString(aVar));
     };
   }
 
@@ -2008,6 +2018,88 @@ class GlobalConstraintBruteForceTest {
         "");
   }
 
+  /**
+   * Values next to constraints that force pairs of its variables to differ (x != y, x = y + t, |x -
+   * y| = t, x = y + c, x - y != 0, alldistinct), from which it reads a difference graph and a
+   * clique at the root. Positions n + 1 .. hold the t of each pair.
+   */
+  private static Instance valuesDifferences(Random random) {
+    int n = 2 + random.nextInt(4);
+    int pairs = 1 + random.nextInt(4);
+    int[] kind = new int[pairs];
+    int[] first = new int[pairs];
+    int[] second = new int[pairs];
+    int[] third = new int[pairs];
+    int[] constant = new int[pairs];
+    for (int p = 0; p < pairs; p++) {
+      first[p] = random.nextInt(n);
+      second[p] = (first[p] + 1 + random.nextInt(n - 1)) % n;
+      third[p] = 0;
+      while (third[p] == first[p] || third[p] == second[p]) {
+        third[p]++;
+      }
+      // alldistinct needs a third variable
+      kind[p] = random.nextInt(n > 2 ? 6 : 5);
+      constant[p] = random.nextInt(3) - 1;
+    }
+    int[][] auxiliary = new int[pairs][];
+    for (int p = 0; p < pairs; p++) {
+      auxiliary[p] = random.nextBoolean() ? new int[] {-2, -1, 1, 2} : domain(random, -2, 2);
+    }
+    int[][] domains = append(append(domains(random, n, 0, 3), domain(random, 0, n + 1)), auxiliary);
+    StringBuilder description = new StringBuilder();
+    for (int p = 0; p < pairs; p++) {
+      description.append(
+          String.format(" %d(x%d,x%d,%d)", kind[p], first[p], second[p], constant[p]));
+    }
+    return new Instance(
+        domains,
+        (store, x) -> {
+          store.impose(new Values(Arrays.copyOfRange(x, 0, n), x[n]));
+          for (int p = 0; p < pairs; p++) {
+            IntVar a = x[first[p]];
+            IntVar b = x[second[p]];
+            IntVar t = x[n + 1 + p];
+            switch (kind[p]) {
+              case 0 -> store.impose(new XneqY(a, b));
+              case 1 -> store.impose(new XplusYeqZ(b, t, a));
+              case 2 -> store.impose(new Distance(a, b, t));
+              case 3 -> store.impose(new XplusCeqZ(b, constant[p], a));
+              case 4 ->
+                  store.impose(new LinearInt(new IntVar[] {a, b}, new int[] {1, -1}, "!=", 0));
+              default -> store.impose(new Alldistinct(new IntVar[] {a, b, x[third[p]]}));
+            }
+          }
+        },
+        x -> {
+          if (Arrays.stream(x, 0, n).distinct().count() != x[n]) {
+            return false;
+          }
+          for (int p = 0; p < pairs; p++) {
+            int a = x[first[p]];
+            int b = x[second[p]];
+            int t = x[n + 1 + p];
+            boolean holds =
+                switch (kind[p]) {
+                  case 0 -> a != b;
+                  case 1 -> a == b + t;
+                  case 2 -> Math.abs(a - b) == t;
+                  case 3 -> a == b + constant[p];
+                  case 4 -> a != b;
+                  default -> {
+                    int c = x[third[p]];
+                    yield a != b && a != c && b != c;
+                  }
+                };
+            if (!holds) {
+              return false;
+            }
+          }
+          return true;
+        },
+        description.toString());
+  }
+
   private static Instance assignment(Random random) {
     int n = 1 + random.nextInt(4);
     return new Instance(
@@ -2355,6 +2447,77 @@ class GlobalConstraintBruteForceTest {
               + " lag="
               + Arrays.toString(lag));
     };
+  }
+
+  // starts s[0..n-1] of tasks with durations on one or two unary machines (a task may be on
+  // both, or on none), with sums of earliness and tardiness terms at most the last variable
+  private static Instance unaryEarlinessTardiness(Random random) {
+    int n = 1 + random.nextInt(4);
+    int[] d = new int[n];
+    for (int i = 0; i < n; i++) {
+      d[i] = 1 + random.nextInt(3);
+    }
+    boolean two = random.nextBoolean();
+    List<Integer> first = new ArrayList<>();
+    List<Integer> second = new ArrayList<>();
+    int[] owner = new int[n];
+    for (int i = 0; i < n; i++) {
+      int kind = random.nextInt(4);
+      owner[i] = kind == 3 ? -1 : 0;
+      if (kind != 3) {
+        first.add(i);
+      }
+      if (two && kind >= 2) {
+        second.add(i);
+        if (kind == 3) {
+          owner[i] = 1;
+        }
+      }
+    }
+    int[][] machines =
+        two
+            ? new int[][] {
+              first.stream().mapToInt(Integer::intValue).toArray(),
+              second.stream().mapToInt(Integer::intValue).toArray()
+            }
+            : new int[][] {first.stream().mapToInt(Integer::intValue).toArray()};
+    List<int[]> terms = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int k = random.nextInt(3); k > 0; k--) {
+        terms.add(new int[] {i, random.nextInt(10) - 1, random.nextInt(4), random.nextInt(4)});
+      }
+    }
+    int[][] t = terms.toArray(new int[0][]);
+    int[][] domains = append(domains(random, n, 0, 7), domain(random, 0, 6 * n));
+    return new Instance(
+        domains,
+        (store, v) ->
+            store.impose(
+                new UnaryEarlinessTardiness(Arrays.copyOf(v, n), d, machines, owner, t, v[n])),
+        x -> {
+          for (int[] m : machines) {
+            for (int a = 0; a < m.length; a++) {
+              for (int b = a + 1; b < m.length; b++) {
+                if (x[m[a]] < x[m[b]] + d[m[b]] && x[m[b]] < x[m[a]] + d[m[a]]) {
+                  return false;
+                }
+              }
+            }
+          }
+          int total = 0;
+          for (int[] r : t) {
+            total += r[2] * Math.max(0, r[1] - x[r[0]]) + r[3] * Math.max(0, x[r[0]] - r[1]);
+          }
+          return total <= x[n];
+        },
+        "d="
+            + Arrays.toString(d)
+            + " machines="
+            + Arrays.deepToString(machines)
+            + " owner="
+            + Arrays.toString(owner)
+            + " terms="
+            + Arrays.deepToString(t));
   }
 
   // starts s[0..n-1] under random acyclic precedences (a chain when chain), with sums of
@@ -3093,9 +3256,9 @@ class GlobalConstraintBruteForceTest {
     int vars = 2 + random.nextInt(4);
     int items = vars + random.nextInt(2);
     int bins = 2 + random.nextInt(2);
-    int[] var = new int[items];
+    int[] aVar = new int[items];
     for (int i = 0; i < items; i++) {
-      var[i] = i < vars ? i : random.nextInt(vars);
+      aVar[i] = i < vars ? i : random.nextInt(vars);
     }
     int[] weights = randomInts(random, items, 0, 4);
     return new Instance(
@@ -3105,7 +3268,7 @@ class GlobalConstraintBruteForceTest {
         (store, x) -> {
           IntVar[] item = new IntVar[items];
           for (int i = 0; i < items; i++) {
-            item[i] = x[var[i]];
+            item[i] = x[aVar[i]];
           }
           store.impose(
               new Binpacking(
@@ -3119,8 +3282,8 @@ class GlobalConstraintBruteForceTest {
           int[] load = new int[bins];
           int[] count = new int[bins];
           for (int i = 0; i < items; i++) {
-            load[x[var[i]]] += weights[i];
-            count[x[var[i]]]++;
+            load[x[aVar[i]]] += weights[i];
+            count[x[aVar[i]]]++;
           }
           for (int b = 0; b < bins; b++) {
             if (load[b] != x[vars + b] || count[b] != x[vars + bins + b]) {
@@ -3129,7 +3292,7 @@ class GlobalConstraintBruteForceTest {
           }
           return true;
         },
-        "items=" + Arrays.toString(var) + " weights=" + Arrays.toString(weights));
+        "items=" + Arrays.toString(aVar) + " weights=" + Arrays.toString(weights));
   }
 
   /**
@@ -3748,7 +3911,7 @@ class GlobalConstraintBruteForceTest {
       Set<List<Integer>> found;
       try {
         found = solveOnViews(instance, a, b, random.nextLong());
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         // a precondition of the instance on the domains, which a factor can thin out
         continue;
       } catch (RuntimeException e) {
