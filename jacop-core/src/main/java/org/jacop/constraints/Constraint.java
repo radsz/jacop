@@ -472,6 +472,33 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   /**
+   * Whether the constraint is a shadow: it stays attached to its variables, so that code reading
+   * the model (the core-guided phase, the LP, LNS, search heuristics) still sees it, but the store
+   * never queues it, since another component (the clauses of a learning solver) propagates it
+   * instead.
+   */
+  private boolean shadow;
+
+  /**
+   * Checks whether the constraint is a shadow, see {@link #setShadow(boolean)}.
+   *
+   * @return true if the store does not queue the constraint.
+   */
+  public final boolean isShadow() {
+    return shadow;
+  }
+
+  /**
+   * Makes the constraint a shadow, or a propagator again. A shadow stays in the model but the store
+   * does not queue it; whoever makes it a shadow must propagate it some other way.
+   *
+   * @param shadow true to stop the store queueing the constraint.
+   */
+  public final void setShadow(boolean shadow) {
+    this.shadow = shadow;
+  }
+
+  /**
    * Returns the store level of the constraint's first consistency call.
    *
    * @return the level, or {@link #NOT_RUN} or {@link #RUN_UNDONE}.

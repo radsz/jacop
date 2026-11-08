@@ -3488,6 +3488,20 @@ public final class LcgSolver implements ExternalPropagator {
 
   static final int CLAUSE_COUNTER = Integer.getInteger("jacop.lcg.clauses.counter", 20000);
 
+  /**
+   * Whether a constraint given to the solver as clauses stays in the store as a shadow (attached to
+   * its variables, never queued), {@code jacop.lcg.clauses.shadow}. The core-guided phase, the LP,
+   * LNS and the search heuristics read the model's constraints; removing them hides that structure.
+   */
+  static final boolean CLAUSE_SHADOW = Boolean.getBoolean("jacop.lcg.clauses.shadow");
+
+  /**
+   * Whether constraints over the objective's definition may become clauses too, {@code
+   * jacop.lcg.clauses.objective}. They stay propagators by default, since removing them hid them
+   * from the core-guided phase; as shadows they stay visible.
+   */
+  static final boolean CLAUSE_OBJECTIVE = Boolean.getBoolean("jacop.lcg.clauses.objective");
+
   /** The most unfixed 0/1 variables of such a sum, {@code jacop.lcg.clauses.boolArity}. */
   static final int CLAUSE_BOOL_ARITY = Integer.getInteger("jacop.lcg.clauses.boolArity", 256);
 
@@ -3533,7 +3547,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private java.util.Set<IntVar> objectiveTerms() {
     java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES)) {
+    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES) || CLAUSE_OBJECTIVE) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -3652,7 +3666,12 @@ public final class LcgSolver implements ExternalPropagator {
         clauseFailedAtRoot = true;
       }
     }
-    c.removeConstraint();
+    if (CLAUSE_SHADOW) {
+      // the clauses propagate; the constraint stays in the model for the code that reads it
+      c.setShadow(true);
+    } else {
+      c.removeConstraint();
+    }
     encodedConstraints.add(c);
     return true;
   }
@@ -4284,7 +4303,12 @@ public final class LcgSolver implements ExternalPropagator {
     trail.detach();
     // search without learning needs the propagators of the constraints that became clauses
     for (Constraint c : encodedConstraints) {
-      c.impose(store);
+      if (c.isShadow()) {
+        c.setShadow(false);
+        store.addChanged(c);
+      } else {
+        c.impose(store);
+      }
     }
     encodedConstraints.clear();
   }

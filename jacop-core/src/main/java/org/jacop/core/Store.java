@@ -530,6 +530,10 @@ public class Store {
 
     propagationHasOccurred = true;
 
+    if (c.isShadow()) {
+      return;
+    }
+
     if (c.getQueueIndex() < currentQueue) {
       currentQueue = c.getQueueIndex();
     }
@@ -547,6 +551,10 @@ public class Store {
    * @param queueIndex the queue in which the constraint is scheduled.
    */
   public void addChanged(Constraint c, int queueIndex) {
+
+    if (c.isShadow()) {
+      return;
+    }
 
     if (queueIndex < currentQueue) {
       currentQueue = queueIndex;
@@ -722,6 +730,9 @@ public class Store {
 
   /** It wakes one model constraint of a changed variable. */
   private void queueModelConstraint(Domain vdomain, Var v, Constraint c) {
+    if (c.isShadow()) {
+      return;
+    }
     if (c.isEntailed()) {
       // the domain was saved at this level by the change being reported, so the constraint can be
       // detached without a copy; backtracking below this level attaches it again
