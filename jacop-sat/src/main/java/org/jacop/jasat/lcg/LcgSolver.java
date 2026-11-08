@@ -4039,6 +4039,8 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (keptScratch.length < size) {
       keptScratch = new int[2 * size];
+    }
+    if (holeScratch.length < size) {
       holeScratch = new long[2 * size];
     }
     int kept = 0;
@@ -4061,6 +4063,8 @@ public final class LcgSolver implements ExternalPropagator {
         || !forbidsBefore(i, lo, hi, holes)) {
       return 0;
     }
+    // the dropped literals go after the kept ones, through the scratch array: writing them back
+    // in place would overwrite literals not read yet
     int j = kept;
     for (int k = 0; k < size; k++) {
       boolean in = false;
@@ -4068,10 +4072,11 @@ public final class LcgSolver implements ExternalPropagator {
         in = keptScratch[m] == lits[k];
       }
       if (!in) {
-        lits[j++] = lits[k];
+        keptScratch[j++] = lits[k];
       }
     }
-    System.arraycopy(keptScratch, 0, lits, 0, kept);
+    assert j == size : "the frontier holds distinct literals";
+    System.arraycopy(keptScratch, 0, lits, 0, size);
     return kept;
   }
 

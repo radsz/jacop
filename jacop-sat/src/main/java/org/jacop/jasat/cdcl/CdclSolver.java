@@ -1698,6 +1698,14 @@ public final class CdclSolver {
     return n;
   }
 
+  private static boolean samePermutation(int[] before, int[] after, int n) {
+    int[] a = before.clone();
+    int[] b = Arrays.copyOf(after, n);
+    Arrays.sort(a);
+    Arrays.sort(b);
+    return Arrays.equals(a, b);
+  }
+
   /**
    * Stops the analysis at the open conflict-level literals when the external propagator takes them
    * as an extended UIP (CPIP, Marijnissen, Flippo and Demirovic, CP 2026): their negations, the
@@ -1705,7 +1713,11 @@ public final class CdclSolver {
    * whether it stopped.
    */
   private boolean stopExtended(int n) {
+    int[] before = null;
+    assert (before = Arrays.copyOf(frontier, n)) != null;
     int kept = external.extendedUip(frontier, n);
+    assert samePermutation(before, frontier, n)
+        : "extendedUip must reorder the frontier, not change it";
     if (kept < 2) {
       return false;
     }
