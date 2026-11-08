@@ -3633,6 +3633,29 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
+208. New constraint BottleneckAlldiff(x, cost, offset, z)
+     (org.jacop.constraints): the x[i] are pairwise different and
+     z >= max(i) cost[i][x[i] - offset]. The lower bound of z is the
+     bottleneck value, the smallest threshold whose cheap values still
+     give every variable its own value; posted as alldifferent, elements
+     and a maximum, the parts only see the largest of the smallest costs.
+     It is found by the threshold method of Gabow and Tarjan (Algorithms
+     for two bottleneck optimization problems, Journal of Algorithms
+     9(3), 411-417, 1988) over a matching kept between calls, and the
+     values of no matching under max(z) are removed as in Regin's
+     all different (AAAI 1994), so the constraint is domain consistent.
+     Under --lcg a bound of z, a removed value and a failure are explained
+     by a Hall set (Hall 1935; Downing, Feydy and Stuckey, Explaining
+     alldifferent, ACSC 2012) and an upper bound of z. The FlatZinc
+     front end adds it as a redundant constraint when a variable is the
+     maximum or an upper bound of at least two element costs over
+     constant arrays indexed by variables of one alldifferent
+     (-Dorg.jacop.fz.bottleneckAlldiff=false turns it off). No MiniZinc
+     Challenge instance of 2008-2025 has the pattern; on 72 random
+     bottleneck assignments (30 to 250 agents, osolpro
+     benchmarks/bottleneck-alldiff) JaCoP proves 72 optima in 60 s instead
+     of 56 by default and 72 instead of 57 with -f.
+
 Version 4.11
 =============
 
