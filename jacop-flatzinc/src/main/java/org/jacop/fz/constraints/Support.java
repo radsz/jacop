@@ -60,6 +60,7 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.regular.MultiCostRegular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -145,6 +146,8 @@ public class Support implements ParserTreeConstants {
   final ReificationConstraints reif = new ReificationConstraints(this);
   final ImplicationConstraints imply = new ImplicationConstraints(this);
   public Options options;
+  // tables linked for pairwise consistency (TableLinkDetector), posted in place of their nodes
+  Map<SimpleNode, HybridTable> linkedTables;
   // =========== Annotations ===========
   public boolean boundsConsistency = true;
   public boolean domainConsistency;

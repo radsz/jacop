@@ -65,6 +65,12 @@ final class TrailedTupleSet implements Stateful {
   /** Set when a word lost tuples; the owner clears it. */
   boolean changed;
 
+  // When an owner asks for it, the tuples removed since it last cleared the record: their bits in
+  // removed, and the words that hold them in touched[0 .. touchedCount - 1].
+  long[] removed;
+  int[] touched;
+  int touchedCount;
+
   private final int[] savedEpoch;
   private int epoch;
   private int epochLevel = -1;
@@ -240,6 +246,9 @@ final class TrailedTupleSet implements Stateful {
       long word = old & mask[w];
       if (word != old) {
         changed = true;
+        if (removed != null) {
+          record(w, old & ~word);
+        }
         save(w);
         state[w] = word;
         if (word == 0L) {
@@ -254,10 +263,37 @@ final class TrailedTupleSet implements Stateful {
     }
   }
 
+  /** It starts recording the removed tuples. */
+  void recordRemovals() {
+    removed = new long[words];
+    touched = new int[words];
+  }
+
+  /** It forgets the removed tuples recorded so far. */
+  void clearRemovals() {
+    for (int p = 0; p < touchedCount; p++) {
+      removed[touched[p]] = 0L;
+    }
+    touchedCount = 0;
+  }
+
+  private void record(int w, long bits) {
+    if (bits == 0L) {
+      return;
+    }
+    if (removed[w] == 0L) {
+      touched[touchedCount++] = w;
+    }
+    removed[w] |= bits;
+  }
+
   /** It removes tuple t, whose word is index[position]. */
   void removeTuple(int t, int position) {
     int w = t >> 6;
     changed = true;
+    if (removed != null) {
+      record(w, state[w] & (1L << t));
+    }
     save(w);
     state[w] &= ~(1L << t);
     if (state[w] == 0L) {

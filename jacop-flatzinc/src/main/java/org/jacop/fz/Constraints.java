@@ -68,6 +68,7 @@ import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.TableCoverDetector;
+import org.jacop.fz.constraints.TableLinkDetector;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -199,6 +200,11 @@ public class Constraints implements ParserTreeConstants {
           replaced = new HashSet<>(replaced);
           replaced.addAll(elements.replaced());
         }
+      }
+
+      // tables that share two or more variables are posted with links for pairwise consistency
+      if (TableLinkDetector.enabled(options.lcg()) && options.proof() == null) {
+        new TableLinkDetector(support).detect(astTree);
       }
 
       // the membership clauses replace set unions, which --proof encodes as they are

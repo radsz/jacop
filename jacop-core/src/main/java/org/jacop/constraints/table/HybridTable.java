@@ -230,6 +230,18 @@ public class HybridTable extends Constraint
   /** The explanations for lazy clause generation, made on first use. */
   private TableExplanation explanation;
 
+  // Links to other tables over shared variables (pairwise consistency, see TableLink): for link l,
+  // the rows with key k are keyRows[l][keyStart[l][k] .. keyStart[l][k + 1] - 1], keyResidue[l][k]
+  // is the last row found valid with it, and record linkRecord + l of the valid set is the size of
+  // the link's live keys when the table last removed the rows of dead keys.
+  private List<TableLink> links;
+  private List<int[]> linkKeys;
+  private int[][] keyOf;
+  private int[][] keyStart;
+  private int[][] keyRows;
+  private int[][] keyResidue;
+  private int linkRecord;
+
   // Work space of the tuples with restrictions between columns.
   private IntDomain[] work;
   private IntDomain[] binarySupport;
@@ -478,7 +490,7 @@ public class HybridTable extends Constraint
       }
     }
     int n = tupleCount;
-    valid = new TrailedTupleSet(n, arity);
+    valid = new TrailedTupleSet(n, arity + (links == null ? 0 : links.size()));
     valid.recordOn(store);
     words = valid.words;
     queue = new int[arity];
@@ -571,7 +583,191 @@ public class HybridTable extends Constraint
     positionByIndex = TrailedTupleSet.positionByIndex(x);
     indexOffset = TrailedTupleSet.minIndex(x);
 
+    if (links != null) {
+      imposeLinks(store);
+    }
+
     super.impose(store);
+  }
+
+  /**
+   * It links the table to other tables over a set of shared variables, so that a row stays valid
+   * only while every table of the link has a valid row with the same sub-tuple on them. It is
+   * called before the table is imposed, on a table without restrictions between columns.
+   *
+   * @param link the link of the tables over the shared variables.
+   * @param keyOfRow the key (the number of the sub-tuple on the shared variables) of each row.
+   */
+  public void link(TableLink link, int[] keyOfRow) {
+    if (store != null) {
+      throw new IllegalStateException("HybridTable: a table is linked before it is imposed");
+    }
+    if (keyOfRow.length != tupleCount) {
+      throw new IllegalArgumentException("HybridTable: one key per row is needed");
+    }
+    for (Restriction r : cells) {
+      if (r.isBinary()) {
+        throw new IllegalArgumentException(
+            "HybridTable: a table with restrictions between columns cannot be linked");
+      }
+    }
+    for (int k : keyOfRow) {
+      if (k < 0 || k >= link.keys) {
+        throw new IllegalArgumentException("HybridTable: key " + k + " is out of the link");
+      }
+    }
+    if (links == null) {
+      links = new ArrayList<>();
+      linkKeys = new ArrayList<>();
+    }
+    links.add(link);
+    linkKeys.add(keyOfRow.clone());
+  }
+
+  private void imposeLinks(Store store) {
+    int count = links.size();
+    linkRecord = liveRecord + arity;
+    keyStart = new int[count][];
+    keyRows = new int[count][];
+    keyResidue = new int[count][];
+    keyOf = linkKeys.toArray(new int[0][]);
+    valid.recordRemovals();
+    for (int l = 0; l < count; l++) {
+      TableLink link = links.get(l);
+      int[] key = linkKeys.get(l);
+      int[] start = new int[link.keys + 1];
+      for (int k : key) {
+        start[k + 1]++;
+      }
+      for (int k = 0; k < link.keys; k++) {
+        start[k + 1] += start[k];
+      }
+      int[] fill = Arrays.copyOf(start, link.keys);
+      int[] rows = new int[key.length];
+      for (int t = 0; t < key.length; t++) {
+        rows[fill[key[t]]++] = t;
+      }
+      int[] residue = new int[link.keys];
+      for (int k = 0; k < link.keys; k++) {
+        residue[k] = start[k] < start[k + 1] ? rows[start[k]] : -1;
+      }
+      keyStart[l] = start;
+      keyRows[l] = rows;
+      keyResidue[l] = residue;
+      // no key is processed yet: the first consistency removes the rows of the keys already dead
+      state[linkRecord + l] = link.keys;
+      link.attach(store);
+      link.tables.add(this);
+    }
+    linkKeys = null;
+  }
+
+  /** It tells whether a key still has a valid row, and keeps that row as its residue. */
+  private boolean keySupported(int l, int k) {
+    int r = keyResidue[l][k];
+    if (r >= 0 && validRow(r)) {
+      return true;
+    }
+    int[] start = keyStart[l];
+    int[] rows = keyRows[l];
+    for (int q = start[k]; q < start[k + 1]; q++) {
+      if (validRow(rows[q])) {
+        keyResidue[l][k] = rows[q];
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean validRow(int t) {
+    return (state[t >> 6] & (1L << t)) != 0L;
+  }
+
+  /**
+   * It removes the rows of the keys that died since the table last looked.
+   *
+   * @return true when some row was removed.
+   */
+  private boolean removeRowsOfDeadKeys() {
+    boolean removed = false;
+    for (int l = 0; l < links.size(); l++) {
+      TableLink link = links.get(l);
+      int processed = (int) state[linkRecord + l];
+      int size = link.size();
+      if (size >= processed) {
+        continue;
+      }
+      int[] start = keyStart[l];
+      int[] rows = keyRows[l];
+      boolean any = false;
+      valid.clearMask();
+      for (int p = size; p < processed; p++) {
+        int k = link.key(p);
+        for (int q = start[k]; q < start[k + 1]; q++) {
+          int t = rows[q];
+          if (validRow(t)) {
+            mask[t >> 6] |= 1L << t;
+            any = true;
+          }
+        }
+      }
+      if (any) {
+        valid.reverseMask();
+        valid.intersectWithMask();
+        removed = true;
+        if (limit() < 0) {
+          throw Store.failException;
+        }
+      }
+      valid.set(linkRecord + l, size);
+    }
+    return removed;
+  }
+
+  /**
+   * It kills the live keys of the links that no valid row of the table has any more: all keys at
+   * the first call, then only the keys of the rows removed since the last call.
+   *
+   * @param all true to look at every live key.
+   */
+  private void killUnsupportedKeys(boolean all) {
+    int count = links.size();
+    if (all) {
+      for (int l = 0; l < count; l++) {
+        TableLink link = links.get(l);
+        for (int p = link.size() - 1; p >= 0; p--) {
+          int k = link.key(p);
+          if (!keySupported(l, k)) {
+            link.kill(k, this);
+          }
+        }
+      }
+    } else {
+      long[] removed = valid.removed;
+      int[] touched = valid.touched;
+      for (int p = 0; p < valid.touchedCount; p++) {
+        int w = touched[p];
+        long bits = removed[w];
+        while (bits != 0L) {
+          int t = (w << 6) + Long.numberOfTrailingZeros(bits);
+          bits &= bits - 1;
+          for (int l = 0; l < count; l++) {
+            int k = keyOf[l][t];
+            TableLink link = links.get(l);
+            if (link.alive(k) && !keySupported(l, k)) {
+              link.kill(k, this);
+            }
+          }
+        }
+      }
+    }
+    valid.clearRemovals();
+    for (int l = 0; l < count; l++) {
+      int size = links.get(l).size();
+      if (size != (int) state[linkRecord + l]) {
+        valid.set(linkRecord + l, size);
+      }
+    }
   }
 
   private void buildClasses() {
@@ -1048,6 +1244,10 @@ public class HybridTable extends Constraint
     valid.newEpochIfNeeded(store.level);
     pruning = false;
     valid.changed = false;
+    if (links != null) {
+      // a failed call leaves its removals; they belong to restored rows
+      valid.clearRemovals();
+    }
 
     if (limit() < 0) {
       throw Store.failException;
@@ -1066,6 +1266,13 @@ public class HybridTable extends Constraint
       }
     }
 
+    // The rows of keys that another table lost may support values of any column, of the changed
+    // column too.
+    if (links != null && removeRowsOfDeadKeys()) {
+      changed++;
+      onlyChanged = -1;
+    }
+
     // Restrictions between columns can remove further values of the changed column itself, for
     // example x[1] > x[2] and x[2] >= x[1] - 1 in one tuple, and the tuples they remove may have
     // been the only supports of other values of that column. The tuples that involve the column
@@ -1082,12 +1289,17 @@ public class HybridTable extends Constraint
       onlyChanged = -1;
     }
 
-    if (init.begin(store)) {
+    boolean firstCall = init.begin(store);
+    if (firstCall) {
       onlyChanged = -1;
       changed = arity;
     } else if (!valid.changed && (binaryAll == null || !intersects(binaryAll))) {
       // The valid tuples are those of the previous call, which supported every remaining value.
       return;
+    }
+
+    if (links != null) {
+      killUnsupportedKeys(firstCall);
     }
 
     pruning = true;
@@ -2054,7 +2266,7 @@ public class HybridTable extends Constraint
    */
   @Override
   public Optional<List<Constraint>> simplify() {
-    if (getClass() != HybridTable.class) {
+    if (getClass() != HybridTable.class || links != null) {
       return Optional.empty();
     }
     boolean[] removed = new boolean[arity];

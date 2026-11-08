@@ -1676,6 +1676,15 @@ class GlobalConstraints implements ParserTreeConstants {
     t = deduplicateTableRows(t);
 
     int[] vu = uniqueIndex(v);
+    HybridTable linked = support.linkedTables == null ? null : support.linkedTables.remove(node);
+    if (linked != null) {
+      // the same table over the distinct variables, with its links to other tables
+      if (vu.length == v.length && v.length <= TableCliques.MAX_ARITY) {
+        support.dictionary.addTable(v, t);
+      }
+      support.pose(linked);
+      return;
+    }
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
