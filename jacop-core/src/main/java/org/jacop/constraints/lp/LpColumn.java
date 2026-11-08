@@ -36,12 +36,14 @@ import org.jacop.core.IntervalDomain;
 
 /**
  * A column of the linear relaxation that is not a variable of the store: the auxiliary 0/1 column
- * {@code [x = v]} of a value encoding that the model has no Boolean for, or an arc column of the
- * flow model of a layered graph (an edge of level i labelled v), which is at most {@code [x_i =
- * v]}. It is never pruned and never searched on. In the simplex its bounds come from the domain of
- * its variable ({@link #lower}, {@link #upper}). The relaxation removes it from every inequality it
- * deduces, at the bound that keeps the inequality valid, so that pruning and its explanations only
- * use variables of the store.
+ * {@code [x = v]} of a value encoding that the model has no Boolean for, an arc column of the flow
+ * model of a layered graph (an edge of level i labelled v), which is at most {@code [x_i = v]}, or
+ * a free column with fixed bounds that belongs to no variable, such as a wire of the sorting
+ * network of an all-different ({@link org.jacop.constraints.Linearizations#alldifferentNetwork}).
+ * It is never pruned and never searched on. In the simplex its bounds come from the domain of its
+ * variable ({@link #lower}, {@link #upper}), or are those it was made with for a free column. The
+ * relaxation removes it from every inequality it deduces, at the bound that keeps the inequality
+ * valid, so that pruning and its explanations only use variables of the store.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -75,6 +77,24 @@ public final class LpColumn extends IntVar {
   }
 
   /**
+   * Creates a free column with the given bounds, which indicates no value of a variable; the bounds
+   * hold for the whole search.
+   *
+   * @param name the name of the column
+   * @param min the lower bound
+   * @param max the upper bound
+   */
+  public LpColumn(String name, int min, int max) {
+    super();
+    this.variable = null;
+    this.value = 0;
+    this.arc = false;
+    id = "lp_" + name + "#" + NUMBER.incrementAndGet();
+    domain = new IntervalDomain(min, max);
+    refreshBounds();
+  }
+
+  /**
    * Creates the 0/1 arc column of an edge labelled {@code value} of the level of {@code variable}
    * in the flow model of a layered graph: it is at most {@code [variable = value]}, so it is 0 once
    * the value is gone, but it is not 1 when the variable takes the value, since several edges of a
@@ -99,28 +119,43 @@ public final class LpColumn extends IntVar {
 
   /**
    * Returns the lower bound the domain of the variable gives the column: 1 for an indicator whose
-   * variable is the value, 0 otherwise.
+   * variable is the value, 0 otherwise; for a free column its fixed lower bound.
    *
-   * @return 0 or 1
+   * @return the bound
    */
   public int lower() {
+    if (variable == null) {
+      return min();
+    }
     return !arc && variable.singleton(value) ? 1 : 0;
   }
 
   /**
    * Returns the upper bound the domain of the variable gives the column: 0 once the value is gone,
-   * 1 otherwise.
+   * 1 otherwise; for a free column its fixed upper bound.
    *
-   * @return 0 or 1
+   * @return the bound
    */
   public int upper() {
+    if (variable == null) {
+      return max();
+    }
     return variable.domain.contains(value) ? 1 : 0;
+  }
+
+  /**
+   * Tells whether this is a free column, which belongs to no variable.
+   *
+   * @return true for a free column
+   */
+  public boolean isFree() {
+    return variable == null;
   }
 
   /**
    * Returns the variable whose value the column indicates.
    *
-   * @return the variable
+   * @return the variable, or null for a free column
    */
   public IntVar variable() {
     return variable;
@@ -155,5 +190,18 @@ public final class LpColumn extends IntVar {
    */
   public LpColumn copy(IntVar copied) {
     return new LpColumn(copied, value, arc);
+  }
+
+  /**
+   * Returns the free column with the same bounds for a copy of the relaxation.
+   *
+   * @return the new column
+   * @throws IllegalStateException for a value column, which {@link #copy(IntVar)} copies
+   */
+  public LpColumn copy() {
+    if (variable != null) {
+      throw new IllegalStateException("a value column is copied over the copy of its variable");
+    }
+    return new LpColumn(id, min(), max());
   }
 }
