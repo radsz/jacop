@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
+import org.jacop.util.DualFeasibleFunctions;
 
 /**
  * Energy cuts of a resource over the start times of its tasks, separated from an LP solution.
@@ -97,6 +98,58 @@ public final class EnergyCuts {
     this.dur = dur.clone();
     this.use = use.clone();
     this.cap = cap;
+  }
+
+  /**
+   * It returns the separations of the same tasks with their usages and the capacity mapped by dual
+   * feasible functions. Tasks that run together use at most C, so their mapped usages sum to at
+   * most f(C), and the cuts of the mapped resource hold for the model too (J. Carlier and E. Néron,
+   * Computing redundant resources for the resource constrained project scheduling problem, European
+   * Journal of Operational Research 176(3) (2007) 1452-1463). The functions are those of {@link
+   * DualFeasibleFunctions#redundantResources}; tasks mapped to 0 are left out.
+   *
+   * @param max the most functions
+   * @return the separations, empty when no function adds anything or the sizes are too large
+   */
+  List<EnergyCuts> mapped(int max) {
+    List<EnergyCuts> result = new ArrayList<>();
+    int n = starts.length;
+    if (max <= 0 || cap > DualFeasibleFunctions.MAX_SIDE) {
+      return result;
+    }
+    int c = (int) cap;
+    int[] u = new int[n];
+    int[] p = new int[n];
+    for (int j = 0; j < n; j++) {
+      if (dur[j] > Integer.MAX_VALUE) {
+        return result;
+      }
+      u[j] = (int) Math.min(use[j], cap);
+      p[j] = (int) dur[j];
+    }
+    for (DualFeasibleFunctions.Resource f :
+        DualFeasibleFunctions.redundantResources(u, p, c, max)) {
+      List<Integer> kept = new ArrayList<>();
+      for (int j = 0; j < n; j++) {
+        if (f.map(u[j]) > 0) {
+          kept.add(j);
+        }
+      }
+      if (kept.size() < 2) {
+        continue;
+      }
+      IntVar[] s = new IntVar[kept.size()];
+      long[] d = new long[kept.size()];
+      long[] m = new long[kept.size()];
+      for (int k = 0; k < s.length; k++) {
+        int j = kept.get(k);
+        s[k] = starts[j];
+        d[k] = dur[j];
+        m[k] = f.map(u[j]);
+      }
+      result.add(new EnergyCuts(s, d, m, f.capacity()));
+    }
+    return result;
   }
 
   /**

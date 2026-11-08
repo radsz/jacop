@@ -495,6 +495,11 @@ public class LinearRelaxation extends Constraint
   private static final boolean ENERGY_CUTS =
       !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
 
+  // energy cuts also over the uses and capacity mapped by up to this many dual feasible functions
+  // of each resource (Carlier and Néron 2007, see DualFeasibleFunctions.redundantResources); 0, the
+  // default, adds none
+  private static final int DFF_ENERGY_CUTS = Integer.getInteger("org.jacop.lp.dffEnergyCuts", 0);
+
   // the separations of the energy cuts, one for each cumulative resource
   private List<EnergyCuts> energy = new ArrayList<>();
 
@@ -924,6 +929,7 @@ public class LinearRelaxation extends Constraint
         EnergyCuts e = energyCuts(c);
         if (e != null) {
           resources.add(e);
+          resources.addAll(e.mapped(DFF_ENERGY_CUTS));
         }
       }
       LinearForm f = LinearForms.of(c);

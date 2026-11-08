@@ -32,6 +32,7 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import org.jacop.core.IntVar;
@@ -160,6 +161,66 @@ class EnergyCutsTest {
       }
     }
     assertThat(violated).isGreaterThan(INSTANCES / 4);
+  }
+
+  @Test
+  void mappedEnergyCutsKeepEverySchedule() {
+    Random rnd = new Random(13);
+    Store store = new Store();
+    int mapped = 0;
+    int violated = 0;
+    for (int instance = 0; instance < INSTANCES; instance++) {
+      int n = 3 + rnd.nextInt(3);
+      long cap = 4 + rnd.nextInt(6);
+      long[] est = new long[n];
+      long[] lst = new long[n];
+      long[] dur = new long[n];
+      long[] use = new long[n];
+      for (int j = 0; j < n; j++) {
+        est[j] = rnd.nextInt(3);
+        lst[j] = est[j] + rnd.nextInt(4);
+        dur[j] = 1 + rnd.nextInt(3);
+        use[j] = 1 + rnd.nextInt((int) cap);
+      }
+      Resource r = new Resource(est, lst, dur, use, cap);
+      IntVar[] starts = new IntVar[n];
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      for (int j = 0; j < n; j++) {
+        starts[j] = new IntVar(store, (int) est[j], (int) lst[j]);
+        lo[j] = est[j];
+        hi[j] = lst[j];
+      }
+      List<long[]> all = schedules(r);
+      for (EnergyCuts cuts : new EnergyCuts(starts, dur, use, cap).mapped(3)) {
+        mapped++;
+        IntVar[] s = cuts.starts();
+        int[] column = new int[s.length];
+        for (int k = 0; k < s.length; k++) {
+          column[k] = Arrays.asList(starts).indexOf(s[k]);
+        }
+        for (int trial = 0; trial < 20; trial++) {
+          double[] value = new double[n];
+          for (int j = 0; j < n; j++) {
+            value[j] = trial == 0 ? est[j] : est[j] + rnd.nextDouble() * (lst[j] - est[j]);
+          }
+          for (MirCut c : cuts.separate(column, value, lo, hi, 10)) {
+            violated++;
+            for (long[] sched : all) {
+              long sum = 0;
+              for (int k = 0; k < c.columns.length; k++) {
+                sum += c.weights[k] * sched[c.columns[k]];
+              }
+              assertThat(sum)
+                  .as("mapped cut %s of %s at %s", c, r, sched)
+                  .isLessThanOrEqualTo(c.rhs);
+            }
+          }
+        }
+      }
+    }
+    assertThat(mapped).isPositive();
+    assertThat(violated).isPositive();
   }
 
   @Test
