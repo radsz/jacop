@@ -266,11 +266,18 @@ public final class CapacityCuts {
         }
       }
     }
-    if (FRAMED) {
-      framed(mandatory, flow, value, cuts);
-    }
     cuts.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
-    return cuts.size() > limit ? new ArrayList<>(cuts.subList(0, limit)) : cuts;
+    if (cuts.size() >= limit) {
+      return new ArrayList<>(cuts.subList(0, limit));
+    }
+    // framed cuts only take the slots the capacity and multistar cuts leave
+    if (FRAMED) {
+      List<Cut> found = new ArrayList<>();
+      framed(mandatory, flow, value, found);
+      found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
+      cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));
+    }
+    return cuts;
   }
 
   // the routes needed by a set: its demand over the capacity, rounded up, and at least one
