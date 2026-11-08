@@ -96,6 +96,7 @@ import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.EqBool;
 import org.jacop.constraints.ExtensionalConflictVa;
 import org.jacop.constraints.GCC;
@@ -114,6 +115,7 @@ import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
+import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -3063,6 +3065,167 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(c.isEntailed()).isFalse();
     assertThat(x.sizeConstraints()).isEqualTo(attached - 1);
+  }
+
+  // A constraint that holds for every value left is marked entailed during search when it is woken,
+  // so later changes of its variables do not wake it again; the mark goes on backtracking and the
+  // constraint prunes again.
+  @Test
+  void testEntailedPrimitivesAndExtremaDropThemselves() {
+    record Case(
+        String name,
+        Function<IntVar[], Constraint> make,
+        java.util.function.Consumer<IntVar[]> entail,
+        java.util.function.Consumer<IntVar[]> afterBacktrack,
+        Predicate<IntVar[]> pruned) {}
+    List<Case> cases =
+        List.of(
+            new Case(
+                "x <= y",
+                v -> new XlteqY(v[0], v[1]),
+                v -> {
+                  v[0].domain.in(1, v[0], 1, 3);
+                  v[1].domain.in(1, v[1], 3, 9);
+                },
+                v -> v[1].domain.in(1, v[1], 0, 4),
+                v -> v[0].max() == 4),
+            new Case(
+                "x + 2 <= y",
+                v -> new XplusClteqZ(v[0], 2, v[1]),
+                v -> {
+                  v[0].domain.in(1, v[0], 1, 3);
+                  v[1].domain.in(1, v[1], 5, 9);
+                },
+                v -> v[1].domain.in(1, v[1], 0, 4),
+                v -> v[0].max() == 2),
+            new Case(
+                "x + y <= z",
+                v -> new XplusYlteqZ(v[0], v[1], v[2]),
+                v -> {
+                  v[0].domain.in(1, v[0], 1, 2);
+                  v[1].domain.in(1, v[1], 1, 2);
+                  v[2].domain.in(1, v[2], 5, 9);
+                },
+                v -> v[2].domain.in(1, v[2], 0, 3),
+                v -> v[0].max() == 3),
+            new Case(
+                "min",
+                v -> new Min(new IntVar[] {v[0], v[1]}, v[2]),
+                v -> {
+                  v[2].domain.in(1, v[2], 2, 2);
+                  v[0].domain.in(1, v[0], 2, 2);
+                },
+                v -> v[1].domain.in(1, v[1], 0, 1),
+                v -> v[2].max() == 1),
+            new Case(
+                "max",
+                v -> new Max(new IntVar[] {v[0], v[1]}, v[2]),
+                v -> {
+                  v[2].domain.in(1, v[2], 8, 8);
+                  v[0].domain.in(1, v[0], 8, 8);
+                },
+                v -> v[1].domain.in(1, v[1], 9, 10),
+                v -> v[2].min() == 9),
+            new Case(
+                "max of two",
+                v -> new MaxSimple(v[0], v[1], v[2]),
+                v -> {
+                  v[2].domain.in(1, v[2], 8, 8);
+                  v[0].domain.in(1, v[0], 8, 8);
+                },
+                v -> v[1].domain.in(1, v[1], 9, 10),
+                v -> v[2].min() == 9),
+            new Case(
+                "element, index fixed",
+                v -> new ElementVariableFast(v[3], new IntVar[] {v[0], v[1]}, v[2]),
+                v -> {
+                  v[3].domain.in(1, v[3], 1, 1);
+                  v[2].domain.in(1, v[2], 5, 5);
+                },
+                v -> {
+                  v[3].domain.in(1, v[3], 1, 1);
+                  v[2].domain.in(1, v[2], 6, 6);
+                },
+                v -> v[0].singleton() && v[0].value() == 6),
+            new Case(
+                "element, all positions hold the value",
+                v -> new ElementVariableFast(v[3], new IntVar[] {v[0], v[1]}, v[2]),
+                v -> {
+                  v[0].domain.in(1, v[0], 5, 5);
+                  v[1].domain.in(1, v[1], 5, 5);
+                  v[2].domain.in(1, v[2], 5, 5);
+                },
+                v -> {
+                  v[3].domain.in(1, v[3], 1, 1);
+                  v[0].domain.in(1, v[0], 3, 3);
+                },
+                v -> v[2].singleton() && v[2].value() == 3),
+            new Case(
+                "x != y",
+                v -> new XneqY(v[0], v[1]),
+                v -> v[0].domain.in(1, v[0], 3, 3),
+                v -> v[1].domain.in(1, v[1], 4, 4),
+                v -> !v[0].domain.contains(4)),
+            new Case(
+                "not (x <= y)",
+                v -> new Not(new XlteqY(v[0], v[1])),
+                v -> {
+                  v[0].domain.in(1, v[0], 6, 10);
+                  v[1].domain.in(1, v[1], 0, 3);
+                },
+                v -> v[1].domain.in(1, v[1], 5, 10),
+                v -> v[1].max() == 9),
+            new Case(
+                "sum of Booleans != c",
+                v -> new SumBool(new IntVar[] {v[4], v[5]}, "!=", v[2]),
+                v -> {
+                  v[4].domain.in(1, v[4], 1, 1);
+                  v[2].domain.in(1, v[2], 0, 0);
+                },
+                v -> {
+                  v[2].domain.in(1, v[2], 1, 1);
+                  v[4].domain.in(1, v[4], 0, 0);
+                },
+                v -> v[5].max() == 0),
+            new Case(
+                "count of a value",
+                v -> new CountValues(new IntVar[] {v[4], v[5]}, new IntVar[] {v[2]}, new int[] {1}),
+                v -> {
+                  v[4].domain.in(1, v[4], 1, 1);
+                  v[5].domain.in(1, v[5], 0, 0);
+                },
+                v -> v[2].domain.in(1, v[2], 2, 2),
+                v -> v[5].min() == 1));
+    for (Case k : cases) {
+      Store store = new Store();
+      IntVar[] v = {
+        new IntVar(store, "a", 0, 10),
+        new IntVar(store, "b", 0, 10),
+        new IntVar(store, "c", 0, 10),
+        new IntVar(store, "i", 1, 2),
+        new IntVar(store, "p", 0, 1),
+        new IntVar(store, "q", 0, 1)
+      };
+      Constraint c = k.make().apply(v);
+      store.impose(c);
+      assertThat(store.consistency()).as(k.name()).isTrue();
+      assertThat(c.isEntailed()).as(k.name()).isFalse();
+
+      store.setLevel(1);
+      k.entail().accept(v);
+      assertThat(store.consistency()).as(k.name()).isTrue();
+      assertThat(c.isEntailed()).as(k.name() + " entailed").isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+      assertThat(c.isEntailed()).as(k.name() + " after backtrack").isFalse();
+
+      store.setLevel(1);
+      k.afterBacktrack().accept(v);
+      assertThat(store.consistency()).as(k.name()).isTrue();
+      assertThat(k.pruned().test(v)).as(k.name() + " prunes after backtrack").isTrue();
+      store.removeLevel(1);
+      store.setLevel(0);
+    }
   }
 
   // A constraint that reads one bound of a variable is attached with the MIN_EVENT or MAX_EVENT
