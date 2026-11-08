@@ -153,6 +153,21 @@ public class UnaryEarlinessTardiness extends Constraint
   static final long WORK =
       Long.getLong("org.jacop.unaryEarlinessTardiness.workPerPropagation", 1000);
 
+  // whether the bounds of the starts are filtered by the reduced costs of the machine duals
+  static final boolean FILTER =
+      Boolean.parseBoolean(System.getProperty("org.jacop.unaryEarlinessTardiness.filter", "true"));
+
+  // the start bounds the filtering changed (prunings) and the propagations it ran
+  private long prunings;
+  private long filterCalls;
+
+  // the certificates of the start bounds of the filtering, per atom (2i: start >= limit, 2i + 1:
+  // start <= limit): the weakest start bounds and the largest maximum of the cost they hold for
+  private final long[][] reasonLo;
+  private final long[][] reasonHi;
+  private final long[] reasonCostMax;
+  private final long[] reasonLimit;
+
   // the work of the solves in propagation so far, and the store's propagations at this one
   private long work;
   private long propagations;
@@ -418,6 +433,10 @@ public class UnaryEarlinessTardiness extends Constraint
     lo = new long[n];
     hi = new long[n];
     needLo = new long[n];
+    reasonLo = new long[2 * n][];
+    reasonHi = new long[2 * n][];
+    reasonCostMax = new long[2 * n];
+    reasonLimit = new long[2 * n];
     needHi = new long[n];
 
     this.queueIndex = 3;
@@ -1055,47 +1074,53 @@ public class UnaryEarlinessTardiness extends Constraint
       Machine mc = machine[m];
       if (mc.trivial) {
         for (int i : mc.owned) {
-          exactNeed(i);
+          exactNeed(i, needLo, needHi);
         }
         continue;
       }
       for (int j = 0; j < mc.jobs; j++) {
-        int i = mc.task[j];
-        long p = durations[i];
-        boolean counted = owner[i] == m && hasCost[i];
-        long wl = lo[i];
-        long wh = hi[i] + p - 1;
-        // down from the block of the first slot of the window
-        int k = (int) ((wl - mc.first) / mc.length);
-        long reach = wl;
-        while (k >= 0 && fits(mc, j, i, k, counted)) {
-          reach = mc.start(k);
-          k--;
-        }
-        long need = k < 0 ? Long.MIN_VALUE : reach;
-        needLo[i] = Math.max(needLo[i], need);
-        k = (int) ((wh - mc.first) / mc.length);
-        reach = wh;
-        while (k < mc.blocks && fits(mc, j, i, k, counted)) {
-          reach = mc.end(k) - 1;
-          k++;
-        }
-        need = k >= mc.blocks ? Long.MAX_VALUE : reach - p + 1;
-        needHi[i] = Math.min(needHi[i], need);
+        dualNeed(mc, m, j, needLo, needHi);
       }
     }
     for (int i : outside) {
-      exactNeed(i);
+      exactNeed(i, needLo, needHi);
     }
   }
 
+  // the weakest bounds of the start of job j of machine m that keep the dual of the machine
+  // feasible
+  private void dualNeed(Machine mc, int m, int j, long[] needL, long[] needH) {
+    int i = mc.task[j];
+    long p = durations[i];
+    boolean counted = owner[i] == m && hasCost[i];
+    long wl = lo[i];
+    long wh = hi[i] + p - 1;
+    // down from the block of the first slot of the window
+    int k = (int) ((wl - mc.first) / mc.length);
+    long reach = wl;
+    while (k >= 0 && fits(mc, j, i, k, counted)) {
+      reach = mc.start(k);
+      k--;
+    }
+    long need = k < 0 ? Long.MIN_VALUE : reach;
+    needL[i] = Math.max(needL[i], need);
+    k = (int) ((wh - mc.first) / mc.length);
+    reach = wh;
+    while (k < mc.blocks && fits(mc, j, i, k, counted)) {
+      reach = mc.end(k) - 1;
+      k++;
+    }
+    need = k >= mc.blocks ? Long.MAX_VALUE : reach - p + 1;
+    needH[i] = Math.min(needH[i], need);
+  }
+
   // the bound of the start that the exact minimum of task i over its bounds depends on
-  private void exactNeed(int i) {
+  private void exactNeed(int i, long[] needL, long[] needH) {
     if (bestStart[i] < lo[i]) {
-      needLo[i] = Math.max(needLo[i], lo[i]);
+      needL[i] = Math.max(needL[i], lo[i]);
     }
     if (bestStart[i] > hi[i]) {
-      needHi[i] = Math.min(needHi[i], hi[i]);
+      needH[i] = Math.min(needH[i], hi[i]);
     }
   }
 
@@ -1151,6 +1176,191 @@ public class UnaryEarlinessTardiness extends Constraint
     if (bound > cost.min()) {
       cost.domain.inMin(store.level, cost, (int) bound);
     }
+    if (FILTER) {
+      filter(store);
+    }
+  }
+
+  // ---------------------------------------------------------------- reduced-cost filtering
+
+  /**
+   * It filters the bounds of the starts with the duals of the machines. For a machine with dual (u,
+   * w), w recomputed for the current costs, restricting the window of a task j only raises its
+   * costs, so (u, w) stays feasible and u[j] may rise to the least c[j][k] + w[k] over the blocks
+   * left in the window: the bound grows by p[j] times that rise. A start bound whose restriction
+   * makes the bound exceed the maximum of the cost is removed. The dual is the one the bound used,
+   * w included, so the certificate of the bound (with the window of the task kept on the side the
+   * atom does not restrict) proves the pruning under lazy clause generation.
+   */
+  private void filter(Store store) {
+    long max = cost.max();
+    long outsideTotal = 0;
+    for (int i : outside) {
+      outsideTotal += outsideCost(i);
+    }
+    long scaled = 0;
+    for (Machine mc : machine) {
+      scaled += mc.off ? mc.trivialValue : Math.max(mc.lower, mc.trivialValue);
+    }
+    filterCalls++;
+    for (int m = 0; m < machine.length; m++) {
+      Machine mc = machine[m];
+      if (mc.off || !mc.dual) {
+        continue;
+      }
+      long value = 0;
+      for (int j = 0; j < mc.jobs; j++) {
+        value += durations[mc.task[j]] * mc.u[j];
+      }
+      for (int k = 0; k < mc.blocks; k++) {
+        value -= mc.capacity[k] * mc.w[k];
+      }
+      // the room of this machine: its bound may reach cap before the total exceeds the maximum
+      long rest = scaled - Math.max(mc.lower, mc.trivialValue);
+      long cap = (max - outsideTotal) * SCALE - rest;
+      long slack = cap - value;
+      if (slack < 0) {
+        continue;
+      }
+      for (int j = 0; j < mc.jobs; j++) {
+        int i = mc.task[j];
+        if (lo[i] == hi[i]) {
+          continue;
+        }
+        long p = durations[i];
+        boolean counted = owner[i] == m && hasCost[i];
+        // starts at most v: the units in [lo, v + p - 1]
+        if (excess(mc, j, i, counted, lo[i], lo[i] + p - 1, slack) > 0) {
+          long a = lo[i];
+          long z = hi[i];
+          while (a < z) {
+            long v = a + (z - a + 1) / 2;
+            if (excess(mc, j, i, counted, lo[i], v + p - 1, slack) > 0) {
+              a = v;
+            } else {
+              z = v - 1;
+            }
+          }
+          if (a >= hi[i]) {
+            throw Store.failException;
+          }
+          if (a + 1 > starts[i].min()) {
+            prunings++;
+            long room = (excess(mc, j, i, counted, lo[i], a + p - 1, slack) - 1) / SCALE;
+            record(m, j, true, a + 1, max + room);
+            starts[i].domain.inMin(store.level, starts[i], (int) (a + 1));
+          }
+        }
+        // starts at least v: the units in [v, hi + p - 1]
+        if (excess(mc, j, i, counted, hi[i], hi[i] + p - 1, slack) > 0) {
+          long a = lo[i];
+          long z = hi[i];
+          while (a < z) {
+            long v = a + (z - a) / 2;
+            if (excess(mc, j, i, counted, v, hi[i] + p - 1, slack) > 0) {
+              z = v;
+            } else {
+              a = v + 1;
+            }
+          }
+          if (a <= lo[i]) {
+            throw Store.failException;
+          }
+          if (a - 1 < starts[i].max()) {
+            prunings++;
+            long room = (excess(mc, j, i, counted, a, hi[i] + p - 1, slack) - 1) / SCALE;
+            record(m, j, false, a - 1, max + room);
+            starts[i].domain.inMax(store.level, starts[i], (int) (a - 1));
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * How much the units of job j in the slots [a, z] raise the scaled bound of its machine beyond
+   * the slack: positive when that window is infeasible (INF when no block is left).
+   */
+  private long excess(Machine mc, int j, int i, boolean counted, long a, long z, long slack) {
+    long g = INF;
+    int first = (int) Math.max(0, (a - mc.first) / mc.length);
+    for (int k = first; k < mc.blocks && mc.start(k) <= z; k++) {
+      long x = Math.max(mc.start(k), a);
+      long y = Math.min(mc.end(k) - 1, z);
+      if (x > y) {
+        continue;
+      }
+      long c = counted ? leastSlotCost(i, x, y) : 0;
+      g = Math.min(g, c + mc.w[k]);
+    }
+    if (g >= INF) {
+      return INF;
+    }
+    long rise = g - mc.u[j];
+    return rise <= 0 ? -1 : durations[i] * rise - slack;
+  }
+
+  /**
+   * It records the certificate of a pruning of the start of job j of machine m: the certificate of
+   * the bound, with machine m by its dual even when the bound counted its exact minima, the window
+   * of the task kept on the side the atom does not restrict and free on the other.
+   */
+  private void record(int m, int jPruned, boolean ge, long limit, long costMax) {
+    int slot = ge ? 2 * mtask(m, jPruned) : 2 * mtask(m, jPruned) + 1;
+    if (reasonLo[slot] == null) {
+      reasonLo[slot] = new long[n];
+      reasonHi[slot] = new long[n];
+    }
+    long[] needL = reasonLo[slot];
+    long[] needH = reasonHi[slot];
+    Arrays.fill(needL, Long.MIN_VALUE);
+    Arrays.fill(needH, Long.MAX_VALUE);
+    for (int q = 0; q < machine.length; q++) {
+      Machine mc = machine[q];
+      if (q != m && (mc.off || mc.trivial)) {
+        for (int i : mc.owned) {
+          exactNeed(i, needL, needH);
+        }
+        continue;
+      }
+      for (int j = 0; j < mc.jobs; j++) {
+        int i = mc.task[j];
+        if (q == m && j == jPruned) {
+          if (ge) {
+            needL[i] = Math.max(needL[i], lo[i]);
+          } else {
+            needH[i] = Math.min(needH[i], hi[i]);
+          }
+          continue;
+        }
+        dualNeed(mc, q, j, needL, needH);
+      }
+    }
+    for (int i : outside) {
+      exactNeed(i, needL, needH);
+    }
+    int i = mtask(m, jPruned);
+    if (ge) {
+      needH[i] = Long.MAX_VALUE;
+    } else {
+      needL[i] = Long.MIN_VALUE;
+    }
+    reasonCostMax[slot] = costMax;
+    reasonLimit[slot] = limit;
+  }
+
+  private int mtask(int m, int j) {
+    return machine[m].task[j];
+  }
+
+  /**
+   * It returns the start bounds changed by the reduced-cost filtering and the propagations that ran
+   * it.
+   *
+   * @return {prunings, calls}.
+   */
+  public long[] filterStatistics() {
+    return new long[] {prunings, filterCalls};
   }
 
   // the exact cost of a ground schedule; fails if two tasks of a machine overlap
@@ -1199,9 +1409,13 @@ public class UnaryEarlinessTardiness extends Constraint
 
   // whether the certificate's bounds held before a position
   private boolean certificateHolds(AtomicTrail trail, int position) {
+    return holds(trail, position, needLo, needHi);
+  }
+
+  private boolean holds(AtomicTrail trail, int position, long[] needL, long[] needH) {
     for (int i = 0; i < n; i++) {
-      if ((needLo[i] != Long.MIN_VALUE && trail.minBefore(starts[i], position) < needLo[i])
-          || (needHi[i] != Long.MAX_VALUE && trail.maxBefore(starts[i], position) > needHi[i])) {
+      if ((needL[i] != Long.MIN_VALUE && trail.minBefore(starts[i], position) < needL[i])
+          || (needH[i] != Long.MAX_VALUE && trail.maxBefore(starts[i], position) > needH[i])) {
         return false;
       }
     }
@@ -1209,12 +1423,16 @@ public class UnaryEarlinessTardiness extends Constraint
   }
 
   private void addCertificate(AtomicTrail trail, int position, EntryList reason) {
+    add(trail, position, needLo, needHi, reason);
+  }
+
+  private void add(AtomicTrail trail, int position, long[] needL, long[] needH, EntryList reason) {
     for (int i = 0; i < n; i++) {
-      if (needLo[i] != Long.MIN_VALUE) {
-        trail.addBoundReaching(starts[i], position, true, needLo[i], reason);
+      if (needL[i] != Long.MIN_VALUE) {
+        trail.addBoundReaching(starts[i], position, true, needL[i], reason);
       }
-      if (needHi[i] != Long.MAX_VALUE) {
-        trail.addBoundReaching(starts[i], position, false, needHi[i], reason);
+      if (needH[i] != Long.MAX_VALUE) {
+        trail.addBoundReaching(starts[i], position, false, needH[i], reason);
       }
     }
   }
@@ -1240,7 +1458,14 @@ public class UnaryEarlinessTardiness extends Constraint
 
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList reason) {
-    if (trail.kind(entry) != AtomicTrail.GE || trail.variable(entry) != cost) {
+    int kind = trail.kind(entry);
+    if (kind != AtomicTrail.GE && kind != AtomicTrail.LE) {
+      return false;
+    }
+    if (trail.variable(entry) != cost) {
+      return explainStart(trail, entry, kind == AtomicTrail.GE, reason);
+    }
+    if (kind != AtomicTrail.GE) {
       return false;
     }
     int value = trail.skippedBound(entry);
@@ -1251,6 +1476,64 @@ public class UnaryEarlinessTardiness extends Constraint
       }
     }
     trail.addSkippedHoles(entry, value, reason);
+    addCertificate(trail, entry, reason);
+    return true;
+  }
+
+  /**
+   * A bound of a start from the filtering: with the negation of the atom the bound of the cost
+   * exceeds its maximum, so the reason is the maximum of the cost with the certificate of that
+   * bound, without the bound the negation sets.
+   */
+  private boolean explainStart(AtomicTrail trail, int entry, boolean ge, EntryList reason) {
+    Integer task = index.get(trail.variable(entry));
+    if (task == null) {
+      return false;
+    }
+    int i = task;
+    int value = trail.skippedBound(entry);
+    int slot = ge ? 2 * i : 2 * i + 1;
+    if (reasonLo[slot] != null
+        && (ge ? reasonLimit[slot] >= value : reasonLimit[slot] <= value)
+        && trail.maxBefore(cost, entry) <= reasonCostMax[slot]
+        && holds(trail, entry, reasonLo[slot], reasonHi[slot])) {
+      trail.addSkippedHoles(entry, value, reason);
+      trail.addBoundWithin(
+          cost, entry, false, reasonCostMax[slot] - trail.maxBefore(cost, entry), reason);
+      add(trail, entry, reasonLo[slot], reasonHi[slot], reason);
+      return true;
+    }
+    for (int k = 0; k < n; k++) {
+      lo[k] = trail.minBefore(starts[k], entry);
+      hi[k] = trail.maxBefore(starts[k], entry);
+    }
+    if (ge) {
+      hi[i] = (long) value - 1;
+    } else {
+      lo[i] = (long) value + 1;
+    }
+    if (lo[i] > hi[i]) {
+      return false;
+    }
+    for (Machine mc : machine) {
+      mc.valid = false;
+    }
+    long b = bound(false, true);
+    for (Machine mc : machine) {
+      mc.valid = false;
+    }
+    certificateValid = false;
+    long max = trail.maxBefore(cost, entry);
+    if (b == Long.MAX_VALUE || b <= max) {
+      return false;
+    }
+    if (ge) {
+      needHi[i] = Long.MAX_VALUE;
+    } else {
+      needLo[i] = Long.MIN_VALUE;
+    }
+    trail.addSkippedHoles(entry, value, reason);
+    trail.addBoundWithin(cost, entry, false, b - max - 1, reason);
     addCertificate(trail, entry, reason);
     return true;
   }

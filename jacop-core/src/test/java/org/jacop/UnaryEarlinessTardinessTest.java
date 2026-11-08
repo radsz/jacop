@@ -324,6 +324,65 @@ class UnaryEarlinessTardinessTest {
     }
   }
 
+  /**
+   * The reduced-cost filtering keeps every start value of a schedule that fits on the machines with
+   * a cost at most the maximum, and removes some: the maximum is the brute-force minimum plus a
+   * small margin.
+   */
+  @Test
+  void filteringKeepsEverySupportedStart() {
+    Random r = new Random(4);
+    long prunings = 0;
+    for (int t = 0; t < INSTANCES; t++) {
+      Problem q = Problem.random(r, 5, 12, 4);
+      long best = q.bruteMinimum();
+      if (best == Long.MAX_VALUE) {
+        continue;
+      }
+      long max = best + r.nextInt(4);
+      boolean[][] supported = new boolean[q.n][];
+      for (int i = 0; i < q.n; i++) {
+        supported[i] = new boolean[q.hi[i] - q.lo[i] + 1];
+      }
+      int[] x = q.lo.clone();
+      while (true) {
+        if (q.feasible(x) && q.cost(x) <= max) {
+          for (int i = 0; i < q.n; i++) {
+            supported[i][x[i] - q.lo[i]] = true;
+          }
+        }
+        int k = 0;
+        while (k < q.n && x[k] == q.hi[k]) {
+          x[k] = q.lo[k];
+          k++;
+        }
+        if (k == q.n) {
+          break;
+        }
+        x[k]++;
+      }
+      Store store = new Store();
+      IntVar[] s = new IntVar[q.n];
+      for (int i = 0; i < q.n; i++) {
+        s[i] = new IntVar(store, "s" + i, q.lo[i], q.hi[i]);
+      }
+      IntVar c = new IntVar(store, "c", 0, (int) max);
+      UnaryEarlinessTardiness et = q.post(store, s, c);
+      assertTrue(store.consistency(), "instance " + t + " max " + max + ": " + q);
+      for (int i = 0; i < q.n; i++) {
+        for (int v = q.lo[i]; v <= q.hi[i]; v++) {
+          if (supported[i][v - q.lo[i]]) {
+            assertTrue(
+                s[i].domain.contains(v),
+                "instance " + t + " max " + max + ": s" + i + " = " + v + " removed for " + q);
+          }
+        }
+      }
+      prunings += et.filterStatistics()[0];
+    }
+    assertTrue(prunings > 0, "the filtering never pruned");
+  }
+
   /** The optimum with the constraint alone (and the disjunctions), the decomposition, and both. */
   @Test
   void optimaMatchDecomposition() {
