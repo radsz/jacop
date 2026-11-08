@@ -170,6 +170,43 @@ final class StdDecompositions {
     DECOMPOSERS.put("jacop_mdd", StdDecompositions::mdd);
   }
 
+  static {
+    DECOMPOSERS.put("jacop_count_var_reif", JacopDecompositions::countVarReif);
+    DECOMPOSERS.put("jacop_count_var_le", JacopDecompositions::countVarLe);
+    DECOMPOSERS.put("jacop_count_var_ge", JacopDecompositions::countVarGe);
+    DECOMPOSERS.put("jacop_atleast_reif", JacopDecompositions::atLeastReif);
+    DECOMPOSERS.put("jacop_member_bool", JacopDecompositions::memberBool);
+    DECOMPOSERS.put("jacop_member_bool_reif", JacopDecompositions::memberBoolReif);
+    DECOMPOSERS.put("jacop_short_table_int", JacopDecompositions::shortTable);
+    DECOMPOSERS.put("jacop_negative_table_int", JacopDecompositions::negativeTable);
+    DECOMPOSERS.put("jacop_table_int_reif", JacopDecompositions::tableReif);
+    DECOMPOSERS.put("jacop_table_bool_reif", JacopDecompositions::tableReif);
+    DECOMPOSERS.put("jacop_table_int_imp", JacopDecompositions::tableImp);
+    DECOMPOSERS.put("jacop_table_bool_imp", JacopDecompositions::tableImp);
+    DECOMPOSERS.put("jacop_among_var", JacopDecompositions::amongVar);
+    DECOMPOSERS.put("jacop_channel", JacopDecompositions::channel);
+    DECOMPOSERS.put("jacop_sequence", JacopDecompositions::sequence);
+    DECOMPOSERS.put("jacop_inter_distance", JacopDecompositions::interDistance);
+    DECOMPOSERS.put("jacop_multi_inter_distance", JacopDecompositions::multiInterDistance);
+    DECOMPOSERS.put("jacop_deviation", JacopDecompositions::deviation);
+    DECOMPOSERS.put("jacop_spread", JacopDecompositions::spread);
+    DECOMPOSERS.put("jacop_diff2", JacopDecompositions::diff2);
+    DECOMPOSERS.put("jacop_sort", JacopDecompositions::sort);
+    DECOMPOSERS.put("jacop_sort_permutation", JacopDecompositions::sortPermutation);
+    DECOMPOSERS.put("jacop_alldifferent_opt", JacopDecompositions::allDifferentOpt);
+    DECOMPOSERS.put("jacop_softalldiff", JacopDecompositions::softAllDifferent);
+    DECOMPOSERS.put("jacop_softgcc", JacopDecompositions::softGcc);
+    DECOMPOSERS.put("jacop_softgcc_var", JacopDecompositions::softGccVar);
+    DECOMPOSERS.put("jacop_reservoir", JacopDecompositions::reservoir);
+    DECOMPOSERS.put("jacop_stocking_cost", JacopDecompositions::stockingCost);
+    DECOMPOSERS.put("jacop_subcircuit_cost", JacopDecompositions::subcircuitCost);
+    DECOMPOSERS.put("jacop_disjunctive_setup", JacopDecompositions::disjunctiveSetup);
+    DECOMPOSERS.put(
+        "jacop_disjunctive_setup_optional", JacopDecompositions::disjunctiveSetupOptional);
+    DECOMPOSERS.put("jacop_sum_set", JacopDecompositions::sumSet);
+    DECOMPOSERS.put("jacop_stretch", JacopDecompositions::stretch);
+  }
+
   private StdDecompositions() {}
 
   static boolean supports(String constraint) {

@@ -141,6 +141,9 @@ class AllSolutionsSuite {
       Path.of(System.getProperty("suite.state", FZ + "decomposition/suite-state.tsv"));
   private final Path reportPath =
       Path.of(System.getProperty("suite.report", FZ + "decomposition/suite-coverage.md"));
+  private final Path twins =
+      System.getProperty("suite.twins") == null ? null : Path.of(System.getProperty("suite.twins"));
+  private final Map<Path, String> twinNames = new HashMap<>();
   private final Path out = Path.of(System.getProperty("suite.out", "target/all-solutions-suite"));
   private final Path mznlib =
       Path.of(
@@ -276,6 +279,7 @@ class AllSolutionsSuite {
         while (m.find()) {
           globals.add(m.group(1));
         }
+        twinNames.put(p, name);
         Path twin = twin(p);
         String sha = DecompositionCheck.sha(twin == null ? text : text + read(twin));
         candidates.add(new Candidate(name, p, size, globals, family(name), sha));
@@ -738,11 +742,21 @@ class AllSolutionsSuite {
     record(c, sha, check, verdict, r, note);
   }
 
-  /** The FlatZinc of the same model and data flattened with MiniZinc's standard library. */
-  private static Path twin(Path p) {
+  /**
+   * The FlatZinc of the same model and data flattened with MiniZinc's standard library: {@code
+   * <inst>.std.fzn} next to the file, or {@code <suite.twins>/<root>/<rel>.std.fzn}.
+   */
+  private Path twin(Path p) {
     String s = p.toString().replaceAll("\\.fzn(\\.gz)?$", "");
     for (String ext : List.of(".std.fzn", ".std.fzn.gz")) {
       Path t = Path.of(s + ext);
+      if (Files.exists(t)) {
+        return t;
+      }
+    }
+    String name = twinNames.get(p);
+    if (twins != null && name != null) {
+      Path t = twins.resolve(name.replaceFirst(":", "/") + ".std.fzn");
       if (Files.exists(t)) {
         return t;
       }
