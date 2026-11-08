@@ -279,9 +279,13 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/ExactCoverTest.java</include>
+                                <include>**/TableCoverTest.java</include>
                                 <include>**/LinearIntDomSumsetTest.java</include>
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
@@ -463,9 +467,13 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/ExactCoverTest.java</include>
+                                <include>**/TableCoverTest.java</include>
                                 <include>**/LinearIntDomSumsetTest.java</include>
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
@@ -648,9 +656,13 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/ExactCoverTest.java</include>
+                                <include>**/TableCoverTest.java</include>
                                 <include>**/LinearIntDomSumsetTest.java</include>
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
@@ -833,9 +845,13 @@ setup to run configuration. -->
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
                                 <include>**/XorSystemTest.java</include>
+                                <include>**/ExactCoverTest.java</include>
+                                <include>**/TableCoverTest.java</include>
                                 <include>**/LinearIntDomSumsetTest.java</include>
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
+                                <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
