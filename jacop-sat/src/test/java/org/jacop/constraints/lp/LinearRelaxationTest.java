@@ -56,6 +56,7 @@ import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
@@ -1546,6 +1547,96 @@ class LinearRelaxationTest {
       } else {
         assertThat(copies).containsValue(v);
       }
+    }
+  }
+
+  /**
+   * The sorting-network rows and the Hall cuts of all-different constraints keep the optimum of
+   * random permutation and assignment models under lazy clause generation with the explanation
+   * checker on: the free columns of the network leave every explanation at their fixed bounds.
+   */
+  @Test
+  void alldifferentRowsKeepTheOptimumUnderLcg() {
+    long checked = 0;
+    int used = 0;
+    for (int run = 0; run < 16; run++) {
+      boolean permutation = run % 2 == 0;
+      long expected = new Permutation(run, permutation).optimum();
+
+      Permutation lcg = new Permutation(run, permutation);
+      LinearRelaxation l =
+          LinearRelaxation.of(
+              lcg.store,
+              lcg.cost,
+              false,
+              List.of(),
+              permutation ? Linearizations.alldifferentNetwork(lcg.x) : List.of(),
+              Set.of(),
+              LinearRelaxation.Simplex.DENSE);
+      assertThat(l).as("seed %d", run).isNotNull();
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+      used += l.alldiffCuts > 0 || l.simplexFreeColumns() > 0 ? 1 : 0;
+    }
+    assertThat(checked).isPositive();
+    assertThat(used).isPositive();
+  }
+
+  /**
+   * A random all-different over 5 to 7 variables, a permutation of spread values or domains from a
+   * larger pool, with a linear cost {@code cost = sum c_i x_i}.
+   */
+  private static final class Permutation {
+    final Store store = new Store();
+    final IntVar[] x;
+    final IntVar cost;
+
+    Permutation(int seed, boolean permutation) {
+      Random rnd = new Random(seed * 104_729L + 1);
+      int n = 5 + rnd.nextInt(3);
+      int size = permutation ? n : n + 2;
+      int[] values = new int[size];
+      for (int i = 0, at = rnd.nextInt(4); i < size; i++) {
+        at += 1 + rnd.nextInt(3);
+        values[i] = at;
+      }
+      x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        IntervalDomain d = new IntervalDomain();
+        for (int v : values) {
+          if (permutation || rnd.nextInt(4) > 0) {
+            d.unionAdapt(v, v);
+          }
+        }
+        if (d.isEmpty()) {
+          d.unionAdapt(values[i], values[i]);
+        }
+        x[i] = new IntVar(store, "x" + i, d);
+      }
+      int[] w = new int[n + 1];
+      IntVar[] vars = Arrays.copyOf(x, n + 1);
+      int range = 0;
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(19) - 9;
+        range += Math.abs(w[i]) * values[size - 1];
+      }
+      cost = new IntVar(store, "cost", -range, range);
+      vars[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(vars, w, "==", 0));
+      store.impose(new Alldistinct(x));
+    }
+
+    long optimum() {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost))
+          .isTrue();
+      return search.getCostValue();
     }
   }
 
