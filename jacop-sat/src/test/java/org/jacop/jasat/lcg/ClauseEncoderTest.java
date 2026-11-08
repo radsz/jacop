@@ -195,6 +195,20 @@ class ClauseEncoderTest {
     FACTORIES.put(
         "ElementVariableFast",
         (s, r) -> new ElementVariableFast(var(s, r, 0, 3), vs(s, r, 4), v(s, r), 0));
+    FACTORIES.put("CountBool", (s, r) -> new Count(bs(s, 3 + r.nextInt(8)), var(s, r, 0, 6), 1));
+    FACTORIES.put(
+        "LinearBoolVar",
+        (s, r) -> {
+          int n = 3 + r.nextInt(7);
+          int[] w = new int[n + 1];
+          for (int i = 0; i < n; i++) {
+            w[i] = r.nextBoolean() ? 1 : -1;
+          }
+          w[n] = r.nextBoolean() ? 1 : -1;
+          IntVar[] x = java.util.Arrays.copyOf(bs(s, n), n + 1);
+          x[n] = var(s, r, -2, 6);
+          return new LinearInt(x, w, rel(r), r.nextInt(5) - 2);
+        });
     FACTORIES.put("Count", (s, r) -> new Count(vs(s, r, 2 + r.nextInt(3)), var(s, r, 0, 4), 2));
     FACTORIES.put("AtMost", (s, r) -> new AtMost(vs(s, r, 2 + r.nextInt(3)), 1 + r.nextInt(2), 2));
     FACTORIES.put(
@@ -351,9 +365,18 @@ class ClauseEncoderTest {
       long[] st = new long[6]; // encoded, rejected, solutions, cp-stronger, up-stronger, cases
       for (int i = 0; i < INSTANCES; i++) {
         long seed = 1000L * i + f.getKey().hashCode();
-        check(f.getKey(), f.getValue(), seed, st);
+        check(f.getKey(), f.getValue(), seed, st, 4096, 4096);
       }
       stats.put(f.getKey(), st);
+      // a low limit leaves 0/1 sums to the unary counter
+      long[] low = new long[6];
+      for (int i = 0; i < INSTANCES; i++) {
+        long seed = 1000L * i + f.getKey().hashCode();
+        check(f.getKey(), f.getValue(), seed, low, 4, 4096);
+      }
+      if (low[0] > 0) {
+        stats.put(f.getKey() + "/counter", low);
+      }
     }
     stats.forEach(
         (k, st) ->
@@ -363,7 +386,8 @@ class ClauseEncoderTest {
     assertThat(stats.get("XplusYeqZ")[0]).isPositive();
   }
 
-  private static void check(String name, Factory factory, long seed, long[] st) {
+  private static void check(
+      String name, Factory factory, long seed, long[] st, int limit, int counterLimit) {
     Copy first = rebuild(factory, seed);
     Constraint c = first.c();
     Random r = new Random(seed + 7);
@@ -381,7 +405,7 @@ class ClauseEncoderTest {
     for (IntVar y : x) {
       cnf.add(y);
     }
-    List<int[]> clauses = new ClauseEncoder(cnf, 4096).encode(c);
+    List<int[]> clauses = new ClauseEncoder(cnf, limit, counterLimit).encode(c);
     if (clauses == null) {
       st[1]++;
       return;

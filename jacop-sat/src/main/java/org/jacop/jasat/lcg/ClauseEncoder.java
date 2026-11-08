@@ -90,6 +90,8 @@ final class ClauseEncoder implements PbModel {
 
   private final Literals lits;
   private final int limit;
+  private final int counterLimit;
+  private int currentLimit;
   private final List<int[]> clauses = new ArrayList<>();
   private final List<String> guard = new ArrayList<>();
 
@@ -98,8 +100,19 @@ final class ClauseEncoder implements PbModel {
    * @param limit the most clauses of one constraint
    */
   ClauseEncoder(Literals lits, int limit) {
+    this(lits, limit, limit);
+  }
+
+  /**
+   * @param lits the literals of the solver
+   * @param limit the most clauses of one constraint
+   * @param counterLimit the most clauses of one constraint that is a sum of 0/1 terms (with at most
+   *     one integer term), which becomes a unary counter
+   */
+  ClauseEncoder(Literals lits, int limit, int counterLimit) {
     this.lits = lits;
     this.limit = limit;
+    this.counterLimit = Math.max(limit, counterLimit);
   }
 
   /**
@@ -111,6 +124,7 @@ final class ClauseEncoder implements PbModel {
   List<int[]> encode(Constraint c) {
     clauses.clear();
     guard.clear();
+    currentLimit = limit;
     try {
       if (!dispatch(c)) {
         return null;
@@ -241,7 +255,7 @@ final class ClauseEncoder implements PbModel {
         c[n++] = parse(l);
       }
     }
-    if (clauses.size() >= limit) {
+    if (clauses.size() >= currentLimit) {
       throw REJECTED;
     }
     clauses.add(java.util.Arrays.copyOf(c, n));
@@ -408,6 +422,10 @@ final class ClauseEncoder implements PbModel {
     for (int i = 0; i < ws.length; i++) {
       ws[i] = w.get(i);
     }
+    if (relation != LinearForm.NE && counterShape(terms, ws) && orderCombos(terms) > limit) {
+      unaryCounter(terms, ws, relation, c);
+      return;
+    }
     switch (relation) {
       case LinearForm.LE -> le(terms, ws, c);
       case LinearForm.GE -> le(terms, negate(ws), -c);
@@ -421,6 +439,135 @@ final class ClauseEncoder implements PbModel {
       case LinearForm.NE -> ne(terms, ws, c);
       default -> throw REJECTED;
     }
+  }
+
+  // the clauses of the order encoding: the values of all terms but the widest one
+  private static double orderCombos(Term[] t) {
+    int last = 0;
+    for (int i = 1; i < t.length; i++) {
+      if (t[i].values.length > t[last].values.length) {
+        last = i;
+      }
+    }
+    double combos = 1;
+    for (int i = 0; i < t.length; i++) {
+      if (i != last) {
+        combos *= t[i].values.length;
+      }
+    }
+    return combos;
+  }
+
+  // 0/1 terms of weight +-1, and at most one other term of weight +-1
+  private static boolean counterShape(Term[] t, long[] w) {
+    int others = 0;
+    for (int i = 0; i < t.length; i++) {
+      if (Math.abs(w[i]) != 1) {
+        return false;
+      }
+      if (t[i].min() != 0 || t[i].max() != 1) {
+        others++;
+      }
+    }
+    return others <= 1 && t.length >= 2;
+  }
+
+  /**
+   * A sum of 0/1 terms, plus at most one integer term y, related to a constant: the 0/1 terms feed
+   * a unary counter (a sequential counter, Sinz CP 2005, with its outputs defined both ways), whose
+   * output o[j] = [sum >= j] is linked to the order literals of y. Unit propagation over it prunes
+   * the bounds the sum allows, and its count literals give conflicts stated in counts.
+   */
+  private void unaryCounter(Term[] t, long[] w, int relation, long c) {
+    List<String> l = new ArrayList<>();
+    Term y = null;
+    long wy = 0;
+    for (int i = 0; i < t.length; i++) {
+      if (t[i].min() == 0 && t[i].max() == 1) {
+        if (w[i] > 0) {
+          l.add(t[i].ge(1));
+        } else {
+          l.add(PbModel.not(t[i].ge(1))); // -t = (1 - t) - 1
+          c += 1;
+        }
+      } else {
+        y = t[i];
+        wy = w[i];
+      }
+    }
+    int n = l.size();
+    // the sum S of the literals and wy * y: S + wy y REL c; S <= c - wy y and S >= c - wy y
+    long minRest = y == null ? c : c - Math.max(wy * y.min(), wy * y.max());
+    long maxRest = y == null ? c : c - Math.min(wy * y.min(), wy * y.max());
+    // counts above maxRest + 1 or n never matter
+    int k = (int) Math.max(0, Math.min(n, maxRest + 1));
+    if ((double) n * k * 4 + 2L * (k + 1) > counterLimit) {
+      throw REJECTED;
+    }
+    currentLimit = counterLimit;
+    // s[i][j] = [l[0] + ... + l[i] >= j], j = 1..k
+    String[] prev = new String[k + 1];
+    prev[0] = "1";
+    for (int j = 1; j <= k; j++) {
+      prev[j] = "0";
+    }
+    for (int i = 0; i < n; i++) {
+      String[] cur = new String[k + 1];
+      cur[0] = "1";
+      for (int j = 1; j <= k; j++) {
+        if (j > i + 1) {
+          cur[j] = "0";
+          continue;
+        }
+        if ("1".equals(prev[j])) {
+          cur[j] = "1";
+          continue;
+        }
+        String s = auxiliary();
+        cur[j] = s;
+        String li = l.get(i);
+        clause(PbModel.not(prev[j]), s); // prev[j] -> s
+        clause(PbModel.not(li), PbModel.not(prev[j - 1]), s); // li and prev[j-1] -> s
+        clause(PbModel.not(s), prev[j], li); // s -> prev[j] or li
+        clause(PbModel.not(s), prev[j], prev[j - 1]); // s -> prev[j] or prev[j-1]
+      }
+      prev = cur;
+    }
+    String[] o = prev; // o[j] = [S >= j], j <= k; [S >= k + 1] counts as false only if k == n
+    for (int j = 0; j <= k + 1; j++) {
+      String atLeastJ = j <= k ? o[j] : (k == n ? "0" : null);
+      if (atLeastJ == null) {
+        continue;
+      }
+      long bound =
+          c - j; // with S >= j: wy y <= c - j (LE); with S <= j - 1: wy y >= c - j + 1 (GE)
+      if (relation == LinearForm.LE || relation == LinearForm.EQ) {
+        // S >= j -> wy y <= c - j
+        clause(PbModel.not(atLeastJ), yAtMost(y, wy, bound));
+      }
+      if ((relation == LinearForm.GE || relation == LinearForm.EQ) && j >= 1) {
+        // S <= j - 1 -> wy y >= c - j + 1
+        clause(atLeastJ, PbModel.not(yAtMost(y, wy, bound)));
+      }
+    }
+    if (relation == LinearForm.GE || relation == LinearForm.EQ) {
+      // S >= minRest needs counts up to minRest, which k covers when minRest <= n
+      if (minRest > n) {
+        clause();
+      }
+    }
+  }
+
+  // the literal [wy * y <= b], "1" or "0" for a constant; y == null stands for 0
+  private static String yAtMost(Term y, long wy, long b) {
+    if (y == null) {
+      return 0 <= b ? "1" : "0";
+    }
+    if (wy > 0) {
+      return PbModel.not(y.ge(Math.floorDiv(b, wy) + 1));
+    }
+    // -y <= b: y >= -b
+    return y.ge(-b);
   }
 
   private static long[] negate(long[] w) {

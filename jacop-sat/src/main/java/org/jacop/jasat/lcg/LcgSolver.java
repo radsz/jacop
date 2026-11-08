@@ -3477,6 +3477,15 @@ public final class LcgSolver implements ExternalPropagator {
   /** The most unfixed variables of such a constraint, {@code jacop.lcg.clauses.arity}. */
   static final int CLAUSE_ARITY = Integer.getInteger("jacop.lcg.clauses.arity", 16);
 
+  /**
+   * The most clauses of a sum of 0/1 variables (with at most one other variable), which becomes a
+   * unary counter, {@code jacop.lcg.clauses.counter}.
+   */
+  static final int CLAUSE_COUNTER = Integer.getInteger("jacop.lcg.clauses.counter", 20000);
+
+  /** The most unfixed 0/1 variables of such a sum, {@code jacop.lcg.clauses.boolArity}. */
+  static final int CLAUSE_BOOL_ARITY = Integer.getInteger("jacop.lcg.clauses.boolArity", 256);
+
   private static final java.util.Set<String> CLAUSE_SET =
       new java.util.HashSet<>(Arrays.asList(CLAUSE_CLASSES.split(",")));
 
@@ -3497,6 +3506,7 @@ public final class LcgSolver implements ExternalPropagator {
       return false;
     }
     int arity = 0;
+    int wide = 0;
     for (org.jacop.core.Var v : c.arguments()) {
       if (!(v instanceof IntVar x)) {
         return false;
@@ -3506,9 +3516,12 @@ public final class LcgSolver implements ExternalPropagator {
         if (trail.id(x) >= vars.length || x.getSize() > CLAUSE_DOM) {
           return false;
         }
+        if (x.min() < 0 || x.max() > 1) {
+          wide++;
+        }
       }
     }
-    return arity <= CLAUSE_ARITY;
+    return arity <= CLAUSE_ARITY || wide <= 1 && arity <= CLAUSE_BOOL_ARITY;
   }
 
   private boolean encodeAsClauses(Constraint c) {
@@ -3536,7 +3549,8 @@ public final class LcgSolver implements ExternalPropagator {
                   return x.dom();
                 }
               },
-              CLAUSE_LIMIT);
+              CLAUSE_LIMIT,
+              CLAUSE_COUNTER);
     }
     List<int[]> cs = clauseEncoder.encode(c);
     if (cs == null) {
