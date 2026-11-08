@@ -949,7 +949,20 @@ public class Store {
           numberConsistencyCalls++;
           currentConstraint.countConsistencyCall();
           long changesBefore = domainChanges;
-          currentConstraint.consistency(this);
+          if (ConstraintProfile.ON) {
+            Constraint pc = currentConstraint;
+            long t0 = System.nanoTime();
+            boolean ok = false;
+            try {
+              pc.consistency(this);
+              ok = true;
+            } finally {
+              ConstraintProfile.call(
+                  pc, System.nanoTime() - t0, domainChanges != changesBefore, !ok);
+            }
+          } else {
+            currentConstraint.consistency(this);
+          }
           if (variableActivityManagement) {
             updateActivities(currentConstraint);
             variablesPrunned.clear();

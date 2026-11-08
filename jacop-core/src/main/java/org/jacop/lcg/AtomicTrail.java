@@ -1034,6 +1034,18 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return true when the constraint explained it, false for the generic reason
    */
   public boolean explain(int entry, EntryList out) {
+    if (org.jacop.core.ConstraintProfile.ON) {
+      long t0 = System.nanoTime();
+      int m0 = out.size();
+      boolean r = explain0(entry, out);
+      org.jacop.core.ConstraintProfile.explain(
+          reason[entry], System.nanoTime() - t0, out.size() - m0, false);
+      return r;
+    }
+    return explain0(entry, out);
+  }
+
+  private boolean explain0(int entry, EntryList out) {
     int mark = out.size();
     replayed = false;
     if (reason[entry] instanceof Explainable c && c.explain(this, entry, out)) {
@@ -1082,6 +1094,18 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * @return true when the constraint explained it, false for the generic reason
    */
   public boolean explainFailure(Constraint failed, EntryList out) {
+    if (org.jacop.core.ConstraintProfile.ON) {
+      long t0 = System.nanoTime();
+      int m0 = out.size();
+      boolean r = explainFailure0(failed, out);
+      org.jacop.core.ConstraintProfile.explain(
+          failed, System.nanoTime() - t0, out.size() - m0, true);
+      return r;
+    }
+    return explainFailure0(failed, out);
+  }
+
+  private boolean explainFailure0(Constraint failed, EntryList out) {
     int mark = out.size();
     replayed = false;
     if (failed instanceof Explainable c && c.explainFailure(this, out)) {
