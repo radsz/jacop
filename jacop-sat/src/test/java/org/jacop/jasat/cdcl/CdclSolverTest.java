@@ -145,19 +145,67 @@ class CdclSolverTest {
 
   @Test
   void assumptionsAndFailedCores() {
-    Random rnd = new Random(7);
+    assumptionsAndFailedCores(7, true, 3);
+  }
+
+  @Test
+  void assumptionsOnTheirOwnLevels() {
+    assumptionsAndFailedCores(7, false, 3);
+  }
+
+  @Test
+  void manyAssumptionsOnOneLevel() {
+    // more assumptions than variables: duplicates and complementary pairs on level 1
+    assumptionsAndFailedCores(13, true, 14);
+  }
+
+  @Test
+  void complementaryAssumptions() {
+    CdclSolver s = new CdclSolver();
+    s.ensureVars(3);
+    s.addClause(new int[] {1, 2, 3});
+    assertEquals(CdclSolver.UNSAT, s.solve(2, 1, -2));
+    Set<Integer> core = new HashSet<>();
+    for (int a : s.failedAssumptions()) {
+      core.add(a);
+    }
+    assertEquals(Set.of(2, -2), core);
+    assertTrue(s.isOk());
+    assertEquals(CdclSolver.SAT, s.solve(-1, -2));
+  }
+
+  @Test
+  void conflictOfTheAssumptionLevel() {
+    // the assumptions -1 and -2 force 3 and 4, which clash: the core is {-1, -2}, not -5
+    CdclSolver s = new CdclSolver();
+    s.ensureVars(5);
+    s.addClause(new int[] {1, 2, 3});
+    s.addClause(new int[] {1, 2, 4});
+    s.addClause(new int[] {-3, -4});
+    assertEquals(CdclSolver.UNSAT, s.solve(-5, -1, -2));
+    Set<Integer> core = new HashSet<>();
+    for (int a : s.failedAssumptions()) {
+      core.add(a);
+    }
+    assertEquals(Set.of(-1, -2), core);
+    assertEquals(CdclSolver.SAT, s.solve(-5, -1));
+  }
+
+  private void assumptionsAndFailedCores(long seed, boolean oneLevel, int maxAssumptions) {
+    Random rnd = new Random(seed);
     for (int run = 0; run < 1000; run++) {
       int vars = 4 + rnd.nextInt(8);
       List<int[]> f = randomFormula(rnd, vars, vars + rnd.nextInt(3 * vars), 3);
       CdclSolver s = new CdclSolver();
       s.setChecking(true);
+      s.setAssumptionsOnOneLevel(oneLevel);
       s.ensureVars(vars);
       for (int[] c : f) {
         s.addClause(c);
       }
       // several calls on the same solver: learnt clauses must stay valid across assumptions
       for (int call = 0; call < 4; call++) {
-        int k = 1 + rnd.nextInt(3);
+        int k = 1 + rnd.nextInt(maxAssumptions);
         int[] assumed = new int[k];
         for (int i = 0; i < k; i++) {
           int v = 1 + rnd.nextInt(vars);

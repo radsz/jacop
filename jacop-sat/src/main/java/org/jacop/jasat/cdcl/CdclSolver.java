@@ -288,6 +288,13 @@ public final class CdclSolver {
 
   // --- assumptions and model
   private int[] assumptions = new int[0];
+  // all assumptions on decision level 1, kept at restarts (Hickey and Bacchus, SAT 2019); otherwise
+  // assumption i is the decision of level i + 1
+  private boolean assumptionsOnOneLevel = true;
+  // the decision levels the assumptions take: 1 (or 0 without assumptions) on one level
+  private int assumptionLevels;
+  // on one level: the index of the next assumption to take on level 1
+  private int assumptionNext;
   private int[] failed = new int[0];
   private boolean[] model = new boolean[0];
 
@@ -531,6 +538,7 @@ public final class CdclSolver {
         restoreEliminated();
       }
     }
+    assumptionLevels = assumptionsOnOneLevel ? Math.min(1, assumptions.length) : assumptions.length;
     interrupted = cancelled;
     outOfTime = false;
     backtrack(0);
@@ -750,6 +758,23 @@ public final class CdclSolver {
   }
 
   /**
+   * Sets where {@link #solve} puts its assumptions. On one level (the default), all of them are
+   * assigned at decision level 1, in order and each propagated before the next, and restarts go
+   * back to level 1, so the assumptions and their consequences are not propagated again after every
+   * restart (R. Hickey and F. Bacchus, "Speeding Up Assumption-Based SAT", SAT 2019, LNCS 11628). A
+   * conflict at level 1 makes the assumptions unsatisfiable, with the assumptions it depends on as
+   * the core. Restarts that vivify or eliminate still go back to level 0. Otherwise each assumption
+   * is the decision of its own level, as in MiniSat, and restarts go back to level 0. Assigning all
+   * of them before propagating, as the paper does, made LCG explanations about seven times longer
+   * on ptv and is not done.
+   *
+   * @param on whether the assumptions share one decision level
+   */
+  public void setAssumptionsOnOneLevel(boolean on) {
+    assumptionsOnOneLevel = on;
+  }
+
+  /**
    * Sets the size up to which an external propagator's reasons are kept as learnt clauses once
    * conflict analysis has asked for them (2 by default: binary reasons are kept). Larger reasons
    * are temporary: they live while their literal stays assigned, unwatched, and are deleted when it
@@ -931,8 +956,8 @@ public final class CdclSolver {
   }
 
   private void newDecisionLevel() {
-    if (decisionLevel == trailLim.length) {
-      trailLim = Arrays.copyOf(trailLim, 2 * trailLim.length);
+    if (decisionLevel >= trailLim.length) {
+      trailLim = Arrays.copyOf(trailLim, 2 * decisionLevel + 2);
       qheadLim = Arrays.copyOf(qheadLim, trailLim.length);
     }
     qheadLim[decisionLevel] = qhead;
@@ -1850,47 +1875,112 @@ public final class CdclSolver {
     return false;
   }
 
-  /** Collects the assumptions responsible for {@code p} being false into {@code failed}. */
-  private void analyzeFinal(int p) {
-    int[] out = new int[assumptions.length];
-    int n = 0;
-    out[n++] = toDimacs(p ^ 1);
+  /**
+   * Takes the next assumption on decision level 1, which it opens first when the search is at the
+   * root. The assumptions are taken in order, each propagated before the next, so that a false one
+   * is found as early as on levels of their own.
+   *
+   * @return the assumption to assign, -1 when all of them hold, or -2 when one is false; {@link
+   *     #failedAssumptions()} then gives the assumptions responsible
+   */
+  private int nextAssumption() {
     if (decisionLevel == 0) {
-      failed = Arrays.copyOf(out, n);
+      newSearchLevel();
+      assumptionNext = 0;
+    }
+    while (assumptionNext < assumptions.length) {
+      int a = assumptions[assumptionNext++];
+      if (vals[a] < 0) {
+        analyzeFinal(a ^ 1);
+        return -2;
+      }
+      if (vals[a] == 0) {
+        return a;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Collects the assumptions responsible for the conflict at level 1, where they are the only
+   * decisions, into {@code failed}.
+   */
+  private void analyzeFinalConflict() {
+    int ref = conflictRef;
+    if (ref == UNIT_REASON) {
+      failed = new int[assumptions.length]; // a conflict without literals: all of them, to be safe
+      for (int i = 0; i < assumptions.length; i++) {
+        failed[i] = toDimacs(assumptions[i]);
+      }
       return;
     }
-    seen[p >> 1] = 1;
+    if (ref == BINARY_CONFLICT) {
+      markFinal(conflictLit0);
+      markFinal(conflictLit1);
+    } else if (ref < NO_REASON) {
+      markFinal(-2 - ref);
+    } else if (ref >= STACK_REF) {
+      int lits = ref - STACK_REF + HEADER;
+      int size = rstack[lits - HEADER + SIZE];
+      for (int k = 0; k < size; k++) {
+        markFinal(rstack[lits + k]);
+      }
+    } else {
+      int lits = ref + HEADER;
+      int size = mem[ref + SIZE];
+      for (int k = 0; k < size; k++) {
+        markFinal(mem[lits + k]);
+      }
+    }
+    int[] out = new int[assumptions.length];
+    failed = Arrays.copyOf(out, collectFinal(out, 0));
+  }
+
+  /** Collects the assumptions responsible for {@code p} being false into {@code failed}. */
+  private void analyzeFinal(int p) {
+    int[] out = new int[assumptions.length + 1];
+    out[0] = toDimacs(p ^ 1);
+    if (decisionLevel == 0) {
+      failed = Arrays.copyOf(out, 1);
+      return;
+    }
+    markFinal(p);
+    failed = Arrays.copyOf(out, collectFinal(out, 1));
+  }
+
+  private void markFinal(int q) {
+    if (level[q >> 1] > 0) {
+      seen[q >> 1] = 1;
+    }
+  }
+
+  /**
+   * Walks the trail above the root back from its end, through the reasons of the marked variables,
+   * adds the decisions (the assumptions) it reaches to {@code out} and clears the marks.
+   *
+   * @return the number of literals in {@code out}
+   */
+  private int collectFinal(int[] out, int n) {
     for (int i = trailSize - 1; i >= trailLim[0]; i--) {
       int x = trail[i] >> 1;
       if (seen[x] == 0) {
         continue;
       }
       int r = reasonRef(x);
-      if (r == UNIT_REASON) {
-        seen[x] = 0;
-        continue;
-      }
       if (r == NO_REASON) {
         out[n++] = toDimacs(trail[i]);
-      } else if (r < NO_REASON) {
-        int q = -2 - r;
-        if (level[q >> 1] > 0) {
-          seen[q >> 1] = 1;
-        }
-      } else {
+      } else if (r != UNIT_REASON && r < NO_REASON) {
+        markFinal(-2 - r);
+      } else if (r != UNIT_REASON) {
         int[] m = reasonArena(r);
         int off = reasonOffset(r);
         for (int k = 1; k < m[off + SIZE]; k++) {
-          int q = m[off + HEADER + k];
-          if (level[q >> 1] > 0) {
-            seen[q >> 1] = 1;
-          }
+          markFinal(m[off + HEADER + k]);
         }
       }
       seen[x] = 0;
     }
-    seen[p >> 1] = 0;
-    failed = Arrays.copyOf(out, n);
+    return n;
   }
 
   // ------------------------------------------------------------------------- external search
@@ -2465,6 +2555,11 @@ public final class CdclSolver {
           }
           return UNSAT;
         }
+        if (assumptionsOnOneLevel && decisionLevel == 1 && assumptions.length > 0) {
+          // only the assumptions are decided at level 1: together with the root they are refuted
+          analyzeFinalConflict();
+          return UNSAT;
+        }
         if (chrono && conflictNeedsNoLearning()) {
           if (decisionLevel == 0 && vals[conflictLit0] < 0) {
             ok = false;
@@ -2528,7 +2623,20 @@ public final class CdclSolver {
         checkFixpoint();
       }
       int next = -1;
-      while (decisionLevel < assumptions.length) {
+      if (assumptionsOnOneLevel
+          && decisionLevel <= 1
+          && (decisionLevel == 0 || assumptionNext < assumptions.length)
+          && assumptions.length > 0) {
+        int a = nextAssumption();
+        if (a == -2) {
+          return UNSAT;
+        }
+        if (a >= 0) {
+          assign(a, NO_REASON);
+          continue;
+        }
+      }
+      while (!assumptionsOnOneLevel && decisionLevel < assumptions.length) {
         int a = assumptions[decisionLevel];
         if (vals[a] > 0) {
           newSearchLevel();
@@ -3060,7 +3168,7 @@ public final class CdclSolver {
   }
 
   private boolean shouldRestart() {
-    if (!restartsOn || decisionLevel <= assumptions.length) {
+    if (!restartsOn || decisionLevel <= assumptionLevels) {
       return false;
     }
     if (conflicts >= modeSwitchAt || conflicts >= nextRephase) {
@@ -3081,7 +3189,9 @@ public final class CdclSolver {
 
   private void restart() {
     restarts++;
-    backtrack(0);
+    // vivification and elimination work at the root; other restarts keep the assumption level
+    boolean root = vivifyDue || conflicts >= nextElimination && elimination && !externalUsed;
+    backtrack(root ? 0 : Math.min(decisionLevel, assumptionLevels));
     if (external != null) {
       external.notifyRestart();
     }
